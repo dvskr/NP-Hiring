@@ -3,50 +3,44 @@
  * Aggregator implementation. The orchestrator's fetchFromSource() reads
  * from here instead of a hardcoded switch.
  *
- * Adding a new source:
+ * NP Hiring scope: **ATS sources only**. Non-ATS aggregators (Adzuna,
+ * Jooble, JSearch/Fantastic-Jobs-DB, USAJobs, DocCafe, HealthCareerCenter)
+ * removed 2026-05-23 — we now ingest directly from the employer's
+ * applicant tracking system. ATS sources have:
+ *   - Higher data quality (employer-authoritative listings, not scraped)
+ *   - Fewer duplicates (no aggregator overlap)
+ *   - Better apply-link health (linked directly to the ATS, not a
+ *     redirect chain through a marketing site)
+ *   - Zero external API quota cost (public ATS endpoints)
+ *
+ * Resurrect a removed source from git history if revisited.
+ *
+ * Adding a new ATS source:
  *   1. Implement the Aggregator interface in lib/aggregators/<source>.ts
  *      and export `<source>Aggregator: Aggregator`.
  *   2. Add the source key to `JobSource` in lib/aggregators/types.ts.
  *   3. Register the export below.
- *   4. Add cron entries to vercel.json (count must equal the
- *      adapter's `chunkCount` — see tests/aggregators/chunk-count.test.ts).
+ *   4. Add cron entries to lib/inngest/functions/scheduled-crons.ts.
  */
 
 import type { Aggregator, JobSource } from './types';
 
-import { adzunaAggregator } from './adzuna';
 import { greenhouseAggregator } from './greenhouse';
 import { leverAggregator } from './lever';
 import { workdayAggregator } from './workday';
-import { fantasticJobsDbAggregator } from './fantastic-jobs-db';
 import { smartRecruitersAggregator } from './smartrecruiters';
-import { usaJobsAggregator } from './usajobs';
 import { ashbyAggregator } from './ashby';
 import { bambooHrAggregator } from './bamboohr';
 import { jazzHrAggregator } from './jazzhr';
 import { workableAggregator } from './workable';
-import { docCafeAggregator } from './doccafe';
-import { healthCareerCenterAggregator } from './healthcareercenter';
-
-// ats-jobs-db decommissioned 2026-05-06: live-fetch analysis showed
-// only 3/171 (2%) of returned jobs were PMHNP-relevant, and 90% were
-// duplicates of sources we already scrape natively for free
-// (workday/greenhouse/smartrecruiters). Net incremental yield ~10-15
-// jobs/month for $49 = ~$3-5/job — not worth keeping. Adapter and
-// scripts removed; resurrect from git history if we revisit.
 
 export const aggregators: Record<JobSource, Aggregator> = {
-    adzuna: adzunaAggregator,
     greenhouse: greenhouseAggregator,
     lever: leverAggregator,
     workday: workdayAggregator,
-    'fantastic-jobs-db': fantasticJobsDbAggregator,
     smartrecruiters: smartRecruitersAggregator,
-    usajobs: usaJobsAggregator,
     ashby: ashbyAggregator,
     bamboohr: bambooHrAggregator,
     jazzhr: jazzHrAggregator,
     workable: workableAggregator,
-    doccafe: docCafeAggregator,
-    healthcareercenter: healthCareerCenterAggregator,
 };

@@ -1,7 +1,6 @@
 import { randomUUID } from 'crypto';
 import { prisma } from './prisma';
 import { GREENHOUSE_TOTAL_CHUNKS } from './aggregators/greenhouse';
-import { getLastRunDiagnostics as getFantasticJobsDiag } from './aggregators/fantastic-jobs-db';
 import { normalizeJobWithReason } from './job-normalizer';
 import { checkDuplicate, buildJobIdentityKey, buildApplyUrlPathKey } from './deduplicator';
 import { getOrCreateCompany } from './company-normalizer';
@@ -260,9 +259,10 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
   let qualityScoreCount = 0;
   // Sub-bucketed counts of per-job exceptions. Sums to `errors`.
   const errorsByKind: Record<string, number> = {};
-  // External API request count, only set for sources with a quota
-  // (currently fantastic-jobs-db / RapidAPI Ultra plan).
-  let apiCallsUsed: number | undefined;
+  // External API request count, only set for sources with a quota.
+  // Currently no ATS source has a per-run quota tracker — placeholder for
+  // future paid-API sources if they're added back.
+  const apiCallsUsed: number | undefined = undefined;
 
   try {
     console.log(`\n[${source.toUpperCase()}] Starting ingestion...`);
@@ -270,9 +270,6 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
     // Fetch raw jobs from source
     const rawJobs = await fetchFromSource(source, options);
     fetched = rawJobs.length;
-    if (source === 'fantastic-jobs-db') {
-      apiCallsUsed = getFantasticJobsDiag().apiCallsUsed;
-    }
 
     console.log(`[${source.toUpperCase()}] Fetched ${fetched} jobs`);
 
@@ -289,21 +286,15 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
     }> = [];
 
     if (fetched === 0) {
-      // Surface diagnostics to Discord so we can debug without scraping
-      // Vercel function logs. Only fantastic-jobs-db exposes a per-run
-      // diagnostic accessor today.
-      if (source === 'fantastic-jobs-db') {
+      // No per-source diagnostic accessor today — ATS sources are tenant
+      // -driven; 0 jobs usually means a tenant URL is stale, surfaced in
+      // function logs and source_stats.
+      if (false) {
         try {
-          const diag = getFantasticJobsDiag();
           const { sendDiscordMessage } = await import('./discord-notifier');
-          // Lean diag: HTTP status + abort reason in the description.
-          // Full status counts / first body sample are persisted in the
-          // function logs and source_stats — not needed in the channel.
-          const summary = `HTTP ${diag.firstResponseStatus ?? '—'} · quota left: ${diag.rateLimitRemaining ?? '?'}`
-            + (diag.abortReasons.length > 0 ? ` · aborts: ${diag.abortReasons.join(', ').slice(0, 200)}` : '');
           await sendDiscordMessage('', [{
             title: `⚠️ ${source}: 0 rows fetched`,
-            description: summary,
+            description: 'See function logs for details',
             color: 0xFFAA00,
           }]);
         } catch (e) {
@@ -1091,12 +1082,9 @@ export async function ingestJobs(
   // Process each source sequentially
   for (const source of sources) {
     const useChunk = source === 'workday' || source === 'greenhouse';
-    const isFantastic = source === 'fantastic-jobs-db';
-    let sourceOptions: typeof options = undefined;
-    if (useChunk) sourceOptions = { chunk: options?.chunk };
-    if (isFantastic && options?.fantasticEndpoint) {
-      sourceOptions = { ...(sourceOptions ?? {}), fantasticEndpoint: options.fantasticEndpoint };
-    }
+    const sourceOptions: typeof options = useChunk
+      ? { chunk: options?.chunk }
+      : undefined;
     const result = await ingestFromSource(source, sourceOptions);
     results.push(result);
   }

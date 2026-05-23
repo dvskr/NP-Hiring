@@ -1,10 +1,13 @@
 /**
  * Scheduled cron functions — Inngest replacement for vercel.json crons.
  *
- * Why: Vercel Pro caps cron entries at 64. The pmhnp fork already had 67
- * crons (over-limit on import alone). Inngest has no per-project cron
- * cap and gives us per-function observability, retries, and replays for
- * free.
+ * NP Hiring scope: ATS sources only (greenhouse, lever, workday,
+ * smartrecruiters, ashby, bamboohr, jazzhr, workable). Non-ATS
+ * aggregators removed 2026-05-23 — see lib/aggregators/registry.ts.
+ *
+ * Why Inngest over Vercel cron: Vercel Pro caps cron entries at 64.
+ * Inngest has no per-project cron cap and gives us per-function
+ * observability, retries, and replays for free.
  *
  * Pattern: each entry below produces one Inngest function that triggers
  * on a cron schedule and HTTP-fetches the underlying /api/cron/<name>
@@ -16,7 +19,6 @@
  * doesn't fire them.
  *
  * Local dev: `npx inngest-cli@latest dev -u http://localhost:3000/api/inngest`
- * fires schedules locally for testing.
  */
 
 import { inngest } from '../client';
@@ -31,31 +33,27 @@ type CronJob = {
 };
 
 const CRON_JOBS: CronJob[] = [
-    // ── Ingestion (morning wave, UTC) ──
-    { id: 'cron-ingest-adzuna-am',           cron: '0 10 * * *',  path: '/api/cron/ingest?source=adzuna' },
+    // ── ATS ingestion (morning wave, UTC) ──
+    // Greenhouse has 4 chunks (tenant fan-out exceeds single 240s budget)
     { id: 'cron-ingest-greenhouse-0-am',     cron: '10 10 * * *', path: '/api/cron/ingest?source=greenhouse&chunk=0' },
     { id: 'cron-ingest-greenhouse-1-am',     cron: '15 10 * * *', path: '/api/cron/ingest?source=greenhouse&chunk=1' },
     { id: 'cron-ingest-greenhouse-2-am',     cron: '20 10 * * *', path: '/api/cron/ingest?source=greenhouse&chunk=2' },
     { id: 'cron-ingest-greenhouse-3-am',     cron: '25 10 * * *', path: '/api/cron/ingest?source=greenhouse&chunk=3' },
     { id: 'cron-ingest-lever-am',            cron: '50 10 * * *', path: '/api/cron/ingest?source=lever' },
+    // Workday has 5 chunks
     { id: 'cron-ingest-workday-0-am',        cron: '5 11 * * *',  path: '/api/cron/ingest?source=workday&chunk=0' },
     { id: 'cron-ingest-workday-1-am',        cron: '10 11 * * *', path: '/api/cron/ingest?source=workday&chunk=1' },
     { id: 'cron-ingest-workday-2-am',        cron: '15 11 * * *', path: '/api/cron/ingest?source=workday&chunk=2' },
     { id: 'cron-ingest-workday-3-am',        cron: '20 11 * * *', path: '/api/cron/ingest?source=workday&chunk=3' },
     { id: 'cron-ingest-workday-4-am',        cron: '25 11 * * *', path: '/api/cron/ingest?source=workday&chunk=4' },
     { id: 'cron-ingest-smartrecruiters-am',  cron: '35 11 * * *', path: '/api/cron/ingest?source=smartrecruiters' },
-    { id: 'cron-ingest-usajobs-am',          cron: '45 11 * * *', path: '/api/cron/ingest?source=usajobs' },
     { id: 'cron-ingest-ashby-am',            cron: '40 11 * * *', path: '/api/cron/ingest?source=ashby' },
     { id: 'cron-ingest-bamboohr-am',         cron: '50 11 * * *', path: '/api/cron/ingest?source=bamboohr' },
     { id: 'cron-ingest-jazzhr-am',           cron: '55 11 * * *', path: '/api/cron/ingest?source=jazzhr' },
     { id: 'cron-ingest-workable-am',         cron: '0 12 * * *',  path: '/api/cron/ingest?source=workable' },
-    { id: 'cron-ingest-doccafe-am',          cron: '5 12 * * *',  path: '/api/cron/ingest?source=doccafe' },
-    { id: 'cron-ingest-healthcareer-am',     cron: '10 12 * * *', path: '/api/cron/ingest?source=healthcareercenter' },
-    { id: 'cron-ingest-fantastic-24h-noon',  cron: '30 12 * * *', path: '/api/cron/ingest?source=fantastic-jobs-db&endpoint=24h' },
     { id: 'cron-ingest-wave-summary-noon',   cron: '50 12 * * *', path: '/api/cron/ingest-wave-summary' },
 
-    // ── Ingestion (evening wave, UTC) ──
-    { id: 'cron-ingest-adzuna-pm',           cron: '0 23 * * *',  path: '/api/cron/ingest?source=adzuna' },
+    // ── ATS ingestion (evening wave, UTC) ──
     { id: 'cron-ingest-greenhouse-0-pm',     cron: '10 23 * * *', path: '/api/cron/ingest?source=greenhouse&chunk=0' },
     { id: 'cron-ingest-greenhouse-1-pm',     cron: '15 23 * * *', path: '/api/cron/ingest?source=greenhouse&chunk=1' },
     { id: 'cron-ingest-greenhouse-2-pm',     cron: '20 23 * * *', path: '/api/cron/ingest?source=greenhouse&chunk=2' },
@@ -71,13 +69,8 @@ const CRON_JOBS: CronJob[] = [
     { id: 'cron-ingest-bamboohr-pm',         cron: '45 0 * * *',  path: '/api/cron/ingest?source=bamboohr' },
     { id: 'cron-ingest-jazzhr-pm',           cron: '48 0 * * *',  path: '/api/cron/ingest?source=jazzhr' },
     { id: 'cron-ingest-workable-pm',         cron: '52 0 * * *',  path: '/api/cron/ingest?source=workable' },
-    { id: 'cron-ingest-doccafe-pm',          cron: '53 0 * * *',  path: '/api/cron/ingest?source=doccafe' },
-    { id: 'cron-ingest-healthcareer-pm',     cron: '54 0 * * *',  path: '/api/cron/ingest?source=healthcareercenter' },
-    { id: 'cron-ingest-fantastic-24h-eve',   cron: '0 21 * * *',  path: '/api/cron/ingest?source=fantastic-jobs-db&endpoint=24h' },
     { id: 'cron-ingest-wave-summary-eve',    cron: '55 17 * * *', path: '/api/cron/ingest-wave-summary' },
     { id: 'cron-ingest-wave-summary-night',  cron: '55 0 * * *',  path: '/api/cron/ingest-wave-summary' },
-    // 6-month deep ingest — once per year, Jan 1
-    { id: 'cron-ingest-fantastic-6m-yearly', cron: '0 0 1 1 *',   path: '/api/cron/ingest?source=fantastic-jobs-db&endpoint=6m' },
 
     // ── Enrichment + maintenance ──
     { id: 'cron-enrich-jobs',           cron: '0 6,12,18,22 * * *', path: '/api/cron/enrich-jobs' },
@@ -128,8 +121,6 @@ async function invokeCronEndpoint(path: string): Promise<{ ok: boolean; status: 
     const res = await fetch(url, {
         method: 'GET',
         headers: { Authorization: `Bearer ${secret}` },
-        // No timeout — let the underlying route's `maxDuration` handle it.
-        // Inngest has its own per-function timeout (default 30s, configurable).
     });
     const body = await res.text();
     return { ok: res.ok, status: res.status, body: body.slice(0, 2000) };

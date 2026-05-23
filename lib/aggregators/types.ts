@@ -21,19 +21,14 @@ import type { HealthDecision } from '@/lib/health/check-job-health';
  * `aggregators` registry below.
  */
 export type JobSource =
-    | 'adzuna'
     | 'greenhouse'
     | 'lever'
     | 'workday'
-    | 'fantastic-jobs-db'
     | 'smartrecruiters'
-    | 'usajobs'
     | 'ashby'
     | 'bamboohr'
     | 'jazzhr'
-    | 'workable'
-    | 'doccafe'
-    | 'healthcareercenter';
+    | 'workable';
 
 /**
  * Canonical raw-job shape produced by adapters and consumed by the
