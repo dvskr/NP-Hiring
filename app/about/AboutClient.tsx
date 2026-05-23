@@ -56,7 +56,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
               </div>
               <div className="ab-scene teal" style={{ minHeight: 380, padding: 0 }}>
                 <img src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/about/diorama_inpatient.webp" alt="Inpatient psychiatric" width={800} height={600} loading="lazy" decoding="async" style={{ width: '100%', flex: 1, objectFit: 'cover', borderRadius: '28px 28px 0 0' }} />
-                <div style={{ padding: '16px 20px' }}><div className="label">Acute<br />psychiatric units</div><div className="meta" style={{ marginTop: 10 }}>{fmt(counts.inpatient)} roles</div></div>
+                <div style={{ padding: '16px 20px' }}><div className="label">Acute<br />care units</div><div className="meta" style={{ marginTop: 10 }}>{fmt(counts.inpatient)} roles</div></div>
               </div>
               <div className="ab-scene coral" style={{ minHeight: 350, padding: 0 }}>
                 <img src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/about/diorama_telehealth.webp" alt="Telehealth remote practice" width={800} height={600} loading="lazy" decoding="async" style={{ width: '100%', flex: 1, objectFit: 'cover', borderRadius: '28px 28px 0 0' }} />
@@ -86,9 +86,9 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
           <div>
             <span className="ab-kicker"><Target size={12} /> For NPs</span>
             <h2 style={{ marginTop: 20 }}>Stop scrolling past generic <em>RN postings.</em></h2>
-            <p style={{ marginTop: 22, color: 'var(--ink-soft)', fontSize: 18, maxWidth: 540 }}>General nursing boards bury nurse practitioner roles under thousands of primary-care postings. This site only lists psychiatric mental health NP jobs — filtered by setting, salary, license, and the actual scope of practice you train in.</p>
+            <p style={{ marginTop: 22, color: 'var(--ink-soft)', fontSize: 18, maxWidth: 540 }}>General job boards bury Nurse Practitioner roles under thousands of RN and admin postings. This site only lists NP and APRN positions — every job is direct from an employer ATS, filtered by specialty, setting, salary, and licensure scope.</p>
             <div className="ab-feat-list">
-              <div className="ab-feat"><div className="ab-feat-ico"><CheckCircle size={22} /></div><div><h4>100% Specialized Filters</h4><p>Search by psychiatric setting — Inpatient, Outpatient, Telehealth, Correctional, Addiction, Geriatric — instead of typical nursing tags.</p></div></div>
+              <div className="ab-feat"><div className="ab-feat-ico"><CheckCircle size={22} /></div><div><h4>100% Specialized Filters</h4><p>Search by NP specialty — Family, Adult-Gerontology, Pediatric, Women&apos;s Health, Acute Care, PMHNP, CRNA, CNM — and setting (Inpatient, Outpatient, Telehealth, Hospital, Private Practice) instead of generic nursing tags.</p></div></div>
               <div className="ab-feat"><div className="ab-feat-ico coral"><DollarSign size={22} /></div><div><h4>Unmatched Salary Transparency</h4><p>We pierce the veil on compensation, comparing state benchmarks with thousands of real-time listings so you can negotiate fairly.</p></div></div>
               <div className="ab-feat"><div className="ab-feat-ico" style={{ color: '#6F63C0' }}><CalendarDays size={22} /></div><div><h4>Licensure-aware Alerts</h4><p>Your compact and state licensure drive the feed — you only ever see roles you can actually accept.</p></div></div>
             </div>
@@ -123,7 +123,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
             <h2 style={{ marginTop: 20 }}>Zero-waste <em>candidate sourcing.</em></h2>
             <p style={{ marginTop: 22, color: 'var(--ink-soft)', fontSize: 18, maxWidth: 540 }}>Skip generic aggregators where most applicants are unqualified. Post directly to a board where every visitor is a practicing or about-to-practice NP.</p>
             <div className="ab-feat-list">
-              <div className="ab-feat"><div className="ab-feat-ico coral"><Target size={22} /></div><div><h4>High-Intent Audience</h4><p>The talent on NP Hiring is actively surveying psychiatric scopes — not casually browsing — leading to vastly higher conversion rates.</p></div></div>
+              <div className="ab-feat"><div className="ab-feat-ico coral"><Target size={22} /></div><div><h4>High-Intent Audience</h4><p>The talent on NP Hiring is actively surveying NP and APRN roles — not casually browsing — leading to vastly higher conversion rates than general healthcare boards.</p></div></div>
               <div className="ab-feat"><div className="ab-feat-ico" style={{ color: '#6F63C0' }}><BarChart3 size={22} /></div><div><h4>Analytics & Placements</h4><p>Secure featured placements and monitor actionable apply-funnel analytics directly from your verified employer dashboard.</p></div></div>
               <div className="ab-feat"><div className="ab-feat-ico"><Layers size={22} /></div><div><h4>Calibrated Matching</h4><p>Our taxonomy maps exact subspecialties — SMI, C/L, substance use, perinatal — so you spend less time filtering and more time hiring.</p></div></div>
             </div>

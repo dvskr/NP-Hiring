@@ -326,6 +326,42 @@ function isDualRoleTitle(titleLower: string): boolean {
 }
 
 /**
+ * Build word-boundary regex matchers for each keyword.
+ *
+ * Why: substring `.includes()` matching is fragile around punctuation.
+ * Example failures we observed in the 2026-05-23 smoke test:
+ *   - " lpn" (space-padded) did NOT match "(LPN)" in title "Care
+ *     Manager (LPN)" because the leading char is "(" not " ".
+ *   - " pa " did NOT match "PA-C, Bilingual" for the same reason.
+ *
+ * Word-boundary `\b` matches at any non-alphanumeric transition, so
+ * "(LPN)" / "PA-C" / "[FNP-BC]" / "NP," / "NP." all match correctly.
+ *
+ * Built once at module-load; runtime cost is one regex test per keyword
+ * per filter call (~150 negatives × 1 title = ~150 cheap regex tests).
+ */
+function buildBoundaryPattern(keyword: string): RegExp {
+    // Trim surrounding whitespace (legacy keyword lists used space-padding
+    // as a poor-man's word boundary); regex \b handles boundaries proper.
+    const trimmed = keyword.trim();
+    // Escape regex metacharacters (parens, periods, hyphens, etc.).
+    const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // \b only fires at alphanumeric→non-alphanumeric edges. For tokens
+    // starting/ending with a non-word char (e.g. "(np)"), use a tolerant
+    // boundary that also accepts string start/end + whitespace + punctuation.
+    const startsWithWord = /^\w/.test(trimmed);
+    const endsWithWord = /\w$/.test(trimmed);
+    const leftBoundary = startsWithWord ? '\\b' : '';
+    const rightBoundary = endsWithWord ? '\\b' : '';
+    return new RegExp(`${leftBoundary}${escaped}${rightBoundary}`, 'i');
+}
+
+const POSITIVE_PATTERNS = POSITIVE_KEYWORDS.map(buildBoundaryPattern);
+const NEGATIVE_PATTERNS_INDEXED: Array<[string, RegExp]> = NEGATIVE_KEYWORDS.map(
+    (kw) => [kw, buildBoundaryPattern(kw)],
+);
+
+/**
  * Reasons a job can be rejected at the relevance gate.
  *
  * `relevance_filter` is kept as a catch-all for backward compat — new
@@ -367,11 +403,11 @@ export function classifyRelevance(
     //   - Title that itself contains a positive NP signal short-circuits this
     //     check (handled below — checked first so a "Family NP" title with
     //     stray 'medical director' in description still passes).
-    const titleHasPositive = POSITIVE_KEYWORDS.some((kw) => titleLower.includes(kw));
+    const titleHasPositive = POSITIVE_PATTERNS.some((re) => re.test(titleLower));
 
     if (!titleHasPositive) {
-        const isWrongRole = NEGATIVE_KEYWORDS.some((neg) => {
-            if (!titleLower.includes(neg)) return false;
+        const isWrongRole = NEGATIVE_PATTERNS_INDEXED.some(([neg, re]) => {
+            if (!re.test(titleLower)) return false;
             if (dualRole && DUAL_ROLE_NEGATIVE_KEYWORDS.has(neg)) return false;
             if (aprn && APRN_NEGATIVE_OVERRIDES.has(neg)) return false;
             return true;
@@ -388,14 +424,29 @@ export function classifyRelevance(
         return { passes: true, reason: 'pass' };
     }
 
-    const descriptionHasPositive = POSITIVE_KEYWORDS.some((kw) =>
-        combinedText.includes(kw),
+    // 3. Description-only positive: require TITLE to be clinical-sounding
+    // (no obvious admin/sales/eng tell) — guards against jobs at NP-employing
+    // companies where the title is "Engagement Specialist" / "General
+    // Manager" / "Credentialing Associate" but the description recruits NPs
+    // elsewhere in the JD body.
+    const titleHasNegative = NEGATIVE_PATTERNS_INDEXED.some(([neg, re]) => {
+        if (!re.test(titleLower)) return false;
+        if (dualRole && DUAL_ROLE_NEGATIVE_KEYWORDS.has(neg)) return false;
+        if (aprn && APRN_NEGATIVE_OVERRIDES.has(neg)) return false;
+        return true;
+    });
+    if (titleHasNegative) {
+        return { passes: false, reason: 'relevance_wrong_role' };
+    }
+
+    const descriptionHasPositive = POSITIVE_PATTERNS.some((re) =>
+        re.test(combinedText),
     );
     if (descriptionHasPositive) {
         return { passes: true, reason: 'pass' };
     }
 
-    // 3. Default → REJECT.
+    // 4. Default → REJECT.
     return { passes: false, reason: 'relevance_no_keyword' };
 }
 
