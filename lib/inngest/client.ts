@@ -34,5 +34,5 @@ export interface FpRecoveryProbeEventData {
 }
 
 export const inngest = new Inngest({
-    id: 'pmhnp-job-board',
+    id: 'np-hiring',
 });
