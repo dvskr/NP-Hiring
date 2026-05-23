@@ -56,7 +56,7 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
         >
             {/* ── Nurse crowd background — fills viewport, anchored bottom ── */}
             <Image
-                src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/hero-nurses.webp"
+                src="https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/hero-nurses.webp"
                 alt="Diverse community of NP professionals"
                 fill
                 priority

@@ -7,7 +7,7 @@ self.addEventListener('push', function (event) {
     try {
         const data = event.data.json();
         const options = {
-            body: data.body || 'New PMHNP jobs available!',
+            body: data.body || 'New Nurse Practitioner jobs available!',
             icon: data.icon || '/icon-192x192.png',
             badge: data.badge || '/favicon-48x48.png',
             data: { url: data.url || '/jobs' },

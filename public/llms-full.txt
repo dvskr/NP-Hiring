@@ -2,58 +2,63 @@
 # llms-full.txt — Extended version of llms.txt
 # Last Updated: May 2026
 
-> NP Hiring (nphiring.com) is the #1 specialized job board for Psychiatric Mental Health Nurse Practitioners in the United States. We connect PMHNPs with employers across all 50 states.
+> NP Hiring (nphiring.com) is the #1 specialized job board for Nurse Practitioners and APRNs in the United States. We connect NPs of every specialty (FNP, AGNP, PNP, NNP, WHNP, ACNP, PMHNP) plus CRNAs, CNMs, and CNSs with employers across all 50 states.
 
 ## Mission
 
-To connect every PMHNP with their ideal position by providing the most comprehensive, transparent, and data-rich job discovery platform in psychiatric nursing.
+To connect every Nurse Practitioner with their ideal role through the most comprehensive, transparent, and data-rich job discovery platform in advanced practice nursing.
 
 ## Platform Overview
 
 ### Job Listings
-- **10,000+ active listings** aggregated from 1,249+ employers
-- Sources: Direct employer postings, ATS integrations, staffing agencies
+- Active listings sourced **directly from employer ATS systems** — no aggregator scrapes
+- Sources: Greenhouse, Lever, Workday, SmartRecruiters, Ashby, BambooHR, JazzHR, Workable
 - Updated: Multiple times daily
 - 73% of listings include salary information
-- Searchable by: location, job type, setting, specialty, salary range, employer
+- Searchable by: location, job type, setting, specialty, salary range, employer, license requirements
 
 ### Content Pages (100,000+)
-We maintain city-level content pages for 24 job categories across 4,135 US cities:
+We maintain city-level content pages for 40+ job categories across 4,135 US cities.
 
-#### Job Categories (24)
+#### NP/APRN Specialty Categories
 | Category | Slug | Description | Typical Salary |
 |----------|------|-------------|----------------|
-| Remote | remote | Work-from-home positions | $120K-$180K |
-| Telehealth | telehealth | Virtual care positions | $115K-$175K |
-| Inpatient | inpatient | Hospital-based psychiatric units | $125K-$185K |
-| Outpatient | outpatient | Clinic and office settings | $115K-$170K |
-| Travel | travel | Locum tenens assignments | $2,200-$4,500/week |
-| Addiction | addiction | Substance use disorder treatment | $120K-$175K |
-| Child & Adolescent | child-adolescent | Pediatric psychiatry | $120K-$180K |
-| Substance Abuse | substance-abuse | SUD treatment centers | $115K-$165K |
-| New Graduate | new-grad | First clinical positions | $105K-$145K |
-| Per Diem | per-diem | PRN/as-needed shifts | $70-$120/hr |
-| Full-Time | full-time | Permanent salaried positions | $120K-$190K |
-| Part-Time | part-time | Flexible schedules | $55-$95/hr |
-| Contract | contract | 1099/locum tenens assignments | $85-$160/hr |
-| Entry-Level | entry-level | 0-2 years experience | $105K-$145K |
-| Mid-Career | mid-career | 3-7 years experience | $135K-$175K |
-| Senior | senior | 7+ years, leadership roles | $160K-$220K+ |
-| Hospital | hospital | Hospital system positions | $125K-$180K |
-| Private Practice | private-practice | Independent/group practice | $140K-$250K+ |
-| Community Health | community-health | FQHC and public health | $110K-$160K |
-| VA | va | Veterans Affairs federal positions | $120K-$170K |
-| Geriatric | geriatric | Older adult psychiatric care | $125K-$180K |
-| Veterans | veterans | Military/veteran mental health | $120K-$175K |
-| LGBTQ+ | lgbtq | LGBTQ+ affirming care | $120K-$175K |
-| Crisis | crisis | Psychiatric emergency/crisis | $130K-$195K |
+| Family Practice | family-practice | FNP — primary care across lifespan | $105K-$135K |
+| Adult-Gerontology | adult-gerontology | AGNP — adult and older adult focus | $115K-$145K |
+| Pediatric | pediatric | PNP — child and adolescent | $105K-$135K |
+| Neonatal | neonatal | NNP — NICU and high-acuity newborns | $130K-$185K |
+| Women's Health | women-health | WHNP — OB/GYN focused | $110K-$140K |
+| Acute Care | acute-care | ACNP — hospital and high-acuity | $120K-$155K |
+| Emergency | emergency | ENP — emergency department NPs | $125K-$170K |
+| Psychiatric Mental Health | psychiatric-mental-health | PMHNP — mental health and prescribing | $130K-$180K |
+| Geriatric | geriatric | Older adult focused | $110K-$150K |
+| Oncology | oncology | Cancer care NPs | $120K-$165K |
+| Cardiology | cardiology | Heart failure, EP, structural | $125K-$170K |
+| Primary Care | primary-care | Generalist NP in primary care | $105K-$140K |
+| Hospitalist | hospitalist | Inpatient generalist | $130K-$170K |
+| Dermatology | dermatology | Derm NPs and aesthetics | $125K-$180K |
+| Orthopedic | orthopedic | Ortho NPs, sports med | $120K-$165K |
+| Anesthesia (CRNA) | anesthesia | Certified Registered Nurse Anesthetist | $200K-$350K |
+| Midwifery (CNM) | midwifery | Certified Nurse Midwife | $115K-$150K |
+| Clinical Nurse Specialist | clinical-nurse-specialist | CNS — population-focused expert | $100K-$140K |
+
+#### Setting/Modality Categories
+Remote, Telehealth, Inpatient, Outpatient, Hospital, Private Practice, Community Health, VA, Correctional, Urgent Care, Home Health, Travel.
+
+#### Job Type Categories
+Full-Time, Part-Time, Contract, Per Diem, Locum Tenens, 1099.
+
+#### Experience Categories
+New Grad, Entry Level, Mid-Career, Senior.
+
+#### Population Categories
+Veterans, LGBTQ+ affirming.
 
 ### City Data (4,135 cities)
 Each city page includes:
 - **Population** (2020 Census)
 - **Cost of Living Index** (national average = 100)
 - **Median Household Income**
-- **Mental Health Shortage Status** (HPSA designation)
 - **Healthcare Systems** (major employers in the area)
 - **Metro Area** affiliation
 - **Practice Authority** (Full/Reduced/Restricted by state)
@@ -68,60 +73,74 @@ Each state has:
 - Job listings by category
 - City-level breakdowns
 
-## PMHNP Career Information
+## NP Career Information
 
-### What is a PMHNP?
-A Psychiatric Mental Health Nurse Practitioner (PMHNP) is an Advanced Practice Registered Nurse (APRN) specializing in mental health care. PMHNPs can:
-- Diagnose psychiatric disorders
-- Prescribe psychiatric medications
-- Provide psychotherapy
+### What is a Nurse Practitioner (NP)?
+A Nurse Practitioner is an Advanced Practice Registered Nurse (APRN) who holds a Master's (MSN) or Doctoral (DNP) degree on top of a BSN. NPs:
+- Assess, diagnose, and manage patient care
 - Order and interpret diagnostic tests
-- Manage patient care independently (in full practice authority states)
+- Prescribe medications including controlled substances (in all 50 states)
+- Practice independently in Full Practice Authority states (27 states + DC)
+
+NPs train in one of seven population foci: Family, Adult-Gerontology Primary Care, Adult-Gerontology Acute Care, Pediatric Primary Care, Pediatric Acute Care, Neonatal, Women's Health, or Psychiatric-Mental Health.
+
+### Other APRN Roles
+The NP Hiring platform also covers the broader APRN cohort:
+- **CRNA** (Certified Registered Nurse Anesthetist) — anesthesia specialists, highest-paid APRN role
+- **CNM** (Certified Nurse Midwife) — pregnancy and primary women's health
+- **CNS** (Clinical Nurse Specialist) — population-focused clinical experts
 
 ### Education Requirements
-1. Bachelor of Science in Nursing (BSN)
-2. Master's or Doctoral degree in Psychiatric-Mental Health Nursing (MSN or DNP)
-3. National certification from ANCC (American Nurses Credentialing Center)
-4. State RN and APRN licensure
-5. DEA registration for prescribing controlled substances
+1. Bachelor of Science in Nursing (BSN) — 4 years
+2. RN experience (1–2 years, strongly recommended)
+3. Master's (MSN) or Doctoral (DNP) degree in chosen specialty — 2–4 years
+4. National certification from ANCC or AANP (specialty-dependent)
+5. State RN and APRN licensure
+6. DEA registration for prescribing controlled substances
 
 ### Salary Data (2026)
-- **National Average**: $155,000/year
-- **Entry-Level**: $105,000–$145,000
-- **Mid-Career**: $135,000–$175,000
-- **Senior/Leadership**: $160,000–$220,000+
-- **Private Practice**: $140,000–$250,000+
-- **Highest-Paying States**: California, New York, Massachusetts, Washington, Oregon
-- **Highest Demand**: Rural areas, HPSAs, states with full practice authority
+- **National Average (NP)**: $128,490 (BLS, May 2024)
+- **FNP**: $105,000–$135,000
+- **AGNP**: $115,000–$145,000
+- **PMHNP**: $130,000–$180,000
+- **ACNP**: $120,000–$155,000
+- **CRNA**: $200,000–$350,000+
+- **Private Practice**: $180,000–$300,000+
+- **Highest-Paying States**: California, Washington, Oregon, Massachusetts, New York
+- **Highest Demand**: Rural areas, HPSAs, states with Full Practice Authority
 
 ### Practice Authority by State Type
-- **Full Practice Authority** (28 states): PMHNPs practice independently
-- **Reduced Practice Authority** (16 states): Collaborative agreement required
-- **Restricted Practice Authority** (6 states): Physician supervision required
+- **Full Practice Authority** (27 states + DC): NPs practice independently without physician oversight
+- **Reduced Practice Authority** (15 states): Collaborative agreement required for at least one element of practice
+- **Restricted Practice Authority** (8 states): Career-long physician supervision required
 
 ### Industry Trends (2026)
-- 45% increase in PMHNP job postings since 2024
-- Telehealth positions growing 60% year-over-year
-- Average time to fill a PMHNP position: 89 days
-- 70% of PMHNPs receive sign-on bonuses ($10K–$25K average)
-- Student loan repayment programs available at 40% of positions
+- BLS projects 38% NP employment growth through 2032 (much faster than average)
+- Telehealth positions growing year-over-year
+- Multi-state APRN Compact licensure adoption accelerating remote NP options
+- Sign-on bonuses common across most specialties ($5K–$25K typical)
+- Student loan repayment programs available (NHSC, Nurse Corps, VA EDRP)
 
 ## API & Data Access
 
-### Sitemap
-- Primary: https://nphiring.com/sitemap.xml
-- City sitemaps: https://nphiring.com/api/sitemaps/cities/{0-9}
-- Sitemap index: https://nphiring.com/api/sitemaps/index
+### Structured Data
+- JobPosting Schema.org JSON-LD on every job page
+- BreadcrumbList JSON-LD on category pages
+- FAQPage JSON-LD on /faq and category pages with FAQ data
+- Organization JSON-LD in root layout
 
 ### Feeds
-- RSS: https://nphiring.com/feed.xml (if available)
+- RSS: https://nphiring.com/feed.xml
+- Dynamic XML sitemap: https://nphiring.com/sitemap.xml
+- IndexNow integration for Bing and Yandex
 - Job alerts: https://nphiring.com/job-alerts
 
 ## Contact & Legal
 
 - **Website**: https://nphiring.com
 - **Email**: contact@nphiring.com
-- **LinkedIn**: https://www.linkedin.com/company/pmhnpjobs
-- **Facebook**: https://www.facebook.com/nphiring
+- **Support**: support@nphiring.com
+- **Privacy**: privacy@nphiring.com
+- **Security**: security@nphiring.com
 - **Privacy Policy**: https://nphiring.com/privacy
 - **Terms of Service**: https://nphiring.com/terms

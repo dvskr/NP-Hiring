@@ -214,8 +214,8 @@ function styled410(opts: {
 <body>
 <header class="header">
   <a href="/" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;">
-    <span class="logo-mark">P</span>
-    <span class="logo-text">PMHNP <span class="accent">Hiring</span></span>
+    <span class="logo-mark">N</span>
+    <span class="logo-text">NP <span class="accent">Hiring</span></span>
   </a>
 </header>
 <main>
@@ -224,7 +224,7 @@ function styled410(opts: {
     <h1>${safe(opts.heading)}</h1>
     <p class="subtext">${safe(opts.subtext)}</p>
     <div class="cta-row">
-      <a href="/jobs" class="cta-primary">Browse all PMHNP jobs &rarr;</a>
+      <a href="/jobs" class="cta-primary">Browse all NP jobs &rarr;</a>
       <a href="/" class="cta-ghost">Back to home</a>
     </div>
   </section>
@@ -441,7 +441,7 @@ export async function middleware(request: NextRequest) {
                 return styled410({
                     badge: 'Position Removed',
                     heading: 'This position is no longer available',
-                    subtext: "This job listing has been permanently removed. Don't worry — we have hundreds of similar PMHNP positions open right now.",
+                    subtext: "This job listing has been permanently removed. Don't worry — we have hundreds of similar NP positions open right now.",
                     title: 'Position Removed — NP Hiring',
                 });
             }
@@ -470,7 +470,7 @@ export async function middleware(request: NextRequest) {
                             return styled410({
                                 badge: 'Position Removed',
                                 heading: 'This position is no longer available',
-                                subtext: "This job listing has been permanently removed. Don't worry — we have hundreds of similar PMHNP positions open right now.",
+                                subtext: "This job listing has been permanently removed. Don't worry — we have hundreds of similar NP positions open right now.",
                                 title: 'Position Removed — NP Hiring',
                             });
                         }
@@ -616,7 +616,7 @@ export async function middleware(request: NextRequest) {
         // /jobs/state/{x} — state listing
         if (segs.length === 3 && segs[1] === 'state') {
             if (!resolveStateSlug(segs[2])) {
-                return gone410(`No PMHNP listings exist for the state "${segs[2]}".`);
+                return gone410(`No NP listings exist for the state "${segs[2]}".`);
             }
         }
         // /jobs/metro/{x} — metro landing page
@@ -635,14 +635,14 @@ export async function middleware(request: NextRequest) {
                 if (STATE_ELIGIBLE_TAXONOMIES.has(cat)) {
                     // Valid state-eligible taxonomy — tail must be a real state slug.
                     if (!resolveStateSlug(tail)) {
-                        return gone410(`No PMHNP listings exist for "${cat}" in "${tail}".`);
+                return gone410(`No NP listings exist for "${cat}" in "${tail}".`);
                     }
                 } else if (CITY_ELIGIBLE_TAXONOMIES.has(cat)) {
                     // City-only taxonomy used in state-shaped URL — invalid shape.
                     return gone410(`The URL pattern /jobs/${cat}/${tail} is not a valid listing (use /jobs/${cat}/city/{slug}).`);
                 } else {
                     // Unknown taxonomy entirely — never a valid page.
-                    return gone410(`The category "${cat}" is not a recognized PMHNP listing.`);
+                    return gone410(`The category "${cat}" is not a recognized NP listing.`);
                 }
             }
         }
@@ -651,10 +651,10 @@ export async function middleware(request: NextRequest) {
             const cat = segs[1];
             const slug = segs[3];
             if (!CITY_ELIGIBLE_TAXONOMIES.has(cat)) {
-                return gone410(`The category "${cat}" is not a recognized PMHNP city listing.`);
+                return gone410(`The category "${cat}" is not a recognized NP city listing.`);
             }
             if (!isKnownCitySlug(slug)) {
-                return gone410(`No PMHNP city page exists for "${slug}".`);
+                return gone410(`No NP city page exists for "${slug}".`);
             }
         }
         // /jobs/city/{slug} — generic city listing

@@ -10,7 +10,7 @@ interface VideoJsonLdProps {
  *
  * GSC Fix: previously we did `${brand.baseUrl}${video.thumbnail}` even when
  * `video.thumbnail` was already an absolute Supabase URL — producing
- * `https://nphiring.comhttps://sggccmqjzuimwlahocmy.supabase.co/...`
+ * `https://nphiring.comhttps://ytpmrlpnpbdylujbtgij.supabase.co/...`
  * which GSC flagged as "Invalid URL in field 'thumbnailUrl'" and which
  * disqualified the page from VideoObject rich results.
  */
@@ -60,7 +60,7 @@ export default function VideoJsonLd({ pathname }: VideoJsonLdProps) {
             name: brand.name,
             logo: {
                 '@type': 'ImageObject',
-                url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pmhnp-hiring-logo.webp',
+                url: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/pmhnp-hiring-logo.webp',
             },
         },
     };

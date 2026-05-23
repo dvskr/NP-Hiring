@@ -42,7 +42,10 @@ function sectionHeadV2(text: string): string {
 function statBlockV2(value: string, label: string): string {
   return `<td width="33%" style="padding:16px 12px;background:#ffffff;text-align:center;border-radius:12px;border:1px solid #E8ECE9;box-shadow:0 2px 6px rgba(0,0,0,0.04);"><div style="font-family:${SANS_V2};font-size:30px;font-weight:800;color:${V2.teal};letter-spacing:-0.5px;">${value}</div><div style="font-family:${SANS_V2};font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:1.5px;margin-top:6px;">${label}</div></td>`;
 }
-const SALARY_GUIDE_URL = process.env.SALARY_GUIDE_URL || 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/resources/PMHNP_Salary_Guide_2026.pdf';
+// Fallback removed (was pointing at the deleted pmhnp Supabase project).
+// Set SALARY_GUIDE_URL in env to wire the salary-guide email; empty string
+// disables the download link gracefully in the email body.
+const SALARY_GUIDE_URL = process.env.SALARY_GUIDE_URL || '';
 
 // ── Sender addresses — separate transactional from marketing ──
 // Defaults match config/brand.ts; runtime values come from env (validated in lib/env.ts).

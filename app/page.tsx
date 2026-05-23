@@ -75,7 +75,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: `Browse ${jobCountDisplay} nurse practitioner jobs. Remote, hybrid, and in-person positions with salary transparency.`,
       images: [
         {
-          url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp',
+          url: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp',
           width: 1280,
           height: 900,
           alt: `NP Hiring job board homepage showing ${jobCountDisplay} nurse practitioner jobs from ${uniqueEmployerCount}+ companies across 50 states`,
@@ -84,7 +84,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     twitter: {
       card: 'summary_large_image',
-      images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp'],
+      images: ['https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp'],
     },
     alternates: {
       canonical: brand.baseUrl,

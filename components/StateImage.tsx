@@ -16,10 +16,10 @@ import { useState } from 'react';
  * components/TopStatesList.tsx, components/LicensureChecker.tsx.
  */
 
-const STATE_IMAGE_BASE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/states';
+const STATE_IMAGE_BASE = 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/states';
 // Verified 200 at audit time — used as the universal fallback so a single
 // missing per-state asset doesn't cascade into a broken-image hit.
-const FALLBACK_URL = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp';
+const FALLBACK_URL = 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp';
 
 type FillProps = {
     fill: true;

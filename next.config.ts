@@ -139,21 +139,43 @@ const nextConfig: NextConfig = {
   // SEO: 301 redirects to consolidate cannibalized pages
   async redirects() {
     return [
-      // Consolidate salary content — 3 pages were splitting 708 impressions
+      // Salary guide page was deleted in phase 2 of the NP fork. Redirect
+      // every salary-guide reference to /resources (the parent index) until
+      // an NP-broad salary guide is authored. This catches:
+      //  • inbound links from blog/footer
+      //  • old PMHNP blog post URLs
+      //  • crawler-invented patterns like /salary-guide/city/<x>
+      {
+        source: '/salary-guide',
+        destination: '/resources',
+        permanent: true,
+      },
+      {
+        source: '/salary-guide/:path*',
+        destination: '/resources',
+        permanent: true,
+      },
       {
         source: '/blog/pmhnp-salary-guide-2026',
-        destination: '/salary-guide',
+        destination: '/resources',
         permanent: true,
       },
       {
         source: '/blog/average-pmhnp-salary-by-state-2026-real-numbers',
-        destination: '/salary-guide',
+        destination: '/resources',
         permanent: true,
       },
-      // Consolidate new-grad job routes
+      // Consolidate new-grad job routes — point to /jobs/c/new-grad
+      // (category landing route moved to /jobs/c/<slug> to resolve [slug]
+      // conflict; old /jobs/new-grad direct dir was deleted in phase 2).
       {
         source: '/new-grad',
-        destination: '/jobs/new-grad',
+        destination: '/jobs/c/new-grad',
+        permanent: true,
+      },
+      {
+        source: '/jobs/new-grad',
+        destination: '/jobs/c/new-grad',
         permanent: true,
       },
       // Crawler-discovered URL pattern that never existed; canonical route is /jobs/city/[slug]
@@ -162,10 +184,21 @@ const nextConfig: NextConfig = {
         destination: '/jobs/city/:slug',
         permanent: true,
       },
-      // Bots invent /salary-guide/city/<slug>; canonical content lives at /salary-guide
+      // /for-programs was deleted in phase 2 — PMHNP-specific feature.
       {
-        source: '/salary-guide/city/:slug*',
-        destination: '/salary-guide',
+        source: '/for-programs',
+        destination: '/for-employers',
+        permanent: true,
+      },
+      {
+        source: '/for-programs/:path*',
+        destination: '/for-employers',
+        permanent: true,
+      },
+      // /resources/fpa-guide deleted — psych-specific. Redirect to resources index.
+      {
+        source: '/resources/fpa-guide',
+        destination: '/resources',
         permanent: true,
       },
       // Legacy/expected /register path → canonical /signup

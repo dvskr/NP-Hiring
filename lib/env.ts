@@ -25,8 +25,13 @@ const envSchema = z.object({
     EMAIL_FROM: z.string().optional().default('NP Hiring <noreply@nphiring.com>'),
     EMAIL_FROM_MARKETING: z.string().optional().default('NP Hiring <alerts@nphiring.com>'),
     EMAIL_REPLY_TO: z.string().optional().default('support@nphiring.com'),
-    EMAIL_ASSETS_URL: z.string().url().optional().default('https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/email-assets'),
-    SALARY_GUIDE_URL: z.string().url().optional().default('https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/resources/PMHNP_Salary_Guide_2026.pdf'),
+    // No defaults here — old defaults pointed at the deleted pmhnp Supabase
+    // project (ytpmrlpnpbdylujbtgij) which would 404 in production. Must be
+    // set explicitly in .env.local + Vercel env for the email/salary-guide
+    // features to work. Empty string is acceptable for soft launch (emails
+    // render without hero asset; salary guide download link is just missing).
+    EMAIL_ASSETS_URL: z.string().optional().default(''),
+    SALARY_GUIDE_URL: z.string().optional().default(''),
     // Required so the Resend webhook can verify Svix signatures. Webhook returns 500 at
     // runtime if missing — better to fail at startup so misconfiguration is loud.
     RESEND_WEBHOOK_SECRET: z.string().optional(),

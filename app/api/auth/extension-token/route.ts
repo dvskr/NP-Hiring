@@ -3,10 +3,15 @@ import { createClient } from '@/lib/supabase/server';
 import { SignJWT } from 'jose';
 import { prisma } from '@/lib/prisma';
 
-const JWT_SECRET = process.env.EXTENSION_JWT_SECRET || process.env.NEXTAUTH_SECRET;
+// Require an explicit EXTENSION_JWT_SECRET — fail loud rather than fall
+// back to NEXTAUTH_SECRET. The previous fallback meant an attacker who
+// could forge a JWT signed with NEXTAUTH_SECRET could impersonate any
+// user to the extension; isolating the extension's signing key removes
+// that lateral-movement risk.
+const JWT_SECRET = process.env.EXTENSION_JWT_SECRET;
 
 if (!JWT_SECRET) {
-    console.error('CRITICAL: Neither EXTENSION_JWT_SECRET nor NEXTAUTH_SECRET is set. Extension tokens will not work.');
+    console.error('CRITICAL: EXTENSION_JWT_SECRET is not set. Extension token route will reject all requests.');
 }
 
 export async function GET() {

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'NP Hiring',
     images: [{
-      url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp',
+      url: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp',
       width: 1280,
       height: 900,
       alt: 'Companies hiring NPs',
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Companies Hiring NPs',
     description: 'Browse 3,000+ employers actively hiring nurse practitioners.',
-    images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp'],
+    images: ['https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp'],
   },
   alternates: {
     canonical: `${brand.baseUrl}/companies`,

@@ -32,7 +32,7 @@ function buildStateFaqs({
         {
             question: `How many NP jobs are available in ${stateName}?`,
             answer: totalJobs > 0
-                ? `There are currently ${totalJobs} NP job openings in ${stateName}. New positions are added daily as healthcare facilities, telehealth companies, and private practices post openings for psychiatric mental health nurse practitioners.`
+                ? `There are currently ${totalJobs} NP job openings in ${stateName}. New positions are added daily as hospitals, clinics, telehealth platforms, and private practices post openings for nurse practitioners across every specialty — family practice, adult-gerontology, pediatric, women's health, acute care, psychiatric mental health, and more.`
                 : `While there are no current NP openings specifically in ${stateName}, new positions are added daily. Consider setting up a job alert to be notified when jobs become available, or explore remote/telehealth positions that may allow you to work from ${stateName}.`,
         },
         {

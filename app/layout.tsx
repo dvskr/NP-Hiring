@@ -62,14 +62,21 @@ export const metadata: Metadata = {
   description: 'Browse thousands of NP jobs updated daily. Remote, telehealth & in-person nurse practitioner positions with salary transparency. Free for job seekers.',
 
   keywords: [
-    'NP jobs',
     'nurse practitioner jobs',
-    'mental health NP jobs',
-    'telepsychiatry jobs',
+    'NP jobs',
+    'APRN jobs',
+    'family nurse practitioner jobs',
+    'FNP jobs',
+    'AGNP jobs',
+    'PMHNP jobs',
+    'acute care NP jobs',
+    "women's health NP jobs",
+    'pediatric NP jobs',
+    'CRNA jobs',
+    'certified nurse midwife jobs',
     'remote NP positions',
-    'psychiatric nursing jobs',
+    'telehealth nurse practitioner',
     'NP career',
-    'nurse practitioner psychiatry',
   ],
 
   authors: [{ name: brand.name }],
@@ -176,8 +183,8 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* Preconnect to Supabase CDN for hero/LCP image */}
-        <link rel="preconnect" href="https://sggccmqjzuimwlahocmy.supabase.co" crossOrigin="" />
-        <link rel="dns-prefetch" href="https://sggccmqjzuimwlahocmy.supabase.co" />
+        <link rel="preconnect" href="https://ytpmrlpnpbdylujbtgij.supabase.co" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://ytpmrlpnpbdylujbtgij.supabase.co" />
         {/* AI & GEO Discovery Links */}
         <link rel="author" href="/humans.txt" />
         <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM Site Information" />

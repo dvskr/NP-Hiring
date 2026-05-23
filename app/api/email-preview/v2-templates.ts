@@ -354,7 +354,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
     desc: 'Sent when a user requests the salary guide',
     fn: () => simple('hero-salary-guide.png', 'Your 2026 Salary Guide',
       'Your comprehensive PMHNP compensation report is ready. It includes salary ranges across all 50 states, remote versus in-person pay differentials, and negotiation strategies.',
-      'Download Salary Guide (PDF)', 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/resources/PMHNP_Salary_Guide_2026.pdf',
+      'Download Salary Guide (PDF)', 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/resources/PMHNP_Salary_Guide_2026.pdf',
       'Your 2026 PMHNP Salary Guide is ready.',
       `${spacerV2(16)}${secondary(`Looking for opportunities? <a href="${BASE_URL}/jobs" style="color:${V2.teal};text-decoration:underline;">Browse open positions</a>.`)}`),
   },

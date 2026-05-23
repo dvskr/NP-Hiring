@@ -22,9 +22,9 @@ export const metadata: Metadata = {
     description:
         'NP career guides, salary insights, and job market trends from the #1 nurse practitioner job board.',
     openGraph: {
-        images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp', width: 1280, height: 900, alt: 'NP career blog with expert guides on salary negotiation, state spotlights, and job market insights' }],
+        images: [{ url: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp', width: 1280, height: 900, alt: 'NP career blog with expert guides on salary negotiation, state spotlights, and job market insights' }],
     },
-    twitter: { card: 'summary_large_image', images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp'] },
+    twitter: { card: 'summary_large_image', images: ['https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp'] },
     alternates: {
         canonical: `${brand.baseUrl}/blog`,
     },
@@ -425,9 +425,9 @@ export default async function BlogIndexPage({
                     </h2>
                     <div className="blog-cta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                         {[
-                            { href: '/salary-guide', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp', title: 'Salary Guide', desc: '2026 data with state breakdowns' },
-                            { href: '/jobs', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-trending.webp', title: 'Browse Jobs', desc: '10,000+ NP positions' },
-                            { href: '/resources', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-chart.webp', title: 'Resources', desc: 'Licensure guides & tools' },
+                            { href: '/salary-guide', icon: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp', title: 'Salary Guide', desc: '2026 data with state breakdowns' },
+                            { href: '/jobs', icon: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-trending.webp', title: 'Browse Jobs', desc: '10,000+ NP positions' },
+                            { href: '/resources', icon: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-chart.webp', title: 'Resources', desc: 'Licensure guides & tools' },
                         ].map(item => (
                             <Link key={item.href} href={item.href} className="blog-cta-card" style={{
                                 ...clayCard, padding: '28px 22px', textDecoration: 'none',

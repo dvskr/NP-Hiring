@@ -163,8 +163,15 @@ export async function PATCH(request: NextRequest) {
     const authHeader = request.headers.get('Authorization');
     const apiKey = process.env.BLOG_API_KEY;
     if (!apiKey) return NextResponse.json({ error: 'BLOG_API_KEY not configured' }, { status: 500 });
-    const providedKey = authHeader?.replace('Bearer ', '');
-    if (!providedKey || providedKey !== apiKey) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const providedKey = authHeader?.replace('Bearer ', '') || '';
+    // Timing-safe comparison — guards against side-channel inference of
+    // BLOG_API_KEY by an attacker measuring response time. Same pattern as
+    // the POST handler above.
+    const { timingSafeEqual } = await import('node:crypto');
+    const a = Buffer.from(providedKey);
+    const b = Buffer.from(apiKey);
+    const keysMatch = a.length === b.length && timingSafeEqual(a, b);
+    if (!keysMatch) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     try {
         const body = await request.json();

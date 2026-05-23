@@ -2,7 +2,7 @@
 
 ## Context
 
-Full end-to-end audit of the job ingestion pipeline (fetch → normalize → dedup → persist → enrich → expire → deindex) for the PMHNP Job Board (Next.js + Prisma + Postgres on Supabase). Includes a live snapshot of the production database (`sggccmqjzuimwlahocmy.supabase.co`, 31,851 jobs) sampled 2026-04-28.
+Full end-to-end audit of the job ingestion pipeline (fetch → normalize → dedup → persist → enrich → expire → deindex) for the PMHNP Job Board (Next.js + Prisma + Postgres on Supabase). Includes a live snapshot of the production database (`ytpmrlpnpbdylujbtgij.supabase.co`, 31,851 jobs) sampled 2026-04-28.
 
 This is an **analysis/research task** — no code changes are proposed. The deliverable is the report below.
 
@@ -360,4 +360,4 @@ SELECT source_provider, COUNT(*) FILTER (WHERE is_published) AS pub
 FROM jobs GROUP BY source_provider ORDER BY pub DESC;
 ```
 
-Snapshot taken: **2026-04-28** against Supabase project `sggccmqjzuimwlahocmy`.
+Snapshot taken: **2026-04-28** against Supabase project `ytpmrlpnpbdylujbtgij`.

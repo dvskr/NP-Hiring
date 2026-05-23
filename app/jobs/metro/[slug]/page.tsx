@@ -200,7 +200,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor={metro.practiceAuthority === 'Full' ? '#86c1a8' : metro.practiceAuthority === 'Reduced' ? '#c1a886' : '#c1868a'}
-        heroImage="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp"
+        heroImage="https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp"
         heroAlt={`NP jobs in ${metro.city}, ${metro.stateCode}`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', metro.state, metro.city]}
@@ -374,13 +374,13 @@ export default async function MetroLandingPage({ params }: PageProps) {
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
-                <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/bento_state_practice.webp" alt={`${metro.state} practice authority`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src="https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/bento_state_practice.webp" alt={`${metro.state} practice authority`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
             <div className="metro-bento-hero-2 metro-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/bento_state_growth.webp" alt="Metro growth" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
+                <Image src="https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/bento_state_growth.webp" alt="Metro growth" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
               </div>
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Cost of Living</h3>
@@ -392,10 +392,10 @@ export default async function MetroLandingPage({ params }: PageProps) {
 
             {/* ROW 2: 4 compact cards with clay icons */}
             {[
-              { icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp', text: metro.whyThisMetro[0] },
-              { icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_hospital.webp', text: metro.whyThisMetro[1] },
-              { icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_community.webp', text: metro.whyThisMetro[2] },
-              { icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp', text: metro.whyThisMetro[3] },
+              { icon: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp', text: metro.whyThisMetro[0] },
+              { icon: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_hospital.webp', text: metro.whyThisMetro[1] },
+              { icon: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_community.webp', text: metro.whyThisMetro[2] },
+              { icon: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp', text: metro.whyThisMetro[3] },
             ].map((card, i) => (
               <div key={i} className="metro-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
                 <Image src={card.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -413,7 +413,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/bento_state_salary.webp" alt={`${metro.city} NP salary`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src="https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/bento_state_salary.webp" alt={`${metro.city} NP salary`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
@@ -477,12 +477,12 @@ export default async function MetroLandingPage({ params }: PageProps) {
           </h2>
           <div className="metro-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
             {[
-              { href: `/jobs/state/${metro.stateSlug}`, label: `${metro.state} Jobs`, sub: `All ${metro.stateCode} positions`, icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp' },
-              { href: '/jobs/remote', label: 'Remote', sub: 'Work from anywhere', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp' },
-              { href: '/jobs/new-grad', label: 'New Grad', sub: 'Entry-level roles', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_newgrad.webp' },
-              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual patient care', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp' },
-              { href: `/salary-guide/${metro.stateSlug}`, label: 'Salary Guide', sub: `${metro.state} comp data`, icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp' },
-              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp' },
+              { href: `/jobs/state/${metro.stateSlug}`, label: `${metro.state} Jobs`, sub: `All ${metro.stateCode} positions`, icon: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp' },
+              { href: '/jobs/remote', label: 'Remote', sub: 'Work from anywhere', icon: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp' },
+              { href: '/jobs/new-grad', label: 'New Grad', sub: 'Entry-level roles', icon: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_newgrad.webp' },
+              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual patient care', icon: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp' },
+              { href: `/salary-guide/${metro.stateSlug}`, label: 'Salary Guide', sub: `${metro.state} comp data`, icon: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp' },
+              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp' },
             ].map(c => (
               <Link key={c.href} href={c.href} className="metro-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
                 <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />

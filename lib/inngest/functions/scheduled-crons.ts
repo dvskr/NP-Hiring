@@ -112,7 +112,12 @@ const CRON_JOBS: CronJob[] = [
  * Requires NEXT_PUBLIC_BASE_URL + CRON_SECRET to be set.
  */
 async function invokeCronEndpoint(path: string): Promise<{ ok: boolean; status: number; body: string }> {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    if (!baseUrl) {
+        // Fail loud in production — silent localhost fallback would have
+        // Inngest cron-functions POST to nowhere in the deployed app.
+        throw new Error('NEXT_PUBLIC_BASE_URL not set — cron functions cannot resolve their target URL');
+    }
     const secret = process.env.CRON_SECRET;
     if (!secret) {
         throw new Error('CRON_SECRET not set — cannot invoke cron endpoint');

@@ -102,13 +102,13 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
       // returns 404 from Supabase, breaking every social share of /jobs and
       // every filtered jobs URL. Pointing at the existing homepage asset
       // until a dedicated OG image is uploaded.
-      images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp', width: 1280, height: 900, alt: 'NP Job Board — Browse nurse practitioner jobs' }],
+      images: [{ url: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp', width: 1280, height: 900, alt: 'NP Job Board — Browse nurse practitioner jobs' }],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp'],
+      images: ['https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp'],
     },
     alternates: {
       canonical,

@@ -7,7 +7,7 @@ import AboutClient from './AboutClient';
 
 export const revalidate = 3600;
 
-const ABOUT_OG_IMAGE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/about-pmhnp-hiring-platform.webp';
+const ABOUT_OG_IMAGE = 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/pages/about-pmhnp-hiring-platform.webp';
 
 export const metadata: Metadata = {
   title: 'About Us - The #1 Job Board for Nurse Practitioners',

@@ -9,7 +9,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 // minimum; bump sooner when content changes substantively.
 const PUBLISHED_AT = '2026-03-19';
 const LAST_REVIEWED = '2026-03-19';
-const HERO_IMAGE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp';
+const HERO_IMAGE = 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp';
 
 export const metadata: Metadata = {
   title: '1099 vs W2 for NPs — Complete Compensation Comparison 2026',
