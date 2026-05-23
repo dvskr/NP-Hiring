@@ -4,7 +4,7 @@ import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
 import { buildWhereClause, parseFiltersFromParams } from '@/lib/filters';
 import { slugify } from '@/lib/utils';
-import JobsPageClient from '../JobsPageClient';
+import JobsPageClient from '../../JobsPageClient';
 import { Job } from '@/lib/types';
 import {
     CANONICAL_CATEGORY_SLUGS,
@@ -84,7 +84,7 @@ export async function generateMetadata({ params, searchParams }: CategoryPagePro
     const title = `${label} NP Jobs — ${jobCountDisplay} Open Positions`;
     const description = `Browse ${jobCountDisplay} ${label.toLowerCase()} nurse practitioner jobs across the US. Filter by state, salary, mode, and job type. Updated daily.`;
 
-    const basePath = `/jobs/${category}`;
+    const basePath = `/jobs/c/${category}`;
     const canonical = isPaginated && !hasUserFilters
         ? `${brand.baseUrl}${basePath}?page=${pageNum}`
         : `${brand.baseUrl}${basePath}`;

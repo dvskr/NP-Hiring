@@ -4,7 +4,7 @@ import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
 import { buildWhereClause, parseFiltersFromParams } from '@/lib/filters';
 import { slugify } from '@/lib/utils';
-import JobsPageClient from '../../../JobsPageClient';
+import JobsPageClient from '../../../../JobsPageClient';
 import { Job } from '@/lib/types';
 import {
     CANONICAL_CATEGORY_SLUGS,
@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: CategoryCityPageProps): Promi
 
     const title = `${label} NP Jobs in ${city.name}, ${city.stateCode} — ${totalJobs} Open`;
     const description = `Browse ${totalJobs} ${label.toLowerCase()} nurse practitioner jobs in ${city.name}, ${city.stateCode}. Population: ${city.population.toLocaleString()}. Updated daily.`;
-    const canonical = `${brand.baseUrl}/jobs/${category}/city/${slug}`;
+    const canonical = `${brand.baseUrl}/jobs/c/${category}/city/${slug}`;
 
     return {
         title,
