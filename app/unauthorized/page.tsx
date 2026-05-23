@@ -12,7 +12,7 @@ const clayCard = {
 };
 
 export const metadata = {
-  title: 'Unauthorized Access | PMHNP Hiring',
+  title: 'Unauthorized Access | NP Hiring',
 };
 
 export default function UnauthorizedPage() {

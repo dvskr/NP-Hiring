@@ -25,7 +25,7 @@
 import { logger } from './logger';
 
 const ENDPOINT = 'https://api.indexnow.org/IndexNow';
-const HOST = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com';
+const HOST = process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com';
 
 function getKey(): string | null {
   const key = process.env.INDEXNOW_KEY;

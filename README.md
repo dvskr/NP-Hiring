@@ -11,7 +11,7 @@
 ![Stripe](https://img.shields.io/badge/Stripe-Payments-635bff?style=flat-square&logo=stripe)
 ![Vercel](https://img.shields.io/badge/Vercel-Deployed-black?logo=vercel&style=flat-square)
 
-**Live:** [https://pmhnphiring.com](https://pmhnphiring.com)
+**Live:** [https://nphiring.com](https://nphiring.com)
 
 ---
 
@@ -1000,7 +1000,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
 SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 
 # App URL
-NEXT_PUBLIC_BASE_URL="http://localhost:3000"  # or https://pmhnphiring.com
+NEXT_PUBLIC_BASE_URL="http://localhost:3000"  # or https://nphiring.com
 ```
 
 ### Job Aggregator APIs
@@ -1018,7 +1018,7 @@ USAJOBS_USER_AGENT="your-email@example.com"
 
 ```env
 RESEND_API_KEY="re_xxxxxxxxxxxxx"
-EMAIL_FROM="PMHNP Hiring <noreply@pmhnphiring.com>"
+EMAIL_FROM="NP Hiring <noreply@nphiring.com>"
 DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."  # Ingestion notifications
 ```
 
@@ -1069,7 +1069,7 @@ Tests in `tests/` using Vitest:
 1. Push to `main` branch → auto-deploys application code to Vercel
 2. **Environment Variables**: Set all required vars in Vercel Dashboard → Settings → Environment Variables
 3. **Cron Jobs**: Auto-configured from `vercel.json` (55 entries)
-4. **Stripe Webhook**: Set endpoint to `https://pmhnphiring.com/api/webhooks/stripe`
+4. **Stripe Webhook**: Set endpoint to `https://nphiring.com/api/webhooks/stripe`
 5. **Deployment Protection**: Set to "Standard Protection" (protects preview deploys, not production custom domain)
 
 ### Production Migrations (GitHub Actions)

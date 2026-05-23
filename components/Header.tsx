@@ -217,7 +217,7 @@ export default function Header() {
                   above the fold on every page. */}
               <Image
                 src="/logo.png"
-                alt="PMHNP Hiring"
+                alt="NP Hiring"
                 width={56}
                 height={56}
                 priority

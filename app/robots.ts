@@ -200,7 +200,7 @@ const SEO_CRAWLERS = [
 ] as const
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com'
 
   // P2.3: nag the logs if we're past the auth-pages re-block deadline.
   // The intent is for a human to verify de-indexing in GSC and then

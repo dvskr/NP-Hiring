@@ -276,7 +276,7 @@ function FeedbackRatingCard() {
                 Rate Your Experience
             </h3>
             <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 14px', lineHeight: 1.4 }}>
-                How would you rate PMHNP Hiring so far?
+                How would you rate NP Hiring so far?
             </p>
 
             {/* Stars */}
@@ -409,7 +409,7 @@ function TestimonialCard({ firstName }: { firstName: string | null }) {
             <textarea
                 value={review}
                 onChange={(e) => setReview(e.target.value)}
-                placeholder="What has your experience been like using PMHNP Hiring?"
+                placeholder="What has your experience been like using NP Hiring?"
                 rows={3}
                 maxLength={500}
                 style={{

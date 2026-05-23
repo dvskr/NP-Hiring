@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
 
           // Ping search engines for renewed job (fire-and-forget)
           if (job.slug) {
-            pingAllSearchEngines(`https://pmhnphiring.com/jobs/${job.slug}`).catch((err) =>
+            pingAllSearchEngines(`https://nphiring.com/jobs/${job.slug}`).catch((err) =>
               logger.error('[Stripe] Background indexing ping failed (renewal)', err)
             );
           }
@@ -386,7 +386,7 @@ export async function POST(request: NextRequest) {
 
           // Ping search engines for new job (fire-and-forget)
           if (job.slug) {
-            pingAllSearchEngines(`https://pmhnphiring.com/jobs/${job.slug}`).catch((err) =>
+            pingAllSearchEngines(`https://nphiring.com/jobs/${job.slug}`).catch((err) =>
               logger.error('[Stripe] Background indexing ping failed (new job)', err)
             );
           }

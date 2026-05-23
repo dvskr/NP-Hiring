@@ -137,7 +137,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       }],
     },
     alternates: {
-      canonical: `https://pmhnphiring.com/jobs/metro/${slug}`,
+      canonical: `https://nphiring.com/jobs/metro/${slug}`,
     },
   };
 }
@@ -159,10 +159,10 @@ export default async function MetroLandingPage({ params }: PageProps) {
     <div className="min-h-screen" style={{ backgroundColor: '#FDFBF7' }}>
       {/* Breadcrumb Schema */}
       <BreadcrumbSchema items={[
-        { name: "Home", url: "https://pmhnphiring.com" },
-        { name: "Jobs", url: "https://pmhnphiring.com/jobs" },
-        { name: metro.state, url: `https://pmhnphiring.com/jobs/state/${metro.stateSlug}` },
-        { name: `${metro.city} PMHNP Jobs`, url: `https://pmhnphiring.com/jobs/metro/${slug}` },
+        { name: "Home", url: "https://nphiring.com" },
+        { name: "Jobs", url: "https://nphiring.com/jobs" },
+        { name: metro.state, url: `https://nphiring.com/jobs/state/${metro.stateSlug}` },
+        { name: `${metro.city} PMHNP Jobs`, url: `https://nphiring.com/jobs/metro/${slug}` },
       ]} />
 
       {/* FAQ Schema */}
@@ -193,7 +193,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
           numberOfItems: stats.totalJobs,
           itemListElement: stats.recentJobs.slice(0, 6).map((job: Job, idx: number) => ({
             '@type': 'ListItem', position: idx + 1, name: job.title,
-            url: `https://pmhnphiring.com/jobs/${job.slug || job.id}`,
+            url: `https://nphiring.com/jobs/${job.slug || job.id}`,
           })),
         }) }} />
       )}

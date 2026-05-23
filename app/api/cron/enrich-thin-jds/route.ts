@@ -39,7 +39,7 @@ const MAX_JOBS_PER_RUN = 25; // Conservative — each call is ~$0.05 at gpt-5.4 
 const TIME_BUDGET_MS = 250_000;
 const COOLDOWN_DAYS = 30;
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com';
 
 const SYSTEM_PROMPT = `You are rewriting a too-short job posting for a PMHNP role into a long-form SEO-optimized description.
 

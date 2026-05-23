@@ -5,12 +5,12 @@ import {
   V2, SANS, SERIF,
 } from '@/lib/email-templates-v2';
 
-const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com').replace(/\/$/, '');
+const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com').replace(/\/$/, '');
 const IMG = process.env.EMAIL_ASSETS_URL || `${BASE_URL}/images/email`;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function hero(file: string, alt: string = 'PMHNP Hiring'): string {
+function hero(file: string, alt: string = 'NP Hiring'): string {
   return `<tr><td style="padding:0 40px;" bgcolor="${V2.bgCard}"><img src="${IMG}/${file}" alt="${alt}" width="520" height="280" style="width:100%;max-width:520px;height:auto;display:block;border-radius:12px;margin:0 auto;border:0;background-color:${V2.bgCard};color:${V2.teal};font-family:${SERIF};font-size:20px;font-weight:700;text-align:center;line-height:280px;" /></td></tr>`;
 }
 
@@ -98,7 +98,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
     label: 'Signup Welcome (Job Seeker)',
     desc: 'Sent when a new job seeker creates an account',
     fn: () => emailShellV2(`
-      ${headerBlockV2('Welcome to PMHNP Hiring', '')}
+      ${headerBlockV2('Welcome to NP Hiring', '')}
       ${spacerV2(20)}
       ${bodyText('You have unlocked a new way to find your perfect role. Search curated positions, get matched by AI, and connect directly with hiring managers \u2014 no recruiters, no middlemen.')}
       ${spacerV2(36)}
@@ -115,7 +115,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
       ${secondary(`Want the data first? <a href="${BASE_URL}/salary-guide" style="color:${V2.teal};text-decoration:underline;">Download the 2026 Salary Guide</a>.`)}
       ${spacerV2(48)}
       ${closeContentV2()}`, unsubscribeFooterV2('sample'),
-      'Welcome to PMHNP Hiring \u2014 find your perfect PMHNP role.'),
+      'Welcome to NP Hiring \u2014 find your perfect PMHNP role.'),
   },
 
   // 2b. Signup - Employer

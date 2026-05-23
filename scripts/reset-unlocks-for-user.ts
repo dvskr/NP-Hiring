@@ -6,8 +6,8 @@
  * Defaults to dev env. Pass --env=prod to target prod (gated behind .env.prod).
  *
  * Usage:
- *   npx tsx scripts/reset-unlocks-for-user.ts test@pmhnphiring.com           # dry-run
- *   npx tsx scripts/reset-unlocks-for-user.ts test@pmhnphiring.com --apply   # delete
+ *   npx tsx scripts/reset-unlocks-for-user.ts test@nphiring.com           # dry-run
+ *   npx tsx scripts/reset-unlocks-for-user.ts test@nphiring.com --apply   # delete
  */
 import { config as dotenvConfig } from 'dotenv';
 

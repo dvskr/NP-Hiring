@@ -84,10 +84,10 @@ If the source is a sub-processor, get their incident report in writing **before*
 
 ## 5. User notification template
 
-When user notification is required, send via Resend from `privacy@pmhnphiring.com`. Avoid marketing-style language.
+When user notification is required, send via Resend from `privacy@nphiring.com`. Avoid marketing-style language.
 
 ```
-Subject: Security incident affecting your PMHNP Hiring account
+Subject: Security incident affecting your NP Hiring account
 
 We are writing to inform you of a security incident we became aware of on
 <DATE>. We believe the following information of yours may have been
@@ -102,7 +102,7 @@ What you should do: <password reset link / credit-monitoring / specific
 guidance — only what is genuinely useful>
 
 We sincerely apologize for the exposure and the worry it causes.
-You can reach us at privacy@pmhnphiring.com with any question. The full
+You can reach us at privacy@nphiring.com with any question. The full
 incident report will be linked from /security-incidents once available.
 ```
 
@@ -129,7 +129,7 @@ Archive the timeline + RCA into `/docs/incidents/INCIDENT-YYYY-MM-DD.md` (privat
 
 These are the items that make the runbook executable, not aspirational. Verify quarterly.
 
-- [ ] `privacy@pmhnphiring.com` is monitored and forwards to a real human.
+- [ ] `privacy@nphiring.com` is monitored and forwards to a real human.
 - [ ] On-call rotation documented somewhere shared.
 - [ ] Sub-processor list (`/sub-processors`) is current — incident reports are emailed to the contacts on each vendor's DPA.
 - [ ] Sentry alert routing → on-call notification.

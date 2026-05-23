@@ -37,7 +37,7 @@ import { notFound } from 'next/navigation';
 // connection pool → 5xx errors. 3600s trades freshness for stability.
 export const revalidate = 3600;
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com';
 
 interface JobPageProps {
   params: { slug: string };
@@ -361,7 +361,7 @@ export async function generateMetadata({ params }: JobPageProps) {
     // not a 410 (deleted job). Use generic page-not-found metadata.
     return {
       title: 'Page Not Found',
-      description: 'The page you are trying to access doesn’t exist. Browse current PMHNP jobs on PMHNP Hiring.',
+      description: 'The page you are trying to access doesn’t exist. Browse current PMHNP jobs on NP Hiring.',
       robots: { index: false, follow: true },
     };
   }
@@ -372,7 +372,7 @@ export async function generateMetadata({ params }: JobPageProps) {
   if (result.status === 'gone') {
     return {
       title: 'Position No Longer Available',
-      description: 'This PMHNP position is no longer available. Browse current job openings on PMHNP Hiring.',
+      description: 'This PMHNP position is no longer available. Browse current job openings on NP Hiring.',
       robots: { index: false, follow: true },
       other: { 'X-Status': '410' },
     };
@@ -387,7 +387,7 @@ export async function generateMetadata({ params }: JobPageProps) {
     const expiredEmployer = result.employer || 'Employer';
     return {
       title: `${expiredTitle} — Position Filled`,
-      description: `This ${expiredTitle} position at ${expiredEmployer} is no longer available. Browse similar PMHNP jobs on PMHNP Hiring.`,
+      description: `This ${expiredTitle} position at ${expiredEmployer} is no longer available. Browse similar PMHNP jobs on NP Hiring.`,
       robots: {
         index: false,
         follow: true,
@@ -471,7 +471,7 @@ export async function generateMetadata({ params }: JobPageProps) {
   //     before the slug column was being written; the backfill script at
   //     scripts/backfill-job-slugs.ts converts those over time.
   const canonicalSlug = job.slug || slugify(job.title, job.id);
-  const canonicalUrl = `https://pmhnphiring.com/jobs/${canonicalSlug}`;
+  const canonicalUrl = `https://nphiring.com/jobs/${canonicalSlug}`;
 
   // Title includes location when available so SERP listings differentiate
   // identical job titles posted in multiple cities. Capped at ~60 chars so
@@ -494,7 +494,7 @@ export async function generateMetadata({ params }: JobPageProps) {
       description,
       type: 'article',
       url: canonicalUrl,
-      siteName: 'PMHNP Hiring',
+      siteName: 'NP Hiring',
       images: [
         {
           url: ogImageUrl.toString(),
@@ -758,10 +758,10 @@ export default async function JobPage({ params }: JobPageProps) {
         job={job}
       />
       <BreadcrumbSchema items={[
-        { name: 'Home', url: 'https://pmhnphiring.com' },
-        { name: 'Jobs', url: 'https://pmhnphiring.com/jobs' },
-        ...(job.state ? [{ name: job.state, url: `https://pmhnphiring.com/jobs/state/${job.state.toLowerCase().replace(/\s+/g, '-')}` }] : []),
-        { name: job.title, url: `https://pmhnphiring.com/jobs/${job.slug || job.id}` },
+        { name: 'Home', url: 'https://nphiring.com' },
+        { name: 'Jobs', url: 'https://nphiring.com/jobs' },
+        ...(job.state ? [{ name: job.state, url: `https://nphiring.com/jobs/state/${job.state.toLowerCase().replace(/\s+/g, '-')}` }] : []),
+        { name: job.title, url: `https://nphiring.com/jobs/${job.slug || job.id}` },
       ]} />
       <JobViewTracker job={{ id: job.id, title: job.title, employer: job.employer, jobType: job.jobType || undefined, stateCode: job.stateCode || undefined, sourceProvider: job.sourceProvider || undefined, normalizedMinSalary: job.normalizedMinSalary }} />
       <div style={{ backgroundColor: '#F5F0EB', minHeight: '100vh', paddingTop: '1px', paddingBottom: '40px' }}>

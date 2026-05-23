@@ -103,8 +103,8 @@ export default async function BlogIndexPage({
         <>
             <VideoJsonLd pathname="/blog" />
             <BreadcrumbSchema items={[
-                { name: 'Home', url: 'https://pmhnphiring.com' },
-                { name: 'Blog', url: 'https://pmhnphiring.com/blog' },
+                { name: 'Home', url: 'https://nphiring.com' },
+                { name: 'Blog', url: 'https://nphiring.com/blog' },
             ]} />
             {/* SEO Fix #16: wrap the post list in a Blog @graph alongside
                 ItemList. Previously only ItemList was emitted, so Google had
@@ -119,29 +119,29 @@ export default async function BlogIndexPage({
                     '@graph': [
                         {
                             '@type': 'Blog',
-                            '@id': 'https://pmhnphiring.com/blog#blog',
+                            '@id': 'https://nphiring.com/blog#blog',
                             name: 'PMHNP Career Blog',
                             description: 'Career guides, salary insights, and job market trends for psychiatric mental health nurse practitioners.',
-                            url: 'https://pmhnphiring.com/blog',
+                            url: 'https://nphiring.com/blog',
                             inLanguage: 'en-US',
-                            publisher: { '@id': 'https://pmhnphiring.com/#organization' },
+                            publisher: { '@id': 'https://nphiring.com/#organization' },
                             blogPost: posts.slice(0, 10).map((post) => ({
                                 '@type': 'BlogPosting',
                                 headline: post.title,
-                                url: `https://pmhnphiring.com/blog/${post.slug}`,
+                                url: `https://nphiring.com/blog/${post.slug}`,
                                 datePublished: post.publish_date || post.created_at,
                             })),
                         },
                         {
                             '@type': 'ItemList',
-                            '@id': 'https://pmhnphiring.com/blog#postlist',
+                            '@id': 'https://nphiring.com/blog#postlist',
                             name: 'PMHNP Career Blog',
                             numberOfItems: totalCount,
                             itemListElement: posts.slice(0, 10).map((post, i) => ({
                                 '@type': 'ListItem',
                                 position: i + 1,
                                 name: post.title,
-                                url: `https://pmhnphiring.com/blog/${post.slug}`,
+                                url: `https://nphiring.com/blog/${post.slug}`,
                             })),
                         },
                     ],

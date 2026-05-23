@@ -41,15 +41,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         return { title: 'Article Not Found' };
     }
 
-    const ogImage = post.image_url || 'https://pmhnphiring.com/api/og';
-    const url = `https://pmhnphiring.com/blog/${slug}`;
+    const ogImage = post.image_url || 'https://nphiring.com/api/og';
+    const url = `https://nphiring.com/blog/${slug}`;
 
     return {
         title: post.title.match(/\(\d{4}\)\s*$/) ? post.title : `${post.title} (${new Date().getFullYear()})`,
         // Description should describe the post, not echo the title (audit
         // 09 M-24). Generic-but-relevant fallback when meta_description
         // is absent — log so editorial can backfill the missing field.
-        description: post.meta_description || `Read this PMHNP career article on PMHNP Hiring — guides, salary insights, and licensure updates for psychiatric nurse practitioners.`,
+        description: post.meta_description || `Read this PMHNP career article on NP Hiring — guides, salary insights, and licensure updates for psychiatric nurse practitioners.`,
         keywords: post.target_keyword ? [post.target_keyword] : undefined,
         openGraph: {
             title: post.title,
@@ -88,7 +88,7 @@ export default async function BlogPostPage({ params }: Props) {
     }
 
     const relatedPosts = await getRelatedPosts(post.category, post.slug);
-    const currentUrl = `https://pmhnphiring.com/blog/${slug}`;
+    const currentUrl = `https://nphiring.com/blog/${slug}`;
 
     // GSC Fix (P1.5): for state-license blog posts (slug like "pmhnp-license-{state}"),
     // we render CTA links to /jobs/{cat}/{state} pages. If a setting-state combo has
@@ -246,7 +246,7 @@ export default async function BlogPostPage({ params }: Props) {
     // JSON-LD BlogPosting schema
     //
     // SEO Fix C1 (YMYL): the previous author/reviewedBy block named
-    // "PMHNP Hiring Editorial Team" and a fictional "PMHNP Clinical Review
+    // "NP Hiring Editorial Team" and a fictional "PMHNP Clinical Review
     // Board" — neither corresponds to a real, named person. Shipping
     // fake clinical credentials in healthcare YMYL content is a manual
     // action risk. Until a real PMHNP-BC reviewer is contracted (and
@@ -265,22 +265,22 @@ export default async function BlogPostPage({ params }: Props) {
         dateModified: post.reviewed_at || post.updated_at,
         author: {
             '@type': 'Organization',
-            name: 'PMHNP Hiring',
-            url: 'https://pmhnphiring.com',
+            name: 'NP Hiring',
+            url: 'https://nphiring.com',
         },
         publisher: {
             '@type': 'Organization',
-            name: 'PMHNP Hiring',
+            name: 'NP Hiring',
             logo: {
                 '@type': 'ImageObject',
-                url: 'https://pmhnphiring.com/pmhnp_logo.png',
+                url: 'https://nphiring.com/logo.png',
             },
         },
         mainEntityOfPage: {
             '@type': 'WebPage',
             '@id': currentUrl,
         },
-        image: post.image_url || 'https://pmhnphiring.com/api/og',
+        image: post.image_url || 'https://nphiring.com/api/og',
         keywords: post.target_keyword || undefined,
         articleSection: categoryLabel,
         url: currentUrl,
@@ -296,16 +296,16 @@ export default async function BlogPostPage({ params }: Props) {
         uploadDate: post.publish_date || post.created_at,
         contentUrl: `https://www.youtube.com/watch?v=${post.youtube_video_id}`,
         embedUrl: `https://www.youtube.com/embed/${post.youtube_video_id}`,
-        publisher: { '@type': 'Organization', name: 'PMHNP Hiring', url: 'https://pmhnphiring.com' },
+        publisher: { '@type': 'Organization', name: 'NP Hiring', url: 'https://nphiring.com' },
     } : post.video_url ? {
         '@context': 'https://schema.org',
         '@type': 'VideoObject',
         name: post.title,
         description: post.meta_description || post.title,
-        thumbnailUrl: post.image_url || 'https://pmhnphiring.com/api/og',
+        thumbnailUrl: post.image_url || 'https://nphiring.com/api/og',
         uploadDate: post.publish_date || post.created_at,
         contentUrl: post.video_url,
-        publisher: { '@type': 'Organization', name: 'PMHNP Hiring', url: 'https://pmhnphiring.com' },
+        publisher: { '@type': 'Organization', name: 'NP Hiring', url: 'https://nphiring.com' },
     } : null;
 
     // Slug-specific FAQ schemas for Google rich results
@@ -343,7 +343,7 @@ export default async function BlogPostPage({ params }: Props) {
             },
             {
                 name: 'How many jobs are available for new grad PMHNPs?',
-                text: 'There are hundreds of new grad-friendly PMHNP positions available at any given time. PMHNP Hiring lists new grad-specific roles that can be filtered at pmhnphiring.com/jobs/new-grad.',
+                text: 'There are hundreds of new grad-friendly PMHNP positions available at any given time. NP Hiring lists new grad-specific roles that can be filtered at nphiring.com/jobs/new-grad.',
             },
         ],
         'pmhnp-vs-psychiatrist': [
@@ -449,8 +449,8 @@ export default async function BlogPostPage({ params }: Props) {
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
                 '@context': 'https://schema.org', '@type': 'BreadcrumbList',
                 itemListElement: [
-                    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://pmhnphiring.com' },
-                    { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://pmhnphiring.com/blog' },
+                    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://nphiring.com' },
+                    { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://nphiring.com/blog' },
                     { '@type': 'ListItem', position: 3, name: post.title, item: currentUrl },
                 ],
             }) }} />
@@ -568,8 +568,8 @@ export default async function BlogPostPage({ params }: Props) {
                         <div className="ed-author-avatar" aria-hidden="true">P</div>
                         <div>
                             <div className="ed-author-role">Published by</div>
-                            <h4 className="ed-author-name">PMHNP Hiring</h4>
-                            <p className="ed-author-bio">PMHNP Hiring is a job board for psychiatric mental health nurse practitioners, operated by Akari Labs LLC. This article is editorial commentary aggregated from public sources and is not medical advice.</p>
+                            <h4 className="ed-author-name">NP Hiring</h4>
+                            <p className="ed-author-bio">NP Hiring is a job board for psychiatric mental health nurse practitioners, operated by Akari Labs LLC. This article is editorial commentary aggregated from public sources and is not medical advice.</p>
                             <div className="ed-author-badges">
                                 <span className="ed-author-badge">Updated {new Date().getFullYear()}</span>
                             </div>
@@ -599,7 +599,7 @@ export default async function BlogPostPage({ params }: Props) {
                         }}
                     >
                         <strong style={{ display: 'block', marginBottom: '4px', color: '#1A2E35' }}>Editorial note</strong>
-                        This article is for informational purposes only and is not medical, clinical, legal, or financial advice. Always consult a licensed clinician, your state board of nursing, or a qualified professional for individual care, licensure, or career decisions. PMHNP Hiring is a job board operated by Akari Labs LLC and is not a medical, regulatory, or licensing authority.
+                        This article is for informational purposes only and is not medical, clinical, legal, or financial advice. Always consult a licensed clinician, your state board of nursing, or a qualified professional for individual care, licensure, or career decisions. NP Hiring is a job board operated by Akari Labs LLC and is not a medical, regulatory, or licensing authority.
                     </aside>
                 </div>
 

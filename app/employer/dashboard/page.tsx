@@ -77,8 +77,8 @@ export default async function EmployerDashboardPage() {
     return (
         <>
             <BreadcrumbSchema items={[
-                { name: 'Home', url: 'https://pmhnphiring.com' },
-                { name: 'Employer Dashboard', url: 'https://pmhnphiring.com/employer/dashboard' },
+                { name: 'Home', url: 'https://nphiring.com' },
+                { name: 'Employer Dashboard', url: 'https://nphiring.com/employer/dashboard' },
             ]} />
             {/* Unfinished-post banner — fetches the auth-anchored draft
                 client-side and renders a Resume + Discard pair when one

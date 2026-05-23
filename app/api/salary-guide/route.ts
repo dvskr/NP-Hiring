@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 import { buildSalaryGuideHtml, sendAndLog, isEmailSuppressed } from '@/lib/email-service';
 import { rateLimit } from '@/lib/rate-limit';
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com';
 
 // Environment-aware URLs
 const PDF_URL = process.env.SALARY_GUIDE_URL || 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/resources/PMHNP_Salary_Guide_2026.pdf';

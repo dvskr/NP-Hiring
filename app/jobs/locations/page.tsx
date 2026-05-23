@@ -180,7 +180,7 @@ export default async function LocationsPage() {
     '@type': 'CollectionPage',
     name: 'PMHNP Jobs by Location',
     description: `Directory of psychiatric mental health nurse practitioner jobs across ${stats.states.length} US states and ${stats.topCities.length} top metros.`,
-    url: 'https://pmhnphiring.com/jobs/locations',
+    url: 'https://nphiring.com/jobs/locations',
     mainEntity: {
       '@type': 'ItemList',
       numberOfItems: stats.states.length,
@@ -188,7 +188,7 @@ export default async function LocationsPage() {
         '@type': 'ListItem',
         position: idx + 1,
         name: `PMHNP Jobs in ${s.name}`,
-        url: `https://pmhnphiring.com/jobs/state/${s.slug}`,
+        url: `https://nphiring.com/jobs/state/${s.slug}`,
       })),
     },
   };
@@ -197,9 +197,9 @@ export default async function LocationsPage() {
     <div className="min-h-screen" style={{ backgroundColor: '#FDFBF7' }}>
       {/* Breadcrumb Schema */}
       <BreadcrumbSchema items={[
-        { name: "Home", url: "https://pmhnphiring.com" },
-        { name: "Jobs", url: "https://pmhnphiring.com/jobs" },
-        { name: "Locations", url: "https://pmhnphiring.com/jobs/locations" }
+        { name: "Home", url: "https://nphiring.com" },
+        { name: "Jobs", url: "https://nphiring.com/jobs" },
+        { name: "Locations", url: "https://nphiring.com/jobs/locations" }
       ]} />
       {/* SEO Fix #15: CollectionPage + ItemList for the state directory */}
       <script

@@ -16,7 +16,7 @@ import { requireEmployer } from '@/lib/auth/protect';
 import EmployerAnalyticsClient from './EmployerAnalyticsClient';
 
 export const metadata = {
-  title: 'Job Analytics | PMHNP Hiring',
+  title: 'Job Analytics | NP Hiring',
   description: 'Per-job views, apply clicks, and CTR for your active and historical PMHNP postings.',
 };
 

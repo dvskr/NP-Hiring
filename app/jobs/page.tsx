@@ -226,7 +226,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
           '@type': 'ListItem',
           position: i + 1,
           name: job.title,
-          url: `https://pmhnphiring.com/jobs/${slug}`,
+          url: `https://nphiring.com/jobs/${slug}`,
         };
       }),
     };

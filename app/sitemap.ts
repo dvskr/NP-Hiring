@@ -64,7 +64,7 @@ const STATE_NAME_TO_CODE: Record<string, string> = {
  * This keeps each sitemap under Google's 50K URL limit.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com'
 
   // GSC Fix (P1.4): use the actual latest job date, or "now" as a safe live
   // fallback. Previously hard-coded "2026-03-01" — a stale stamp made every

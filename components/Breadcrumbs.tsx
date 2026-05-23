@@ -11,7 +11,7 @@ interface BreadcrumbsProps {
 }
 
 export default function Breadcrumbs({ items }: BreadcrumbsProps) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com';
 
   // Generate JSON-LD schema for SEO
   const schemaData = {

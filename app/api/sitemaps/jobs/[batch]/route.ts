@@ -23,7 +23,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 const BATCH_SIZE = 25000;
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com';
 
 const ACTIVE_JOB_WHERE = {
     isPublished: true,

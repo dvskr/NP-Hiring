@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         const expiredUrls = recentlyExpired.map(job => {
             // Use slug if available, otherwise build from title+id
             const slug = job.slug || slugify(job.title, job.id);
-            return `https://pmhnphiring.com/jobs/${slug}`;
+            return `https://nphiring.com/jobs/${slug}`;
         });
 
         console.log(`[CRON:deindex-expired] De-indexing ${expiredUrls.length} expired URLs...`);

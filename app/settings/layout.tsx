@@ -5,9 +5,9 @@ import type { Metadata } from 'next';
 // noindexed regardless — this just gives the route a stable title +
 // canonical so inbound link variants don't splinter.
 export const metadata: Metadata = {
-    title: 'Account Settings | PMHNP Hiring',
-    description: 'Manage your PMHNP Hiring account — profile, resume, job preferences, alerts, and notifications.',
-    alternates: { canonical: 'https://pmhnphiring.com/settings' },
+    title: 'Account Settings | NP Hiring',
+    description: 'Manage your NP Hiring account — profile, resume, job preferences, alerts, and notifications.',
+    alternates: { canonical: 'https://nphiring.com/settings' },
     robots: { index: false, follow: false },
 };
 

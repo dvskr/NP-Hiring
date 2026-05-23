@@ -47,7 +47,7 @@ function styled410(opts: {
     subtext: string;
     title?: string; // browser tab title
 }): NextResponse {
-    const tabTitle = opts.title ?? `${opts.badge} — PMHNP Hiring`;
+    const tabTitle = opts.title ?? `${opts.badge} — NP Hiring`;
     const safe = (s: string) => s
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -246,7 +246,7 @@ function gone410(reason: string): NextResponse {
         badge: 'Page Removed',
         heading: 'This page is no longer available',
         subtext: reason,
-        title: 'Page Permanently Removed — PMHNP Hiring',
+        title: 'Page Permanently Removed — NP Hiring',
     });
 }
 
@@ -419,7 +419,7 @@ export async function middleware(request: NextRequest) {
                     badge: 'Position Removed',
                     heading: 'This position is no longer available',
                     subtext: "This job listing has been permanently removed. Don't worry — we have hundreds of similar PMHNP positions open right now.",
-                    title: 'Position Removed — PMHNP Hiring',
+                    title: 'Position Removed — NP Hiring',
                 });
             }
             // Cached "live" result short-circuits the DB call entirely.
@@ -448,7 +448,7 @@ export async function middleware(request: NextRequest) {
                                 badge: 'Position Removed',
                                 heading: 'This position is no longer available',
                                 subtext: "This job listing has been permanently removed. Don't worry — we have hundreds of similar PMHNP positions open right now.",
-                                title: 'Position Removed — PMHNP Hiring',
+                                title: 'Position Removed — NP Hiring',
                             });
                         }
                         // Live — cache the negative so subsequent requests skip the round-trip.
@@ -546,7 +546,7 @@ export async function middleware(request: NextRequest) {
                                         badge: 'No Open Positions',
                                         heading: 'This employer has no current openings',
                                         subtext: "This company doesn't have any active PMHNP openings right now. Browse positions from other employers below.",
-                                        title: 'No Open Positions — PMHNP Hiring',
+                                        title: 'No Open Positions — NP Hiring',
                                     });
                                 }
                                 // Live company with jobs — cache so the next
@@ -868,8 +868,8 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith('/api/')) {
         const origin = request.headers.get('origin');
         const allowedOrigins = [
-            'https://pmhnphiring.com',
-            'https://www.pmhnphiring.com',
+            'https://nphiring.com',
+            'https://www.nphiring.com',
             process.env.NEXT_PUBLIC_BASE_URL,
             'http://localhost:3000',
             'http://localhost:3001',

@@ -27,7 +27,7 @@ const SITEMAP_CATEGORIES = [
 ];
 
 const BATCH_SIZE = 10000;
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com';
 
 // City slug → population lookup. Used as a defense-in-depth filter on top of
 // pseoStats — small towns can technically have ≥3 jobs but won't rank on

@@ -15,13 +15,13 @@ import fs from 'fs';
  *
  * Read-only tests run unconditionally.
  * Auth-gated tests skip if E2E_SEEKER_EMAIL / E2E_SEEKER_PASS are not set.
- * Mutation tests skip if running against production (PLAYWRIGHT_BASE_URL contains pmhnphiring.com).
+ * Mutation tests skip if running against production (PLAYWRIGHT_BASE_URL contains nphiring.com).
  */
 
 const SEEKER_CREDS = getSeekerCreds();
 const HAS_AUTH = SEEKER_CREDS !== null;
 const AGAINST_PROD =
-  !!process.env.PLAYWRIGHT_BASE_URL && process.env.PLAYWRIGHT_BASE_URL.includes('pmhnphiring.com');
+  !!process.env.PLAYWRIGHT_BASE_URL && process.env.PLAYWRIGHT_BASE_URL.includes('nphiring.com');
 
 // ── Read-only tests (always run) ────────────────────────────────────────────
 

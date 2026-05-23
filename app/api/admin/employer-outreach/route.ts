@@ -12,7 +12,7 @@ import { isEmailSuppressed, getOrCreateUnsubToken } from '@/lib/email-service';
 import { config } from '@/lib/config';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const BASE = 'https://pmhnphiring.com';
+const BASE = 'https://nphiring.com';
 const UNSUB_BASE = `${BASE}/unsubscribe`;
 
 function buildEmail(): string {
@@ -52,10 +52,10 @@ function buildEmail(): string {
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
         <tr>
           <td>
-            <img src="${BASE}/logo.png" width="36" height="36" alt="PMHNP Hiring" style="width:36px;height:36px;border-radius:8px;border:0;background-color:#FFF8EE;color:#0d9488;font-family:Georgia,serif;font-size:11px;font-weight:700;text-align:center;line-height:36px;" />
+            <img src="${BASE}/logo.png" width="36" height="36" alt="NP Hiring" style="width:36px;height:36px;border-radius:8px;border:0;background-color:#FFF8EE;color:#0d9488;font-family:Georgia,serif;font-size:11px;font-weight:700;text-align:center;line-height:36px;" />
           </td>
           <td style="text-align:right;">
-            <a href="${BASE}" style="font-size:13px;color:#6b7280;text-decoration:none;font-weight:500;">pmhnphiring.com</a>
+            <a href="${BASE}" style="font-size:13px;color:#6b7280;text-decoration:none;font-weight:500;">nphiring.com</a>
           </td>
         </tr>
       </table>
@@ -200,16 +200,16 @@ function buildEmail(): string {
   <tr>
     <td class="pad" style="padding:24px 48px 40px;text-align:center;">
       <p style="margin:0 0 10px;font-size:12px;color:#9ca3af;line-height:1.6;">
-        Questions? Reply to this email or write to <a href="mailto:support@pmhnphiring.com" style="color:#0d9488;text-decoration:none;">support@pmhnphiring.com</a>
+        Questions? Reply to this email or write to <a href="mailto:support@nphiring.com" style="color:#0d9488;text-decoration:none;">support@nphiring.com</a>
       </p>
       <p style="margin:0 0 8px;font-size:11px;color:#9ca3af;">
         <a href="https://www.linkedin.com/company/pmhnpjobs" style="color:#9ca3af;text-decoration:none;">LinkedIn</a> &nbsp;&middot;&nbsp;
-        <a href="https://x.com/pmhnphiring" style="color:#9ca3af;text-decoration:none;">X</a> &nbsp;&middot;&nbsp;
-        <a href="https://www.instagram.com/pmhnphiring" style="color:#9ca3af;text-decoration:none;">Instagram</a> &nbsp;&middot;&nbsp;
-        <a href="https://www.facebook.com/pmhnphiring" style="color:#9ca3af;text-decoration:none;">Facebook</a>
+        <a href="https://x.com/nphiring" style="color:#9ca3af;text-decoration:none;">X</a> &nbsp;&middot;&nbsp;
+        <a href="https://www.instagram.com/nphiring" style="color:#9ca3af;text-decoration:none;">Instagram</a> &nbsp;&middot;&nbsp;
+        <a href="https://www.facebook.com/nphiring" style="color:#9ca3af;text-decoration:none;">Facebook</a>
       </p>
       <p style="margin:0;font-size:11px;color:#9ca3af;">
-        &copy; 2026 PMHNP Hiring &middot; <a href="${BASE}" style="color:#9ca3af;text-decoration:none;">pmhnphiring.com</a>
+        &copy; 2026 NP Hiring &middot; <a href="${BASE}" style="color:#9ca3af;text-decoration:none;">nphiring.com</a>
       </p>
     </td>
   </tr>
@@ -330,9 +330,9 @@ export async function POST(request: Request) {
         tokenByEmail.set(r.email, await getOrCreateUnsubToken(r.email));
       }
       const emails = batch.map(r => ({
-        from: process.env.EMAIL_FROM_MARKETING || 'PMHNP Hiring <alerts@pmhnphiring.com>',
+        from: process.env.EMAIL_FROM_MARKETING || 'NP Hiring <alerts@nphiring.com>',
         to: r.email,
-        replyTo: process.env.EMAIL_REPLY_TO || 'support@pmhnphiring.com',
+        replyTo: process.env.EMAIL_REPLY_TO || 'support@nphiring.com',
         subject: 'Your first 2 job posts are free — all features included',
         html,
         text,

@@ -57,15 +57,15 @@ const faqs = [
     { q: 'Are free posts different from paid posts?', a: `Same features — Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks, ${config.limits.inmailsPerPosting} InMails, and full analytics. The only difference is duration: free posts run ${config.freeDurationDays} days, paid posts run ${config.durationDays} days.` },
     { q: 'Do I lose access to candidates I\'ve unlocked when my posting expires?', a: 'No. Once you\'ve unlocked a candidate (viewed their full profile), their contact info, resume, and details remain in your dashboard forever — even after the posting expires. To unlock new candidates or send new InMails, you\'ll need an active posting.' },
     { q: 'Can I edit my job posting after publishing?', a: 'Yes! You can edit your posting anytime from your dashboard — update salary, requirements, or any details. Changes go live immediately.' },
-    { q: 'Do you offer bulk discounts?', a: 'Yes! Contact us at support@pmhnphiring.com for custom pricing if you need to post 5+ positions. We offer volume discounts for larger organizations.' },
+    { q: 'Do you offer bulk discounts?', a: 'Yes! Contact us at support@nphiring.com for custom pricing if you need to post 5+ positions. We offer volume discounts for larger organizations.' },
 ];
 
 export default function PricingPage() {
     return (
         <>
             <BreadcrumbSchema items={[
-                { name: 'Home', url: 'https://pmhnphiring.com' },
-                { name: 'Pricing', url: 'https://pmhnphiring.com/pricing' },
+                { name: 'Home', url: 'https://nphiring.com' },
+                { name: 'Pricing', url: 'https://nphiring.com/pricing' },
             ]} />
 
             {/* ═══════════════════════════════════════════════════════════════
@@ -276,7 +276,7 @@ export default function PricingPage() {
                                 <thead>
                                     <tr style={{ background: 'linear-gradient(135deg, rgba(13,148,136,0.08), rgba(13,148,136,0.02))' }}>
                                         <th style={{ width: '40%', padding: '16px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Feature</th>
-                                        <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '12px' }}>PMHNP Hiring</th>
+                                        <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '12px' }}>NP Hiring</th>
                                         <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>Indeed</th>
                                         <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>LinkedIn</th>
                                     </tr>

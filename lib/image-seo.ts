@@ -21,15 +21,15 @@ const BASE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/
 export const PAGE_IMAGE_SEO: Record<string, PageImageSEO> = {
     '/': {
         image: `${BASE}/pmhnp-job-board-homepage.webp`,
-        alt: 'PMHNP Hiring job board homepage showing 10,000 plus psychiatric nurse practitioner jobs from 3,000 plus companies across 50 states',
+        alt: 'NP Hiring job board homepage showing 10,000 plus psychiatric nurse practitioner jobs from 3,000 plus companies across 50 states',
         caption: 'The #1 job board for psychiatric mental health nurse practitioners',
-        title: 'PMHNP Hiring Homepage',
+        title: 'NP Hiring Homepage',
     },
     '/about': {
         image: `${BASE}/about-pmhnp-hiring-platform.webp`,
-        alt: 'About PMHNP Hiring platform showing mission, methodology, and data sources for psychiatric nurse practitioner job board',
-        caption: 'About PMHNP Hiring - mission and methodology',
-        title: 'About PMHNP Hiring',
+        alt: 'About NP Hiring platform showing mission, methodology, and data sources for psychiatric nurse practitioner job board',
+        caption: 'About NP Hiring - mission and methodology',
+        title: 'About NP Hiring',
     },
     '/for-employers': {
         image: `${BASE}/pmhnp-employer-hiring-solutions.webp`,
@@ -45,26 +45,26 @@ export const PAGE_IMAGE_SEO: Record<string, PageImageSEO> = {
     },
     '/faq': {
         image: `${BASE}/pmhnp-hiring-frequently-asked-questions.webp`,
-        alt: 'PMHNP Hiring FAQ page with answers about job posting, salary transparency, job alerts, and employer features',
-        caption: 'Frequently asked questions about PMHNP Hiring',
-        title: 'PMHNP Hiring FAQ',
+        alt: 'NP Hiring FAQ page with answers about job posting, salary transparency, job alerts, and employer features',
+        caption: 'Frequently asked questions about NP Hiring',
+        title: 'NP Hiring FAQ',
     },
     '/contact': {
         image: `${BASE}/contact-pmhnp-hiring-support.webp`,
-        alt: 'Contact PMHNP Hiring support page with email form for job seekers and employers needing assistance',
-        caption: 'Contact PMHNP Hiring support team',
-        title: 'Contact PMHNP Hiring',
+        alt: 'Contact NP Hiring support page with email form for job seekers and employers needing assistance',
+        caption: 'Contact NP Hiring support team',
+        title: 'Contact NP Hiring',
     },
     '/privacy': {
         image: `${BASE}/pmhnp-hiring-privacy-policy.webp`,
-        alt: 'PMHNP Hiring privacy policy page detailing data protection practices for psychiatric nurse practitioner job seekers and employers',
-        caption: 'PMHNP Hiring privacy policy',
+        alt: 'NP Hiring privacy policy page detailing data protection practices for psychiatric nurse practitioner job seekers and employers',
+        caption: 'NP Hiring privacy policy',
         title: 'Privacy Policy',
     },
     '/terms': {
         image: `${BASE}/pmhnp-hiring-terms-of-service.webp`,
-        alt: 'PMHNP Hiring terms of service page outlining usage policies for the psychiatric nurse practitioner job board',
-        caption: 'PMHNP Hiring terms of service',
+        alt: 'NP Hiring terms of service page outlining usage policies for the psychiatric nurse practitioner job board',
+        caption: 'NP Hiring terms of service',
         title: 'Terms of Service',
     },
     '/resources': {

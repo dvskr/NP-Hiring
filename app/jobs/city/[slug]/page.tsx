@@ -333,7 +333,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
                 }],
             },
             alternates: {
-                canonical: `https://pmhnphiring.com/jobs/city/${slug}`,
+                canonical: `https://nphiring.com/jobs/city/${slug}`,
             },
             // Noindex for empty city pages with zero jobs
             ...(stats.totalJobs === 0 && {
@@ -427,10 +427,10 @@ export default async function CityJobsPage({ params }: CityPageProps) {
         <div className="min-h-screen" style={{ background: '#FDFBF7' }}>
             {/* Breadcrumb Schema */}
             <BreadcrumbSchema items={[
-                { name: "Home", url: "https://pmhnphiring.com" },
-                { name: "Jobs", url: "https://pmhnphiring.com/jobs" },
-                { name: stateName, url: `https://pmhnphiring.com/jobs/state/${stateSlug}` },
-                { name: cityName, url: `https://pmhnphiring.com/jobs/city/${slug}` }
+                { name: "Home", url: "https://nphiring.com" },
+                { name: "Jobs", url: "https://nphiring.com/jobs" },
+                { name: stateName, url: `https://nphiring.com/jobs/state/${stateSlug}` },
+                { name: cityName, url: `https://nphiring.com/jobs/city/${slug}` }
             ]} />
 
             {/* ItemList — recovers Google Jobs eligibility on the generic city
@@ -449,7 +449,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                 '@type': 'ListItem',
                                 position: idx + 1,
                                 name: job.title,
-                                url: `https://pmhnphiring.com/jobs/${job.slug || job.id}`,
+                                url: `https://nphiring.com/jobs/${job.slug || job.id}`,
                             })),
                         }),
                     }}

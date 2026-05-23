@@ -18,8 +18,8 @@ export default async function DashboardPage() {
   return (
     <>
       <BreadcrumbSchema items={[
-        { name: 'Home', url: 'https://pmhnphiring.com' },
-        { name: 'Dashboard', url: 'https://pmhnphiring.com/dashboard' },
+        { name: 'Home', url: 'https://nphiring.com' },
+        { name: 'Dashboard', url: 'https://nphiring.com/dashboard' },
       ]} />
       <DashboardContent />
     </>

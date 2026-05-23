@@ -1,6 +1,9 @@
 /**
- * Brand configuration — single source of truth for everything a fork
- * of this codebase needs to swap to be a different niche job board.
+ * Brand configuration — single source of truth for the NP Hiring job board.
+ *
+ * Forked from the PMHNP Hiring codebase (2026-05-23). Scope broadened from
+ * PMHNP-only to all Nurse Practitioner specialties (FNP, AGNP, PMHNP, PNP,
+ * NNP, WHNP, ACNP, AGACNP, plus APRN cohort: CRNA, CNM, CNS).
  *
  * Forking checklist:
  *   1. Edit the values below.
@@ -21,46 +24,37 @@
 
 export const brand = {
     /** Display name used in copy, OG titles, email subjects. */
-    name: 'PMHNP Hiring',
+    name: 'NP Hiring',
 
     /** Niche descriptor used in long-form prose, schema descriptions. */
     niche: {
-        short: 'PMHNP',
-        long: 'Psychiatric Mental Health Nurse Practitioner',
-        descriptor: 'psychiatric mental health nurse practitioner',
-        category: 'mental health',
+        short: 'NP',
+        long: 'Nurse Practitioner',
+        descriptor: 'nurse practitioner',
+        category: 'advanced practice nursing',
     },
 
     /** Domain + canonical base URL. */
-    domain: 'pmhnphiring.com',
-    baseUrl: 'https://pmhnphiring.com',
+    domain: 'nphiring.com',
+    baseUrl: 'https://nphiring.com',
 
     /**
      * Legal entity that operates the brand.
-     * - `entityName` is the registered legal name (used in ToS, privacy policy,
-     *   data-controller references, indemnification, governing law clauses).
-     * - `brandDisplayName` is the customer-facing trade name (used on receipts,
-     *   hosted Stripe Checkout, customer support contexts).
-     * - `address`, `addressLine`, `addressCity`, etc. drive CAN-SPAM email
-     *   footers and the legal mailing address printed on invoices and contracts.
+     * NP Hiring operates as a brand / DBA under Akari Labs LLC (same legal
+     * umbrella as PMHNP Hiring). See pmhnphiring.com fork for entity history.
      */
     legal: {
         entityName: 'Akari Labs LLC',
-        brandDisplayName: 'PMHNP Hiring',
+        brandDisplayName: 'NP Hiring',
         /**
          * Visible attribution name for everything the public sees — /about,
          * blog post bylines, humans.txt, contact-page copy, etc.
-         * Operator and builder of pmhnphiring.com under the Akari Labs LLC
-         * legal umbrella.
          */
         creatorName: 'Sathish Kumar',
         creatorTitle: 'Creator · AI Data Engineer',
         /**
-         * Registered LLC member of record. Used ONLY in legal contexts
-         * where the registered owner of Akari Labs LLC must be named —
-         * contracts, KYC, payment processing onboarding. Do NOT render
-         * this in user-visible UI or schema. The Creator (above) is the
-         * face of the product.
+         * Registered LLC member of record. Legal contexts only — never
+         * surface in UI or schema.
          */
         founderName: 'Pavan Kumar Reddy Daggula',
         foundingYear: '2026',
@@ -75,28 +69,34 @@ export const brand = {
 
     /**
      * Inboxes. We use distinct addresses so an angry-email tornado doesn't
-     * drown out a real privacy or security report.
+     * drown out a real privacy or security report. All resolve to the same
+     * Resend domain (nphiring.com) once DNS + Resend domain are verified.
      */
     email: {
-        privacy: 'privacy@pmhnphiring.com',
-        security: 'security@pmhnphiring.com',
-        support: 'support@pmhnphiring.com',
-        contact: 'contact@pmhnphiring.com',
+        privacy: 'privacy@nphiring.com',
+        security: 'security@nphiring.com',
+        support: 'support@nphiring.com',
+        contact: 'contact@nphiring.com',
         // From-addresses for outbound mail. Read by lib/email-service.ts and
         // lib/job-alerts-service.ts. Env vars EMAIL_FROM, EMAIL_FROM_MARKETING,
         // and EMAIL_REPLY_TO override these at runtime when set.
-        marketingFrom: 'PMHNP Hiring <alerts@pmhnphiring.com>',
-        transactionalFrom: 'PMHNP Hiring <noreply@pmhnphiring.com>',
-        replyTo: 'support@pmhnphiring.com',
+        marketingFrom: 'NP Hiring <alerts@nphiring.com>',
+        transactionalFrom: 'NP Hiring <noreply@nphiring.com>',
+        replyTo: 'support@nphiring.com',
     },
 
-    /** Public social handles — used in footer + Organization schema. */
+    /**
+     * Public social handles — used in footer + Organization schema.
+     * NOTE: These URLs are placeholders matching the brand handle pattern.
+     * Claim the actual accounts at the URLs below before launch, or they
+     * will 404 / point at unrelated profiles.
+     */
     social: {
-        x: 'https://x.com/pmhnphiring',
-        facebook: 'https://www.facebook.com/pmhnphiring',
-        instagram: 'https://www.instagram.com/pmhnphiring',
-        linkedin: 'https://www.linkedin.com/company/pmhnpjobs',
-        youtube: 'https://www.youtube.com/@pmhnphiring',
+        x: 'https://x.com/nphiring',
+        facebook: 'https://www.facebook.com/nphiring',
+        instagram: 'https://www.instagram.com/nphiring',
+        linkedin: 'https://www.linkedin.com/company/nphiring',
+        youtube: 'https://www.youtube.com/@nphiring',
     },
 } as const;
 

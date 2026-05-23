@@ -76,7 +76,7 @@ const NOISE_URL_HOSTS: ReadonlySet<string> = new Set([
     'indeed.com',
     'linkedin.com',
     'jooble.org',
-    'pmhnphiring.com',
+    'nphiring.com',
     'ziprecruiter.com',
     'glassdoor.com',
     'monster.com',

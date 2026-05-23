@@ -25,7 +25,7 @@ test('sitemap.xml is reachable and contains URLs', async ({ request }) => {
   const body = await res.text();
   expect(body).toContain('<urlset');
   // At minimum, the homepage URL should be present (use NEXT_PUBLIC_BASE_URL fallback host)
-  const expectedHost = (process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com').replace(
+  const expectedHost = (process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com').replace(
     /\/$/,
     ''
   );

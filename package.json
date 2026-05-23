@@ -1,5 +1,5 @@
 {
-  "name": "pmhnp-job-board",
+  "name": "np-hiring",
   "version": "0.1.0",
   "private": true,
   "prisma": {

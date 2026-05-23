@@ -9,7 +9,7 @@
 
 import * as crypto from 'crypto';
 
-const BASE_URL = 'https://pmhnphiring.com';
+const BASE_URL = 'https://nphiring.com';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -191,7 +191,7 @@ export async function pingIndexNow(urls: string | string[]): Promise<IndexResult
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                host: 'pmhnphiring.com',
+                host: 'nphiring.com',
                 key: apiKey,
                 keyLocation: `${BASE_URL}/${apiKey}.txt`,
                 urlList,

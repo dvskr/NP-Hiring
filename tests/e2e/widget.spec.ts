@@ -152,7 +152,7 @@ test.describe('/widget — response headers', () => {
     expect(csp).toBeDefined()
     expect(csp).toContain("frame-ancestors")
     expect(csp).toContain('*.edu')
-    expect(csp).toContain('pmhnphiring.com')
+    expect(csp).toContain('nphiring.com')
   })
 
   test('8b. Cache-Control is near-realtime (s-maxage <= 60)', async ({ request }) => {

@@ -16,7 +16,7 @@ import { renderJobCardHtml } from '@/lib/utils/render-job-card';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Use env var for email links (falls back to production)
-const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com').replace(/\/$/, '');
+const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com').replace(/\/$/, '');
 const SITE_URL = BASE_URL; // alias for backward compatibility
 const IMG = process.env.EMAIL_ASSETS_URL || `${BASE_URL}/images/email`;
 
@@ -46,15 +46,15 @@ const SALARY_GUIDE_URL = process.env.SALARY_GUIDE_URL || 'https://sggccmqjzuimwl
 
 // ── Sender addresses — separate transactional from marketing ──
 // Defaults match config/brand.ts; runtime values come from env (validated in lib/env.ts).
-const EMAIL_FROM_TRANSACTIONAL = process.env.EMAIL_FROM || 'PMHNP Hiring <noreply@pmhnphiring.com>';
-const EMAIL_FROM_MARKETING = process.env.EMAIL_FROM_MARKETING || 'PMHNP Hiring <alerts@pmhnphiring.com>';
+const EMAIL_FROM_TRANSACTIONAL = process.env.EMAIL_FROM || 'NP Hiring <noreply@nphiring.com>';
+const EMAIL_FROM_MARKETING = process.env.EMAIL_FROM_MARKETING || 'NP Hiring <alerts@nphiring.com>';
 // PD outreach gets its own from-name — the campaign is a personal pitch
 // from Sathish, not an automated job-board notification. Falls back to
 // EMAIL_FROM_MARKETING if unset (the previous behavior).
 const EMAIL_FROM_PD_OUTREACH =
   process.env.EMAIL_FROM_PD_OUTREACH || EMAIL_FROM_MARKETING;
 const EMAIL_FROM = EMAIL_FROM_TRANSACTIONAL; // backward compat
-const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || 'support@pmhnphiring.com';
+const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || 'support@nphiring.com';
 
 // Canonical EmailType union — every value the platform sends should be in this list.
 // Drives MARKETING_EMAIL_TYPES below and is the type for `sendAndLog`'s emailType param,
@@ -310,7 +310,7 @@ export async function sendSignupWelcomeEmail(
       );
     } else {
       html = emailShellV2(`
-            ${headerBlockV2('Welcome to PMHNP Hiring', '')}
+            ${headerBlockV2('Welcome to NP Hiring', '')}
             ${spacerV2(20)}
             <tr><td class="content-pad" style="padding:0 40px;"><p style="margin:0;font-family:${SERIF_V2};font-size:17px;color:${V2.textBody};line-height:1.7;text-align:center;">You have unlocked a new way to find your perfect role. Search curated positions, get matched by AI, and connect directly with hiring managers \u2014 no recruiters, no middlemen.</p></td></tr>
             ${spacerV2(36)}
@@ -337,8 +337,8 @@ export async function sendSignupWelcomeEmail(
       from: EMAIL_FROM,
       to: email,
       subject: isEmployer
-        ? 'Welcome to PMHNP Hiring — Start Hiring Today'
-        : `Welcome to PMHNP Hiring, ${firstName || 'there'}!`,
+        ? 'Welcome to NP Hiring — Start Hiring Today'
+        : `Welcome to NP Hiring, ${firstName || 'there'}!`,
       html,
     }, 'welcome_signup', { role }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
 
@@ -614,7 +614,7 @@ export async function sendRefundConfirmationEmail(
         </div>
       </td></tr>
       ${spacerV2(28)}
-      <tr><td class="content-pad" style="padding:0 40px;text-align:center;"><p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textMuted};line-height:1.6;">Questions? Reply to this email or contact <a href="mailto:support@pmhnphiring.com" style="color:${V2.teal};text-decoration:underline;">support@pmhnphiring.com</a>.</p></td></tr>
+      <tr><td class="content-pad" style="padding:0 40px;text-align:center;"><p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textMuted};line-height:1.6;">Questions? Reply to this email or contact <a href="mailto:support@nphiring.com" style="color:${V2.teal};text-decoration:underline;">support@nphiring.com</a>.</p></td></tr>
       ${spacerV2(48)}
       ${closeContentV2()}`,
       unsubscribeFooterV2(unsubscribeToken || 'sample'),
@@ -1022,17 +1022,17 @@ export async function sendNewCandidateAlertEmail(
 
 export function buildBroadcastHtml(body: string, preheaderText: string = '', unsubscribeToken?: string): string {
   return emailShellV2(`
-    ${headerBlockV2('PMHNP Hiring', '')}
+    ${headerBlockV2('NP Hiring', '')}
     ${spacerV2(12)}
     ${bodyTextV2(body)}
     ${spacerV2(32)}
     <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
-      ${primaryButtonV2('Visit PMHNP Hiring', `${BASE_URL}`)}
+      ${primaryButtonV2('Visit NP Hiring', `${BASE_URL}`)}
     </td></tr>
     ${spacerV2(48)}
     ${closeContentV2()}`,
     unsubscribeFooterV2(unsubscribeToken || 'sample'),
-    preheaderText || 'A message from PMHNP Hiring'
+    preheaderText || 'A message from NP Hiring'
   );
 }
 

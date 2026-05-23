@@ -6,7 +6,7 @@ import {
 import { sendAndLog, isEmailSuppressed, getOrCreateUnsubToken } from '@/lib/email-service'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
-const BASE_URL = 'https://pmhnphiring.com'
+const BASE_URL = 'https://nphiring.com'
 
 /**
  * POST /api/email-job — Send job details to user's email
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       `<p style="margin:0 0 4px;font-family:${SANS};font-size:12px;color:${V2.textMuted};">
         <a href="${BASE_URL}/job-alerts" style="color:${V2.textMuted};text-decoration:underline;">Set up job alerts</a>
         &nbsp;&middot;&nbsp;
-        <a href="mailto:support@pmhnphiring.com" style="color:${V2.textMuted};text-decoration:underline;">Contact us</a>
+        <a href="mailto:support@nphiring.com" style="color:${V2.textMuted};text-decoration:underline;">Contact us</a>
       </p>`,
       `You saved "${jobTitle}" — view the full listing and apply!`
     )

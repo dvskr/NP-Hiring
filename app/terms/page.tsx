@@ -7,9 +7,9 @@ import { FileText } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
-  description: 'Read the Terms of Service for PMHNP Hiring, operated by Akari Labs LLC. Understand your rights, responsibilities, pricing, refunds, and platform policies for the #1 PMHNP job board.',
+  description: 'Read the Terms of Service for NP Hiring, operated by Akari Labs LLC. Understand your rights, responsibilities, pricing, refunds, and platform policies for the #1 PMHNP job board.',
   openGraph: {
-    images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-terms-of-service.webp', width: 1280, height: 900, alt: 'PMHNP Hiring terms of service page with user rights, employer responsibilities, and platform policies' }],
+    images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-terms-of-service.webp', width: 1280, height: 900, alt: 'NP Hiring terms of service page with user rights, employer responsibilities, and platform policies' }],
   },
   twitter: { card: 'summary_large_image', images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-terms-of-service.webp'] },
   alternates: { canonical: `${brand.baseUrl}/terms` },
@@ -29,8 +29,8 @@ export default function TermsPage() {
   return (
     <div style={{ background: '#F5F6F8', minHeight: '100vh', padding: '48px 16px 80px' }}>
       <BreadcrumbSchema items={[
-        { name: 'Home', url: 'https://pmhnphiring.com' },
-        { name: 'Terms of Service', url: 'https://pmhnphiring.com/terms' },
+        { name: 'Home', url: 'https://nphiring.com' },
+        { name: 'Terms of Service', url: 'https://nphiring.com/terms' },
       ]} />
       <article style={{ ...clayCard, maxWidth: '760px', margin: '0 auto', padding: '48px 40px' }}>
 
@@ -54,16 +54,16 @@ export default function TermsPage() {
 
         <div>
           <h2 style={h2Style}>1. Introduction & Operating Entity</h2>
-          <p style={pStyle}>PMHNP Hiring (the &quot;Service&quot;, &quot;our Service&quot;, &quot;the Platform&quot;) is operated by <strong>Akari Labs LLC</strong>, a Wyoming limited liability company with its registered office at 30 North Gould Street, Sheridan, WY 82801, United States (&quot;Akari Labs&quot;, &quot;we&quot;, &quot;us&quot;, &quot;our&quot;).</p>
-          <p style={pStyle}>These Terms of Service (&quot;Terms&quot;, &quot;Agreement&quot;) form a legally binding agreement between you (&quot;you&quot;, &quot;User&quot;) and Akari Labs LLC governing your access to and use of PMHNP Hiring at pmhnphiring.com and any related services, features, applications, and content.</p>
+          <p style={pStyle}>NP Hiring (the &quot;Service&quot;, &quot;our Service&quot;, &quot;the Platform&quot;) is operated by <strong>Akari Labs LLC</strong>, a Wyoming limited liability company with its registered office at 30 North Gould Street, Sheridan, WY 82801, United States (&quot;Akari Labs&quot;, &quot;we&quot;, &quot;us&quot;, &quot;our&quot;).</p>
+          <p style={pStyle}>These Terms of Service (&quot;Terms&quot;, &quot;Agreement&quot;) form a legally binding agreement between you (&quot;you&quot;, &quot;User&quot;) and Akari Labs LLC governing your access to and use of NP Hiring at nphiring.com and any related services, features, applications, and content.</p>
 
           <h2 style={h2Style}>2. Acceptance of Terms</h2>
-          <p style={pStyle}>By accessing, registering for, or using PMHNP Hiring, you accept and agree to be bound by these Terms. If you do not agree, you must not use the Service.</p>
+          <p style={pStyle}>By accessing, registering for, or using NP Hiring, you accept and agree to be bound by these Terms. If you do not agree, you must not use the Service.</p>
           <p style={pStyle}>These Terms apply to all visitors, registered users, and others who access or use the Service, including job seekers (Psychiatric Mental Health Nurse Practitioners and other candidates), employers, recruiters, and any third parties acting on their behalf.</p>
           <p style={pStyle}>If you are using the Service on behalf of an organization, you represent and warrant that you have the authority to bind that organization to these Terms, and references to &quot;you&quot; in this Agreement include both you individually and the organization.</p>
 
           <h2 style={h2Style}>3. Description of Service</h2>
-          <p style={pStyle}>PMHNP Hiring is a job board platform connecting Psychiatric Mental Health Nurse Practitioners (&quot;PMHNPs&quot;) with employers seeking to hire them. The Service includes:</p>
+          <p style={pStyle}>NP Hiring is a job board platform connecting Psychiatric Mental Health Nurse Practitioners (&quot;PMHNPs&quot;) with employers seeking to hire them. The Service includes:</p>
           <ul style={ulStyle}>
             <li style={liStyle}>Aggregation of job listings from third-party sources</li>
             <li style={liStyle}>Direct job posting capabilities for verified employers</li>
@@ -122,7 +122,7 @@ export default function TermsPage() {
             <li style={liStyle}>All postings — free, paid, or renewed — receive the same features: 60-day duration, Featured badge, top placement in search results, 25 candidate profile unlocks, 25 InMails, and full analytics</li>
             <li style={liStyle}>Free postings cannot be renewed at the discounted rate. Once a free posting expires, the employer may post a new listing at the standard $199 rate</li>
           </ul>
-          <p style={pStyle}>Current pricing is also published at <Link href="/pricing" style={{ color: '#0D9488', textDecoration: 'none' }}>pmhnphiring.com/pricing</Link> and is incorporated into this Agreement by reference. We may change pricing at any time, and changes will be effective for postings created after the change date. Postings already paid for under prior pricing are not affected.</p>
+          <p style={pStyle}>Current pricing is also published at <Link href="/pricing" style={{ color: '#0D9488', textDecoration: 'none' }}>nphiring.com/pricing</Link> and is incorporated into this Agreement by reference. We may change pricing at any time, and changes will be effective for postings created after the change date. Postings already paid for under prior pricing are not affected.</p>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Payment terms:</p>
           <ul style={ulStyle}>
             <li style={liStyle}>Job posting and renewal fees are due at the time of purchase</li>
@@ -137,7 +137,7 @@ export default function TermsPage() {
           <ul style={ulStyle}>
             <li style={liStyle}>Job posting and renewal fees are generally non-refundable</li>
             <li style={liStyle}>Refund requests may be considered within 7 days of purchase on a case-by-case basis</li>
-            <li style={liStyle}>To request a refund, email <a href="mailto:support@pmhnphiring.com" style={{ color: '#0D9488', textDecoration: 'none' }}>support@pmhnphiring.com</a> with your order details and the reason for the request</li>
+            <li style={liStyle}>To request a refund, email <a href="mailto:support@nphiring.com" style={{ color: '#0D9488', textDecoration: 'none' }}>support@nphiring.com</a> with your order details and the reason for the request</li>
             <li style={liStyle}>We reserve the right to grant or deny refund requests at our sole discretion</li>
             <li style={liStyle}>If we remove a posting for violation of these Terms, no refund will be issued</li>
             <li style={liStyle}>Free postings have no associated payment and are therefore not refundable</li>
@@ -157,7 +157,7 @@ export default function TermsPage() {
           <p style={pStyle}>Candidates agree that, when they make their profile visible and indicate openness to opportunities, their profile may be discoverable by employers using the Service. Candidates may at any time make their profile non-visible or close their account. See our <Link href="/privacy" style={{ color: '#0D9488', textDecoration: 'none' }}>Privacy Policy</Link> for full details on how candidate data is collected, used, shared, and protected.</p>
 
           <h2 style={h2Style}>10. Intellectual Property</h2>
-          <p style={pStyle}>All content provided by Akari Labs LLC on PMHNP Hiring — including text, graphics, logos, icons, images, audio clips, data compilations, software, design, and the &quot;PMHNP Hiring&quot; brand — is the property of Akari Labs LLC or its licensors and is protected by United States and international copyright, trademark, and other intellectual property laws.</p>
+          <p style={pStyle}>All content provided by Akari Labs LLC on NP Hiring — including text, graphics, logos, icons, images, audio clips, data compilations, software, design, and the &quot;NP Hiring&quot; brand — is the property of Akari Labs LLC or its licensors and is protected by United States and international copyright, trademark, and other intellectual property laws.</p>
           <p style={pStyle}>You may not reproduce, distribute, modify, create derivative works of, publicly display, or otherwise exploit any content from the Service without our prior written permission, except for your personal, non-commercial use within the Service.</p>
           <p style={pStyle}>By submitting content to the Service (including job postings, candidate profiles, resumes, and messages), you grant Akari Labs LLC a worldwide, non-exclusive, royalty-free license to host, store, display, transmit, and use that content as necessary to operate, improve, and promote the Service. This license terminates when you delete the content, except where reasonably required for our backups, audit logs, or legal compliance.</p>
 
@@ -189,7 +189,7 @@ export default function TermsPage() {
           </ul>
 
           <h2 style={h2Style}>14. Termination</h2>
-          <p style={pStyle}>You may terminate your account at any time by following the account-deletion flow in your dashboard or by emailing <a href="mailto:support@pmhnphiring.com" style={{ color: '#0D9488', textDecoration: 'none' }}>support@pmhnphiring.com</a>. Account deletion is subject to a 30-day grace period during which the account may be restored, after which it is permanently purged.</p>
+          <p style={pStyle}>You may terminate your account at any time by following the account-deletion flow in your dashboard or by emailing <a href="mailto:support@nphiring.com" style={{ color: '#0D9488', textDecoration: 'none' }}>support@nphiring.com</a>. Account deletion is subject to a 30-day grace period during which the account may be restored, after which it is permanently purged.</p>
           <p style={pStyle}>We may suspend or terminate your access to the Service, or any portion of it, at any time, with or without notice, for any reason — including violation of these Terms, suspected fraud, or any other conduct we determine is harmful to the Service or other users.</p>
           <p style={pStyle}>Upon termination, your right to use the Service immediately ceases. Provisions that by their nature should survive termination — including intellectual property, disclaimers, limitation of liability, indemnification, and dispute resolution — shall survive.</p>
 
@@ -209,15 +209,15 @@ export default function TermsPage() {
           <p style={pStyle}><strong>No waiver.</strong> Our failure to enforce any right or provision of these Terms is not a waiver of that right or provision.</p>
           <p style={pStyle}><strong>Assignment.</strong> You may not assign or transfer these Terms or your account without our prior written consent. We may assign these Terms freely, including to an affiliate or in connection with a merger, acquisition, or sale of assets.</p>
           <p style={pStyle}><strong>Force majeure.</strong> We are not liable for any failure or delay in performance caused by events beyond our reasonable control, including acts of God, natural disasters, war, terrorism, civil unrest, governmental action, labor disputes, or failures of the internet or third-party services.</p>
-          <p style={pStyle}><strong>Notices.</strong> Notices to Akari Labs LLC must be sent to <a href="mailto:support@pmhnphiring.com" style={{ color: '#0D9488', textDecoration: 'none' }}>support@pmhnphiring.com</a> or by mail to 30 North Gould Street, Sheridan, WY 82801. Notices to you may be sent by email to the address associated with your account or by posting on the Service.</p>
+          <p style={pStyle}><strong>Notices.</strong> Notices to Akari Labs LLC must be sent to <a href="mailto:support@nphiring.com" style={{ color: '#0D9488', textDecoration: 'none' }}>support@nphiring.com</a> or by mail to 30 North Gould Street, Sheridan, WY 82801. Notices to you may be sent by email to the address associated with your account or by posting on the Service.</p>
 
           <h2 style={h2Style}>18. Contact</h2>
           <p style={pStyle}>If you have questions about these Terms, please contact us:</p>
           <ul style={{ ...ulStyle, listStyleType: 'none', paddingLeft: 0 }}>
             <li style={liStyle}><strong>Operator:</strong> Akari Labs LLC</li>
             <li style={liStyle}><strong>Mailing address:</strong> 30 North Gould Street, Sheridan, WY 82801, United States</li>
-            <li style={liStyle}><strong>Email:</strong> <a href="mailto:support@pmhnphiring.com" style={{ color: '#0D9488', textDecoration: 'none' }}>support@pmhnphiring.com</a></li>
-            <li style={liStyle}><strong>Website:</strong> <Link href="/" style={{ color: '#0D9488', textDecoration: 'none' }}>pmhnphiring.com</Link></li>
+            <li style={liStyle}><strong>Email:</strong> <a href="mailto:support@nphiring.com" style={{ color: '#0D9488', textDecoration: 'none' }}>support@nphiring.com</a></li>
+            <li style={liStyle}><strong>Website:</strong> <Link href="/" style={{ color: '#0D9488', textDecoration: 'none' }}>nphiring.com</Link></li>
           </ul>
           <p style={pStyle}>For general questions, see our <Link href="/faq" style={{ color: '#0D9488', textDecoration: 'none' }}>FAQ page</Link> or our <Link href="/contact" style={{ color: '#0D9488', textDecoration: 'none' }}>Contact page</Link>.</p>
         </div>

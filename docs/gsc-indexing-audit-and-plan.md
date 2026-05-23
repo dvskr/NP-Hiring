@@ -1,6 +1,6 @@
 # GSC Indexing Audit & Implementation Plan
 
-**Property:** `https://pmhnphiring.com`
+**Property:** `https://nphiring.com`
 **Author:** Sathish Kumar (audit prepared 2026-05-04)
 **Crisis start:** 2026-03-17 (overnight jump 11k → 33k "not indexed")
 **Status as of audit date:** 80,023 total URLs, **22,860 indexed (28.6%)**, **57,163 not indexed (71.4%)**
@@ -340,7 +340,7 @@ for (const row of settingStateStats) {
 }
 ```
 
-Acceptance: `curl -s https://pmhnphiring.com/api/sitemaps/cities/0 | grep -c '<loc>'` returns substantially fewer URLs (≥600 dropped) and all sampled URLs return 200.
+Acceptance: `curl -s https://nphiring.com/api/sitemaps/cities/0 | grep -c '<loc>'` returns substantially fewer URLs (≥600 dropped) and all sampled URLs return 200.
 
 #### P1.2 — Convert empty page 404s to 410 (middleware-level)
 

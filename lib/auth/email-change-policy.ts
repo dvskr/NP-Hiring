@@ -81,7 +81,7 @@ export async function evaluateEmailChange(
     if (userOwnedFreePosts > 0) {
         return {
             allowed: false,
-            reason: `Email domain changes aren't allowed once free posts have been used at ${oldDomain ?? 'your current domain'}. Contact support@pmhnphiring.com if your company domain has actually changed.`,
+            reason: `Email domain changes aren't allowed once free posts have been used at ${oldDomain ?? 'your current domain'}. Contact support@nphiring.com if your company domain has actually changed.`,
             lockedDomain: oldDomain ?? undefined,
         };
     }

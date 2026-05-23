@@ -752,7 +752,7 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
           if (!globalTitleKeyMap.has(idKey)) globalTitleKeyMap.set(idKey, savedJob.id);
         }
 
-        newJobUrls.push(`https://pmhnphiring.com/jobs/${slug}`);
+        newJobUrls.push(`https://nphiring.com/jobs/${slug}`);
 
         // NOTE: Link validation (validateApplyLink) is skipped during ingestion
         // to avoid HTTP timeout overhead. It runs separately via check-dead-links cron.
@@ -1259,7 +1259,7 @@ export async function cleanupExpiredJobs(): Promise<number> {
         const { pingAllSearchEnginesBatchDeleted } = await import('./search-indexing');
         const expiredUrls = allExpiredJobs.map(job => {
           const slug = slugify(job.title, job.id);
-          return `https://pmhnphiring.com/jobs/${slug}`;
+          return `https://nphiring.com/jobs/${slug}`;
         });
 
         console.log(`[Cleanup] De-indexing ${expiredUrls.length} expired jobs via dedicated deletion quota...`);

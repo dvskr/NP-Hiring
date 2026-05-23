@@ -43,7 +43,7 @@ candidates we'll need to spread submissions over ~7 days.
 ### Per-URL submission flow
 
 1. Open https://search.google.com/search-console/removals
-2. Verify the property selector at top reads `pmhnphiring.com`
+2. Verify the property selector at top reads `nphiring.com`
 3. Click **NEW REQUEST** (red button, top right)
 4. Stay on the **TEMPORARILY REMOVE URL** tab
 5. Paste a single URL into the text field

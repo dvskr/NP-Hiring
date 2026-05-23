@@ -1,6 +1,6 @@
 # Data Protection Impact Assessment (DPIA)
 
-> **Controller:** PMHNP Hiring (operated by the founding team)
+> **Controller:** NP Hiring (operated by the founding team)
 > **DPIA reference:** DPIA-2026-001
 > **Version:** 1.0
 > **Date completed:** 2026-04-30
@@ -8,7 +8,7 @@
 > **Template basis:** UK ICO DPIA template (compatible with Art. 35 GDPR & UK GDPR)
 > **Lead reviewer:** Privacy lead (founding engineer)
 
-This DPIA is a self-assessment under GDPR Art. 35. It is required because the processing carried out by PMHNP Hiring meets at least three of the criteria the EDPB lists as triggering mandatory DPIA: systematic profiling, large-scale processing of special categories of data, and innovative use of new technology with personal data.
+This DPIA is a self-assessment under GDPR Art. 35. It is required because the processing carried out by NP Hiring meets at least three of the criteria the EDPB lists as triggering mandatory DPIA: systematic profiling, large-scale processing of special categories of data, and innovative use of new technology with personal data.
 
 The processing has been assessed as **medium residual risk** after mitigation. Prior consultation with a Data Protection Authority under Art. 36 is therefore not required, but this DPIA is retained on file for at least 7 years.
 
@@ -20,7 +20,7 @@ The processing has been assessed as **medium residual risk** after mitigation. P
 
 Three Art. 35(3) triggers are present:
 
-1. **Systematic and extensive evaluation including profiling that produces effects similar to legal effects.** PMHNP Hiring runs an AI candidate-matching algorithm that scores resumes against employer job postings. Although the algorithm does not _decide_ hiring outcomes, the score directly influences which candidates an employer reviews first.
+1. **Systematic and extensive evaluation including profiling that produces effects similar to legal effects.** NP Hiring runs an AI candidate-matching algorithm that scores resumes against employer job postings. Although the algorithm does not _decide_ hiring outcomes, the score directly influences which candidates an employer reviews first.
 2. **Large-scale processing of special categories of data.** Voluntary EEO fields (race/ethnicity, disability status, veteran status, gender) are GDPR Art. 9 categories. We also store DEA / NPI numbers — credentialing identifiers under HHS rules.
 3. **Innovative use of new technology with personal data.** AI scoring on resume content is a novel processing activity that has not been previously risk-assessed for this user base.
 
@@ -38,7 +38,7 @@ Three Art. 35(3) triggers are present:
 
 ### 2.1 Nature of the processing
 
-PMHNP Hiring is a vertical job board for psychiatric mental health nurse practitioners. We:
+NP Hiring is a vertical job board for psychiatric mental health nurse practitioners. We:
 
 - Aggregate public job postings from external sources (Greenhouse, Lever, Workday, Adzuna, etc.) and present them to job seekers.
 - Allow employers to post jobs directly on the platform.

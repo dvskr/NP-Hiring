@@ -3,7 +3,7 @@ import { resolveShortlink } from '@/lib/shortlinks/resolver'
 import { ACTIVE_CAMPAIGN, PLATFORM_BY_LETTER } from '@/lib/shortlinks/campaigns'
 import type { ShortlinkCampaign } from '@/lib/shortlinks/types'
 
-const BASE = 'https://pmhnphiring.com'
+const BASE = 'https://nphiring.com'
 
 describe('resolveShortlink — invalid input', () => {
   it.each([

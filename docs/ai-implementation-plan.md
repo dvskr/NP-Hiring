@@ -1,4 +1,4 @@
-# AI Implementation Plan — PMHNP Hiring
+# AI Implementation Plan — NP Hiring
 
 > Companion to [ai-architecture.md](./ai-architecture.md). The architecture is
 > WHAT we're building. This doc is HOW — sprint-sized tickets, dependencies,

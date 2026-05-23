@@ -2,7 +2,7 @@
 // EMAIL TEMPLATES V2 — "Warm Diorama" Design System
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// Light-mode, warm-tone email design system for pmhnphiring.com
+// Light-mode, warm-tone email design system for nphiring.com
 // Typography: Lora (headings + body) + Inter (UI/buttons/labels)
 // Palette: warm off-white → soft cream → peach accents
 //
@@ -71,10 +71,10 @@ export const V2 = {
 // Structure matches the hand-crafted Supabase auth templates:
 // - 600px card, 8px radius, #FFF8EE bg
 // - Padding: 24px top, 48px bottom
-// - Footer: simple ©, pmhnphiring.com, hello@
+// - Footer: simple ©, nphiring.com, hello@
 
 export function emailShellV2(content: string, footerContent: string = '', preheaderText: string = ''): string {
-  const preheader = preheaderText || 'PMHNP Hiring — The #1 job board for Psychiatric Mental Health Nurse Practitioners';
+  const preheader = preheaderText || 'NP Hiring — The #1 job board for Psychiatric Mental Health Nurse Practitioners';
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -160,7 +160,7 @@ export function emailShellV2(content: string, footerContent: string = '', prehea
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Layout: [100×100 logo centered]
-//         [PMHNP Hiring — centered]
+//         [NP Hiring — centered]
 //         [MENTAL HEALTH CAREERS — centered]
 
 export function headerBlockV2(title: string, subtitle: string = ''): string {
@@ -168,9 +168,9 @@ export function headerBlockV2(title: string, subtitle: string = ''): string {
   return `<tr><td class="header-bg" align="center" bgcolor="${V2.bgPeach}" style="background-color:${V2.bgPeach};padding:24px 0 16px;text-align:center;">
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;">
       <tr>
-        <td valign="middle" style="padding-right:6px;"><img src="${logoUrl}" alt="PMHNP Hiring logo" width="48" height="55" style="display:block;width:48px;height:55px;border:0;background-color:${V2.bgPeach};color:${V2.textPrimary};font-family:${SERIF};font-size:13px;font-weight:700;text-align:center;line-height:55px;" /></td>
+        <td valign="middle" style="padding-right:6px;"><img src="${logoUrl}" alt="NP Hiring logo" width="48" height="55" style="display:block;width:48px;height:55px;border:0;background-color:${V2.bgPeach};color:${V2.textPrimary};font-family:${SERIF};font-size:13px;font-weight:700;text-align:center;line-height:55px;" /></td>
         <td valign="middle">
-          <p class="brand-text" style="margin:0;font-family:${SERIF};font-size:26px;font-weight:700;color:#1F2937;-webkit-text-fill-color:#1F2937;mso-line-height-rule:exactly;letter-spacing:-0.02em;line-height:1;text-align:center;">PMHNP Hiring</p>
+          <p class="brand-text" style="margin:0;font-family:${SERIF};font-size:26px;font-weight:700;color:#1F2937;-webkit-text-fill-color:#1F2937;mso-line-height-rule:exactly;letter-spacing:-0.02em;line-height:1;text-align:center;">NP Hiring</p>
           <p class="tagline-text" style="margin:4px 0 0;font-family:${SANS};font-size:10px;font-weight:700;color:#0d9488;-webkit-text-fill-color:#0d9488;mso-line-height-rule:exactly;letter-spacing:0.08em;text-transform:uppercase;line-height:1;text-align:center;">Mental Health Careers</p>
         </td>
       </tr>
@@ -200,10 +200,10 @@ export function amberHeaderV2(title: string, subtitle: string = ''): string {
               <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto;">
                 <tr>
                   <td valign="middle">
-                    <img src="${BASE_URL}/logo.png" alt="PMHNP Hiring" width="100" height="100" style="display:block;width:100px;height:100px;object-fit:contain;border:0;background-color:${V2.bgAmberWarn};color:${V2.amber};font-family:${SERIF};font-size:14px;font-weight:700;text-align:center;line-height:100px;" />
+                    <img src="${BASE_URL}/logo.png" alt="NP Hiring" width="100" height="100" style="display:block;width:100px;height:100px;object-fit:contain;border:0;background-color:${V2.bgAmberWarn};color:${V2.amber};font-family:${SERIF};font-size:14px;font-weight:700;text-align:center;line-height:100px;" />
                   </td>
                   <td valign="bottom" style="padding-bottom:24px;">
-                    <span style="font-family:${SERIF};font-size:28px;font-weight:700;color:${V2.textPrimary};letter-spacing:-0.02em;display:block;line-height:1;margin-left:-24px;">PMHNP Hiring</span>
+                    <span style="font-family:${SERIF};font-size:28px;font-weight:700;color:${V2.textPrimary};letter-spacing:-0.02em;display:block;line-height:1;margin-left:-24px;">NP Hiring</span>
                     <span style="font-family:${SANS};font-size:10px;font-weight:500;color:${V2.textLabel};letter-spacing:0.08em;text-transform:uppercase;display:block;line-height:1;margin-left:-24px;margin-top:4px;">Mental Health Careers</span>
                   </td>
                 </tr>
@@ -417,6 +417,6 @@ export function unsubscribeFooterV2(unsubscribeToken: string): string {
 
 export function contactFooterV2(): string {
   return `<p style="margin:0 0 4px;font-family:${SANS};font-size:12px;color:#A0AEC0;">
-        Questions? Reply to this email or contact <a href="mailto:support@pmhnphiring.com" style="color:#A0AEC0;text-decoration:underline;">support@pmhnphiring.com</a>
+        Questions? Reply to this email or contact <a href="mailto:support@nphiring.com" style="color:#A0AEC0;text-decoration:underline;">support@nphiring.com</a>
       </p>`;
 }

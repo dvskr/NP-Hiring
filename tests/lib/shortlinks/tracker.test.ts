@@ -4,7 +4,7 @@ import { hashIp, recordClick } from '@/lib/shortlinks/tracker'
 import type { ShortlinkResolution } from '@/lib/shortlinks/types'
 
 const RESOLUTION: ShortlinkResolution = Object.freeze({
-  destination: 'https://pmhnphiring.com/jobs/foo',
+  destination: 'https://nphiring.com/jobs/foo',
   destinationPath: '/jobs/foo',
   platform: 'facebook',
   campaign: 'test-campaign',

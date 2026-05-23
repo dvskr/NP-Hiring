@@ -172,7 +172,7 @@ export interface InvoiceData {
   date: Date;
   paidAt?: Date | null;
   status?: InvoiceStatus;
-  // From/seller block — defaults to PMHNP Hiring.
+  // From/seller block — defaults to NP Hiring.
   fromName?: string;
   fromAddressLines?: ReadonlyArray<string>;
   fromEmail?: string;
@@ -200,13 +200,13 @@ const formatAmount = (cents: number, currency: string = 'USD'): string => {
   return `${symbol}${dollars.toFixed(2)}`;
 };
 
-const DEFAULT_FROM_NAME = 'PMHNP Hiring';
+const DEFAULT_FROM_NAME = 'NP Hiring';
 const DEFAULT_FROM_ADDRESS: ReadonlyArray<string> = [
   '30 North Gould Street',
   'Sheridan, Wyoming 82801',
   'United States',
 ];
-const DEFAULT_FROM_EMAIL = 'support@pmhnphiring.com';
+const DEFAULT_FROM_EMAIL = 'support@nphiring.com';
 
 const InvoiceDocument = ({ data }: { data: InvoiceData }) => {
   const status: InvoiceStatus = data.status ?? 'paid';
@@ -330,8 +330,8 @@ const InvoiceDocument = ({ data }: { data: InvoiceData }) => {
         ) : null}
 
         <View style={styles.footer}>
-          <Text>Thank you for using PMHNP Hiring.</Text>
-          <Text style={{ marginTop: 4 }}>Questions? support@pmhnphiring.com</Text>
+          <Text>Thank you for using NP Hiring.</Text>
+          <Text style={{ marginTop: 4 }}>Questions? support@nphiring.com</Text>
           <Text style={{ marginTop: 8, fontSize: 8, color: '#9CA3AF' }}>
             Akari Labs LLC · 30 North Gould Street, Sheridan, WY 82801, United States
           </Text>

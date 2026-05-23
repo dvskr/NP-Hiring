@@ -909,7 +909,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                         style={{ marginTop: '3px', accentColor: '#0D9488', width: '16px', height: '16px' }}
                       />
                       <div>
-                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on PMHNP Hiring</span>
+                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on NP Hiring</span>
                         <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly — applications arrive in your dashboard</p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
                           {['Resume', 'Cover letter', 'Email alerts'].map(f => (

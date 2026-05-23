@@ -31,12 +31,12 @@ That single round-trip is why the server knows it's "you" on the next page witho
 
 ## 3. First-party vs third-party cookies
 
-- **First-party** = set by the domain you're on. `pmhnphiring.com` setting a cookie when you visit `pmhnphiring.com`.
+- **First-party** = set by the domain you're on. `nphiring.com` setting a cookie when you visit `nphiring.com`.
 - **Third-party** = set by a *different* domain embedded on the page. Like a Facebook "Like" button hosted on `facebook.com`, embedded on your page, setting a `facebook.com` cookie.
 
 Modern browsers (Safari, Firefox, Brave, soon Chrome) **block third-party cookies by default**. We use only first-party cookies, so this doesn't affect us.
 
-> **Subtle but important:** GA4's `_ga` cookie is **first-party** — even though Google operates the analytics, the cookie lives on `pmhnphiring.com`. The data is sent to Google via a separate request, but the cookie itself is ours. This is why GA4 still works in Safari/Firefox.
+> **Subtle but important:** GA4's `_ga` cookie is **first-party** — even though Google operates the analytics, the cookie lives on `nphiring.com`. The data is sent to Google via a separate request, but the cookie itself is ours. This is why GA4 still works in Safari/Firefox.
 
 ## 4. The cookies we set
 
@@ -90,7 +90,7 @@ The cookie is doing one job in this flow: **giving each visitor a stable anonymo
 Third-party cookies powered the entire ad-tech industry for 20 years via **cross-site tracking**:
 
 1. You visit `nytimes.com` which embeds a Doubleclick pixel → Doubleclick sets a third-party cookie `id=abc123`
-2. You then visit `pmhnphiring.com` which also embeds Doubleclick → Doubleclick reads its OWN cookie `id=abc123` → now knows you visited both
+2. You then visit `nphiring.com` which also embeds Doubleclick → Doubleclick reads its OWN cookie `id=abc123` → now knows you visited both
 3. Multiply by 5,000 sites → Doubleclick has a profile of your entire browsing history → sells it to advertisers
 
 Privacy regulators and browser vendors decided that's unacceptable.

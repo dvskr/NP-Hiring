@@ -81,7 +81,7 @@ export default function JobStructuredData({ job }: JobStructuredDataProps) {
   // when titles contain '/', '&', or other punctuation — generate the slug from
   // the same source the page uses so schema URL == <link rel=canonical>.
   const canonicalSlug = job.slug || slugify(job.title, job.id);
-  const canonicalUrl = `https://pmhnphiring.com/jobs/${canonicalSlug}`;
+  const canonicalUrl = `https://nphiring.com/jobs/${canonicalSlug}`;
 
   // SEO Fix #1: location semantics for remote / hybrid / in-person.
   // Google requires:
@@ -210,7 +210,7 @@ export default function JobStructuredData({ job }: JobStructuredDataProps) {
     ...(job.applyOnPlatform ? { directApply: true } : {}),
     identifier: {
       '@type': 'PropertyValue',
-      name: 'PMHNP Hiring',
+      name: 'NP Hiring',
       value: job.id,
     },
   });

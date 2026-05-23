@@ -258,9 +258,9 @@ export default function Footer() {
             {/* Left: Logo + Name + Tagline */}
             <div className="footer-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-                <img src="/logo.png" alt="PMHNP Hiring" width="36" height="36" loading="lazy" decoding="async" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                <img src="/logo.png" alt="NP Hiring" width="36" height="36" loading="lazy" decoding="async" style={{ width: 36, height: 36, objectFit: 'contain' }} />
                 <span className="font-heading" style={{ fontSize: '16px', fontWeight: 700, color: '#fff', marginLeft: '-4px', whiteSpace: 'nowrap' }}>
-                  PMHNP Hiring
+                  NP Hiring
                 </span>
               </Link>
               <span className="footer-pipe" style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)' }} />
@@ -275,11 +275,11 @@ export default function Footer() {
               {/* Pebble Social Icons — organic shapes from hero */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {[
-                  { icon: XLogo, href: 'https://x.com/pmhnphiring', label: 'X', color: '#6ee7b7', shape: '54% 46% 62% 38% / 49% 55% 45% 51%' },
-                  { icon: FacebookLogo, href: 'https://www.facebook.com/pmhnphiring', label: 'Facebook', color: '#5eead4', shape: '61% 39% 45% 55% / 40% 62% 38% 60%' },
-                  { icon: InstagramLogo, href: 'https://www.instagram.com/pmhnphiring', label: 'Instagram', color: '#67e8f9', shape: '42% 58% 55% 45% / 58% 42% 60% 40%' },
+                  { icon: XLogo, href: 'https://x.com/nphiring', label: 'X', color: '#6ee7b7', shape: '54% 46% 62% 38% / 49% 55% 45% 51%' },
+                  { icon: FacebookLogo, href: 'https://www.facebook.com/nphiring', label: 'Facebook', color: '#5eead4', shape: '61% 39% 45% 55% / 40% 62% 38% 60%' },
+                  { icon: InstagramLogo, href: 'https://www.instagram.com/nphiring', label: 'Instagram', color: '#67e8f9', shape: '42% 58% 55% 45% / 58% 42% 60% 40%' },
                   { icon: LinkedinLogo, href: 'https://www.linkedin.com/company/pmhnpjobs', label: 'LinkedIn', color: '#a5b4fc', shape: '67% 33% 48% 52% / 45% 58% 42% 55%' },
-                  { icon: YoutubeLogo, href: 'https://www.youtube.com/@pmhnphiring', label: 'YouTube', color: '#c4b5fd', shape: '50% 50% 60% 40% / 55% 45% 52% 48%' },
+                  { icon: YoutubeLogo, href: 'https://www.youtube.com/@nphiring', label: 'YouTube', color: '#c4b5fd', shape: '50% 50% 60% 40% / 55% 45% 52% 48%' },
                 ].map((s) => {
                   const Icon = s.icon;
                   return (

@@ -22,7 +22,7 @@ import { sendCronFailureAlert } from '@/lib/discord-notifier';
 
 export const maxDuration = 300;
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com';
 
 // Only submit broad categories that have meaningful city-level coverage
 const PSEO_INDEXING_CATEGORIES = [

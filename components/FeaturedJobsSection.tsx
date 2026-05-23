@@ -203,7 +203,7 @@ export default async function FeaturedJobsSection() {
                                 '@type': 'ListItem',
                                 position: idx + 1,
                                 name: job.title,
-                                url: `https://pmhnphiring.com/jobs/${job.slug || job.id}`,
+                                url: `https://nphiring.com/jobs/${job.slug || job.id}`,
                             })),
                         }),
                     }}

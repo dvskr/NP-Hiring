@@ -13,7 +13,7 @@ import { useViewedJobs } from '@/lib/hooks/useViewedJobs';
 import Badge from '@/components/ui/Badge';
 import MessageEmployerModal from '@/components/jobs/MessageEmployerModal';
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com';
 
 interface JobCardProps {
   job: Job;

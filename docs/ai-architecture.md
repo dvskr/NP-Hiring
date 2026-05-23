@@ -1,4 +1,4 @@
-# AI System Architecture — PMHNP Hiring
+# AI System Architecture — NP Hiring
 
 > Enterprise-grade design for AI-powered job matching, candidate intelligence,
 > employer tooling, and platform automation. Living document — designed to be
@@ -53,7 +53,7 @@ clinical workflows, licensing, and PMHNP career paths.
 | "Prep interview questions specific to this role" | Use generic question banks | AI-generated based on job + candidate profile |
 | "Fight bias in my JD" | Hope for the best | Auto-flag gendered/exclusionary language |
 
-### PLATFORM (PMHNP Hiring team)
+### PLATFORM (NP Hiring team)
 | JTBD | Today | With AI |
 |---|---|---|
 | "Catch fake job postings before customers see them" | Manual review of N=18 | Multi-signal classifier flags >$5k/wk salary, spam patterns |

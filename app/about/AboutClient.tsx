@@ -123,7 +123,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
             <h2 style={{ marginTop: 20 }}>Zero-waste <em>candidate sourcing.</em></h2>
             <p style={{ marginTop: 22, color: 'var(--ink-soft)', fontSize: 18, maxWidth: 540 }}>Skip generic aggregators where most applicants are unqualified. Post directly to a board where every visitor is a practicing or about-to-practice PMHNP.</p>
             <div className="ab-feat-list">
-              <div className="ab-feat"><div className="ab-feat-ico coral"><Target size={22} /></div><div><h4>High-Intent Audience</h4><p>The talent on PMHNP Hiring is actively surveying psychiatric scopes — not casually browsing — leading to vastly higher conversion rates.</p></div></div>
+              <div className="ab-feat"><div className="ab-feat-ico coral"><Target size={22} /></div><div><h4>High-Intent Audience</h4><p>The talent on NP Hiring is actively surveying psychiatric scopes — not casually browsing — leading to vastly higher conversion rates.</p></div></div>
               <div className="ab-feat"><div className="ab-feat-ico" style={{ color: '#6F63C0' }}><BarChart3 size={22} /></div><div><h4>Analytics & Placements</h4><p>Secure featured placements and monitor actionable apply-funnel analytics directly from your verified employer dashboard.</p></div></div>
               <div className="ab-feat"><div className="ab-feat-ico"><Layers size={22} /></div><div><h4>Calibrated Matching</h4><p>Our taxonomy maps exact subspecialties — SMI, C/L, substance use, perinatal — so you spend less time filtering and more time hiring.</p></div></div>
             </div>
@@ -159,7 +159,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
           <div className="ab-creator-body">
             <span className="ab-kicker"><Users size={12} /> Who built this</span>
             <h2 style={{ marginTop: 20 }}>One person, one focused job board.</h2>
-            <p>I built PMHNP Hiring because every general nursing job site I looked at made psychiatric NPs do the same thing over and over: filter out hundreds of unrelated RN postings just to find the handful of psych roles. There was no good reason for that, so I built something focused on one specialty instead.</p>
+            <p>I built NP Hiring because every general nursing job site I looked at made psychiatric NPs do the same thing over and over: filter out hundreds of unrelated RN postings just to find the handful of psych roles. There was no good reason for that, so I built something focused on one specialty instead.</p>
             <p>I&apos;m an AI/data engineer, not a clinician. My job here is the data pipeline — pulling job postings, normalizing salary fields, mapping state licensure rules, and surfacing the result through a fast, ad-light interface. The clinical content on this site is editorial commentary aggregated from public sources, not medical advice.</p>
             <p>If something on the site is wrong, missing, or could be better, the fastest way to reach me is the <Link href="/contact" style={{ color: 'inherit', textDecoration: 'underline' }}>contact page</Link>.</p>
             <div className="ab-sig">

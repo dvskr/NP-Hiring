@@ -1,7 +1,7 @@
 # SEO Decision Tree — Required Reading Before Touching pSEO
 
 This is the engineering reference for what HTTP status / canonical / index
-state every URL on `pmhnphiring.com` should return. The GSC indexing
+state every URL on `nphiring.com` should return. The GSC indexing
 crisis of 2026-03-17 happened because someone changed sitemap emit logic
 without internalizing these rules. **Read this before any PR that touches
 `app/jobs/**`, `app/companies/**`, `app/sitemap.ts`, `middleware.ts`, or

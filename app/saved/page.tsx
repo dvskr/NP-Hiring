@@ -173,8 +173,8 @@ export default function SavedJobsPage() {
   return (
     <>
       <BreadcrumbSchema items={[
-        { name: 'Home', url: 'https://pmhnphiring.com' },
-        { name: 'Saved Jobs', url: 'https://pmhnphiring.com/saved' },
+        { name: 'Home', url: 'https://nphiring.com' },
+        { name: 'Saved Jobs', url: 'https://nphiring.com/saved' },
       ]} />
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 16px 80px' }}>
 

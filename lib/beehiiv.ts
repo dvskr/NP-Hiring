@@ -53,9 +53,9 @@ async function _doSync(
         email: email.toLowerCase().trim(),
         reactivate_existing: options.reactivateExisting ?? false,
         send_welcome_email: options.sendWelcome ?? false,
-        utm_source: options.utmSource || 'pmhnphiring',
+        utm_source: options.utmSource || 'nphiring',
         utm_medium: 'website',
-        referring_site: 'https://pmhnphiring.com',
+        referring_site: 'https://nphiring.com',
     };
 
     const response = await fetch(url, {

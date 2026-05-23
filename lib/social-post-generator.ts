@@ -19,7 +19,7 @@ import {
 // Constants
 // ---------------------------------------------------------------------------
 
-const BASE_URL = 'https://pmhnphiring.com';
+const BASE_URL = 'https://nphiring.com';
 const JOBS_PER_POST = 10;
 const HASHTAGS =
     '#PMHNP #NursePractitioner #MentalHealth #NurseJobs #PsychiatricNursing #Hiring #HealthcareJobs #NursingJobs';

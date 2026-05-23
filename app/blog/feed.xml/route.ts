@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getPublishedPosts } from '@/lib/blog';
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com';
 
 /**
  * Blog RSS feed — /blog/feed.xml
@@ -41,7 +41,7 @@ export async function GET() {
       <description><![CDATA[${escape(description)}]]></description>
       <pubDate>${pubDate}</pubDate>
       <category>${escape(post.category || 'PMHNP Career')}</category>
-      <author>contact@pmhnphiring.com (PMHNP Hiring)</author>
+      <author>contact@nphiring.com (NP Hiring)</author>
 ${post.image_url ? `      <enclosure url="${escape(post.image_url)}" type="image/webp"/>` : ''}
     </item>`;
         }).join('\n');
@@ -49,15 +49,15 @@ ${post.image_url ? `      <enclosure url="${escape(post.image_url)}" type="image
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>PMHNP Hiring — Career Blog &amp; Industry Insights</title>
+    <title>NP Hiring — Career Blog &amp; Industry Insights</title>
     <link>${BASE_URL}/blog</link>
     <description>PMHNP career guides, salary trends, licensure changes, and industry analysis from the #1 psychiatric nurse practitioner job board.</description>
     <language>en-us</language>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
     <atom:link href="${BASE_URL}/blog/feed.xml" rel="self" type="application/rss+xml"/>
     <image>
-      <url>${BASE_URL}/pmhnp_logo.png</url>
-      <title>PMHNP Hiring</title>
+      <url>${BASE_URL}/logo.png</url>
+      <title>NP Hiring</title>
       <link>${BASE_URL}/blog</link>
     </image>
     <ttl>60</ttl>

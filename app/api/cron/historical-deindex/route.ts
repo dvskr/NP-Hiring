@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
                             // URL_DELETED submission they needed. A standard
                             // browser UA passes the WAFs and lets the HEAD
                             // check return real status codes.
-                            'User-Agent': 'Mozilla/5.0 (compatible; PMHNPHiringIndexer/1.0; +https://pmhnphiring.com/about)',
+                            'User-Agent': 'Mozilla/5.0 (compatible; PMHNPHiringIndexer/1.0; +https://nphiring.com/about)',
                         },
                     });
                     clearTimeout(timer);

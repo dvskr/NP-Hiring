@@ -7,7 +7,7 @@ import { sendCronFailureAlert } from '@/lib/discord-notifier';
 
 export const maxDuration = 300; // 5 minutes — submits 200+ URLs to search engines
 
-const BASE_URL = 'https://pmhnphiring.com';
+const BASE_URL = 'https://nphiring.com';
 
 /**
  * Daily cron: submit recently created/updated job URLs to

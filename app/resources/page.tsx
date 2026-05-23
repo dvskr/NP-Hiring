@@ -143,8 +143,8 @@ export default async function ResourcesPage() {
     <>
       <VideoJsonLd pathname="/resources" />
       <BreadcrumbSchema items={[
-        { name: 'Home', url: 'https://pmhnphiring.com' },
-        { name: 'Resources', url: 'https://pmhnphiring.com/resources' },
+        { name: 'Home', url: 'https://nphiring.com' },
+        { name: 'Resources', url: 'https://nphiring.com/resources' },
       ]} />
 
       {/* CollectionPage Schema. Audit 14 M-4: previously had no `hasPart`,
@@ -159,12 +159,12 @@ export default async function ResourcesPage() {
         '@type': 'CollectionPage',
         name: `PMHNP Resources & Career Guides — ${currentYear}`,
         description: 'Free career resources for psychiatric nurse practitioners.',
-        url: 'https://pmhnphiring.com/resources',
-        publisher: { '@type': 'Organization', name: 'PMHNP Hiring', url: 'https://pmhnphiring.com' },
+        url: 'https://nphiring.com/resources',
+        publisher: { '@type': 'Organization', name: 'NP Hiring', url: 'https://nphiring.com' },
         hasPart: [
-          { '@type': 'Article', name: 'PMHNP Full Practice Authority Guide', url: 'https://pmhnphiring.com/resources/fpa-guide' },
-          { '@type': 'Article', name: '1099 vs W2 for PMHNPs — Compensation Comparison', url: 'https://pmhnphiring.com/resources/1099-vs-w2' },
-          { '@type': 'Article', name: 'How to Start a PMHNP Private Practice', url: 'https://pmhnphiring.com/resources/private-practice-guide' },
+          { '@type': 'Article', name: 'PMHNP Full Practice Authority Guide', url: 'https://nphiring.com/resources/fpa-guide' },
+          { '@type': 'Article', name: '1099 vs W2 for PMHNPs — Compensation Comparison', url: 'https://nphiring.com/resources/1099-vs-w2' },
+          { '@type': 'Article', name: 'How to Start a PMHNP Private Practice', url: 'https://nphiring.com/resources/private-practice-guide' },
         ],
         numberOfItems: 3,
       }) }} />

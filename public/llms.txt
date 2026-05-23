@@ -1,11 +1,11 @@
-# PMHNP Hiring
+# NP Hiring
 > Last Updated: May 2026
 
 > The #1 specialized job board for Psychiatric Mental Health Nurse Practitioners
 
 ## What We Do
 
-PMHNP Hiring (https://pmhnphiring.com) aggregates, verifies, and enriches PMHNP job postings from hundreds of sources into one dedicated platform. We provide salary transparency, daily job alerts, and data-driven career insights exclusively for psychiatric NPs.
+NP Hiring (https://nphiring.com) aggregates, verifies, and enriches PMHNP job postings from hundreds of sources into one dedicated platform. We provide salary transparency, daily job alerts, and data-driven career insights exclusively for psychiatric NPs.
 
 ## Key Stats
 
@@ -69,7 +69,7 @@ PMHNP Hiring (https://pmhnphiring.com) aggregates, verifies, and enriches PMHNP 
 - /post-job — Employers: post a PMHNP job listing
 - /for-employers — Employer hiring solutions
 - /job-alerts — Set up daily email alerts for new PMHNP jobs
-- /about — About PMHNP Hiring
+- /about — About NP Hiring
 - /faq — Frequently asked questions
 - /resources — Career resources & tools
 
@@ -91,10 +91,10 @@ Each city page includes: job count, average salary (COL-adjusted), population, h
 
 ## Contact
 
-- Website: https://pmhnphiring.com
-- Email: contact@pmhnphiring.com
+- Website: https://nphiring.com
+- Email: contact@nphiring.com
 - LinkedIn: https://www.linkedin.com/company/pmhnpjobs
 
 ## More Info
 
-For comprehensive details, see: https://pmhnphiring.com/llms-full.txt
+For comprehensive details, see: https://nphiring.com/llms-full.txt

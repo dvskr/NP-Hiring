@@ -5,12 +5,12 @@ import { getCurrentUser } from '@/lib/auth/protect'
 import { Suspense } from 'react'
 
 export const metadata = {
-  title: 'Create Account | PMHNP Hiring',
-  description: 'Create your free PMHNP Hiring account. Save jobs, set up alerts, and get matched with psychiatric nurse practitioner positions.',
+  title: 'Create Account | NP Hiring',
+  description: 'Create your free NP Hiring account. Save jobs, set up alerts, and get matched with psychiatric nurse practitioner positions.',
   // Page is noindexed via middleware X-Robots-Tag (per app/robots.ts P2.3
   // unblock window). Self-canonical consolidates ?redirectTo=… variants
   // to the bare /signup URL.
-  alternates: { canonical: 'https://pmhnphiring.com/signup' },
+  alternates: { canonical: 'https://nphiring.com/signup' },
   robots: { index: false, follow: true },
 }
 

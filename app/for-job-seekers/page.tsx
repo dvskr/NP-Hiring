@@ -15,7 +15,7 @@ import {
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: 'For Job Seekers — Find Your Next PMHNP Role | PMHNP Hiring',
+  title: 'For Job Seekers — Find Your Next PMHNP Role | NP Hiring',
   // Removed the hardcoded "9,000+" job count (audit 09 M-21) — the actual
   // count drifts and a stale figure in metadata that doesn't match the
   // live UI is a credibility hit. Description now describes the platform
@@ -73,8 +73,8 @@ export default async function ForJobSeekersPage() {
   return (
     <>
       <BreadcrumbSchema items={[
-        { name: 'Home', url: 'https://pmhnphiring.com' },
-        { name: 'For Job Seekers', url: 'https://pmhnphiring.com/for-job-seekers' },
+        { name: 'Home', url: 'https://nphiring.com' },
+        { name: 'For Job Seekers', url: 'https://nphiring.com/for-job-seekers' },
       ]} />
       <VideoJsonLd pathname="/for-job-seekers" />
 
@@ -268,7 +268,7 @@ export default async function ForJobSeekersPage() {
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, rgba(13,148,136,0.08), rgba(13,148,136,0.02))' }}>
                     <th style={{ width: '40%', padding: '16px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Feature</th>
-                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '12px' }}>PMHNP Hiring</th>
+                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '12px' }}>NP Hiring</th>
                     <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>Indeed</th>
                     <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>LinkedIn</th>
                   </tr>

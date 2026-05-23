@@ -62,7 +62,7 @@ describe('P4.1: sitemap budget guard', () => {
         const sitemap = await sitemapHandler();
 
         // Section presence sanity checks
-        const baseUrl = 'https://pmhnphiring.com';
+        const baseUrl = 'https://nphiring.com';
         const urls = sitemap.map((s) => s.url);
         expect(urls).toContain(baseUrl);
         expect(urls).toContain(`${baseUrl}/jobs`);
@@ -77,7 +77,7 @@ describe('P4.1: sitemap budget guard', () => {
         // Homepage may render as bare host without trailing slash; everything
         // else must be under /...
         for (const entry of sitemap) {
-            expect(entry.url).toMatch(/^https:\/\/pmhnphiring\.com(\/|$)/);
+            expect(entry.url).toMatch(/^https:\/\/nphiring\.com(\/|$)/);
             expect(entry.url).not.toContain('?');
             expect(entry.url).not.toContain('#');
         }
@@ -100,7 +100,7 @@ describe('P4.1: sitemap budget guard', () => {
         expect(sitemap.length).toBeLessThan(200);
         const urls = sitemap.map((s) => s.url);
         // Homepage (bare host) — accept either "https://...com" or with trailing slash.
-        expect(urls.some((u) => u === 'https://pmhnphiring.com' || u === 'https://pmhnphiring.com/')).toBe(true);
+        expect(urls.some((u) => u === 'https://nphiring.com' || u === 'https://nphiring.com/')).toBe(true);
     });
 
     it('robots.txt declares the expected sitemap entrypoints', () => {

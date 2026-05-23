@@ -911,8 +911,8 @@ export async function buildCategoryCityMetadata(
   //     Google expects pagination to canonical to the first page of the same
   //     listing, not jump up two levels.
   const canonicalUrl = isHighQuality
-    ? `https://pmhnphiring.com${basePath}`
-    : `https://pmhnphiring.com/jobs/${config.slug}`;
+    ? `https://nphiring.com${basePath}`
+    : `https://nphiring.com/jobs/${config.slug}`;
 
   // Build salary display for OG image (rawAvgSalary is already in thousands, e.g. 130 = $130K)
   const salaryDisplay = stats.rawAvgSalary && stats.rawAvgSalary > 0
@@ -1098,11 +1098,11 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
     <div style={{ backgroundColor: '#FDFBF7' }}>
       {/* ═══ SCHEMAS ═══ */}
       <BreadcrumbSchema items={[
-        { name: 'Home', url: 'https://pmhnphiring.com' },
-        { name: 'Jobs', url: 'https://pmhnphiring.com/jobs' },
-        { name: config.label, url: `https://pmhnphiring.com/jobs/${config.slug}` },
-        { name: city!.state, url: `https://pmhnphiring.com/jobs/${config.slug}/${stateToSlug(city!.state)}` },
-        { name: city!.name, url: `https://pmhnphiring.com${basePath}` },
+        { name: 'Home', url: 'https://nphiring.com' },
+        { name: 'Jobs', url: 'https://nphiring.com/jobs' },
+        { name: config.label, url: `https://nphiring.com/jobs/${config.slug}` },
+        { name: city!.state, url: `https://nphiring.com/jobs/${config.slug}/${stateToSlug(city!.state)}` },
+        { name: city!.name, url: `https://nphiring.com${basePath}` },
       ]} />
       {/* D9: ItemList schema */}
       {jobs.length > 0 && (
@@ -1118,7 +1118,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                 '@type': 'ListItem',
                 position: idx + 1,
                 name: job.title,
-                url: `https://pmhnphiring.com/jobs/${job.slug || job.id}`,
+                url: `https://nphiring.com/jobs/${job.slug || job.id}`,
               })),
             }),
           }}
@@ -1653,7 +1653,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                         '@type': 'SpeakableSpecification',
                         cssSelector: ['#answer-summary', '.faq-answer'],
                       },
-                      url: `https://pmhnphiring.com${basePath}`,
+                      url: `https://nphiring.com${basePath}`,
                     }),
                   }}
                 />

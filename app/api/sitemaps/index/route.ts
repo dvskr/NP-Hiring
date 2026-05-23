@@ -27,7 +27,7 @@ const BATCH_SIZE = 10000;
 // Mirrors the constant in /api/sitemaps/jobs/[batch]/route.ts — must stay
 // in lockstep so the index reports the right batch count.
 const JOB_BATCH_SIZE = 25000;
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://pmhnphiring.com';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://nphiring.com';
 
 // Mirror of thresholds + staleness window in cities/[batch]/route.ts.
 // If you change either, change both — the two routes must agree exactly.

@@ -46,7 +46,7 @@ export default function AuthLayout({ children, illustration, testimonial }: Auth
           >
             <img
               src="/logo.png"
-              alt="PMHNP Hiring"
+              alt="NP Hiring"
               width="100"
               height="100"
               style={{ width: 100, height: 100, objectFit: 'contain', flexShrink: 0 }}
@@ -64,7 +64,7 @@ export default function AuthLayout({ children, illustration, testimonial }: Auth
                 marginLeft: '-24px',
               }}
             >
-              PMHNP Hiring
+              NP Hiring
             </span>
           </Link>
 

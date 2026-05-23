@@ -390,7 +390,7 @@ export async function generateMetadata({ params, searchParams }: StatePageProps)
         // /jobs/state/ny, /jobs/state/CA, /jobs/state/New%20York all resolve to
         // the same state but each would emit a different canonical if we used
         // the raw param — splintering the indexed forms.
-        canonical: `https://pmhnphiring.com/jobs/state/${stateToSlug(stateName)}`,
+        canonical: `https://nphiring.com/jobs/state/${stateToSlug(stateName)}`,
       },
       // GSC Fix (P3.1 + P3.5): noindex empty-state pages AND any paginated view.
       // Empty state → soft 404 risk; paginated view → duplicate-canonical risk.
@@ -486,9 +486,9 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FDFBF7' }}>
       <BreadcrumbSchema items={[
-        { name: 'Home', url: 'https://pmhnphiring.com' },
-        { name: 'Jobs', url: 'https://pmhnphiring.com/jobs' },
-        { name: stateName, url: `https://pmhnphiring.com/jobs/state/${stateSlug}` },
+        { name: 'Home', url: 'https://nphiring.com' },
+        { name: 'Jobs', url: 'https://nphiring.com/jobs' },
+        { name: stateName, url: `https://nphiring.com/jobs/state/${stateSlug}` },
       ]} />
       {jobs.length > 0 && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -496,7 +496,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
           name: `PMHNP Jobs in ${stateName}`, numberOfItems: stats.totalJobs,
           itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({
             '@type': 'ListItem', position: idx + 1, name: job.title,
-            url: `https://pmhnphiring.com/jobs/${job.slug || job.id}`,
+            url: `https://nphiring.com/jobs/${job.slug || job.id}`,
           })),
         }) }} />
       )}
@@ -510,7 +510,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
           lowPrice: Math.round(stats.avgSalary * 0.8) * 1000,
           highPrice: Math.round(stats.avgSalary * 1.2) * 1000,
           priceCurrency: 'USD',
-          url: `https://pmhnphiring.com/jobs/state/${stateSlug}`,
+          url: `https://nphiring.com/jobs/state/${stateSlug}`,
         }) }} />
       )}
 

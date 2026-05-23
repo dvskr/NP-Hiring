@@ -44,7 +44,7 @@ export default function EditorialToolbar({ slug, title, url }: EditorialToolbarP
   }, [url]);
 
   const handleCite = useCallback(async () => {
-    const citation = `PMHNP Hiring Editorial Team. "${title}". PMHNP Hiring, ${new Date().getFullYear()}. ${url}`;
+    const citation = `NP Hiring Editorial Team. "${title}". NP Hiring, ${new Date().getFullYear()}. ${url}`;
     try {
       await navigator.clipboard.writeText(citation);
     } catch {

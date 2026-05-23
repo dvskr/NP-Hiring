@@ -111,7 +111,7 @@ export async function GET(req: Request) {
             const digest = matchingCandidates.map(c => ({
                 name: [c.firstName, c.lastName?.[0] ? c.lastName[0] + '.' : null].filter(Boolean).join(' ') || 'PMHNP Candidate',
                 headline: c.headline,
-                profileUrl: `https://pmhnphiring.com/employer/candidates/${c.supabaseId}`,
+                profileUrl: `https://nphiring.com/employer/candidates/${c.supabaseId}`,
                 specialties: c.specialties ? c.specialties.split(',').map(s => s.trim()) : [],
                 states: c.licenseStates ? c.licenseStates.split(',').map(s => s.trim()) : [],
                 experience: c.yearsExperience,

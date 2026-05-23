@@ -14,19 +14,19 @@ const FAQ_OG_IMAGE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object
 
 export const metadata: Metadata = {
   // `absolute` opts out of the layout title template so we don't end up
-  // with "FAQ | PMHNP Jobs | PMHNP Hiring" (the brand-confusing form
+  // with "FAQ | PMHNP Jobs | NP Hiring" (the brand-confusing form
   // audit 09 M-18 flagged — "PMHNP Jobs" is not the brand name).
-  title: { absolute: 'PMHNP Hiring FAQ — Job Search, Posting & Alerts' },
-  description: 'Frequently asked questions about PMHNP Hiring. Learn how to search jobs, post positions, set up alerts, and make the most of the #1 PMHNP job board.',
+  title: { absolute: 'NP Hiring FAQ — Job Search, Posting & Alerts' },
+  description: 'Frequently asked questions about NP Hiring. Learn how to search jobs, post positions, set up alerts, and make the most of the #1 PMHNP job board.',
   openGraph: {
-    title: 'PMHNP Hiring FAQ',
+    title: 'NP Hiring FAQ',
     description: 'Common questions about searching, posting, and managing PMHNP jobs.',
     type: 'website',
     url: `${brand.baseUrl}/faq`,
-    siteName: 'PMHNP Hiring',
-    images: [{ url: FAQ_OG_IMAGE, width: 1280, height: 900, alt: 'PMHNP Hiring FAQ — job posting, salary transparency, job alerts, employer features' }],
+    siteName: 'NP Hiring',
+    images: [{ url: FAQ_OG_IMAGE, width: 1280, height: 900, alt: 'NP Hiring FAQ — job posting, salary transparency, job alerts, employer features' }],
   },
-  twitter: { card: 'summary_large_image', title: 'PMHNP Hiring FAQ', images: [FAQ_OG_IMAGE] },
+  twitter: { card: 'summary_large_image', title: 'NP Hiring FAQ', images: [FAQ_OG_IMAGE] },
   alternates: {
     canonical: `${brand.baseUrl}/faq`,
   },
@@ -87,18 +87,18 @@ export default function FAQPage() {
     },
     {
       question: "How do I access my employer dashboard?",
-      answer: "Check your confirmation email for a dashboard link. The dashboard allows you to view analytics, edit your posting, browse candidates, and manage all your job postings in one place. If you've lost the link, contact us at support@pmhnphiring.com."
+      answer: "Check your confirmation email for a dashboard link. The dashboard allows you to view analytics, edit your posting, browse candidates, and manage all your job postings in one place. If you've lost the link, contact us at support@nphiring.com."
     },
     {
       question: "Do you offer refunds?",
-      answer: "Contact us at support@pmhnphiring.com within 7 days of posting if you're unsatisfied and we'll work with you. We want you to have a great experience and will do our best to resolve any issues."
+      answer: "Contact us at support@nphiring.com within 7 days of posting if you're unsatisfied and we'll work with you. We want you to have a great experience and will do our best to resolve any issues."
     },
   ];
 
   const generalFaqs = [
     {
       question: "How do I contact support?",
-      answer: "Email us at support@pmhnphiring.com and we'll respond within 24 hours (usually much faster). You can also use our contact form for general inquiries."
+      answer: "Email us at support@nphiring.com and we'll respond within 24 hours (usually much faster). You can also use our contact form for general inquiries."
     },
     {
       question: "Is my information secure?",
@@ -203,8 +203,8 @@ export default function FAQPage() {
     <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       <VideoJsonLd pathname="/faq" />
       <BreadcrumbSchema items={[
-        { name: 'Home', url: 'https://pmhnphiring.com' },
-        { name: 'FAQ', url: 'https://pmhnphiring.com/faq' },
+        { name: 'Home', url: 'https://nphiring.com' },
+        { name: 'FAQ', url: 'https://nphiring.com/faq' },
       ]} />
       {/* FAQPage Schema for Google rich results */}
       <script
@@ -317,7 +317,7 @@ export default function FAQPage() {
               Didn&apos;t find your answer? We&apos;re here to help. Reach out and we&apos;ll get back to you within 24 hours.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-lg mx-auto">
-              <a href="mailto:support@pmhnphiring.com" className="w-full sm:w-auto">
+              <a href="mailto:support@nphiring.com" className="w-full sm:w-auto">
                 <Button variant="primary" size="lg" className="w-full">
                   <Mail size={20} />
                   Email Us

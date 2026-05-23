@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
 
         // If published, ping all search engines (Google, Bing, IndexNow)
         if (postStatus === 'published') {
-            const postUrl = `https://pmhnphiring.com/blog/${slug}`;
+            const postUrl = `https://nphiring.com/blog/${slug}`;
             // Fire and forget — don't block the response
             pingAllSearchEngines(postUrl).catch((err) =>
                 console.error('[Blog API] Background indexing ping failed:', err)
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
                     category: post.category,
                     status: post.status,
                     publish_date: post.publish_date,
-                    url: `https://pmhnphiring.com/blog/${post.slug}`,
+                    url: `https://nphiring.com/blog/${post.slug}`,
                 },
             },
             { status: 201 }

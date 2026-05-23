@@ -27,7 +27,7 @@ import OnboardingProfessionalForm from './OnboardingProfessionalForm';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-    title: 'Complete your profile | PMHNP Hiring',
+    title: 'Complete your profile | NP Hiring',
     description: 'A few details so employers can find you in AI Match.',
     robots: { index: false, follow: false },
 };

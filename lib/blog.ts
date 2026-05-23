@@ -343,7 +343,7 @@ export function markdownToHtml(markdown: string): string {
     html = html.replace(
         /(?<!")(?<!href=")(?<!<a[^>]*>)(https?:\/\/[^\s<>"',;!)\]]+[^\s<>"',;!.)\]])/g,
         (url) => {
-            const isInternal = url.includes('pmhnphiring.com');
+            const isInternal = url.includes('nphiring.com');
             return isInternal
                 ? `<a href="${url}">${url}</a>`
                 : `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;

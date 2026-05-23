@@ -11,28 +11,28 @@ import ContactFAQ from './ContactFAQ';
 // rendered into <head>-adjacent script) and the visible accordion (client-
 // rendered for the toggle UX) consume this list — they cannot diverge.
 const FAQ_ITEMS = [
-    { q: 'Is PMHNP Hiring free for job seekers?', a: 'Yes! Browsing jobs, setting up alerts, and applying are completely free. We never charge job seekers.' },
+    { q: 'Is NP Hiring free for job seekers?', a: 'Yes! Browsing jobs, setting up alerts, and applying are completely free. We never charge job seekers.' },
     { q: 'How often are jobs updated?', a: 'Our pipeline runs twice daily, pulling from 3,000+ companies across major job boards and direct career pages.' },
     { q: 'How do I post a job as an employer?', a: 'Create a free employer account and post your job listing. Featured listings are available for enhanced visibility.' },
     { q: 'Can I get daily job alerts?', a: 'Absolutely! Sign up for free and set your preferences (location, job type, salary range). We\'ll email you matching jobs daily.' },
-    { q: 'How do I delete my account?', a: 'Go to Settings > Account and click "Delete Account", or email us at support@pmhnphiring.com and we\'ll handle it within 24 hours.' },
+    { q: 'How do I delete my account?', a: 'Go to Settings > Account and click "Delete Account", or email us at support@nphiring.com and we\'ll handle it within 24 hours.' },
     { q: 'Why did a job listing disappear?', a: 'Jobs are automatically removed when they expire, get filled, or are reported by multiple users as invalid. Check the employer\'s site for the latest openings.' },
 ];
 
 export const metadata: Metadata = {
     // `absolute` opts out of the layout title template so we don't
-    // double-suffix " | PMHNP Hiring".
-    title: { absolute: 'Contact PMHNP Hiring — Support, Employer & Partnership Inquiries' },
-    description: 'Reach the PMHNP Hiring team for job-seeker support, employer questions, partnerships, or feedback. We respond within 24-48 hours.',
+    // double-suffix " | NP Hiring".
+    title: { absolute: 'Contact NP Hiring — Support, Employer & Partnership Inquiries' },
+    description: 'Reach the NP Hiring team for job-seeker support, employer questions, partnerships, or feedback. We respond within 24-48 hours.',
     alternates: { canonical: `${brand.baseUrl}/contact` },
     openGraph: {
-        title: 'Contact PMHNP Hiring',
+        title: 'Contact NP Hiring',
         description: 'Get in touch with the team behind the #1 PMHNP job board — support, employer, and partnership inquiries.',
         type: 'website',
         url: `${brand.baseUrl}/contact`,
-        siteName: 'PMHNP Hiring',
+        siteName: 'NP Hiring',
     },
-    twitter: { card: 'summary_large_image', title: 'Contact PMHNP Hiring', description: 'Get in touch with the team — support, employer, and partnership inquiries.' },
+    twitter: { card: 'summary_large_image', title: 'Contact NP Hiring', description: 'Get in touch with the team — support, employer, and partnership inquiries.' },
 };
 
 const clayCard: React.CSSProperties = {
@@ -55,16 +55,16 @@ export default function ContactPage() {
         '@type': 'ContactPage',
         '@id': `${brand.baseUrl}/contact#contactpage`,
         url: `${brand.baseUrl}/contact`,
-        name: 'Contact PMHNP Hiring',
-        description: 'Reach the PMHNP Hiring team for support, employer, and partnership inquiries.',
+        name: 'Contact NP Hiring',
+        description: 'Reach the NP Hiring team for support, employer, and partnership inquiries.',
         mainEntity: {
             '@type': 'Organization',
-            name: 'PMHNP Hiring',
+            name: 'NP Hiring',
             url: brand.baseUrl,
             contactPoint: {
                 '@type': 'ContactPoint',
                 contactType: 'customer support',
-                email: 'support@pmhnphiring.com',
+                email: 'support@nphiring.com',
                 availableLanguage: 'English',
                 areaServed: 'US',
             },
@@ -84,8 +84,8 @@ export default function ContactPage() {
     return (
         <div style={{ background: '#F5F6F8', minHeight: '100vh' }}>
             <BreadcrumbSchema items={[
-                { name: 'Home', url: 'https://pmhnphiring.com' },
-                { name: 'Contact', url: 'https://pmhnphiring.com/contact' },
+                { name: 'Home', url: 'https://nphiring.com' },
+                { name: 'Contact', url: 'https://nphiring.com/contact' },
             ]} />
 
             <script
@@ -143,7 +143,7 @@ export default function ContactPage() {
                                     </div>
                                     <div>
                                         <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A2E35', margin: '0 0 2px' }}>Email</p>
-                                        <a href="mailto:support@pmhnphiring.com" style={{ fontSize: '13px', color: '#0D9488', textDecoration: 'none' }}>support@pmhnphiring.com</a>
+                                        <a href="mailto:support@nphiring.com" style={{ fontSize: '13px', color: '#0D9488', textDecoration: 'none' }}>support@nphiring.com</a>
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>

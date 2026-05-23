@@ -266,7 +266,7 @@ export async function generateJobCardPng(
                             fontSize: '28px',
                             fontWeight: 700,
                         },
-                        children: 'Apply Now →  pmhnphiring.com',
+                        children: 'Apply Now →  nphiring.com',
                     },
                 },
             ],
@@ -531,7 +531,7 @@ export async function generateFBSummaryPng(
                                         fontWeight: 700,
                                     },
                                     children:
-                                        'Browse All Jobs  ->  pmhnphiring.com',
+                                        'Browse All Jobs  ->  nphiring.com',
                                 },
                             },
                         ],

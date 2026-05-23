@@ -7,8 +7,8 @@
  *   2. two consecutive blank-line spacer divs between bullets
  *
  *   npx tsx scripts/verify-jd-render.ts                  # against localhost:3000
- *   npx tsx scripts/verify-jd-render.ts --base=https://pmhnphiring.com
- *   npx tsx scripts/verify-jd-render.ts --env=prod --base=https://pmhnphiring.com
+ *   npx tsx scripts/verify-jd-render.ts --base=https://nphiring.com
+ *   npx tsx scripts/verify-jd-render.ts --env=prod --base=https://nphiring.com
  */
 import { config as dotenvConfig } from 'dotenv';
 const isProd = process.argv.includes('--env=prod');

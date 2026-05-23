@@ -136,7 +136,7 @@ function slugifyProgram(value: string): string {
 function baseUrl(): string {
   return (
     process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '') ||
-    'https://pmhnphiring.com'
+    'https://nphiring.com'
   )
 }
 
@@ -738,7 +738,7 @@ function renderHtml(args: {
   <header class="pd-header">
     <!-- Top row: brand wordmark (left) + primary CTA (right), vertically aligned. -->
     <div class="pd-header-top">
-      <a class="pd-brand" href="${escape(brandUrl)}" target="_blank" rel="noopener" aria-label="PMHNP Hiring">
+      <a class="pd-brand" href="${escape(brandUrl)}" target="_blank" rel="noopener" aria-label="NP Hiring">
         <img class="pd-brand-logo" src="${escape(baseUrl())}/logo.png" alt="" width="72" height="72" loading="eager" decoding="async">
         <span class="pd-brand-mark">PMHNP <span class="pd-brand-mark-accent">Hiring</span></span>
       </a>
@@ -756,7 +756,7 @@ function renderHtml(args: {
   ${cards}${emptyState}
   <div class="pd-footer">
     <span class="pd-stamp">
-      Powered by <a href="${escape(brandUrl)}" target="_blank" rel="noopener">pmhnphiring.com</a>
+      Powered by <a href="${escape(brandUrl)}" target="_blank" rel="noopener">nphiring.com</a>
     </span>
   </div>
 </div>
@@ -779,7 +779,7 @@ function renderErrorHtml(args: { reason: string }): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>PMHNP Hiring — widget</title>
+<title>NP Hiring — widget</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@600;700;800&display=swap" rel="stylesheet">
@@ -889,7 +889,7 @@ function renderErrorHtml(args: { reason: string }): string {
 </head>
 <body>
 <div class="pd-wrap">
-  <a class="pd-brand" href="${escape(brandUrl)}" target="_blank" rel="noopener" aria-label="PMHNP Hiring">
+  <a class="pd-brand" href="${escape(brandUrl)}" target="_blank" rel="noopener" aria-label="NP Hiring">
     <img class="pd-brand-logo" src="${escape(baseUrl())}/logo.png" alt="" width="56" height="56">
     <span class="pd-brand-mark">PMHNP <span class="pd-brand-mark-accent">Hiring</span></span>
   </a>
@@ -903,7 +903,7 @@ function renderErrorHtml(args: { reason: string }): string {
     </a>
   </div>
   <div class="pd-footer">
-    <span>Powered by <a href="${escape(brandUrl)}" target="_blank" rel="noopener">pmhnphiring.com</a></span>
+    <span>Powered by <a href="${escape(brandUrl)}" target="_blank" rel="noopener">nphiring.com</a></span>
   </div>
 </div>
 </body>
@@ -916,7 +916,7 @@ function withWidgetHeaders(res: NextResponse): NextResponse {
   // the legacy X-Frame-Options header.
   res.headers.set(
     'Content-Security-Policy',
-    "frame-ancestors 'self' https://*.edu https://pmhnphiring.com",
+    "frame-ancestors 'self' https://*.edu https://nphiring.com",
   )
   // Near-realtime: 60s edge cache + stale-while-revalidate for snappy
   // iframe loads. Worst-case staleness is 60s; a newly-posted role

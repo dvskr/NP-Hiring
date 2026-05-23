@@ -159,7 +159,7 @@ export async function buildSettingStateMetadata(
       }],
     },
     alternates: {
-      canonical: `https://pmhnphiring.com${basePath}`,
+      canonical: `https://nphiring.com${basePath}`,
     },
     // SEO Fix #9: noindex thin state pages with 1-2 jobs (mirrors the
     // category-city-template MIN_JOBS_FOR_INDEX=3 gate). 0-job pages still
@@ -312,10 +312,10 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
       `}} />
       {/* Schemas */}
       <BreadcrumbSchema items={[
-        { name: 'Home', url: 'https://pmhnphiring.com' },
-        { name: 'Jobs', url: 'https://pmhnphiring.com/jobs' },
-        { name: config.label, url: `https://pmhnphiring.com/jobs/${config.slug}` },
-        { name: stateName!, url: `https://pmhnphiring.com${basePath}` },
+        { name: 'Home', url: 'https://nphiring.com' },
+        { name: 'Jobs', url: 'https://nphiring.com/jobs' },
+        { name: config.label, url: `https://nphiring.com/jobs/${config.slug}` },
+        { name: stateName!, url: `https://nphiring.com${basePath}` },
       ]} />
       {/* ItemList schema */}
       {jobs.length > 0 && (
@@ -331,7 +331,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 '@type': 'ListItem',
                 position: idx + 1,
                 name: job.title,
-                url: `https://pmhnphiring.com/jobs/${job.slug || job.id}`,
+                url: `https://nphiring.com/jobs/${job.slug || job.id}`,
               })),
             }),
           }}

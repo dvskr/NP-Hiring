@@ -129,9 +129,9 @@ export default function PrivatePracticeGuidePage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <BreadcrumbSchema items={[
-        { name: "Home", url: "https://pmhnphiring.com" },
-        { name: "Resources", url: "https://pmhnphiring.com/resources" },
-        { name: "Private Practice Guide", url: "https://pmhnphiring.com/resources/private-practice-guide" }
+        { name: "Home", url: "https://nphiring.com" },
+        { name: "Resources", url: "https://nphiring.com/resources" },
+        { name: "Private Practice Guide", url: "https://nphiring.com/resources/private-practice-guide" }
       ]} />
       <script
         type="application/ld+json"
@@ -161,8 +161,8 @@ export default function PrivatePracticeGuidePage() {
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
             image: HERO_IMAGE,
-            author: { '@type': 'Organization', name: 'PMHNP Hiring' },
-            publisher: { '@type': 'Organization', name: 'PMHNP Hiring', url: 'https://pmhnphiring.com' },
+            author: { '@type': 'Organization', name: 'NP Hiring' },
+            publisher: { '@type': 'Organization', name: 'NP Hiring', url: 'https://nphiring.com' },
             mainEntityOfPage: { '@type': 'WebPage', '@id': `${brand.baseUrl}/resources/private-practice-guide` },
           }),
         }}

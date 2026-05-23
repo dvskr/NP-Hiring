@@ -165,7 +165,7 @@ function RenewalSuccessContent() {
           <p className="text-sm text-gray-500">
             Need help?{' '}
             <a
-              href="mailto:support@pmhnphiring.com"
+              href="mailto:support@nphiring.com"
               className="text-teal-600 hover:underline"
             >
               Contact support

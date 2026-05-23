@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     try {
       await sendAndLog({
         from: '', // overridden by sendAndLog (transactional sender)
-        to: 'support@pmhnphiring.com',
+        to: 'support@nphiring.com',
         subject: `${tierPrefix}Contact Form: ${trimmedSubject}`,
         html: buildContactNotificationHtml(trimmedName, trimmedEmail, trimmedSubject, trimmedMessage + tierInfo),
       }, 'contact_internal', { senderEmail: trimmedEmail, subject: trimmedSubject });
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to send message. Please try again or email us directly at support@pmhnphiring.com.'
+        error: 'Failed to send message. Please try again or email us directly at support@nphiring.com.'
       },
       { status: 500 }
     );

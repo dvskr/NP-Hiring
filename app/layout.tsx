@@ -202,7 +202,7 @@ export default async function RootLayout({
                   "legalName": brand.legal.entityName,
                   "url": brand.baseUrl,
                   "logo": `${brand.baseUrl}/logo.png`,
-                  "image": `${brand.baseUrl}/pmhnp_logo.png`,
+                  "image": `${brand.baseUrl}/logo.png`,
                   "description": `The #1 job board for ${brand.niche.long}s`,
                   "foundingDate": brand.legal.foundingYear,
                   // Per attribution rules: do NOT emit a `founder` Person on

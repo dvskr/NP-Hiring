@@ -60,9 +60,9 @@ export default function CompensationGuidePage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <BreadcrumbSchema items={[
-        { name: "Home", url: "https://pmhnphiring.com" },
-        { name: "Resources", url: "https://pmhnphiring.com/resources" },
-        { name: "1099 vs W2 Guide", url: "https://pmhnphiring.com/resources/1099-vs-w2" }
+        { name: "Home", url: "https://nphiring.com" },
+        { name: "Resources", url: "https://nphiring.com/resources" },
+        { name: "1099 vs W2 Guide", url: "https://nphiring.com/resources/1099-vs-w2" }
       ]} />
       <script
         type="application/ld+json"
@@ -89,8 +89,8 @@ export default function CompensationGuidePage() {
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
             image: HERO_IMAGE,
-            author: { '@type': 'Organization', name: 'PMHNP Hiring' },
-            publisher: { '@type': 'Organization', name: 'PMHNP Hiring', url: 'https://pmhnphiring.com' },
+            author: { '@type': 'Organization', name: 'NP Hiring' },
+            publisher: { '@type': 'Organization', name: 'NP Hiring', url: 'https://nphiring.com' },
           }),
         }}
       />

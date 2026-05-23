@@ -1,8 +1,8 @@
-# PMHNP Hiring — Comprehensive Site Information for AI Systems
+# NP Hiring — Comprehensive Site Information for AI Systems
 # llms-full.txt — Extended version of llms.txt
 # Last Updated: May 2026
 
-> PMHNP Hiring (pmhnphiring.com) is the #1 specialized job board for Psychiatric Mental Health Nurse Practitioners in the United States. We connect PMHNPs with employers across all 50 states.
+> NP Hiring (nphiring.com) is the #1 specialized job board for Psychiatric Mental Health Nurse Practitioners in the United States. We connect PMHNPs with employers across all 50 states.
 
 ## Mission
 
@@ -109,19 +109,19 @@ A Psychiatric Mental Health Nurse Practitioner (PMHNP) is an Advanced Practice R
 ## API & Data Access
 
 ### Sitemap
-- Primary: https://pmhnphiring.com/sitemap.xml
-- City sitemaps: https://pmhnphiring.com/api/sitemaps/cities/{0-9}
-- Sitemap index: https://pmhnphiring.com/api/sitemaps/index
+- Primary: https://nphiring.com/sitemap.xml
+- City sitemaps: https://nphiring.com/api/sitemaps/cities/{0-9}
+- Sitemap index: https://nphiring.com/api/sitemaps/index
 
 ### Feeds
-- RSS: https://pmhnphiring.com/feed.xml (if available)
-- Job alerts: https://pmhnphiring.com/job-alerts
+- RSS: https://nphiring.com/feed.xml (if available)
+- Job alerts: https://nphiring.com/job-alerts
 
 ## Contact & Legal
 
-- **Website**: https://pmhnphiring.com
-- **Email**: contact@pmhnphiring.com
+- **Website**: https://nphiring.com
+- **Email**: contact@nphiring.com
 - **LinkedIn**: https://www.linkedin.com/company/pmhnpjobs
-- **Facebook**: https://www.facebook.com/pmhnphiring
-- **Privacy Policy**: https://pmhnphiring.com/privacy
-- **Terms of Service**: https://pmhnphiring.com/terms
+- **Facebook**: https://www.facebook.com/nphiring
+- **Privacy Policy**: https://nphiring.com/privacy
+- **Terms of Service**: https://nphiring.com/terms

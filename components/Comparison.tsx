@@ -21,7 +21,7 @@ const featureLabels = [
 
 const platforms: Platform[] = [
     {
-        name: 'PMHNP Hiring',
+        name: 'NP Hiring',
         highlighted: true,
         features: {
             'PMHNP-Specific': 'yes',

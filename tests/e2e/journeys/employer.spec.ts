@@ -18,7 +18,7 @@ import {
 
 const HAS_AUTH = getEmployerCreds() !== null;
 const AGAINST_PROD =
-  !!process.env.PLAYWRIGHT_BASE_URL && process.env.PLAYWRIGHT_BASE_URL.includes('pmhnphiring.com');
+  !!process.env.PLAYWRIGHT_BASE_URL && process.env.PLAYWRIGHT_BASE_URL.includes('nphiring.com');
 
 // ── Read-only tests ─────────────────────────────────────────────────────────
 

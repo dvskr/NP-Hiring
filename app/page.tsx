@@ -78,7 +78,7 @@ export async function generateMetadata(): Promise<Metadata> {
           url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp',
           width: 1280,
           height: 900,
-          alt: `PMHNP Hiring job board homepage showing ${jobCountDisplay} psychiatric nurse practitioner jobs from ${uniqueEmployerCount}+ companies across 50 states`,
+          alt: `NP Hiring job board homepage showing ${jobCountDisplay} psychiatric nurse practitioner jobs from ${uniqueEmployerCount}+ companies across 50 states`,
         },
       ],
     },
@@ -112,7 +112,7 @@ export default async function Home() {
             '@context': 'https://schema.org',
             '@type': 'BreadcrumbList',
             itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://pmhnphiring.com' },
+              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://nphiring.com' },
             ],
           }),
         }}

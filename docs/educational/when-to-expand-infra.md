@@ -114,7 +114,7 @@ You hit this when paid ads or enterprise pipeline starts.
 - Future-proofs against the rest of third-party cookie deprecation
 
 **What to set up:**
-- A subdomain like `tag.pmhnphiring.com` pointing to a Google Tag Manager *server* container
+- A subdomain like `tag.nphiring.com` pointing to a Google Tag Manager *server* container
 - Vercel can host this directly via a small API route, or use Google Cloud Run (~$0-50/month at low scale)
 - Send GA4 events through the server container instead of directly from the browser
 - Configure Meta Conversions API + Google Enhanced Conversions to receive events from the same server

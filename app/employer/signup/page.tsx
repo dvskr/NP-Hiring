@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 
 export const metadata = {
-  title: 'Employer Sign Up | PMHNP Hiring',
+  title: 'Employer Sign Up | NP Hiring',
   description: 'Create your employer account to start posting PMHNP jobs',
 }
 

@@ -419,7 +419,7 @@ export async function POST(request: NextRequest) {
     // Ping search engines for indexing (production only, fire-and-forget)
     const isProduction = process.env.VERCEL_ENV === 'production' || (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_BASE_URL?.includes('localhost'));
     if (isProduction) {
-      const jobUrl = `https://pmhnphiring.com/jobs/${slug}`;
+      const jobUrl = `https://nphiring.com/jobs/${slug}`;
       pingAllSearchEngines(jobUrl).catch((err) =>
         logger.error('[Post-Free] Background indexing ping failed', err)
       );

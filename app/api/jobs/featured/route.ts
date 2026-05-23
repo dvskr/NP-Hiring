@@ -130,7 +130,7 @@ function mapJob(job: any) {
         remote_display: remoteDisplay(job.isRemote, job.isHybrid),
         has_sign_on_bonus: signOn.has,
         sign_on_amount: signOn.amount,
-        url: `https://pmhnphiring.com/jobs/${job.slug || job.id}`,
+        url: `https://nphiring.com/jobs/${job.slug || job.id}`,
         posted_date: job.createdAt ? new Date(job.createdAt).toISOString().split('T')[0] : null,
         source: job.sourceProvider || null,
     };

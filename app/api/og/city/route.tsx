@@ -19,9 +19,9 @@ export async function GET(request: NextRequest) {
   // Fetch logo
   let logoSrc = '';
   try {
-    const host = request.headers.get('host') || 'pmhnphiring.com';
+    const host = request.headers.get('host') || 'nphiring.com';
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    const logoRes = await fetch(`${protocol}://${host}/pmhnp_logo.png`);
+    const logoRes = await fetch(`${protocol}://${host}/logo.png`);
     if (logoRes.ok) {
       const logoBuf = await logoRes.arrayBuffer();
       logoSrc = `data:image/png;base64,${Buffer.from(logoBuf).toString('base64')}`;
@@ -103,10 +103,10 @@ export async function GET(request: NextRequest) {
             marginBottom: 24,
           }}>
             {logoSrc ? (
-              <img src={logoSrc} alt="PMHNP Hiring" width={180} height={60} style={{ objectFit: 'contain' }} />
+              <img src={logoSrc} alt="NP Hiring" width={180} height={60} style={{ objectFit: 'contain' }} />
             ) : (
               <div style={{ display: 'flex', fontSize: 26, fontWeight: 800, color: '#0D9488' }}>
-                PMHNP Hiring
+                NP Hiring
               </div>
             )}
             {/* Category badge */}
@@ -257,7 +257,7 @@ export async function GET(request: NextRequest) {
               letterSpacing: '0.05em',
               boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
             }}>
-              pmhnphiring.com
+              nphiring.com
             </div>
           </div>
         </div>

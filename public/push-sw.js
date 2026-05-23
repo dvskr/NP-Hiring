@@ -1,4 +1,4 @@
-// Service Worker for Push Notifications — PMHNP Hiring
+// Service Worker for Push Notifications — NP Hiring
 /* eslint-disable no-restricted-globals */
 
 self.addEventListener('push', function (event) {
@@ -19,7 +19,7 @@ self.addEventListener('push', function (event) {
         };
 
         event.waitUntil(
-            self.registration.showNotification(data.title || 'PMHNP Hiring', options)
+            self.registration.showNotification(data.title || 'NP Hiring', options)
         );
     } catch (e) {
         console.error('Push event error:', e);
@@ -37,7 +37,7 @@ self.addEventListener('notificationclick', function (event) {
         self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
             // Focus existing tab if available
             for (const client of clientList) {
-                if (client.url.includes('pmhnphiring.com') && 'focus' in client) {
+                if (client.url.includes('nphiring.com') && 'focus' in client) {
                     client.navigate(url);
                     return client.focus();
                 }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const BASE_URL = 'https://pmhnphiring.com';
+const BASE_URL = 'https://nphiring.com';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 86400; // daily

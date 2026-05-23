@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAllPageImages } from '@/lib/image-seo';
 
-const BASE_URL = 'https://pmhnphiring.com';
+const BASE_URL = 'https://nphiring.com';
 
 export const dynamic = 'force-static';
 export const revalidate = 86400; // daily

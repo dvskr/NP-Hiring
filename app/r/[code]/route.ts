@@ -48,7 +48,7 @@ const FALLBACK_PATH = '/jobs'
 
 function buildBaseUrl(): string {
   return (
-    process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '') || 'https://pmhnphiring.com'
+    process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '') || 'https://nphiring.com'
   )
 }
 

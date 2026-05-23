@@ -299,7 +299,7 @@ export default function AdminEmailPage() {
                             type="text"
                             value={subject}
                             onChange={e => setSubject(e.target.value)}
-                            placeholder="e.g. Exciting new features on PMHNP Hiring!"
+                            placeholder="e.g. Exciting new features on NP Hiring!"
                             style={{ ...inputStyle, marginBottom: '16px' }}
                         />
 
@@ -310,7 +310,7 @@ export default function AdminEmailPage() {
                         <textarea
                             value={body}
                             onChange={e => setBody(e.target.value)}
-                            placeholder={`Hi {{firstName}},\n\nWe're excited to share some news with you...\n\n**Bold text** and *italic text* work.\n\nBest,\nThe PMHNP Hiring Team`}
+                            placeholder={`Hi {{firstName}},\n\nWe're excited to share some news with you...\n\n**Bold text** and *italic text* work.\n\nBest,\nThe NP Hiring Team`}
                             style={{ ...inputStyle, minHeight: '260px', resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.6' }}
                         />
 

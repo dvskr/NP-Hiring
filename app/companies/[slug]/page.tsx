@@ -73,12 +73,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                 description: company.description
                     ? `${company.description.substring(0, 140)}... View ${activeJobCount} open PMHNP role${activeJobCount === 1 ? '' : 's'} at ${company.name}.`
                     : `Browse ${activeJobCount} open PMHNP position${activeJobCount === 1 ? '' : 's'} at ${company.name}. Salary info, locations, and direct apply.`,
-                url: `https://pmhnphiring.com/companies/${slug}`,
+                url: `https://nphiring.com/companies/${slug}`,
                 type: 'website',
-                siteName: 'PMHNP Hiring',
+                siteName: 'NP Hiring',
             },
             alternates: {
-                canonical: `https://pmhnphiring.com/companies/${slug}`,
+                canonical: `https://nphiring.com/companies/${slug}`,
             },
             // GSC Fix: noindex companies with 0 active jobs (prevents soft 404)
             ...(activeJobCount === 0 && {
@@ -150,9 +150,9 @@ export default async function CompanyPage({ params }: Props) {
     return (
         <>
             <BreadcrumbSchema items={[
-                { name: 'Home', url: 'https://pmhnphiring.com' },
-                { name: 'Companies', url: 'https://pmhnphiring.com/companies' },
-                { name: company.name, url: `https://pmhnphiring.com/companies/${slug}` },
+                { name: 'Home', url: 'https://nphiring.com' },
+                { name: 'Companies', url: 'https://nphiring.com/companies' },
+                { name: company.name, url: `https://nphiring.com/companies/${slug}` },
             ]} />
 
             <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -321,7 +321,7 @@ export default async function CompanyPage({ params }: Props) {
                         '@context': 'https://schema.org',
                         '@type': 'Organization',
                         name: company.name,
-                        url: company.website || `https://pmhnphiring.com/companies/${slug}`,
+                        url: company.website || `https://nphiring.com/companies/${slug}`,
                         ...(company.logoUrl && { logo: company.logoUrl }),
                         ...(company.description && { description: company.description }),
                     }),

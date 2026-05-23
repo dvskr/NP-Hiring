@@ -28,8 +28,8 @@ export const maxDuration = 60;
  *      JSON, different OAuth scope at token-exchange time. The service
  *      account must also be added as a "Restricted" user in GSC →
  *      Settings → Users and permissions → with the property selected.)
- *   GSC_SITE_URL env var = "sc-domain:pmhnphiring.com" or
- *                          "https://pmhnphiring.com/"  (default if not set)
+ *   GSC_SITE_URL env var = "sc-domain:nphiring.com" or
+ *                          "https://nphiring.com/"  (default if not set)
  *
  * If env vars are missing, the cron logs and exits 200 (skipped, not failed)
  * so missing setup doesn't trigger noise.
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     // since the same service account JSON works for both APIs (Search Console
     // needs auth/webmasters.readonly scope; Indexing API needs auth/indexing).
     const keyJsonRaw = process.env.GSC_SERVICE_ACCOUNT_KEY ?? process.env.GOOGLE_INDEXING_CREDENTIALS;
-    const siteUrl = process.env.GSC_SITE_URL || 'sc-domain:pmhnphiring.com';
+    const siteUrl = process.env.GSC_SITE_URL || 'sc-domain:nphiring.com';
 
     if (!keyJsonRaw) {
         console.log('[CRON:gsc-health-check] Skipped — neither GSC_SERVICE_ACCOUNT_KEY nor GOOGLE_INDEXING_CREDENTIALS configured.');

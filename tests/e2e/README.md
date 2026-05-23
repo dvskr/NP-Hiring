@@ -34,7 +34,7 @@ By default, tests run against `http://localhost:3000`. Override with `PLAYWRIGHT
 PLAYWRIGHT_BASE_URL=https://pmhnp-job-board-<deploy>.vercel.app npm run test:e2e
 
 # Against production (read-only tests only — mutations auto-skip)
-PLAYWRIGHT_BASE_URL=https://pmhnphiring.com npm run test:e2e:smoke
+PLAYWRIGHT_BASE_URL=https://nphiring.com npm run test:e2e:smoke
 ```
 
 The `webServer` block in `playwright.config.ts` only auto-starts the dev server when the URL is `localhost` or `127.0.0.1`.
@@ -69,7 +69,7 @@ npx ts-node scripts/create-test-users.ts
 | `journeys/employer.spec.ts` | 13 tests — login/post-job/applicants/settings/signup | Yes (local only) |
 | `journeys/admin.spec.ts` | 17 tests — gate checks, all admin pages, blog/email/jobs | Yes (local only) |
 
-**Mutation tests auto-skip when `PLAYWRIGHT_BASE_URL` contains `pmhnphiring.com`.** This protects production from test pollution. Against localhost they run fully.
+**Mutation tests auto-skip when `PLAYWRIGHT_BASE_URL` contains `nphiring.com`.** This protects production from test pollution. Against localhost they run fully.
 
 ## Reading test output
 

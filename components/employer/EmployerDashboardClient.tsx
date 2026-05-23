@@ -1439,7 +1439,7 @@ function EmployerFeedbackCard() {
                 Rate Your Experience
             </h3>
             <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 14px', lineHeight: 1.4 }}>
-                How would you rate PMHNP Hiring so far?
+                How would you rate NP Hiring so far?
             </p>
             <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
                 {[1, 2, 3, 4, 5].map((n) => (
@@ -1568,12 +1568,12 @@ function EmployerTestimonialCard({ employerName }: { employerName: string }) {
                 Share Your Story
             </h3>
             <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 12px', lineHeight: 1.4 }}>
-                {employerName}, your hiring experience matters! Help others discover PMHNP Hiring.
+                {employerName}, your hiring experience matters! Help others discover NP Hiring.
             </p>
             <textarea
                 value={review}
                 onChange={(e) => { setReview(e.target.value); if (error) setError(null); }}
-                placeholder="How has PMHNP Hiring helped your recruitment?"
+                placeholder="How has NP Hiring helped your recruitment?"
                 rows={3}
                 maxLength={TESTIMONIAL_MAX_CHARS}
                 style={{

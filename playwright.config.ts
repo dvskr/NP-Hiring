@@ -11,7 +11,7 @@ dotenvConfig({ path: path.resolve(__dirname, '.env') });
  *
  * Default target: localhost:3000 (your dev server).
  * Set PLAYWRIGHT_BASE_URL to override (e.g., a Vercel preview URL):
- *   PLAYWRIGHT_BASE_URL=https://pmhnphiring.com npx playwright test
+ *   PLAYWRIGHT_BASE_URL=https://nphiring.com npx playwright test
  *
  * Run:
  *   npm run test:e2e              # full suite, auto-starts dev server

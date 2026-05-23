@@ -222,9 +222,9 @@ function SuccessContent() {
 
           <p style={{ fontSize: '16px', color: '#5A6B73', margin: '0 0 6px', lineHeight: 1.6 }}>
             {state.session?.jobTitle
-              ? <>Your job <strong style={{ color: '#1A2E35' }}>{state.session.jobTitle}</strong> is now live on PMHNP Hiring.</>
+              ? <>Your job <strong style={{ color: '#1A2E35' }}>{state.session.jobTitle}</strong> is now live on NP Hiring.</>
               : isFreeMode
-                ? 'Your job listing is now live on PMHNP Hiring.'
+                ? 'Your job listing is now live on NP Hiring.'
                 : 'Your job post is now live.'}
           </p>
           <p style={{ fontSize: '14px', color: '#8A9BA6', margin: '0 0 28px', lineHeight: 1.6 }}>

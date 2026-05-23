@@ -11,11 +11,11 @@ export const metadata: Metadata = {
   description:
     'Browse companies actively hiring PMHNPs. See open positions, salary data, and apply directly. Updated daily with 3,000+ employers across all 50 states.',
   openGraph: {
-    title: 'Companies Hiring PMHNPs — PMHNP Hiring',
+    title: 'Companies Hiring PMHNPs — NP Hiring',
     description: 'Explore employers with open psychiatric nurse practitioner positions.',
-    url: 'https://pmhnphiring.com/companies',
+    url: 'https://nphiring.com/companies',
     type: 'website',
-    siteName: 'PMHNP Hiring',
+    siteName: 'NP Hiring',
     images: [{
       url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp',
       width: 1280,
@@ -83,8 +83,8 @@ export default async function CompaniesIndexPage() {
     <>
       <BreadcrumbSchema
         items={[
-          { name: 'Home', url: 'https://pmhnphiring.com' },
-          { name: 'Companies', url: 'https://pmhnphiring.com/companies' },
+          { name: 'Home', url: 'https://nphiring.com' },
+          { name: 'Companies', url: 'https://nphiring.com/companies' },
         ]}
       />
 
@@ -133,7 +133,7 @@ export default async function CompaniesIndexPage() {
           <div style={{ fontSize: '15px', color: '#3D3530', lineHeight: 1.75 }}>
             <p style={{ marginBottom: '16px' }}>
               Every employer below has at least one currently published PMHNP role on
-              PMHNP Hiring. The list is a mix of <strong>direct employers</strong> —
+              NP Hiring. The list is a mix of <strong>direct employers</strong> —
               health systems, community mental health centers (CMHCs), Federally
               Qualified Health Centers (FQHCs), VA medical centers, telehealth
               platforms, and private practices — alongside <strong>staffing agencies</strong>{' '}

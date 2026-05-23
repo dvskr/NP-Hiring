@@ -9,34 +9,34 @@
 // ─── Internal Link Formatting ────────────────────────────────────────────────
 
 /**
- * Map of known PMHNP Hiring URL patterns to descriptive link text.
+ * Map of known NP Hiring URL patterns to descriptive link text.
  * Order matters: more specific patterns first to avoid partial matches.
  */
 const INTERNAL_LINK_MAP: [RegExp, string][] = [
-    [/https?:\/\/pmhnphiring\.com\/jobs\?type=remote\b/g, 'Browse remote PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\?type=telehealth\b/g, 'Browse telehealth PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\?type=travel\b/g, 'Browse travel PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\/remote\b/g, 'Browse remote PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\/telehealth\b/g, 'Browse telehealth jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\/travel\b/g, 'Browse travel PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\/new-grad\b/g, 'Browse new grad PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\/per-diem\b/g, 'Browse per diem PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/salary-guide\b/g, 'PMHNP Salary Guide'],
-    [/https?:\/\/pmhnphiring\.com\/salaries\b/g, 'PMHNP Salary Data'],
-    [/https?:\/\/pmhnphiring\.com\/job-alerts\b/g, 'Set up job alerts'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\b/g, 'Browse all PMHNP jobs →'],
+    [/https?:\/\/nphiring\.com\/jobs\?type=remote\b/g, 'Browse remote PMHNP jobs →'],
+    [/https?:\/\/nphiring\.com\/jobs\?type=telehealth\b/g, 'Browse telehealth PMHNP jobs →'],
+    [/https?:\/\/nphiring\.com\/jobs\?type=travel\b/g, 'Browse travel PMHNP jobs →'],
+    [/https?:\/\/nphiring\.com\/jobs\/remote\b/g, 'Browse remote PMHNP jobs →'],
+    [/https?:\/\/nphiring\.com\/jobs\/telehealth\b/g, 'Browse telehealth jobs →'],
+    [/https?:\/\/nphiring\.com\/jobs\/travel\b/g, 'Browse travel PMHNP jobs →'],
+    [/https?:\/\/nphiring\.com\/jobs\/new-grad\b/g, 'Browse new grad PMHNP jobs →'],
+    [/https?:\/\/nphiring\.com\/jobs\/per-diem\b/g, 'Browse per diem PMHNP jobs →'],
+    [/https?:\/\/nphiring\.com\/salary-guide\b/g, 'PMHNP Salary Guide'],
+    [/https?:\/\/nphiring\.com\/salaries\b/g, 'PMHNP Salary Data'],
+    [/https?:\/\/nphiring\.com\/job-alerts\b/g, 'Set up job alerts'],
+    [/https?:\/\/nphiring\.com\/jobs\b/g, 'Browse all PMHNP jobs →'],
 ];
 
 /** Regex to match a raw URL (not already inside a markdown link) */
-const RAW_URL_RE = /(?<!\]\()(?<!\()(?<!")(?<!\[)(https?:\/\/pmhnphiring\.com\/[^\s)"',;!<>\]]*[^\s)"',;!.<>\]])/g;
+const RAW_URL_RE = /(?<!\]\()(?<!\()(?<!")(?<!\[)(https?:\/\/nphiring\.com\/[^\s)"',;!<>\]]*[^\s)"',;!.<>\]])/g;
 
-/** Convert raw pmhnphiring.com URLs into descriptive markdown links */
+/** Convert raw nphiring.com URLs into descriptive markdown links */
 function formatInternalLinks(content: string): string {
     return content
         .split('\n')
         .map((line) => {
-            // Skip lines that already contain well-formed markdown links to pmhnphiring.com
-            if (/\[.+?\]\(https?:\/\/pmhnphiring\.com/.test(line)) return line;
+            // Skip lines that already contain well-formed markdown links to nphiring.com
+            if (/\[.+?\]\(https?:\/\/nphiring\.com/.test(line)) return line;
 
             // Handle state page URLs: /states/california → "PMHNP jobs in California"
             line = line.replace(

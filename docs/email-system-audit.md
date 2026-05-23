@@ -28,7 +28,7 @@ Multiple targeted fixes shipped against the job alert pipeline and shared templa
 - **Category page sort consistency pass** — five category/city listing pages were on the legacy `[isFeatured DESC, createdAt DESC]` order and missing the `qualityScore` boost. Upgraded to the canonical 4-key sort: [`addiction`](../app/jobs/addiction/page.tsx), [`behavioral-health`](../app/jobs/behavioral-health/page.tsx), [`new-grad`](../app/jobs/new-grad/page.tsx), [`city/[slug]`](../app/jobs/city/[slug]/page.tsx), [`metro/[slug]`](../app/jobs/metro/[slug]/page.tsx) (the last had `qualityScore` but was missing `originalPostedAt`). Now all 28 category root pages, both shared pSEO templates ([`lib/pseo/setting-state-template.tsx`](../lib/pseo/setting-state-template.tsx), [`lib/pseo/category-city-template.tsx`](../lib/pseo/category-city-template.tsx)), and the main `/jobs` page sort identically — employer posts surface above aggregator posts everywhere on the site.
 - **Single source of truth for the `best` sort** — extracted [`lib/utils/job-sort.ts`](../lib/utils/job-sort.ts) exporting both `BEST_SORT_ORDER_BY` (Prisma orderBy used by `/api/jobs/route.ts` and `lib/job-alerts-service.ts`) and `compareJobsBest()` (in-memory comparator used after cross-alert dedup). Both share the same 4-key ranking semantics. Pinned by 11 unit tests in [`tests/lib/job-sort.test.ts`](../tests/lib/job-sort.test.ts) covering: orderBy snapshot shape, featured precedence, qualityScore tiebreakers, the employer-bonus scenario, originalPostedAt fallback to createdAt, null handling, and a realistic mixed-list ordering check. Future drift between DB and JS sides will fail CI. Also updated `tests/api/jobs.test.ts` to import `BEST_SORT_ORDER_BY` instead of inlining the expected order.
 - **Saved-job-reminder email card unified with alert card** — `sendSavedJobReminderEmail` ([`lib/email-service.ts:1216`](../lib/email-service.ts)) previously rendered a minimal card (title + employer · location + small Apply button) but never even rendered the cards into the email body — it built `jobCardsHtml` then dropped it on the floor and only sent a hero-image intro. Now renders the same rich card as the job-alert email: salary under title, Featured badge support, mode/jobType/location chips, gradient teal Apply CTA with dynamic `⚡ Easy Apply` / `Direct Apply` / `Apply Now ↗` label. Cron route updated to `select` the additional Job fields (salary, mode, jobType, isFeatured, applyOnPlatform, sourceType, createdAt) needed by the card. Preview catalog `saved-job-reminder` and `email-job` templates also updated to match. (Card markup is now duplicated across `buildAlertHtml`, `sendSavedJobReminderEmail`, and the preview — a future cleanup is to extract a shared `renderJobCardHtml` helper. Audit issue 10 step 2.)
-- **Image-blocking hardening** — Outlook desktop, corporate networks, and Apple Mail privacy mode block images by default for ~40-60% of opens. Audited every `<img>` across `lib/email-templates-v2.ts`, `lib/email-service.ts`, the preview catalog, and the employer-outreach route. For each: (1) replaced empty `alt=""` with meaningful text (e.g., "PMHNP Hiring logo", "Welcome to PMHNP Hiring", step titles), (2) added explicit `width` AND `height` HTML attributes so the layout slot reserves space before the image loads, (3) added `bgcolor` on the image's `<td>` and inline `background-color` on the `<img>` itself for a colored placeholder, (4) added inline `color`, `font-family`, `font-size`, `font-weight`, `line-height` on the `<img>` so the alt text renders as styled text (not the broken-icon glyph) when blocked. Also collapsed three duplicated step-icon blocks in `sendSignupWelcomeEmail` to use the now-fixed `stepBlock()` helper.
+- **Image-blocking hardening** — Outlook desktop, corporate networks, and Apple Mail privacy mode block images by default for ~40-60% of opens. Audited every `<img>` across `lib/email-templates-v2.ts`, `lib/email-service.ts`, the preview catalog, and the employer-outreach route. For each: (1) replaced empty `alt=""` with meaningful text (e.g., "NP Hiring logo", "Welcome to NP Hiring", step titles), (2) added explicit `width` AND `height` HTML attributes so the layout slot reserves space before the image loads, (3) added `bgcolor` on the image's `<td>` and inline `background-color` on the `<img>` itself for a colored placeholder, (4) added inline `color`, `font-family`, `font-size`, `font-weight`, `line-height` on the `<img>` so the alt text renders as styled text (not the broken-icon glyph) when blocked. Also collapsed three duplicated step-icon blocks in `sendSignupWelcomeEmail` to use the now-fixed `stepBlock()` helper.
 - **Audit clean-sweep — all 10 open issues addressed**:
   - **Issue 1 (HIGH)** — five direct-Resend routes refactored to use `sendAndLog`. `/api/email-job`, `/api/auth/send-confirmation`, `/api/contact` (×2), `/api/salary-guide`, `/api/admin/employer-outreach` now go through the wrapper with suppression checks (where applicable) and List-Unsubscribe headers (where applicable). The bulk employer-outreach route filters suppressed addresses upfront and writes per-recipient `EmailSend` rows so the bounce/complaint webhook can find them by `resendId`.
   - **Issue 2 (HIGH)** — List-Unsubscribe headers added to `sendSignupWelcomeEmail`, `sendConfirmationEmail`, and `sendExpiryWarningEmail` (the last had been passing `editToken` semantically wrong; now uses real unsub token via `getOrCreateUnsubToken`).
@@ -44,7 +44,7 @@ Multiple targeted fixes shipped against the job alert pipeline and shared templa
 - **Job alerts switched to single opt-in** — `/api/job-alerts/route.ts` previously created alerts as `isActive=false, confirmedAt=null` and sent a "Confirm Subscription" email containing a link to `/api/job-alerts/confirm` (CASL/GDPR double-opt-in pattern). Now alerts are created with `isActive=true, confirmedAt=now()` and the welcome ("Your Alerts Are Live") email goes out immediately via `sendWelcomeEmail`. The `sendAlertConfirmationEmail` function and the `alert-confirm` preview template were both deleted. The `/api/job-alerts/confirm` endpoint is kept in place to grandfather any in-flight pending alerts from the old flow. Tradeoff: weaker explicit-consent signal to Gmail/Yahoo (relevant under their bulk-sender 2024 rules), slightly higher abuse risk (someone signing up another person's address). Justified for a US-only audience with a niche topic where conversion friction matters more than ISP reputation. Net result: the audit's issue 1 list of "leaky direct-Resend routes" drops from 6 to 5 — `/api/job-alerts` no longer sends any direct-Resend mail at all.
 - **Litmus pass — three real-client fixes**:
   - **Welcome hero image removed entirely** (production + preview). It was rendering at the wrong aspect ratio in Outlook 2021 (Windows 11 dark mode showed an oversized stretched image dominating the email) and was a leading source of weird first-paint experiences. The signup welcome now goes header → centered intro → step-icons → CTA, matching the cleaner pattern used by every other email.
-  - **Brand-text contrast hardened** for Gmail Android dark mode. Gmail Android applies its own color-inversion that ignores `<meta color-scheme>` and `prefers-color-scheme` media queries. "PMHNP Hiring" and the "MENTAL HEALTH CAREERS" tagline now have inline `-webkit-text-fill-color`, `mso-line-height-rule:exactly`, and explicit hex colors (`#1F2937`, `#0d9488`) instead of relying on V2 token colors. Tagline weight bumped 500 → 700. Logo + brand text now stay readable on the peach header in every dark-mode client tested.
+  - **Brand-text contrast hardened** for Gmail Android dark mode. Gmail Android applies its own color-inversion that ignores `<meta color-scheme>` and `prefers-color-scheme` media queries. "NP Hiring" and the "MENTAL HEALTH CAREERS" tagline now have inline `-webkit-text-fill-color`, `mso-line-height-rule:exactly`, and explicit hex colors (`#1F2937`, `#0d9488`) instead of relying on V2 token colors. Tagline weight bumped 500 → 700. Logo + brand text now stay readable on the peach header in every dark-mode client tested.
   - **Bulletproof button pattern** in `primaryButtonV2`, `secondaryButtonV2`, and the inline job-card Apply button. Outlook (Windows 11) was stripping `background-image: linear-gradient(...)`, collapsing `padding` on the `<a>` tag, ignoring `border-radius`, and rendering the button as a plain colored span. The new pattern wraps each button in `<!--[if mso]>...<v:roundrect>...<![endif]-->` for Outlook (renders as a real rounded rectangle via VML) and `<!--[if !mso]><!-- ...<a>... <!--<![endif]-->` for everyone else (gradient + shadow + radius preserved). Inline job-card buttons in `buildAlertHtml`, `sendSavedJobReminderEmail`, and the preview's `email-job` / `saved-job-reminder` / `job-alert` templates all use a shared `applyButton(url, label)` helper. `mso-hide:all` on the modern anchor prevents Outlook from rendering both copies side-by-side.
 - **Email assets env var** — `EMAIL_ASSETS_URL` moved to `.env` (was only in `.env.prod`); dev previews now resolve the Supabase CDN.
 - **Cropped logo uploaded** to Supabase email-assets bucket as `logo-cropped.png`. New helper [`scripts/upload-logo-cropped.js`](../scripts/upload-logo-cropped.js) for re-uploads.
@@ -58,9 +58,9 @@ Multiple targeted fixes shipped against the job alert pipeline and shared templa
 ## Architecture
 
 ```
-                ┌─ Transactional sends (noreply@pmhnphiring.com)
+                ┌─ Transactional sends (noreply@nphiring.com)
 Resend SDK ◄────┤
-                └─ Marketing sends     (alerts@pmhnphiring.com)
+                └─ Marketing sends     (alerts@nphiring.com)
                           ▲
                           │ sendAndLog() wrapper
                           │  • injects List-Unsubscribe headers
@@ -86,9 +86,9 @@ Resend SDK ◄────┤
 
 | Role | Address | Configured via |
 |---|---|---|
-| Transactional | `noreply@pmhnphiring.com` | `EMAIL_FROM` |
-| Marketing | `alerts@pmhnphiring.com` | `EMAIL_FROM_MARKETING` |
-| Reply-to | `support@pmhnphiring.com` (v1), `hello@pmhnphiring.com` (v2 / a few routes — drift, see issue 4) | hardcoded in `lib/email-service.ts:50` |
+| Transactional | `noreply@nphiring.com` | `EMAIL_FROM` |
+| Marketing | `alerts@nphiring.com` | `EMAIL_FROM_MARKETING` |
+| Reply-to | `support@nphiring.com` (v1), `hello@nphiring.com` (v2 / a few routes — drift, see issue 4) | hardcoded in `lib/email-service.ts:50` |
 | Webhook ingress | `/api/webhooks/resend` (Svix-verified) | `RESEND_WEBHOOK_SECRET` |
 
 ---
@@ -177,7 +177,7 @@ Marketing senders (`job_alert`, `candidate_alert`, `performance_report`, `saved_
 `sendAndLog` injects RFC 8058 one-click headers when an `unsubscribeUrl` is supplied:
 
 ```
-List-Unsubscribe: <https://pmhnphiring.com/unsubscribe?token=...>
+List-Unsubscribe: <https://nphiring.com/unsubscribe?token=...>
 List-Unsubscribe-Post: List-Unsubscribe=One-Click
 ```
 
@@ -333,9 +333,9 @@ model EmployerJob {
 
 | Address | Where it appears |
 |---|---|
-| `support@pmhnphiring.com` | `lib/email-service.ts:50`, `app/api/contact/route.ts:90`, `lib/email-templates-v2.ts:139` |
-| `hello@pmhnphiring.com` | `lib/email-service-v2.ts:30`, `app/api/auth/send-confirmation/route.ts:96`, `app/api/email-job/route.ts:54` |
-| `noreply@pmhnphiring.com` | env default in `lib/env.ts:25` and `lib/email-service.ts:47` |
+| `support@nphiring.com` | `lib/email-service.ts:50`, `app/api/contact/route.ts:90`, `lib/email-templates-v2.ts:139` |
+| `hello@nphiring.com` | `lib/email-service-v2.ts:30`, `app/api/auth/send-confirmation/route.ts:96`, `app/api/email-job/route.ts:54` |
+| `noreply@nphiring.com` | env default in `lib/env.ts:25` and `lib/email-service.ts:47` |
 
 `SALARY_GUIDE_URL` defaults to a hardcoded Supabase storage URL in two places.
 

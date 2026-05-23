@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test'
  *   - /for-programs landing page (sections, embed builder controls)
  *
  * Read-only. No auth, no mutations. Safe against production —
- *   PLAYWRIGHT_BASE_URL=https://pmhnphiring.com npx playwright test widget-and-programs
+ *   PLAYWRIGHT_BASE_URL=https://nphiring.com npx playwright test widget-and-programs
  *
  * Run locally:
  *   npx playwright test widget-and-programs
@@ -160,14 +160,14 @@ test.describe('/for-programs — page sections', () => {
     await expect(page.getByRole('heading', { name: /Frequently Asked/i })).toBeVisible()
   })
 
-  test('email CTAs use hello@pmhnphiring.com', async ({ page }) => {
+  test('email CTAs use hello@nphiring.com', async ({ page }) => {
     await page.goto('/for-programs')
     const mailtos = await page.locator('a[href^="mailto:"]').evaluateAll((els) =>
       els.map((el) => el.getAttribute('href') ?? ''),
     )
     expect(mailtos.length).toBeGreaterThan(0)
     for (const href of mailtos) {
-      expect(href.toLowerCase()).toContain('hello@pmhnphiring.com')
+      expect(href.toLowerCase()).toContain('hello@nphiring.com')
     }
   })
 })

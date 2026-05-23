@@ -39,9 +39,9 @@ export default async function EmployerApplicantsPage() {
     return (
         <>
             <BreadcrumbSchema items={[
-                { name: 'Home', url: 'https://pmhnphiring.com' },
-                { name: 'Employer Dashboard', url: 'https://pmhnphiring.com/employer/dashboard' },
-                { name: 'Applicants', url: 'https://pmhnphiring.com/employer/applicants' },
+                { name: 'Home', url: 'https://nphiring.com' },
+                { name: 'Employer Dashboard', url: 'https://nphiring.com/employer/dashboard' },
+                { name: 'Applicants', url: 'https://nphiring.com/employer/applicants' },
             ]} />
 
             <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '16px 16px 48px' }}>

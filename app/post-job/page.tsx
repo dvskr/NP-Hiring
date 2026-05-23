@@ -1332,7 +1332,7 @@ function PostJobContent() {
                           style={{ marginTop: '3px', accentColor: '#0D9488', width: '16px', height: '16px' }}
                         />
                         <div>
-                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on PMHNP Hiring</span>
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on NP Hiring</span>
                           <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly — no website needed</p>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
                             {['Resume', 'Cover letter', 'Email alerts'].map(f => (
@@ -1489,8 +1489,8 @@ export default function PostJobPage() {
   return (
     <>
       <BreadcrumbSchema items={[
-        { name: 'Home', url: 'https://pmhnphiring.com' },
-        { name: 'Post a Job', url: 'https://pmhnphiring.com/post-job' },
+        { name: 'Home', url: 'https://nphiring.com' },
+        { name: 'Post a Job', url: 'https://nphiring.com/post-job' },
       ]} />
       <Suspense fallback={<LoadingFallback />}>
         <PostJobContent />

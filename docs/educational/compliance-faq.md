@@ -181,7 +181,7 @@ For US users (except California with GPC), we already auto-grant analytics conse
 
 ## "What if someone reports a vulnerability?"
 
-`security@pmhnphiring.com` — published on `/security`. We commit to:
+`security@nphiring.com` — published on `/security`. We commit to:
 
 - Acknowledge within 1 business day
 - Triage update within 5 business days
@@ -223,7 +223,7 @@ The runbook at `docs/incident-response.md` operationalizes these. The shortest a
 Today, primarily via:
 - Sentry alerts (when client init wired — Tier 1 trigger)
 - Vercel logs / Supabase Logs Explorer
-- A user / researcher contacting `security@pmhnphiring.com`
+- A user / researcher contacting `security@nphiring.com`
 - Stripe / Resend / Supabase notifying us of an issue on their side
 
 The runbook `§7 Pre-incident readiness checklist` lists the items that need to be verified quarterly. That's the closest thing we have to "monitoring for breaches" today.

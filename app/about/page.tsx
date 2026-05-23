@@ -11,20 +11,20 @@ const ABOUT_OG_IMAGE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/obje
 
 export const metadata: Metadata = {
   title: 'About Us - The #1 Job Board for Psychiatric NPs',
-  description: 'Learn about PMHNP Hiring - the #1 dedicated job board for Psychiatric Mental Health Nurse Practitioners. Thousands of jobs from thousands of companies across all 50 states.',
+  description: 'Learn about NP Hiring - the #1 dedicated job board for Psychiatric Mental Health Nurse Practitioners. Thousands of jobs from thousands of companies across all 50 states.',
   openGraph: {
     // OG block was previously images-only — when a non-overriding child page
     // inherits this layout's defaults the social card pulled the wrong title
     // and description (audit 09 M-22). Spelled-out fields ensure the share
     // card matches the page identity.
-    title: 'About PMHNP Hiring — The #1 Psychiatric NP Job Board',
+    title: 'About NP Hiring — The #1 Psychiatric NP Job Board',
     description: 'Built for the PMHNP community — thousands of psychiatric nurse practitioner jobs across all 50 states, free for job seekers, transparent for employers.',
     type: 'website',
     url: `${brand.baseUrl}/about`,
-    siteName: 'PMHNP Hiring',
-    images: [{ url: ABOUT_OG_IMAGE, width: 1280, height: 900, alt: 'About PMHNP Hiring' }],
+    siteName: 'NP Hiring',
+    images: [{ url: ABOUT_OG_IMAGE, width: 1280, height: 900, alt: 'About NP Hiring' }],
   },
-  twitter: { card: 'summary_large_image', title: 'About PMHNP Hiring', images: [ABOUT_OG_IMAGE] },
+  twitter: { card: 'summary_large_image', title: 'About NP Hiring', images: [ABOUT_OG_IMAGE] },
   alternates: { canonical: `${brand.baseUrl}/about` },
 };
 
@@ -59,8 +59,8 @@ export default async function AboutPage() {
     <>
       <VideoJsonLd pathname="/about" />
       <BreadcrumbSchema items={[
-        { name: 'Home', url: 'https://pmhnphiring.com' },
-        { name: 'About', url: 'https://pmhnphiring.com/about' },
+        { name: 'Home', url: 'https://nphiring.com' },
+        { name: 'About', url: 'https://nphiring.com/about' },
       ]} />
       <AboutClient
         totalJobs={totalJobs}

@@ -468,8 +468,8 @@ function SettingsPageInner() {
   return (
     <>
       <BreadcrumbSchema items={[
-        { name: 'Home', url: 'https://pmhnphiring.com' },
-        { name: 'Settings', url: 'https://pmhnphiring.com/settings' },
+        { name: 'Home', url: 'https://nphiring.com' },
+        { name: 'Settings', url: 'https://nphiring.com/settings' },
       ]} />
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '32px 16px' }}>
 
