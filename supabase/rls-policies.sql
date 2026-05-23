@@ -160,15 +160,15 @@ ALTER TABLE saved_candidates ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS saved_candidates_owner ON saved_candidates;
 CREATE POLICY saved_candidates_owner ON saved_candidates
     FOR ALL TO authenticated
-    USING (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    USING (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_tags ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_tags_owner ON candidate_tags;
 CREATE POLICY candidate_tags_owner ON candidate_tags
     FOR ALL TO authenticated
-    USING (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    USING (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE employer_testimonials ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS employer_testimonials_public_read ON employer_testimonials;
@@ -178,15 +178,15 @@ CREATE POLICY employer_testimonials_public_read ON employer_testimonials
 DROP POLICY IF EXISTS employer_testimonials_owner_write ON employer_testimonials;
 CREATE POLICY employer_testimonials_owner_write ON employer_testimonials
     FOR ALL TO authenticated
-    USING (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE employer_candidate_alerts ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS employer_candidate_alerts_owner ON employer_candidate_alerts;
 CREATE POLICY employer_candidate_alerts_owner ON employer_candidate_alerts
     FOR ALL TO authenticated
-    USING (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
-    WITH CHECK (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
+    USING (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 -- ── Messaging (both participants can access) ──────────────────────────────
 
@@ -195,8 +195,8 @@ DROP POLICY IF EXISTS conversations_participant ON conversations;
 CREATE POLICY conversations_participant ON conversations
     FOR ALL TO authenticated
     USING (
-        participant_a_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text)
-        OR participant_b_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text)
+        participant_a IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text)
+        OR participant_b IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text)
     );
 
 ALTER TABLE employer_messages ENABLE ROW LEVEL SECURITY;
@@ -217,7 +217,7 @@ CREATE POLICY profile_views_owner ON profile_views
 -- ── System / audit tables — service_role only ─────────────────────────────
 -- These have NO policies. RLS enabled + no policies = service_role only.
 
-ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE data_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cron_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_sends ENABLE ROW LEVEL SECURITY;
@@ -229,10 +229,10 @@ ALTER TABLE apply_clicks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_view_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_call_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_eval_snapshot ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ai_feature_flag_overrides ENABLE ROW LEVEL SECURITY;
-ALTER TABLE experiment_assignments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE experiment_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE short_link_clicks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_feature_flag_override ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experiment_assignment ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experiment_event ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shortlink_clicks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE program_director_leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE employer_leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_health_checks ENABLE ROW LEVEL SECURITY;
@@ -241,7 +241,7 @@ ALTER TABLE candidate_embeddings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE candidate_recommendations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pseo_stats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE deindex_queue ENABLE ROW LEVEL SECURITY;
-ALTER TABLE gsc_snapshot ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gsc_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_broadcasts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_broadcast_recipients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_templates ENABLE ROW LEVEL SECURITY;
