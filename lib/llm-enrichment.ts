@@ -44,13 +44,13 @@ Fields:
 - city: string, job city (not employer HQ)
 - state: string, full US state name
 - experience_level: "Entry Level", "Mid Level", "Senior Level", or "Director"
-- clinical_setting: e.g. "Outpatient", "Inpatient", "Residential", "Emergency", "Community Health", "Private Practice", "Correctional", "Telehealth", "Hospital"
-- patient_population: e.g. "Adults", "Children", "Adolescents", "Geriatric", "All Ages", "Veterans", "Substance Abuse"
+- clinical_setting: e.g. "Outpatient", "Inpatient", "Hospital", "Clinic", "Emergency", "ICU", "OR / Surgery Center", "Skilled Nursing", "Long-Term Care", "Home Health", "Telehealth", "Urgent Care", "Private Practice", "Community Health", "Correctional", "Residential", "School-Based"
+- patient_population: e.g. "Adults", "Pediatric", "Adolescents", "Geriatric", "Neonatal", "Women's Health", "Family / All Ages", "Veterans", "Oncology", "Cardiology", "Substance Abuse", "Mental Health"
 - benefits: string array, e.g. ["Health Insurance", "401k", "PTO", "CME Allowance", "Malpractice Coverage", "Student Loan Repayment", "Signing Bonus", "Relocation Assistance"]
 
 Rules:
 - ONLY include if explicitly stated in text
-- Salary must be $40k-$500k/yr range for PMHNP roles
+- Salary must be $60k-$400k/yr range for Nurse Practitioner / APRN roles
 - Return {} if nothing found`;
 
 let _openai: OpenAI | null = null;
@@ -109,7 +109,10 @@ export async function extractWithLLM(
         const parsed = JSON.parse(content) as LLMExtractResult;
 
         // Validate salary range — toss obviously wrong values rather than letting them through.
-        if (parsed.salary_min && (parsed.salary_min < 40000 || parsed.salary_min > 500000)) {
+        // Range tuned for NP/APRN broad scope: FNP ($95k) on the low side,
+        // experienced CRNA ($350k+) on the high side, with $60k-$400k as the
+        // sanity envelope to catch obvious LLM hallucinations.
+        if (parsed.salary_min && (parsed.salary_min < 60000 || parsed.salary_min > 400000)) {
             delete parsed.salary_min;
             delete parsed.salary_max;
             delete parsed.salary_period;

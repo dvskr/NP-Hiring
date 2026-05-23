@@ -10,23 +10,46 @@ import { getAllMetroSlugs } from '@/lib/metro-data';
 // 410 is a permanent-gone signal that Google de-indexes faster than 404.
 //
 // Keep in sync with:
-//   - state-eligible: app/jobs/{taxonomy}/[state]/page.tsx routes (13 dirs)
-//   - city-eligible:  app/jobs/{taxonomy}/city/[slug]/page.tsx routes (28+ dirs)
+//   - CANONICAL_CATEGORY_SLUGS in lib/pseo/category-tagger.ts
+//   - app/jobs/[category]/[state]/page.tsx (state-axis routes)
+//   - app/jobs/[category]/city/[slug]/page.tsx (city-axis routes)
+//
+// State-eligible = taxonomies that get state-level landing pages (50 each).
+// City-eligible  = taxonomies that get city-level landing pages (~250 each).
+// Slugs not in either set still get a base /jobs/[category]/ page but no
+// geo-axis expansion.
 const STATE_ELIGIBLE_TAXONOMIES = new Set<string>([
+    // Setting / modality
     'remote', 'telehealth', 'inpatient', 'outpatient', 'travel',
-    'full-time', 'part-time', 'contract',
-    'addiction', 'new-grad', '1099', 'behavioral-health', 'correctional',
+    // Job type
+    'full-time', 'part-time', 'contract', 'per-diem', 'locum-tenens', '1099',
+    // High-volume NP specialties (state-by-state demand is real)
+    'family-practice', 'adult-gerontology', 'pediatric', 'women-health',
+    'acute-care', 'emergency', 'psychiatric-mental-health',
+    // APRN cohort (state-level licensing actually varies)
+    'anesthesia', 'midwifery',
+    // Experience
+    'new-grad',
 ]);
 
 const CITY_ELIGIBLE_TAXONOMIES = new Set<string>([
+    // Setting / modality
     'remote', 'telehealth', 'inpatient', 'outpatient', 'travel',
-    'full-time', 'part-time', 'contract',
-    'addiction', 'child-adolescent', 'substance-abuse', 'new-grad',
-    'per-diem', 'locum-tenens', 'correctional', '1099',
-    'behavioral-health',
-    'entry-level', 'mid-career', 'senior',
-    'hospital', 'private-practice', 'community-health', 'va',
-    'geriatric', 'veterans', 'lgbtq', 'crisis',
+    'hospital', 'private-practice', 'community-health', 'va', 'correctional',
+    'urgent-care', 'home-health',
+    // Job type
+    'full-time', 'part-time', 'contract', 'per-diem', 'locum-tenens', '1099',
+    // NP specialties
+    'family-practice', 'adult-gerontology', 'pediatric', 'neonatal',
+    'women-health', 'acute-care', 'emergency', 'psychiatric-mental-health',
+    'geriatric', 'oncology', 'cardiology', 'primary-care', 'hospitalist',
+    'dermatology', 'orthopedic',
+    // APRN cohort
+    'anesthesia', 'midwifery', 'clinical-nurse-specialist',
+    // Population
+    'veterans', 'lgbtq',
+    // Experience
+    'entry-level', 'new-grad', 'mid-career', 'senior',
 ]);
 
 const METRO_SLUG_SET = new Set<string>(getAllMetroSlugs());

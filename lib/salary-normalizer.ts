@@ -25,19 +25,24 @@ const PERIOD_MULTIPLIERS: Record<string, number> = {
   'hour': 2080,
 };
 
-// Typical PMHNP salary ranges for validation
-const PMHNP_SALARY_RANGES = {
+// NP / APRN salary ranges for validation.
+// Tuned for the broader cohort vs. PMHNP-only:
+//   - FNP entry-level: ~$95k (W-2 low end)
+//   - PMHNP / AGNP: $110-180k typical
+//   - CRNA: $200-400k (drives the W-2 ceiling)
+//   - Contract / 1099: $80-$300/hr depending on specialty + setting
+const NP_SALARY_RANGES = {
   // W-2 / Salaried positions
-  min: 80000,           // Minimum reasonable annual salary
-  max: 350000,          // Maximum reasonable W-2 annual salary (PMHNP in HCOL areas)
+  min: 60000,           // Minimum reasonable annual NP salary (low end of new-grad part-time)
+  max: 400000,          // CRNA in HCOL / high-volume settings can hit ~$350-400k
 
   // Contract / Hourly positions (these convert to higher annual equivalents)
-  contractorHourlyMin: 50,   // $50/hour minimum for contractor PMHNP
-  contractorHourlyMax: 350,  // $350/hour maximum (high-end contractors)
+  contractorHourlyMin: 40,   // Low-end contract NP / new-grad fill-in
+  contractorHourlyMax: 350,  // High-end contractor CRNA / specialty NP
 
   typical: {
-    min: 100000,
-    max: 160000,
+    min: 110000,
+    max: 170000,
   },
 };
 
@@ -113,8 +118,8 @@ function isReasonableSalary(
   // PMHNP contractors can earn $50-350/hour, which converts to $104k-$728k annually
   if (originalPeriod === 'hourly' || originalPeriod === 'hour') {
     const hourlyRate = originalSalary;
-    const minHourly = PMHNP_SALARY_RANGES.contractorHourlyMin;
-    const maxHourly = PMHNP_SALARY_RANGES.contractorHourlyMax;
+    const minHourly = NP_SALARY_RANGES.contractorHourlyMin;
+    const maxHourly = NP_SALARY_RANGES.contractorHourlyMax;
 
     const isValid = hourlyRate >= minHourly && hourlyRate <= maxHourly;
 
@@ -130,8 +135,8 @@ function isReasonableSalary(
   // For annual salaries, validate against annual thresholds
   // Allow wider ranges for estimated/low-confidence salaries
   const minThreshold = confidence < 0.5
-    ? PMHNP_SALARY_RANGES.min * 0.6   // $48k minimum for low-confidence
-    : PMHNP_SALARY_RANGES.min * 0.8;   // $64k minimum for high-confidence
+    ? NP_SALARY_RANGES.min * 0.6   // $36k minimum for low-confidence
+    : NP_SALARY_RANGES.min * 0.8;   // $48k minimum for high-confidence
 
   // Raised 2026-05-05 from $400k → $550k. Locum / 1099 PMHNP roles in
   // HCOL markets legitimately reach $450k–$500k+ annual. The previous
@@ -178,8 +183,8 @@ function normalizeSingleSalary(
 
   // Hourly: validate the hourly rate itself, not the annual conversion.
   if (period === 'hourly' || period === 'hour') {
-    const minHourly = PMHNP_SALARY_RANGES.contractorHourlyMin;
-    const maxHourly = PMHNP_SALARY_RANGES.contractorHourlyMax;
+    const minHourly = NP_SALARY_RANGES.contractorHourlyMin;
+    const maxHourly = NP_SALARY_RANGES.contractorHourlyMax;
     if (salary < minHourly) {
       console.log(`[Salary] Clamped low hourly: $${salary}/hr → $${minHourly}/hr`);
       annualSalary = minHourly * 2080;
@@ -190,11 +195,11 @@ function normalizeSingleSalary(
       confidence = 0.5;
     }
   } else {
-    // Annual + other-period-converted-to-annual: clamp to PMHNP-realistic
+    // Annual + other-period-converted-to-annual: clamp to NP/APRN realistic
     // band. Use the same caps as isReasonableSalary used to.
     const minAnnual = confidence < 0.5
-      ? PMHNP_SALARY_RANGES.min * 0.6   // $48k for low-confidence
-      : PMHNP_SALARY_RANGES.min * 0.8;  // $64k for high-confidence
+      ? NP_SALARY_RANGES.min * 0.6   // $36k for low-confidence
+      : NP_SALARY_RANGES.min * 0.8;  // $64k for high-confidence
     const maxAnnual = confidence < 0.5 ? 600000 : 550000;
     if (annualSalary < minAnnual) {
       console.log(`[Salary] Clamped low annual: $${annualSalary} → $${minAnnual}`);
@@ -333,6 +338,6 @@ export function formatNormalizedSalary(
  * Get typical PMHNP salary range for comparison
  */
 export function getTypicalPMHNPRange(): { min: number; max: number } {
-  return PMHNP_SALARY_RANGES.typical;
+  return NP_SALARY_RANGES.typical;
 }
 
