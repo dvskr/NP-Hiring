@@ -14,12 +14,12 @@ import {
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: 'For Employers — Hire PMHNPs | PMHNP Job Board',
+  title: 'For Employers — Hire NPs | NP Job Board',
   // Trimmed from 189 chars to ~145 for SERP display (audit 09 M-20).
   description:
-    'Hire Psychiatric Mental Health Nurse Practitioners. First 2 posts free — all features included. Reach thousands actively searching for PMHNP roles.',
+    'Hire Nurse Practitioners. First 2 posts free — all features included. Reach thousands actively searching for NP roles.',
   openGraph: {
-    images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp', width: 1280, height: 900, alt: 'PMHNP employer hiring solutions' }],
+    images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp', width: 1280, height: 900, alt: 'NP employer hiring solutions' }],
   },
   twitter: { card: 'summary_large_image', images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp'] },
   alternates: { canonical: `${brand.baseUrl}/for-employers` },
@@ -48,7 +48,7 @@ async function getEmployerStats() {
 }
 
 const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: true | false | 'partial'; linkedin: true | false | 'partial'; note?: string }[] = [
-  { feature: '100% Psychiatric NP Audience', us: true, indeed: false, linkedin: false },
+  { feature: '100% Nurse Practitioner Audience', us: true, indeed: false, linkedin: false },
   { feature: 'No Unqualified Applicants', us: true, indeed: false, linkedin: false },
   { feature: `First ${config.freePostsPerEmail} Posts Free (No Card)`, us: true, indeed: false, linkedin: false },
   { feature: `Flat $${config.postingPrice}/Post — No Bidding`, us: true, indeed: false, linkedin: false, note: 'Indeed is pay-per-click' },
@@ -82,14 +82,14 @@ export default async function ForEmployersPage() {
               }}>
                 The #1 Job Board Built<br />
                 <span style={{ color: '#0D9488' }}>Exclusively</span>{' '}
-                for PMHNPs
+                for NPs
               </h1>
 
               <p style={{
                 fontSize: '16.5px', color: '#3D2E26', lineHeight: 1.75,
                 margin: '0 0 36px', maxWidth: '460px', fontWeight: 400,
               }}>
-                Reach thousands of psychiatric nurse practitioners actively searching for their next role. Every candidate is a qualified PMHNP — zero noise, maximum relevance.
+                Reach thousands of nurse practitioners actively searching for their next role. Every candidate is a qualified NP — zero noise, maximum relevance.
               </p>
 
               {/* CTA Buttons */}
@@ -117,7 +117,7 @@ export default async function ForEmployersPage() {
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
               <Image
                 src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/hero-v4.webp"
-                alt="Employer posting job and receiving qualified PMHNP candidates"
+                alt="Employer posting job and receiving qualified NP candidates"
                 width={520} height={520}
                 style={{ width: '100%', maxWidth: '520px', height: 'auto' }}
                 priority
@@ -232,7 +232,7 @@ export default async function ForEmployersPage() {
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Daily Job Alerts</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Highlighted in daily email digests to opted-in PMHNPs.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Highlighted in daily email digests to opted-in NPs.</p>
             </div>
 
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -360,7 +360,7 @@ export default async function ForEmployersPage() {
               }}>
                 <Image
                   src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/cta-illustration.webp"
-                  alt="Successful PMHNP hiring celebration"
+                  alt="Successful NP hiring celebration"
                   width={280} height={220}
                   style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px' }}
                 />
@@ -373,7 +373,7 @@ export default async function ForEmployersPage() {
                   color: '#1A2E35', margin: '0 0 10px',
                 }}>
                   Ready to Hire Your{' '}
-                  <span style={{ color: '#0D9488' }}>Next PMHNP</span>?
+                  <span style={{ color: '#0D9488' }}>Next NP</span>?
                 </h3>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px' }}>
                   First 2 posts free — all features included. Then just ${config.postingPrice}/post.

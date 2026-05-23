@@ -154,7 +154,7 @@ function JobAlertsContent() {
     if (mode) parts.push(mode);
     if (jobType) parts.push(jobType);
     if (location) parts.push(`in ${location}`);
-    return parts.length > 0 ? parts.join(' · ') : 'All PMHNP jobs';
+    return parts.length > 0 ? parts.join(' · ') : 'All NP jobs';
   };
 
   return (
@@ -174,7 +174,7 @@ function JobAlertsContent() {
           { value: "200+", label: 'New Daily' },
           { value: "10K+", label: 'Active Jobs' }
         ]}
-        description="Get personalized PMHNP job alerts delivered straight to your inbox. Be the first to apply to jobs that match your exact criteria."
+        description="Get personalized NP job alerts delivered straight to your inbox. Be the first to apply to jobs that match your exact criteria."
         ctaLabel="Manage Alerts"
         ctaHref="/job-alerts/manage"
       />
@@ -451,7 +451,7 @@ function JobAlertsContent() {
             {/* Stats */}
             <div style={{ ...cardBase, padding: '20px' }}>
               <p style={{ fontSize: '12px', fontWeight: 700, color: '#0D9488', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Trusted by PMHNPs
+                Trusted by NPs
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{ ...cardRecessed, padding: '12px', textAlign: 'center' }}>

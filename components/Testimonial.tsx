@@ -7,19 +7,19 @@ const testimonials = [
     {
         quote: 'Found my telehealth role in two weeks. No more filtering out irrelevant PA and NP positions.',
         name: 'Sarah M.',
-        credential: 'PMHNP-BC',
+        credential: 'APRN-BC',
         color: '#E86C2C',
     },
     {
         quote: 'Salary transparency saved me weeks of back-and-forth. I could compare offers and negotiate confidently.',
         name: 'James R.',
-        credential: 'PMHNP-BC',
+        credential: 'APRN-BC',
         color: '#2dd4bf',
     },
     {
         quote: 'As a new grad, I filtered for entry-level roles and had three interviews within a week.',
         name: 'Priya K.',
-        credential: 'PMHNP',
+        credential: 'NP',
         color: '#8b5cf6',
     },
 ];
@@ -33,10 +33,10 @@ export default function Testimonial() {
                     fontSize: '28px', fontWeight: 700,
                     color: 'var(--text-primary)', margin: '0 0 8px',
                 }}>
-                    What PMHNPs Are Saying
+                    What NPs Are Saying
                 </h2>
                 <p style={{ fontSize: '15px', color: 'var(--text-muted)', margin: 0 }}>
-                    Real feedback from psychiatric nurse practitioners
+                    Real feedback from nurse practitioners
                 </p>
             </div>
 

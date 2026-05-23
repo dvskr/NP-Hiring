@@ -239,7 +239,7 @@ export default function Header() {
                   marginLeft: '-6px',
                 }}
               >
-                PMHNP{' '}
+                NP{' '}
                 <span style={{ fontStyle: 'italic', color: '#0D9488', fontWeight: 600 }}>Hiring</span>
               </span>
             </Link>

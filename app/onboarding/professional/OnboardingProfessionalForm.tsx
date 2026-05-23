@@ -187,7 +187,7 @@ export default function OnboardingProfessionalForm({ initial }: { initial: Initi
                                 type="text"
                                 value={headline}
                                 onChange={(e) => setHeadline(e.target.value)}
-                                placeholder="e.g. PMHNP-BC | 5 yrs telehealth, child + adolescent"
+                                placeholder="e.g. APRN-BC | 5 yrs telehealth, child + adolescent"
                                 maxLength={120}
                                 style={inputStyle}
                             />

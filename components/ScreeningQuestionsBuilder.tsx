@@ -19,9 +19,9 @@ interface ScreeningQuestion {
 }
 
 const PRESET_QUESTIONS: { text: string; type: ScreeningQuestion['type']; knockout?: boolean; knockoutAnswer?: string }[] = [
-  { text: 'Do you have an active PMHNP-BC certification?', type: 'boolean', knockout: true, knockoutAnswer: 'no' },
+  { text: 'Do you have an active APRN-BC certification?', type: 'boolean', knockout: true, knockoutAnswer: 'no' },
   { text: 'Do you hold an active DEA license?', type: 'boolean' },
-  { text: 'How many years of psychiatric NP experience do you have?', type: 'number' },
+  { text: 'How many years of nurse practitioner experience do you have?', type: 'number' },
   { text: 'Are you licensed to practice in the state where this position is located?', type: 'boolean', knockout: true, knockoutAnswer: 'no' },
   { text: 'Do you have prescriptive authority?', type: 'boolean' },
   { text: 'Are you open to weekend or on-call shifts?', type: 'boolean' },

@@ -6,7 +6,7 @@ import { Suspense } from 'react'
 
 export const metadata = {
   title: 'Create Account | NP Hiring',
-  description: 'Create your free NP Hiring account. Save jobs, set up alerts, and get matched with psychiatric nurse practitioner positions.',
+  description: 'Create your free NP Hiring account. Save jobs, set up alerts, and get matched with nurse practitioner positions.',
   // Page is noindexed via middleware X-Robots-Tag (per app/robots.ts P2.3
   // unblock window). Self-canonical consolidates ?redirectTo=… variants
   // to the bare /signup URL.
@@ -32,7 +32,7 @@ export default async function SignUpPage({
       illustration="/illustrations/auth-signup.png"
       testimonial={{
         quote: '"Setting up my profile took 2 minutes, and I was getting matched with relevant positions the same day."',
-        name: 'James R., PMHNP',
+        name: 'James R., NP',
         title: 'Denver, CO',
       }}
     >

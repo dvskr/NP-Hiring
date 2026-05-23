@@ -242,7 +242,7 @@ function EmailPreferencesContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-gray-900 text-sm">Weekly Job Alerts</p>
-                <p className="text-xs text-gray-500 mt-1">New PMHNP job listings delivered weekly</p>
+                <p className="text-xs text-gray-500 mt-1">New NP job listings delivered weekly</p>
               </div>
               <div className="flex items-center gap-2">
                 {preferences?.isSubscribed ? (
@@ -269,7 +269,7 @@ function EmailPreferencesContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-gray-900 text-sm">Monthly Newsletter</p>
-                <p className="text-xs text-gray-500 mt-1">PMHNP industry news, salary trends & career tips</p>
+                <p className="text-xs text-gray-500 mt-1">NP industry news, salary trends & career tips</p>
               </div>
               <div className="flex items-center gap-2">
                 {preferences?.newsletterOptIn ? (

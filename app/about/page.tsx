@@ -10,15 +10,15 @@ export const revalidate = 3600;
 const ABOUT_OG_IMAGE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/about-pmhnp-hiring-platform.webp';
 
 export const metadata: Metadata = {
-  title: 'About Us - The #1 Job Board for Psychiatric NPs',
-  description: 'Learn about NP Hiring - the #1 dedicated job board for Psychiatric Mental Health Nurse Practitioners. Thousands of jobs from thousands of companies across all 50 states.',
+  title: 'About Us - The #1 Job Board for Nurse Practitioners',
+  description: 'Learn about NP Hiring - the #1 dedicated job board for Nurse Practitioners. Thousands of jobs from thousands of companies across all 50 states.',
   openGraph: {
     // OG block was previously images-only — when a non-overriding child page
     // inherits this layout's defaults the social card pulled the wrong title
     // and description (audit 09 M-22). Spelled-out fields ensure the share
     // card matches the page identity.
-    title: 'About NP Hiring — The #1 Psychiatric NP Job Board',
-    description: 'Built for the PMHNP community — thousands of psychiatric nurse practitioner jobs across all 50 states, free for job seekers, transparent for employers.',
+    title: 'About NP Hiring — The #1 Nurse Practitioner Job Board',
+    description: 'Built for the NP community — thousands of nurse practitioner jobs across all 50 states, free for job seekers, transparent for employers.',
     type: 'website',
     url: `${brand.baseUrl}/about`,
     siteName: 'NP Hiring',

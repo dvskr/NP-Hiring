@@ -149,13 +149,13 @@ export default function EditorialToolbar({ slug, title, url }: EditorialToolbarP
       <div className="ed-sidebar-newsletter">
         <div className="ed-newsletter-kicker">
           <BookOpen size={12} style={{ display: 'inline', marginRight: 4 }} />
-          The PMHNP Dispatch
+          The NP Dispatch
         </div>
         <h4 className="ed-sidebar-newsletter-title">
           Clinical <em>insights</em>, delivered weekly
         </h4>
         <p className="ed-sidebar-newsletter-desc">
-          Career strategies, salary data, and evidence-based practice updates for PMHNPs.
+          Career strategies, salary data, and evidence-based practice updates for NPs.
         </p>
         <div className="ed-newsletter-form">
           <BlogEmailSignup source={`blog_sidebar_${slug}`} />

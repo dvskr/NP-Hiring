@@ -57,7 +57,7 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
             {/* ── Nurse crowd background — fills viewport, anchored bottom ── */}
             <Image
                 src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/hero-nurses.webp"
-                alt="Diverse community of PMHNP professionals"
+                alt="Diverse community of NP professionals"
                 fill
                 priority
                 fetchPriority="high"
@@ -113,7 +113,7 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
                         marginBottom: '16px',
                     }}
                 >
-                    The #1 PMHNP Job Board
+                    The #1 NP Job Board
                 </m.p>
 
                 {/* ── Headline ── */}
@@ -129,7 +129,7 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
                     }}
                 >
                     Find Your Next{' '}
-                    <span style={{ color: '#0D9488' }}>PMHNP Role</span>
+                    <span style={{ color: '#0D9488' }}>NP Role</span>
                 </m.h1>
 
                 {/* ── Subtitle ── */}

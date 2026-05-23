@@ -116,7 +116,7 @@ interface RelatedJobsParams {
  * Phase 3 #20 — three explicit internal-linking buckets surfaced as
  * separate sections on the JD page (more from this employer, more in
  * city, more new-grad jobs). Distinct from getRelatedJobs which mixes
- * everything into a single "Similar PMHNP jobs" feed. SEO impact:
+ * everything into a single "Similar NP jobs" feed. SEO impact:
  * named anchor links into category/employer/city pages compound the
  * pSEO surface area.
  */
@@ -361,7 +361,7 @@ export async function generateMetadata({ params }: JobPageProps) {
     // not a 410 (deleted job). Use generic page-not-found metadata.
     return {
       title: 'Page Not Found',
-      description: 'The page you are trying to access doesn’t exist. Browse current PMHNP jobs on NP Hiring.',
+      description: 'The page you are trying to access doesn’t exist. Browse current NP jobs on NP Hiring.',
       robots: { index: false, follow: true },
     };
   }
@@ -372,7 +372,7 @@ export async function generateMetadata({ params }: JobPageProps) {
   if (result.status === 'gone') {
     return {
       title: 'Position No Longer Available',
-      description: 'This PMHNP position is no longer available. Browse current job openings on NP Hiring.',
+      description: 'This NP position is no longer available. Browse current job openings on NP Hiring.',
       robots: { index: false, follow: true },
       other: { 'X-Status': '410' },
     };
@@ -383,11 +383,11 @@ export async function generateMetadata({ params }: JobPageProps) {
   // A 200 + noindex + rich content (links to similar jobs) tells Google to de-index
   // the URL without wasting crawl budget re-crawling 404s.
   if (result.status === 'expired') {
-    const expiredTitle = result.title || 'PMHNP Position';
+    const expiredTitle = result.title || 'NP Position';
     const expiredEmployer = result.employer || 'Employer';
     return {
       title: `${expiredTitle} — Position Filled`,
-      description: `This ${expiredTitle} position at ${expiredEmployer} is no longer available. Browse similar PMHNP jobs on NP Hiring.`,
+      description: `This ${expiredTitle} position at ${expiredEmployer} is no longer available. Browse similar NP jobs on NP Hiring.`,
       robots: {
         index: false,
         follow: true,
@@ -583,7 +583,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
             {subtext}
           </p>
           <p style={{ fontSize: '14px', color: '#7A6A62', marginTop: '8px' }}>
-            Don&apos;t worry — we have hundreds of similar PMHNP positions available right now.
+            Don&apos;t worry — we have hundreds of similar NP positions available right now.
           </p>
         </div>
 
@@ -611,7 +611,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
         {/* Salary Guide CTA */}
         <div style={{ ...clayCard, padding: '28px 32px', textAlign: 'center' }}>
           <p style={{ fontSize: '14px', color: '#7A6A62', marginBottom: '16px' }}>
-            While you&apos;re here, check out the latest PMHNP salary data:
+            While you&apos;re here, check out the latest NP salary data:
           </p>
           <a href="/salary-guide"
             className="gone-cta"
@@ -623,7 +623,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
               boxShadow: '4px 4px 12px rgba(13,148,136,0.2), -2px -2px 6px rgba(255,255,255,0.3), inset 1px 1px 2px rgba(255,255,255,0.2)',
             }}>
             <img src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp" alt="" width={22} height={22} loading="lazy" decoding="async" style={{ objectFit: 'contain' }} />
-            2026 PMHNP Salary Guide →
+            2026 NP Salary Guide →
           </a>
         </div>
 
@@ -656,7 +656,7 @@ export default async function JobPage({ params }: JobPageProps) {
   // Job exists but expired/unpublished → render rich expired page
   // (not notFound() — see generateMetadata for rationale)
   if (result.status === 'expired') {
-    const expiredTitle = result.title || 'PMHNP Position';
+    const expiredTitle = result.title || 'NP Position';
     const expiredEmployer = result.employer || 'an employer';
 
     return renderRemovedPage({
@@ -1165,7 +1165,7 @@ export default async function JobPage({ params }: JobPageProps) {
           <RelatedJobs
             jobs={relatedJobs}
             currentJobId={job.id}
-            title="Similar PMHNP Jobs"
+            title="Similar NP Jobs"
           />
         )}
 
@@ -1183,14 +1183,14 @@ export default async function JobPage({ params }: JobPageProps) {
           <RelatedJobs
             jobs={internalLinkBuckets.moreInCity}
             currentJobId={job.id}
-            title={`More PMHNP jobs in ${internalLinkBuckets.cityName}`}
+            title={`More NP jobs in ${internalLinkBuckets.cityName}`}
           />
         )}
         {internalLinkBuckets.moreNewGrad.length > 0 && (
           <RelatedJobs
             jobs={internalLinkBuckets.moreNewGrad}
             currentJobId={job.id}
-            title="More new-grad-friendly PMHNP jobs"
+            title="More new-grad-friendly NP jobs"
           />
         )}
 

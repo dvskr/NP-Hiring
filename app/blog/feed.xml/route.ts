@@ -40,7 +40,7 @@ export async function GET() {
       <guid isPermaLink="true">${url}</guid>
       <description><![CDATA[${escape(description)}]]></description>
       <pubDate>${pubDate}</pubDate>
-      <category>${escape(post.category || 'PMHNP Career')}</category>
+      <category>${escape(post.category || 'NP Career')}</category>
       <author>contact@nphiring.com (NP Hiring)</author>
 ${post.image_url ? `      <enclosure url="${escape(post.image_url)}" type="image/webp"/>` : ''}
     </item>`;
@@ -51,7 +51,7 @@ ${post.image_url ? `      <enclosure url="${escape(post.image_url)}" type="image
   <channel>
     <title>NP Hiring — Career Blog &amp; Industry Insights</title>
     <link>${BASE_URL}/blog</link>
-    <description>PMHNP career guides, salary trends, licensure changes, and industry analysis from the #1 psychiatric nurse practitioner job board.</description>
+    <description>NP career guides, salary trends, licensure changes, and industry analysis from the #1 nurse practitioner job board.</description>
     <language>en-us</language>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
     <atom:link href="${BASE_URL}/blog/feed.xml" rel="self" type="application/rss+xml"/>

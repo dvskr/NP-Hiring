@@ -56,7 +56,7 @@ export default function NotFound() {
                         textDecoration: 'none',
                     }}>
                         <Briefcase size={18} />
-                        Find PMHNP Jobs
+                        Find NP Jobs
                     </Link>
                     <Link href="/" style={{
                         display: 'inline-flex', alignItems: 'center', gap: '8px',
@@ -118,7 +118,7 @@ export default function NotFound() {
                     </div>
                     <div style={{ flex: 1 }}>
                         <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>Employers</h3>
-                        <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>Hire top PMHNP talent</p>
+                        <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>Hire top NP talent</p>
                     </div>
                     <ChevronRight size={18} color="#94A3B8" />
                 </Link>

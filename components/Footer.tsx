@@ -13,17 +13,17 @@ import { brand } from '@/config/brand';
 
 // Footer is the single biggest internal-linking lever for SEO. Audit 11
 // flagged ~18 category hubs as orphans (no inbound nav links anywhere in
-// the site), descriptive-anchor gaps ("Remote" vs "Remote PMHNP Jobs"),
+// the site), descriptive-anchor gaps ("Remote" vs "Remote NP Jobs"),
 // and an audience mismatch ("Post a Job" in the For Job Seekers column).
 // Restructured into 5 columns that surface every primary category hub.
 const linkColumns = [
   {
     title: 'For Job Seekers',
     links: [
-      { label: 'Browse PMHNP Jobs', href: '/jobs' },
+      { label: 'Browse NP Jobs', href: '/jobs' },
       { label: 'Saved Jobs', href: '/saved' },
       { label: 'Job Alerts', href: '/job-alerts' },
-      { label: 'PMHNP Salary Guide', href: '/salary-guide' },
+      { label: 'NP Salary Guide', href: '/salary-guide' },
       { label: 'FAQ', href: '/faq' },
     ],
   },
@@ -33,21 +33,21 @@ const linkColumns = [
     // are weaker than the noun phrase the page actually targets.
     title: 'Browse by Setting',
     links: [
-      { label: 'Remote PMHNP Jobs', href: '/jobs/remote' },
-      { label: 'Telehealth PMHNP Jobs', href: '/jobs/telehealth' },
-      { label: 'Inpatient PMHNP Jobs', href: '/jobs/inpatient' },
-      { label: 'Outpatient PMHNP Jobs', href: '/jobs/outpatient' },
-      { label: 'Hospital PMHNP Jobs', href: '/jobs/hospital' },
-      { label: 'Travel PMHNP Jobs', href: '/jobs/travel' },
+      { label: 'Remote NP Jobs', href: '/jobs/remote' },
+      { label: 'Telehealth NP Jobs', href: '/jobs/telehealth' },
+      { label: 'Inpatient NP Jobs', href: '/jobs/inpatient' },
+      { label: 'Outpatient NP Jobs', href: '/jobs/outpatient' },
+      { label: 'Hospital NP Jobs', href: '/jobs/hospital' },
+      { label: 'Travel NP Jobs', href: '/jobs/travel' },
       { label: 'Locum Tenens', href: '/jobs/locum-tenens' },
     ],
   },
   {
     title: 'Browse by Specialty',
     links: [
-      { label: 'VA PMHNP Jobs', href: '/jobs/va' },
-      { label: 'Veterans PMHNP Jobs', href: '/jobs/veterans' },
-      { label: 'New Grad PMHNP', href: '/jobs/new-grad' },
+      { label: 'VA NP Jobs', href: '/jobs/va' },
+      { label: 'Veterans NP Jobs', href: '/jobs/veterans' },
+      { label: 'New Grad NP', href: '/jobs/new-grad' },
       { label: 'Behavioral Health', href: '/jobs/behavioral-health' },
       { label: 'Substance Abuse', href: '/jobs/substance-abuse' },
       { label: 'Child & Adolescent', href: '/jobs/child-adolescent' },
@@ -56,11 +56,11 @@ const linkColumns = [
   {
     title: 'Browse by Location',
     links: [
-      { label: 'PMHNP Jobs in New York', href: '/jobs/state/new-york' },
-      { label: 'PMHNP Jobs in California', href: '/jobs/state/california' },
-      { label: 'PMHNP Jobs in Florida', href: '/jobs/state/florida' },
-      { label: 'PMHNP Jobs in Texas', href: '/jobs/state/texas' },
-      { label: 'PMHNP Jobs in Massachusetts', href: '/jobs/state/massachusetts' },
+      { label: 'NP Jobs in New York', href: '/jobs/state/new-york' },
+      { label: 'NP Jobs in California', href: '/jobs/state/california' },
+      { label: 'NP Jobs in Florida', href: '/jobs/state/florida' },
+      { label: 'NP Jobs in Texas', href: '/jobs/state/texas' },
+      { label: 'NP Jobs in Massachusetts', href: '/jobs/state/massachusetts' },
       { label: 'Browse All 50 States', href: '/jobs/locations' },
     ],
   },
@@ -265,7 +265,7 @@ export default function Footer() {
               </Link>
               <span className="footer-pipe" style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)' }} />
               <p className="footer-tagline" style={{ fontSize: '13px', color: '#78716c', margin: 0, whiteSpace: 'nowrap' }}>
-                The #1 specialized job board for psychiatric nurse practitioners.
+                The #1 specialized job board for nurse practitioners.
               </p>
             </div>
 

@@ -204,7 +204,7 @@ export default function MyApplicationsPage() {
                             color: '#8A9BA6', fontSize: '14px', marginBottom: '24px',
                             maxWidth: '340px', marginInline: 'auto', lineHeight: 1.6,
                         }}>
-                            Find your next PMHNP role and apply today.
+                            Find your next NP role and apply today.
                         </p>
                         <Link href="/jobs" style={{
                             display: 'inline-flex', alignItems: 'center', gap: '8px',

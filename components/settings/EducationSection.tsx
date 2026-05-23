@@ -174,7 +174,7 @@ export default function EducationSection({ showMsg }: Props) {
                 </div>
                 <div>
                     <label style={labelStyle}>Field of Study / Program</label>
-                    <input type="text" value={form.fieldOfStudy} onChange={(e) => setForm({ ...form, fieldOfStudy: e.target.value })} placeholder="e.g. Psychiatric Mental Health Nurse Practitioner" style={inputStyle} />
+                    <input type="text" value={form.fieldOfStudy} onChange={(e) => setForm({ ...form, fieldOfStudy: e.target.value })} placeholder="e.g. Nurse Practitioner" style={inputStyle} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
                     <div>

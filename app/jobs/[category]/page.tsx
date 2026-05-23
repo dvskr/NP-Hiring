@@ -16,7 +16,7 @@ import { CATEGORY_LABELS, type CategorySlug } from '@/lib/pseo/category-faq-data
 /**
  * Generic taxonomy landing route — `/jobs/<category-slug>`.
  *
- * Replaces the 32 hand-rolled `/jobs/<slug>/` directories from the PMHNP
+ * Replaces the 32 hand-rolled `/jobs/<slug>/` directories from the NP
  * fork with a single dynamic route driven by CANONICAL_CATEGORY_SLUGS.
  *
  * Rich pSEO chrome (hero, bento, benefits, tips, niche FAQs) is deferred

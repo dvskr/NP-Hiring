@@ -31,8 +31,8 @@ export default async function LoginPage({
     <AuthLayout
       illustration="/illustrations/auth-login.png"
       testimonial={{
-        quote: '"I found my dream remote PMHNP position in less than a week. The job matching was incredibly accurate."',
-        name: 'Sarah M., PMHNP-BC',
+        quote: '"I found my dream remote NP position in less than a week. The job matching was incredibly accurate."',
+        name: 'Sarah M., APRN-BC',
         title: 'Austin, TX',
       }}
     >

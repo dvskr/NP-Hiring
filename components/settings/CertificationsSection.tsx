@@ -9,7 +9,7 @@ import {
 
 // ── Constants ──
 const CERT_NAME_OPTIONS = [
-    'PMHNP-BC', 'FNP-BC', 'FNP-C', 'AGPCNP-BC', 'AGACNP-BC',
+    'APRN-BC', 'FNP-BC', 'FNP-C', 'AGPCNP-BC', 'AGACNP-BC',
     'CAQ-Psych', 'BLS', 'ACLS', 'CPI/CPI-NV', 'CARN', 'Other',
 ]
 const BODY_OPTIONS = ['ANCC', 'AANP', 'AHA', 'CPI', 'Other']

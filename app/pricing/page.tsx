@@ -7,13 +7,13 @@ import { config } from '@/lib/config';
 import { Check, ArrowRight, X, HelpCircle, RefreshCw } from 'lucide-react';
 
 export const metadata: Metadata = {
-    title: `Pricing — PMHNP Job Board | First ${config.freePostsPerEmail} Posts Free, Then $${config.postingPrice}`,
+    title: `Pricing — NP Job Board | First ${config.freePostsPerEmail} Posts Free, Then $${config.postingPrice}`,
     description:
-        `Simple, transparent pricing for PMHNP job postings. First ${config.freePostsPerEmail} posts are free with all features. After that, $${config.postingPrice} per post. No subscriptions, no contracts.`,
+        `Simple, transparent pricing for NP job postings. First ${config.freePostsPerEmail} posts are free with all features. After that, $${config.postingPrice} per post. No subscriptions, no contracts.`,
     openGraph: {
-        title: 'Pricing — PMHNP Job Board',
-        description: `Post PMHNP jobs — first ${config.freePostsPerEmail} free, then $${config.postingPrice}/post. Every post gets the full package.`,
-        images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp', width: 1280, height: 900, alt: 'PMHNP job board pricing' }],
+        title: 'Pricing — NP Job Board',
+        description: `Post NP jobs — first ${config.freePostsPerEmail} free, then $${config.postingPrice}/post. Every post gets the full package.`,
+        images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp', width: 1280, height: 900, alt: 'NP job board pricing' }],
     },
     twitter: { card: 'summary_large_image', images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp'] },
     alternates: { canonical: `${brand.baseUrl}/pricing` },
@@ -36,7 +36,7 @@ const clayIconWrap = (gradient: string): React.CSSProperties => ({
 
 /* ═══ Comparison Data — same as employer page ═══ */
 const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: true | false | 'partial'; linkedin: true | false | 'partial'; note?: string }[] = [
-    { feature: '100% Psychiatric NP Audience', us: true, indeed: false, linkedin: false },
+    { feature: '100% Nurse Practitioner Audience', us: true, indeed: false, linkedin: false },
     { feature: 'No Unqualified Applicants', us: true, indeed: false, linkedin: false },
     { feature: `First ${config.freePostsPerEmail} Posts Free (No Card)`, us: true, indeed: false, linkedin: false },
     { feature: `Flat $${config.postingPrice}/Post — No Bidding`, us: true, indeed: false, linkedin: false, note: 'Indeed is pay-per-click' },
@@ -216,7 +216,7 @@ export default function PricingPage() {
                         <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
                             <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
                             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Daily Job Alerts</h3>
-                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Highlighted in daily email digests to opted-in PMHNPs.</p>
+                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Highlighted in daily email digests to opted-in NPs.</p>
                         </div>
 
                         <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -321,7 +321,7 @@ export default function PricingPage() {
                             }}>
                                 <Image
                                     src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/cta-illustration.webp"
-                                    alt="Successful PMHNP hiring celebration"
+                                    alt="Successful NP hiring celebration"
                                     width={280} height={220}
                                     style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px' }}
                                 />
@@ -332,7 +332,7 @@ export default function PricingPage() {
                                     color: '#1A2E35', margin: '0 0 10px',
                                 }}>
                                     Ready to Hire Your{' '}
-                                    <span style={{ color: '#0D9488' }}>Next PMHNP</span>?
+                                    <span style={{ color: '#0D9488' }}>Next NP</span>?
                                 </h3>
                                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px' }}>
                                     First 2 posts free — all features included. Then just ${config.postingPrice}/post.

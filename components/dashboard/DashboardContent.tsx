@@ -258,7 +258,7 @@ function FeedbackRatingCard() {
                     color: '#0D9488', margin: '0 0 4px',
                 }}>Thank You!</h3>
                 <p style={{ fontSize: '13px', color: '#6B7F8A', margin: 0 }}>
-                    Your feedback helps us build a better experience for all PMHNPs.
+                    Your feedback helps us build a better experience for all NPs.
                 </p>
             </div>
         )
@@ -403,7 +403,7 @@ function TestimonialCard({ firstName }: { firstName: string | null }) {
                 Share Your Story
             </h3>
             <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 12px', lineHeight: 1.4 }}>
-                {firstName ? `${firstName}, your` : 'Your'} experience matters! Help other PMHNPs discover opportunities.
+                {firstName ? `${firstName}, your` : 'Your'} experience matters! Help other NPs discover opportunities.
             </p>
 
             <textarea
@@ -1130,7 +1130,7 @@ export default function DashboardContent() {
                     <div style={{ padding: '16px 18px' }}>
                         <h3 style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 6px' }}>Job Market Pulse</h3>
                         <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 8px', lineHeight: 1.5 }}>
-                            PMHNP roles grew <span style={{ color: '#0D9488', fontWeight: 600 }}>18%</span> this quarter. Telehealth surging.
+                            NP roles grew <span style={{ color: '#0D9488', fontWeight: 600 }}>18%</span> this quarter. Telehealth surging.
                         </p>
                         <Link href="/salary-guide" className="jc-view-btn" style={{ fontSize: '12px', fontWeight: 600, color: '#0D9488', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             Salary Guide <ArrowRight size={11} />

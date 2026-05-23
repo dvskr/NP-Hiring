@@ -125,10 +125,10 @@ export default function ExitIntentPopup() {
                 </div>
 
                 <h3 className="text-xl font-bold text-center mb-2" style={{ color: 'var(--text-primary)' }}>
-                    Don&apos;t Miss Your Dream PMHNP Job
+                    Don&apos;t Miss Your Dream NP Job
                 </h3>
                 <p className="text-sm text-center mb-6" style={{ color: 'var(--text-secondary)' }}>
-                    Get the latest PMHNP positions delivered to your inbox daily. No spam — just jobs.
+                    Get the latest NP positions delivered to your inbox daily. No spam — just jobs.
                 </p>
 
                 {status === 'done' ? (
@@ -166,7 +166,7 @@ export default function ExitIntentPopup() {
                                 className="w-4 h-4 rounded cursor-pointer accent-[#2DD4BF]"
                             />
                             <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                                Also send me the monthly PMHNP newsletter
+                                Also send me the monthly NP newsletter
                             </span>
                         </label>
                         <button

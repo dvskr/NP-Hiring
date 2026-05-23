@@ -207,7 +207,7 @@ export default function JobAlertSignupForm({
           className="mt-0.5 w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
         />
         <span className="text-sm text-gray-600">
-          Also send me PMHNP career tips, salary insights & market updates
+          Also send me NP career tips, salary insights & market updates
         </span>
       </label>
 

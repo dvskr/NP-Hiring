@@ -7,7 +7,7 @@ import { FileText } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
-  description: 'Read the Terms of Service for NP Hiring, operated by Akari Labs LLC. Understand your rights, responsibilities, pricing, refunds, and platform policies for the #1 PMHNP job board.',
+  description: 'Read the Terms of Service for NP Hiring, operated by Akari Labs LLC. Understand your rights, responsibilities, pricing, refunds, and platform policies for the #1 NP job board.',
   openGraph: {
     images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-terms-of-service.webp', width: 1280, height: 900, alt: 'NP Hiring terms of service page with user rights, employer responsibilities, and platform policies' }],
   },
@@ -59,11 +59,11 @@ export default function TermsPage() {
 
           <h2 style={h2Style}>2. Acceptance of Terms</h2>
           <p style={pStyle}>By accessing, registering for, or using NP Hiring, you accept and agree to be bound by these Terms. If you do not agree, you must not use the Service.</p>
-          <p style={pStyle}>These Terms apply to all visitors, registered users, and others who access or use the Service, including job seekers (Psychiatric Mental Health Nurse Practitioners and other candidates), employers, recruiters, and any third parties acting on their behalf.</p>
+          <p style={pStyle}>These Terms apply to all visitors, registered users, and others who access or use the Service, including job seekers (Nurse Practitioners and other candidates), employers, recruiters, and any third parties acting on their behalf.</p>
           <p style={pStyle}>If you are using the Service on behalf of an organization, you represent and warrant that you have the authority to bind that organization to these Terms, and references to &quot;you&quot; in this Agreement include both you individually and the organization.</p>
 
           <h2 style={h2Style}>3. Description of Service</h2>
-          <p style={pStyle}>NP Hiring is a job board platform connecting Psychiatric Mental Health Nurse Practitioners (&quot;PMHNPs&quot;) with employers seeking to hire them. The Service includes:</p>
+          <p style={pStyle}>NP Hiring is a job board platform connecting Nurse Practitioners (&quot;NPs&quot;) with employers seeking to hire them. The Service includes:</p>
           <ul style={ulStyle}>
             <li style={liStyle}>Aggregation of job listings from third-party sources</li>
             <li style={liStyle}>Direct job posting capabilities for verified employers</li>
@@ -126,7 +126,7 @@ export default function TermsPage() {
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Payment terms:</p>
           <ul style={ulStyle}>
             <li style={liStyle}>Job posting and renewal fees are due at the time of purchase</li>
-            <li style={liStyle}>All payments are processed by Stripe, our third-party payment processor. Your card statement will show &quot;PMHNPHIRING&quot; as the merchant</li>
+            <li style={liStyle}>All payments are processed by Stripe, our third-party payment processor. Your card statement will show &quot;NPHIRING&quot; as the merchant</li>
             <li style={liStyle}>All amounts are stated in US Dollars (USD) and are exclusive of any taxes that may apply in your jurisdiction</li>
             <li style={liStyle}>Payment must be completed before a paid posting goes live</li>
             <li style={liStyle}>You authorize us, through Stripe, to charge the payment method you provide</li>

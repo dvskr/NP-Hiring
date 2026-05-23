@@ -149,7 +149,7 @@ export default function PushNotificationPrompt() {
                                     Get notified about new jobs
                                 </p>
                                 <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-                                    We&apos;ll only notify you about relevant PMHNP positions
+                                    We&apos;ll only notify you about relevant NP positions
                                 </p>
                             </div>
                         </div>

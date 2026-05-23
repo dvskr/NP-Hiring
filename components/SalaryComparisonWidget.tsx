@@ -7,7 +7,7 @@ interface SalaryComparisonWidgetProps {
     jobMaxSalary?: number | null;
 }
 
-const NATIONAL_AVG_SALARY = 158; // $158k national average for PMHNPs
+const NATIONAL_AVG_SALARY = 158; // $158k national average for NPs
 
 export default function SalaryComparisonWidget({
     stateName,

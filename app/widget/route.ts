@@ -290,7 +290,7 @@ function renderHtml(args: {
   jobs: readonly RenderedJob[]
 }): string {
   const { state, program, jobs } = args
-  const heading = `Latest PMHNP Jobs in ${escape(state)}`
+  const heading = `Latest NP Jobs in ${escape(state)}`
   const subheading = program
     ? `Curated for ${escape(program)} students`
     : 'Updated daily'
@@ -302,8 +302,8 @@ function renderHtml(args: {
   const emptyState =
     jobs.length === 0
       ? `<div class="pd-empty">
-          <p>No PMHNP roles currently listed in <strong>${escape(state)}</strong>.</p>
-          <p>New jobs are added daily — <a href="${escape(baseUrl())}/jobs?utm_source=widget&amp;utm_medium=embed&amp;utm_campaign=${utmCampaign}" target="_blank" rel="noopener">browse all PMHNP jobs →</a></p>
+          <p>No NP roles currently listed in <strong>${escape(state)}</strong>.</p>
+          <p>New jobs are added daily — <a href="${escape(baseUrl())}/jobs?utm_source=widget&amp;utm_medium=embed&amp;utm_campaign=${utmCampaign}" target="_blank" rel="noopener">browse all NP jobs →</a></p>
         </div>`
       : ''
 
@@ -503,7 +503,7 @@ function renderHtml(args: {
     margin-bottom: 12px;
     /* min-width: 0 on row + body lets flex children shrink properly so
        long titles ellipsis-truncate instead of forcing horizontal
-       overflow. Without these two lines a long "Outpatient PMHNP —
+       overflow. Without these two lines a long "Outpatient NP —
        Telehealth …" title pushes the actions column off-screen. */
     min-width: 0;
     overflow: hidden;
@@ -740,7 +740,7 @@ function renderHtml(args: {
     <div class="pd-header-top">
       <a class="pd-brand" href="${escape(brandUrl)}" target="_blank" rel="noopener" aria-label="NP Hiring">
         <img class="pd-brand-logo" src="${escape(baseUrl())}/logo.png" alt="" width="72" height="72" loading="eager" decoding="async">
-        <span class="pd-brand-mark">PMHNP <span class="pd-brand-mark-accent">Hiring</span></span>
+        <span class="pd-brand-mark">NP <span class="pd-brand-mark-accent">Hiring</span></span>
       </a>
       <a class="pd-cta" href="${escape(seeAllUrl)}" target="_blank" rel="noopener">
         See all in ${escape(state)}
@@ -768,7 +768,7 @@ function renderHtml(args: {
  * Render the validation-failure response. Reuses the widget shell (brand
  * wordmark + cream body + footer) so a broken iframe still looks like
  * ours, but the body explicitly says "this request was invalid" with a
- * CTA to browse all PMHNP jobs. No fake "Jobs in <state>" header.
+ * CTA to browse all NP jobs. No fake "Jobs in <state>" header.
  */
 function renderErrorHtml(args: { reason: string }): string {
   const browseAllUrl = `${baseUrl()}/jobs?utm_source=widget&utm_medium=embed&utm_campaign=pd-error`
@@ -891,14 +891,14 @@ function renderErrorHtml(args: { reason: string }): string {
 <div class="pd-wrap">
   <a class="pd-brand" href="${escape(brandUrl)}" target="_blank" rel="noopener" aria-label="NP Hiring">
     <img class="pd-brand-logo" src="${escape(baseUrl())}/logo.png" alt="" width="56" height="56">
-    <span class="pd-brand-mark">PMHNP <span class="pd-brand-mark-accent">Hiring</span></span>
+    <span class="pd-brand-mark">NP <span class="pd-brand-mark-accent">Hiring</span></span>
   </a>
   <div class="pd-error-card" role="alert" aria-live="polite">
     <div class="pd-error-badge">Widget Request Issue</div>
     <h2 class="pd-error-heading">We couldn&rsquo;t load this widget</h2>
     <p class="pd-error-reason">${args.reason}</p>
     <a class="pd-error-cta" href="${escape(browseAllUrl)}" target="_blank" rel="noopener">
-      Browse all PMHNP jobs
+      Browse all NP jobs
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
     </a>
   </div>
@@ -956,7 +956,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     } else if (fieldErrors.has('limit')) {
       reason = `Jobs to show must be a number between ${LIMIT_MIN} and ${LIMIT_MAX}. Received "${escape(String(rawLimit ?? ''))}".`
     } else {
-      reason = 'We couldn\'t load PMHNP jobs for that request. Try again with a valid state code.'
+      reason = 'We couldn\'t load NP jobs for that request. Try again with a valid state code.'
     }
     return withWidgetHeaders(
       new NextResponse(renderErrorHtml({ reason }), { status: 400 }),

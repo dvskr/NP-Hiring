@@ -28,7 +28,7 @@ interface Props {
 /* ─── Requirements per state (common baseline + state-specific) ─── */
 const COMMON_REQUIREMENTS = [
   { step: 1, text: 'MSN or DNP from accredited program', img: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-star.webp' },
-  { step: 2, text: 'ANCC PMHNP-BC certification', img: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp' },
+  { step: 2, text: 'ANCC APRN-BC certification', img: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp' },
   { step: 3, text: 'State APRN license application', img: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-briefcase.webp' },
   { step: 4, text: 'NPI number registration', img: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-people.webp' },
   { step: 5, text: 'DEA registration for prescribing', img: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp' },
@@ -142,7 +142,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
         }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2 }}>
-            {selectedState ? `${selectedState} Licensure` : 'PMHNP Licensure Checker'}
+            {selectedState ? `${selectedState} Licensure` : 'NP Licensure Checker'}
           </h2>
           <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: '4px 0 0' }}>
             {selectedState ? 'Requirements, timeline, and salary data' : 'Select your state to see requirements, timeline, and salary data'}
@@ -312,7 +312,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {[
-                  { label: 'Certification Exam', value: 'ANCC PMHNP-BC ($395)' },
+                  { label: 'Certification Exam', value: 'ANCC APRN-BC ($395)' },
                   { label: 'DEA Registration', value: '$888 / 3 years' },
                   { label: 'License Renewal', value: 'Every 2-3 years' },
                   { label: 'CE Hours', value: '25-50 hours / cycle' },
@@ -361,7 +361,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
       }}>
         <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>📋 Cite This Page</h3>
         <p style={{ fontSize: '13px', color: '#5A4A42', marginBottom: '14px' }}>Use the following citation when referencing data from this licensure tool:</p>
-        <CopyCitation citation={`NP Hiring. "2026 PMHNP State Licensure Checker: Practice Authority & Requirements by State." NP Hiring, April 2026, nphiring.com/resources.`} />
+        <CopyCitation citation={`NP Hiring. "2026 NP State Licensure Checker: Practice Authority & Requirements by State." NP Hiring, April 2026, nphiring.com/resources.`} />
         <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '10px' }}>For media inquiries or custom data requests, contact press@nphiring.com</p>
       </div>
 

@@ -17,7 +17,7 @@ import EmployerAnalyticsClient from './EmployerAnalyticsClient';
 
 export const metadata = {
   title: 'Job Analytics | NP Hiring',
-  description: 'Per-job views, apply clicks, and CTR for your active and historical PMHNP postings.',
+  description: 'Per-job views, apply clicks, and CTR for your active and historical NP postings.',
 };
 
 export default async function EmployerAnalyticsPage() {

@@ -278,7 +278,7 @@ export default function CandidateCard({
                     // the raw percentage is misleading — a 55% match
                     // sounds "half right" when it's actually a strong
                     // signal in this data. Bucket into three tiers
-                    // calibrated against the empirical PMHNP query
+                    // calibrated against the empirical NP query
                     // distribution. Within a tier, ranking position
                     // (the LLM rerank's order) is the source of truth.
                     type Tier = { label: string; bg: string; color: string; border: string };

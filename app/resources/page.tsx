@@ -13,20 +13,20 @@ import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
 
 export const revalidate = 86400;
 
-const SALARY_GUIDE_URL = process.env.SALARY_GUIDE_URL || 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/resources/PMHNP_Salary_Guide_2026.pdf';
+const SALARY_GUIDE_URL = process.env.SALARY_GUIDE_URL || 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/resources/NP_Salary_Guide_2026.pdf';
 
 export const metadata: Metadata = {
-  title: 'PMHNP Resources & Career Guides — 85+ Free Articles',
-  description: 'Free PMHNP career resources: 50-state licensure guides, salary calculator, negotiation tips, private practice startup, 1099 vs W2 comparison, and 85+ expert articles.',
+  title: 'NP Resources & Career Guides — 85+ Free Articles',
+  description: 'Free NP career resources: 50-state licensure guides, salary calculator, negotiation tips, private practice startup, 1099 vs W2 comparison, and 85+ expert articles.',
   keywords: [
-    'pmhnp resources', 'psychiatric nurse practitioner career', 'pmhnp salary guide',
+    'pmhnp resources', 'nurse practitioner career', 'pmhnp salary guide',
     'pmhnp licensure by state', 'pmhnp private practice', 'pmhnp career guide',
     'pmhnp interview tips', 'pmhnp job search',
   ],
   openGraph: {
-    title: 'PMHNP Resources & Career Guides — 85+ Free Articles',
-    description: 'Free career resources for psychiatric nurse practitioners. Salary data, licensure guides, and expert articles.',
-    images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp', width: 1280, height: 900, alt: 'PMHNP career resources and guides' }],
+    title: 'NP Resources & Career Guides — 85+ Free Articles',
+    description: 'Free career resources for nurse practitioners. Salary data, licensure guides, and expert articles.',
+    images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp', width: 1280, height: 900, alt: 'NP career resources and guides' }],
   },
   twitter: { card: 'summary_large_image', images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp'] },
   alternates: { canonical: `${brand.baseUrl}/resources` },
@@ -157,14 +157,14 @@ export default async function ResourcesPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
-        name: `PMHNP Resources & Career Guides — ${currentYear}`,
-        description: 'Free career resources for psychiatric nurse practitioners.',
+        name: `NP Resources & Career Guides — ${currentYear}`,
+        description: 'Free career resources for nurse practitioners.',
         url: 'https://nphiring.com/resources',
         publisher: { '@type': 'Organization', name: 'NP Hiring', url: 'https://nphiring.com' },
         hasPart: [
-          { '@type': 'Article', name: 'PMHNP Full Practice Authority Guide', url: 'https://nphiring.com/resources/fpa-guide' },
-          { '@type': 'Article', name: '1099 vs W2 for PMHNPs — Compensation Comparison', url: 'https://nphiring.com/resources/1099-vs-w2' },
-          { '@type': 'Article', name: 'How to Start a PMHNP Private Practice', url: 'https://nphiring.com/resources/private-practice-guide' },
+          { '@type': 'Article', name: 'NP Full Practice Authority Guide', url: 'https://nphiring.com/resources/fpa-guide' },
+          { '@type': 'Article', name: '1099 vs W2 for NPs — Compensation Comparison', url: 'https://nphiring.com/resources/1099-vs-w2' },
+          { '@type': 'Article', name: 'How to Start a NP Private Practice', url: 'https://nphiring.com/resources/private-practice-guide' },
         ],
         numberOfItems: 3,
       }) }} />
@@ -181,10 +181,10 @@ export default async function ResourcesPage() {
             fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, lineHeight: 1.15,
             color: '#1A2E35', marginBottom: '16px',
           }}>
-            PMHNP Resources & Guides
+            NP Resources & Guides
           </h1>
           <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto 32px', lineHeight: 1.6 }}>
-            Everything you need for your PMHNP career — from licensure requirements to salary negotiation.
+            Everything you need for your NP career — from licensure requirements to salary negotiation.
           </p>
 
           {/* Stat Pills */}
@@ -238,7 +238,7 @@ export default async function ResourcesPage() {
             }}>
               <div style={{ padding: '24px 28px' }}>
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#F59E0B', background: '#FEF3C7', padding: '4px 10px', borderRadius: '20px' }}>Compensation</span>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '10px 0 6px' }}>1099 vs W2 for PMHNPs — Complete Comparison</h2>
+                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '10px 0 6px' }}>1099 vs W2 for NPs — Complete Comparison</h2>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.55, margin: 0 }}>
                   Independent contractor vs employee: tax strategies, income comparison, and which model maximizes your earnings.
                 </p>
@@ -260,7 +260,7 @@ export default async function ResourcesPage() {
             Interactive Tool
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '12px' }}>
-            PMHNP Licensure Checker
+            NP Licensure Checker
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '550px', margin: '0 auto 44px', lineHeight: 1.6 }}>
             Select your state to instantly see requirements, practice authority, salary data, and timeline.
@@ -315,7 +315,7 @@ export default async function ResourcesPage() {
                     {/* SEO Fix H15: StateImage falls back if per-state webp is missing. */}
                     <StateImage
                       slug={slug}
-                      alt={`${s.name} PMHNP licensure guide`}
+                      alt={`${s.name} NP licensure guide`}
                       fill
                       className="object-cover"
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
@@ -446,9 +446,9 @@ export default async function ResourcesPage() {
           }}>
             <div style={{ background: 'linear-gradient(145deg, #0D9488, #10B981)', padding: '40px 32px', color: '#fff' }}>
               <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/clay-icon-match.webp" alt="Jobs" width={56} height={56} style={{ width: '56px', height: '56px', margin: '0 auto 16px', borderRadius: '16px' }} />
-              <h2 className="font-lora" style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px' }}>Ready to Find Your Next PMHNP Role?</h2>
+              <h2 className="font-lora" style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px' }}>Ready to Find Your Next NP Role?</h2>
               <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.8)', margin: '0 0 24px' }}>
-                Browse thousands of psychiatric nurse practitioner positions updated daily.
+                Browse thousands of nurse practitioner positions updated daily.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
                 <Link href="/jobs" className="emp-cta-primary" style={{

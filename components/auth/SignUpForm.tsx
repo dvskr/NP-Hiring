@@ -253,8 +253,8 @@ export default function SignUpForm() {
       </h1>
       <p style={{ fontSize: '14px', color: '#6B7F8A', marginBottom: '14px', textAlign: 'center' }}>
         {role === 'employer'
-          ? 'Start posting jobs and hiring qualified PMHNPs'
-          : 'Join thousands of PMHNPs finding their perfect role'}
+          ? 'Start posting jobs and hiring qualified NPs'
+          : 'Join thousands of NPs finding their perfect role'}
       </p>
 
       {/* ═══ ROLE TOGGLE ═══ */}
@@ -449,7 +449,7 @@ export default function SignUpForm() {
                 <input type="checkbox" checked={newsletterOptIn} onChange={(e) => setNewsletterOptIn(e.target.checked)}
                   style={{ accentColor: '#B45309', width: '15px', height: '15px', marginTop: '2px', flexShrink: 0 }} />
                 <span style={{ fontSize: '13px', color: '#4B5E68' }}>
-                  Send me hiring tips, salary benchmarks &amp; PMHNP market insights
+                  Send me hiring tips, salary benchmarks &amp; NP market insights
                 </span>
               </label>
             </div>

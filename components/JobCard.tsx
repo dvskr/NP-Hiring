@@ -93,7 +93,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
   const cardAriaLabel = `${job.title} at ${job.employer}${cardLocation ? ` — ${cardLocation}` : ''}`;
   const freshness = getJobFreshness(job);
   const shareTitle = `${job.title} at ${job.employer}`;
-  const shareDescription = `Check out this PMHNP job: ${job.title} at ${job.employer}`;
+  const shareDescription = `Check out this NP job: ${job.title} at ${job.employer}`;
   const viewed = isHydrated && isViewed(jobSlug);
   const easyApply = job.applyOnPlatform === true;
   // "Direct Apply" = employer posted the job here AND links to their own

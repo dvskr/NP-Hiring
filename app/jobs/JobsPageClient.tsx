@@ -29,7 +29,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
 
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
 
-  // `total` was previously displayed in the "Showing X PMHNP jobs" header
+  // `total` was previously displayed in the "Showing X NP jobs" header
   // (replaced by the AI Search bar). Kept as setter-only so future surfaces
   // (analytics, breadcrumbs, sticky toast) can pick it up without re-wiring fetchJobs.
   const [, setTotal] = useState(initialTotal);
@@ -332,12 +332,12 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                     letterSpacing: '-0.015em',
                   }}
                 >
-                  PMHNP &amp; Psychiatric Nurse Practitioner Jobs
+                  NP &amp; Nurse Practitioner Jobs
                 </h1>
                 <p style={{
                   fontSize: '13px', color: '#6B7F8A', margin: 0, fontWeight: 500,
                 }}>
-                  Browse fresh PMHNP roles across the US — telehealth, on-site, hybrid, and locum.
+                  Browse fresh NP roles across the US — telehealth, on-site, hybrid, and locum.
                 </p>
               </header>
               {/* Empty right column mirrors the breadcrumb column so the

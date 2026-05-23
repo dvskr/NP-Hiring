@@ -483,7 +483,7 @@ export default function CreateProfilePage() {
                             marginBottom: '8px',
                         }}
                     >
-                        Create Your PMHNP Profile
+                        Create Your NP Profile
                     </h1>
                     <p style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>
                         Let employers find you. It only takes a few minutes.

@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         // Description should describe the post, not echo the title (audit
         // 09 M-24). Generic-but-relevant fallback when meta_description
         // is absent — log so editorial can backfill the missing field.
-        description: post.meta_description || `Read this PMHNP career article on NP Hiring — guides, salary insights, and licensure updates for psychiatric nurse practitioners.`,
+        description: post.meta_description || `Read this NP career article on NP Hiring — guides, salary insights, and licensure updates for nurse practitioners.`,
         keywords: post.target_keyword ? [post.target_keyword] : undefined,
         openGraph: {
             title: post.title,
@@ -246,10 +246,10 @@ export default async function BlogPostPage({ params }: Props) {
     // JSON-LD BlogPosting schema
     //
     // SEO Fix C1 (YMYL): the previous author/reviewedBy block named
-    // "NP Hiring Editorial Team" and a fictional "PMHNP Clinical Review
+    // "NP Hiring Editorial Team" and a fictional "NP Clinical Review
     // Board" — neither corresponds to a real, named person. Shipping
     // fake clinical credentials in healthcare YMYL content is a manual
-    // action risk. Until a real PMHNP-BC reviewer is contracted (and
+    // action risk. Until a real APRN-BC reviewer is contracted (and
     // their name + license number can be cited), the schema names the
     // Organization as the author with NO `reviewedBy` field. Adding a
     // real Person.author is the path forward — see runbook B.1.
@@ -312,52 +312,52 @@ export default async function BlogPostPage({ params }: Props) {
     const blogFaqData: Record<string, Array<{ name: string; text: string }>> = {
         'how-to-become-a-pmhnp': [
             {
-                name: 'How long does it take to become a PMHNP?',
-                text: 'It typically takes 6-8 years total: 4 years for a BSN, 1-2 years of RN experience, and 2-3 years for an MSN or DNP with PMHNP specialization.',
+                name: 'How long does it take to become a NP?',
+                text: 'It typically takes 6-8 years total: 4 years for a BSN, 1-2 years of RN experience, and 2-3 years for an MSN or DNP with NP specialization.',
             },
             {
-                name: 'What degree do you need to be a PMHNP?',
-                text: 'You need a Master of Science in Nursing (MSN) or Doctor of Nursing Practice (DNP) with a Psychiatric Mental Health Nurse Practitioner specialization from an accredited program. You must also pass the PMHNP certification exam through ANCC.',
+                name: 'What degree do you need to be a NP?',
+                text: 'You need a Master of Science in Nursing (MSN) or Doctor of Nursing Practice (DNP) with a Nurse Practitioner specialization from an accredited program. You must also pass the NP certification exam through ANCC.',
             },
             {
-                name: 'Can a PMHNP prescribe medication?',
-                text: 'Yes. PMHNPs can prescribe psychiatric medications including antidepressants, antipsychotics, mood stabilizers, and controlled substances. Prescribing authority varies by state, with some states granting full practice authority and others requiring physician collaboration.',
+                name: 'Can a NP prescribe medication?',
+                text: 'Yes. NPs can prescribe psychiatric medications including antidepressants, antipsychotics, mood stabilizers, and controlled substances. Prescribing authority varies by state, with some states granting full practice authority and others requiring physician collaboration.',
             },
             {
-                name: 'What is the difference between a PMHNP and a psychiatrist?',
-                text: 'Both can diagnose and treat mental health conditions and prescribe medications. Psychiatrists complete medical school (MD/DO) plus a 4-year residency. PMHNPs complete nursing school plus a master\'s or doctoral nursing program. PMHNPs typically spend more time on therapy and holistic care, while psychiatrists often focus on medication management.',
+                name: 'What is the difference between a NP and a psychiatrist?',
+                text: 'Both can diagnose and treat mental health conditions and prescribe medications. Psychiatrists complete medical school (MD/DO) plus a 4-year residency. NPs complete nursing school plus a master\'s or doctoral nursing program. NPs typically spend more time on therapy and holistic care, while psychiatrists often focus on medication management.',
             },
             {
-                name: 'Is PMHNP a good career?',
-                text: 'Yes. PMHNPs are among the most in-demand healthcare providers in the US. Average salaries range from $140,000-$175,000, job growth is projected at 40%+ through 2031, and there are 10,000+ open positions nationwide. The mental health provider shortage ensures strong demand for years to come.',
+                name: 'Is NP a good career?',
+                text: 'Yes. NPs are among the most in-demand healthcare providers in the US. Average salaries range from $140,000-$175,000, job growth is projected at 40%+ through 2031, and there are 10,000+ open positions nationwide. The mental health provider shortage ensures strong demand for years to come.',
             },
         ],
         'new-grad-pmhnp-first-job': [
             {
-                name: 'Can new grad PMHNPs get hired without experience?',
-                text: 'Yes. Due to the mental health provider shortage, many employers actively hire new grad PMHNPs. Telehealth companies, community mental health centers, and large health systems commonly offer new grad PMHNP positions with mentorship and supervision.',
+                name: 'Can new grad NPs get hired without experience?',
+                text: 'Yes. Due to the mental health provider shortage, many employers actively hire new grad NPs. Telehealth companies, community mental health centers, and large health systems commonly offer new grad NP positions with mentorship and supervision.',
             },
             {
-                name: 'What is the best setting for a new grad PMHNP?',
+                name: 'What is the best setting for a new grad NP?',
                 text: 'Community mental health centers and outpatient clinics are often recommended for new grads because they offer diverse patient populations, structured supervision, and exposure to a wide range of diagnoses. Inpatient settings and telehealth are also options depending on comfort level.',
             },
             {
-                name: 'How many jobs are available for new grad PMHNPs?',
-                text: 'There are hundreds of new grad-friendly PMHNP positions available at any given time. NP Hiring lists new grad-specific roles that can be filtered at nphiring.com/jobs/new-grad.',
+                name: 'How many jobs are available for new grad NPs?',
+                text: 'There are hundreds of new grad-friendly NP positions available at any given time. NP Hiring lists new grad-specific roles that can be filtered at nphiring.com/jobs/new-grad.',
             },
         ],
         'pmhnp-vs-psychiatrist': [
             {
-                name: 'Can a PMHNP do everything a psychiatrist can?',
-                text: 'PMHNPs can diagnose mental health conditions, prescribe medications including controlled substances, and provide therapy. The main differences are in training path and, in some states, practice authority requirements. In full practice authority states, PMHNPs operate independently.',
+                name: 'Can a NP do everything a psychiatrist can?',
+                text: 'NPs can diagnose mental health conditions, prescribe medications including controlled substances, and provide therapy. The main differences are in training path and, in some states, practice authority requirements. In full practice authority states, NPs operate independently.',
             },
             {
-                name: 'Do PMHNPs make as much as psychiatrists?',
-                text: 'No. Psychiatrists earn $250,000-$400,000+ annually while PMHNPs earn $140,000-$175,000 on average. However, PMHNPs require significantly less training time and student debt, often resulting in a better return on investment earlier in their career.',
+                name: 'Do NPs make as much as psychiatrists?',
+                text: 'No. Psychiatrists earn $250,000-$400,000+ annually while NPs earn $140,000-$175,000 on average. However, NPs require significantly less training time and student debt, often resulting in a better return on investment earlier in their career.',
             },
             {
-                name: 'Should I become a PMHNP or psychiatrist?',
-                text: 'It depends on your goals. If you want a faster path to practice (6-8 years vs 12+ years), lower student debt, and a holistic nursing approach, PMHNP is the better fit. If you want the highest salary ceiling and full medical training, psychiatry may be preferred.',
+                name: 'Should I become a NP or psychiatrist?',
+                text: 'It depends on your goals. If you want a faster path to practice (6-8 years vs 12+ years), lower student debt, and a holistic nursing approach, NP is the better fit. If you want the highest salary ceiling and full medical training, psychiatry may be preferred.',
             },
         ],
     };
@@ -369,16 +369,16 @@ export default async function BlogPostPage({ params }: Props) {
         const stateName = stateNameRaw.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
         blogFaqData[slug] = [
             {
-                name: `How long does it take to get a PMHNP license in ${stateName}?`,
-                text: `The timeline to obtain your PMHNP license in ${stateName} typically takes 2-4 weeks after submitting a complete application, assuming you have already earned your MSN/DNP, passed the ANCC PMHNP-BC certification exam, and hold an active RN license. Processing times vary based on ${stateName}'s Board of Nursing workload.`,
+                name: `How long does it take to get a NP license in ${stateName}?`,
+                text: `The timeline to obtain your NP license in ${stateName} typically takes 2-4 weeks after submitting a complete application, assuming you have already earned your MSN/DNP, passed the ANCC APRN-BC certification exam, and hold an active RN license. Processing times vary based on ${stateName}'s Board of Nursing workload.`,
             },
             {
-                name: `What are the requirements to become a PMHNP in ${stateName}?`,
-                text: `To practice as a PMHNP in ${stateName}, you need: (1) an active RN license, (2) a Master's or Doctoral degree in nursing with PMHNP specialization from an accredited program, (3) national certification as a PMHNP-BC from ANCC, and (4) an APRN license from ${stateName}'s Board of Nursing. Prescriptive authority may require additional applications.`,
+                name: `What are the requirements to become a NP in ${stateName}?`,
+                text: `To practice as a NP in ${stateName}, you need: (1) an active RN license, (2) a Master's or Doctoral degree in nursing with NP specialization from an accredited program, (3) national certification as a APRN-BC from ANCC, and (4) an APRN license from ${stateName}'s Board of Nursing. Prescriptive authority may require additional applications.`,
             },
             {
-                name: `What is the average PMHNP salary in ${stateName}?`,
-                text: `PMHNP salaries in ${stateName} vary by setting and experience. Refer to the salary section in our detailed ${stateName} licensing guide above for the latest data, including comparisons between inpatient, outpatient, and telehealth settings.`,
+                name: `What is the average NP salary in ${stateName}?`,
+                text: `NP salaries in ${stateName} vary by setting and experience. Refer to the salary section in our detailed ${stateName} licensing guide above for the latest data, including comparisons between inpatient, outpatient, and telehealth settings.`,
             },
         ];
     }
@@ -390,14 +390,14 @@ export default async function BlogPostPage({ params }: Props) {
         return {
             '@context': 'https://schema.org',
             '@type': 'HowTo',
-            name: `How to Get Your PMHNP License in ${sn}`,
+            name: `How to Get Your NP License in ${sn}`,
             description: `Step-by-step guide to obtaining your Psychiatric-Mental Health Nurse Practitioner license in ${sn}.`,
             totalTime: 'P60D',
             estimatedCost: { '@type': 'MonetaryAmount', currency: 'USD', value: '500-1500' },
             image: post.image_url || undefined,
             step: [
                 { '@type': 'HowToStep', position: 1, name: 'Complete MSN or DNP', text: `Earn a Master of Science in Nursing (MSN) or Doctor of Nursing Practice (DNP) degree with a Psychiatric-Mental Health Nurse Practitioner specialization from an CCNE or ACEN accredited program.` },
-                { '@type': 'HowToStep', position: 2, name: 'Pass the ANCC PMHNP-BC Exam', text: 'Pass the American Nurses Credentialing Center (ANCC) Psychiatric-Mental Health Nurse Practitioner Board Certification (PMHNP-BC) examination.' },
+                { '@type': 'HowToStep', position: 2, name: 'Pass the ANCC APRN-BC Exam', text: 'Pass the American Nurses Credentialing Center (ANCC) Psychiatric-Mental Health Nurse Practitioner Board Certification (APRN-BC) examination.' },
                 { '@type': 'HowToStep', position: 3, name: `Apply for ${sn} RN License`, text: `Obtain or verify your Registered Nurse (RN) license with the ${sn} Board of Nursing. If licensed in another state, apply for licensure by endorsement.` },
                 { '@type': 'HowToStep', position: 4, name: `Apply for ${sn} APRN License`, text: `Submit your Advanced Practice Registered Nurse (APRN) application to the ${sn} Board of Nursing, including proof of education, national certification, and any required fees.` },
                 { '@type': 'HowToStep', position: 5, name: 'Apply for Prescriptive Authority', text: `Apply for prescriptive authority through ${sn}'s Board of Nursing or Board of Pharmacy, which allows you to prescribe medications including controlled substances.` },
@@ -556,9 +556,9 @@ export default async function BlogPostPage({ params }: Props) {
                     <EditorialShare title={post.title} url={currentUrl} />
 
 
-                    {/* SEO Fix C1: removed the "PMHNP-BC Reviewed" / "ANCC Certified"
+                    {/* SEO Fix C1: removed the "APRN-BC Reviewed" / "ANCC Certified"
                         badges and the "Clinical Editorial Team" byline because no
-                        real, named PMHNP-BC reviewer can be cited. Shipping fake
+                        real, named APRN-BC reviewer can be cited. Shipping fake
                         clinical credentials on YMYL healthcare content is a
                         manual-action risk. The simplified author card below names
                         the publishing organization and date only. Restore named
@@ -580,7 +580,7 @@ export default async function BlogPostPage({ params }: Props) {
                     </div>
 
                     {/* SEO Fix H13: medical disclaimer (YMYL).
-                        Required because PMHNP content discusses clinical scope,
+                        Required because NP content discusses clinical scope,
                         prescribing, and licensure. Without this, Google's quality
                         raters can flag posts as offering medical advice. */}
                     <aside
@@ -649,7 +649,7 @@ export default async function BlogPostPage({ params }: Props) {
                         return (
                             <>
                                 <p className="ed-jobs-cta-text" style={{ marginBottom: '12px' }}>
-                                    Ready to start your career? Browse PMHNP positions:
+                                    Ready to start your career? Browse NP positions:
                                 </p>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
                                     <Link href={`/jobs/state/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#F0FDFA', border: '1px solid rgba(13,148,136,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>
@@ -699,7 +699,7 @@ export default async function BlogPostPage({ params }: Props) {
                             </p>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
                                 <Link href="/jobs" className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#0D9488', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#fff' }}>
-                                    Browse All PMHNP Jobs →
+                                    Browse All NP Jobs →
                                 </Link>
                                 {matched.map(l => (
                                     <Link key={l.href} href={l.href} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#F0FDFA', border: '1px solid rgba(13,148,136,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>

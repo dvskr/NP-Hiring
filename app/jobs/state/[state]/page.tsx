@@ -360,27 +360,27 @@ export async function generateMetadata({ params, searchParams }: StatePageProps)
     const stats = await getStateStats(stateName, stateCode);
 
     const title = stats.avgSalary > 0
-      ? `${stats.totalJobs} PMHNP Jobs in ${stateName} (${stateCode}) — $${stats.avgSalary}K Avg Salary`
-      : `${stats.totalJobs} PMHNP Jobs in ${stateName} (${stateCode}) — Apply Today`;
+      ? `${stats.totalJobs} NP Jobs in ${stateName} (${stateCode}) — $${stats.avgSalary}K Avg Salary`
+      : `${stats.totalJobs} NP Jobs in ${stateName} (${stateCode}) — Apply Today`;
 
     const description = stats.avgSalary > 0
-      ? `Find ${stats.totalJobs} psychiatric nurse practitioner jobs in ${stateName}. Average PMHNP salary: $${stats.avgSalary}K. Telehealth, inpatient, outpatient, and private practice positions. New jobs added daily.`
-      : `Find ${stats.totalJobs} psychiatric nurse practitioner jobs in ${stateName}. Telehealth, inpatient, outpatient, and private practice PMHNP positions. New jobs added daily.`;
+      ? `Find ${stats.totalJobs} nurse practitioner jobs in ${stateName}. Average NP salary: $${stats.avgSalary}K. Telehealth, inpatient, outpatient, and private practice positions. New jobs added daily.`
+      : `Find ${stats.totalJobs} nurse practitioner jobs in ${stateName}. Telehealth, inpatient, outpatient, and private practice NP positions. New jobs added daily.`;
 
     return {
       title,
       description,
       openGraph: {
         title: stats.avgSalary > 0
-          ? `${stats.totalJobs} PMHNP Jobs in ${stateName} | $${stats.avgSalary}k Average`
-          : `${stats.totalJobs} PMHNP Jobs in ${stateName}`,
+          ? `${stats.totalJobs} NP Jobs in ${stateName} | $${stats.avgSalary}k Average`
+          : `${stats.totalJobs} NP Jobs in ${stateName}`,
         description,
         type: 'website',
         images: [{
-          url: `/api/og?type=page&title=${encodeURIComponent(`PMHNP Jobs in ${stateName}`)}&subtitle=${encodeURIComponent(`${stats.totalJobs} psychiatric NP positions in ${stateCode}`)}`,
+          url: `/api/og?type=page&title=${encodeURIComponent(`NP Jobs in ${stateName}`)}&subtitle=${encodeURIComponent(`${stats.totalJobs} nurse practitioner positions in ${stateCode}`)}`,
           width: 1200,
           height: 630,
-          alt: `PMHNP Jobs in ${stateName}`,
+          alt: `NP Jobs in ${stateName}`,
         }],
       },
       alternates: {
@@ -404,8 +404,8 @@ export async function generateMetadata({ params, searchParams }: StatePageProps)
   } catch (error) {
     console.error('Error generating metadata:', error);
     return {
-      title: 'PMHNP Jobs by State',
-      description: 'Find psychiatric mental health nurse practitioner jobs by state. Browse PMHNP positions with salary data, practice authority info, and top employers across all 50 states.',
+      title: 'NP Jobs by State',
+      description: 'Find psychiatric mental health nurse practitioner jobs by state. Browse NP positions with salary data, practice authority info, and top employers across all 50 states.',
     };
   }
 }
@@ -493,7 +493,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
       {jobs.length > 0 && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           '@context': 'https://schema.org', '@type': 'ItemList',
-          name: `PMHNP Jobs in ${stateName}`, numberOfItems: stats.totalJobs,
+          name: `NP Jobs in ${stateName}`, numberOfItems: stats.totalJobs,
           itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({
             '@type': 'ListItem', position: idx + 1, name: job.title,
             url: `https://nphiring.com/jobs/${job.slug || job.id}`,
@@ -505,7 +505,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           '@context': 'https://schema.org',
           '@type': 'AggregateOffer',
-          name: `PMHNP Jobs in ${stateName}`,
+          name: `NP Jobs in ${stateName}`,
           offerCount: stats.totalJobs,
           lowPrice: Math.round(stats.avgSalary * 0.8) * 1000,
           highPrice: Math.round(stats.avgSalary * 1.2) * 1000,
@@ -518,10 +518,10 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
       <CategoryHero
         bgColor="#0D9488"
         heroImage="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp"
-        heroAlt={`PMHNP Jobs in ${stateName}`}
+        heroAlt={`NP Jobs in ${stateName}`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'By State', stateName]}
-        headlineLine1="PMHNP"
+        headlineLine1="NP"
         headlineLine2="Jobs"
         headlineSub={`in ${stateName}.`}
         stats={[
@@ -529,7 +529,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
           { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K+', label: 'avg salary' },
           { value: `${stats.uniqueEmployerCount}`, label: 'employers' },
         ]}
-        description={`Browse all psychiatric NP positions in ${stateName}. Remote telehealth, outpatient clinics, inpatient facilities, and private practice opportunities.`}
+        description={`Browse all nurse practitioner positions in ${stateName}. Remote telehealth, outpatient clinics, inpatient facilities, and private practice opportunities.`}
         ctaLabel={`Browse ${stateName} Jobs`}
         ctaHref="#listings"
         secondaryCtaLabel="Set Alert"
@@ -635,8 +635,8 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
       <div style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FDFBF7 100%)', padding: '48px 0' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>{stateName} Overview</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Working as a PMHNP in {stateName}</h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Key information for psychiatric nurse practitioners practicing in {stateName}.</p>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Working as a NP in {stateName}</h2>
+          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Key information for nurse practitioners practicing in {stateName}.</p>
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Practice Authority (8col) + Salary (4col) */}
@@ -644,7 +644,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
               <div style={{ padding: '32px 28px' }}>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Practice Authority</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: '0 0 12px', lineHeight: 1.6 }}>
-                  {practiceAuthority ? practiceAuthority.details : `${stateName} offers opportunities for PMHNPs across multiple practice settings.`}
+                  {practiceAuthority ? practiceAuthority.details : `${stateName} offers opportunities for NPs across multiple practice settings.`}
                 </p>
                 {practiceAuthority && (
                   <span style={{ display: 'inline-block', padding: '4px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: 700, background: practiceAuthority.authority === 'full' ? '#D1FAE5' : practiceAuthority.authority === 'reduced' ? '#FEF3C7' : '#FEE2E2', color: practiceAuthority.authority === 'full' ? '#065F46' : practiceAuthority.authority === 'reduced' ? '#92400E' : '#991B1B' }}>
@@ -653,7 +653,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                 )}
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
-                <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/bento_state_practice.webp" alt={`PMHNP practice in ${stateName}`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/bento_state_practice.webp" alt={`NP practice in ${stateName}`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
@@ -664,7 +664,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Salary & Compensation</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  PMHNPs in {stateName} earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K+'} annually.
+                  NPs in {stateName} earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K+'} annually.
                 </p>
               </div>
             </div>
@@ -689,7 +689,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growth & Outlook</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  PMHNP demand in {stateName} continues to grow with {stats.totalJobs} active positions.
+                  NP demand in {stateName} continues to grow with {stats.totalJobs} active positions.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
@@ -713,7 +713,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Explore</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More PMHNP Opportunities in {stateName}</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More NP Opportunities in {stateName}</h2>
 
           {/* Top Cities */}
           {citiesWithJobs.length > 0 && (
@@ -741,7 +741,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
             {nearbyStates.length > 0 && (
               <div style={{ marginBottom: '24px', paddingBottom: '24px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
                 <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#7A6A62', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
-                  PMHNP Jobs Nearby
+                  NP Jobs Nearby
                 </h3>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {nearbyStates.map((s) => (
@@ -819,7 +819,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                   style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', textDecoration: 'none', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
                   <Users size={18} style={{ color: '#0D9488', flexShrink: 0 }} />
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>All PMHNP Jobs</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>All NP Jobs</div>
                     <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Nationwide listings</div>
                   </div>
                 </Link>
@@ -834,14 +834,14 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
       <div style={{ background: 'linear-gradient(180deg, #F0FDFA 0%, #E6FAF5 50%, #F0FDFA 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>PMHNP Jobs in {stateName}</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>NP Jobs in {stateName}</h2>
           <div style={{ display: 'grid', gap: '12px' }}>
             {[
-              { q: `How many PMHNP jobs are in ${stateName}?`, a: `There are currently ${stats.totalJobs} psychiatric nurse practitioner positions available in ${stateName}${stats.avgSalary > 0 ? `, with an average salary of $${stats.avgSalary}K/year` : ''}. New positions are added daily.` },
+              { q: `How many NP jobs are in ${stateName}?`, a: `There are currently ${stats.totalJobs} nurse practitioner positions available in ${stateName}${stats.avgSalary > 0 ? `, with an average salary of $${stats.avgSalary}K/year` : ''}. New positions are added daily.` },
               { q: `What is the practice authority in ${stateName}?`, a: practiceAuthority ? practiceAuthority.details : `Practice authority in ${stateName} varies. Check state-specific NP practice regulations for the most current requirements.` },
-              { q: `What is the average PMHNP salary in ${stateName}?`, a: stats.avgSalary > 0 ? `The average PMHNP salary in ${stateName} is $${stats.avgSalary}K/year. Salaries vary based on experience, setting, and whether the role is W-2 or 1099.` : `PMHNP salaries in ${stateName} typically range from $130K to $200K+ depending on setting and experience level.` },
-              { q: `Which cities in ${stateName} have the most PMHNP jobs?`, a: citiesWithJobs.length > 0 ? `Top cities for PMHNP jobs in ${stateName} include ${citiesWithJobs.slice(0, 4).map(c => `${c.name} (${c.count} jobs)`).join(', ')}.` : `PMHNP positions in ${stateName} are distributed across multiple cities and include remote telehealth options.` },
-              { q: `Can I work remotely as a PMHNP in ${stateName}?`, a: `Yes, many telehealth and remote PMHNP positions allow you to practice from ${stateName}. You'll need an active NP license in the state where your patient resides.` },
+              { q: `What is the average NP salary in ${stateName}?`, a: stats.avgSalary > 0 ? `The average NP salary in ${stateName} is $${stats.avgSalary}K/year. Salaries vary based on experience, setting, and whether the role is W-2 or 1099.` : `NP salaries in ${stateName} typically range from $130K to $200K+ depending on setting and experience level.` },
+              { q: `Which cities in ${stateName} have the most NP jobs?`, a: citiesWithJobs.length > 0 ? `Top cities for NP jobs in ${stateName} include ${citiesWithJobs.slice(0, 4).map(c => `${c.name} (${c.count} jobs)`).join(', ')}.` : `NP positions in ${stateName} are distributed across multiple cities and include remote telehealth options.` },
+              { q: `Can I work remotely as a NP in ${stateName}?`, a: `Yes, many telehealth and remote NP positions allow you to practice from ${stateName}. You'll need an active NP license in the state where your patient resides.` },
             ].map((faq, idx) => (
               <details key={idx} className="faq-accordion" style={{ ...clayCard, overflow: 'hidden' }}>
                 <summary style={{ padding: '20px 28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', listStyle: 'none', fontSize: '16px', fontWeight: 700, color: '#1A2E35', lineHeight: 1.4 }}>
@@ -853,11 +853,11 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
             ))}
           </div>
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [
-            { q: `How many PMHNP jobs are in ${stateName}?`, a: `There are currently ${stats.totalJobs} positions available in ${stateName}.` },
+            { q: `How many NP jobs are in ${stateName}?`, a: `There are currently ${stats.totalJobs} positions available in ${stateName}.` },
             { q: `What is the practice authority in ${stateName}?`, a: practiceAuthority?.details || `Practice authority varies by state.` },
-            { q: `What is the average PMHNP salary in ${stateName}?`, a: stats.avgSalary > 0 ? `$${stats.avgSalary}K/year` : `$130K-$200K+` },
-            { q: `Which cities in ${stateName} have the most PMHNP jobs?`, a: citiesWithJobs.slice(0, 4).map(c => c.name).join(', ') || 'Multiple cities' },
-            { q: `Can I work remotely as a PMHNP in ${stateName}?`, a: `Yes, many telehealth positions are available.` },
+            { q: `What is the average NP salary in ${stateName}?`, a: stats.avgSalary > 0 ? `$${stats.avgSalary}K/year` : `$130K-$200K+` },
+            { q: `Which cities in ${stateName} have the most NP jobs?`, a: citiesWithJobs.slice(0, 4).map(c => c.name).join(', ') || 'Multiple cities' },
+            { q: `Can I work remotely as a NP in ${stateName}?`, a: `Yes, many telehealth positions are available.` },
           ].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>
       </div>

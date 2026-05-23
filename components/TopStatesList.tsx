@@ -51,7 +51,7 @@ export default function TopStatesList({ states }: TopStatesProps) {
                         Browse by state
                     </m.p>
                     <m.h2 variants={fadeUp} className="font-lora text-3xl lg:text-4xl font-bold text-gray-900">
-                        Top states hiring PMHNPs
+                        Top states hiring NPs
                     </m.h2>
                 </m.div>
 
@@ -93,7 +93,7 @@ export default function TopStatesList({ states }: TopStatesProps) {
                                         if the per-state webp is missing in Supabase. */}
                                     <StateImage
                                         slug={state.slug}
-                                        alt={`${state.name} PMHNP jobs`}
+                                        alt={`${state.name} NP jobs`}
                                         fill
                                         className="object-cover"
                                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"

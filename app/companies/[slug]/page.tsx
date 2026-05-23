@@ -62,17 +62,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         });
 
         return {
-            title: `${company.name} PMHNP Jobs`,
+            title: `${company.name} NP Jobs`,
             description: company.description
-                ? `${company.description.substring(0, 150)}... View open PMHNP positions at ${company.name}.`
-                : `Browse open Psychiatric Mental Health Nurse Practitioner (PMHNP) positions at ${company.name}. Find salary info, locations, and apply today.`,
+                ? `${company.description.substring(0, 150)}... View open NP positions at ${company.name}.`
+                : `Browse open Nurse Practitioner (NP) positions at ${company.name}. Find salary info, locations, and apply today.`,
             openGraph: {
-                title: `${company.name} — PMHNP Jobs`,
+                title: `${company.name} — NP Jobs`,
                 // Expanded from a 30-char default so social cards (LinkedIn,
                 // Facebook) have enough copy to render a usable preview.
                 description: company.description
-                    ? `${company.description.substring(0, 140)}... View ${activeJobCount} open PMHNP role${activeJobCount === 1 ? '' : 's'} at ${company.name}.`
-                    : `Browse ${activeJobCount} open PMHNP position${activeJobCount === 1 ? '' : 's'} at ${company.name}. Salary info, locations, and direct apply.`,
+                    ? `${company.description.substring(0, 140)}... View ${activeJobCount} open NP role${activeJobCount === 1 ? '' : 's'} at ${company.name}.`
+                    : `Browse ${activeJobCount} open NP position${activeJobCount === 1 ? '' : 's'} at ${company.name}. Salary info, locations, and direct apply.`,
                 url: `https://nphiring.com/companies/${slug}`,
                 type: 'website',
                 siteName: 'NP Hiring',
@@ -251,7 +251,7 @@ export default async function CompanyPage({ params }: Props) {
                                 No open positions at {company.name} right now.
                             </p>
                             <p className="text-sm mb-6" style={{ color: 'var(--text-tertiary)' }}>
-                                Check back later or browse other PMHNP jobs.
+                                Check back later or browse other NP jobs.
                             </p>
                             <Link
                                 href="/jobs"
@@ -307,7 +307,7 @@ export default async function CompanyPage({ params }: Props) {
                             href="/jobs"
                             className="text-teal-600 hover:text-teal-800 font-medium text-sm hover:underline"
                         >
-                            ← Browse All PMHNP Jobs
+                            ← Browse All NP Jobs
                         </Link>
                     </div>
                 </div>

@@ -42,7 +42,7 @@ export default function JobNotFound() {
               <Briefcase className="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="font-medium text-gray-900 text-sm">Browse similar jobs</p>
-                <p className="text-xs text-gray-600">Find other PMHNP opportunities</p>
+                <p className="text-xs text-gray-600">Find other NP opportunities</p>
               </div>
             </div>
             <div className="flex items-start gap-3 text-left">
@@ -88,7 +88,7 @@ export default function JobNotFound() {
         <Card padding="md" variant="bordered" className="bg-primary-50 border-primary-200">
           <div className="text-center py-8">
             <p className="text-gray-700 mb-4">
-              Check out our latest PMHNP job postings
+              Check out our latest NP job postings
             </p>
             <Link href="/jobs?sort=newest">
               <Button variant="primary" size="md">

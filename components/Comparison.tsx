@@ -12,7 +12,7 @@ interface Platform {
 }
 
 const featureLabels = [
-    'PMHNP-Specific',
+    'NP-Specific',
     'Zero Irrelevant Roles',
     'Salary Transparency',
     'Free Job Alerts',
@@ -24,7 +24,7 @@ const platforms: Platform[] = [
         name: 'NP Hiring',
         highlighted: true,
         features: {
-            'PMHNP-Specific': 'yes',
+            'NP-Specific': 'yes',
             'Zero Irrelevant Roles': 'yes',
             'Salary Transparency': 'yes',
             'Free Job Alerts': 'yes',
@@ -34,7 +34,7 @@ const platforms: Platform[] = [
     {
         name: 'Indeed',
         features: {
-            'PMHNP-Specific': 'no',
+            'NP-Specific': 'no',
             'Zero Irrelevant Roles': 'no',
             'Salary Transparency': 'partial',
             'Free Job Alerts': 'yes',
@@ -44,7 +44,7 @@ const platforms: Platform[] = [
     {
         name: 'LinkedIn',
         features: {
-            'PMHNP-Specific': 'no',
+            'NP-Specific': 'no',
             'Zero Irrelevant Roles': 'no',
             'Salary Transparency': 'no',
             'Free Job Alerts': 'yes',
@@ -54,7 +54,7 @@ const platforms: Platform[] = [
     {
         name: 'ZipRecruiter',
         features: {
-            'PMHNP-Specific': 'no',
+            'NP-Specific': 'no',
             'Zero Irrelevant Roles': 'no',
             'Salary Transparency': 'partial',
             'Free Job Alerts': 'yes',
@@ -83,7 +83,7 @@ export default function Comparison() {
                     <p style={{
                         fontSize: '15px', color: 'var(--text-muted)', margin: 0,
                     }}>
-                        See why PMHNPs prefer a specialized job board
+                        See why NPs prefer a specialized job board
                     </p>
                 </div>
 

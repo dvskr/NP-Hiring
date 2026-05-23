@@ -137,7 +137,7 @@ export default async function CategoryLocationsExplore({
                         marginBottom: '40px',
                     }}
                 >
-                    {categoryLabel} PMHNP Jobs by Location
+                    {categoryLabel} NP Jobs by Location
                 </h2>
 
                 {stateLinks.length > 0 && (

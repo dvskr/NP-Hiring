@@ -2,8 +2,8 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Job Alerts | PMHNP Jobs',
-    description: 'Set up personalized job alerts and get notified when new PMHNP positions match your criteria.',
+    title: 'Job Alerts | NP Jobs',
+    description: 'Set up personalized job alerts and get notified when new NP positions match your criteria.',
     alternates: {
         canonical: `${brand.baseUrl}/job-alerts`,
     },
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     //   (b) noindex and remove from sitemap.
     // Going with (b) for now since users discover this page via the
     // footer link on every page, not via SERP. Switch to (a) if branded
-    // "PMHNP job alerts" queries become valuable to rank for.
+    // "NP job alerts" queries become valuable to rank for.
     robots: { index: false, follow: true },
 };
 

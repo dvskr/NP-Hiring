@@ -24,7 +24,7 @@ export default function BrowseByState({ states }: BrowseByStateProps) {
                         fontSize: '28px', fontWeight: 700,
                         color: 'var(--text-primary)', margin: '0 0 8px',
                     }}>
-                        Find PMHNP Jobs by State
+                        Find NP Jobs by State
                     </h2>
                     <p style={{
                         fontSize: '15px', color: 'var(--text-muted)', margin: 0,

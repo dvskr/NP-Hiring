@@ -85,7 +85,7 @@ export default function ShareButtons({ url, title, company }: ShareButtonsProps)
   const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
   const xUrl = `https://x.com/intent/tweet?text=${encodedTitle}%20at%20${encodedCompany}&url=${encodedUrl}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + url)}`;
-  const emailUrl = `mailto:?subject=${encodedTitle}&body=Check%20out%20this%20PMHNP%20job:%20${url}`;
+  const emailUrl = `mailto:?subject=${encodedTitle}&body=Check%20out%20this%20NP%20job:%20${url}`;
 
   const handleCopyLink = async () => {
     try {

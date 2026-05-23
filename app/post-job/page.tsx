@@ -949,7 +949,7 @@ function PostJobContent() {
                 {/* Job Title */}
                 <div>
                   <Label required htmlFor="title">Job Title</Label>
-                  <input type="text" id="title" placeholder="e.g. Remote PMHNP - Telepsychiatry"
+                  <input type="text" id="title" placeholder="e.g. Remote NP - Telepsychiatry"
                     {...register('title')}
                     style={errors.title ? clayInputError : clayInput}
                   />
@@ -1212,7 +1212,7 @@ function PostJobContent() {
                   </span>
                 </div>
                 <InfoBox emoji="💡" color="blue">
-                  <strong>Writing tip:</strong> Include sections for <em>About the Role</em>, <em>Responsibilities</em>, <em>Requirements</em>, and <em>Why Join Us</em> to attract top PMHNP talent.
+                  <strong>Writing tip:</strong> Include sections for <em>About the Role</em>, <em>Responsibilities</em>, <em>Requirements</em>, and <em>Why Join Us</em> to attract top NP talent.
                 </InfoBox>
               </div>
             </div>

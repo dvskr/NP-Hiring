@@ -653,7 +653,7 @@ export default function CandidateSearchClient() {
                                                 setJdSearchTitle(null);
                                             }
                                         }}
-                                        placeholder='Describe the candidate you need (e.g., "experienced CA-licensed telehealth PMHNP")'
+                                        placeholder='Describe the candidate you need (e.g., "experienced CA-licensed telehealth NP")'
                                         style={{
                                             ...clayInput,
                                             paddingLeft: '38px',

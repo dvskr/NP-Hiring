@@ -175,7 +175,7 @@ export default function AboutEmployer({
             </div>
 
             <p style={{ fontSize: '14px', lineHeight: 1.65, color: 'var(--text-secondary)', margin: '0 0 14px' }}>
-                {employerName} is hiring for this PMHNP position. Psychiatric Mental Health Nurse Practitioners
+                {employerName} is hiring for this NP position. Nurse Practitioners
                 play a critical role in addressing the growing demand for mental health services across the United States.
                 This employer is actively seeking qualified candidates to join their team.
             </p>

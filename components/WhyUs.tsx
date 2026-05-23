@@ -6,7 +6,7 @@ const features = [
     {
         num: '01',
         color: '#E86C2C',
-        title: '100% PMHNP Roles',
+        title: '100% NP Roles',
         desc: 'Every listing is verified for relevance. No physician assistant roles, no general NP positions, no irrelevant noise.',
         stat: '10,000+',
         statLabel: 'verified listings',
@@ -98,12 +98,12 @@ export default function WhyUs() {
                         fontSize: '28px', fontWeight: 700,
                         color: 'var(--text-primary)', margin: '0 0 8px',
                     }}>
-                        Why PMHNPs Choose Us
+                        Why NPs Choose Us
                     </h2>
                     <p style={{
                         fontSize: '15px', color: 'var(--text-muted)', margin: 0,
                     }}>
-                        Built exclusively for Psychiatric Mental Health Nurse Practitioners — not a generic job board
+                        Built exclusively for Nurse Practitioners — not a generic job board
                     </p>
                 </div>
 

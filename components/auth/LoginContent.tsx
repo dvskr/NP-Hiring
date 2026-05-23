@@ -135,7 +135,7 @@ export default function LoginContent() {
       </h1>
       <p style={{ fontSize: '14px', color: '#6B7F8A', marginBottom: '14px', textAlign: 'center' }}>
         {role === 'employer'
-          ? 'Manage your job listings and find top PMHNP talent'
+          ? 'Manage your job listings and find top NP talent'
           : 'Access your saved jobs, applications, and profile'}
       </p>
 

@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     alternates: { canonical: `${brand.baseUrl}/contact` },
     openGraph: {
         title: 'Contact NP Hiring',
-        description: 'Get in touch with the team behind the #1 PMHNP job board — support, employer, and partnership inquiries.',
+        description: 'Get in touch with the team behind the #1 NP job board — support, employer, and partnership inquiries.',
         type: 'website',
         url: `${brand.baseUrl}/contact`,
         siteName: 'NP Hiring',
@@ -108,11 +108,11 @@ export default function ContactPage() {
                             We&apos;d love to <span style={{ color: '#0D9488' }}>hear from you</span>
                         </h1>
                         <p style={{ fontSize: '20px', color: '#6B7F8A', lineHeight: 1.6, margin: 0, maxWidth: '500px' }}>
-                            Whether you represent a clinic seeking your next top-tier PMHNP, or you&apos;re a candidate looking for the perfect match, our team is standing by.
+                            Whether you represent a clinic seeking your next top-tier NP, or you&apos;re a candidate looking for the perfect match, our team is standing by.
                         </p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/clay_hero_contact.webp" alt="Contact PMHNP Jobs" width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
+                        <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/clay_hero_contact.webp" alt="Contact NP Jobs" width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
                     </div>
                 </div>
             </section>
@@ -172,7 +172,7 @@ export default function ContactPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 {[
                                     { label: 'FAQ', href: '/faq' },
-                                    { label: 'About PMHNP Jobs', href: '/about' },
+                                    { label: 'About NP Jobs', href: '/about' },
                                     { label: 'Terms of Service', href: '/terms' },
                                     { label: 'Privacy Policy', href: '/privacy' },
                                 ].map(link => (

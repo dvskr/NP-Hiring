@@ -6,7 +6,7 @@ import { Metadata } from 'next';
 // suffix here would render "Post a Job | NP Hiring | NP Hiring".
 export const metadata: Metadata = {
     title: 'Post a Job',
-    description: 'Post your PMHNP job opening and reach thousands of qualified psychiatric nurse practitioners. Starter, Growth, and Premium listings with email alerts to subscribers.',
+    description: 'Post your NP job opening and reach thousands of qualified nurse practitioners. Starter, Growth, and Premium listings with email alerts to subscribers.',
     alternates: {
         canonical: `${brand.baseUrl}/post-job`,
     },

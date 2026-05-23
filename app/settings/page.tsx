@@ -975,7 +975,7 @@ function SettingsPageInner() {
                     type="text"
                     value={profile.headline || ''}
                     onChange={(e) => updateProfile({ headline: e.target.value })}
-                    placeholder="e.g. PMHNP-BC | 5 Years Telehealth"
+                    placeholder="e.g. APRN-BC | 5 Years Telehealth"
                     maxLength={120}
                     style={inputStyle}
                   />

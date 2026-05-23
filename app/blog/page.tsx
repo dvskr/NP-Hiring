@@ -18,11 +18,11 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-    title: 'PMHNP Career Blog | Expert Guides & Insights',
+    title: 'NP Career Blog | Expert Guides & Insights',
     description:
-        'PMHNP career guides, salary insights, and job market trends from the #1 psychiatric NP job board.',
+        'NP career guides, salary insights, and job market trends from the #1 nurse practitioner job board.',
     openGraph: {
-        images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp', width: 1280, height: 900, alt: 'PMHNP career blog with expert guides on salary negotiation, state spotlights, and job market insights' }],
+        images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp', width: 1280, height: 900, alt: 'NP career blog with expert guides on salary negotiation, state spotlights, and job market insights' }],
     },
     twitter: { card: 'summary_large_image', images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp'] },
     alternates: {
@@ -120,7 +120,7 @@ export default async function BlogIndexPage({
                         {
                             '@type': 'Blog',
                             '@id': 'https://nphiring.com/blog#blog',
-                            name: 'PMHNP Career Blog',
+                            name: 'NP Career Blog',
                             description: 'Career guides, salary insights, and job market trends for psychiatric mental health nurse practitioners.',
                             url: 'https://nphiring.com/blog',
                             inLanguage: 'en-US',
@@ -135,7 +135,7 @@ export default async function BlogIndexPage({
                         {
                             '@type': 'ItemList',
                             '@id': 'https://nphiring.com/blog#postlist',
-                            name: 'PMHNP Career Blog',
+                            name: 'NP Career Blog',
                             numberOfItems: totalCount,
                             itemListElement: posts.slice(0, 10).map((post, i) => ({
                                 '@type': 'ListItem',
@@ -158,7 +158,7 @@ export default async function BlogIndexPage({
                         fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, lineHeight: 1.15,
                         color: '#1A2E35', marginBottom: '16px',
                     }}>
-                        PMHNP Career Blog
+                        NP Career Blog
                     </h1>
                     <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto 32px', lineHeight: 1.6 }}>
                         Data-driven guides, salary negotiation tips, and career strategies
@@ -426,7 +426,7 @@ export default async function BlogIndexPage({
                     <div className="blog-cta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                         {[
                             { href: '/salary-guide', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp', title: 'Salary Guide', desc: '2026 data with state breakdowns' },
-                            { href: '/jobs', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-trending.webp', title: 'Browse Jobs', desc: '10,000+ PMHNP positions' },
+                            { href: '/jobs', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-trending.webp', title: 'Browse Jobs', desc: '10,000+ NP positions' },
                             { href: '/resources', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-chart.webp', title: 'Resources', desc: 'Licensure guides & tools' },
                         ].map(item => (
                             <Link key={item.href} href={item.href} className="blog-cta-card" style={{

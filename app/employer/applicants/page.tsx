@@ -9,7 +9,7 @@ import ApplicantsTab from '@/components/employer/ApplicantsTab';
 
 export const metadata: Metadata = {
     title: 'Applicants',
-    description: 'Review candidates who have applied to your PMHNP job postings.',
+    description: 'Review candidates who have applied to your NP job postings.',
     robots: { index: false, follow: false },
 };
 

@@ -39,7 +39,7 @@ function buildCriteriaSummary(filters: InitialFilters): string {
     }
   }
 
-  return parts.length > 0 ? parts.join(' · ') : 'all PMHNP jobs';
+  return parts.length > 0 ? parts.join(' · ') : 'all NP jobs';
 }
 
 export default function CreateAlertForm({ initialFilters = {}, onSuccess }: CreateAlertFormProps) {

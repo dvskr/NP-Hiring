@@ -442,7 +442,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                 {/* ═══ Quick Access Row ═══
                     Stack the two CTA cards on phones — at 1fr 1fr the icon +
                     two-line copy + chevron clipped both cards (Talent Pool
-                    truncated to "Search qualified PMHNP", Messages to
+                    truncated to "Search qualified NP", Messages to
                     "Messa..."). Single column on ≤640px, 2-col on tablet+. */}
                 {!isTokenAccess && (
                     <div className="emp-quick-access" style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
@@ -462,7 +462,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                 </div>
                                 <div>
                                     <p style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0 }}>Browse Talent Pool</p>
-                                    <p style={{ fontSize: '11px', color: '#8A9BA6', margin: 0 }}>Search qualified PMHNP candidates</p>
+                                    <p style={{ fontSize: '11px', color: '#8A9BA6', margin: 0 }}>Search qualified NP candidates</p>
                                 </div>
                             </div>
                             <span style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>Browse →</span>
@@ -574,7 +574,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                     color: '#1A2E35', marginBottom: '6px',
                                 }}>Welcome! Let&apos;s get started</h3>
                                 <p style={{ fontSize: '13px', color: '#8A9BA6', marginBottom: '24px' }}>
-                                    Follow these steps to start hiring qualified PMHNPs
+                                    Follow these steps to start hiring qualified NPs
                                 </p>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', maxWidth: '560px', marginInline: 'auto', marginBottom: '24px' }}>
@@ -1253,7 +1253,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                             Talent Pool
                         </h3>
                         <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 10px', lineHeight: 1.5 }}>
-                            Browse qualified PMHNP candidates. Save, tag, and manage your pipeline.
+                            Browse qualified NP candidates. Save, tag, and manage your pipeline.
                         </p>
                         <Link href="/employer/candidates" className="emp-cta-card" style={{
                             fontSize: '12px', fontWeight: 600, color: '#0D9488',
@@ -1346,7 +1346,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                    the card's intrinsic minimum width equals the longest
                    unbreakable run of content inside it — which for
                    .emp-cta-card was the full subtitle string ("Search
-                   qualified PMHNP candidates"), pinning these cards to
+                   qualified NP candidates"), pinning these cards to
                    ~576px and forcing the entire dashboard grid wider than
                    the iPhone XR viewport. min-width: 0 breaks that trap so
                    the cards actually shrink with their parent. Diagnosed

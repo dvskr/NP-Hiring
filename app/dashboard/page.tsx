@@ -4,7 +4,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema'
 import DashboardContent from '@/components/dashboard/DashboardContent'
 
 export const metadata = {
-  title: 'Dashboard | PMHNP Jobs',
+  title: 'Dashboard | NP Jobs',
 }
 
 export default async function DashboardPage() {

@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 
 // Title is bare ("Contact Us") because the root layout's title.template
 // (`%s | ${brand.name}`) already appends the brand suffix. Including the
-// suffix here would render "Contact Us | PMHNP Jobs | NP Hiring" — a
+// suffix here would render "Contact Us | NP Jobs | NP Hiring" — a
 // duplicated and inconsistent brand reference.
 export const metadata: Metadata = {
   title: 'Contact Us',

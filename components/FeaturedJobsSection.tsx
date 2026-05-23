@@ -197,7 +197,7 @@ export default async function FeaturedJobsSection() {
                         __html: JSON.stringify({
                             '@context': 'https://schema.org',
                             '@type': 'ItemList',
-                            name: 'Featured PMHNP Jobs',
+                            name: 'Featured NP Jobs',
                             numberOfItems: jobs.length,
                             itemListElement: jobs.map((job, idx) => ({
                                 '@type': 'ListItem',
