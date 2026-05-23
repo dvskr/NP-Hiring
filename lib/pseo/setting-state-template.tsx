@@ -776,7 +776,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
 
 
       {/* FAQ */}
-      <CategoryFAQ category={config.faqCategory as 'remote' | 'telehealth' | 'travel' | 'new-grad' | 'per-diem' | 'inpatient' | 'outpatient' | 'substance-abuse' | 'child-adolescent' | 'addiction'} totalJobs={stats.totalJobs} />
+      <CategoryFAQ category={config.faqCategory as 'remote' | 'telehealth' | 'travel' | 'new-grad' | 'per-diem' | 'inpatient' | 'outpatient' | 'psychiatric-mental-health' | 'pediatric'} totalJobs={stats.totalJobs} />
     </div>
   );
 }

@@ -314,7 +314,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     buildWhere: (stateName: string) => buildKeywordWhere(
       ['addiction', 'substance abuse', 'substance use', 'MAT', 'suboxone', 'buprenorphine', 'methadone', 'recovery', 'detox'],
       stateName,
-      'addiction',
+      'psychiatric-mental-health',
     ),
     benefits: [
       { title: 'Critical Need', description: 'The opioid epidemic has created unprecedented demand for addiction-trained PMHNPs across every state.', iconName: 'AlertTriangle' },
@@ -470,7 +470,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     buildWhere: (stateName: string) => buildKeywordWhere(
       ['behavioral health', 'behavioral', 'integrated care', 'integrated behavioral'],
       stateName,
-      'behavioral-health',
+      'psychiatric-mental-health',
     ),
     benefits: [
       { title: 'Integrated Care Model', description: 'Work alongside primary care, social workers, and therapists in a collaborative care team.', iconName: 'Users' },

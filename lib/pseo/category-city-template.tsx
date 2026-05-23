@@ -72,7 +72,7 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       isPublished: true,
       state: { equals: stateName, mode: 'insensitive' },
       ...(cityName && { city: { equals: cityName, mode: 'insensitive' } }),
-      ...withTagFallback('addiction'),
+      ...withTagFallback('psychiatric-mental-health'),
     }),
     benefits: [
       { title: 'High Demand', description: 'Addiction specialists are critically needed — over 40 million Americans have a substance use disorder.', iconName: 'Activity' },
@@ -99,7 +99,7 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       isPublished: true,
       state: { equals: stateName, mode: 'insensitive' },
       ...(cityName && { city: { equals: cityName, mode: 'insensitive' } }),
-      ...withTagFallback('child-adolescent'),
+      ...withTagFallback('pediatric'),
     }),
     benefits: [
       { title: 'Critical Need', description: 'Youth mental health crisis means massive demand — 1 in 5 children has a diagnosable mental disorder.', iconName: 'Users' },
@@ -126,7 +126,7 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       isPublished: true,
       state: { equals: stateName, mode: 'insensitive' },
       ...(cityName && { city: { equals: cityName, mode: 'insensitive' } }),
-      ...withTagFallback('substance-abuse'),
+      ...withTagFallback('psychiatric-mental-health'),
     }),
     benefits: [
       { title: 'Growing Field', description: 'Federal funding for addiction treatment has increased dramatically, creating new positions nationwide.', iconName: 'TrendingUp' },
@@ -574,7 +574,7 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       isPublished: true,
       state: { equals: stateName, mode: 'insensitive' },
       ...(cityName && { city: { equals: cityName, mode: 'insensitive' } }),
-      ...withTagFallback('crisis'),
+      ...withTagFallback('emergency'),
     }),
     benefits: [
       { title: 'Premium Compensation', description: 'Crisis roles pay 15-30% more than standard positions — $130K-$195K with shift differentials for nights/weekends.', iconName: 'DollarSign' },
@@ -662,7 +662,7 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
       isPublished: true,
       state: { equals: stateName, mode: 'insensitive' },
       ...(cityName && { city: { equals: cityName, mode: 'insensitive' } }),
-      ...withTagFallback('behavioral-health'),
+      ...withTagFallback('psychiatric-mental-health'),
     }),
     benefits: [
       { title: 'Integrated Care', description: 'Work in multidisciplinary teams combining psychiatric care with therapy, social work, and primary care.', iconName: 'Users' },
