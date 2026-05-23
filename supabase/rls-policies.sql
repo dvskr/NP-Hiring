@@ -67,8 +67,8 @@ ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS user_profiles_owner ON user_profiles;
 CREATE POLICY user_profiles_owner ON user_profiles
     FOR ALL TO authenticated
-    USING (supabase_id = auth.uid())
-    WITH CHECK (supabase_id = auth.uid());
+    USING (supabase_id = auth.uid()::text)
+    WITH CHECK (supabase_id = auth.uid()::text);
 -- Also allow employers to see profiles where profile_visible=true
 DROP POLICY IF EXISTS user_profiles_employer_browse ON user_profiles;
 CREATE POLICY user_profiles_employer_browse ON user_profiles
@@ -79,64 +79,64 @@ ALTER TABLE candidate_licenses ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_licenses_owner ON candidate_licenses;
 CREATE POLICY candidate_licenses_owner ON candidate_licenses
     FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_certifications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_certifications_owner ON candidate_certifications;
 CREATE POLICY candidate_certifications_owner ON candidate_certifications
     FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_education ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_education_owner ON candidate_education;
 CREATE POLICY candidate_education_owner ON candidate_education
     FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_work_experience ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_work_experience_owner ON candidate_work_experience;
 CREATE POLICY candidate_work_experience_owner ON candidate_work_experience
     FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_references ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_references_owner ON candidate_references;
 CREATE POLICY candidate_references_owner ON candidate_references
     FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_screening_answers ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_screening_answers_owner ON candidate_screening_answers;
 CREATE POLICY candidate_screening_answers_owner ON candidate_screening_answers
     FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_open_ended_responses ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_open_ended_responses_owner ON candidate_open_ended_responses;
 CREATE POLICY candidate_open_ended_responses_owner ON candidate_open_ended_responses
     FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE saved_jobs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS saved_jobs_owner ON saved_jobs;
 CREATE POLICY saved_jobs_owner ON saved_jobs
     FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE job_applications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS job_applications_owner ON job_applications;
 CREATE POLICY job_applications_owner ON job_applications
     FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 -- ── Job alerts (email-keyed, no user_id) ──────────────────────────────────
 -- These use the alert's confirmation_token for ownership; not exposed to
@@ -153,22 +153,22 @@ ALTER TABLE employer_jobs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS employer_jobs_owner ON employer_jobs;
 CREATE POLICY employer_jobs_owner ON employer_jobs
     FOR ALL TO authenticated
-    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE saved_candidates ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS saved_candidates_owner ON saved_candidates;
 CREATE POLICY saved_candidates_owner ON saved_candidates
     FOR ALL TO authenticated
-    USING (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE candidate_tags ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS candidate_tags_owner ON candidate_tags;
 CREATE POLICY candidate_tags_owner ON candidate_tags
     FOR ALL TO authenticated
-    USING (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE employer_testimonials ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS employer_testimonials_public_read ON employer_testimonials;
@@ -178,15 +178,15 @@ CREATE POLICY employer_testimonials_public_read ON employer_testimonials
 DROP POLICY IF EXISTS employer_testimonials_owner_write ON employer_testimonials;
 CREATE POLICY employer_testimonials_owner_write ON employer_testimonials
     FOR ALL TO authenticated
-    USING (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 ALTER TABLE employer_candidate_alerts ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS employer_candidate_alerts_owner ON employer_candidate_alerts;
 CREATE POLICY employer_candidate_alerts_owner ON employer_candidate_alerts
     FOR ALL TO authenticated
-    USING (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()))
-    WITH CHECK (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
+    WITH CHECK (employer_user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 -- ── Messaging (both participants can access) ──────────────────────────────
 
@@ -195,8 +195,8 @@ DROP POLICY IF EXISTS conversations_participant ON conversations;
 CREATE POLICY conversations_participant ON conversations
     FOR ALL TO authenticated
     USING (
-        participant_a_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid())
-        OR participant_b_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid())
+        participant_a_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text)
+        OR participant_b_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text)
     );
 
 ALTER TABLE employer_messages ENABLE ROW LEVEL SECURITY;
@@ -204,15 +204,15 @@ DROP POLICY IF EXISTS employer_messages_participant ON employer_messages;
 CREATE POLICY employer_messages_participant ON employer_messages
     FOR ALL TO authenticated
     USING (
-        sender_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid())
-        OR recipient_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid())
+        sender_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text)
+        OR recipient_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text)
     );
 
 ALTER TABLE profile_views ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS profile_views_owner ON profile_views;
 CREATE POLICY profile_views_owner ON profile_views
     FOR ALL TO authenticated
-    USING (viewer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()));
+    USING (viewer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
 -- ── System / audit tables — service_role only ─────────────────────────────
 -- These have NO policies. RLS enabled + no policies = service_role only.
