@@ -240,7 +240,7 @@ export async function sendWelcomeEmail(email: string, unsubscribeToken: string):
     const html = emailShellV2(`
       ${headerBlockV2('Your Alerts Are Live', '')}
       ${spacerV2(12)}
-      ${simpleBlock('hero-alert-subscription.png', 'Your job alerts are now active. We scan thousands of PMHNP positions daily and deliver matches straight to your inbox \u2014 so you never miss the right opportunity.')}
+      ${simpleBlock('hero-alert-subscription.png', 'Your job alerts are now active. We scan thousands of NP and APRN positions daily and deliver matches straight to your inbox \u2014 so you never miss the right opportunity.')}
       ${spacerV2(32)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
         ${primaryButtonV2('Browse Open Positions', `${BASE_URL}/jobs`)}
@@ -248,7 +248,7 @@ export async function sendWelcomeEmail(email: string, unsubscribeToken: string):
       ${spacerV2(48)}
       ${closeContentV2()}`,
       unsubscribeFooterV2(unsubscribeToken),
-      'Your PMHNP job alerts are active.'
+      'Your NP job alerts are active.'
     );
 
     await sendAndLog({
@@ -301,7 +301,7 @@ export async function sendSignupWelcomeEmail(
       ${spacerV2(16)}
       ${stepBlock('icon-emp-analytics.png', 'Track engagement', 'Monitor views, apply clicks, and applicant quality in real time.')}
       ${spacerV2(16)}
-      ${stepBlock('icon-emp-handshake.png', 'Connect with candidates', 'Message qualified PMHNPs directly through the platform. Candidates you unlock stay accessible forever.')}
+      ${stepBlock('icon-emp-handshake.png', 'Connect with candidates', 'Message qualified NPs directly through the platform. Candidates you unlock stay accessible forever.')}
       ${spacerV2(32)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
         ${primaryButtonV2('Post Your First Job', `${SITE_URL}/post-job`)}
@@ -331,7 +331,7 @@ export async function sendSignupWelcomeEmail(
             ${spacerV2(48)}
             ${closeContentV2()}`,
           unsubscribeFooterV2('sample'),
-          `Welcome ${firstName || ''} \u2014 find your perfect PMHNP role.`
+          `Welcome ${firstName || ''} \u2014 find your perfect NP role.`
       );
     }
 
@@ -404,7 +404,7 @@ export async function sendConfirmationEmail(
     const html = emailShellV2(`
       ${headerBlockV2('Your Listing Is Live', '')}
       ${spacerV2(12)}
-      ${simpleBlock('hero-job-post.png', `Your posting is now visible to thousands of PMHNPs actively searching for their next role. The listing will remain active for ${durationDays} days.`)}
+      ${simpleBlock('hero-job-post.png', `Your posting is now visible to thousands of NPs actively searching for their next role. The listing will remain active for ${durationDays} days.`)}
       ${spacerV2(20)}
       <tr><td class="content-pad" style="padding:0 40px;">
         <div style="background:#F0FDFA;border:1px solid rgba(13,148,136,0.15);border-radius:12px;padding:16px 20px;">
@@ -429,7 +429,7 @@ export async function sendConfirmationEmail(
     await sendAndLog({
       from: EMAIL_FROM,
       to: employerEmail,
-      subject: `✅ Your PMHNP job post is live — "${jobTitle}"`,
+      subject: `✅ Your NP job post is live — "${jobTitle}"`,
       html,
     }, 'job_confirmation', { jobId }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
 
@@ -676,7 +676,7 @@ export async function sendDraftSavedEmail(
     await sendAndLog({
       from: EMAIL_FROM,
       to: email,
-      subject: '📝 Continue your PMHNP job posting',
+      subject: '📝 Continue your NP job posting',
       html,
     }, 'draft_saved');
 
@@ -792,7 +792,7 @@ export function buildSalaryGuideHtml(pdfUrl: string, unsubscribeToken: string): 
   return emailShellV2(`
     ${headerBlockV2('Your 2026 Salary Guide', '')}
     ${spacerV2(12)}
-    ${simpleBlock('hero-salary-guide.png', 'Your comprehensive PMHNP compensation report is ready. It includes salary ranges across all 50 states, remote versus in-person pay differentials, and negotiation strategies.')}
+    ${simpleBlock('hero-salary-guide.png', 'Your comprehensive NP compensation report covering FNP, AGNP, PMHNP, ACNP, CRNA, and CNM specialties is ready. It includes salary ranges across all 50 states, remote versus in-person pay differentials, and negotiation strategies.')}
     ${spacerV2(32)}
     <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
       ${primaryButtonV2('Download Salary Guide (PDF)', pdfUrl)}
@@ -802,7 +802,7 @@ export function buildSalaryGuideHtml(pdfUrl: string, unsubscribeToken: string): 
     ${spacerV2(48)}
     ${closeContentV2()}`,
     unsubscribeFooterV2(unsubscribeToken),
-    'Your 2026 PMHNP Salary Guide is ready.'
+    'Your 2026 NP Salary Guide is ready.'
   );
 }
 
@@ -990,7 +990,7 @@ export async function sendNewCandidateAlertEmail(
     const html = emailShellV2(`
       ${headerBlockV2('New Candidate Match', '')}
       ${spacerV2(12)}
-      ${simpleBlock('hero-new-candidate.png', `A new candidate matching your hiring criteria has joined the platform. They specialize in psychiatric mental health nursing and are open to new positions.`)}
+      ${simpleBlock('hero-new-candidate.png', `A new candidate matching your hiring criteria has joined the platform. They are advanced practice nurses and are open to new positions.`)}
       ${spacerV2(32)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
         ${primaryButtonV2('View Candidate Profile', `${SITE_URL}/employer/candidates`)}

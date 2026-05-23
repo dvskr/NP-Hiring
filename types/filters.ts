@@ -45,10 +45,11 @@ export interface FilterCounts {
     '7d': number;
     '30d': number;
   };
-  specialty: {
-    Telehealth: number;
-    Travel: number;
-  };
+  // Keyed by canonical category slug (see lib/pseo/category-tagger.ts).
+  // Open-ended so adding a new NP specialty doesn't require updating this
+  // interface — the filter-counts API returns counts for any slug present
+  // in the lookup.
+  specialty: Partial<Record<string, number>>;
   experienceLevel: {
     'New Grad': number;
     'Mid-Level': number;

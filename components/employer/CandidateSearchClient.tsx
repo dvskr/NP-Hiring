@@ -9,10 +9,30 @@ import CandidateCard from './CandidateCard';
 /* ═══════════════════════════════════════════
    CONSTANTS
    ═══════════════════════════════════════════ */
+// NP / APRN specialty presets — broadened from the PMHNP-only psychiatric
+// population list to cover the full NP cohort. Keyed off the canonical
+// taxonomy at lib/pseo/category-tagger.ts so an employer's saved-search
+// can be carried into the category-page URL space without translation.
 const SPECIALTY_PRESETS = [
-    'ADHD', 'Anxiety/Depression', 'PTSD', 'Addiction',
-    'Child & Adolescent', 'Geriatric', 'Eating Disorders',
-    'OCD', 'Bipolar', 'Schizophrenia', 'General Adult',
+    'Family Practice (FNP)',
+    'Adult-Gerontology (AGNP)',
+    'Pediatric (PNP)',
+    'Neonatal (NNP)',
+    "Women's Health (WHNP)",
+    'Acute Care (ACNP)',
+    'Emergency (ENP)',
+    'Psychiatric Mental Health (PMHNP)',
+    'Primary Care',
+    'Urgent Care',
+    'Hospitalist',
+    'Oncology',
+    'Cardiology',
+    'Dermatology',
+    'Orthopedic',
+    'Geriatric',
+    'Anesthesia (CRNA)',
+    'Nurse Midwifery (CNM)',
+    'Clinical Nurse Specialist (CNS)',
 ];
 const US_STATES = [
     'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',

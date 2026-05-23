@@ -547,19 +547,69 @@ export default function LinkedInFilters() {
               />
             </FilterSection>
 
-            {/* Specialty */}
+            {/* Specialty — NP / APRN cohort. Keys match canonical category
+                slugs in lib/pseo/category-tagger.ts so a saved filter set
+                translates directly into the /jobs/c/<slug>/ URL space. */}
             <FilterSection title="Specialty">
               <CheckboxFilter
+                label="Family Practice (FNP)"
+                count={counts?.specialty?.['family-practice'] || 0}
+                checked={filters.specialty?.includes('family-practice') || false}
+                onChange={() => toggleArrayFilter('specialty', 'family-practice')}
+              />
+              <CheckboxFilter
+                label="Adult-Gerontology (AGNP)"
+                count={counts?.specialty?.['adult-gerontology'] || 0}
+                checked={filters.specialty?.includes('adult-gerontology') || false}
+                onChange={() => toggleArrayFilter('specialty', 'adult-gerontology')}
+              />
+              <CheckboxFilter
+                label="Pediatric (PNP)"
+                count={counts?.specialty?.pediatric || 0}
+                checked={filters.specialty?.includes('pediatric') || false}
+                onChange={() => toggleArrayFilter('specialty', 'pediatric')}
+              />
+              <CheckboxFilter
+                label="Women's Health (WHNP)"
+                count={counts?.specialty?.['women-health'] || 0}
+                checked={filters.specialty?.includes('women-health') || false}
+                onChange={() => toggleArrayFilter('specialty', 'women-health')}
+              />
+              <CheckboxFilter
+                label="Acute Care (ACNP)"
+                count={counts?.specialty?.['acute-care'] || 0}
+                checked={filters.specialty?.includes('acute-care') || false}
+                onChange={() => toggleArrayFilter('specialty', 'acute-care')}
+              />
+              <CheckboxFilter
+                label="Psychiatric Mental Health (PMHNP)"
+                count={counts?.specialty?.['psychiatric-mental-health'] || 0}
+                checked={filters.specialty?.includes('psychiatric-mental-health') || false}
+                onChange={() => toggleArrayFilter('specialty', 'psychiatric-mental-health')}
+              />
+              <CheckboxFilter
+                label="Anesthesia (CRNA)"
+                count={counts?.specialty?.anesthesia || 0}
+                checked={filters.specialty?.includes('anesthesia') || false}
+                onChange={() => toggleArrayFilter('specialty', 'anesthesia')}
+              />
+              <CheckboxFilter
+                label="Midwifery (CNM)"
+                count={counts?.specialty?.midwifery || 0}
+                checked={filters.specialty?.includes('midwifery') || false}
+                onChange={() => toggleArrayFilter('specialty', 'midwifery')}
+              />
+              <CheckboxFilter
                 label="Telehealth"
-                count={counts?.specialty?.Telehealth || 0}
-                checked={filters.specialty?.includes('Telehealth') || false}
-                onChange={() => toggleArrayFilter('specialty', 'Telehealth')}
+                count={counts?.specialty?.telehealth || 0}
+                checked={filters.specialty?.includes('telehealth') || false}
+                onChange={() => toggleArrayFilter('specialty', 'telehealth')}
               />
               <CheckboxFilter
                 label="Travel / Locum"
-                count={counts?.specialty?.Travel || 0}
-                checked={filters.specialty?.includes('Travel') || false}
-                onChange={() => toggleArrayFilter('specialty', 'Travel')}
+                count={counts?.specialty?.travel || 0}
+                checked={filters.specialty?.includes('travel') || false}
+                onChange={() => toggleArrayFilter('specialty', 'travel')}
               />
             </FilterSection>
 

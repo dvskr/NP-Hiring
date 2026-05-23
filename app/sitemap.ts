@@ -33,13 +33,16 @@ const US_STATES = [
   'west-virginia', 'wisconsin', 'wyoming', 'district-of-columbia'
 ]
 
-const SETTING_SLUGS = ['remote', 'telehealth', 'inpatient', 'outpatient', 'travel']
-const SPECIALTY_SLUGS = ['addiction', 'child-adolescent', 'substance-abuse', 'new-grad', 'per-diem', 'locum-tenens', 'correctional', '1099']
-const JOB_TYPE_SLUGS = ['full-time', 'part-time', 'contract']
-const EXPERIENCE_SLUGS = ['entry-level', 'mid-career', 'senior']
-const EMPLOYER_SLUGS = ['hospital', 'private-practice', 'community-health', 'va']
-const POPULATION_SLUGS = ['geriatric', 'veterans', 'lgbtq', 'crisis']
-const ALL_CATEGORY_SLUGS = [...SETTING_SLUGS, ...SPECIALTY_SLUGS, ...JOB_TYPE_SLUGS, ...EXPERIENCE_SLUGS, ...EMPLOYER_SLUGS, ...POPULATION_SLUGS]
+// 2026-05-23: re-aligned with lib/pseo/category-tagger.ts CANONICAL_CATEGORY_SLUGS
+// for the NP fork. PMHNP-only slugs removed; APRN cohort + NP specialty slugs added.
+const SETTING_SLUGS = ['remote', 'telehealth', 'inpatient', 'outpatient', 'travel', 'urgent-care', 'home-health']
+const SPECIALTY_SLUGS = ['family-practice', 'adult-gerontology', 'pediatric', 'neonatal', 'women-health', 'acute-care', 'emergency', 'psychiatric-mental-health', 'oncology', 'cardiology', 'primary-care', 'hospitalist', 'dermatology', 'orthopedic']
+const APRN_SLUGS = ['anesthesia', 'midwifery', 'clinical-nurse-specialist']
+const JOB_TYPE_SLUGS = ['full-time', 'part-time', 'contract', 'per-diem', 'locum-tenens', '1099']
+const EXPERIENCE_SLUGS = ['entry-level', 'mid-career', 'senior', 'new-grad']
+const EMPLOYER_SLUGS = ['hospital', 'private-practice', 'community-health', 'va', 'correctional']
+const POPULATION_SLUGS = ['geriatric', 'veterans', 'lgbtq']
+const ALL_CATEGORY_SLUGS = [...SETTING_SLUGS, ...SPECIALTY_SLUGS, ...APRN_SLUGS, ...JOB_TYPE_SLUGS, ...EXPERIENCE_SLUGS, ...EMPLOYER_SLUGS, ...POPULATION_SLUGS]
 
 // State name-to-code lookup for slug generation
 const STATE_NAME_TO_CODE: Record<string, string> = {
@@ -115,20 +118,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ]
 
-  // Category landing pages
+  // Category landing pages — new route shape is /jobs/c/<slug> (the prior
+  // /jobs/<slug> shape conflicted with the [slug] job-detail route after the
+  // 32 hand-rolled taxonomy directories were deleted during the NP fork).
   const categoryLandingPages: MetadataRoute.Sitemap = ALL_CATEGORY_SLUGS.map(slug => ({
-    url: `${baseUrl}/jobs/${slug}`,
+    url: `${baseUrl}/jobs/c/${slug}`,
     lastModified: latestJobDate,
     changeFrequency: 'daily',
     priority: 0.9,
   }))
 
   // Other landing pages
+  // - /salary-guide and /resources/fpa-guide were deleted in the NP fork and
+  //   redirect via next.config.ts; intentionally not in sitemap so Google
+  //   doesn't keep crawling redirect chains.
   const landingPages: MetadataRoute.Sitemap = [
-    { url: `${baseUrl}/salary-guide`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'weekly', priority: 0.9 },
     { url: `${baseUrl}/resources`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/jobs/locations`, lastModified: latestJobDate, changeFrequency: 'weekly', priority: 0.8 },
-    { url: `${baseUrl}/resources/fpa-guide`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${baseUrl}/resources/private-practice-guide`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${baseUrl}/resources/1099-vs-w2`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
   ]
@@ -143,13 +149,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }))
 
-  // Salary guide state pages — same gating treatment.
-  let salaryGuideStatePages: MetadataRoute.Sitemap = US_STATES.map(state => ({
-    url: `${baseUrl}/salary-guide/${state}`,
-    lastModified: latestJobDate,
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }))
+  // Salary guide state pages — removed in NP fork. Salary content folded
+  // into /resources; per-state salary pages no longer exist.
+  const salaryGuideStatePages: MetadataRoute.Sitemap = [];
 
   // Category × State pages — handled by /api/sitemaps/cities/[batch] (which
   // emits both category×city AND setting×state URLs via pseoStats with
@@ -200,12 +202,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     }));
-    salaryGuideStatePages = US_STATES.filter(s => statesWithSalary.has(s)).map(state => ({
-      url: `${baseUrl}/salary-guide/${state}`,
-      lastModified: latestJobDate,
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
-    }));
+    // salaryGuideStatePages: removed in NP fork (salary-guide page deleted).
+    // statesWithSalary still computed above so the same query can be reused
+    // when salary content is re-added; intentionally not emitting URLs today.
+    void statesWithSalary;
 
     // Top city pages (DB-driven, only active non-expired jobs).
     //

@@ -28,42 +28,48 @@ const rowAnim = {
     },
 };
 
+// NOTE 2026-05-23: hrefs route to real pages on the site (resource hub
+// + category listings) instead of specific blog slugs. The blog table is
+// empty post-fork; once 6+ NP-focused blog posts are seeded, this whole
+// component should be refactored to fetch from Prisma and render the
+// real posts. Until then, every link here resolves to a real page so
+// nothing 404s.
 const FEATURED_POSTS = [
     {
         category: 'Salary Guide',
-        title: 'NP Salary Guide 2026: State-by-State Analysis',
-        description: 'Data from 8,500+ job postings reveals top-paying states, specialty premiums, and negotiation strategies that can add $15K–$25K to your offer.',
-        href: '/blog/pmhnp-salary-guide-2026',
+        title: 'NP Salary by State + Specialty',
+        description: 'Data from real job postings reveals top-paying states, specialty premiums (FNP vs PMHNP vs CRNA), and negotiation strategies that can add $15K–$25K to your offer.',
+        href: '/resources',
     },
     {
         category: 'Career Path',
-        title: 'How to Become a NP: The Complete Roadmap',
-        description: 'From BSN to board certification — every step, timeline, and insider tip for launching your nurse practitioner career in 2026.',
-        href: '/blog/how-to-become-a-pmhnp',
+        title: 'How to Become a Nurse Practitioner',
+        description: 'From BSN to board certification — every step, timeline, and insider tip for launching your NP career across all seven population foci.',
+        href: '/resources',
     },
     {
         category: 'Job Market',
-        title: 'NP Job Outlook: 45% Growth Through 2032',
-        description: '123 million Americans live in mental health shortage areas. Here\'s what that means for your career trajectory and earning potential.',
-        href: '/blog/pmhnp-job-outlook',
+        title: 'NP Job Outlook: 38% Growth Through 2032',
+        description: 'BLS projects nurse practitioner roles among the fastest-growing US occupations. See state-by-state demand patterns and the specialties leading growth.',
+        href: '/jobs',
     },
     {
         category: 'Remote Work',
-        title: 'The Ultimate Guide to Remote NP Jobs',
-        description: '62% of NP positions now offer telehealth. Find out which companies pay $130K–$200K for remote psychiatric care.',
-        href: '/blog/ultimate-guide-remote-pmhnp-jobs-2026',
+        title: 'Remote & Telehealth NP Jobs',
+        description: 'Remote arrangements have transformed primary-care, psych, and chronic-care practice. Find positions paying $120K–$180K at telehealth-first employers.',
+        href: '/jobs/c/remote',
     },
     {
         category: 'New Graduates',
-        title: 'New Grad NP: Landing Your First Role',
-        description: 'Residency programs, interview prep, salary benchmarks, and the resume strategies that get callbacks within 48 hours.',
-        href: '/blog/new-grad-pmhnp-guide-2026',
+        title: 'New Grad NP Roles',
+        description: 'NP residency programs, fellowship pathways, salary benchmarks, and resume strategies for landing your first clinical role within 90 days.',
+        href: '/jobs/c/new-grad',
     },
     {
         category: 'Private Practice',
-        title: 'NP Private Practice Income: What to Expect',
-        description: 'Cash-pay vs insurance, overhead costs, and how practice owners in FPA states are clearing $200K–$300K+ annually.',
-        href: '/blog/pmhnp-private-practice-income-2026',
+        title: 'Starting a Private NP Practice',
+        description: 'Cash-pay vs insurance, overhead costs, practice authority by state, and how FPA-state NPs are clearing $180K–$300K+ in independent practice.',
+        href: '/resources/private-practice-guide',
     },
 ];
 
