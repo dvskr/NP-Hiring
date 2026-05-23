@@ -1,0 +1,338 @@
+/**
+ * Comprehensive Salary Normalizer
+ * Converts all salary formats to annual equivalent
+ */
+
+export interface SalaryNormalizationResult {
+  normalizedMinSalary: number | null;
+  normalizedMaxSalary: number | null;
+  salaryIsEstimated: boolean;
+  salaryConfidence: number | null;
+}
+
+// Conversion multipliers to annual salary
+const PERIOD_MULTIPLIERS: Record<string, number> = {
+  'annual': 1,
+  'yearly': 1,
+  'year': 1,
+  'monthly': 12,
+  'month': 12,
+  'weekly': 52,
+  'week': 52,
+  'daily': 260, // Assuming 260 working days/year
+  'day': 260,
+  'hourly': 2080, // 40 hours/week * 52 weeks
+  'hour': 2080,
+};
+
+// Typical PMHNP salary ranges for validation
+const PMHNP_SALARY_RANGES = {
+  // W-2 / Salaried positions
+  min: 80000,           // Minimum reasonable annual salary
+  max: 350000,          // Maximum reasonable W-2 annual salary (PMHNP in HCOL areas)
+
+  // Contract / Hourly positions (these convert to higher annual equivalents)
+  contractorHourlyMin: 50,   // $50/hour minimum for contractor PMHNP
+  contractorHourlyMax: 350,  // $350/hour maximum (high-end contractors)
+
+  typical: {
+    min: 100000,
+    max: 160000,
+  },
+};
+
+/**
+ * Detect salary period from salary string or context
+ */
+function detectSalaryPeriod(
+  salaryStr: string | null | undefined,
+  salaryPeriod: string | null | undefined,
+  minSalary: number | null | undefined,
+  maxSalary: number | null | undefined
+): string {
+  // If period is explicitly provided, use it
+  if (salaryPeriod) {
+    const normalized = salaryPeriod.toLowerCase().trim();
+    for (const [period] of Object.entries(PERIOD_MULTIPLIERS)) {
+      if (normalized.includes(period)) {
+        return period;
+      }
+    }
+  }
+
+  // Try to detect from salary string
+  if (salaryStr) {
+    const lower = salaryStr.toLowerCase();
+    if (lower.includes('/hour') || lower.includes('per hour') || lower.includes('hourly')) {
+      return 'hourly';
+    }
+    if (lower.includes('/week') || lower.includes('per week') || lower.includes('weekly')) {
+      return 'weekly';
+    }
+    if (lower.includes('/month') || lower.includes('per month') || lower.includes('monthly')) {
+      return 'monthly';
+    }
+    if (lower.includes('/year') || lower.includes('per year') || lower.includes('annually') || lower.includes('annual')) {
+      return 'annual';
+    }
+    if (lower.includes('/day') || lower.includes('per day') || lower.includes('daily')) {
+      return 'daily';
+    }
+  }
+
+  // Infer from salary magnitude
+  const salary = minSalary || maxSalary;
+  if (salary) {
+    if (salary < 500) {
+      return 'hourly';  // $50-200/hour typical for PMHNP
+    }
+    if (salary < 5000) {
+      return 'weekly';  // $2000-4000/week typical
+    }
+    if (salary < 20000) {
+      return 'monthly'; // $8000-15000/month typical
+    }
+    return 'annual';    // $85k-200k/year typical
+  }
+
+  // Default to annual
+  return 'annual';
+}
+
+/**
+ * Validate if salary is reasonable for PMHNP role
+ * Handles hourly contractor rates and annual salaries differently
+ */
+function isReasonableSalary(
+  annual: number,
+  originalPeriod: string,
+  originalSalary: number,
+  confidence: number = 1.0
+): boolean {
+  // For hourly rates, validate the hourly amount (not the annual conversion)
+  // PMHNP contractors can earn $50-350/hour, which converts to $104k-$728k annually
+  if (originalPeriod === 'hourly' || originalPeriod === 'hour') {
+    const hourlyRate = originalSalary;
+    const minHourly = PMHNP_SALARY_RANGES.contractorHourlyMin;
+    const maxHourly = PMHNP_SALARY_RANGES.contractorHourlyMax;
+
+    const isValid = hourlyRate >= minHourly && hourlyRate <= maxHourly;
+
+    if (!isValid) {
+      console.log(
+        `[Salary] Rejected hourly rate: $${hourlyRate}/hr (outside $${minHourly}-${maxHourly}/hr range)`
+      );
+    }
+
+    return isValid;
+  }
+
+  // For annual salaries, validate against annual thresholds
+  // Allow wider ranges for estimated/low-confidence salaries
+  const minThreshold = confidence < 0.5
+    ? PMHNP_SALARY_RANGES.min * 0.6   // $48k minimum for low-confidence
+    : PMHNP_SALARY_RANGES.min * 0.8;   // $64k minimum for high-confidence
+
+  // Raised 2026-05-05 from $400k → $550k. Locum / 1099 PMHNP roles in
+  // HCOL markets legitimately reach $450k–$500k+ annual. The previous
+  // $400k cap was silently dropping ~10% of real high-end annual postings
+  // (audit found multiple $457k–$487k jobs with valid bounds being
+  // rejected by this single threshold).
+  const maxThreshold = confidence < 0.5
+    ? 600000   // $600k max for low-confidence
+    : 550000;  // $550k max for high-confidence
+
+  const isValid = annual >= minThreshold && annual <= maxThreshold;
+
+  if (!isValid) {
+    console.log(
+      `[Salary] Rejected annual salary: $${annual.toLocaleString()} (outside $${minThreshold.toLocaleString()}-${maxThreshold.toLocaleString()} range, confidence: ${confidence})`
+    );
+  }
+
+  return isValid;
+}
+
+/**
+ * Normalize a single salary value to annual.
+ *
+ * Changed 2026-05-05: out-of-range annuals are CLAMPED to the
+ * confidence-band bounds rather than dropped to null. The source
+ * tried to give us a number, so a clamped usable value is better
+ * than no signal. Behavior:
+ *
+ *   - Hourly $20–$300 stays as-is, then × 2080 to annual
+ *   - Annual < $64k → clamped UP to $64k (high-confidence floor)
+ *   - Annual > $550k → clamped DOWN to $550k
+ *   - confidence drops to 0.5 when we clamp (signals "approximate")
+ */
+function normalizeSingleSalary(
+  salary: number,
+  period: string,
+  isEstimated: boolean
+): { value: number; confidence: number } | null {
+  const multiplier = PERIOD_MULTIPLIERS[period] || 1;
+  let annualSalary = Math.round(salary * multiplier);
+
+  let confidence = isEstimated ? 0.6 : 1.0;
+
+  // Hourly: validate the hourly rate itself, not the annual conversion.
+  if (period === 'hourly' || period === 'hour') {
+    const minHourly = PMHNP_SALARY_RANGES.contractorHourlyMin;
+    const maxHourly = PMHNP_SALARY_RANGES.contractorHourlyMax;
+    if (salary < minHourly) {
+      console.log(`[Salary] Clamped low hourly: $${salary}/hr → $${minHourly}/hr`);
+      annualSalary = minHourly * 2080;
+      confidence = 0.5;
+    } else if (salary > maxHourly) {
+      console.log(`[Salary] Clamped high hourly: $${salary}/hr → $${maxHourly}/hr`);
+      annualSalary = maxHourly * 2080;
+      confidence = 0.5;
+    }
+  } else {
+    // Annual + other-period-converted-to-annual: clamp to PMHNP-realistic
+    // band. Use the same caps as isReasonableSalary used to.
+    const minAnnual = confidence < 0.5
+      ? PMHNP_SALARY_RANGES.min * 0.6   // $48k for low-confidence
+      : PMHNP_SALARY_RANGES.min * 0.8;  // $64k for high-confidence
+    const maxAnnual = confidence < 0.5 ? 600000 : 550000;
+    if (annualSalary < minAnnual) {
+      console.log(`[Salary] Clamped low annual: $${annualSalary} → $${minAnnual}`);
+      annualSalary = minAnnual;
+      confidence = 0.5;
+    } else if (annualSalary > maxAnnual) {
+      console.log(`[Salary] Clamped high annual: $${annualSalary} → $${maxAnnual}`);
+      annualSalary = maxAnnual;
+      confidence = 0.5;
+    }
+  }
+
+  // Adjust confidence based on period (annual is most reliable)
+  if (period === 'hourly' || period === 'hour') {
+    confidence *= 0.9; // Hourly conversions slightly less certain
+  } else if (period === 'daily' || period === 'weekly' || period === 'day' || period === 'week') {
+    confidence *= 0.85; // Weekly/daily conversions less certain
+  }
+
+  return { value: annualSalary, confidence };
+}
+
+/**
+ * Main function: Normalize salary data for a job
+ */
+export function normalizeSalary(job: {
+  salaryRange?: string | null;
+  minSalary?: number | null;
+  maxSalary?: number | null;
+  salaryPeriod?: string | null;
+  title?: string;
+}): SalaryNormalizationResult {
+  const result: SalaryNormalizationResult = {
+    normalizedMinSalary: null,
+    normalizedMaxSalary: null,
+    salaryIsEstimated: false,
+    salaryConfidence: null,
+  };
+
+  // Check if salary is marked as estimated/predicted
+  const isEstimated = job.salaryRange?.toLowerCase().includes('estimated') ||
+    job.salaryRange?.toLowerCase().includes('predicted') ||
+    false;
+
+  result.salaryIsEstimated = isEstimated;
+
+  // If no salary data, return early
+  if (!job.minSalary && !job.maxSalary) {
+    return result;
+  }
+
+  // Detect the salary period
+  const period = detectSalaryPeriod(
+    job.salaryRange,
+    job.salaryPeriod,
+    job.minSalary,
+    job.maxSalary
+  );
+
+  // Normalize min salary
+  if (job.minSalary) {
+    const normalized = normalizeSingleSalary(job.minSalary, period, isEstimated);
+    if (normalized) {
+      result.normalizedMinSalary = normalized.value;
+      result.salaryConfidence = normalized.confidence;
+    }
+  }
+
+  // Normalize max salary
+  if (job.maxSalary) {
+    const normalized = normalizeSingleSalary(job.maxSalary, period, isEstimated);
+    if (normalized) {
+      result.normalizedMaxSalary = normalized.value;
+      // Use the lower confidence of the two
+      if (result.salaryConfidence !== null) {
+        result.salaryConfidence = Math.min(result.salaryConfidence, normalized.confidence);
+      } else {
+        result.salaryConfidence = normalized.confidence;
+      }
+    }
+  }
+
+  // If we have both min and max, validate the range
+  if (result.normalizedMinSalary && result.normalizedMaxSalary) {
+    if (result.normalizedMinSalary > result.normalizedMaxSalary) {
+      // Swap min and max if they're reversed
+      [result.normalizedMinSalary, result.normalizedMaxSalary] =
+        [result.normalizedMaxSalary, result.normalizedMinSalary];
+    }
+
+    // Check if range is too wide (indicates bad data)
+    const rangeRatio = result.normalizedMaxSalary / result.normalizedMinSalary;
+    if (rangeRatio > 2.5) {
+      // Wide salary range detected - reduce confidence
+      if (result.salaryConfidence) {
+        result.salaryConfidence *= 0.7;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Format normalized salary for display
+ */
+export function formatNormalizedSalary(
+  min: number | null,
+  max: number | null,
+  isEstimated: boolean = false
+): string {
+  if (!min && !max) return 'Not specified';
+
+  const formatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  });
+
+  const estimatedLabel = isEstimated ? ' (estimated)' : '';
+
+  if (min && max) {
+    return `${formatter.format(min)} - ${formatter.format(max)}${estimatedLabel}`;
+  }
+  if (min) {
+    return `From ${formatter.format(min)}${estimatedLabel}`;
+  }
+  if (max) {
+    return `Up to ${formatter.format(max)}${estimatedLabel}`;
+  }
+
+  return 'Not specified';
+}
+
+/**
+ * Get typical PMHNP salary range for comparison
+ */
+export function getTypicalPMHNPRange(): { min: number; max: number } {
+  return PMHNP_SALARY_RANGES.typical;
+}
+

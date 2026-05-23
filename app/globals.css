@@ -1,0 +1,1679 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Enable class-based dark mode for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Kill Tailwind v4 focus ring on hero search inputs */
+@utility hero-search-reset {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  width: 100%;
+  font-size: 1rem;
+  color: #1f2937;
+  cursor: text;
+  caret-color: #1f2937;
+  &:focus,
+  &:focus-visible {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    padding: 0;
+    margin: 0;
+    text-align: left;
+    width: 100%;
+    font-size: 1rem;
+    color: #1f2937;
+    cursor: text;
+    caret-color: #1f2937;
+  }
+}
+
+/* ─── Hide the native browser scrollbar.
+   The visible scrollbar is rendered by <ScrollIndicator/> as a real DOM
+   element so we have a guaranteed-consistent look across Chrome/Firefox/
+   Safari and across OS scrollbar settings (auto-hide, overlay-mode). The
+   native bar would otherwise show alongside it as a duplicate.
+   `overflow-y: scroll` is preserved so the page remains scrollable —
+   we only hide the *visual* bar, not the scroll axis itself. ─── */
+
+html {
+  overflow-y: scroll;
+  overflow-x: hidden;
+  max-width: 100vw;
+  background-color: #F5F0EB !important;
+  /* Firefox — none hides the native bar without disabling scroll. */
+  scrollbar-width: none;
+  -ms-overflow-style: none; /* IE / legacy Edge */
+}
+
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  background-color: #F5F0EB !important;
+}
+
+/* Chrome / Safari / Edge — hide the native page scrollbar entirely. */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Inner-element scrollbars (modals, dropdowns, lists with overflow:auto) —
+   thin branded styling. Independent of the page-level bar above; these
+   elements aren't covered by ScrollIndicator (which only tracks the page),
+   so they keep a visible bar. */
+*:not(html):not(body):not(.scrollbar-hide) {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(13, 148, 136, 0.45) transparent;
+}
+
+*:not(html):not(body)::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*:not(html):not(body)::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*:not(html):not(body)::-webkit-scrollbar-thumb {
+  background-color: rgba(13, 148, 136, 0.40);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*:not(html):not(body)::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(13, 148, 136, 0.70);
+}
+
+*:not(html):not(body)::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ── Hide all scrollbars on mobile for native app feel ── */
+@media (max-width: 767px) {
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Reset Tailwind v4 preflight that sets form inputs to background-color: field (white) */
+html.dark input:not(.hero-search-input),
+html.dark textarea,
+html.dark select {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+}
+
+/* Chrome autofill forces white bg via internal UA stylesheet — box-shadow trick is the ONLY override */
+html.dark input:-webkit-autofill,
+html.dark input:-webkit-autofill:hover,
+html.dark input:-webkit-autofill:focus,
+html.dark input:-webkit-autofill:active,
+html.dark textarea:-webkit-autofill,
+html.dark select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #162231 inset !important;
+  box-shadow: 0 0 0 1000px #162231 inset !important;
+  -webkit-text-fill-color: #F1F5F9 !important;
+  border-color: var(--border-color-dark) !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+  caret-color: #F1F5F9 !important;
+}
+
+:root {
+  /* ══════ TYPOGRAPHY ══════ */
+  --font-geist-sans: 'Inter', system-ui, sans-serif;
+  --font-heading: 'Lora', Georgia, 'Times New Roman', serif;
+  --font-geist-mono: 'Lora', serif;
+
+  /* ══════ COLOR SYSTEM ══════ */
+  /* Primary — Deep Teal (matches all inline styles) */
+  --color-primary: #0D9488;
+  --color-primary-dark: #0F766E;
+  --color-primary-light: #4DB6AC;
+  --color-primary-hover: #0F766E;
+  --salary-color: #0D9488;
+
+  /* Accent — Soft Coral for diorama warmth */
+  --color-accent: #F8BBD0;
+  --color-accent-light: #FCE4EC;
+
+  /* ══════ BACKGROUNDS — Diorama Palette ══════ */
+  --bg-primary: #F5F0EB;
+  --bg-secondary: #F3F2EF;
+  --bg-secondary-rgb: 243, 242, 239;
+  --bg-tertiary: #FFFFFF;
+  --bg-shell: #1c1917; /* header, footer — warm near-black */
+  --bg-panel-alt: #F5F0EB; /* unified with body — no alt panels */
+
+  /* ══════ TEXT — Deep Charcoal ══════ */
+  --text-primary: #2D3748;
+  --text-primary-rgb: 45, 55, 72;
+  --text-secondary: #4A5568;
+  --text-tertiary: #718096;
+  /* WCAG 1.4.3 AA fix: previous value #A0AEC0 had ~2.86:1 contrast on
+     --bg-primary, failing AA for any non-large text (placeholders,
+     floating-label idle state, optional metadata in forms). #64748B
+     gives ~4.99:1 which clears 4.5:1 with margin. */
+  --text-muted: #64748B;
+
+  /* ══════ BORDERS — Structure Felt, Not Seen ══════ */
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-color-dark: rgba(0, 0, 0, 0.12);
+
+  /* ══════ SHADOWS — 3-Tier System ══════ */
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-hover: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-elevated: 0 12px 40px rgba(0,0,0,0.12);
+
+  /* ══════ SPACING — 8px Grid ══════ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ══════ RADII — Soft, Modern ══════ */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  /* ══════ NAV / HEADER ══════ */
+  --header-bg: #1c1917;
+  --header-text: #E2E8F0;
+  --header-text-muted: #94A3B8;
+  --mobile-menu-bg: #1c1917;
+  --nav-btn-bg: rgba(255,255,255,0.08);
+  --nav-btn-text: #E2E8F0;
+  --nav-btn-hover-bg: rgba(255,255,255,0.12);
+
+  /* ══════ INPUTS ══════ */
+  --input-text: #2D3748;
+  --input-placeholder: #A0AEC0;
+
+  /* ══════ SELECTION ══════ */
+  --selection-bg: #D5F3ED;
+  --selection-text: #285550;
+
+  /* ══════ TRANSITIONS ══════ */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+
+  /* ══════ SHIMMER ══════ */
+  --shimmer-from: #F3F2EF;
+  --shimmer-via: #E2E8F0;
+
+  color-scheme: light;
+}
+
+/* Pitch Dark mode overrides removed natively for Diorama UI */
+
+
+@theme inline {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-lora: var(--font-lora), Georgia, 'Times New Roman', serif;
+}
+
+/* ===== BASE STYLES ===== */
+html {
+  background: #1c1917;
+}
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern" 1;
+  font-kerning: normal;
+  font-optical-sizing: auto;
+
+}
+
+/* ══════ CLAY CHECKBOX — Puffy toggle ══════ */
+input[type="checkbox"].li-checkbox,
+input[type="checkbox"].clay-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  background: #EDF2EE !important;
+  box-shadow:
+    3px 3px 6px rgba(0,0,0,0.08),
+    -2px -2px 4px rgba(255,255,255,0.9),
+    inset 1px 1px 3px rgba(255,255,255,0.7),
+    inset -1px -1px 2px rgba(0,0,0,0.03) !important;
+  cursor: pointer;
+  transition: all 0.2s ease !important;
+  position: relative;
+  flex-shrink: 0;
+}
+input[type="checkbox"].li-checkbox:checked,
+input[type="checkbox"].clay-check:checked {
+  background: #0D9488 !important;
+  border-color: rgba(0,0,0,0.1) !important;
+  box-shadow:
+    2px 2px 4px rgba(13,148,136,0.25),
+    -1px -1px 3px rgba(255,255,255,0.5),
+    inset 2px 2px 4px rgba(0,0,0,0.15),
+    inset -1px -1px 2px rgba(255,255,255,0.2) !important;
+}
+input[type="checkbox"].li-checkbox:checked::after,
+input[type="checkbox"].clay-check:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* ══════ CLAY BUTTON UTILITY ══════ */
+.clay-btn {
+  border-radius: 16px !important;
+  border: 1px solid rgba(255,255,255,0.5) !important;
+  box-shadow:
+    5px 5px 12px rgba(0,0,0,0.08),
+    -3px -3px 8px rgba(255,255,255,0.9),
+    inset 2px 2px 4px rgba(255,255,255,0.6),
+    inset -1px -1px 2px rgba(0,0,0,0.03) !important;
+  transition: all 0.2s ease !important;
+}
+.clay-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    7px 7px 16px rgba(0,0,0,0.10),
+    -4px -4px 10px rgba(255,255,255,0.9),
+    inset 2px 2px 5px rgba(255,255,255,0.7),
+    inset -1px -1px 2px rgba(0,0,0,0.03) !important;
+}
+.clay-btn:active {
+  transform: translateY(1px);
+  box-shadow:
+    2px 2px 5px rgba(0,0,0,0.06),
+    inset 3px 3px 6px rgba(0,0,0,0.08),
+    inset -2px -2px 4px rgba(255,255,255,0.3) !important;
+}
+
+/* ══════ CLAY CARD UTILITY ══════ */
+.clay-card {
+  background: #F7FBF8;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.6);
+  box-shadow:
+    8px 8px 20px rgba(0,0,0,0.08),
+    -4px -4px 12px rgba(255,255,255,0.9),
+    inset 2px 2px 4px rgba(255,255,255,0.6),
+    inset -1px -1px 2px rgba(0,0,0,0.02);
+  transition: all 0.3s ease;
+}
+.clay-card:hover {
+  box-shadow:
+    10px 10px 25px rgba(0,0,0,0.10),
+    -5px -5px 15px rgba(255,255,255,0.9),
+    inset 2px 2px 5px rgba(255,255,255,0.7),
+    inset -1px -1px 2px rgba(0,0,0,0.02);
+  transform: translateY(-2px);
+}
+
+/* ══════ GLOBAL CLAY HOVER EFFECTS ══════ */
+.jp-alert-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 7px 7px 16px rgba(13,148,136,0.18), -4px -4px 10px rgba(255,255,255,0.9), inset 2px 2px 5px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03) !important;
+}
+.jp-alert-btn:active {
+  transform: translateY(1px) !important;
+  box-shadow: 2px 2px 5px rgba(13,148,136,0.10), inset 3px 3px 6px rgba(0,0,0,0.06), inset -2px -2px 4px rgba(255,255,255,0.3) !important;
+}
+.jp-mobile-filter-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 7px 7px 16px rgba(0,0,0,0.10), -4px -4px 10px rgba(255,255,255,0.9), inset 2px 2px 5px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03) !important;
+}
+.jp-sort-select:hover {
+  box-shadow: 6px 6px 14px rgba(0,0,0,0.08), -3px -3px 8px rgba(255,255,255,0.9), inset 2px 2px 5px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03) !important;
+}
+.jp-view-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 3px 3px 6px rgba(0,0,0,0.06), -2px -2px 4px rgba(255,255,255,0.7) !important;
+}
+.apply-btn:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 8px 8px 20px rgba(13,148,136,0.35), -4px -4px 12px rgba(255,255,255,0.25), inset 2px 2px 5px rgba(255,255,255,0.3), inset -1px -1px 2px rgba(0,0,0,0.08) !important;
+}
+.apply-btn:active {
+  transform: translateY(1px) !important;
+  box-shadow: 2px 2px 6px rgba(13,148,136,0.2), inset 3px 3px 6px rgba(0,0,0,0.12), inset -2px -2px 4px rgba(255,255,255,0.15) !important;
+}
+
+/* Apply antialiasing to all text elements */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ══════ TYPOGRAPHY UTILITIES ══════ */
+.font-heading {
+  font-family: var(--font-lora), Georgia, 'Times New Roman', serif;
+  letter-spacing: -0.02em;
+}
+
+/* ══════ SECTION PANELS — Consistent Rhythm ══════ */
+.section-panel {
+  padding: var(--space-7) 0;
+  position: relative;
+}
+@media (min-width: 768px) {
+  .section-panel {
+    padding: var(--space-8) 0;
+  }
+}
+.section-panel + .section-panel {
+  /* Remove double-spacing between adjacent panels */
+}
+.section-panel-alt {
+  background-color: var(--bg-panel-alt);
+}
+.divider-hairline {
+  display: none; /* Killed — no visible dividers */
+}
+
+/* ══════ PRECISION CARD SYSTEM ══════ */
+.card-precision {
+  background: #F7FBF8;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 20px;
+  padding: var(--space-5);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 6px 6px 14px rgba(0,0,0,0.06), -2px -2px 8px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6);
+}
+.card-precision:hover {
+  box-shadow: 8px 8px 18px rgba(0,0,0,0.08), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6);
+  transform: translateY(-2px);
+}
+
+/* ══════ BUTTON SYSTEM ══════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 14px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid rgba(0,0,0,0.06);
+  text-decoration: none;
+}
+.btn-primary {
+  background: #0D9488;
+  color: #FFFFFF;
+  box-shadow: 3px 3px 8px rgba(13,148,136,0.2), -1px -1px 4px rgba(255,255,255,0.1), inset 1px 1px 2px rgba(255,255,255,0.15);
+}
+.btn-primary:hover {
+  background: #0F766E;
+  box-shadow: 4px 4px 12px rgba(13,148,136,0.25), -2px -2px 6px rgba(255,255,255,0.15), inset 1px 1px 3px rgba(255,255,255,0.2);
+  transform: translateY(-1px);
+}
+.btn-secondary {
+  background: #F1F5F2;
+  color: #374151;
+  box-shadow: 3px 3px 6px rgba(0,0,0,0.04), -1px -1px 4px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.6);
+}
+.btn-secondary:hover {
+  color: #0D9488;
+  box-shadow: 4px 4px 8px rgba(0,0,0,0.06), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.5);
+  transform: translateY(-1px);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+.btn-ghost:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-primary);
+}
+.btn-pill {
+  border-radius: var(--radius-pill);
+}
+
+/* SEO Fix H6: skip-to-content link (WCAG 2.4.1).
+   Hidden off-screen until focused, then snaps to top-left so a keyboard
+   user pressing Tab on page load can jump past the header nav. */
+.skip-to-content:focus,
+.skip-to-content:focus-visible {
+  left: 0 !important;
+  top: 0 !important;
+  outline: 2px solid #FFFFFF;
+  outline-offset: -4px;
+}
+
+/* Focus styles for accessibility (WCAG 2.4.7).
+   SEO Fix C3: previously this rule excluded `.hero-search-input` and a
+   second block forced `outline: none !important` on the most-clicked
+   control on the site — keyboard users had no visible focus indicator.
+   Now the focus ring renders for every focusable element including
+   hero/filter search inputs. */
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-primary, #fff), 0 0 0 4px var(--color-primary, #0D9488);
+}
+/* Hero search inputs: strip inherited styles but keep text-align: left.
+   NOTE: `:focus` and `:focus-visible` selectors removed from this rule
+   so the global focus-visible ring above can take effect. */
+.hero-search-input {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  text-align: left !important;
+  width: 100% !important;
+  font-size: 1rem !important;
+  color: #1f2937 !important;
+  cursor: text !important;
+  caret-color: #1f2937 !important;
+}
+/* Match the global focus-visible ring on hero inputs so it sits inside
+   the rounded clay search-bar without breaking layout. */
+.hero-search-input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.45) !important;
+  border-radius: 6px !important;
+}
+
+/* Better text rendering for all text elements */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+span,
+a,
+button,
+input,
+textarea,
+label,
+div {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure crisp text on all screens */
+@media (-webkit-min-device-pixel-ratio: 2),
+(min-resolution: 192dpi) {
+  body {
+    -webkit-font-smoothing: subpixel-antialiased;
+  }
+}
+
+/* Prevent fractional pixels causing blur */
+img,
+svg,
+video,
+canvas,
+iframe {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Ensure buttons and inputs have sharp text */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent blurry text on animated elements */
+.animate-fade-in,
+.animate-fade-in-up,
+.animate-fade-in-down,
+.animate-slide-in-right,
+.animate-slide-in-left,
+.animate-scale-in,
+.animate-bounce-in {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000px;
+  -webkit-perspective: 1000px;
+}
+
+/* Modal/popover scale-in. Used by the Easy Apply form (and any other
+   .animate-scale-in element). Was previously declared in the
+   GPU-optimization list above but had no actual keyframes attached,
+   so the modal just popped abruptly. */
+@keyframes scaleIn {
+  0%   { opacity: 0; transform: scale(0.96) translateY(8px); }
+  100% { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+.animate-scale-in {
+  animation: scaleIn 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-scale-in { animation: none; }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+html[data-scroll-behavior="smooth"] {
+  scroll-behavior: smooth;
+}
+
+html:not([data-scroll-behavior]) {
+  scroll-behavior: auto;
+}
+
+/* Selection color */
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation: slideInFromTop 0.2s ease-out;
+}
+
+.fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.slide-in-from-top-2 {
+  animation: slideInFromTop 0.2s ease-out;
+}
+
+/* Shimmer animation for skeleton loading */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, var(--shimmer-from) 25%, var(--shimmer-via) 50%, var(--shimmer-from) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ===== SAFE AREA ===== */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pb-safe {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.pt-safe {
+  padding-top: calc(0.5rem + env(safe-area-inset-top));
+}
+
+/* Hide third-party banners */
+[data-ph-banner],
+[data-product-hunt],
+#product-hunt-banner,
+#producthunt-banner,
+.product-hunt-banner,
+.producthunt-banner {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* ===== INPUT COLORS (theme-aware) ===== */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  color: var(--input-text);
+}
+
+input::placeholder,
+textarea::placeholder,
+select::placeholder {
+  color: var(--input-placeholder);
+  opacity: 1;
+}
+
+input:focus:not([type="checkbox"]):not([type="radio"]),
+textarea:focus,
+select:focus {
+  color: var(--input-text);
+}
+
+/* Hero search inputs — forced white text, no highlight */
+.hero-input {
+  color: #F1F5F9 !important;
+  caret-color: #F1F5F9 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  -webkit-appearance: none !important;
+}
+
+.hero-input:-webkit-autofill,
+.hero-input:-webkit-autofill:hover,
+.hero-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #F1F5F9 !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  background-color: transparent !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.hero-input::placeholder {
+  color: rgba(148, 163, 184, 0.6) !important;
+}
+
+/* ===== HERO ANIMATIONS ===== */
+@keyframes heroPing {
+  0% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+
+  75%,
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Gradient text animation */
+@keyframes heroGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.hero-gradient-text {
+  background: linear-gradient(90deg,
+      var(--accent-orange),
+      var(--accent-teal),
+      var(--accent-orange));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShift 6s ease infinite;
+}
+
+/* Hide scrollbar but allow scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ===== JOB DESCRIPTION HTML (Quill editor output) ===== */
+.job-description-html {
+  /* Only break unbroken strings if they would actually overflow the
+     container. Do NOT use `word-break: break-word` (deprecated alias for
+     break-all in modern browsers) — it forces mid-character splits when
+     Quill emits U+00A0/&nbsp; between every word, which surfaced as
+     "Th ere", "caselo ad", "b illing" in customer reports. */
+  overflow-wrap: break-word;
+  overflow: hidden;
+}
+
+.job-description-html h1,
+.job-description-html h2,
+.job-description-html h3,
+.job-description-html h4 {
+  color: var(--text-primary);
+  font-weight: 700;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+.job-description-html h1 {
+  font-size: 1.5em;
+}
+
+.job-description-html h2 {
+  font-size: 1.25em;
+}
+
+.job-description-html h3 {
+  font-size: 1.125em;
+}
+
+.job-description-html p {
+  margin-bottom: 0.75em;
+  line-height: 1.7;
+}
+
+.job-description-html ul,
+.job-description-html ol {
+  margin: 0.75em 0;
+  padding-left: 1.5em;
+}
+
+.job-description-html ul {
+  list-style-type: disc;
+}
+
+.job-description-html ol {
+  list-style-type: decimal;
+}
+
+.job-description-html li {
+  margin-bottom: 0.25em;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.job-description-html strong,
+.job-description-html b {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.job-description-html a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+footer {
+  padding-bottom: 20px;
+}
+
+@media (max-width: 767px) {
+  footer {
+    padding-bottom: 80px;
+  }
+}
+
+/* ══════ PROSE TYPOGRAPHY — Medical Journal Style ══════ */
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  font-family: var(--font-heading);
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+.prose blockquote {
+  font-family: var(--font-heading);
+  font-style: italic;
+  border-left: 3px solid var(--color-primary);
+  color: var(--text-secondary);
+}
+.prose a {
+  color: var(--color-primary);
+  text-decoration-color: rgba(13, 148, 136, 0.3);
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--transition-fast);
+}
+.prose a:hover {
+  text-decoration-color: var(--color-primary);
+}
+
+/* ══════ NAV LINK HOVER UNDERLINE ══════ */
+.nav-link-hover {
+  position: relative;
+}
+.nav-link-hover::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--color-primary);
+  border-radius: 1px;
+  transition: width 0.25s ease, left 0.25s ease;
+}
+.nav-link-hover:hover::after {
+  width: 100%;
+  left: 0;
+}
+
+/* ══════ INPUT STANDARDIZATION ══════ */
+input[type="text"]:not(.hero-search-input),
+input[type="email"]:not(.hero-search-input),
+input[type="password"]:not(.hero-search-input),
+input[type="search"]:not(.hero-search-input),
+input[type="tel"]:not(.hero-search-input),
+input[type="url"]:not(.hero-search-input),
+input[type="number"]:not(.hero-search-input),
+textarea,
+select {
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background-color: #F1F5F2;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  box-shadow: inset 1px 1px 2px rgba(255,255,255,0.6), 2px 2px 4px rgba(0,0,0,0.03);
+}
+input:focus:not(.hero-search-input),
+textarea:focus,
+select:focus {
+  border-color: #0D9488;
+  box-shadow: inset 1px 1px 2px rgba(255,255,255,0.6), 0 0 0 3px rgba(13, 148, 136, 0.1);
+  outline: none;
+}
+input:not(.hero-search-input)::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Hero search bar — strip global input styling */
+.hero-search-input,
+.hero-search-input:focus,
+.hero-search-input:focus-visible {
+  border: none !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  text-align: left !important;
+  --tw-ring-shadow: none !important;
+  --tw-ring-color: transparent !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   PHASE 1 — DESIGN SYSTEM UTILITIES
+   Reusable building blocks for all pages.
+   ═══════════════════════════════════════════════════════ */
+
+/* ══════ PAGE HERO — Pulls hero under fixed header ══════ */
+.page-hero {
+  margin-top: -80px;
+  padding-top: 120px;
+  padding-bottom: 64px;
+  position: relative;
+}
+@media (max-width: 767px) {
+  .page-hero {
+    padding-top: 100px;
+    padding-bottom: 40px;
+  }
+}
+
+/* ══════ PAGE SECTION — Consistent vertical rhythm ══════ */
+.page-section {
+  padding: 48px 0;
+  position: relative;
+}
+@media (min-width: 768px) {
+  .page-section {
+    padding: 80px 0;
+  }
+}
+
+/* ══════ CARD HOVER — Lift + teal border accent ══════ */
+.card-hover {
+  background: #F7FBF8;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 20px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 6px 6px 14px rgba(0,0,0,0.06), -2px -2px 8px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6);
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 8px 8px 18px rgba(0,0,0,0.08), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6);
+}
+
+/* ══════ BUTTON SYSTEM — Large variants ══════ */
+.btn-primary-lg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 16px;
+  border-radius: 16px;
+  padding: 14px 28px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0,0,0,0.08);
+  text-decoration: none;
+  background: #0D9488;
+  color: #FFFFFF;
+  box-shadow: 4px 4px 10px rgba(13,148,136,0.25), -2px -2px 6px rgba(255,255,255,0.15), inset 1px 1px 2px rgba(255,255,255,0.2);
+}
+.btn-primary-lg:hover {
+  background: #0F766E;
+  box-shadow: 6px 6px 14px rgba(13,148,136,0.3), -3px -3px 8px rgba(255,255,255,0.2), inset 1px 1px 3px rgba(255,255,255,0.25);
+  transform: translateY(-2px);
+}
+.btn-primary-lg:active {
+  transform: translateY(0);
+  box-shadow: 2px 2px 6px rgba(13,148,136,0.2), inset 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-ghost-lg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 16px;
+  border-radius: 16px;
+  padding: 14px 28px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  background: #F1F5F2;
+  color: #374151;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 3px 3px 6px rgba(0,0,0,0.04), -1px -1px 4px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.6);
+}
+.btn-ghost-lg:hover {
+  color: #0D9488;
+  box-shadow: 4px 4px 8px rgba(0,0,0,0.06), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.5);
+  transform: translateY(-1px);
+}
+
+/* ══════ BADGE PILLS — Clay ══════ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  border: 1px solid rgba(0,0,0,0.04);
+  box-shadow: 1px 1px 3px rgba(0,0,0,0.03), inset 1px 1px 2px rgba(255,255,255,0.5);
+}
+.badge-teal {
+  background: #CCFBF1;
+  color: #0F766E;
+}
+.badge-peach {
+  background: #FFEDD5;
+  color: #C2410C;
+}
+.badge-blue {
+  background: #DBEAFE;
+  color: #1D4ED8;
+}
+.badge-green {
+  background: #DCFCE7;
+  color: #15803D;
+}
+.badge-gray {
+  background: #F1F5F2;
+  color: #6B7280;
+}
+
+/* ══════ SCROLL REVEAL ANIMATIONS ══════ */
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes revealFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes revealScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.reveal-up {
+  animation: revealUp 0.5s ease-out both;
+}
+.reveal-fade {
+  animation: revealFade 0.4s ease-out both;
+}
+.reveal-scale {
+  animation: revealScale 0.4s ease-out both;
+}
+/* Staggered delays */
+.reveal-delay-1 { animation-delay: 0.1s; }
+.reveal-delay-2 { animation-delay: 0.2s; }
+.reveal-delay-3 { animation-delay: 0.3s; }
+.reveal-delay-4 { animation-delay: 0.4s; }
+.reveal-delay-5 { animation-delay: 0.5s; }
+
+/* ══════ CONTAINER — Consistent max-widths ══════ */
+.container-lg {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+@media (min-width: 768px) {
+  .container-lg {
+    padding: 0 32px;
+  }
+}
+.container-xl {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+@media (min-width: 768px) {
+  .container-xl {
+    padding: 0 24px;
+  }
+}
+
+/* ══════ FLOATING LABEL INPUT ══════ */
+.input-float-group {
+  position: relative;
+}
+.input-float-group input,
+.input-float-group textarea,
+.input-float-group select {
+  width: 100%;
+  padding: 16px 14px 8px;
+  font-size: 15px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+}
+.input-float-group input:focus,
+.input-float-group textarea:focus,
+.input-float-group select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+}
+.input-float-group label {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px;
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+.input-float-group input:focus + label,
+.input-float-group input:not(:placeholder-shown) + label,
+.input-float-group textarea:focus + label,
+.input-float-group textarea:not(:placeholder-shown) + label {
+  top: 10px;
+  transform: translateY(0);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* ══════ SECTION HEADING ══════ */
+.section-heading {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.section-heading-lg {
+  font-size: 28px;
+}
+@media (min-width: 768px) {
+  .section-heading-lg {
+    font-size: 36px;
+  }
+}
+.section-subheading {
+  font-size: 16px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 600px;
+}
+
+/* ══════ GRADIENT OVERLAYS ══════ */
+.gradient-teal {
+  background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%);
+}
+.gradient-warm {
+  background: linear-gradient(135deg, #FDFBF7 0%, #F5D5C4 50%, #FDFBF7 100%);
+}
+.gradient-dark {
+  background: linear-gradient(135deg, #1c1917 0%, #292524 100%);
+}
+
+/* ══════ AUTH CLAY THEME ══════
+   Claymorphic styling for all auth form elements.
+   Apply `.auth-clay` to the form wrapper to activate.
+   ─────────────────────────────────────── */
+
+/* ── The wrapper card itself ── */
+.auth-clay {
+  background: #F7FBF8;
+  border-radius: 20px;
+  padding: 28px 24px;
+  box-shadow:
+    8px 8px 20px rgba(0, 60, 50, 0.08),
+    -4px -4px 12px rgba(255, 255, 255, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(213, 232, 224, 0.5);
+}
+
+/* ── Inputs: deeply recessed clay ── */
+.auth-clay input[type="text"],
+.auth-clay input[type="email"],
+.auth-clay input[type="password"],
+.auth-clay input[type="tel"] {
+  background: #EDF5F0 !important;
+  border: 1.5px solid #C5DDD5 !important;
+  border-radius: 14px !important;
+  box-shadow:
+    inset 3px 3px 6px rgba(0, 40, 30, 0.08),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.85) !important;
+  transition: all 0.2s ease;
+  color: #1A2E35 !important;
+  -webkit-text-fill-color: #1A2E35 !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+.auth-clay input[type="text"]:focus,
+.auth-clay input[type="email"]:focus,
+.auth-clay input[type="password"]:focus,
+.auth-clay input[type="tel"]:focus {
+  border-color: #0D9488 !important;
+  background: #E8F5F0 !important;
+  box-shadow:
+    inset 3px 3px 6px rgba(0, 40, 30, 0.08),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.85),
+    0 0 0 4px rgba(13, 148, 136, 0.12) !important;
+  outline: none !important;
+}
+
+/* ── Labels ── */
+.auth-clay label {
+  color: #2A4A5A !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  letter-spacing: 0.01em;
+}
+
+/* ── Primary buttons: raised puffy clay ── */
+.auth-clay button[type="submit"] {
+  background: linear-gradient(145deg, #10B981, #0D9488) !important;
+  border-radius: 14px !important;
+  box-shadow:
+    6px 6px 16px rgba(13, 148, 136, 0.3),
+    -3px -3px 8px rgba(255, 255, 255, 0.15),
+    inset 0 2px 2px rgba(255, 255, 255, 0.25),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.1) !important;
+  border: none !important;
+  transition: all 0.2s ease;
+  font-size: 15px !important;
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
+}
+
+.auth-clay button[type="submit"]:hover:not(:disabled) {
+  box-shadow:
+    4px 4px 12px rgba(13, 148, 136, 0.35),
+    -2px -2px 6px rgba(255, 255, 255, 0.1),
+    inset 0 2px 2px rgba(255, 255, 255, 0.25),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(1px);
+}
+
+.auth-clay button[type="submit"]:active:not(:disabled) {
+  box-shadow:
+    inset 3px 3px 8px rgba(0, 0, 0, 0.2),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(2px);
+}
+
+/* ── Google / SSO button: raised clay ── */
+.auth-clay button[type="button"] {
+  border-radius: 14px !important;
+  background: #fff !important;
+  border: 1.5px solid #D5E8E0 !important;
+  box-shadow:
+    4px 4px 10px rgba(0, 40, 30, 0.06),
+    -2px -2px 6px rgba(255, 255, 255, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+  transition: all 0.2s ease;
+}
+
+.auth-clay button[type="button"]:hover {
+  box-shadow:
+    2px 2px 6px rgba(0, 40, 30, 0.08),
+    -1px -1px 4px rgba(255, 255, 255, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+  transform: translateY(1px);
+}
+
+/* ── Role toggle container: recessed tray ── */
+.auth-clay .flex.rounded-lg {
+  border-radius: 16px !important;
+  background: #E0EDE6 !important;
+  border: 1.5px solid #C5DDD5 !important;
+  box-shadow:
+    inset 4px 4px 8px rgba(0, 40, 30, 0.07),
+    inset -3px -3px 6px rgba(255, 255, 255, 0.9) !important;
+  padding: 5px !important;
+  overflow: hidden;
+}
+
+/* ── Role toggle active pill: raised clay ── */
+.auth-clay .flex.rounded-lg button {
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease;
+}
+
+/* ── Checkboxes ── */
+.auth-clay input[type="checkbox"] {
+  accent-color: #0D9488 !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 5px !important;
+}
+
+/* ── Divider (OR line) ── */
+.auth-clay .relative span {
+  background: #F7FBF8 !important;
+  color: #8A9EA8 !important;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+/* ── Newsletter / opt-in card ── */
+.auth-clay .rounded-xl,
+.auth-clay [class*="rounded-xl"] {
+  border-radius: 16px !important;
+  box-shadow:
+    inset 3px 3px 6px rgba(0, 40, 30, 0.05),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.7) !important;
+}
+
+/* ── Error box ── */
+.auth-clay [class*="bg-red"],
+.auth-clay [style*="rgba(239,68,68"] {
+  border-radius: 14px !important;
+  box-shadow:
+    inset 2px 2px 5px rgba(239, 68, 68, 0.08),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.5) !important;
+}
+
+/* ── Success box ── */
+.auth-clay [class*="bg-green"] {
+  border-radius: 14px !important;
+  box-shadow:
+    inset 2px 2px 5px rgba(16, 185, 129, 0.08),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.5) !important;
+}
+
+/* ── Links within auth ── */
+.auth-clay a {
+  color: #0D9488;
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+
+.auth-clay a:hover {
+  color: #0F766E;
+}
+
+/* ═════════════════════════════════════════════════════
+   DASHBOARD — Hover Effects (buttons only)
+   ═════════════════════════════════════════════════════ */
+
+/* Quick action pills — press effect on hover */
+.clay-action-pill {
+  transition: all 0.2s ease !important;
+}
+.clay-action-pill:hover {
+  transform: translateY(-2px) !important;
+  background: #E6FAF8 !important;
+  color: #0D9488 !important;
+  box-shadow:
+    5px 5px 14px rgba(13, 148, 136, 0.12),
+    -3px -3px 8px rgba(255, 255, 255, 0.8),
+    inset 2px 2px 4px rgba(255, 255, 255, 0.7),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.03) !important;
+}
+.clay-action-pill:active {
+  transform: translateY(1px) !important;
+  box-shadow:
+    inset 3px 3px 6px rgba(0, 40, 30, 0.08),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.6) !important;
+}
+
+/* ═════════════════════════════════════════════════════
+   pSEO BENTO CARD — Hover lift + glow
+   Used across category-city and setting-state templates.
+   ═════════════════════════════════════════════════════ */
+.pseo-bento-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+}
+.pseo-bento-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow:
+    8px 8px 20px rgba(0, 0, 0, 0.08),
+    -3px -3px 10px rgba(255, 255, 255, 0.9),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.6),
+    inset -1px -1px 1px rgba(0, 0, 0, 0.02) !important;
+}
+.pseo-bento-card:active {
+  transform: translateY(-1px) !important;
+}
+
+/* CTA button glow on hover */
+.pseo-cta-primary {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+.pseo-cta-primary:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 4px 4px 12px rgba(13, 148, 136, 0.3), -2px -2px 6px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* ══════ FOCUS-VISIBLE FOR INLINE-STYLED ICON BUTTONS ══════
+   Many icon buttons across the app set inline `outline: none` for the
+   pressed look. That removes the keyboard focus ring entirely, so we
+   restore a visible 2px teal ring on `:focus-visible` (keyboard / switch
+   navigation) without re-introducing the click outline that designers
+   typically dislike. WCAG 2.4.7 + 2.4.11. */
+.jc-icon-btn:focus-visible,
+.icon-btn:focus-visible,
+[data-icon-btn]:focus-visible {
+  outline: 2px solid var(--color-primary, #0D9488);
+  outline-offset: 2px;
+}
+
+/* ══════ /jobs page search + sort layout (mobile) ══════
+   The /jobs page reuses .hero-search-bar from the homepage hero, which has
+   a 540px breakpoint that stacks input + button vertically. On the homepage
+   (two inputs + one CTA) that's correct; on /jobs (one input + one CTA)
+   it leaves the search input feeling cramped. We override the column-stack
+   for the /jobs scope only via .jp-jobs-search-bar so the input + AI Search
+   button stay on one row, with the AI Search button shrinking to an icon
+   (Sparkles) on phones. The Best Match sort dropdown drops to its own row
+   below, right-aligned, so the search bar can use the full row width. */
+@media (max-width: 540px) {
+  /* Compound selector raises specificity above the global
+     `.hero-search-bar { flex-direction: column }` rule defined later in the
+     cascade -- needed because both rules use !important and matching the
+     element on both classes wins on specificity. */
+  .hero-search-bar.jp-jobs-search-bar {
+    flex-direction: row !important;
+    border-radius: 20px !important;
+  }
+  .hero-search-bar.jp-jobs-search-bar .hero-search-divider {
+    display: none !important;
+  }
+  .hero-search-bar.jp-jobs-search-bar .hero-search-btn {
+    padding: 0 16px !important;
+    border-radius: 0 !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .jp-search-row .jp-search-form {
+    width: 100%;
+    max-width: 100% !important;
+    flex: 1 0 100%;
+  }
+  .jp-search-row .jp-sort-cluster {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* ══════ JobCard list-view mobile layout ══════
+   The list-view JobCard renders as a horizontal row at desktop:
+   [logo] [title + company + badges] [save] [view] [apply] [posted]
+   At < 640px the right-column actions eat the row width and the title
+   gets clipped to nothing -- on iPhone XR (414px) the title and company
+   were visually missing entirely. This collapses the card to a vertical
+   stack on phones: actions wrap below the title/company instead of
+   competing with them for horizontal space. */
+@media (max-width: 639px) {
+  .jc-list-card {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .jc-list-card .jc-list-actions {
+    align-items: flex-start !important;
+    width: 100%;
+  }
+  .jc-list-card .jc-list-action-row {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+}
+
+/* ══════ MOBILE RESPONSIVE OVERRIDES ══════ */
+
+/* pSEO state-template 12-col bento — collapse to single column on mobile.
+   Inline `repeat(12, 1fr)` and child `gridColumn: 'span N'` styles get
+   overridden via !important here, and `min-width: 0` prevents intrinsic
+   min-content of nested images from blowing the row past the viewport. */
+.state-bento-grid > div { min-width: 0; }
+@media (max-width: 768px) {
+  .state-bento-grid { grid-template-columns: 1fr !important; }
+  .state-bento-grid > div { grid-column: span 1 !important; grid-template-columns: 1fr !important; }
+}
+
+/* Hero search bar — stack vertically on mobile */
+@media (max-width: 540px) {
+  .hero-search-bar {
+    flex-direction: column !important;
+    border-radius: 16px !important;
+  }
+  .hero-search-divider {
+    width: auto !important;
+    height: 1px !important;
+    margin: 0 18px !important;
+  }
+  .hero-search-btn {
+    padding: 14px 28px !important;
+  }
+}
+
+/* Footer link grid — 2 cols on tablet, 1 on mobile.
+   Desktop: 4 equal-width columns inside a centered ~1100px track so the
+   columns spread evenly without stretching edge-to-edge of the wrapper. */
+@media (min-width: 769px) {
+  .footer-link-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+    max-width: 1100px !important;
+    margin: 0 auto !important;
+    gap: 32px 40px !important;
+    padding-top: 64px !important;
+    padding-bottom: 64px !important;
+  }
+}
+@media (max-width: 768px) {
+  .footer-link-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .footer-bottom-bar {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  .footer-bar-left {
+    flex-wrap: wrap !important;
+  }
+  .footer-bar-right {
+    flex-wrap: wrap !important;
+  }
+  .footer-pipe {
+    display: none !important;
+  }
+  .footer-tagline {
+    white-space: normal !important;
+  }
+}
+@media (max-width: 480px) {
+  .footer-link-grid {
+    grid-template-columns: 1fr !important;
+    gap: 28px !important;
+  }
+}
+
+/* Blog section — reduce padding on mobile */
+@media (max-width: 768px) {
+  .wf-section {
+    padding-top: 48px !important;
+    padding-bottom: 40px !important;
+  }
+  .wf-header {
+    padding: 0 20px !important;
+  }
+}
+@media (max-width: 479px) {
+  .wf-header {
+    padding: 0 16px !important;
+  }
+}
+
+/* Featured Jobs section — reduce padding on mobile */
+@media (max-width: 768px) {
+  .fjs-header {
+    padding: 48px 20px 36px !important;
+  }
+  .fjs-header h2 {
+    font-size: 28px !important;
+  }
+}
+@media (max-width: 520px) {
+  .fjs-header {
+    padding: 40px 16px 28px !important;
+  }
+  .fjs-header h2 {
+    font-size: 24px !important;
+  }
+}
+
+/* Employer how-it-works — reduce padding on mobile */
+@media (max-width: 768px) {
+  .ehw-inner {
+    padding: 48px 20px !important;
+  }
+  .ehw-inner h2 {
+    font-size: 28px !important;
+    margin-bottom: 40px !important;
+  }
+}
+@media (max-width: 520px) {
+  .ehw-inner {
+    padding: 40px 16px !important;
+  }
+  .ehw-inner h2 {
+    font-size: 24px !important;
+    margin-bottom: 32px !important;
+  }
+}
+
+/* Sticky email bar — sit above bottom nav on mobile, hide on tiny screens */
+@media (max-width: 767px) {
+  .sticky-email-bar {
+    bottom: 60px !important;
+  }
+}
+@media (max-width: 480px) {
+  .sticky-email-bar {
+    display: none !important;
+  }
+}
