@@ -4,6 +4,13 @@ import { buildWhereClause, parseFiltersFromParams } from '@/lib/filters';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
+import {
+  CANONICAL_CATEGORY_SLUGS,
+  withTagFallback,
+  type CategoryTag,
+} from '@/lib/pseo/category-tagger';
+
+const CANONICAL_CATEGORY_SET = new Set<string>(CANONICAL_CATEGORY_SLUGS);
 
 export async function GET(request: NextRequest) {
   try {
@@ -72,6 +79,15 @@ export async function GET(request: NextRequest) {
     // Parse filters from URL
     const filters = parseFiltersFromParams(searchParams);
     const where = buildWhereClause(filters);
+
+    // NP-canonical category slugs (e.g. 'family-practice', 'psychiatric-mental-health')
+    // aren't in the legacy CATEGORY_FILTERS registry inside buildWhereClause, so they'd
+    // silently no-op there. Bridge to the precomputed-tag system: when filters.category
+    // is a canonical NP slug, merge withTagFallback() into the where. This keeps the
+    // /api/jobs?category=X path consistent with what /jobs/c/[category] server-renders.
+    if (filters.category && CANONICAL_CATEGORY_SET.has(filters.category)) {
+      Object.assign(where, withTagFallback(filters.category as CategoryTag));
+    }
 
     // Parse sort option
     const sort = searchParams.get('sort') || 'best';

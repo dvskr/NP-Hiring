@@ -232,6 +232,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                 initialTotal={total}
                 initialPage={page}
                 initialTotalPages={Math.ceil(total / limit)}
+                category={category}
             />
         </>
     );

@@ -22,9 +22,13 @@ interface JobsContentProps {
   initialTotal: number;
   initialPage: number;
   initialTotalPages: number;
+  // Path-segment category from /jobs/c/[category] routes. When set, the client
+  // preserves it across every refetch, sort change, and pagination link so the
+  // server-rendered category filter isn't dropped on hydration.
+  category?: string;
 }
 
-function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages }: JobsContentProps) {
+function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages, category }: JobsContentProps) {
   const searchParams = useSearchParams();
 
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
@@ -177,6 +181,11 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
       if (filters.category) {
         params.set('category', filters.category);
       }
+      // Path-segment category (/jobs/c/[category]) overrides any URL-derived
+      // value since the path is the canonical source for category pages.
+      if (category) {
+        params.set('category', category);
+      }
 
       const url = `/api/jobs?${params.toString()}`;
 
@@ -201,7 +210,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [category]);
 
   // Fetch jobs when filters change
   useEffect(() => {
@@ -234,7 +243,8 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
       params.set('sort', newSort);
     }
     params.delete('page'); // Reset to page 1
-    router.push(`/jobs?${params.toString()}`, { scroll: false });
+    const basePath = category ? `/jobs/c/${category}` : '/jobs';
+    router.push(`${basePath}?${params.toString()}`, { scroll: false });
   };
 
   // Build a paginated URL for the given page number while preserving every
@@ -249,7 +259,8 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
       params.set('page', n.toString());
     }
     const qs = params.toString();
-    return qs ? `/jobs?${qs}` : '/jobs';
+    const basePath = category ? `/jobs/c/${category}` : '/jobs';
+    return qs ? `${basePath}?${qs}` : basePath;
   };
 
   // Count active filters (including search)
@@ -1038,7 +1049,7 @@ function StickyFilterSidebar({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function JobsPageClient({ initialJobs, initialTotal, initialPage, initialTotalPages }: JobsContentProps) {
+export default function JobsPageClient({ initialJobs, initialTotal, initialPage, initialTotalPages, category }: JobsContentProps) {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <JobsContent
@@ -1046,6 +1057,7 @@ export default function JobsPageClient({ initialJobs, initialTotal, initialPage,
         initialTotal={initialTotal}
         initialPage={initialPage}
         initialTotalPages={initialTotalPages}
+        category={category}
       />
     </Suspense>
   );
