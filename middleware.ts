@@ -626,7 +626,10 @@ export async function middleware(request: NextRequest) {
             }
         }
         // /jobs/{cat}/{x} — category × state (only some taxonomies have state pages)
-        else if (segs.length === 3 && segs[1] !== 'city' && segs[1] !== 'metro' && segs[1] !== 'edit') {
+        // Skip /jobs/c/... — new NP taxonomy namespace where segs[1]='c' is a
+        // literal route prefix, not a category. The page handler at
+        // app/jobs/c/[category]/page.tsx validates against CANONICAL_CATEGORY_SLUGS.
+        else if (segs.length === 3 && segs[1] !== 'city' && segs[1] !== 'metro' && segs[1] !== 'edit' && segs[1] !== 'c') {
             const cat = segs[1];
             const tail = segs[2];
             // Skip job-detail pages (slug ends in UUID) — handled by job-detail 410 block above
