@@ -1,5 +1,14 @@
 import { Prisma } from '@prisma/client';
 import { FilterState } from '@/types/filters';
+import {
+  CANONICAL_CATEGORY_SLUGS,
+  withTagFallback,
+  type CategoryTag,
+} from '@/lib/pseo/category-tagger';
+
+// category-tagger.ts is a zero-import pure module, so this stays edge-safe
+// (lib/filters.ts is reachable from middleware's Edge runtime).
+const CANONICAL_CATEGORY_SET = new Set<string>(CANONICAL_CATEGORY_SLUGS);
 
 /**
  * "Posted Within" semantics (revised 2026-05-06).
@@ -474,8 +483,17 @@ export function buildWhereClause(filters: FilterState): Prisma.JobWhereInput {
     }
   }
 
-  // Category filter (enterprise pattern: reuses same filter as category pages)
-  if (filters.category && CATEGORY_FILTERS[filters.category]) {
+  // Category filter.
+  // Canonical NP taxonomy slugs (CANONICAL_CATEGORY_SLUGS) resolve to the
+  // precomputed `categoryTags` column via withTagFallback — the P9 design that
+  // kills cross-taxonomy duplication and is what /jobs/c/[category] renders.
+  // This branch is FIRST so canonical slugs are always tag-based, keeping the
+  // listing (/api/jobs), counts (/api/jobs/filter-counts), and pSEO pages
+  // consistent. Legacy-only slugs (child-adolescent, substance-abuse, crisis…)
+  // that predate the tag system fall through to the CATEGORY_FILTERS registry.
+  if (filters.category && CANONICAL_CATEGORY_SET.has(filters.category)) {
+    andConditions.push(withTagFallback(filters.category as CategoryTag) as Prisma.JobWhereInput);
+  } else if (filters.category && CATEGORY_FILTERS[filters.category]) {
     andConditions.push({
       OR: CATEGORY_FILTERS[filters.category],
     });
