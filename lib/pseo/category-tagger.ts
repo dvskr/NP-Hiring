@@ -163,6 +163,12 @@ const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
     // ── Modality (job can simultaneously be remote AND telehealth) ──
     remote: {
         keywords: ['remote', 'work from home', 'WFH', '100% remote'],
+        // Title-only keyword match. Without this, matchDescription defaults to
+        // true and any hybrid/on-site job whose description merely mentions
+        // "remote" (e.g. "occasional remote days") gets mis-tagged remote —
+        // which surfaced ~97 hybrid jobs on /jobs/c/remote. The real remote
+        // signal is the structural isRemote flag plus a remote-in-title match.
+        matchDescription: false,
         structural: (j) => j.isRemote === true,
     },
     telehealth: {
