@@ -303,7 +303,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
         <div style={{ display: 'flex', gap: '28px' }}>
           {/* Sidebar Filters - Hidden on mobile by default, visible on desktop */}
           <StickyFilterSidebar>
-            <LinkedInFilters />
+            <LinkedInFilters category={category} />
           </StickyFilterSidebar>
 
           {/* Job Results — labeled section, not <main>, since <main id="main-content">
@@ -391,6 +391,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
             <MobileFilterDrawer
               isOpen={isMobileFilterOpen}
               onClose={() => setIsMobileFilterOpen(false)}
+              category={category}
             />
 
             {/* Create Alert Button (shown when filters are active) */}

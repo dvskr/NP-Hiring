@@ -4,13 +4,6 @@ import { buildWhereClause, parseFiltersFromParams } from '@/lib/filters';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
-import {
-  CANONICAL_CATEGORY_SLUGS,
-  withTagFallback,
-  type CategoryTag,
-} from '@/lib/pseo/category-tagger';
-
-const CANONICAL_CATEGORY_SET = new Set<string>(CANONICAL_CATEGORY_SLUGS);
 
 export async function GET(request: NextRequest) {
   try {
@@ -76,20 +69,11 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(Math.max(1, rawLimit), 50);
     const skip = (page - 1) * limit;
 
-    // Parse filters from URL
+    // Parse filters from URL. buildWhereClause now resolves canonical NP
+    // category slugs to the precomputed categoryTags filter centrally, so no
+    // per-route bridge is needed here.
     const filters = parseFiltersFromParams(searchParams);
-    const baseWhere = buildWhereClause(filters);
-
-    // NP-canonical category slugs (e.g. 'family-practice', 'psychiatric-mental-health')
-    // aren't in the legacy CATEGORY_FILTERS registry inside buildWhereClause, so they'd
-    // silently no-op there. Bridge to the precomputed-tag system: when filters.category
-    // is a canonical NP slug, AND-wrap withTagFallback() with baseWhere. AND-wrap (not
-    // spread/Object.assign) so the category OR-clause can't collide with a top-level
-    // OR/AND key in baseWhere — that collision dropped the filter entirely.
-    const where =
-      filters.category && CANONICAL_CATEGORY_SET.has(filters.category)
-        ? { AND: [baseWhere, withTagFallback(filters.category as CategoryTag)] }
-        : baseWhere;
+    const where = buildWhereClause(filters);
 
     // Parse sort option
     const sort = searchParams.get('sort') || 'best';

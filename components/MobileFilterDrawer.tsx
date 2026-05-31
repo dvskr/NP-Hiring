@@ -8,9 +8,10 @@ import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 interface MobileFilterDrawerProps {
     isOpen: boolean;
     onClose: () => void;
+    category?: string;
 }
 
-export default function MobileFilterDrawer({ isOpen, onClose }: MobileFilterDrawerProps) {
+export default function MobileFilterDrawer({ isOpen, onClose, category }: MobileFilterDrawerProps) {
     // Focus trap, ESC handler, and focus restore are centralised in
     // useFocusTrap so all dialogs in the app behave consistently.
     const trapRef = useFocusTrap<HTMLDivElement>({ isOpen, onEscape: onClose });
@@ -61,7 +62,7 @@ export default function MobileFilterDrawer({ isOpen, onClose }: MobileFilterDraw
 
                 {/* Filter Content */}
                 <div className="p-4">
-                    <LinkedInFilters />
+                    <LinkedInFilters category={category} />
                 </div>
 
                 {/* Footer with Apply button */}

@@ -91,9 +91,14 @@ function FilterSection({ title, defaultExpanded = true, children }: FilterSectio
   );
 }
 
-// Empty interface removed - not needed
+interface LinkedInFiltersProps {
+  // Path-segment category from /jobs/c/[category] routes. Lives in the URL
+  // path, not searchParams, so it must be threaded in explicitly — otherwise
+  // filter counts and filter-change navigation drop the category constraint.
+  category?: string;
+}
 
-export default function LinkedInFilters() {
+export default function LinkedInFilters({ category }: LinkedInFiltersProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -116,10 +121,13 @@ export default function LinkedInFilters() {
     try {
       setIsLoading(true);
       const parsed = parseFiltersFromParams(new URLSearchParams(searchParams.toString()));
+      // Path-segment category (/jobs/c/[category]) overrides any query-string
+      // value so the counts match the server-rendered listing.
+      const payload = category ? { ...parsed, category } : parsed;
       const response = await fetch('/api/jobs/filter-counts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parsed),
+        body: JSON.stringify(payload),
       });
       if (response.ok) {
         const data = await response.json();
@@ -130,7 +138,7 @@ export default function LinkedInFilters() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchParams]);
+  }, [searchParams, category]);
 
   // Defer the filter-count POST off the critical render path. Audit 07
   // M-3: this fired on every page load before any user interaction,
