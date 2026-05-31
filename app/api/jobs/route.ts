@@ -78,16 +78,18 @@ export async function GET(request: NextRequest) {
 
     // Parse filters from URL
     const filters = parseFiltersFromParams(searchParams);
-    const where = buildWhereClause(filters);
+    const baseWhere = buildWhereClause(filters);
 
     // NP-canonical category slugs (e.g. 'family-practice', 'psychiatric-mental-health')
     // aren't in the legacy CATEGORY_FILTERS registry inside buildWhereClause, so they'd
     // silently no-op there. Bridge to the precomputed-tag system: when filters.category
-    // is a canonical NP slug, merge withTagFallback() into the where. This keeps the
-    // /api/jobs?category=X path consistent with what /jobs/c/[category] server-renders.
-    if (filters.category && CANONICAL_CATEGORY_SET.has(filters.category)) {
-      Object.assign(where, withTagFallback(filters.category as CategoryTag));
-    }
+    // is a canonical NP slug, AND-wrap withTagFallback() with baseWhere. AND-wrap (not
+    // spread/Object.assign) so the category OR-clause can't collide with a top-level
+    // OR/AND key in baseWhere — that collision dropped the filter entirely.
+    const where =
+      filters.category && CANONICAL_CATEGORY_SET.has(filters.category)
+        ? { AND: [baseWhere, withTagFallback(filters.category as CategoryTag)] }
+        : baseWhere;
 
     // Parse sort option
     const sort = searchParams.get('sort') || 'best';

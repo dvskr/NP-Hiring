@@ -65,8 +65,7 @@ export async function generateMetadata({ params, searchParams }: CategoryPagePro
     const filters = parseFiltersFromParams(urlParams);
     const baseWhere = buildWhereClause(filters);
     const whereWithCategory = {
-        ...baseWhere,
-        ...withTagFallback(category as CategoryTag),
+        AND: [baseWhere, withTagFallback(category as CategoryTag)],
     };
 
     const totalJobs = await prisma.job.count({ where: whereWithCategory });
@@ -124,9 +123,10 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
     const filters = parseFiltersFromParams(urlParams);
     const baseWhere = buildWhereClause(filters);
+    // AND-wrap (not spread) so the category OR-clause from withTagFallback can't
+    // be overwritten by a top-level OR/AND key in baseWhere.
     const where = {
-        ...baseWhere,
-        ...withTagFallback(category as CategoryTag),
+        AND: [baseWhere, withTagFallback(category as CategoryTag)],
     };
 
     const page = parseInt((sp.page as string) || '1');
