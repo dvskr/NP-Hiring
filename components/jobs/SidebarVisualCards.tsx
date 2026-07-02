@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { CAREER_PULSE_STATS } from '@/config/niche/stats';
 
 /* ──────────────────────────────────────────────
  *  SidebarVisualCards
@@ -135,9 +136,9 @@ export function CareerPulseCard() {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <StatPebble emoji="📈" value="43%" label="Projected growth 2024-2034" color="#D5F5F1" />
-          <StatPebble emoji="💰" value="$160K+" label="Median annual salary" color="#FDE68A" />
-          <StatPebble emoji="🏥" value="2,400+" label="Active openings nationwide" color="#BFDBFE" />
+          {CAREER_PULSE_STATS.map((s) => (
+            <StatPebble key={s.label} emoji={s.emoji} value={s.value} label={s.label} color={s.color} />
+          ))}
         </div>
 
         <Link href="/salary-guide" style={{

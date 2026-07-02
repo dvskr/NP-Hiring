@@ -12,6 +12,8 @@ import HomepageBlogSection from '@/components/HomepageBlogSection';
 import EmployerHowItWorks from '@/components/EmployerHowItWorks';
 import dynamic from 'next/dynamic';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 // Below-fold interactive components — defer from critical bundle
 const ExitIntentPopup = dynamic(() => import('@/components/ExitIntentPopup'));
 
@@ -62,7 +64,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: `Browse ${jobCountDisplay} psychiatric nurse practitioner jobs. Remote, hybrid, and in-person positions with salary transparency.`,
       images: [
         {
-          url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp',
+          url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`,
           width: 1280,
           height: 900,
           alt: `PMHNP Hiring job board homepage showing ${jobCountDisplay} psychiatric nurse practitioner jobs from ${uniqueEmployerCount}+ companies across 50 states`,
@@ -71,7 +73,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     twitter: {
       card: 'summary_large_image',
-      images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp'],
+      images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`],
     },
     alternates: {
       canonical: brand.baseUrl,

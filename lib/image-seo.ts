@@ -1,3 +1,10 @@
+/*
+ * FORK-NOTE: This is a per-board content-pack DATA file — a route →
+ * image SEO map whose alt text, captions, titles, and asset URLs are
+ * all niche-specific (PMHNP). Forks must regenerate every entry (and
+ * the underlying page screenshots) for their own niche.
+ */
+
 /**
  * Image SEO Configuration
  *

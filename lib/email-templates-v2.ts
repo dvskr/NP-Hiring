@@ -17,6 +17,7 @@
 //   - CTA button: #4DB6AC, 14px/40px padding, 8px radius, 16px font
 
 import { brand } from '@/config/brand';
+import { EMAIL_DEFAULT_PREHEADER, EMAIL_HEADER_TAGLINE } from '@/config/niche/copy';
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl).replace(/\/$/, '');
 const IMG = process.env.EMAIL_ASSETS_URL || `${BASE_URL}/images/email`;
@@ -74,7 +75,7 @@ export const V2 = {
 // - Footer: simple ©, pmhnphiring.com, hello@
 
 export function emailShellV2(content: string, footerContent: string = '', preheaderText: string = ''): string {
-  const preheader = preheaderText || 'PMHNP Hiring — The #1 job board for Psychiatric Mental Health Nurse Practitioners';
+  const preheader = preheaderText || EMAIL_DEFAULT_PREHEADER;
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -171,7 +172,7 @@ export function headerBlockV2(title: string, subtitle: string = ''): string {
         <td valign="middle" style="padding-right:6px;"><img src="${logoUrl}" alt="PMHNP Hiring logo" width="48" height="55" style="display:block;width:48px;height:55px;border:0;background-color:${V2.bgPeach};color:${V2.textPrimary};font-family:${SERIF};font-size:13px;font-weight:700;text-align:center;line-height:55px;" /></td>
         <td valign="middle">
           <p class="brand-text" style="margin:0;font-family:${SERIF};font-size:26px;font-weight:700;color:#1F2937;-webkit-text-fill-color:#1F2937;mso-line-height-rule:exactly;letter-spacing:-0.02em;line-height:1;text-align:center;">PMHNP Hiring</p>
-          <p class="tagline-text" style="margin:4px 0 0;font-family:${SANS};font-size:10px;font-weight:700;color:#0d9488;-webkit-text-fill-color:#0d9488;mso-line-height-rule:exactly;letter-spacing:0.08em;text-transform:uppercase;line-height:1;text-align:center;">Mental Health Careers</p>
+          <p class="tagline-text" style="margin:4px 0 0;font-family:${SANS};font-size:10px;font-weight:700;color:#0d9488;-webkit-text-fill-color:#0d9488;mso-line-height-rule:exactly;letter-spacing:0.08em;text-transform:uppercase;line-height:1;text-align:center;">${EMAIL_HEADER_TAGLINE}</p>
         </td>
       </tr>
     </table>
@@ -204,7 +205,7 @@ export function amberHeaderV2(title: string, subtitle: string = ''): string {
                   </td>
                   <td valign="bottom" style="padding-bottom:24px;">
                     <span style="font-family:${SERIF};font-size:28px;font-weight:700;color:${V2.textPrimary};letter-spacing:-0.02em;display:block;line-height:1;margin-left:-24px;">PMHNP Hiring</span>
-                    <span style="font-family:${SANS};font-size:10px;font-weight:500;color:${V2.textLabel};letter-spacing:0.08em;text-transform:uppercase;display:block;line-height:1;margin-left:-24px;margin-top:4px;">Mental Health Careers</span>
+                    <span style="font-family:${SANS};font-size:10px;font-weight:500;color:${V2.textLabel};letter-spacing:0.08em;text-transform:uppercase;display:block;line-height:1;margin-left:-24px;margin-top:4px;">${EMAIL_HEADER_TAGLINE}</span>
                   </td>
                 </tr>
               </table>

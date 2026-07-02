@@ -36,6 +36,7 @@
     "populate:display-salaries": "ts-node --project scripts/tsconfig.json scripts/populate-display-salaries.ts",
     "clean:descriptions": "ts-node --project scripts/tsconfig.json scripts/clean-job-descriptions.ts",
     "ingest": "ts-node -r tsconfig-paths/register --project scripts/tsconfig.json scripts/run-ingestion.ts",
+    "crons:generate": "ts-node -r tsconfig-paths/register --project scripts/tsconfig.json scripts/generate-vercel-crons.ts",
     "eval": "ts-node -r tsconfig-paths/register --project scripts/tsconfig.json scripts/run-eval.ts",
     "prompt:diff": "ts-node -r tsconfig-paths/register --project scripts/tsconfig.json scripts/prompt-diff.ts",
     "backfill:embeddings": "ts-node -r tsconfig-paths/register --project scripts/tsconfig.json scripts/backfill-embeddings.ts",
@@ -52,7 +53,8 @@
     "backfill:experience": "ts-node -r tsconfig-paths/register --project scripts/tsconfig.json scripts/backfill-experience.ts --env=prod",
     "backfill:experience:dev": "ts-node -r tsconfig-paths/register --project scripts/tsconfig.json scripts/backfill-experience.ts --env=dev",
     "recs:run": "ts-node -r tsconfig-paths/register --project scripts/tsconfig.json scripts/run-recommendations.ts",
-    "seed:test-candidates": "ts-node -r tsconfig-paths/register --project scripts/tsconfig.json scripts/seed-test-candidates.ts"
+    "seed:test-candidates": "ts-node -r tsconfig-paths/register --project scripts/tsconfig.json scripts/seed-test-candidates.ts",
+    "fork:preflight": "ts-node -r tsconfig-paths/register --project scripts/tsconfig.json scripts/fork-preflight.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -25,19 +25,10 @@
  *     marginal description-quality gain.
  */
 
+import { DOCCAFE_SEARCH_QUERIES as QUERIES } from './search-terms/doccafe';
 import type { Aggregator, RawJobData } from './types';
 import { checkJobHealth, type HealthDecision } from '@/lib/health/check-job-health';
 import { htmlToReadableText } from '@/lib/sanitize';
-
-// Several keyword queries to maximize PMHNP coverage. RSS is capped at
-// ~30 items per call, so multiple targeted queries help.
-const QUERIES: readonly string[] = [
-    'PMHNP',
-    'psychiatric mental health nurse practitioner',
-    'psychiatric nurse practitioner',
-    'mental health nurse practitioner',
-    'behavioral health nurse practitioner',
-];
 
 const TIME_BUDGET_MS = 90_000; // Well under the 240s envelope; RSS is fast.
 const QUERY_GAP_MS = 600;

@@ -1,6 +1,8 @@
 import { getPageVideoSEO } from '@/lib/video-seo';
 import { brand } from '@/config/brand';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 interface VideoJsonLdProps {
     pathname: string;
 }
@@ -60,7 +62,7 @@ export default function VideoJsonLd({ pathname }: VideoJsonLdProps) {
             name: brand.name,
             logo: {
                 '@type': 'ImageObject',
-                url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pmhnp-hiring-logo.webp',
+                url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pmhnp-hiring-logo.webp`,
             },
         },
     };

@@ -3,8 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { sanitizeText } from '@/lib/sanitize'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+// Niche credential taxonomy (license types) lives in config/niche/credentials.ts;
+// the validation logic below stays here.
+import { LICENSE_TYPES as VALID_LICENSE_TYPES } from '@/config/niche/credentials'
 
-const VALID_LICENSE_TYPES = ['RN', 'APRN', 'Compact (NLC)', 'Compact (APRN)']
 const VALID_STATUSES = ['active', 'inactive', 'restricted']
 
 // GET — fetch all licenses for the current user

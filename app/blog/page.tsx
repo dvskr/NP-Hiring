@@ -11,6 +11,8 @@ import {
 import VideoJsonLd from '@/components/VideoJsonLd';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 // ISR: blog index changes when posts publish/unpublish; 1-hour revalidate is
 // well within the editorial cadence. Previously force-dynamic meant every
 // Googlebot hit hit Supabase live — wasted DB and CPU on the highest-traffic
@@ -22,9 +24,9 @@ export const metadata: Metadata = {
     description:
         'PMHNP career guides, salary insights, and job market trends from the #1 psychiatric NP job board.',
     openGraph: {
-        images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp', width: 1280, height: 900, alt: 'PMHNP career blog with expert guides on salary negotiation, state spotlights, and job market insights' }],
+        images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp`, width: 1280, height: 900, alt: 'PMHNP career blog with expert guides on salary negotiation, state spotlights, and job market insights' }],
     },
-    twitter: { card: 'summary_large_image', images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp'] },
+    twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp`] },
     alternates: {
         canonical: `${brand.baseUrl}/blog`,
     },
@@ -425,9 +427,9 @@ export default async function BlogIndexPage({
                     </h2>
                     <div className="blog-cta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                         {[
-                            { href: '/salary-guide', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp', title: 'Salary Guide', desc: '2026 data with state breakdowns' },
-                            { href: '/jobs', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-trending.webp', title: 'Browse Jobs', desc: '10,000+ PMHNP positions' },
-                            { href: '/resources', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-chart.webp', title: 'Resources', desc: 'Licensure guides & tools' },
+                            { href: '/salary-guide', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`, title: 'Salary Guide', desc: '2026 data with state breakdowns' },
+                            { href: '/jobs', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp`, title: 'Browse Jobs', desc: '10,000+ PMHNP positions' },
+                            { href: '/resources', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-chart.webp`, title: 'Resources', desc: 'Licensure guides & tools' },
                         ].map(item => (
                             <Link key={item.href} href={item.href} className="blog-cta-card" style={{
                                 ...clayCard, padding: '28px 22px', textDecoration: 'none',

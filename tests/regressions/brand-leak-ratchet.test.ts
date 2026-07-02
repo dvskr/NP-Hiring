@@ -21,88 +21,16 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+// Scan machinery (patterns, scan dirs, walker) is shared with
+// scripts/fork-preflight.ts — see tests/regressions/brand-leak-scan.ts.
+import { scanBrandLeaks } from './brand-leak-scan';
 
 const ROOT = path.resolve(__dirname, '../..');
 const BASELINE_PATH = path.join(__dirname, 'brand-leak-baseline.json');
 
-// Brand-identifying strings that must come from config, not source.
-const PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
-  { name: 'domain', re: /pmhnphiring/gi },
-  { name: 'brand-name', re: /PMHNP Hiring/g },
-  { name: 'legal-entity', re: /Akari/g },
-];
-
-// Production surfaces the ratchet protects.
-const SCAN_DIRS = ['app', 'lib', 'components', 'types', 'public'];
-const SCAN_ROOT_FILES = [
-  'middleware.ts',
-  'next.config.ts',
-  'instrumentation.ts',
-  'instrumentation-client.ts',
-  'vercel.json',
-];
-
-// Sanctioned homes for brand strings, plus non-production content that is
-// per-board authored (tracked by Phase-1 content work, not this ratchet).
-const EXCLUDE_DIRS = new Set(['node_modules', '.next', '.git']);
-const EXCLUDE_PATH_PREFIXES = [
-  'public/videos', // binary-adjacent niche-named media, replaced per board
-];
-const TEXT_EXTENSIONS = new Set([
-  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.css',
-  '.txt', '.xml', '.webmanifest', '.md', '.html', '.svg',
-]);
-
-function isTextFile(filePath: string): boolean {
-  return TEXT_EXTENSIONS.has(path.extname(filePath).toLowerCase());
-}
-
-function walk(dir: string, out: string[]): void {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (EXCLUDE_DIRS.has(entry.name)) continue;
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walk(full, out);
-    } else if (entry.isFile() && isTextFile(full)) {
-      out.push(full);
-    }
-  }
-}
-
-function countMatches(content: string): number {
-  let total = 0;
-  for (const { re } of PATTERNS) {
-    const matches = content.match(re);
-    if (matches) total += matches.length;
-  }
-  return total;
-}
-
-function scan(): Record<string, number> {
-  const files: string[] = [];
-  for (const dir of SCAN_DIRS) {
-    const abs = path.join(ROOT, dir);
-    if (fs.existsSync(abs)) walk(abs, files);
-  }
-  for (const f of SCAN_ROOT_FILES) {
-    const abs = path.join(ROOT, f);
-    if (fs.existsSync(abs)) files.push(abs);
-  }
-
-  const counts: Record<string, number> = {};
-  for (const file of files) {
-    const rel = path.relative(ROOT, file).replace(/\\/g, '/');
-    if (EXCLUDE_PATH_PREFIXES.some((p) => rel.startsWith(p))) continue;
-    const content = fs.readFileSync(file, 'utf-8');
-    const n = countMatches(content);
-    if (n > 0) counts[rel] = n;
-  }
-  return counts;
-}
-
 describe('brand-leak ratchet', () => {
   it('no production file gains brand-string occurrences beyond the baseline', () => {
-    const current = scan();
+    const current = scanBrandLeaks({ root: ROOT });
 
     if (process.env.UPDATE_BRAND_LEAK_BASELINE === '1') {
       const sorted = Object.fromEntries(

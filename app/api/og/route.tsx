@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { brand } from '@/config/brand';
+import { OG_HOMEPAGE_HEADLINE, OG_HOMEPAGE_STATS, OG_HOMEPAGE_SUBHEADLINE } from '@/config/niche/copy';
 
 export const runtime = 'edge';
 
@@ -136,7 +137,7 @@ export async function GET(request: NextRequest) {
                   letterSpacing: '-0.02em',
                   maxWidth: 900,
                 }}>
-                  The #1 PMHNP Job Board
+                  {OG_HOMEPAGE_HEADLINE}
                 </div>
                 <div style={{
                   display: 'flex',
@@ -147,7 +148,7 @@ export async function GET(request: NextRequest) {
                   marginTop: 16,
                   maxWidth: 800,
                 }}>
-                  Find psychiatric nurse practitioner jobs with salary transparency. Remote &amp; in-person positions updated daily.
+                  {OG_HOMEPAGE_SUBHEADLINE}
                 </div>
               </div>
 
@@ -158,11 +159,7 @@ export async function GET(request: NextRequest) {
                 borderTop: '2px solid rgba(51, 65, 85, 0.5)',
                 paddingTop: 24,
               }}>
-                {[
-                  { number: '10,000+', label: 'PMHNP Jobs' },
-                  { number: '3,000+', label: 'Companies' },
-                  { number: '50', label: 'States' },
-                ].map((stat, i) => (
+                {OG_HOMEPAGE_STATS.map((stat, i) => (
                   <div key={stat.label} style={{
                     display: 'flex',
                     flexGrow: 1,
@@ -269,7 +266,7 @@ export async function GET(request: NextRequest) {
                   color: '#64748b',
                   marginLeft: 16,
                 }}>
-                  The #1 PMHNP Job Board
+                  {OG_HOMEPAGE_HEADLINE}
                 </div>
               </div>
             </div>

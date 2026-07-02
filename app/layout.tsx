@@ -25,6 +25,9 @@ import GoogleAnalytics from '@/components/GoogleAnalytics';
 import ConsentGatedTelemetry from '@/components/ConsentGatedTelemetry';
 import ScrollIndicator from '@/components/ScrollIndicator';
 import { ToastProvider } from '@/components/ui/ToastProvider';
+
+const STORAGE_BASE = brand.assets.storageBase;
+
 const ExitIntentPopup = dynamic(() => import('@/components/ExitIntentPopup'));
 const PushNotificationPrompt = dynamic(() => import('@/components/PushNotificationPrompt'));
 const CookieConsent = dynamic(() => import('@/components/CookieConsent'));
@@ -176,8 +179,8 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* Preconnect to Supabase CDN for hero/LCP image */}
-        <link rel="preconnect" href="https://sggccmqjzuimwlahocmy.supabase.co" crossOrigin="" />
-        <link rel="dns-prefetch" href="https://sggccmqjzuimwlahocmy.supabase.co" />
+        <link rel="preconnect" href={`${STORAGE_BASE}`} crossOrigin="" />
+        <link rel="dns-prefetch" href={`${STORAGE_BASE}`} />
         {/* AI & GEO Discovery Links */}
         <link rel="author" href="/humans.txt" />
         <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM Site Information" />

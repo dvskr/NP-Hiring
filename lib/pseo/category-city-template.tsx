@@ -44,6 +44,8 @@ import {
 import { PseoPageViewTracker } from '@/components/analytics/ViewTrackers';
 import { buildCityFacts, buildTaxonomyCityNarrative } from './city-narrative';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 // ─── Category Configuration (extends SettingConfig for specialties) ────────────
 
 export interface CategoryConfig {
@@ -1168,7 +1170,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
       {/* ═══ D2: HERO — CategoryHero with category's watercolor ═══ */}
       <CategoryHero
         bgColor={assets?.bgColor || '#0D9488'}
-        heroImage={assets?.heroImage || 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp'}
+        heroImage={assets?.heroImage || `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
         heroAlt={`${config.label} PMHNP working in ${city!.name}, ${city!.stateCode}`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', config.label, city!.name]}

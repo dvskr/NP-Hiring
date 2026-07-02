@@ -6,8 +6,9 @@ import {
     clayCard, clayInnerCard, clayFormPanel, clayTitle, claySubTitle,
     clayInput, clayLabel, clayBtnPrimary, clayBtnOutlineSmall, clayPalette,
 } from './clay-tokens'
+// Niche credential taxonomy — see config/niche/credentials.ts for FORK NOTEs.
+import { DEGREE_TYPES } from '@/config/niche/credentials'
 
-const DEGREE_TYPES = ['DNP', 'PhD', 'MSN', 'EdD', "Post-Master's Certificate", 'BSN', 'ADN']
 const MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',

@@ -10,7 +10,9 @@ import VideoJsonLd from '@/components/VideoJsonLd';
 import { Mail, HelpCircle } from 'lucide-react';
 import { config } from '@/lib/config';
 
-const FAQ_OG_IMAGE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-frequently-asked-questions.webp';
+const STORAGE_BASE = brand.assets.storageBase;
+
+const FAQ_OG_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-frequently-asked-questions.webp`;
 
 export const metadata: Metadata = {
   // `absolute` opts out of the layout title template so we don't end up
@@ -239,7 +241,7 @@ export default function FAQPage() {
                   </p>
               </div>
               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/clay_hero_faq.webp" alt="FAQ PMHNP Jobs" width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
+                  <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/clay_hero_faq.webp`} alt="FAQ PMHNP Jobs" width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
               </div>
           </div>
       </section>

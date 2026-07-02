@@ -6,10 +6,12 @@ import { buildSalaryGuideHtml, sendAndLog, isEmailSuppressed } from '@/lib/email
 import { rateLimit } from '@/lib/rate-limit';
 import { brand } from '@/config/brand';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 
 // Environment-aware URLs
-const PDF_URL = process.env.SALARY_GUIDE_URL || 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/resources/PMHNP_Salary_Guide_2026.pdf';
+const PDF_URL = process.env.SALARY_GUIDE_URL || `${STORAGE_BASE}/storage/v1/object/public/resources/PMHNP_Salary_Guide_2026.pdf`;
 
 export async function POST(request: NextRequest) {
   try {

@@ -2,6 +2,9 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
+import { brand } from '@/config/brand';
+
+const STORAGE_BASE = brand.assets.storageBase;
 
 /**
  * Renders a state hero image from the Supabase `images/states/{slug}.webp`
@@ -16,10 +19,10 @@ import { useState } from 'react';
  * components/TopStatesList.tsx, components/LicensureChecker.tsx.
  */
 
-const STATE_IMAGE_BASE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/states';
+const STATE_IMAGE_BASE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/states`;
 // Verified 200 at audit time — used as the universal fallback so a single
 // missing per-state asset doesn't cascade into a broken-image hit.
-const FALLBACK_URL = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp';
+const FALLBACK_URL = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`;
 
 type FillProps = {
     fill: true;

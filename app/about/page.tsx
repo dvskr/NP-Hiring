@@ -5,9 +5,11 @@ import VideoJsonLd from '@/components/VideoJsonLd';
 import { prisma } from '@/lib/prisma';
 import AboutClient from './AboutClient';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 export const revalidate = 3600;
 
-const ABOUT_OG_IMAGE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/about-pmhnp-hiring-platform.webp';
+const ABOUT_OG_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/about-pmhnp-hiring-platform.webp`;
 
 export const metadata: Metadata = {
   title: 'About Us - The #1 Job Board for Psychiatric NPs',

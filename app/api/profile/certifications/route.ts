@@ -4,11 +4,11 @@ import { prisma } from '@/lib/prisma'
 import { sanitizeText } from '@/lib/sanitize'
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
-const VALID_CERT_NAMES = [
-    'PMHNP-BC', 'FNP-BC', 'FNP-C', 'AGPCNP-BC', 'AGACNP-BC',
-    'CAQ-Psych', 'BLS', 'ACLS', 'CPI/CPI-NV', 'CARN',
-]
-const VALID_BODIES = ['ANCC', 'AANP', 'AHA', 'CPI']
+// The certification-name/body whitelists (VALID_CERT_NAMES, VALID_BODIES)
+// live in config/niche/credentials.ts. They were never enforced here — this
+// route deliberately accepts free text (sanitized below) so the settings
+// form's "Other" option round-trips; the UI dropdown constrains the common
+// choices from that same pack.
 
 // GET — fetch all certifications for the current user
 export async function GET() {

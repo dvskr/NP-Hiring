@@ -1,6 +1,10 @@
+// FORK NOTE: this module is PMHNP-specific YMYL regulatory data (NP practice
+// authority per state). Its public API is re-exported by config/niche/regulatory.ts
+// — the per-niche regulatory seam. A fork replaces this module with its own
+// niche's equivalent (same interface); do not ship these claims on another niche.
 /**
  * State Practice Authority Data for PMHNPs
- * 
+ *
  * Practice authority levels:
  * - FULL: PMHNPs can practice independently without physician oversight
  * - REDUCED: Requires a collaborative agreement with a physician

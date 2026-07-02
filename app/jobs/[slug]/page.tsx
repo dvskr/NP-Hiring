@@ -31,6 +31,8 @@ import { getPostBySlug } from '@/lib/blog';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 // ISR: Cache job detail pages for 1 hour.
 // Each job page runs 10-12 DB queries (relatedJobs, companyInfo, salaryData, blogPosts, etc.).
 // Without caching, Googlebot crawling thousands of pages simultaneously exhausts the DB
@@ -544,12 +546,12 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
   };
 
   const actionCards = [
-    { href: '/jobs', label: 'Browse All Jobs', sub: 'View all open positions', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp' },
-    { href: '/jobs/remote', label: 'Remote Jobs', sub: 'Work from anywhere', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp' },
-    { href: '/jobs/telehealth', label: 'Telehealth Jobs', sub: 'Virtual psychiatric care', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp' },
-    { href: '/jobs/travel', label: 'Travel Jobs', sub: 'Explore new locations', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_travel.webp' },
-    { href: '/jobs/outpatient', label: 'Outpatient Jobs', sub: 'Clinic-based roles', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp' },
-    { href: '/jobs/inpatient', label: 'Inpatient Jobs', sub: 'Hospital settings', icon: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp' },
+    { href: '/jobs', label: 'Browse All Jobs', sub: 'View all open positions', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
+    { href: '/jobs/remote', label: 'Remote Jobs', sub: 'Work from anywhere', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
+    { href: '/jobs/telehealth', label: 'Telehealth Jobs', sub: 'Virtual psychiatric care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
+    { href: '/jobs/travel', label: 'Travel Jobs', sub: 'Explore new locations', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_travel.webp` },
+    { href: '/jobs/outpatient', label: 'Outpatient Jobs', sub: 'Clinic-based roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
+    { href: '/jobs/inpatient', label: 'Inpatient Jobs', sub: 'Hospital settings', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
   ];
 
   return (
@@ -631,7 +633,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
               background: 'linear-gradient(135deg, #0D9488, #0F766E)',
               boxShadow: '4px 4px 12px rgba(13,148,136,0.2), -2px -2px 6px rgba(255,255,255,0.3), inset 1px 1px 2px rgba(255,255,255,0.2)',
             }}>
-            <img src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp" alt="" width={22} height={22} loading="lazy" decoding="async" style={{ objectFit: 'contain' }} />
+            <img src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp`} alt="" width={22} height={22} loading="lazy" decoding="async" style={{ objectFit: 'contain' }} />
             2026 PMHNP Salary Guide →
           </a>
         </div>

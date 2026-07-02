@@ -5,6 +5,8 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import Image from 'next/image';
 import { FileText } from 'lucide-react';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 // Legal identity — every entity/venue/descriptor reference on this page
 // must come from brand.legal so a fork can never ship a ToS naming the
 // wrong operator, arbitration venue, or card-statement descriptor.
@@ -16,9 +18,9 @@ export const metadata: Metadata = {
   title: 'Terms of Service',
   description: `Read the Terms of Service for ${brand.name}, operated by ${ENTITY}. Understand your rights, responsibilities, pricing, refunds, and platform policies for the #1 ${brand.niche.short} job board.`,
   openGraph: {
-    images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-terms-of-service.webp', width: 1280, height: 900, alt: 'PMHNP Hiring terms of service page with user rights, employer responsibilities, and platform policies' }],
+    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-terms-of-service.webp`, width: 1280, height: 900, alt: 'PMHNP Hiring terms of service page with user rights, employer responsibilities, and platform policies' }],
   },
-  twitter: { card: 'summary_large_image', images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-terms-of-service.webp'] },
+  twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-terms-of-service.webp`] },
   alternates: { canonical: `${brand.baseUrl}/terms` },
 };
 
@@ -54,7 +56,7 @@ export default function TermsPage() {
               <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: May 1, 2026</p>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/clay_hero_terms.webp" alt="Terms of Service" width={140} height={140} style={{ objectFit: 'contain', filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.12))' }} priority />
+              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/clay_hero_terms.webp`} alt="Terms of Service" width={140} height={140} style={{ objectFit: 'contain', filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.12))' }} priority />
             </div>
           </div>
         </header>

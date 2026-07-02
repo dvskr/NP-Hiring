@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { brand } from '@/config/brand'
+import { WORDMARK } from '@/config/niche/copy'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { ATS_HOST_SUBSTRINGS, classifyJob, HEALTH_DEAD_THRESHOLD } from '@/lib/ai/job-classifier'
@@ -741,7 +742,7 @@ function renderHtml(args: {
     <div class="pd-header-top">
       <a class="pd-brand" href="${escape(brandUrl)}" target="_blank" rel="noopener" aria-label="PMHNP Hiring">
         <img class="pd-brand-logo" src="${escape(baseUrl())}/logo.png" alt="" width="72" height="72" loading="eager" decoding="async">
-        <span class="pd-brand-mark">PMHNP <span class="pd-brand-mark-accent">Hiring</span></span>
+        <span class="pd-brand-mark">${WORDMARK.primary} <span class="pd-brand-mark-accent">${WORDMARK.accent}</span></span>
       </a>
       <a class="pd-cta" href="${escape(seeAllUrl)}" target="_blank" rel="noopener">
         See all in ${escape(state)}
@@ -892,7 +893,7 @@ function renderErrorHtml(args: { reason: string }): string {
 <div class="pd-wrap">
   <a class="pd-brand" href="${escape(brandUrl)}" target="_blank" rel="noopener" aria-label="PMHNP Hiring">
     <img class="pd-brand-logo" src="${escape(baseUrl())}/logo.png" alt="" width="56" height="56">
-    <span class="pd-brand-mark">PMHNP <span class="pd-brand-mark-accent">Hiring</span></span>
+    <span class="pd-brand-mark">${WORDMARK.primary} <span class="pd-brand-mark-accent">${WORDMARK.accent}</span></span>
   </a>
   <div class="pd-error-card" role="alert" aria-live="polite">
     <div class="pd-error-badge">Widget Request Issue</div>

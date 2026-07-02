@@ -16,6 +16,7 @@ import {
 import HowItWorksSidebar from './HowItWorksSidebar'
 import JobCard from '@/components/JobCard'
 import type { Job as JobCardJob } from '@/lib/types'
+import { DASHBOARD_MARKET_PULSE, DASHBOARD_PROFILE_NUDGE_CLAIM } from '@/config/niche/stats'
 
 /* ── Types ── */
 interface DashboardJob {
@@ -719,7 +720,7 @@ export default function DashboardContent() {
                             Your profile needs attention
                         </h3>
                         <p style={{ fontSize: '13px', color: '#6B7F8A', margin: '0 0 10px' }}>
-                            Employers are 5x more likely to reach out to profiles that are 80%+ complete.
+                            {DASHBOARD_PROFILE_NUDGE_CLAIM}
                         </p>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             {completeness.missingItems.slice(0, 4).map((item) => (
@@ -1130,7 +1131,7 @@ export default function DashboardContent() {
                     <div style={{ padding: '16px 18px' }}>
                         <h3 style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 6px' }}>Job Market Pulse</h3>
                         <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 8px', lineHeight: 1.5 }}>
-                            PMHNP roles grew <span style={{ color: '#0D9488', fontWeight: 600 }}>18%</span> this quarter. Telehealth surging.
+                            {DASHBOARD_MARKET_PULSE.lead}<span style={{ color: '#0D9488', fontWeight: 600 }}>{DASHBOARD_MARKET_PULSE.metric}</span>{DASHBOARD_MARKET_PULSE.tail}
                         </p>
                         <Link href="/salary-guide" className="jc-view-btn" style={{ fontSize: '12px', fontWeight: 600, color: '#0D9488', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             Salary Guide <ArrowRight size={11} />

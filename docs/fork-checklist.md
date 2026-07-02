@@ -25,6 +25,15 @@
    `UPDATE_BRAND_LEAK_BASELINE=1 npx vitest run tests/regressions/brand-leak-ratchet.test.ts`.
    The ratchet fails CI on any file that still hardcodes the ORIGINAL brand,
    so leftover pmhnphiring strings can't silently ship on your fork.
+9. **The rest of the niche packs** (`config/niche/`): relevance.ts (filter
+   keywords — the quality-critical one), copy.ts, content-map.ts, stats.ts
+   (EMPTY the fallback employers!), credentials.ts, regulatory.ts, plus
+   `lib/aggregators/search-terms/*` and `lib/aggregators/tenants/*`.
+10. **Regenerate crons** — edit `config/cron-schedule.ts` for your source mix,
+    then `npm run crons:generate` (never hand-edit vercel.json's crons; a
+    drift test enforces this).
+11. **Run the preflight** — `npm run fork:preflight` must exit 0 before launch.
+    Full operational sequence: `docs/pilot-fork-runbook.md`.
 
 ## What carries over for free
 

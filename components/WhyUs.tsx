@@ -1,33 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-
-const features = [
-    {
-        num: '01',
-        color: '#E86C2C',
-        title: '100% PMHNP Roles',
-        desc: 'Every listing is verified for relevance. No physician assistant roles, no general NP positions, no irrelevant noise.',
-        stat: '10,000+',
-        statLabel: 'verified listings',
-    },
-    {
-        num: '02',
-        color: '#2dd4bf',
-        title: 'Updated Daily',
-        desc: 'We aggregate from 500+ healthcare employers, ATS feeds, and job boards — refreshed every 24 hours.',
-        stat: '3,000+',
-        statLabel: 'sources monitored',
-    },
-    {
-        num: '03',
-        color: '#22c55e',
-        title: 'Salary Transparency',
-        desc: 'See compensation upfront. We surface salary data whenever available so you skip the guesswork.',
-        stat: '73%',
-        statLabel: 'show salary',
-    },
-];
+import { WHY_US_FEATURES } from '@/config/niche/stats';
 
 export default function WhyUs() {
     const sectionRef = useRef<HTMLElement>(null);
@@ -109,7 +83,7 @@ export default function WhyUs() {
 
                 {/* Feature rows */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                    {features.map((f, idx) => (
+                    {WHY_US_FEATURES.map((f, idx) => (
                         <div
                             key={f.num}
                             className={`wu-item ${visible ? 'wu-visible' : ''}`}
@@ -119,7 +93,7 @@ export default function WhyUs() {
                                 gap: '0 24px',
                                 alignItems: 'start',
                                 padding: '32px 0',
-                                borderBottom: idx < features.length - 1 ? '1px solid var(--border-color)' : 'none',
+                                borderBottom: idx < WHY_US_FEATURES.length - 1 ? '1px solid var(--border-color)' : 'none',
                                 transitionDelay: `${idx * 150}ms`,
                             }}
                         >

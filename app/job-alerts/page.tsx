@@ -5,6 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Bell, MapPin, Briefcase, Zap, CheckCircle, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import CategoryHero from '@/components/CategoryHero';
+import { brand } from '@/config/brand';
+
+const STORAGE_BASE = brand.assets.storageBase;
 
 // US States array for dropdown
 const US_STATES = [
@@ -162,7 +165,7 @@ function JobAlertsContent() {
       {/* ═══ Hero Section ═══ */}
       <CategoryHero
         bgColor="#0D9488"
-        heroImage="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/categories/hero_wc_alerts.webp"
+        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_alerts.webp`}
         heroAlt="Job Alerts"
         badgeText="Job Alerts"
         breadcrumbs={['Home', 'Job Alerts']}

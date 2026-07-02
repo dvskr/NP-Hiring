@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import HeaderAuth from '@/components/auth/HeaderAuth';
+import { WORDMARK } from '@/config/niche/copy';
 
 /*
  * Header — Floating claymorphic navbar.
@@ -239,8 +240,8 @@ export default function Header() {
                   marginLeft: '-6px',
                 }}
               >
-                PMHNP{' '}
-                <span style={{ fontStyle: 'italic', color: '#0D9488', fontWeight: 600 }}>Hiring</span>
+                {WORDMARK.primary}{' '}
+                <span style={{ fontStyle: 'italic', color: '#0D9488', fontWeight: 600 }}>{WORDMARK.accent}</span>
               </span>
             </Link>
           </div>

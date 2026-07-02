@@ -7,6 +7,8 @@ import { slugify } from '@/lib/utils';
 import JobsPageClient from './JobsPageClient';
 import { Job } from '@/lib/types';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 // Nav-only params do not constitute a user filter — paginated and sorted
 // views of the unfiltered list should still be crawled (page>=2 is noindexed
 // separately to avoid duplicate-content; sort variants canonical to /jobs).
@@ -103,13 +105,13 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
       // returns 404 from Supabase, breaking every social share of /jobs and
       // every filtered jobs URL. Pointing at the existing homepage asset
       // until a dedicated OG image is uploaded.
-      images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp', width: 1280, height: 900, alt: 'PMHNP Job Board — Browse psychiatric nurse practitioner jobs' }],
+      images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`, width: 1280, height: 900, alt: 'PMHNP Job Board — Browse psychiatric nurse practitioner jobs' }],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp'],
+      images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`],
     },
     alternates: {
       canonical,

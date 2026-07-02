@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { Scale, DollarSign, Calculator, CheckCircle, AlertTriangle, TrendingUp, Building2 } from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 // Bump on each editorial review pass so dateModified isn't permanently
 // frozen at the original publish date. Quarterly cadence is a reasonable
 // minimum; bump sooner when content changes substantively.
 const PUBLISHED_AT = '2026-03-19';
 const LAST_REVIEWED = '2026-03-19';
-const HERO_IMAGE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp';
+const HERO_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp`;
 
 export const metadata: Metadata = {
   title: '1099 vs W2 for PMHNPs — Complete Compensation Comparison 2026',

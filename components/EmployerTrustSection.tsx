@@ -1,27 +1,9 @@
 import { prisma } from '@/lib/prisma';
 import ClayDoughStrip from '@/components/ClayDoughStrip';
 import { findCanonicalName, normalizeCompanyName } from '@/lib/company-normalizer';
-
-const FALLBACK_EMPLOYERS = [
-    { name: 'Talkiatry', count: 47 },
-    { name: 'LifeStance Health', count: 32 },
-    { name: 'Cerebral', count: 18 },
-    { name: 'Headway', count: 24 },
-    { name: 'Grow Therapy', count: 39 },
-    { name: 'Spring Health', count: 15 },
-    { name: 'Modern Health', count: 22 },
-    { name: 'Lyra Health', count: 28 },
-    { name: 'BetterHelp', count: 41 },
-    { name: 'Alma', count: 13 },
-    { name: 'Geode Health', count: 17 },
-    { name: 'Mindpath Health', count: 19 },
-    { name: 'Rula Health', count: 12 },
-    { name: 'Brightside', count: 14 },
-    { name: 'Noom', count: 35 },
-    { name: 'Eleanor Health', count: 11 },
-    { name: 'Quartet Health', count: 9 },
-    { name: 'SilverCloud', count: 16 },
-];
+// FALLBACK_EMPLOYERS pads the strip with fabricated chips whenever the DB
+// has <10 employers — see the FORK WARNING on its export before shipping.
+import { FALLBACK_EMPLOYERS } from '@/config/niche/stats';
 
 /**
  * EmployerTrustSection (Server Component)

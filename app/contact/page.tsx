@@ -7,6 +7,8 @@ import { brand } from '@/config/brand';
 import ContactForm from './ContactForm';
 import ContactFAQ from './ContactFAQ';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 // Single source of truth for FAQ content. Both the FAQPage JSON-LD (server-
 // rendered into <head>-adjacent script) and the visible accordion (client-
 // rendered for the toggle UX) consume this list — they cannot diverge.
@@ -112,7 +114,7 @@ export default function ContactPage() {
                         </p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/clay_hero_contact.webp" alt="Contact PMHNP Jobs" width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
+                        <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/clay_hero_contact.webp`} alt="Contact PMHNP Jobs" width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
                     </div>
                 </div>
             </section>

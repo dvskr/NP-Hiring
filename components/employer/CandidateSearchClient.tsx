@@ -5,15 +5,11 @@ import { Search, Filter, Users, Loader2, X, ChevronLeft, ChevronRight, ChevronDo
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import CandidateCard from './CandidateCard';
+import { SPECIALTY_PRESETS } from '@/config/niche/credentials';
 
 /* ═══════════════════════════════════════════
    CONSTANTS
    ═══════════════════════════════════════════ */
-const SPECIALTY_PRESETS = [
-    'ADHD', 'Anxiety/Depression', 'PTSD', 'Addiction',
-    'Child & Adolescent', 'Geriatric', 'Eating Disorders',
-    'OCD', 'Bipolar', 'Schizophrenia', 'General Adult',
-];
 const US_STATES = [
     'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
     'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',

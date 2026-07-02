@@ -10,6 +10,8 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CopyCitation from '@/components/CopyCitation';
 import SalaryCalculator from '@/components/SalaryCalculator';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 // Enable ISR with daily revalidation
 export const revalidate = 86400;
 
@@ -102,9 +104,9 @@ export const metadata: Metadata = {
     description: 'Complete guide to PMHNP salaries. National average $155,000+, top 10% earn $210,000+. State-by-state breakdown and tips to maximize earnings.',
     type: 'website',
     url: `${BASE_URL}/salary-guide`,
-    images: [{ url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp', width: 1280, height: 900, alt: 'PMHNP salary guide 2026 showing psychiatric nurse practitioner pay by state with interactive salary comparison table' }],
+    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`, width: 1280, height: 900, alt: 'PMHNP salary guide 2026 showing psychiatric nurse practitioner pay by state with interactive salary comparison table' }],
   },
-  twitter: { card: 'summary_large_image', images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp'] },
+  twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`] },
   alternates: { canonical: `${brand.baseUrl}/salary-guide` },
 };
 
@@ -144,12 +146,12 @@ const specialtyData = [
 ];
 
 const factorCards = [
-  { img: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/clay-icon-match.webp', title: 'Geographic Location', desc: 'States with higher cost of living and greater demand (CA, NY, MA) typically offer 20-40% higher salaries than rural areas.' },
-  { img: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp', title: 'Experience Level', desc: 'Entry-level PMHNPs start around $115-145k. With 5+ years experience, salaries can reach $180-210k or more.' },
-  { img: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-briefcase.webp', title: 'Practice Setting', desc: 'Private practice and telehealth positions often pay more than hospital or community health settings.' },
-  { img: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-people.webp', title: 'Employment Type', desc: '1099 contractors and travel PMHNPs often earn 20-50% more than W2 employees, though without traditional benefits.' },
-  { img: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-trending.webp', title: 'Specialization', desc: 'Subspecialties like addiction psychiatry, child/adolescent, or forensic psychiatry can command premium pay (+10-25%).' },
-  { img: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp', title: 'Negotiation', desc: 'PMHNPs who negotiate can often secure 5-15% higher starting salaries plus signing bonuses ($5,000-$30,000).' },
+  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/clay-icon-match.webp`, title: 'Geographic Location', desc: 'States with higher cost of living and greater demand (CA, NY, MA) typically offer 20-40% higher salaries than rural areas.' },
+  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp`, title: 'Experience Level', desc: 'Entry-level PMHNPs start around $115-145k. With 5+ years experience, salaries can reach $180-210k or more.' },
+  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-briefcase.webp`, title: 'Practice Setting', desc: 'Private practice and telehealth positions often pay more than hospital or community health settings.' },
+  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-people.webp`, title: 'Employment Type', desc: '1099 contractors and travel PMHNPs often earn 20-50% more than W2 employees, though without traditional benefits.' },
+  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp`, title: 'Specialization', desc: 'Subspecialties like addiction psychiatry, child/adolescent, or forensic psychiatry can command premium pay (+10-25%).' },
+  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`, title: 'Negotiation', desc: 'PMHNPs who negotiate can often secure 5-15% higher starting salaries plus signing bonuses ($5,000-$30,000).' },
 ];
 
 const faqData = [
@@ -185,7 +187,7 @@ export default async function SalaryGuidePage() {
     "@type": "Article",
     "headline": "2026 PMHNP Salary Guide: Psychiatric NP Pay by State",
     "description": "Comprehensive PMHNP salary data for 2026 including state-by-state pay, experience levels, specialty premiums, and market trends. Based on BLS, ZipRecruiter, Indeed, and 10,000+ job postings.",
-    "image": "https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp",
+    "image": `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`,
     "datePublished": "2026-01-01T00:00:00Z",
     "dateModified": new Date().toISOString(),
     "author": { "@type": "Organization", "name": "PMHNP Hiring", "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.png` } },
@@ -298,7 +300,7 @@ export default async function SalaryGuidePage() {
               border: '2px solid rgba(13,148,136,0.10)',
             }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
-                <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp" alt="Salary" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px', flexShrink: 0 }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`} alt="Salary" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px', flexShrink: 0 }} />
                 <div>
                   <h2 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Quick Answer: PMHNP Salary in {currentYear}</h2>
                   <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>
@@ -428,7 +430,7 @@ export default async function SalaryGuidePage() {
             {/* Experience Level (8 cols) */}
             <div className="sal-bento-exp emp-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden' }}>
               <div style={{ padding: '24px 28px 8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp" alt="Experience" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp`} alt="Experience" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
                 <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>By Experience Level</h3>
               </div>
               <div style={{ padding: '0 0 0' }}>
@@ -456,7 +458,7 @@ export default async function SalaryGuidePage() {
             {/* Practice Setting (4 cols) */}
             <div className="sal-bento-setting emp-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '24px 22px', overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-                <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-briefcase.webp" alt="Setting" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-briefcase.webp`} alt="Setting" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>By Setting</h3>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -479,7 +481,7 @@ export default async function SalaryGuidePage() {
             {/* Specialty Premiums (6 cols) */}
             <div className="sal-bento-spec emp-bento-card" style={{ ...clayCard, gridColumn: 'span 6', padding: '0', overflow: 'hidden' }}>
               <div style={{ padding: '24px 28px 8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-star.webp" alt="Specialty" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-star.webp`} alt="Specialty" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Specialty Premiums</h3>
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
@@ -499,7 +501,7 @@ export default async function SalaryGuidePage() {
               ...clayCard, gridColumn: 'span 6', padding: '24px 22px',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-chart.webp" alt="Practice Authority" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-chart.webp`} alt="Practice Authority" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Full Practice Authority</h3>
               </div>
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 16px' }}>
@@ -624,7 +626,7 @@ export default async function SalaryGuidePage() {
                   display: 'flex', alignItems: 'center', gap: '12px',
                   fontSize: '15px', fontWeight: 600, color: '#1A2E35', listStyle: 'none',
                 }}>
-                  <Image src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp" alt="FAQ" width={28} height={28} style={{ width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0 }} />
+                  <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp`} alt="FAQ" width={28} height={28} style={{ width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0 }} />
                   {q}
                 </summary>
                 <div style={{ padding: '0 24px 18px 64px', fontSize: '14px', color: '#5A4A42', lineHeight: 1.65 }}>{a}</div>
@@ -695,7 +697,7 @@ export default async function SalaryGuidePage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', padding: '24px', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)' }}>
               <Image
-                src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/employers/cta-illustration.webp"
+                src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/cta-illustration.webp`}
                 alt="Find high-paying PMHNP jobs"
                 width={280} height={220}
                 style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px' }}

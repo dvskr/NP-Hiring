@@ -8,6 +8,8 @@ import {
     Building2, CreditCard, BellRing, ShieldCheck, Bell,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+// Niche specialty vocabulary — see config/niche/credentials.ts for FORK NOTEs.
+import { SPECIALTY_PRESETS } from '@/config/niche/credentials';
 
 interface CompanyInfo {
     name: string;
@@ -58,11 +60,6 @@ interface AlertPrefs {
     isActive: boolean;
 }
 
-const SPECIALTY_PRESETS = [
-    'ADHD', 'Anxiety/Depression', 'PTSD', 'Addiction',
-    'Child & Adolescent', 'Geriatric', 'Eating Disorders',
-    'OCD', 'Bipolar', 'Schizophrenia', 'General Adult',
-];
 const US_STATES = [
     'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
     'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',

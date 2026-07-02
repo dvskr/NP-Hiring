@@ -5,13 +5,15 @@ import { Shield, MapPin, CheckCircle, AlertTriangle, XCircle } from 'lucide-reac
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { STATE_PRACTICE_AUTHORITY, getStatesByAuthority, getAuthorityColor, type PracticeAuthority } from '@/lib/state-practice-authority';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 // Bump on each editorial review pass — Article.dateModified should reflect
 // real freshness, not be permanently frozen at the original publish date.
 // Update at least quarterly; sooner if NLC membership or state authority
 // classifications change.
 const PUBLISHED_AT = '2026-03-19';
 const LAST_REVIEWED = '2026-03-19';
-const HERO_IMAGE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp';
+const HERO_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp`;
 
 export const metadata: Metadata = {
   title: 'PMHNP Full Practice Authority Guide 2026 — All 50 States',

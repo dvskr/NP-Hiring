@@ -8,6 +8,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { brand } from '@/config/brand';
+import { SOCIAL_HASHTAGS } from '@/config/niche/copy';
 import { generateJobCardPng, generateFBSummaryPng, type JobCardData } from '@/lib/job-card-generator';
 import {
     uploadImage,
@@ -22,8 +23,7 @@ import {
 
 const BASE_URL = brand.baseUrl;
 const JOBS_PER_POST = 10;
-const HASHTAGS =
-    '#PMHNP #NursePractitioner #MentalHealth #NurseJobs #PsychiatricNursing #Hiring #HealthcareJobs #NursingJobs';
+const HASHTAGS = SOCIAL_HASHTAGS.join(' ');
 
 // ---------------------------------------------------------------------------
 // Job fetching — top jobs with a mix of categories

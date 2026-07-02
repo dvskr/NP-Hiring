@@ -2,68 +2,13 @@
 
 import { Fragment } from 'react';
 import { Check, X, Minus } from 'lucide-react';
+import {
+    COMPARISON_FEATURE_LABELS,
+    COMPARISON_PLATFORMS,
+    type ComparisonStatus,
+} from '@/config/niche/stats';
 
-type Status = 'yes' | 'no' | 'partial';
-
-interface Platform {
-    name: string;
-    highlighted?: boolean;
-    features: Record<string, Status>;
-}
-
-const featureLabels = [
-    'PMHNP-Specific',
-    'Zero Irrelevant Roles',
-    'Salary Transparency',
-    'Free Job Alerts',
-    'Employer Direct',
-];
-
-const platforms: Platform[] = [
-    {
-        name: 'PMHNP Hiring',
-        highlighted: true,
-        features: {
-            'PMHNP-Specific': 'yes',
-            'Zero Irrelevant Roles': 'yes',
-            'Salary Transparency': 'yes',
-            'Free Job Alerts': 'yes',
-            'Employer Direct': 'yes',
-        },
-    },
-    {
-        name: 'Indeed',
-        features: {
-            'PMHNP-Specific': 'no',
-            'Zero Irrelevant Roles': 'no',
-            'Salary Transparency': 'partial',
-            'Free Job Alerts': 'yes',
-            'Employer Direct': 'no',
-        },
-    },
-    {
-        name: 'LinkedIn',
-        features: {
-            'PMHNP-Specific': 'no',
-            'Zero Irrelevant Roles': 'no',
-            'Salary Transparency': 'no',
-            'Free Job Alerts': 'yes',
-            'Employer Direct': 'partial',
-        },
-    },
-    {
-        name: 'ZipRecruiter',
-        features: {
-            'PMHNP-Specific': 'no',
-            'Zero Irrelevant Roles': 'no',
-            'Salary Transparency': 'partial',
-            'Free Job Alerts': 'yes',
-            'Employer Direct': 'no',
-        },
-    },
-];
-
-function StatusIcon({ status }: { status: Status }) {
+function StatusIcon({ status }: { status: ComparisonStatus }) {
     if (status === 'yes') return <Check size={16} style={{ color: '#22c55e' }} />;
     if (status === 'no') return <X size={16} style={{ color: '#ef4444' }} />;
     return <Minus size={16} style={{ color: '#eab308' }} />;
@@ -100,7 +45,7 @@ export default function Comparison() {
                     }}>
                         {/* Header row */}
                         <div style={{ padding: '16px 14px', backgroundColor: 'var(--bg-secondary)' }} />
-                        {platforms.map((p) => (
+                        {COMPARISON_PLATFORMS.map((p) => (
                             <div
                                 key={p.name}
                                 style={{
@@ -125,7 +70,7 @@ export default function Comparison() {
                         ))}
 
                         {/* Feature rows */}
-                        {featureLabels.map((feat, rowIdx) => (
+                        {COMPARISON_FEATURE_LABELS.map((feat, rowIdx) => (
                             <Fragment key={feat}>
                                 {/* Label cell */}
                                 <div
@@ -134,21 +79,21 @@ export default function Comparison() {
                                         fontSize: '13px', fontWeight: 500,
                                         color: 'var(--text-secondary)',
                                         display: 'flex', alignItems: 'center',
-                                        borderBottom: rowIdx < featureLabels.length - 1 ? '1px solid var(--border-color)' : 'none',
+                                        borderBottom: rowIdx < COMPARISON_FEATURE_LABELS.length - 1 ? '1px solid var(--border-color)' : 'none',
                                     }}
                                 >
                                     {feat}
                                 </div>
 
                                 {/* Status cells */}
-                                {platforms.map((p) => (
+                                {COMPARISON_PLATFORMS.map((p) => (
                                     <div
                                         key={`${p.name}-${feat}`}
                                         style={{
                                             padding: '14px 12px',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             borderLeft: '1px solid var(--border-color)',
-                                            borderBottom: rowIdx < featureLabels.length - 1 ? '1px solid var(--border-color)' : 'none',
+                                            borderBottom: rowIdx < COMPARISON_FEATURE_LABELS.length - 1 ? '1px solid var(--border-color)' : 'none',
                                             ...(p.highlighted ? {
                                                 backgroundColor: 'rgba(13,148,136,0.03)',
                                             } : {}),
@@ -177,7 +122,7 @@ export default function Comparison() {
                 <div className="cmp-mobile" style={{
                     display: 'none', flexDirection: 'column', gap: '12px', marginTop: '-1px',
                 }}>
-                    {platforms.map((p) => (
+                    {COMPARISON_PLATFORMS.map((p) => (
                         <div
                             key={p.name}
                             style={{
@@ -193,7 +138,7 @@ export default function Comparison() {
                             }}>
                                 {p.name}
                             </div>
-                            {featureLabels.map((feat) => (
+                            {COMPARISON_FEATURE_LABELS.map((feat) => (
                                 <div key={feat} style={{
                                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                     padding: '6px 0', fontSize: '13px', color: 'var(--text-secondary)',

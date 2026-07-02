@@ -27,15 +27,12 @@ import NewsletterPreference from '@/components/settings/NewsletterPreference'
 import AIRecommendationsToggle from '@/components/settings/AIRecommendationsToggle'
 
 import ReferencesSection from '@/components/settings/ReferencesSection'
+// Niche specialty vocabulary — see config/niche/credentials.ts for FORK NOTEs.
+import { SPECIALTY_PRESETS } from '@/config/niche/credentials'
 
 
 // ── Preset data ──
 
-const SPECIALTY_PRESETS = [
-  'ADHD', 'Anxiety/Depression', 'PTSD', 'Addiction',
-  'Child & Adolescent', 'Geriatric', 'Eating Disorders',
-  'OCD', 'Bipolar', 'Schizophrenia', 'General Adult',
-]
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
   'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',

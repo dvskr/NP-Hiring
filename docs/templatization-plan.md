@@ -4,6 +4,24 @@
 > Goal: turn this codebase into a template for launching multiple niche job boards
 > with the same infrastructure and **zero downgrades** to quality, SEO, or compliance.
 
+## STATUS (2026-07-02): Phases 0–2 COMPLETE · Phase 3 = runbook ready
+- **Phase 0** done — repairs + centralization (brand config coverage, salary
+  config, taxonomy registry, DB bootstrap migrations, brand-leak ratchet).
+- **Phase 1** done — niche packs shipped under `config/niche/`: relevance.ts
+  (all filter keyword data; engine untouched, 63 regression tests prove no-op),
+  salary.ts, copy.ts, content-map.ts, stats.ts, credentials.ts, regulatory.ts
+  (seam), plus completed `lib/aggregators/search-terms/` extraction (workday ×2,
+  doccafe, healthcareercenter) and `brand.assets.storageBase` (943 asset URLs
+  derive from one value). Deliberate deferrals, documented below: credential
+  SCHEMA fields/consent logic (§4 credentials row), namespace prefixes (renamed
+  at fork time — see pilot runbook §2.8, not runtime config), sources.ts (the
+  aggregator registry is already pluggable; a separate pack added no value).
+- **Phase 2** done — `npm run crons:generate` (vercel.json crons generated from
+  config/cron-schedule.ts + chunk constants, drift-tested), `npm run
+  fork:preflight` (env/config/coherence/pack validator), docs updated.
+- **Phase 3** — see `docs/pilot-fork-runbook.md`; requires niche/domain/account
+  decisions, so it executes per-fork rather than in the template.
+
 ---
 
 ## 1. Architecture decision: keep fork-per-board

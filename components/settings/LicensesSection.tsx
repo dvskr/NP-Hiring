@@ -6,16 +6,10 @@ import {
     clayCard, clayInnerCard, clayFormPanel, clayTitle, claySubTitle,
     clayInput, clayLabel, clayBtnPrimary, clayBtnOutlineSmall, clayPalette,
 } from './clay-tokens'
+// Niche credential taxonomy — see config/niche/credentials.ts for FORK NOTEs.
+import { LICENSE_TYPES, LICENSE_STATE_OPTIONS as US_STATES } from '@/config/niche/credentials'
 
 // ── Constants ──
-const US_STATES = [
-    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC',
-]
-const LICENSE_TYPES = ['RN', 'APRN', 'Compact (NLC)', 'Compact (APRN)']
 const STATUSES = [
     { label: 'Active', value: 'active' },
     { label: 'Inactive', value: 'inactive' },

@@ -1,3 +1,6 @@
+// FORK NOTE: Per-board citation data — every stat below is PMHNP/US-specific.
+// A fork MUST re-source each value (and URL, and asOf date) for its own niche
+// before launch; shipping these unedited publishes false, cited-looking claims.
 /**
  * Single source of truth for cited statistics rendered across the site.
  *

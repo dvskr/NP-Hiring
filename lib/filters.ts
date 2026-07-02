@@ -1,6 +1,12 @@
 import { Prisma } from '@prisma/client';
 import { FilterState } from '@/types/filters';
 import { OFF_SPECIALTY_TITLE_MARKERS, NON_PROVIDER_TITLE_MARKERS, PSYCH_EMPLOYER_ALLOWLIST, DUAL_ROLE_PATTERNS } from '@/lib/utils/job-filter';
+import {
+    PSYCH_TITLE_SIGNALS,
+    PSYCH_EMPLOYER_PATTERNS,
+    NP_CREDENTIAL_SIGNALS,
+    NON_PSYCH_EMPLOYER_BLOCKLIST,
+} from '@/config/niche/relevance';
 
 /**
  * "Posted Within" semantics (revised 2026-05-06).
@@ -407,30 +413,17 @@ export const CATEGORY_EXCLUSIONS: Record<string, Prisma.JobWhereInput[]> = {
  * Global Exclusions — applied to EVERY query site-wide.
  * Removes jobs that should never appear on a PMHNP job board.
  */
-// Psychiatric signal in the TITLE that rescues an off-specialty title from the
-// off-specialty exclusion below (e.g. "Psychiatric Family NP", "Family NP -
-// PMHNP", "Family NP - Substance Use Disorder"). Addiction/SUD is in-scope for
-// this board, mirroring the ingest gate's addiction rescue.
-const PSYCH_TITLE_SIGNALS = [
-  'psych', 'mental health', 'behavioral health', 'pmhnp', 'telepsych',
-  'substance use', 'addiction', 'suboxone', 'opioid treatment', 'otp',
-];
-// Psychiatric signal in the EMPLOYER name (psych orgs + the known-psych
-// allowlist that carries no psych keyword, e.g. Lyra Health, Talkiatry).
+// Query-time vocabularies (PSYCH_TITLE_SIGNALS, NP_CREDENTIAL_SIGNALS,
+// NON_PSYCH_EMPLOYER_BLOCKLIST) live in config/niche/relevance.ts alongside
+// the ingest gate's keyword data — one pack per niche, two gates in lockstep.
+//
+// Psychiatric signal in the EMPLOYER name: the pack's employer-name patterns
+// plus the known-psych allowlist whose names carry no psych keyword
+// (e.g. Lyra Health, Talkiatry).
 const PSYCH_EMPLOYER_SIGNALS = [
-  'psych', 'mental health', 'behavioral', 'recovery', 'addiction', 'substance', 'counseling',
+  ...PSYCH_EMPLOYER_PATTERNS,
   ...PSYCH_EMPLOYER_ALLOWLIST,
 ];
-// NP/PA credential signals that protect a real provider from the non-provider
-// exclusion below (a recruiter/psychometrist title carries none of these).
-const NP_CREDENTIAL_SIGNALS = ['nurse practitioner', 'pmhnp', 'aprn', 'arnp', ' np', 'physician assistant', 'pa-c'];
-// Confirmed non-psychiatric aggregator employers (senior / primary care, SNF,
-// general federal staffing) that emit generic "Nurse Practitioner" titles with
-// no psych signal. Hidden UNLESS the posting itself carries a psych title, so a
-// rare genuine psych role from them still shows. Stopgap for the currently
-// confirmed offenders — the durable controls are the ingest gate + the periodic
-// audit (scripts/audit/audit-non-pmhnp.ts).
-const NON_PSYCH_EMPLOYER_BLOCKLIST = ['chenmed', 'akido labs', 'truhealth', 'akicita'];
 
 export const GLOBAL_EXCLUSIONS: Prisma.JobWhereInput[] = [
   // Exclude pure MD Psychiatrist roles (no NP/Nurse/PMHNP/APRN mention)

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 export const revalidate = 3600; // ISR: revalidate every hour
 
 export const metadata: Metadata = {
@@ -17,7 +19,7 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'PMHNP Hiring',
     images: [{
-      url: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp',
+      url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`,
       width: 1280,
       height: 900,
       alt: 'Companies hiring PMHNPs',
@@ -27,7 +29,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Companies Hiring PMHNPs',
     description: 'Browse 3,000+ employers actively hiring psychiatric nurse practitioners.',
-    images: ['https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp'],
+    images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`],
   },
   alternates: {
     canonical: `${brand.baseUrl}/companies`,

@@ -2,6 +2,8 @@ import Link from 'next/link';
 
 import { BookOpen } from 'lucide-react';
 
+import { RELATED_BLOG_SLUGS } from '@/config/niche/content-map';
+
 interface BlogPost {
     slug: string;
     title: string;
@@ -153,7 +155,9 @@ export default function RelatedBlogPosts({
 }
 
 /**
- * Get relevant blog posts based on job characteristics
+ * Get relevant blog posts based on job characteristics.
+ * Slug data lives in config/niche/content-map.ts (per-niche content
+ * pack); only the selection logic lives here.
  */
 export function getRelevantBlogSlugs(options: {
     isRemote?: boolean;
@@ -165,22 +169,19 @@ export function getRelevantBlogSlugs(options: {
     const slugs: string[] = [];
 
     // Always include salary guide
-    slugs.push('pmhnp-salary-guide-2026');
+    slugs.push(...RELATED_BLOG_SLUGS.always);
 
     if (options.isRemote || options.isTelehealth) {
-        slugs.push('telehealth-pmhnp-guide');
-        slugs.push('ultimate-guide-remote-pmhnp-jobs-2026');
+        slugs.push(...RELATED_BLOG_SLUGS.remoteOrTelehealth);
     }
 
     if (options.isNewGrad) {
-        slugs.push('new-grad-pmhnp-first-job');
-        slugs.push('5-tips-new-grad-pmhnp-job-market');
+        slugs.push(...RELATED_BLOG_SLUGS.newGrad);
     }
 
     // General career guides
     if (slugs.length < 3) {
-        slugs.push('pmhnp-interview-questions');
-        slugs.push('pmhnp-salary-negotiation');
+        slugs.push(...RELATED_BLOG_SLUGS.generalFallback);
     }
 
     return [...new Set(slugs)].slice(0, 3);

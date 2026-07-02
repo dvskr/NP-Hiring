@@ -6,13 +6,8 @@ import {
     clayCard, clayInnerCard, clayFormPanel, clayTitle, claySubTitle,
     clayInput, clayLabel, clayBtnPrimary, clayBtnOutlineSmall, clayPalette,
 } from './clay-tokens'
-
-// ── Constants ──
-const CERT_NAME_OPTIONS = [
-    'PMHNP-BC', 'FNP-BC', 'FNP-C', 'AGPCNP-BC', 'AGACNP-BC',
-    'CAQ-Psych', 'BLS', 'ACLS', 'CPI/CPI-NV', 'CARN', 'Other',
-]
-const BODY_OPTIONS = ['ANCC', 'AANP', 'AHA', 'CPI', 'Other']
+// Niche credential taxonomy — see config/niche/credentials.ts for FORK NOTEs.
+import { CERT_NAME_OPTIONS, BODY_OPTIONS } from '@/config/niche/credentials'
 
 interface Certification {
     id: string

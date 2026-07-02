@@ -6,6 +6,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Search, MapPin, Globe, Monitor, Clock, Clock3, GraduationCap } from 'lucide-react';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
+import { brand } from '@/config/brand';
+
+const STORAGE_BASE = brand.assets.storageBase;
 
 interface HomepageHeroProps {
     jobCountDisplay: string;
@@ -56,7 +59,7 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
         >
             {/* ── Nurse crowd background — fills viewport, anchored bottom ── */}
             <Image
-                src="https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/hero-nurses.webp"
+                src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/hero-nurses.webp`}
                 alt="Diverse community of PMHNP professionals"
                 fill
                 priority

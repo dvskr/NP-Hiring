@@ -106,6 +106,11 @@ export const brand = {
      * dependency (and shows the wrong niche's imagery).
      */
     assets: {
+        /**
+         * Origin of the board's Supabase storage; every hardcoded image URL
+         * derives from this — forks point it at their own project.
+         */
+        storageBase: 'https://sggccmqjzuimwlahocmy.supabase.co',
         /** CDN base for email images (logo, hero, step icons). Env override: EMAIL_ASSETS_URL. */
         emailAssetsBase: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/email-assets',
         /** Lead-magnet PDF for the salary-guide email. Env override: SALARY_GUIDE_URL. */

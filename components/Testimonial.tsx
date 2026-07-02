@@ -1,28 +1,9 @@
-// TODO: Replace with real testimonials
 'use client';
 
 import { Star, Quote } from 'lucide-react';
-
-const testimonials = [
-    {
-        quote: 'Found my telehealth role in two weeks. No more filtering out irrelevant PA and NP positions.',
-        name: 'Sarah M.',
-        credential: 'PMHNP-BC',
-        color: '#E86C2C',
-    },
-    {
-        quote: 'Salary transparency saved me weeks of back-and-forth. I could compare offers and negotiate confidently.',
-        name: 'James R.',
-        credential: 'PMHNP-BC',
-        color: '#2dd4bf',
-    },
-    {
-        quote: 'As a new grad, I filtered for entry-level roles and had three interviews within a week.',
-        name: 'Priya K.',
-        credential: 'PMHNP',
-        color: '#8b5cf6',
-    },
-];
+// TODO: Replace with real testimonials — TESTIMONIALS holds placeholder
+// quotes; see the FORK WARNING on its export.
+import { TESTIMONIALS } from '@/config/niche/stats';
 
 export default function Testimonial() {
     return (
@@ -45,7 +26,7 @@ export default function Testimonial() {
                 gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
                 gap: '20px',
             }}>
-                {testimonials.map((t) => (
+                {TESTIMONIALS.map((t) => (
                     <div
                         key={t.name}
                         className="card-precision"

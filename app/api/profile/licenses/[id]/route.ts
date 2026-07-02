@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { sanitizeText } from '@/lib/sanitize'
+// Niche credential taxonomy (license types) lives in config/niche/credentials.ts;
+// the validation logic below stays here.
+import { LICENSE_TYPES as VALID_LICENSE_TYPES } from '@/config/niche/credentials'
 
-const VALID_LICENSE_TYPES = ['RN', 'APRN', 'Compact (NLC)', 'Compact (APRN)']
 const VALID_STATUSES = ['active', 'inactive', 'restricted']
 
 // PUT — update an existing license

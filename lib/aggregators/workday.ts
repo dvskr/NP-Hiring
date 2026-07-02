@@ -7,10 +7,15 @@
  *
  * No API key required. Free and unlimited.
  *
- * Tenant list lives in tenants/workday.ts so the adapter stays focused
- * on fetch/pagination logic.
+ * Tenant list lives in tenants/workday.ts and search-term lists live in
+ * search-terms/workday.ts so the adapter stays focused on
+ * fetch/pagination logic.
  */
 
+import {
+    WORKDAY_SEARCH_TERMS as SEARCH_TERMS,
+    WORKDAY_TITLE_PREFILTER_TERMS as TITLE_PREFILTER_TERMS,
+} from './search-terms/workday';
 import { WORKDAY_TENANTS, type WorkdayTenant } from './tenants/workday';
 type WorkdayCompany = WorkdayTenant;
 const WORKDAY_COMPANIES: readonly WorkdayCompany[] = WORKDAY_TENANTS;
@@ -153,20 +158,10 @@ async function fetchCompanyJobs(company: WorkdayCompany): Promise<WorkdayJobRaw[
     const baseUrl = `https://${company.slug}.wd${company.instance}.myworkdayjobs.com/wday/cxs/${company.slug}/${company.site}/jobs`;
     const applyBase = `https://${company.slug}.wd${company.instance}.myworkdayjobs.com/en-US/${company.site}`;
 
-    // PMHNP search terms - cast a wide net, let isRelevantJob filter precisely
-    const searchTerms = [
-        'Psychiatric Nurse Practitioner',
-        'PMHNP',
-        'Psychiatric Mental Health',
-        'Behavioral Health Nurse Practitioner',
-        'Psychiatric APRN',
-        'Psych NP',
-    ];
-
     const allJobs: WorkdayJobRaw[] = [];
     const seenPaths = new Set<string>();
 
-    for (const searchText of searchTerms) {
+    for (const searchText of SEARCH_TERMS) {
         let offset = 0;
         const limit = 20;
         let hasMore = true;
@@ -207,14 +202,7 @@ async function fetchCompanyJobs(company: WorkdayCompany): Promise<WorkdayJobRaw[
                     if (seenPaths.has(posting.externalPath)) return false;
                     seenPaths.add(posting.externalPath);
                     const titleLower = posting.title.toLowerCase();
-                    return (
-                        titleLower.includes('pmhnp') ||
-                        titleLower.includes('psychiatric') ||
-                        titleLower.includes('psych') ||
-                        titleLower.includes('mental health') ||
-                        titleLower.includes('behavioral health') ||
-                        titleLower.includes('nurse practitioner')
-                    );
+                    return TITLE_PREFILTER_TERMS.some((term) => titleLower.includes(term));
                 });
 
                 // Fetch descriptions in parallel (concurrency 5). The serial

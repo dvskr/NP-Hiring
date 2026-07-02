@@ -1,3 +1,10 @@
+/*
+ * FORK-NOTE: This is a per-board content-pack DATA file — a route →
+ * video SEO map whose titles, descriptions, and asset URLs are all
+ * niche-specific (PMHNP). Forks must regenerate every entry (and the
+ * underlying recordings/thumbnails) for their own niche.
+ */
+
 /**
  * Video SEO Configuration
  *

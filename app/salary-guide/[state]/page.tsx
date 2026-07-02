@@ -16,6 +16,8 @@ import {
     BookOpen,
 } from 'lucide-react';
 
+const STORAGE_BASE = brand.assets.storageBase;
+
 export const revalidate = 86400; // ISR daily
 
 // ── State mappings ──────────────────────────────────────────────────────────
@@ -169,7 +171,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // The "Average Pay, Jobs & Cost of Living" suffix moved into the description.
     const title = `PMHNP Salary in ${stateName} (${code}) 2026 — Avg Pay & Jobs`;
     const description = `PMHNP salary data for ${stateName}: average pay by practice setting, top employers, and open positions. Updated daily.`;
-    const ogImage = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp';
+    const ogImage = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`;
 
     return {
         title,

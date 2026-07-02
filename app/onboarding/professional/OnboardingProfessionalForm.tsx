@@ -5,15 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Sparkles, ArrowRight, Loader2, FileText } from 'lucide-react';
 import ResumeUpload from '@/components/auth/ResumeUpload';
-
-// Kept in sync with components/employer/CandidateSearchClient.tsx —
-// the same chip set employers use to filter the talent pool, so the
-// candidate's tags align with how they'll be discovered.
-const SPECIALTY_PRESETS = [
-    'ADHD', 'Anxiety/Depression', 'PTSD', 'Addiction',
-    'Child & Adolescent', 'Geriatric', 'Eating Disorders',
-    'OCD', 'Bipolar', 'Schizophrenia', 'General Adult',
-];
+// The same chip set employers use to filter the talent pool, so the
+// candidate's tags align with how they'll be discovered. Lives in the
+// niche credentials pack; components/employer/CandidateSearchClient.tsx
+// still holds a local copy that must stay in sync.
+import { SPECIALTY_PRESETS } from '@/config/niche/credentials';
 
 interface InitialValues {
     headline: string;
