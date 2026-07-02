@@ -1,29 +1,29 @@
 -- ============================================================================
--- Row-Level Security policies — NP Hiring
+-- Row-Level Security policies â€” NP Hiring
 -- ============================================================================
 --
 -- Why this exists: `prisma db push` doesn't manage RLS. Without these
 -- policies, ANYONE with the anon key (which is intentionally public, used
--- in the browser) can read ALL rows in tables that hold user data —
+-- in the browser) can read ALL rows in tables that hold user data â€”
 -- including user_profiles, candidate licenses, saved jobs, messages, etc.
 --
--- Paste this file ONCE into Supabase Dashboard → SQL Editor → Run.
+-- Paste this file ONCE into Supabase Dashboard â†’ SQL Editor â†’ Run.
 -- Safe to re-run: every policy uses `CREATE POLICY IF NOT EXISTS` pattern
 -- (Postgres 15+) or is DROP-then-CREATE.
 --
 -- Coverage:
---   - user_profiles, candidate_* tables → owner-only
---   - employer_jobs, employer-side records → owner-only
---   - saved_jobs, job_alerts, conversations, messages → owner-only
---   - public job data (jobs, companies) → readable when published
---   - audit/system tables → service_role only (denies anon entirely)
+--   - user_profiles, candidate_* tables â†’ owner-only
+--   - employer_jobs, employer-side records â†’ owner-only
+--   - saved_jobs, job_alerts, conversations, messages â†’ owner-only
+--   - public job data (jobs, companies) â†’ readable when published
+--   - audit/system tables â†’ service_role only (denies anon entirely)
 --
 -- The Prisma client in our Next.js server uses the SERVICE_ROLE_KEY for
 -- writes, which bypasses RLS. The anon key (browser) is restricted by these
 -- policies.
 -- ============================================================================
 
--- ── Public-read tables (when published) ────────────────────────────────────
+-- â”€â”€ Public-read tables (when published) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS jobs_public_read ON jobs;
@@ -61,7 +61,7 @@ CREATE POLICY category_city_snippets_public_read ON category_city_snippets
     FOR SELECT TO anon, authenticated
     USING (approved_at IS NOT NULL);
 
--- ── User-owned tables (auth.uid() match) ──────────────────────────────────
+-- â”€â”€ User-owned tables (auth.uid() match) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS user_profiles_owner ON user_profiles;
@@ -138,16 +138,16 @@ CREATE POLICY job_applications_owner ON job_applications
     USING (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
     WITH CHECK (user_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
--- ── Job alerts (email-keyed, no user_id) ──────────────────────────────────
+-- â”€â”€ Job alerts (email-keyed, no user_id) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 -- These use the alert's confirmation_token for ownership; not exposed to
 -- anon at all. Service role manages all access.
 ALTER TABLE job_alerts ENABLE ROW LEVEL SECURITY;
--- (No policies → denies all anon access; only service_role can read/write.)
+-- (No policies â†’ denies all anon access; only service_role can read/write.)
 
 ALTER TABLE email_leads ENABLE ROW LEVEL SECURITY;
--- (No policies → service_role only.)
+-- (No policies â†’ service_role only.)
 
--- ── Employer-side tables ──────────────────────────────────────────────────
+-- â”€â”€ Employer-side tables â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 ALTER TABLE employer_jobs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS employer_jobs_owner ON employer_jobs;
@@ -188,7 +188,7 @@ CREATE POLICY employer_candidate_alerts_owner ON employer_candidate_alerts
     USING (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text))
     WITH CHECK (employer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
--- ── Messaging (both participants can access) ──────────────────────────────
+-- â”€â”€ Messaging (both participants can access) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS conversations_participant ON conversations;
@@ -214,7 +214,7 @@ CREATE POLICY profile_views_owner ON profile_views
     FOR ALL TO authenticated
     USING (viewer_id IN (SELECT id FROM user_profiles WHERE supabase_id = auth.uid()::text));
 
--- ── System / audit tables — service_role only ─────────────────────────────
+-- â”€â”€ System / audit tables â€” service_role only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 -- These have NO policies. RLS enabled + no policies = service_role only.
 
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
@@ -239,7 +239,7 @@ ALTER TABLE job_health_checks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_embeddings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE candidate_embeddings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE candidate_recommendations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pseo_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "PseoStats" ENABLE ROW LEVEL SECURITY; -- template schema: PseoStats has no @@map (donor called it pseo_stats)
 ALTER TABLE deindex_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE gsc_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_broadcasts ENABLE ROW LEVEL SECURITY;
@@ -254,7 +254,7 @@ ALTER TABLE job_drafts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_screening_questions ENABLE ROW LEVEL SECURITY;
 
--- ── Verify ─────────────────────────────────────────────────────────────────
+-- â”€â”€ Verify â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 -- After running, confirm with:
 --   SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname='public' AND rowsecurity=true;
 -- Should list all of the above ~50 tables.
