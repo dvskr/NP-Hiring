@@ -12,6 +12,8 @@
  * and caption for use in OG tags, image sitemap, and on-page alt.
  */
 
+import { brand } from '@/config/brand';
+
 export interface PageImageSEO {
     /** Path to WebP image relative to public, e.g. https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp */
     image: string;
@@ -23,7 +25,7 @@ export interface PageImageSEO {
     title: string;
 }
 
-const BASE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages';
+const BASE = `${brand.assets.storageBase}/storage/v1/object/public/site-assets/images/pages`;
 
 export const PAGE_IMAGE_SEO: Record<string, PageImageSEO> = {
     '/': {

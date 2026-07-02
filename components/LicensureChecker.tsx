@@ -366,7 +366,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
         <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>📋 Cite This Page</h3>
         <p style={{ fontSize: '13px', color: '#5A4A42', marginBottom: '14px' }}>Use the following citation when referencing data from this licensure tool:</p>
         <CopyCitation citation={`PMHNP Hiring. "2026 PMHNP State Licensure Checker: Practice Authority & Requirements by State." PMHNP Hiring, April 2026, pmhnphiring.com/resources.`} />
-        <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '10px' }}>For media inquiries or custom data requests, contact press@pmhnphiring.com</p>
+        <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '10px' }}>For media inquiries or custom data requests, contact {brand.email.press}</p>
       </div>
 
       <style>{`

@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { Search, MapPin, Globe, Monitor, Clock, Clock3, GraduationCap } from 'lucide-react';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 import { brand } from '@/config/brand';
+import { OG_HOMEPAGE_HEADLINE } from '@/config/niche/copy';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -116,7 +117,7 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
                         marginBottom: '16px',
                     }}
                 >
-                    The #1 PMHNP Job Board
+                    {OG_HOMEPAGE_HEADLINE}
                 </m.p>
 
                 {/* ── Headline ── */}

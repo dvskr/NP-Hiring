@@ -92,6 +92,8 @@ export const brand = {
         contact: 'contact@pmhnphiring.com',
         /** Partnerships / program-director outreach inbox (used by /for-programs + PD campaign). */
         hello: 'hello@pmhnphiring.com',
+        /** Media / data-request inbox (cited by the licensure-checker tool). */
+        press: 'press@pmhnphiring.com',
         // From-addresses for outbound mail. Read by lib/email-service.ts and
         // lib/job-alerts-service.ts. Env vars EMAIL_FROM, EMAIL_FROM_MARKETING,
         // and EMAIL_REPLY_TO override these at runtime when set.

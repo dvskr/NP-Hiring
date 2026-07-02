@@ -26,6 +26,7 @@ import { shouldRenderCategoryCity } from './render-gate';
 import { JOB_LISTING_OMIT } from './job-listing-omit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { brand } from '@/config/brand';
+import { licenseGuideSlug } from '@/config/niche/content-map';
 import { prisma } from '@/lib/prisma';
 import JobCard from '@/components/JobCard';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
@@ -1485,7 +1486,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                     <Shield size={14} style={{ color: '#0D9488' }} />
                     <span style={{ fontSize: '12px', fontWeight: 700, color: '#1A2E35' }}>{practiceAuthority.authority}</span>
                   </div>
-                  <Link href={`/blog/pmhnp-license-${stateToSlug(city!.state)}`} style={{ fontSize: '11px', color: '#0D9488', textDecoration: 'none' }}>
+                  <Link href={`/blog/${licenseGuideSlug(stateToSlug(city!.state))}`} style={{ fontSize: '11px', color: '#0D9488', textDecoration: 'none' }}>
                     {city!.state} Licensure Guide →
                   </Link>
                 </div>

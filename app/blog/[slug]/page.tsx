@@ -1,4 +1,5 @@
 import { brand } from '@/config/brand';
+import { LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import Link from 'next/link';
@@ -91,10 +92,11 @@ export default async function BlogPostPage({ params }: Props) {
     const relatedPosts = await getRelatedPosts(post.category, post.slug);
     const currentUrl = `${brand.baseUrl}/blog/${slug}`;
 
-    // GSC Fix (P1.5): for state-license blog posts (slug like "pmhnp-license-{state}"),
-    // we render CTA links to /jobs/{cat}/{state} pages. If a setting-state combo has
-    // 0 jobs, that page now 410s — so don't render the link at all.
-    const licenseSlugMatch = slug.match(/^pmhnp-license-(.+)$/);
+    // GSC Fix (P1.5): for state-license blog posts (slug like "<prefix>{state}",
+    // see config/niche/content-map.ts), we render CTA links to /jobs/{cat}/{state}
+    // pages. If a setting-state combo has 0 jobs, that page now 410s — so don't
+    // render the link at all.
+    const licenseSlugMatch = slug.match(LICENSE_GUIDE_SLUG_REGEX);
     const validBlogStateSettings = new Set<string>();
     if (licenseSlugMatch) {
         const stateSlugFromBlog = licenseSlugMatch[1];
@@ -644,7 +646,7 @@ export default async function BlogPostPage({ params }: Props) {
             <div className="ed-jobs-cta" style={{ textAlign: 'center' }}>
                 {(() => {
                     // State license guide → link to that state's job pages
-                    const licenseMatch = slug.match(/^pmhnp-license-(.+)$/);
+                    const licenseMatch = slug.match(LICENSE_GUIDE_SLUG_REGEX);
                     if (licenseMatch) {
                         const stateSlug = licenseMatch[1];
                         return (

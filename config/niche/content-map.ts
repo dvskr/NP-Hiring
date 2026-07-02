@@ -57,6 +57,29 @@ export const RELATED_BLOG_SLUGS: {
     ],
 };
 
+/**
+ * Slug prefix of the authored state-licensure blog series
+ * ('pmhnp-license-alabama' … 'pmhnp-license-wyoming', all 50 states + DC).
+ * CODE derives links and lookups from this prefix in four places:
+ *   - lib/pseo/category-city-template.tsx (a link on EVERY category×city page)
+ *   - app/salary-guide/[state]/page.tsx (related-guide lookup)
+ *   - app/blog/[slug]/page.tsx (license-post detection for related content)
+ *   - app/resources/page.tsx (series listing)
+ * A fork MUST author its own state-guide series under its own prefix (or
+ * point this at an equivalent series) — the pSEO templates link it from
+ * ~100K pages, so a missing series means internal 404s at scale.
+ * Keep the value free of regex metacharacters (it is compiled into a RegExp).
+ */
+export const LICENSE_GUIDE_SLUG_PREFIX = 'pmhnp-license-';
+
+/** Build the license-guide slug for a state slug (e.g. 'california'). */
+export function licenseGuideSlug(stateSlug: string): string {
+    return `${LICENSE_GUIDE_SLUG_PREFIX}${stateSlug}`;
+}
+
+/** Regex matching a license-guide slug, capturing the state slug. */
+export const LICENSE_GUIDE_SLUG_REGEX = new RegExp(`^${LICENSE_GUIDE_SLUG_PREFIX}(.+)$`);
+
 /** One row of the homepage "From the blog" section. */
 export interface FeaturedBlogPost {
     category: string;

@@ -1,4 +1,5 @@
 import { brand } from '@/config/brand';
+import { LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -122,7 +123,7 @@ export default async function ResourcesPage() {
 
   // Extract unique state names from slugs for the grid
   const stateNames = stateGuides.map(s => {
-    const match = s.slug.match(/pmhnp-license-(.+)/);
+    const match = s.slug.match(LICENSE_GUIDE_SLUG_REGEX);
     if (!match) return null;
     const raw = match[1].replace(/-\d+$/, ''); // remove trailing -2 duplicates
     return {

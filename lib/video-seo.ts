@@ -13,6 +13,8 @@
  * video sitemap and VideoObject JSON-LD.
  */
 
+import { brand } from '@/config/brand';
+
 export interface PageVideoSEO {
     /** Path to video relative to public, e.g. /videos/pmhnp-job-board-homepage-scroll.webm */
     video: string;
@@ -29,7 +31,7 @@ export interface PageVideoSEO {
 }
 
 const VBASE = '/videos';
-const IBASE = 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/site-assets/images/pages';
+const IBASE = `${brand.assets.storageBase}/storage/v1/object/public/site-assets/images/pages`;
 // SEO Fix: schema.org `uploadDate` requires ISO 8601 with a time zone. Previously
 // just `2026-02-20` (date only) — GSC flagged "Invalid datetime value" and
 // "missing a time zone". The VideoJsonLd renderer also normalizes, but anchor

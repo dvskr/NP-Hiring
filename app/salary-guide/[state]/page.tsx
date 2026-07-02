@@ -1,4 +1,5 @@
 import { brand } from '@/config/brand';
+import { licenseGuideSlug } from '@/config/niche/content-map';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -232,8 +233,8 @@ export default async function StateSalaryPage({ params }: PageProps) {
     const diffPct = nationalAvg > 0 ? Math.round((diff / nationalAvg) * 100) : 0;
     const aboveBelow = diff >= 0 ? 'above' : 'below';
 
-    // Find the licensure blog post slug
-    const licenseSlug = `pmhnp-license-${slug}`;
+    // Find the licensure blog post slug (prefix lives in config/niche/content-map.ts)
+    const licenseSlug = licenseGuideSlug(slug);
 
     return (
         <div style={{ backgroundColor: 'var(--bg-primary)', minHeight: '100vh' }}>

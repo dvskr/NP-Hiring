@@ -60,7 +60,7 @@
   "components/Footer.tsx": 6,
   "components/Header.tsx": 1,
   "components/JobStructuredData.tsx": 1,
-  "components/LicensureChecker.tsx": 4,
+  "components/LicensureChecker.tsx": 3,
   "components/PWAInstallBanner.tsx": 1,
   "components/VideoJsonLd.tsx": 1,
   "lib/blog-formatter.ts": 17,
