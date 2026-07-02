@@ -67,92 +67,16 @@ export interface CategoryConfig {
 }
 
 // Specialty configs (supplement the setting configs from setting-state-config.ts)
+// NP taxonomy migration (2026-07): the five PMHNP-only specialty configs
+// were removed — their slugs are no longer in taxonomy-registry.ts.
+// TODO(content): narrative fields (heroSubtitle/benefits/tips/keywords) in
+// the kept configs below are still PMHNP-era psych-specific copy — pending
+// all-NP editorial rewrite (docs/pilot-fork-runbook.md §3).
 export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
-  addiction: {
-    slug: 'addiction',
-    label: 'Addiction',
-    fullLabel: 'Addiction PMHNP',
-    heroSubtitle: 'Substance abuse & addiction treatment positions',
-    salaryRange: '$120K-180K',
-    keywords: ['addiction pmhnp', 'substance abuse pmhnp', 'MAT pmhnp', 'suboxone pmhnp'],
-    faqCategory: 'substance-abuse',
-    buildWhere: (stateName: string, cityName?: string) => ({
-      isPublished: true,
-      state: { equals: stateName, mode: 'insensitive' },
-      ...(cityName && { city: { equals: cityName, mode: 'insensitive' } }),
-      ...withTagFallback('addiction'),
-    }),
-    benefits: [
-      { title: 'High Demand', description: 'Addiction specialists are critically needed — over 40 million Americans have a substance use disorder.', iconName: 'Activity' },
-      { title: 'Loan Repayment', description: 'Many addiction positions qualify for NHSC loan repayment up to $50,000+ for serving underserved areas.', iconName: 'DollarSign' },
-      { title: 'Meaningful Impact', description: 'Help patients reclaim their lives through evidence-based medication-assisted treatment (MAT).', iconName: 'Heart' },
-    ],
-    tips: [
-      'Get DEA X-waiver for buprenorphine prescribing',
-      'Build motivational interviewing skills',
-      'Understand MAT protocols (Suboxone, Vivitrol)',
-      'Stay current on state opioid prescribing laws',
-      'Consider dual diagnosis (addiction + mental health) training',
-    ],
-  },
-  'child-adolescent': {
-    slug: 'child-adolescent',
-    label: 'Child & Adolescent',
-    fullLabel: 'Child & Adolescent PMHNP',
-    heroSubtitle: 'Pediatric & youth psychiatric positions',
-    salaryRange: '$125K-185K',
-    keywords: ['child pmhnp', 'adolescent pmhnp', 'pediatric psychiatric NP', 'youth mental health'],
-    faqCategory: 'child-adolescent',
-    buildWhere: (stateName: string, cityName?: string) => ({
-      isPublished: true,
-      state: { equals: stateName, mode: 'insensitive' },
-      ...(cityName && { city: { equals: cityName, mode: 'insensitive' } }),
-      ...withTagFallback('child-adolescent'),
-    }),
-    benefits: [
-      { title: 'Critical Need', description: 'Youth mental health crisis means massive demand — 1 in 5 children has a diagnosable mental disorder.', iconName: 'Users' },
-      { title: 'School-Based Options', description: 'School-based positions follow the academic calendar with summers off and competitive benefits.', iconName: 'Building2' },
-      { title: 'Early Intervention Impact', description: 'Shape lifelong outcomes through early identification and treatment of childhood psychiatric conditions.', iconName: 'Heart' },
-    ],
-    tips: [
-      'Get experience with ADHD, anxiety, and ASD in children',
-      'Build family engagement and parent coaching skills',
-      'Understand pediatric psychopharmacology dosing',
-      'Consider school-based positions for work-life balance',
-      'Stay current on youth suicide prevention protocols',
-    ],
-  },
-  'substance-abuse': {
-    slug: 'substance-abuse',
-    label: 'Substance Abuse',
-    fullLabel: 'Substance Abuse PMHNP',
-    heroSubtitle: 'Substance use disorder treatment positions',
-    salaryRange: '$120K-180K',
-    keywords: ['substance abuse pmhnp', 'SUD pmhnp', 'detox pmhnp', 'rehab pmhnp'],
-    faqCategory: 'substance-abuse',
-    buildWhere: (stateName: string, cityName?: string) => ({
-      isPublished: true,
-      state: { equals: stateName, mode: 'insensitive' },
-      ...(cityName && { city: { equals: cityName, mode: 'insensitive' } }),
-      ...withTagFallback('substance-abuse'),
-    }),
-    benefits: [
-      { title: 'Growing Field', description: 'Federal funding for addiction treatment has increased dramatically, creating new positions nationwide.', iconName: 'TrendingUp' },
-      { title: 'Diverse Settings', description: 'Work in detox centers, residential rehab, outpatient clinics, or integrated primary care settings.', iconName: 'Building2' },
-      { title: 'Loan Forgiveness', description: 'Many SUD treatment positions qualify for Public Service Loan Forgiveness and NHSC programs.', iconName: 'DollarSign' },
-    ],
-    tips: [
-      'Build expertise in motivational interviewing',
-      'Understand dual diagnosis treatment approaches',
-      'Get certified in addiction nursing (CARN)',
-      'Stay current on harm reduction models',
-      'Learn to work with peer recovery specialists',
-    ],
-  },
   'new-grad': {
     slug: 'new-grad',
     label: 'New Grad',
-    fullLabel: 'New Graduate PMHNP',
+    fullLabel: 'New Graduate NP',
     heroSubtitle: 'Entry-level & new graduate positions',
     salaryRange: '$115K-160K',
     keywords: ['new grad pmhnp', 'entry level pmhnp', 'new graduate pmhnp', 'pmhnp fellowship'],
@@ -179,7 +103,7 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   'per-diem': {
     slug: 'per-diem',
     label: 'Per Diem',
-    fullLabel: 'Per Diem PMHNP',
+    fullLabel: 'Per Diem NP',
     heroSubtitle: 'PRN & flexible schedule positions',
     salaryRange: '$80-150/hr',
     keywords: ['per diem pmhnp', 'PRN pmhnp', 'part time pmhnp', 'flexible pmhnp'],
@@ -206,11 +130,13 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
 };
 
 // Job Type configs
+// TODO(content): narrative fields (heroSubtitle/benefits/tips/keywords) below
+// are still PMHNP-era psych-specific copy — pending all-NP editorial rewrite.
 export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   'full-time': {
     slug: 'full-time',
     label: 'Full-Time',
-    fullLabel: 'Full-Time PMHNP',
+    fullLabel: 'Full-Time NP',
     heroSubtitle: 'Permanent full-time psychiatric NP positions with benefits',
     salaryRange: '$120K-190K',
     keywords: ['full time pmhnp', 'permanent pmhnp', 'salaried pmhnp'],
@@ -237,7 +163,7 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   'part-time': {
     slug: 'part-time',
     label: 'Part-Time',
-    fullLabel: 'Part-Time PMHNP',
+    fullLabel: 'Part-Time NP',
     heroSubtitle: 'Flexible part-time psychiatric NP positions',
     salaryRange: '$55-95/hr',
     keywords: ['part time pmhnp', 'half time pmhnp', 'flexible pmhnp'],
@@ -264,7 +190,7 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   contract: {
     slug: 'contract',
     label: 'Contract',
-    fullLabel: 'Contract PMHNP',
+    fullLabel: 'Contract NP',
     heroSubtitle: 'Contract & locum tenens psychiatric NP assignments',
     salaryRange: '$85-160/hr',
     keywords: ['contract pmhnp', 'locum tenens pmhnp', '1099 pmhnp', 'temp pmhnp'],
@@ -291,11 +217,13 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
 };
 
 // Experience Level configs
+// TODO(content): narrative fields (heroSubtitle/benefits/tips/keywords) below
+// are still PMHNP-era psych-specific copy — pending all-NP editorial rewrite.
 export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
   'entry-level': {
     slug: 'entry-level',
     label: 'Entry-Level',
-    fullLabel: 'Entry-Level PMHNP',
+    fullLabel: 'Entry-Level NP',
     heroSubtitle: 'New graduate & early-career psychiatric NP positions with mentorship',
     salaryRange: '$105K-145K',
     keywords: ['entry level pmhnp', 'new grad pmhnp', 'junior pmhnp', '0-2 years pmhnp'],
@@ -322,7 +250,7 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
   'mid-career': {
     slug: 'mid-career',
     label: 'Mid-Career',
-    fullLabel: 'Mid-Career PMHNP',
+    fullLabel: 'Mid-Career NP',
     heroSubtitle: 'Experienced PMHNP positions for 3-7 years of practice',
     salaryRange: '$135K-175K',
     keywords: ['experienced pmhnp', 'mid career pmhnp', '3-5 years pmhnp', 'senior pmhnp positions'],
@@ -349,7 +277,7 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
   senior: {
     slug: 'senior',
     label: 'Senior',
-    fullLabel: 'Senior PMHNP',
+    fullLabel: 'Senior NP',
     heroSubtitle: 'Leadership & advanced practice positions for 7+ years experience',
     salaryRange: '$160K-220K+',
     keywords: ['senior pmhnp', 'lead pmhnp', 'director pmhnp', 'advanced practice pmhnp'],
@@ -376,11 +304,13 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
 };
 
 // Employer Type configs
+// TODO(content): narrative fields (heroSubtitle/benefits/tips/keywords) below
+// are still PMHNP-era psych-specific copy — pending all-NP editorial rewrite.
 export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   hospital: {
     slug: 'hospital',
     label: 'Hospital',
-    fullLabel: 'Hospital PMHNP',
+    fullLabel: 'Hospital NP',
     heroSubtitle: 'Hospital-based psychiatric NP positions with full benefits',
     salaryRange: '$125K-180K',
     keywords: ['hospital pmhnp', 'inpatient hospital pmhnp', 'academic medical center pmhnp'],
@@ -407,7 +337,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   'private-practice': {
     slug: 'private-practice',
     label: 'Private Practice',
-    fullLabel: 'Private Practice PMHNP',
+    fullLabel: 'Private Practice NP',
     heroSubtitle: 'Independent & group practice psychiatric NP opportunities',
     salaryRange: '$140K-250K+',
     keywords: ['private practice pmhnp', 'independent pmhnp', 'group practice pmhnp', 'own practice pmhnp'],
@@ -434,7 +364,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   'community-health': {
     slug: 'community-health',
     label: 'Community Health',
-    fullLabel: 'Community Health PMHNP',
+    fullLabel: 'Community Health NP',
     heroSubtitle: 'FQHC, community mental health & public health positions',
     salaryRange: '$110K-160K',
     keywords: ['community health pmhnp', 'FQHC pmhnp', 'community mental health pmhnp', 'public health pmhnp'],
@@ -461,7 +391,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   va: {
     slug: 'va',
     label: 'VA',
-    fullLabel: 'VA PMHNP',
+    fullLabel: 'VA NP',
     heroSubtitle: 'Veterans Affairs psychiatric NP positions with federal benefits',
     salaryRange: '$120K-170K',
     keywords: ['VA pmhnp', 'veterans affairs pmhnp', 'military pmhnp', 'federal pmhnp'],
@@ -488,11 +418,13 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
 };
 
 // Population Specialty configs
+// TODO(content): narrative fields (heroSubtitle/benefits/tips/keywords) below
+// are still PMHNP-era psych-specific copy — pending all-NP editorial rewrite.
 export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   geriatric: {
     slug: 'geriatric',
     label: 'Geriatric',
-    fullLabel: 'Geriatric PMHNP',
+    fullLabel: 'Geriatric NP',
     heroSubtitle: 'Older adult & geriatric psychiatric NP positions',
     salaryRange: '$125K-180K',
     keywords: ['geriatric pmhnp', 'geropsych pmhnp', 'elderly psychiatric NP', 'older adult mental health'],
@@ -519,7 +451,7 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   veterans: {
     slug: 'veterans',
     label: 'Veterans',
-    fullLabel: 'Veterans Mental Health PMHNP',
+    fullLabel: 'Veterans NP', // TODO(content): benefits/tips below are psych-specific (PTSD/trauma) — pending all-NP rewrite
     heroSubtitle: 'Military & veteran-focused psychiatric NP positions',
     salaryRange: '$120K-175K',
     keywords: ['veterans pmhnp', 'military mental health pmhnp', 'PTSD pmhnp', 'combat veteran psychiatric NP'],
@@ -546,7 +478,7 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   lgbtq: {
     slug: 'lgbtq',
     label: 'LGBTQ+',
-    fullLabel: 'LGBTQ+ Affirming PMHNP',
+    fullLabel: 'LGBTQ+ Affirming NP',
     heroSubtitle: 'LGBTQ+ affirming psychiatric NP positions',
     salaryRange: '$120K-175K',
     keywords: ['lgbtq pmhnp', 'gender affirming pmhnp', 'transgender mental health', 'queer affirming psychiatric NP'],
@@ -570,33 +502,8 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       'Telehealth expands reach to LGBTQ+ patients in underserved areas',
     ],
   },
-  crisis: {
-    slug: 'crisis',
-    label: 'Crisis',
-    fullLabel: 'Crisis PMHNP',
-    heroSubtitle: 'Psychiatric emergency & crisis intervention positions',
-    salaryRange: '$130K-195K',
-    keywords: ['crisis pmhnp', 'psychiatric emergency pmhnp', '988 suicide hotline pmhnp', 'crisis intervention NP'],
-    faqCategory: 'inpatient',
-    buildWhere: (stateName: string, cityName?: string) => ({
-      isPublished: true,
-      state: { equals: stateName, mode: 'insensitive' },
-      ...(cityName && { city: { equals: cityName, mode: 'insensitive' } }),
-      ...withTagFallback('crisis'),
-    }),
-    benefits: [
-      { title: 'Premium Compensation', description: 'Crisis roles pay 15-30% more than standard positions — $130K-$195K with shift differentials for nights/weekends.', iconName: 'DollarSign' },
-      { title: 'High-Impact Work', description: 'Stabilize patients in their most vulnerable moments — every shift makes a life-or-death difference.', iconName: 'Heart' },
-      { title: 'Funded by 988', description: 'The 988 Suicide & Crisis Lifeline expansion is creating thousands of new positions with dedicated federal funding.', iconName: 'TrendingUp' },
-    ],
-    tips: [
-      'Get CPI (Crisis Prevention Institute) certification',
-      'Learn de-escalation techniques and safety protocols',
-      'Expect 12-hour shifts — negotiate 3 days on, 4 days off schedules',
-      'Build rapid assessment skills (risk stratification, disposition)',
-      'Crisis stabilization centers are the fastest-growing employer type',
-    ],
-  },
+  // NP taxonomy migration (2026-07): 'crisis' config removed — slug no
+  // longer in taxonomy-registry.ts.
 };
 
 // Merge setting configs with city-aware buildWhere
@@ -613,6 +520,218 @@ function settingToCategory(config: SettingConfig): CategoryConfig {
   };
 }
 
+// ─── NP taxonomy category configs (2026-07 migration) ─────────────────────────
+//
+// Minimal, honest configs for the 19 NP slugs added by the taxonomy
+// migration (lib/pseo/taxonomy-registry.ts) so every CITY-eligible category
+// has a working /jobs/<slug>/city/[slug] route. Mirrors the
+// buildNpSpecialtyConfig pattern in setting-state-config.ts.
+//
+// TODO(content): per-board editorial copy + researched salary bands — see
+// docs/pilot-fork-runbook.md §3. salaryRange values are broad national
+// estimates consistent with config/niche/salary.ts (staff NP ~$95-140K
+// bands; CRNA drives the $180K-250K high end).
+//
+// QUERY NOTE: the ingest classifier (lib/pseo/category-tagger.ts) still
+// emits the legacy PMHNP tag set, so these buildWhere clauses gate on the
+// precomputed `categoryTags` column directly. City pages 308-redirect to
+// the parent category (totalJobs === 0) until rows are re-tagged for the
+// NP taxonomy — same as the matching [state] pages.
+//
+// faqCategory is the slug itself: getCategoryFaqs() returns [] for unmapped
+// keys and CategoryFAQ renders nothing (no empty/mismatched FAQPage schema);
+// the city template builds its FAQ block inline from label/salaryRange.
+
+interface NpCategoryConfigInput {
+  slug: string;
+  label: string;
+  fullLabel: string;
+  heroSubtitle: string;
+  salaryRange: string;
+  keywords: string[];
+}
+
+function buildNpCategoryConfig(input: NpCategoryConfigInput): CategoryConfig {
+  return {
+    ...input,
+    faqCategory: input.slug, // CategoryFAQ renders nothing for unmapped keys
+    buildWhere: (stateName: string, cityName?: string) => ({
+      isPublished: true,
+      state: { equals: stateName, mode: 'insensitive' },
+      ...(cityName && { city: { equals: cityName, mode: 'insensitive' } }),
+      categoryTags: { has: input.slug },
+    }),
+    benefits: [
+      { title: 'Growing Demand', description: `${input.fullLabel} roles are among the fastest-growing advanced practice positions nationwide.`, iconName: 'TrendingUp' },
+      { title: 'Practice Variety', description: 'Openings span health systems, private groups, and community settings.', iconName: 'Building2' },
+      { title: 'Career Mobility', description: 'State licensure plus national certification keeps your options open across employers and settings.', iconName: 'Users' },
+    ],
+    tips: [
+      'Verify state APRN licensure and prescriptive authority requirements',
+      'Keep national certification and CE credits current',
+      'Compare total compensation — base, incentives, CME, and benefits',
+      'Ask about caseload, support staffing, and documentation time',
+      'Confirm collaborative or supervisory agreement requirements in this state',
+    ],
+  };
+}
+
+// TODO(content): all salaryRange values below are estimates — see block comment above.
+export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
+  'urgent-care': buildNpCategoryConfig({
+    slug: 'urgent-care',
+    label: 'Urgent Care',
+    fullLabel: 'Urgent Care NP',
+    heroSubtitle: 'Walk-in clinic & urgent care nurse practitioner positions',
+    salaryRange: '$105K-140K',
+    keywords: ['urgent care nurse practitioner', 'urgent care NP jobs', 'walk-in clinic NP'],
+  }),
+  'home-health': buildNpCategoryConfig({
+    slug: 'home-health',
+    label: 'Home Health',
+    fullLabel: 'Home Health NP',
+    heroSubtitle: 'In-home visit & house-call nurse practitioner positions',
+    salaryRange: '$100K-135K',
+    keywords: ['home health nurse practitioner', 'home health NP jobs', 'house call NP'],
+  }),
+  'family-practice': buildNpCategoryConfig({
+    slug: 'family-practice',
+    label: 'Family Practice',
+    fullLabel: 'Family Practice NP (FNP)',
+    heroSubtitle: 'Family practice nurse practitioner positions',
+    salaryRange: '$110K-150K',
+    keywords: ['family practice nurse practitioner', 'FNP jobs', 'family nurse practitioner'],
+  }),
+  'adult-gerontology': buildNpCategoryConfig({
+    slug: 'adult-gerontology',
+    label: 'Adult-Gerontology',
+    fullLabel: 'Adult-Gerontology NP (AGNP)',
+    heroSubtitle: 'Adult-gerontology nurse practitioner positions',
+    salaryRange: '$110K-150K',
+    keywords: ['adult gerontology nurse practitioner', 'AGNP jobs', 'AGACNP', 'AGPCNP'],
+  }),
+  pediatric: buildNpCategoryConfig({
+    slug: 'pediatric',
+    label: 'Pediatric',
+    fullLabel: 'Pediatric NP (PNP)',
+    heroSubtitle: 'Pediatric nurse practitioner positions',
+    salaryRange: '$105K-145K',
+    keywords: ['pediatric nurse practitioner', 'PNP jobs', 'peds NP'],
+  }),
+  neonatal: buildNpCategoryConfig({
+    slug: 'neonatal',
+    label: 'Neonatal',
+    fullLabel: 'Neonatal NP (NNP)',
+    heroSubtitle: 'NICU & newborn care nurse practitioner positions',
+    salaryRange: '$115K-155K',
+    keywords: ['neonatal nurse practitioner', 'NNP jobs', 'NICU nurse practitioner'],
+  }),
+  'women-health': buildNpCategoryConfig({
+    slug: 'women-health',
+    label: "Women's Health",
+    fullLabel: "Women's Health NP (WHNP)",
+    heroSubtitle: "Women's health nurse practitioner positions",
+    salaryRange: '$105K-145K',
+    keywords: ["women's health nurse practitioner", 'WHNP jobs', 'OB/GYN nurse practitioner'],
+  }),
+  'acute-care': buildNpCategoryConfig({
+    slug: 'acute-care',
+    label: 'Acute Care',
+    fullLabel: 'Acute Care NP (ACNP)',
+    heroSubtitle: 'Acute care nurse practitioner positions',
+    salaryRange: '$115K-160K',
+    keywords: ['acute care nurse practitioner', 'ACNP jobs', 'ICU nurse practitioner'],
+  }),
+  emergency: buildNpCategoryConfig({
+    slug: 'emergency',
+    label: 'Emergency',
+    fullLabel: 'Emergency NP (ENP)',
+    heroSubtitle: 'Emergency nurse practitioner positions',
+    salaryRange: '$115K-160K',
+    keywords: ['emergency nurse practitioner', 'ENP jobs', 'ER nurse practitioner'],
+  }),
+  'psychiatric-mental-health': buildNpCategoryConfig({
+    slug: 'psychiatric-mental-health',
+    label: 'Psychiatric Mental Health',
+    fullLabel: 'Psychiatric Mental Health NP (PMHNP)',
+    heroSubtitle: 'Psychiatric mental health nurse practitioner positions',
+    salaryRange: '$120K-170K',
+    keywords: ['psychiatric nurse practitioner', 'PMHNP jobs', 'psych NP'],
+  }),
+  oncology: buildNpCategoryConfig({
+    slug: 'oncology',
+    label: 'Oncology',
+    fullLabel: 'Oncology NP',
+    heroSubtitle: 'Oncology nurse practitioner positions',
+    salaryRange: '$110K-150K',
+    keywords: ['oncology nurse practitioner', 'oncology NP jobs', 'hematology oncology NP'],
+  }),
+  cardiology: buildNpCategoryConfig({
+    slug: 'cardiology',
+    label: 'Cardiology',
+    fullLabel: 'Cardiology NP',
+    heroSubtitle: 'Cardiology nurse practitioner positions',
+    salaryRange: '$110K-150K',
+    keywords: ['cardiology nurse practitioner', 'cardiology NP jobs', 'cardiovascular NP'],
+  }),
+  'primary-care': buildNpCategoryConfig({
+    slug: 'primary-care',
+    label: 'Primary Care',
+    fullLabel: 'Primary Care NP',
+    heroSubtitle: 'Primary care nurse practitioner positions',
+    salaryRange: '$100K-140K',
+    keywords: ['primary care nurse practitioner', 'primary care NP jobs', 'internal medicine NP'],
+  }),
+  hospitalist: buildNpCategoryConfig({
+    slug: 'hospitalist',
+    label: 'Hospitalist',
+    fullLabel: 'Hospitalist NP',
+    heroSubtitle: 'Inpatient medicine nurse practitioner positions',
+    salaryRange: '$110K-150K',
+    keywords: ['hospitalist nurse practitioner', 'hospitalist NP jobs', 'inpatient medicine NP'],
+  }),
+  dermatology: buildNpCategoryConfig({
+    slug: 'dermatology',
+    label: 'Dermatology',
+    fullLabel: 'Dermatology NP',
+    heroSubtitle: 'Dermatology nurse practitioner positions',
+    salaryRange: '$110K-155K',
+    keywords: ['dermatology nurse practitioner', 'dermatology NP jobs', 'derm NP'],
+  }),
+  orthopedic: buildNpCategoryConfig({
+    slug: 'orthopedic',
+    label: 'Orthopedic',
+    fullLabel: 'Orthopedic NP',
+    heroSubtitle: 'Orthopedic nurse practitioner positions',
+    salaryRange: '$105K-145K',
+    keywords: ['orthopedic nurse practitioner', 'orthopedic NP jobs', 'ortho NP'],
+  }),
+  anesthesia: buildNpCategoryConfig({
+    slug: 'anesthesia',
+    label: 'Nurse Anesthetist',
+    fullLabel: 'Nurse Anesthetist (CRNA)',
+    heroSubtitle: 'Certified registered nurse anesthetist positions',
+    salaryRange: '$180K-250K',
+    keywords: ['CRNA jobs', 'nurse anesthetist', 'certified registered nurse anesthetist'],
+  }),
+  midwifery: buildNpCategoryConfig({
+    slug: 'midwifery',
+    label: 'Nurse Midwife',
+    fullLabel: 'Nurse Midwife (CNM)',
+    heroSubtitle: 'Certified nurse midwife positions',
+    salaryRange: '$105K-140K',
+    keywords: ['CNM jobs', 'certified nurse midwife', 'nurse midwifery'],
+  }),
+  'clinical-nurse-specialist': buildNpCategoryConfig({
+    slug: 'clinical-nurse-specialist',
+    label: 'Clinical Nurse Specialist',
+    fullLabel: 'Clinical Nurse Specialist (CNS)',
+    heroSubtitle: 'Clinical nurse specialist positions',
+    salaryRange: '$95K-130K',
+    keywords: ['clinical nurse specialist', 'CNS jobs', 'CNS nurse jobs'],
+  }),
+};
+
 export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   // Settings (5)
   remote: settingToCategory(SETTING_CONFIGS.remote),
@@ -620,7 +739,7 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   inpatient: settingToCategory(SETTING_CONFIGS.inpatient),
   outpatient: settingToCategory(SETTING_CONFIGS.outpatient),
   travel: settingToCategory(SETTING_CONFIGS.travel),
-  // Specialties (5)
+  // Specialties (2: new-grad, per-diem)
   ...SPECIALTY_CONFIGS,
   // Job Types (3)
   ...JOB_TYPE_CONFIGS,
@@ -628,13 +747,15 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   ...EXPERIENCE_LEVEL_CONFIGS,
   // Employer Types (4)
   ...EMPLOYER_TYPE_CONFIGS,
-  // Population Specialties (4)
+  // Population Specialties (3: geriatric, veterans, lgbtq)
   ...POPULATION_SPECIALTY_CONFIGS,
-  // ─── Additional Categories (4) ─────────────────────────────────────────────
+  // NP taxonomy categories (19 — 2026-07 migration)
+  ...NP_CATEGORY_CONFIGS,
+  // ─── Additional Categories (3) ─────────────────────────────────────────────
   '1099': {
     slug: '1099',
     label: '1099',
-    fullLabel: '1099 / Independent Contractor PMHNP',
+    fullLabel: '1099 / Independent Contractor NP',
     heroSubtitle: 'Independent contractor & 1099 psychiatric NP positions',
     salaryRange: '$75-150/hr',
     keywords: ['1099 pmhnp', 'independent contractor pmhnp', '1099 psychiatric nurse practitioner', 'contract psych NP'],
@@ -658,37 +779,12 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
       'Keep detailed records of all business expenses for deductions',
     ],
   },
-  'behavioral-health': {
-    slug: 'behavioral-health',
-    label: 'Behavioral Health',
-    fullLabel: 'Behavioral Health PMHNP',
-    heroSubtitle: 'Behavioral health facility & integrated care positions',
-    salaryRange: '$120K-180K',
-    keywords: ['behavioral health pmhnp', 'behavioral health NP', 'integrated behavioral health', 'mental health facility NP'],
-    faqCategory: 'outpatient',
-    buildWhere: (stateName: string, cityName?: string) => ({
-      isPublished: true,
-      state: { equals: stateName, mode: 'insensitive' },
-      ...(cityName && { city: { equals: cityName, mode: 'insensitive' } }),
-      ...withTagFallback('behavioral-health'),
-    }),
-    benefits: [
-      { title: 'Integrated Care', description: 'Work in multidisciplinary teams combining psychiatric care with therapy, social work, and primary care.', iconName: 'Users' },
-      { title: 'Diverse Settings', description: 'Practice in outpatient clinics, residential treatment, partial hospitalization, or intensive outpatient programs.', iconName: 'Building2' },
-      { title: 'Growing Sector', description: 'Behavioral health investment has surged — new facilities and telehealth platforms are expanding rapidly.', iconName: 'TrendingUp' },
-    ],
-    tips: [
-      'Integrated behavioral health models are the fastest-growing employer type',
-      'Experience with co-occurring disorders (mental health + substance use) is highly valued',
-      'PHPs and IOPs offer structured environments with predictable schedules',
-      'Many behavioral health companies offer equity or profit-sharing',
-      'Get comfortable with brief intervention models for primary care integration',
-    ],
-  },
+  // NP taxonomy migration (2026-07): 'behavioral-health' config removed —
+  // slug no longer in taxonomy-registry.ts.
   correctional: {
     slug: 'correctional',
     label: 'Correctional',
-    fullLabel: 'Correctional PMHNP',
+    fullLabel: 'Correctional NP',
     heroSubtitle: 'Prison, jail & forensic psychiatric NP positions',
     salaryRange: '$130K-190K',
     keywords: ['correctional pmhnp', 'prison pmhnp', 'forensic psychiatric NP', 'jail mental health NP'],
@@ -715,7 +811,7 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   'locum-tenens': {
     slug: 'locum-tenens',
     label: 'Locum Tenens',
-    fullLabel: 'Locum Tenens PMHNP',
+    fullLabel: 'Locum Tenens NP',
     heroSubtitle: 'Temporary assignment & locum tenens psychiatric NP positions',
     salaryRange: '$80-160/hr',
     keywords: ['locum tenens pmhnp', 'locum psych NP', 'temporary assignment pmhnp', 'locum psychiatric nurse practitioner'],

@@ -343,7 +343,7 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
               { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
               { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
               { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
-              { href: '/jobs/substance-abuse', label: 'Substance Abuse', sub: 'Addiction care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_substance.webp` },
+              { href: '/jobs/psychiatric-mental-health', label: 'Psychiatric (PMHNP)', sub: 'Psych & addiction care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_substance.webp` },
               { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
               { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
             ].map(c => (

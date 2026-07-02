@@ -315,7 +315,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
             {[
               { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
               { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-              { href: '/jobs/crisis', label: 'Crisis', sub: 'Emergency psych', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_crisis.webp` },
+              { href: '/jobs/emergency', label: 'Emergency', sub: 'ED & urgent care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_crisis.webp` },
               { href: '/jobs/correctional', label: 'Correctional', sub: 'Forensic settings', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_correctional.webp` },
               { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
               { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },

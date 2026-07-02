@@ -12,6 +12,10 @@ export interface FAQItem {
     answer: string;
 }
 
+// NP taxonomy migration (2026-07): FAQ entries for the removed PMHNP-only
+// categories were deleted — their slugs are no longer in taxonomy-registry.ts. Configs
+// whose faqCategory has no entry here render no FAQ block (getCategoryFaqs
+// returns [] and CategoryFAQ returns null — no empty FAQPage schema).
 export type CategorySlug =
     | 'remote'
     | 'telehealth'
@@ -20,10 +24,6 @@ export type CategorySlug =
     | 'per-diem'
     | 'inpatient'
     | 'outpatient'
-    | 'substance-abuse'
-    | 'child-adolescent'
-    | 'addiction'
-    | 'behavioral-health'
     | 'community-health'
     | 'metro';
 
@@ -42,10 +42,6 @@ export const CATEGORY_LABELS: Record<CategorySlug, string> = {
     'per-diem': 'Per Diem',
     inpatient: 'Inpatient',
     outpatient: 'Outpatient',
-    'substance-abuse': 'Substance Abuse',
-    'child-adolescent': 'Child & Adolescent',
-    addiction: 'Addiction',
-    'behavioral-health': 'Behavioral Health',
     'community-health': 'Community Health',
     metro: 'Metro',
 };
@@ -184,63 +180,6 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         {
             question: 'Can outpatient PMHNPs start their own private practice?',
             answer: 'Yes — outpatient experience is ideal preparation for private practice. In full practice authority states, PMHNPs can open independent practices. Most PMHNPs gain 2-3 years of supervised experience first, then transition to private practice earning $200K+ with full schedule control.',
-        },
-    ],
-    'substance-abuse': ({ totalJobs }) => [
-        {
-            question: 'How many substance abuse PMHNP positions are available?',
-            answer: `There are currently ${totalJobs} substance abuse and addiction PMHNP positions available. These include MAT clinics, residential rehab facilities, detox centers, and dual-diagnosis treatment programs.`,
-        },
-        {
-            question: 'Do PMHNPs need special training for addiction treatment?',
-            answer: 'While PMHNPs can prescribe buprenorphine (Suboxone) with their standard DEA registration, additional training in addiction medicine is highly recommended. ASAM certification, motivational interviewing training, and CE courses in substance use disorders enhance clinical effectiveness and marketability.',
-        },
-        {
-            question: 'What does a substance abuse PMHNP do daily?',
-            answer: 'Addiction PMHNPs manage MAT programs (buprenorphine, naltrexone), conduct substance use assessments, monitor urine drug screens, coordinate with therapists and counselors, manage psychiatric comorbidities, and develop relapse prevention plans. Many also provide group therapy facilitation.',
-        },
-        {
-            question: 'Is there loan repayment for addiction PMHNP positions?',
-            answer: 'Yes — many substance abuse positions in underserved areas qualify for National Health Service Corps (NHSC) loan repayment up to $50,000 for 2 years of service. Positions at nonprofit employers also qualify for Public Service Loan Forgiveness (PSLF) after 10 years of qualifying payments.',
-        },
-    ],
-    'child-adolescent': ({ totalJobs }) => [
-        {
-            question: 'How many child & adolescent PMHNP jobs are available?',
-            answer: `There are currently ${totalJobs} child and adolescent PMHNP positions available. These span children's hospitals, school-based health centers, pediatric clinics, residential treatment facilities, and community mental health agencies.`,
-        },
-        {
-            question: 'Do PMHNPs need special certification for pediatric psychiatry?',
-            answer: 'The standard PMHNP certification (ANCC) is across-the-lifespan and qualifies you to treat children. However, employers strongly prefer candidates with pediatric clinical experience. Some programs offer child/adolescent PMHNP concentrations, and post-graduate fellowships provide specialized training.',
-        },
-        {
-            question: 'What conditions do child & adolescent PMHNPs treat?',
-            answer: 'Common conditions include ADHD, anxiety disorders, depression, autism spectrum disorder (ASD), oppositional defiant disorder (ODD), eating disorders, trauma/PTSD, and emerging personality disorders. Prescribing requires careful attention to pediatric dosing, growth effects, and FDA guidelines.',
-        },
-        {
-            question: 'Are school-based PMHNP positions available?',
-            answer: 'Yes — school-based PMHNP positions are growing rapidly as districts address the youth mental health crisis. These roles typically follow the school calendar with summers off, offer competitive salaries, and provide a rewarding opportunity to serve children where they spend most of their day.',
-        },
-    ],
-    addiction: (props) => CATEGORY_FAQS['substance-abuse']?.(props) ?? [],
-    'behavioral-health': ({ totalJobs, avgSalary }) => [
-        {
-            question: 'How many behavioral health NP jobs are available?',
-            answer: `There are currently ${totalJobs} behavioral health nurse practitioner positions available. These span outpatient clinics, inpatient units, community mental health centers, telehealth platforms, and integrated care settings.`,
-        },
-        {
-            question: 'What is the average salary for behavioral health NPs?',
-            answer: avgSalary
-                ? `Behavioral health NP positions offer an average salary of approximately $${avgSalary.toLocaleString()} per year. Salaries vary by setting, experience, and geographic location, with private practice and specialty roles earning significantly more.`
-                : 'Behavioral health NP salaries typically range from $130,000 to $200,000+ per year. Private practice owners and specialty providers (addiction, forensic, child/adolescent) can earn $200K-$300K+.',
-        },
-        {
-            question: 'What settings do behavioral health NPs work in?',
-            answer: 'Behavioral health NPs work in diverse settings including outpatient mental health clinics, hospitals (inpatient psychiatry), community mental health centers (CMHCs), FQHCs, telehealth platforms, residential treatment facilities, correctional facilities, VA medical centers, schools, and private practice.',
-        },
-        {
-            question: 'What qualifications are needed for behavioral health NP roles?',
-            answer: 'You need a PMHNP-BC certification from ANCC, an active APRN license in your state, and a master\'s or doctoral degree in psychiatric-mental health nursing. Most positions also require DEA registration for prescribing controlled substances. Experience requirements vary from new-grad friendly to 3+ years depending on the role.',
         },
     ],
     'community-health': ({ totalJobs, avgSalary }) => [

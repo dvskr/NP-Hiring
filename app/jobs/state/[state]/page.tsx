@@ -777,8 +777,8 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                   { slug: 'full-time', label: 'Full-Time' },
                   { slug: 'part-time', label: 'Part-Time' },
                   { slug: 'contract', label: 'Contract' },
-                  { slug: 'addiction', label: 'Addiction' },
-                  { slug: 'behavioral-health', label: 'Behavioral Health' },
+                  // NP taxonomy migration (2026-07): addiction / behavioral-health
+                  // candidates removed — slugs no longer exist in the registry.
                   { slug: 'correctional', label: 'Correctional' },
                   { slug: '1099', label: '1099' },
                 ].filter((setting) => validSettingSlugs.has(setting.slug)).map((setting) => (

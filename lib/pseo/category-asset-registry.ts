@@ -16,6 +16,10 @@ export interface CategoryAssets {
   exploreCards: ExploreCard[];
 }
 
+// NP taxonomy migration (2026-07): asset entries for the five removed
+// PMHNP-only specialty slugs were deleted (see taxonomy-registry.ts). New NP
+// categories have no bespoke assets yet; the city template falls back to
+// defaults when a slug is absent here.
 export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
   'remote': {
     heroImage: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`,
@@ -133,78 +137,6 @@ export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
       { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
       { href: '/jobs/locum-tenens', label: 'Locum Tenens', sub: 'Short-term fills', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_locumtenens.webp` },
       { href: '/jobs/contract', label: 'Contract', sub: 'Fixed-term roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_contract.webp` },
-      { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-      { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
-    ],
-  },
-  'addiction': {
-    heroImage: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v2_addiction.webp`,
-    bgColor: '#aabe9c',
-    bentoSectionLabel: 'Why Choose Addiction & SUD',
-    bentoImages: [
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_addiction_recovery.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_addiction_mat.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_addiction_impact.webp`,
-    ],
-    bentoIcons: [
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_addiction_demand.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_addiction_dual.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_addiction_harm.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_addiction_heart.webp`,
-    ],
-    exploreCards: [
-      { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-      { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-      { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
-      { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
-      { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-      { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
-    ],
-  },
-  'child-adolescent': {
-    heroImage: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_childadolescent.webp`,
-    bgColor: '#e3ac73',
-    bentoSectionLabel: 'Why Choose Child & Adolescent',
-    bentoImages: [
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_child_clinic.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_child_school.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_child_salary.webp`,
-    ],
-    bentoIcons: [
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_child_teddy.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_child_school.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_child_family.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_child_play.webp`,
-    ],
-    exploreCards: [
-      { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-      { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-      { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
-      { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
-      { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-      { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
-    ],
-  },
-  'substance-abuse': {
-    heroImage: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_sa_people.webp`,
-    bgColor: '#9bb7a5',
-    bentoSectionLabel: 'Why Choose Substance Abuse',
-    bentoImages: [
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_sa_counseling.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_sa_grouptherapy.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_sa_salary.webp`,
-    ],
-    bentoIcons: [
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_sa_recovery.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_sa_medicine.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_sa_group.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_sa_impact.webp`,
-    ],
-    exploreCards: [
-      { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-      { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-      { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
-      { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
       { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
       { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
     ],
@@ -556,30 +488,6 @@ export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
       { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
     ],
   },
-  'crisis': {
-    heroImage: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_crisis.webp`,
-    bgColor: '#dbafac',
-    bentoSectionLabel: 'Why Choose Crisis',
-    bentoImages: [
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_cr_intervention.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_cr_team.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_cr_salary.webp`,
-    ],
-    bentoIcons: [
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_cr_demand.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_cr_lifesaving.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_cr_response.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_cr_team.webp`,
-    ],
-    exploreCards: [
-      { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
-      { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-      { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-      { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
-      { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-      { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
-    ],
-  },
   '1099': {
     heroImage: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_1099.webp`,
     bgColor: '#d19b99',
@@ -599,29 +507,6 @@ export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
       { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
       { href: '/jobs/locum-tenens', label: 'Locum Tenens', sub: 'Travel assignments', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_locumtenens.webp` },
       { href: '/jobs/per-diem', label: 'Per Diem', sub: 'Flexible shifts', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_perdiem.webp` },
-      { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-      { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
-    ],
-  },
-  'behavioral-health': {
-    heroImage: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_behavioralhealth.webp`,
-    bgColor: '#a8c4d4',
-    bentoSectionLabel: 'Why Choose Behavioral Health',
-    bentoImages: [
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_bh_team.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_bh_facility.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_bh_salary.webp`,
-    ],
-    bentoIcons: [
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_bh_team.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_bh_growth.webp`,
-      `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_bh_building.webp`,
-    ],
-    exploreCards: [
-      { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
-      { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
-      { href: '/jobs/community-health', label: 'Community Health', sub: 'FQHC & public', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_community.webp` },
-      { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
       { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
       { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
     ],

@@ -117,7 +117,7 @@ export interface SettingConfig {
   slug: string;
   /** Display name: "Remote", "Telehealth", etc. */
   label: string;
-  /** Longer display: "Remote PMHNP", "Telehealth PMHNP", etc. */
+  /** Longer display: "Remote NP", "Telehealth NP", etc. */
   fullLabel: string;
   /** Hero subtitle for the state page */
   heroSubtitle: string;
@@ -286,11 +286,15 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
   }),
 };
 
+// TODO(content): narrative fields (heroSubtitle/benefits/tips/keywords) in the
+// legacy configs below are still PMHNP-era psych-specific copy — pending all-NP
+// editorial rewrite (docs/pilot-fork-runbook.md §3). fullLabel fields relabeled
+// to NP for the all-NP board (2026-07).
 export const SETTING_CONFIGS: Record<string, SettingConfig> = {
   remote: {
     slug: 'remote',
     label: 'Remote',
-    fullLabel: 'Remote PMHNP',
+    fullLabel: 'Remote NP',
     heroSubtitle: 'Work from home psychiatric NP positions',
     salaryRange: '$130K-200K',
     keywords: ['remote pmhnp', 'work from home pmhnp', 'remote psychiatric nurse practitioner', 'telehealth pmhnp'],
@@ -316,7 +320,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
   telehealth: {
     slug: 'telehealth',
     label: 'Telehealth',
-    fullLabel: 'Telehealth PMHNP',
+    fullLabel: 'Telehealth NP',
     heroSubtitle: 'Virtual psychiatric care positions',
     salaryRange: '$130K-200K',
     keywords: ['telehealth pmhnp', 'telemedicine pmhnp', 'virtual psychiatry', 'telepsychiatry nurse practitioner'],
@@ -342,7 +346,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
   inpatient: {
     slug: 'inpatient',
     label: 'Inpatient',
-    fullLabel: 'Inpatient PMHNP',
+    fullLabel: 'Inpatient NP',
     heroSubtitle: 'Hospital & acute care psychiatric positions',
     salaryRange: '$140K-200K',
     keywords: ['inpatient pmhnp', 'hospital pmhnp', 'acute care pmhnp', 'inpatient psychiatric nurse practitioner'],
@@ -368,7 +372,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
   outpatient: {
     slug: 'outpatient',
     label: 'Outpatient',
-    fullLabel: 'Outpatient PMHNP',
+    fullLabel: 'Outpatient NP',
     heroSubtitle: 'Clinic & private practice positions',
     salaryRange: '$130K-190K',
     keywords: ['outpatient pmhnp', 'clinic pmhnp', 'private practice pmhnp', 'outpatient psychiatric nurse practitioner'],
@@ -394,7 +398,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
   travel: {
     slug: 'travel',
     label: 'Travel',
-    fullLabel: 'Travel PMHNP',
+    fullLabel: 'Travel NP',
     heroSubtitle: 'Locum tenens & travel assignment positions',
     salaryRange: '$80-150/hr',
     keywords: ['travel pmhnp', 'locum tenens pmhnp', 'travel psychiatric nurse practitioner', 'locum psych np'],
@@ -427,7 +431,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
   'full-time': {
     slug: 'full-time',
     label: 'Full-Time',
-    fullLabel: 'Full-Time PMHNP',
+    fullLabel: 'Full-Time NP',
     heroSubtitle: 'Permanent full-time psychiatric NP positions',
     salaryRange: '$130K-200K',
     keywords: ['full-time pmhnp', 'permanent pmhnp', 'full time psychiatric nurse practitioner', 'W-2 pmhnp'],
@@ -453,7 +457,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
   'part-time': {
     slug: 'part-time',
     label: 'Part-Time',
-    fullLabel: 'Part-Time PMHNP',
+    fullLabel: 'Part-Time NP',
     heroSubtitle: 'Flexible part-time psychiatric NP positions',
     salaryRange: '$60-100/hr',
     keywords: ['part-time pmhnp', 'part time pmhnp', 'flexible pmhnp', 'PRN pmhnp'],
@@ -479,7 +483,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
   contract: {
     slug: 'contract',
     label: 'Contract',
-    fullLabel: 'Contract PMHNP',
+    fullLabel: 'Contract NP',
     heroSubtitle: 'Contract & temp-to-perm psychiatric NP positions',
     salaryRange: '$70-130/hr',
     keywords: ['contract pmhnp', 'temp pmhnp', 'contract psychiatric nurse practitioner', 'temp to perm pmhnp'],
@@ -505,7 +509,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
   'new-grad': {
     slug: 'new-grad',
     label: 'New Grad',
-    fullLabel: 'New Grad PMHNP',
+    fullLabel: 'New Grad NP',
     heroSubtitle: 'Entry-level positions for new PMHNP graduates',
     salaryRange: '$110K-160K',
     keywords: ['new grad pmhnp', 'entry level pmhnp', 'new graduate pmhnp', 'pmhnp residency', 'pmhnp fellowship'],
@@ -531,7 +535,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
   '1099': {
     slug: '1099',
     label: '1099',
-    fullLabel: '1099 PMHNP',
+    fullLabel: '1099 NP',
     heroSubtitle: 'Independent contractor psychiatric NP positions',
     salaryRange: '$75-150+/hr',
     keywords: ['1099 pmhnp', 'independent contractor pmhnp', 'self-employed pmhnp', 'IC psychiatric nurse practitioner'],
