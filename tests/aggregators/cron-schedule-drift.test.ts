@@ -7,8 +7,10 @@
  *   - vercel.json's crons were hand-edited without updating the config,
  *   - the config (or a *_TOTAL_CHUNKS constant it derives from) changed
  *     without running `npm run crons:generate`,
- *   - an ingest source exists in the registry but has no cron, or a
- *     cron references a source the registry doesn't know.
+ *   - a registry source is neither scheduled nor declared in
+ *     DISABLED_SOURCES (this board is ATS-only; disabled non-ATS
+ *     sources must be listed explicitly in config/cron-schedule.ts),
+ *   - a cron references a source the registry doesn't know.
  *
  * Complements tests/aggregators/chunk-count.test.ts, which checks the
  * chunk-entry counts specifically.
@@ -18,7 +20,7 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { CRON_ENTRIES } from '@/config/cron-schedule';
+import { CRON_ENTRIES, DISABLED_SOURCES } from '@/config/cron-schedule';
 import type { CronEntry } from '@/config/cron-schedule';
 import { aggregators } from '@/lib/aggregators/registry';
 import { GREENHOUSE_TOTAL_CHUNKS } from '@/lib/aggregators/greenhouse';
@@ -30,7 +32,7 @@ import { WORKDAY_TOTAL_CHUNKS } from '@/lib/aggregators/workday';
  * constants; this literal tail is fixed. Bump it deliberately when
  * adding/removing a non-chunked cron.
  */
-const NON_CHUNKED_CRON_COUNT = 51;
+const NON_CHUNKED_CRON_COUNT = 40;
 
 const INGEST_PREFIX = '/api/cron/ingest?';
 
@@ -60,13 +62,30 @@ describe('cron schedule drift guard', () => {
         expect(actualCrons.length).toBe(expectedTotal);
     });
 
-    it('every registry source has at least one ingest cron entry', () => {
+    it('every registry source is either scheduled or listed in DISABLED_SOURCES', () => {
         const scheduledSources = new Set(
             actualCrons.map(sourceOf).filter((s): s is string => s !== null),
         );
+        const disabled = new Set<string>(DISABLED_SOURCES);
         for (const source of registrySources) {
-            expect(scheduledSources, `registry source "${source}" has no cron entry`)
+            expect(
+                scheduledSources.has(source) || disabled.has(source),
+                `registry source "${source}" has no cron entry and is not in DISABLED_SOURCES`,
+            ).toBe(true);
+        }
+    });
+
+    it('every DISABLED_SOURCES entry is a registry source and is NOT scheduled', () => {
+        const scheduledSources = new Set(
+            actualCrons.map(sourceOf).filter((s): s is string => s !== null),
+        );
+        for (const source of DISABLED_SOURCES) {
+            expect(registrySources, `DISABLED_SOURCES entry "${source}" is not in the registry`)
                 .toContain(source);
+            expect(
+                scheduledSources.has(source),
+                `"${source}" is in DISABLED_SOURCES but still has an ingest cron entry`,
+            ).toBe(false);
         }
     });
 

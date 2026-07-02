@@ -7,10 +7,20 @@
  * required-field checks, sanitization, and "Other" free-text escape
  * hatches; only the choice lists live here.
  *
+ * ── NP HIRING (2026-07-02) ────────────────────────────────────────────
+ * Lists ported from the hand-forked NP donor board:
+ *   - SPECIALTY_PRESETS: the donor's 19 NP/APRN talent-search presets
+ *     (its phase-8 broadening from 11 PMHNP psych populations), verbatim.
+ *   - VALID_CERT_NAMES: the donor's UI list (its CertificationsSection
+ *     swapped 'PMHNP-BC' → 'APRN-BC'; the rest is unchanged). The donor
+ *     did NOT add CRNA/CNM/specialty cert names — nothing was invented
+ *     beyond the donor's lists.
+ *   - VALID_BODIES / LICENSE_TYPES / LICENSE_STATE_OPTIONS / DEGREE_TYPES:
+ *     unchanged in the donor (they were already NP/APRN-generic).
+ *
  * ── FOR FORKS ─────────────────────────────────────────────────────────
- * A new niche defines its own credential taxonomy in this file (e.g. a
- * physical-therapy board replaces PMHNP-BC/ANCC with its own certs and
- * boards). The DEEPER credential refactor — Prisma schema fields like
+ * A new niche defines its own credential taxonomy in this file. The
+ * DEEPER credential refactor — Prisma schema fields like
  * npiNumber/deaNumber on UserProfile, consent gates and redaction,
  * resume-parser schemas, profile-completeness weights, per-niche
  * eligibility strategy — is deliberately OUT OF SCOPE here and is
@@ -29,7 +39,7 @@
  * FORK NOTE: replace with the new niche's recognized certifications.
  */
 export const VALID_CERT_NAMES = [
-    'PMHNP-BC', 'FNP-BC', 'FNP-C', 'AGPCNP-BC', 'AGACNP-BC',
+    'APRN-BC', 'FNP-BC', 'FNP-C', 'AGPCNP-BC', 'AGACNP-BC',
     'CAQ-Psych', 'BLS', 'ACLS', 'CPI/CPI-NV', 'CARN',
 ];
 
@@ -99,20 +109,37 @@ export const DEGREE_TYPES = ['DNP', 'PhD', 'MSN', 'EdD', "Post-Master's Certific
 /**
  * Clinical specialty chips — the shared tag vocabulary candidates pick
  * and employers filter by, so profiles align with how they are
- * discovered. Consumed by:
+ * discovered. The 19 NP/APRN presets below are the donor board's
+ * phase-8 broadening (was 11 PMHNP psych populations); the parenthesized
+ * credential hints mirror the canonical pSEO taxonomy in
+ * lib/pseo/taxonomy-registry.ts so an employer's saved search maps onto
+ * the category-page URL space without translation. Consumed by:
  *   - app/onboarding/professional/OnboardingProfessionalForm.tsx
  *   - app/settings/page.tsx (candidate profile specialties)
  *   - app/employer/settings/EmployerSettingsClient.tsx (talent-alert filters)
- *
- * WARNING: components/employer/CandidateSearchClient.tsx still holds a
- * byte-identical LOCAL copy of this list (that file is outside this
- * refactor's scope). Keep it in sync until it migrates to this export.
+ *   - components/employer/CandidateSearchClient.tsx (employer talent search)
  *
  * FORK NOTE: replace with the new niche's specialty vocabulary — these
  * strings are stored on profiles and matched verbatim by search filters.
  */
 export const SPECIALTY_PRESETS = [
-    'ADHD', 'Anxiety/Depression', 'PTSD', 'Addiction',
-    'Child & Adolescent', 'Geriatric', 'Eating Disorders',
-    'OCD', 'Bipolar', 'Schizophrenia', 'General Adult',
+    'Family Practice (FNP)',
+    'Adult-Gerontology (AGNP)',
+    'Pediatric (PNP)',
+    'Neonatal (NNP)',
+    "Women's Health (WHNP)",
+    'Acute Care (ACNP)',
+    'Emergency (ENP)',
+    'Psychiatric Mental Health (PMHNP)',
+    'Primary Care',
+    'Urgent Care',
+    'Hospitalist',
+    'Oncology',
+    'Cardiology',
+    'Dermatology',
+    'Orthopedic',
+    'Geriatric',
+    'Anesthesia (CRNA)',
+    'Nurse Midwifery (CNM)',
+    'Clinical Nurse Specialist (CNS)',
 ];

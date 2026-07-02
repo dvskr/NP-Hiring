@@ -35,6 +35,12 @@ const rowAnim = {
 const FEATURED_POSTS = HOMEPAGE_FEATURED_POSTS;
 
 export default function HomepageBlogSection() {
+    // No authored posts yet (fresh board) — skip the whole section rather
+    // than render an empty "From the blog" header or dead links. The
+    // section reappears automatically once HOMEPAGE_FEATURED_POSTS in
+    // config/niche/content-map.ts is populated with published posts.
+    if (FEATURED_POSTS.length === 0) return null;
+
     return (
         <section className="wf-section" style={{ background: '#fff', paddingTop: '88px', paddingBottom: '72px' }}>
 

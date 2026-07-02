@@ -1,5 +1,5 @@
 import { brand } from '@/config/brand';
-import { licenseGuideSlug } from '@/config/niche/content-map';
+import { licenseGuideSlug, LICENSE_GUIDE_SERIES_PUBLISHED } from '@/config/niche/content-map';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -587,7 +587,12 @@ export default async function StateSalaryPage({ params }: PageProps) {
                         </div>
                     </Link>
 
-                    {/* Link to licensure guide */}
+                    {/* Link to licensure guide — rendered only once the
+                        license-guide blog series is published (see
+                        LICENSE_GUIDE_SERIES_PUBLISHED in
+                        config/niche/content-map.ts); otherwise this is a
+                        dead /blog link on every salary-guide state page. */}
+                    {LICENSE_GUIDE_SERIES_PUBLISHED && (
                     <Link
                         href={`/blog/${licenseSlug}`}
                         style={{
@@ -612,6 +617,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                             </p>
                         </div>
                     </Link>
+                    )}
 
                     {/* Link to national salary guide */}
                     <Link

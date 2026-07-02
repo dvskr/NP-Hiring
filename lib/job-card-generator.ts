@@ -10,6 +10,12 @@ import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import { brand } from '@/config/brand';
 
+/**
+ * Domain watermark rendered on every generated card. Uses brand.domain
+ * verbatim so the text always matches the real site URL.
+ */
+const SITE_WATERMARK = brand.domain;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -117,7 +123,7 @@ export async function generateJobCardPng(
                                         fontWeight: 700,
                                         color: '#64ffda',
                                     },
-                                    children: 'PMHNPHiring.com',
+                                    children: SITE_WATERMARK,
                                 },
                             },
                         ],
@@ -479,7 +485,7 @@ export async function generateFBSummaryPng(
                                         fontWeight: 700,
                                         color: '#64ffda',
                                     },
-                                    children: 'PMHNPHiring.com',
+                                    children: SITE_WATERMARK,
                                 },
                             },
                         ],

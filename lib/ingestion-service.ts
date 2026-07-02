@@ -1,7 +1,9 @@
 import { randomUUID } from 'crypto';
 import { brand } from '@/config/brand';
 import { prisma } from './prisma';
-import { GREENHOUSE_TOTAL_CHUNKS } from './aggregators/greenhouse';
+// (GREENHOUSE_TOTAL_CHUNKS import removed 2026-07-02 — it was unused here;
+// chunk totals are consumed via CHUNKED_SOURCE_TOTAL_CHUNKS in
+// lib/health/chunked-presence.ts and the cron schedule in config/cron-schedule.ts.)
 import { getLastRunDiagnostics as getFantasticJobsDiag } from './aggregators/fantastic-jobs-db';
 import { normalizeJobWithReason } from './job-normalizer';
 import { checkDuplicate, buildJobIdentityKey, buildApplyUrlPathKey } from './deduplicator';

@@ -170,11 +170,14 @@ describe('validateAndNormalizeSalary', () => {
         expect(r.salaryPeriod).toBe('hourly');
     });
 
-    it('clamps impossibly high hourly rate to the 300/hr ceiling', () => {
+    it('clamps impossibly high hourly rate to the 350/hr ceiling', () => {
         // Behavior changed 2026-05-05: out-of-range values are clamped
-        // to the period's bound rather than dropped to null.
-        const r = validateAndNormalizeSalary(500, null, 'hourly', 'PMHNP', 'hour');
-        expect(r.minSalary).toBe(300); // clamped from 500 to bounds.max
+        // to the period's bound rather than dropped to null. Ceiling is
+        // the NP pack's CRNA/specialty contractor max (config/niche/
+        // salary.ts jobNormalizer.periodBounds.hourly, from the donor's
+        // contractorHourlyMax=350).
+        const r = validateAndNormalizeSalary(500, null, 'hourly', 'CRNA', 'hour');
+        expect(r.minSalary).toBe(350); // clamped from 500 to bounds.max
     });
 
     it('clamps impossibly low annual salary to the $30k floor', () => {

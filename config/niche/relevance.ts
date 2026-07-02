@@ -4,37 +4,33 @@
  * (lib/filters.ts GLOBAL_EXCLUSIONS). This file is DATA ONLY; the
  * tier/veto/rescue mechanics live in the engine and are niche-agnostic.
  *
- * ── FOR FORKS ─────────────────────────────────────────────────────────
- * This is the single most quality-critical file to retune per niche.
- * The PMHNP values below encode months of dated production-audit fixes
- * (see inline notes). A new niche needs:
- *   1. Its own positive keywords (role titles + credential strings +
- *      common misspellings seen in real postings).
- *   2. Its own negative keywords (wrong provider types, wrong
- *      specialties, non-provider roles) — START STRICT and loosen with
- *      rejected_jobs data; every REMOVED note below is a false-positive
- *      class someone had to discover in production.
- *   3. Context/rescue vocabularies sized to the niche (loose context
- *      terms, strong "definitely this specialty" terms, employer name
- *      patterns, employer allowlist).
- *   4. Its own audit cycle: run scripts/deep-relevance-audit.ts (and
- *      the rejected_jobs funnel) weekly for the first month.
- * Every list keeps its historical name — the engine imports them by
- * name, and lib/filters.ts mirrors four of them into SQL WHERE clauses,
- * so ingest-time and query-time gates can never drift apart.
+ * ── NP HIRING (board #2) ──────────────────────────────────────────────
+ * Retuned 2026-07-02 for the ALL-NP + APRN-cohort niche (FNP, AGNP,
+ * PMHNP, PNP, NNP, WHNP, ACNP, AGACNP + CRNA, CNM, CNS). Vocabulary is
+ * harvested from the donor fork's broadened classifier
+ * (PMHNP-Job-Board-Fork lib/utils/job-filter.ts, phase 4b "all-NP +
+ * APRN cohort", 2026-05-23) and adapted to this template's SUBSTRING
+ * engine (the donor used word-boundary regexes; see per-knob notes).
+ *
+ * Key semantic shift vs the PMHNP pack this replaces: the board WANTS
+ * every NP specialty, so "niche context" now means "NP/APRN credential
+ * context" (not psych context), and the off-specialty veto shrinks to
+ * roles that are not human-NP jobs at all. Wrong-role vetoes now target
+ * only non-NP provider classes (physician, PA-only, RN-only, LPN,
+ * therapists, admin/sales) — donor job-filter.ts:163-169.
  *
  * ── MECHANISM MAP (which knob feeds which engine layer) ───────────────
  *   POSITIVE_KEYWORDS            Tier 1: instant pass signal
- *   MENTAL_HEALTH_CONTEXT_TERMS  Tier 2: loose context (title-NP + context)
+ *   MENTAL_HEALTH_CONTEXT_TERMS  Tier 2: loose context (NP-title + NP-credential context)
  *   ROLE_TITLE_MARKERS/_REGEX    Tier 2: "is this an NP-role title at all"
  *   CATCH_ALL_TERM               Tier 3: last-chance substring anywhere
  *   PSYCH_EMPLOYER_PATTERNS      Tier 2.5: employer-name heuristic
- *   PSYCH_EMPLOYER_ALLOWLIST     Tier 2.5: named employers w/o psych words
- *   OFF_SPECIALTY_TITLE_MARKERS  Veto: title defines ANOTHER specialty
- *   STRONG_PSYCH_DESC_TERMS      Rescue: specialty-specific description terms
+ *   PSYCH_EMPLOYER_ALLOWLIST     Tier 2.5: named employers w/o pattern words
+ *   OFF_SPECIALTY_TITLE_MARKERS  Veto: title defines a NON-NP role
+ *   STRONG_PSYCH_DESC_TERMS      Rescue: NP-credential-specific description terms
  *   STRONG_PSYCH_CONTEXT_MIN_HITS Rescue: repeated loose-context threshold
- *   TITLE_CONTEXT_WORDS          Rescue: psych word in the title itself
- *   GENERIC_NP_TITLES            Guard: too-generic titles need title/employer psych signal
+ *   TITLE_CONTEXT_WORDS          Rescue: NP-credential word in the title itself
+ *   GENERIC_NP_TITLES            Guard: too-generic titles need title/employer NP signal
  *   NEGATIVE_KEYWORDS            Wrong-role kill list (title match)
  *   DUAL_ROLE_PATTERNS/_NEGATIVE_KEYWORDS  Exception: "NP or PA" postings
  *   APRN_TITLE_MARKERS/_NEGATIVE_OVERRIDES Exception: APRN titles vs RN negatives
@@ -42,326 +38,396 @@
  *   NON_PROVIDER_TITLE_MARKERS   Query-time mirror only (lib/filters.ts)
  */
 
+/**
+ * Tier-1 positives: specialty-specific NP titles + credential strings.
+ * Donor job-filter.ts:33-156 with substring-engine adaptations:
+ *   - Donor's bare word-boundary tokens (' np ', '(np)', ' cns ', 'app - ')
+ *     are NOT safe as raw substrings against title+description text
+ *     ('scrna', 'CNS depressants', 'whatsapp-based'), so they moved to
+ *     ROLE_TITLE_REGEX (title-only, word-boundary) — engine adaptation.
+ *   - Bare 'nurse practitioner' is deliberately NOT Tier-1: it reaches
+ *     Tier 2 via ROLE_TITLE_MARKERS + context instead, so wrong-role
+ *     negatives (veterinary, medical director, talent community) can
+ *     still veto titles that merely contain the phrase. Donor's
+ *     title-positive short-circuit accepted those; this is stricter on
+ *     purpose (substring engine keeps the template's layered guards).
+ *   - Short credential abbreviations keep the template's space-padding
+ *     convention (like the old pack's ' pa ' / ' rn ') where donor used
+ *     regex boundaries.
+ */
 export const POSITIVE_KEYWORDS = [
-    'pmhnp',
+    // Generic APRN markers (donor job-filter.ts:33-45)
+    'aprn',
+    'arnp',
+    'advanced practice registered nurse',
+    'advanced practice nurse',
+    'advanced practice provider',
+    'nurse practitioner - ', // donor:154 "Nurse Practitioner - <specialty>" pattern
+    'np - ',                 // donor:155 "NP - <specialty>" pattern
+
+    // Common NP specialty title keywords, full forms (donor:47-88)
+    'family nurse practitioner',
+    'family np',
+    'adult-gerontology nurse practitioner',
+    'adult gerontology nurse practitioner',
+    'adult-gerontology primary care nurse practitioner',
+    'adult-gerontology acute care nurse practitioner',
+    'pediatric nurse practitioner',
+    'pediatric np',
+    'pediatrics nurse practitioner',
+    'neonatal nurse practitioner',
+    "women's health nurse practitioner",
+    'womens health nurse practitioner',
+    "women's health np",
+    // Curly-apostrophe variants — aggregator titles often use U+2019
+    // (lesson carried over from the PMHNP pack's off-specialty list).
+    'women’s health nurse practitioner',
+    'women’s health np',
+    'acute care nurse practitioner',
+    'acute care np',
+    'emergency nurse practitioner',
+    'emergency np',
+    'oncology nurse practitioner',
+    'cardiology nurse practitioner',
+    'cardiovascular nurse practitioner',
+    'geriatric nurse practitioner',
+    'geriatrics nurse practitioner',
+    'hospice nurse practitioner',
+    'palliative care nurse practitioner',
+    'primary care nurse practitioner',
+    'urgent care nurse practitioner',
+    'hospitalist nurse practitioner',
+    'urology nurse practitioner',
+    'dermatology nurse practitioner',
+    'orthopedic nurse practitioner',
+    'pulmonology nurse practitioner',
+    'gastroenterology nurse practitioner',
+    'rheumatology nurse practitioner',
+    'nephrology nurse practitioner',
+    'endocrinology nurse practitioner',
+    'neurology nurse practitioner',
+    'occupational health nurse practitioner',
+    'telehealth nurse practitioner',
+    'telemedicine nurse practitioner',
+    'travel nurse practitioner',
+    'locum tenens nurse practitioner',
+
+    // PMHNP / behavioral health — the original niche, still in scope (donor:90-106)
+    'pmhnp',   // substring also covers donor's 'pmhnp-bc' / 'fpmhnp' suffix forms
+    'fpmhnp',
+    'pmnhp',   // common misspelling (donor:94)
     'psychiatric nurse practitioner',
     'psych nurse practitioner',
     'mental health nurse practitioner',
     'psychiatric mental health nurse practitioner',
     'psychiatric-mental health nurse practitioner',
     'psychiatric aprn',
-    'psychiatric prescriber',
+    'psych aprn',
     'behavioral health nurse practitioner',
     'behavioral health np',
     'psych np',
     'mental health np',
     'psychiatric np',
-    'pmhnp-bc',
-    'fpmhnp',
-    'pmnhp', // Common misspelling of PMHNP
-    'app - psychiatry',
-    'advanced practice provider - psychiatry',
-    'nurse practitioner - psychiatry',
-    'nurse practitioner - mental health',
-    'nurse practitioner - behavioral health',
-    'np - psychiatry',
-    'np - mental health',
-    'nurse practitioner psychiatry',
-    'nurse practitioner mental health',
-    'nurse practitioner behavioral health',
-    'np psychiatry',
-    'np mental health',
-    'np behavioral health',
-    // Headway/Jooble title variants (previously rejected by normalizer)
-    'licensed psychiatric np',
-    'licensed psychiatric nurse practitioner',
+
+    // NP specialty abbreviations (donor:108-133; space-padded per the
+    // template convention — the join `${title} ${description}` supplies
+    // an interior space, so mid-text tokens match; parenthesized forms
+    // are covered by ROLE_TITLE_REGEX at the title level)
+    ' fnp ',
+    ' fnp,',
+    ' fnp-',
+    'fnp-bc',
+    'fnp-c',
+    ' agnp ',
+    'agnp-c',
+    ' agpcnp ',
+    'agpcnp-bc',
+    ' agacnp ',
+    'agacnp-bc',
+    ' pnp ',
+    'pnp-bc',
+    ' acpnp ',
+    'cpnp-pc',
+    'cpnp-ac',
+    ' nnp ',
+    'nnp-bc',
+    ' whnp ',
+    'whnp-bc',
+    ' acnp ',
+    'acnp-bc',
+    ' enp ',
+    'enp-c',
+    ' onp ',
+
+    // APRN cohort — CRNA / CNM / CNS (donor:135-148). Bare ' cns ' is
+    // dropped: it collides with "CNS depressants/stimulants" vocabulary
+    // in psych JDs under substring matching; CNS titles are caught by
+    // ROLE_TITLE_REGEX + 'clinical nurse specialist'.
+    'certified registered nurse anesthetist',
+    'nurse anesthetist',
+    ' crna ',
+    'crna,',
+    'crna -',
+    'certified nurse midwife',
+    'certified nurse-midwife',
+    'nurse midwife',
+    'nurse-midwife',
+    ' cnm ',
+    'cnm,',
+    'clinical nurse specialist',
 ];
 
+/**
+ * Wrong-role kill list (title match). Donor job-filter.ts:170-261 —
+ * only NON-NP provider classes and non-provider roles remain. Every
+ * other-NP-specialty negative from the PMHNP pack (pediatric NP,
+ * women's health NP, FNP, travel NP, oncology, cardiology, urgent care,
+ * anesthesia, acute care, hospitalist, ICU, primary care, clinical
+ * nurse specialist, midwife, …) is REMOVED because those ARE NP/APRN
+ * roles — donor:163-169.
+ */
 export const NEGATIVE_KEYWORDS = [
-    // Wrong provider type
+    // Wrong provider class (donor:171-181)
     'physician',
     'medical doctor',
     ' m.d.',
     ' d.o.',
-    'social worker',
-    'therapist',
-    'counselor',
     'psychiatrist',
+    'psychologist',
+    'physician assistant',
+    'pa-c',
+    ' pa ',
+    'medical pa',
+
+    // Non-advanced nursing — lower tier than NP (donor:183-195)
+    'registered nurse',
+    ' rn ',
+    ' rn,',
+    ' rn-',
+    '-rn ',
     'practical nurse',
     ' lpn',
     ' lvn',
     ' cna',
-    'medical assistant',
-    'verify insurance',
-    'receptionist',
-    'scheduler',
-    'driver',
-    'dietitian',
-    'nutritionist',
+    'nursing assistant',
+    'patient care technician',
+    ' pct',
+
+    // Allied / non-nursing clinicians (donor:197-219)
+    'social worker',
+    'lcsw',
+    'licsw',
+    'lmsw',
+    'therapist',
+    'counselor',
+    'lmft',
+    ' lpc',
+    'lcpc',
+    'lgpc',
     'occupational therapist',
     'physical therapist',
     'speech therapist',
-    'primary care',
-    // NOTE: 'fnp' and 'family nurse practitioner' REMOVED — many dual-certified PMHNP/FNP postings exist
-    'home based',
-    'community care clinic',
-    'emergency medicine',
-    'acute care',
-    'cardiology',
-    'dermatology',
-    'surgical',
-    'orthopedic',
-    'urology',
-    'occupational health',
-    // Non-provider roles
-    'registered nurse',
-    ' rn ',
-    ' rn-',
-    '-rn ',
-    'lecturer',
-    'instructor',
-    'technician',
-    // NOTE: 'coordinator' narrowed — 'scheduling coordinator', 'intake coordinator' etc still blocked
+    'speech-language pathologist',
+    'dietitian',
+    'nutritionist',
+    'medical assistant',
+    'chiropractor',
+    'pharmacist',
+    'pharmacy technician',
+    'radiologic technologist',
+    'rad tech',
+
+    // Admin / support roles (donor:221-249)
+    'receptionist',
+    'scheduler',
     'scheduling coordinator',
     'intake coordinator',
     'referral coordinator',
     'case manager',
-    'program director',
-    // NOTE: 'manager' narrowed — clinical roles like 'Clinical Manager - PMHNP' now allowed
     'office manager',
     'facility manager',
     'practice manager',
-    // NOTE: 'associate' REMOVED — blocks legitimate roles like 'Associate Clinical Director - PMHNP'
-    // NOTE: 'assistant' REMOVED — blocks dual-role 'Physician Assistant / PMHNP' postings
-    'lcsw',
-    'lmft',
-    'licsw',
-    'lpc',
-    'phd',
-    'psy d',
-    'psychologist',
+    'program director',
     'medical director',
-    // NOTE: 'director of' narrowed — 'Director of Psychiatric Services' (with NP req) now allowed
     'director of nursing',
     'director of operations',
     'director of finance',
-    // NOTE: 'graduate' REMOVED — blocks 'New Graduate PMHNP' positions
-    // NOTE: 'child adolescent' REMOVED — blocks 'Child & Adolescent PMHNP' subspecialty
-    // NOTE: 'outpatient position' REMOVED — blocks 'Outpatient PMHNP Position'
-    // Gap closing: titles leaking from adzuna, jooble, lever, etc.
-    'chiropractor',
-    'hospitalist',
-    'physician assistant',
-    'pa-c',
-    ' pa ',
-    'locum tenens psychiatrist',
-    'clinical nurse specialist',
-    'medical front office',
-    'talent community',
-    ' icu ',
-    'anesthesia',
-    'pain management',
-    'advanced practice clinician',
-    // NOTE: 'family medicine' REMOVED — some PMHNP roles coexist with family medicine depts
-    'nocturnist',
-    'pediatric icu',
-    'collaborating psychiatrist',
-    // Gap closing round 3: from Feb 2026 audit of leaked jobs
-    'neurologist',
     'interim cfo',
-    'cfo',
-    'building automation',
-    'project sales',
+    ' cfo ',
+    ' ceo ',
     'recruiter',
-    'recruitment',
-    'patient acquisition',
-    'talent acquisition',
-    'director of growth',
-    'patient access',
-    'psychometrist',
-    'mental health coordinator',
-    'epileptologist',
-    'business development',
     'bookings specialist',
     'medical science liaison',
-    'lmsw',
-    'lcpc',
-    'lgpc',
+    'lecturer',
+    'instructor',
+    'technician',
+    'verify insurance',
+    'driver',
+    'building automation',
+    'project sales',
     'prospect application',
-    'pediatric nurse practitioner',
-    'pediatric np',
-    'pediatrics nurse practitioner',
-    'women\'s health nurse practitioner',
-    'women\'s health np',
-    'certified nurse midwife',
-    'nurse midwife',
-    'midwife',
-    'substance abuse nurse practitioner',
-    'addiction medicine nurse practitioner',
-    'travel nurse practitioner',
-    'outpatient rn',
-    'inpatient rn',
-    'skilled nursing',
-    'walk-in clinic',
-    'urgent care',
-    'oncology',
-    'endocrinology',
-    'gastroenterology',
-    'nephrology',
-    'pulmonology',
-    'rheumatology',
-    'hematology',
-    'neurology',
-    'bariatric',
-    'neonatal',
-    'labor and delivery',
-    ' pace ',
-    'wound care',
-    'palliative',
-    // NOTE: 'hospice' REMOVED — psychiatric hospice roles exist
-    'nursing home',
-    'long term care',
-    'long-term care',
-    'home health',
-    'infusion',
-    'dialysis',
-    'transplant',
-    // NOTE: 'float' REMOVED — 'Float PMHNP' is a common staffing model
-    'medical np',
-    'medical pa',
-    'centralized nurse practioner', // Typo in Firsthand posting
+
+    // Title artifacts that aren't a real job (donor:251-252)
+    'talent community',
+
+    // Other healthcare-adjacent roles that aren't NP (donor:254-257)
+    'neurologist',
+    'collaborating psychiatrist',
+    'nocturnist',
+
+    // Non-human "nurse practitioner" roles. NOT in the donor list —
+    // added because this engine's Tier 2 accepts any 'nurse
+    // practitioner' title, so vet-clinic postings ("Veterinary Nurse
+    // Practitioner", a UK-style vet-nurse role) need an explicit veto.
+    'veterinary',
+    'veterinarian',
+
+    // Common typo (donor:260)
+    'centralized nurse practioner',
 ];
 
-/** Titles that are so generic they need STRONG psychiatric context in both title and description */
+/**
+ * Titles too generic to confirm an NP/APRN role — need an NP-credential
+ * word in the title itself (TITLE_CONTEXT_WORDS) or an NP-ish employer.
+ * The PMHNP pack listed bare 'nurse practitioner' here; that entry is
+ * REMOVED because generic NP titles now pass on their own (donor
+ * job-filter.ts:8-9,21). What remains are APP/APN forms the donor also
+ * did NOT accept bare (donor Tier-1 required 'app - ' with a specialty
+ * suffix, donor:150-152): "APP" alone could be a PA-only posting.
+ */
 export const GENERIC_NP_TITLES = [
-    'nurse practitioner',
-    'advanced practice provider',
-    'advanced practice nurse',
-    'advanced practice professional',
     'app',
     'apn',
     'inpatient app',
     'outpatient app',
-    'prn nurse practitioner',
-    'part time nurse practitioner',
-    'part-time nurse practitioner',
-    'weekend nurse practitioner',
-    'clinical nurse practitioner',
-    'pnp',
-    'lpnp',
+    'advanced practice professional',
+    'advanced practice clinician', // was a PMHNP-pack NEGATIVE; APCs are NP-or-PA, so guard instead of veto
 ];
 
 /**
- * Mental-health context terms — checked in title and description for
- * Tier 2 (NP-in-title + psych-context) and the generic-title guard.
+ * Loose NP-credential context — checked in title and description for
+ * Tier 2 (NP-title + credential-context) and the generic-title guard.
  *
- * Extended 2026-05-05 to cover substance-abuse / addiction / MAT
- * vocabulary — these were missed before, causing roles at recovery
- * centers and substance-abuse clinics to be rejected.
+ * Semantic shift: the PMHNP pack put psych vocabulary here; for the
+ * all-NP board the "context" that confirms relevance is NP/APRN
+ * credential vocabulary (donor POSITIVE_KEYWORDS, job-filter.ts:33-156).
+ * Because the engine checks context against title+description combined,
+ * any title containing an NP role marker self-satisfies Tier 2 — which
+ * reproduces the donor's "generic Nurse Practitioner passes on its own"
+ * behavior (donor:8-9) without engine changes.
  */
 export const MENTAL_HEALTH_CONTEXT_TERMS = [
-    'mental health',
-    'psychiatric',
-    'behavioral health',
-    'psychiatry',
-    'addiction',
-    'substance use',
-    'substance abuse',
-    'mat program',
-    'medication-assisted treatment',
-    'medication assisted treatment',
-    'recovery center',
-    'dual diagnosis',
-    'suboxone',
-    'buprenorphine',
+    'nurse practitioner',
+    'aprn',
+    'arnp',
+    'advanced practice',
+    'np-c',
+    'np-bc',
+    'fnp',
+    'agnp',
+    'agacnp',
+    'pmhnp',
+    'whnp',
+    'nnp-bc',
+    'crna',
+    'nurse anesthetist',
+    'nurse midwife',
+    'nurse-midwife',
+    'certified nurse midwife',
+    'clinical nurse specialist',
+    'dnp',
+    // Dual-role tokens so bare "NP/PA"-style titles satisfy Tier 2
+    // (donor accepted these via its \bnp\b positive, donor:37-40)
+    'np/pa',
+    'np or pa',
+    'pa/np',
+    'pa or np',
+    'np - ',
 ];
 
 /**
- * Specialties that, when they DEFINE the role in the TITLE, mean the posting is
- * NOT psychiatric — unless a STRONG psych signal rescues it (psych in the title,
- * a positive PMHNP keyword, a psych employer, or psych-specific description
- * terms). This closes the biggest leak: primary-care / hospice NP JDs (One
- * Medical, Ennoble Care) that merely list "behavioral health" once among many
- * services tripped the loose Tier-2 mental-health-context check and passed.
+ * Veto: title defines a role that is NOT a human-NP job at all. For the
+ * all-NP board this list shrinks drastically — FNP / women's-health /
+ * pediatric / oncology / geriatric NP titles from the PMHNP pack are
+ * all IN scope now (donor job-filter.ts:10-13,163-169). What remains is
+ * the veterinary "nurse practitioner" title class (also vetoed by
+ * NEGATIVE_KEYWORDS, which is the harder stop because TITLE_CONTEXT_WORDS
+ * legitimately rescues 'nurse practitioner' titles from this veto).
+ * This list also feeds the query-time off-specialty exclusion in
+ * lib/filters.ts, hiding already-ingested vet rows.
  */
 export const OFF_SPECIALTY_TITLE_MARKERS = [
-    'family nurse practitioner', 'family np', 'fnp',
-    'primary care', 'internal medicine', 'family medicine', 'family practice',
-    'hospice', 'palliative',
-    "women's health", 'whnp', 'nurse midwife', 'midwife', 'ob/gyn', 'obgyn',
-    'urgent care', 'walk-in clinic',
-    'dermatology', 'aesthetic', 'med spa', 'medspa',
-    'wound care', 'occupational health',
-    'dialysis', 'nephrology', 'oncology', 'hematology', 'cardiology',
-    'gastroenterology', 'endocrinology', 'pulmonology', 'rheumatology',
-    'orthopedic', 'urology', 'neonatal', 'labor and delivery',
-    'pediatric nurse practitioner', 'pediatric np', 'pediatrics nurse practitioner',
-    'geriatric', 'geriatrics', 'gerontology',
-    // Curly-apostrophe variant — aggregator titles often use U+2019, which the
-    // straight-quote "women's health" above misses.
-    'women’s health',
+    'veterinary',
+    'veterinarian',
 ];
 
 /**
- * Non-provider / non-NP roles that are not PMHNP postings even when the JD
- * mentions psychiatry (e.g. a recruiter sourcing PMHNPs, a psychometrist doing
- * testing). Excluded unless the title actually carries an NP/PA credential.
+ * Non-provider / non-NP roles that are not NP postings even when the JD
+ * mentions nurse practitioners (e.g. a recruiter sourcing NPs).
+ * Excluded at query time unless the title carries an NP/PA credential.
+ * PMHNP-pack list retained (psychometrist / mental-health coordinator /
+ * epileptologist still leak from the board's psych segment) plus the
+ * donor's admin/sales cluster (donor job-filter.ts:221-249).
  */
 export const NON_PROVIDER_TITLE_MARKERS = [
     'epileptologist', 'recruitment', 'recruiter', 'patient acquisition',
     'talent acquisition', 'director of growth', 'psychometrist',
     'mental health coordinator', 'patient access', 'sales representative',
-    'account executive', 'business development',
+    'account executive', 'business development', 'medical science liaison',
+    'bookings specialist',
 ];
 
 /**
- * Psych terms specific enough that their presence means the role really is
- * psychiatric — vs a primary-care JD that lists "behavioral health" once. These
- * RESCUE off-specialty / generic titles where the loose MENTAL_HEALTH_CONTEXT_TERMS
- * (which includes a bare "behavioral health"/"mental health" mention) must not.
+ * Description terms specific enough that their presence means the role
+ * really recruits an NP/APRN — used to RESCUE off-specialty / generic
+ * dual-role titles. For the all-NP board these are explicit credential
+ * strings (donor job-filter.ts:33-156): a JD that spells out
+ * "nurse practitioner", "APRN", "FNP-C", "CRNA" etc. is recruiting one.
  */
 export const STRONG_PSYCH_DESC_TERMS = [
-    'psychiatric', 'psychiatry', 'pmhnp', 'telepsychiatry', 'telepsych',
-    'psychotropic', 'psychotherapy', 'mental illness', 'bipolar', 'schizophren',
-    // Addiction / SUD is in-scope for this board, and these terms are specific
-    // enough that primary care won't carry them — so they rescue an off-specialty
-    // or generic title (e.g. "Family NP — Telehealth SUD", "NP/PA (OTP)").
-    'substance use disorder', 'opioid use disorder', 'alcohol use disorder',
-    'suboxone', 'buprenorphine', 'methadone', 'opioid treatment',
-    'medication-assisted treatment', 'medication assisted treatment',
-    'addiction medicine', ' otp ',
+    'nurse practitioner', 'aprn', 'arnp', 'advanced practice registered nurse',
+    'pmhnp', 'fnp-c', 'fnp-bc', 'np-c', 'agacnp', 'whnp',
+    'crna', 'nurse anesthetist', 'certified nurse midwife', 'nurse midwife',
+    'clinical nurse specialist', 'dnp',
 ];
 
 /**
- * Repeated-loose-context threshold for hasStrongPsychContext: a real psych
- * JD mentions mental-health vocabulary throughout; a primary-care JD lists
- * "behavioral health" once among many services.
+ * Repeated-loose-context threshold for hasStrongPsychContext. Context
+ * terms are now credential strings, so TWO independent NP-vocabulary
+ * hits in a posting is a strong recruit signal (a JD that merely
+ * mentions "collaborates with the NP team" once stays below it).
+ * Lowered from the PMHNP pack's 3 (its loose psych vocabulary needed a
+ * higher bar); rationale: donor treated a single credential mention as
+ * sufficient (donor Tier-1 on description, job-filter.ts:442-447).
  */
-export const STRONG_PSYCH_CONTEXT_MIN_HITS = 3;
+export const STRONG_PSYCH_CONTEXT_MIN_HITS = 2;
 
 /**
- * Employer name patterns that strongly suggest a psych-focused org.
- * Used as an additional Tier 2.5 signal — a generic NP title at
- * "Senior PsychCare" or "Kanza Mental Health" should pass even
- * though title alone lacks psych context.
+ * Employer name patterns that suggest a clinical / NP-employing org.
+ * The donor had NO employer heuristics (donor classifyRelevance ignores
+ * its employer param, job-filter.ts:391), so this is a conservative
+ * minimal set: it only fires Tier 2.5 when the TITLE already carries an
+ * NP role marker, and it rescues generic APP/APN titles at obviously
+ * clinical employers.
  */
 export const PSYCH_EMPLOYER_PATTERNS = [
-    'psych',          // PsychCare, Psychiatric, Psychotherapy, etc.
-    'mental health',
-    'behavioral health',
-    'behavioral',     // Behavioral Center / Behavioral Wellness
-    'recovery',       // Recovery centers, addiction
-    'addiction',
-    'substance',
-    'counseling',     // Counseling & Wellness centers
+    'health',
+    'medical',
+    'clinic',
+    'hospital',
+    'healthcare',
+    'medicine',
+    'wellness',
+    'nursing',
+    'physicians',
 ];
 
 /**
- * Well-known psychiatric / mental-health employers whose NAMES carry no psych
- * keyword, so PSYCH_EMPLOYER_PATTERNS misses them. They post real PMHNP roles
- * (often generic "Prescribing NP or PA" contractor titles), so without this
- * allowlist the generic-title / off-specialty guards wrongly reject them.
- * Keep names specific enough not to collide with unrelated companies.
+ * Named NP-employing orgs whose NAMES carry no clinical keyword, so
+ * PSYCH_EMPLOYER_PATTERNS misses them. Donor had no allowlist; the
+ * PMHNP pack's telehealth/psych orgs are retained — they are real NP
+ * employers (PMHNPs are NPs) posting generic "Prescribing NP or PA"
+ * contractor titles.
  */
 export const PSYCH_EMPLOYER_ALLOWLIST = [
     'lyra health',
@@ -378,6 +444,7 @@ export const PSYCH_EMPLOYER_ALLOWLIST = [
  * When a title is dual-role, the negative-keyword check skips
  * `physician`, `physician assistant`, `pa-c`, ` pa ` — those words are
  * structurally part of the dual-role offer, not a wrong-role signal.
+ * Identical in donor (job-filter.ts:269-292) and the PMHNP pack.
  */
 export const DUAL_ROLE_PATTERNS = [
     'nurse practitioner or physician assistant',
@@ -404,7 +471,7 @@ export const DUAL_ROLE_PATTERNS = [
     'physician assistant / np',
 ];
 
-/** Negative keywords skipped for dual-role titles (see DUAL_ROLE_PATTERNS). */
+/** Negative keywords skipped for dual-role titles (donor job-filter.ts:294-300). */
 export const DUAL_ROLE_NEGATIVE_KEYWORDS = [
     'physician',
     'physician assistant',
@@ -417,9 +484,11 @@ export const DUAL_ROLE_NEGATIVE_KEYWORDS = [
  * Title markers identifying an advanced-practice-nurse role. APRNs ARE
  * registered nurses with advanced training, so bare RN negatives must not
  * catch these titles (see APRN_NEGATIVE_OVERRIDES).
+ * 'advanced practice nurse' added per donor isAprnTitle (job-filter.ts:315-322).
  */
 export const APRN_TITLE_MARKERS = [
     'advanced practice registered nurse',
+    'advanced practice nurse',
     'aprn',
     'arnp',
 ];
@@ -427,34 +496,79 @@ export const APRN_TITLE_MARKERS = [
 /**
  * Negative keywords that should be skipped when the title clearly
  * announces an advanced-practice nurse role.
+ * ' rn,' added per donor (job-filter.ts:307-313).
  */
 export const APRN_NEGATIVE_OVERRIDES = [
     'registered nurse',
     ' rn ',
+    ' rn,',
     ' rn-',
     '-rn ',
 ];
 
 /**
  * Tier-2 "is this a role title at all" markers: substring markers plus a
- * word-boundary regex so titles starting with NP / NP- match too.
+ * word-boundary regex covering the donor's short abbreviation tokens
+ * (donor job-filter.ts:37-40,108-155 used space-padded/regex forms; a
+ * title-only word-boundary regex is the substring-engine-safe home for
+ * them — 'cns'/'app'/'cnm' are unsafe as description substrings).
  */
-export const ROLE_TITLE_MARKERS = ['nurse practitioner', 'aprn', 'arnp'];
-export const ROLE_TITLE_REGEX = /\bnp\b/;
-
-/** Tier-3 catch-all: a mention ANYWHERE (title or description) passes Tier 1. */
-export const CATCH_ALL_TERM = 'pmhnp';
+export const ROLE_TITLE_MARKERS = [
+    'nurse practitioner',
+    'aprn',
+    'arnp',
+    'nurse anesthetist',
+    'nurse midwife',
+    'nurse-midwife',
+    'clinical nurse specialist',
+    'advanced practice provider',
+    'advanced practice nurse',
+];
+export const ROLE_TITLE_REGEX =
+    /\b(?:np|fnp|agnp|agpcnp|agacnp|pnp|acpnp|cpnp|nnp|whnp|acnp|enp|onp|pmhnp|crna|cnm|cns|apn|app)\b/;
 
 /**
- * Words that count as "the title itself carries a psych signal" — used by
- * the off-specialty veto rescue and the generic-title guard.
+ * Tier-3 catch-all: a mention ANYWHERE (title or description) passes
+ * Tier 1. 'nurse practitioner' spelled out is the donor's #1 positive
+ * (job-filter.ts:35) and is safe as a substring; wrong-role titles that
+ * merely mention it in the description are still killed by
+ * NEGATIVE_KEYWORDS (same net behavior as donor steps 1+3).
  */
-export const TITLE_CONTEXT_WORDS = ['psych', 'mental health', 'behavioral health', 'pmhnp', 'telepsych'];
+export const CATCH_ALL_TERM = 'nurse practitioner';
+
+/**
+ * Words that count as "the title itself carries an NP signal" — used by
+ * the off-specialty veto rescue, the generic-title guard, and the
+ * dual-role guard. NP-credential vocabulary (donor job-filter.ts:33-156);
+ * short tokens here are title-only, where 'fnp'/'crna'/'cnm' substrings
+ * are unambiguous.
+ */
+export const TITLE_CONTEXT_WORDS = [
+    'nurse practitioner',
+    'aprn',
+    'arnp',
+    'pmhnp',
+    'fnp',
+    'crna',
+    'cnm',
+    'nurse anesthetist',
+    'nurse midwife',
+    'nurse-midwife',
+    'clinical nurse specialist',
+    'np-c',
+    'np/pa',
+    'np or pa',
+    'pa/np',
+    'pa or np',
+    'np - ',
+];
 
 /**
  * Negative keywords that are ALLOWED when specific indicator terms co-occur
- * anywhere in the posting. PMHNP case: 'psychiatrist' is fine in
- * collaborative-care / dual-role psychiatrist+PMHNP postings.
+ * anywhere in the posting. Retained from the PMHNP pack (donor dropped the
+ * mechanism, relying on its title-positive short-circuit): 'psychiatrist'
+ * is fine in collaborative-care / dual-role psychiatrist+NP postings,
+ * which the board's psych segment still ingests.
  */
 export const WRONG_ROLE_CO_OCCURRENCE_EXCEPTIONS: Record<string, readonly string[]> = {
     psychiatrist: [
@@ -469,20 +583,19 @@ export const WRONG_ROLE_CO_OCCURRENCE_EXCEPTIONS: Record<string, readonly string
 
 // ─── Query-time mirror vocabularies (lib/filters.ts GLOBAL_EXCLUSIONS) ──────
 // The query-time gate protects rows ALREADY in the database (ingested before
-// a filter fix) without a data migration. Its vocabularies are deliberately
-// slightly different from the ingest engine's — title signals include the
-// addiction/SUD rescue terms, and description text is intentionally NOT
+// a filter fix) without a data migration. For the all-NP board these become
+// NP-credential vocabularies; description text is intentionally NOT
 // consulted at query time.
 
 /**
- * Psychiatric signal in the TITLE that rescues an off-specialty title from
- * the query-time off-specialty exclusion (e.g. "Psychiatric Family NP",
- * "Family NP - Substance Use Disorder"). Addiction/SUD is in-scope,
- * mirroring the ingest gate's addiction rescue.
+ * NP-credential signal in the TITLE that rescues a title from the
+ * query-time off-specialty (veterinary) and dual-role exclusions.
+ * Historical export name retained — lib/filters.ts imports it by name.
  */
 export const PSYCH_TITLE_SIGNALS = [
-    'psych', 'mental health', 'behavioral health', 'pmhnp', 'telepsych',
-    'substance use', 'addiction', 'suboxone', 'opioid treatment', 'otp',
+    'nurse practitioner', 'pmhnp', 'aprn', 'arnp', 'fnp', 'crna', 'cnm',
+    'nurse anesthetist', 'nurse midwife', 'clinical nurse specialist',
+    ' np', 'np-c', 'np/pa', 'np or pa',
 ];
 
 /**
@@ -490,14 +603,21 @@ export const PSYCH_TITLE_SIGNALS = [
  * non-provider exclusion (a recruiter/psychometrist title carries none).
  */
 export const NP_CREDENTIAL_SIGNALS = [
-    'nurse practitioner', 'pmhnp', 'aprn', 'arnp', ' np', 'physician assistant', 'pa-c',
+    'nurse practitioner', 'pmhnp', 'aprn', 'arnp', ' np', 'np-c', 'fnp',
+    'crna', 'cnm', 'nurse anesthetist', 'nurse midwife',
+    'clinical nurse specialist', 'physician assistant', 'pa-c',
 ];
 
 /**
- * Confirmed non-psychiatric aggregator employers (senior / primary care, SNF,
- * general federal staffing) that emit generic "Nurse Practitioner" titles with
- * no psych signal. Hidden at query time UNLESS the posting itself carries a
- * psych title. Stopgap for confirmed offenders — the durable controls are the
- * ingest gate + the periodic audit (scripts/audit/audit-non-pmhnp.ts).
+ * Confirmed non-NP employers emitting "nurse"-adjacent titles that are
+ * not human-NP roles (veterinary chains). The PMHNP pack's entries
+ * (ChenMed etc.) are REMOVED — senior/primary-care orgs ARE in-scope NP
+ * employers on this board. Donor had no employer blocklist; this is a
+ * conservative seed, to be grown from rejected_jobs/audit data.
  */
-export const NON_PSYCH_EMPLOYER_BLOCKLIST = ['chenmed', 'akido labs', 'truhealth', 'akicita'];
+export const NON_PSYCH_EMPLOYER_BLOCKLIST = [
+    'banfield pet hospital',
+    'vca animal hospital',
+    'bluepearl',
+    'thrive pet healthcare',
+];

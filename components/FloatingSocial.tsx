@@ -8,6 +8,7 @@ import {
     LinkedinLogo,
     YoutubeLogo,
 } from '@phosphor-icons/react';
+import { brand } from '@/config/brand';
 
 const PEBBLE_SHAPES = [
     '54% 46% 62% 38% / 49% 55% 45% 51%',
@@ -20,11 +21,11 @@ const PEBBLE_SHAPES = [
 const PEBBLE_COLORS = ['#6ee7b7', '#5eead4', '#67e8f9', '#a5b4fc', '#c4b5fd'];
 
 const socialLinks = [
-    { icon: XLogo, href: 'https://x.com/pmhnphiring', label: 'X' },
-    { icon: FacebookLogo, href: 'https://www.facebook.com/pmhnphiring', label: 'Facebook' },
-    { icon: InstagramLogo, href: 'https://www.instagram.com/pmhnphiring', label: 'Instagram' },
-    { icon: LinkedinLogo, href: 'https://www.linkedin.com/company/pmhnpjobs', label: 'LinkedIn' },
-    { icon: YoutubeLogo, href: 'https://www.youtube.com/@pmhnphiring', label: 'YouTube' },
+    { icon: XLogo, href: brand.social.x, label: 'X' },
+    { icon: FacebookLogo, href: brand.social.facebook, label: 'Facebook' },
+    { icon: InstagramLogo, href: brand.social.instagram, label: 'Instagram' },
+    { icon: LinkedinLogo, href: brand.social.linkedin, label: 'LinkedIn' },
+    { icon: YoutubeLogo, href: brand.social.youtube, label: 'YouTube' },
 ];
 
 export default function FloatingSocial() {

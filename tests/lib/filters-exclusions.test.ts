@@ -1,13 +1,16 @@
 /**
- * GLOBAL_EXCLUSIONS — non-PMHNP leak fixes (2026-06 audit).
+ * GLOBAL_EXCLUSIONS — query-time mirror of the NP Hiring relevance pack.
  *
  * The live /jobs query applies GLOBAL_EXCLUSIONS via buildWhereClause. These
- * assert the serialized WHERE shape so the fixes can't silently regress:
+ * assert the serialized WHERE shape so the pack's query-time gates can't
+ * silently regress:
  *   • the "Inpatient Psychiatrist" bug (bare `contains: 'NP'` matched the "np"
  *     in "Inpatient", defeating the physician exclusion),
- *   • the off-specialty NP exclusion (Family NP / hospice / oncology / …),
- *   • the bare dual-role "NP or PA" exclusion,
- *   • the psych-signal rescue (title/employer, incl. the known-psych allowlist).
+ *   • the off-specialty exclusion, now shrunk to non-human-NP (veterinary)
+ *     titles — FNP / hospice / oncology NPs are IN scope on the all-NP board,
+ *   • the dual-role clause with its NP-signal rescue,
+ *   • the non-provider exclusion guarded by NP/PA credential signals,
+ *   • the non-NP employer denylist (veterinary chains).
  */
 import { describe, it, expect } from 'vitest';
 import { buildWhereClause } from '@/lib/filters';
@@ -21,20 +24,23 @@ describe('GLOBAL_EXCLUSIONS', () => {
     expect(json).toContain('"contains":" NP"');
   });
 
-  it('excludes off-specialty NP titles (family NP, hospice, oncology, …)', () => {
-    expect(json).toContain('family nurse practitioner');
-    expect(json).toContain('hospice');
-    expect(json).toContain('oncology');
+  it('does NOT exclude in-scope NP specialties (family / hospice / oncology NPs)', () => {
+    // The PMHNP pack's off-specialty markers are gone from the exclusion OR.
+    expect(json).not.toContain('family nurse practitioner');
+    expect(json).not.toContain('"contains":"hospice"');
+    expect(json).not.toContain('"contains":"oncology"');
   });
 
-  it('excludes bare dual-role NP-or-PA titles', () => {
+  it('excludes veterinary "nurse practitioner" titles (the shrunken off-specialty veto)', () => {
+    expect(json).toContain('veterinary');
+    expect(json).toContain('veterinarian');
+  });
+
+  it('still carries the dual-role clause with its NP-signal rescue', () => {
     expect(json).toContain('nurse practitioner or physician assistant');
-  });
-
-  it('carries the psych-signal rescue (title keyword + employer allowlist)', () => {
-    // The off-specialty / dual-role clauses are guarded by NOT(psych in title
-    // OR employer), so the rescue tokens must be serialized into the WHERE.
+    // Rescue tokens: NP credentials in title, clinical employer patterns.
     expect(json).toContain('pmhnp');
+    expect(json).toContain('crna');
     expect(json).toContain('lyra health');
   });
 
@@ -44,12 +50,15 @@ describe('GLOBAL_EXCLUSIONS', () => {
     expect(json).toContain('recruitment');
   });
 
-  it('excludes generic NP titles from confirmed non-psych employers (denylist)', () => {
-    expect(json).toContain('chenmed');
+  it('non-provider exclusion is guarded by NP/PA credential signals', () => {
+    expect(json).toContain('"contains":"aprn"');
+    expect(json).toContain('"contains":"pa-c"');
   });
 
-  it('covers geriatric + the curly-apostrophe women’s-health title variant', () => {
-    expect(json).toContain('geriatric');
-    expect(json).toContain('women’s health');
+  it('excludes generic titles from confirmed non-NP (veterinary) employers', () => {
+    expect(json).toContain('banfield pet hospital');
+    // The PMHNP-era denylist entries are gone — senior/primary-care orgs are
+    // legitimate NP employers on this board.
+    expect(json).not.toContain('chenmed');
   });
 });

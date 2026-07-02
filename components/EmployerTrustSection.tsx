@@ -68,5 +68,10 @@ export default async function EmployerTrustSection() {
         }
     }
 
+    // Fresh board: FALLBACK_EMPLOYERS is empty by policy (no fabricated
+    // chips), so with zero real DB employers there is nothing to show —
+    // skip the strip entirely instead of rendering an empty marquee band.
+    if (employers.length === 0) return null;
+
     return <ClayDoughStrip employers={employers} />;
 }

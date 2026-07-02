@@ -7,9 +7,9 @@ Location: United States
 
 /* SITE */
 
-Site: PMHNP Hiring
-URL: https://pmhnphiring.com
-Description: The #1 job board for Psychiatric Mental Health Nurse Practitioners
+Site: NP Hiring
+URL: https://nphiring.com
+Description: A specialized job board for Nurse Practitioners across every specialty
 Standards: HTML5, CSS3, JavaScript ES2024
 Components: Next.js 15, React 19, TypeScript, Prisma, PostgreSQL
 Platform: Vercel
@@ -18,9 +18,8 @@ Launch: 2026
 
 /* PURPOSE */
 
-Mission: Connect every PMHNP with their ideal position through the most comprehensive, transparent, and data-rich job discovery platform in psychiatric nursing.
+Mission: Help every Nurse Practitioner find the right role through a transparent, data-rich job board built for NPs — from FNP and AGNP to PMHNP, NNP, WHNP, and the wider APRN cohort (CRNA, CNM, CNS).
 
 Coverage: All 50 US states + DC
-Cities: 4,135+ with enriched local data
-Categories: 24 job categories
-Pages: 100,000+ indexed content pages
+Categories: 42 category pages
+Sources: 8 ATS sources at launch, growing

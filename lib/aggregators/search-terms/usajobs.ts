@@ -1,6 +1,12 @@
 /**
  * USAJobs search terms.
  *
+ * ⛔ SOURCE DISABLED ON THIS BOARD — NP Hiring runs ATS-only ingestion
+ * (see DISABLED_SOURCES in config/cron-schedule.ts). No cron schedules
+ * usajobs; the adapter and this file remain in the engine for other
+ * boards. The terms below are the inherited PMHNP set and are inert
+ * here — refresh them for the niche if a board re-enables the source.
+ *
  * Each entry becomes one paginated Keyword query against the USAJobs
  * Search API (https://data.usajobs.gov/api/search). All queries are
  * additionally constrained to JobCategoryCode=0610 (Nurse) inside the

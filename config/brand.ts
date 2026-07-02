@@ -1,66 +1,47 @@
 /**
- * Brand configuration — single source of truth for everything a fork
- * of this codebase needs to swap to be a different niche job board.
+ * Brand configuration — single source of truth for the NP Hiring job board.
  *
- * Forking checklist:
- *   1. Edit the values below.
- *   2. Update DNS / Vercel project domain.
- *   3. Reissue DPIA from `docs/dpia.md` (replace brand placeholders).
- *   4. Confirm sub-processor list at `app/sub-processors/page.tsx`
- *      (vendors may differ if you switch payment / email providers).
- *   5. Rewrite marketing copy: home, about, FAQ, blog.
- *   6. Run `prisma migrate deploy` against the new database.
+ * Board #2 of the niche-job-board template (created from the template, with
+ * niche decisions ported from the earlier hand-forked dvskr/NP-Hiring repo).
+ * Scope: all Nurse Practitioner specialties (FNP, AGNP, PMHNP, PNP, NNP,
+ * WHNP, ACNP, AGACNP) plus the APRN cohort (CRNA, CNM, CNS).
  *
- * What is NOT in this file (intentionally):
- *   - Niche-specific job filters and category routes — those are part
- *     of the product, not branding.
- *   - Marketing copy on the home page, About, FAQ — too varied to
- *     parameterize. Rewrite per fork.
- *   - Schema field names — they're internal and don't change.
+ * Fork procedure: docs/fork-checklist.md · launch: docs/pilot-fork-runbook.md
  */
 
 export const brand = {
     /** Display name used in copy, OG titles, email subjects. */
-    name: 'PMHNP Hiring',
+    name: 'NP Hiring',
 
     /** Niche descriptor used in long-form prose, schema descriptions. */
     niche: {
-        short: 'PMHNP',
-        long: 'Psychiatric Mental Health Nurse Practitioner',
-        descriptor: 'psychiatric mental health nurse practitioner',
-        category: 'mental health',
+        short: 'NP',
+        long: 'Nurse Practitioner',
+        descriptor: 'nurse practitioner',
+        category: 'advanced practice nursing',
     },
 
     /** Domain + canonical base URL. */
-    domain: 'pmhnphiring.com',
-    baseUrl: 'https://pmhnphiring.com',
+    domain: 'nphiring.com',
+    baseUrl: 'https://nphiring.com',
 
     /**
      * Legal entity that operates the brand.
-     * - `entityName` is the registered legal name (used in ToS, privacy policy,
-     *   data-controller references, indemnification, governing law clauses).
-     * - `brandDisplayName` is the customer-facing trade name (used on receipts,
-     *   hosted Stripe Checkout, customer support contexts).
-     * - `address`, `addressLine`, `addressCity`, etc. drive CAN-SPAM email
-     *   footers and the legal mailing address printed on invoices and contracts.
+     * NP Hiring operates as a brand / DBA under Akari Labs LLC (same legal
+     * umbrella as PMHNP Hiring).
      */
     legal: {
         entityName: 'Akari Labs LLC',
-        brandDisplayName: 'PMHNP Hiring',
+        brandDisplayName: 'NP Hiring',
         /**
          * Visible attribution name for everything the public sees — /about,
          * blog post bylines, humans.txt, contact-page copy, etc.
-         * Operator and builder of pmhnphiring.com under the Akari Labs LLC
-         * legal umbrella.
          */
         creatorName: 'Sathish Kumar',
-        creatorTitle: 'Creator',
+        creatorTitle: 'Creator · AI Data Engineer',
         /**
-         * Registered LLC member of record. Used ONLY in legal contexts
-         * where the registered owner of Akari Labs LLC must be named —
-         * contracts, KYC, payment processing onboarding. Do NOT render
-         * this in user-visible UI or schema. The Creator (above) is the
-         * face of the product.
+         * Registered LLC member of record. Legal contexts only — never
+         * surface in UI or schema.
          */
         founderName: 'Pavan Kumar Reddy Daggula',
         foundingYear: '2026',
@@ -77,46 +58,48 @@ export const brand = {
         venue: 'Sheridan County, Wyoming',
         /** Arbitration locale named in the ToS. */
         arbitrationCity: 'Sheridan, Wyoming',
-        /** Stripe statement descriptor shown on card statements (set in Stripe dashboard). */
-        stripeDescriptor: 'PMHNPHIRING',
+        /**
+         * Stripe statement descriptor shown on card statements. Must also be
+         * configured in the Stripe dashboard when payments are enabled.
+         */
+        stripeDescriptor: 'NPHIRING',
     },
 
     /**
-     * Inboxes. We use distinct addresses so an angry-email tornado doesn't
-     * drown out a real privacy or security report.
+     * Inboxes. Distinct addresses so an angry-email tornado doesn't drown
+     * out a real privacy or security report. All resolve to the same Resend
+     * domain (nphiring.com) once DNS + Resend domain are verified.
      */
     email: {
-        privacy: 'privacy@pmhnphiring.com',
-        security: 'security@pmhnphiring.com',
-        support: 'support@pmhnphiring.com',
-        contact: 'contact@pmhnphiring.com',
-        /** Partnerships / program-director outreach inbox (used by /for-programs + PD campaign). */
-        hello: 'hello@pmhnphiring.com',
+        privacy: 'privacy@nphiring.com',
+        security: 'security@nphiring.com',
+        support: 'support@nphiring.com',
+        contact: 'contact@nphiring.com',
+        /** Partnerships / program-director outreach inbox. */
+        hello: 'hello@nphiring.com',
         /** Media / data-request inbox (cited by the licensure-checker tool). */
-        press: 'press@pmhnphiring.com',
+        press: 'press@nphiring.com',
         // From-addresses for outbound mail. Read by lib/email-service.ts and
         // lib/job-alerts-service.ts. Env vars EMAIL_FROM, EMAIL_FROM_MARKETING,
         // and EMAIL_REPLY_TO override these at runtime when set.
-        marketingFrom: 'PMHNP Hiring <alerts@pmhnphiring.com>',
-        transactionalFrom: 'PMHNP Hiring <noreply@pmhnphiring.com>',
-        replyTo: 'support@pmhnphiring.com',
+        marketingFrom: 'NP Hiring <alerts@nphiring.com>',
+        transactionalFrom: 'NP Hiring <noreply@nphiring.com>',
+        replyTo: 'support@nphiring.com',
     },
 
     /**
-     * Per-board hosted assets. Every fork points these at its own storage —
-     * leaving them on the original board's bucket is a silent cross-board
-     * dependency (and shows the wrong niche's imagery).
+     * Per-board hosted assets — this board's own Supabase project.
+     * Buckets must be created + populated before launch (see
+     * docs/pilot-fork-runbook.md §2.9 and the donor repo's LAUNCH_RUNBOOK
+     * §3.B.9 asset list).
      */
     assets: {
-        /**
-         * Origin of the board's Supabase storage; every hardcoded image URL
-         * derives from this — forks point it at their own project.
-         */
-        storageBase: 'https://sggccmqjzuimwlahocmy.supabase.co',
+        /** Origin of the board's Supabase storage; every image URL derives from this. */
+        storageBase: 'https://ytpmrlpnpbdylujbtgij.supabase.co',
         /** CDN base for email images (logo, hero, step icons). Env override: EMAIL_ASSETS_URL. */
-        emailAssetsBase: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/email-assets',
+        emailAssetsBase: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/email-assets',
         /** Lead-magnet PDF for the salary-guide email. Env override: SALARY_GUIDE_URL. */
-        salaryGuidePdf: 'https://sggccmqjzuimwlahocmy.supabase.co/storage/v1/object/public/resources/PMHNP_Salary_Guide_2026.pdf',
+        salaryGuidePdf: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/resources/NP_Salary_Guide.pdf',
     },
 
     /**
@@ -125,15 +108,20 @@ export const brand = {
      * historical-deindex cron + audit scripts send it — the two sides
      * must stay in lockstep, so both read this one field.
      */
-    indexerUserAgent: 'PMHNPHiringIndexer',
+    indexerUserAgent: 'NPHiringIndexer',
 
-    /** Public social handles — used in footer + Organization schema. */
+    /**
+     * Public social handles — used in footer + Organization schema.
+     * NOTE: placeholder URLs matching the brand handle pattern. Claim the
+     * actual accounts before launch, or they will 404 / point at unrelated
+     * profiles.
+     */
     social: {
-        x: 'https://x.com/pmhnphiring',
-        facebook: 'https://www.facebook.com/pmhnphiring',
-        instagram: 'https://www.instagram.com/pmhnphiring',
-        linkedin: 'https://www.linkedin.com/company/pmhnpjobs',
-        youtube: 'https://www.youtube.com/@pmhnphiring',
+        x: 'https://x.com/nphiring',
+        facebook: 'https://www.facebook.com/nphiring',
+        instagram: 'https://www.instagram.com/nphiring',
+        linkedin: 'https://www.linkedin.com/company/nphiring',
+        youtube: 'https://www.youtube.com/@nphiring',
     },
 } as const;
 

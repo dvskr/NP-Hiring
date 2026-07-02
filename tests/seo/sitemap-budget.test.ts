@@ -13,6 +13,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
 import sitemapHandler from '@/app/sitemap';
 import robotsHandler from '@/app/robots';
+import { brand } from '@/config/brand';
+
+// Canonical host comes from the board's brand config — hardcoding the donor
+// domain here broke every fork (NP Hiring fork, 2026-07-02).
+const BASE_URL = brand.baseUrl.replace(/\/$/, '');
+const BASE_URL_RE = new RegExp(`^${BASE_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\/|$)`);
 
 // Build a synthetic catalog that's representative of production scale.
 function jobsFixture(count: number) {
@@ -62,7 +68,7 @@ describe('P4.1: sitemap budget guard', () => {
         const sitemap = await sitemapHandler();
 
         // Section presence sanity checks
-        const baseUrl = 'https://pmhnphiring.com';
+        const baseUrl = BASE_URL;
         const urls = sitemap.map((s) => s.url);
         expect(urls).toContain(baseUrl);
         expect(urls).toContain(`${baseUrl}/jobs`);
@@ -77,7 +83,7 @@ describe('P4.1: sitemap budget guard', () => {
         // Homepage may render as bare host without trailing slash; everything
         // else must be under /...
         for (const entry of sitemap) {
-            expect(entry.url).toMatch(/^https:\/\/pmhnphiring\.com(\/|$)/);
+            expect(entry.url).toMatch(BASE_URL_RE);
             expect(entry.url).not.toContain('?');
             expect(entry.url).not.toContain('#');
         }
@@ -100,7 +106,7 @@ describe('P4.1: sitemap budget guard', () => {
         expect(sitemap.length).toBeLessThan(200);
         const urls = sitemap.map((s) => s.url);
         // Homepage (bare host) — accept either "https://...com" or with trailing slash.
-        expect(urls.some((u) => u === 'https://pmhnphiring.com' || u === 'https://pmhnphiring.com/')).toBe(true);
+        expect(urls.some((u) => u === BASE_URL || u === `${BASE_URL}/`)).toBe(true);
     });
 
     it('robots.txt declares the expected sitemap entrypoints', () => {

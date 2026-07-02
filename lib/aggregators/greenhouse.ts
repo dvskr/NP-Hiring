@@ -110,12 +110,14 @@ async function fetchCompanyJobs(companySlug: string): Promise<GreenhouseJobRaw[]
 
 /**
  * Total number of chunks for Greenhouse. Reduced from 8 → 4 on
- * 2026-05-05 after trimming the tenant list from 63 → 50 producers.
- * With ~12-13 boards per chunk and the tenant list reading from a
- * config file, 4 chunks complete comfortably inside the 240s budget.
+ * 2026-05-05 after a production audit trimmed the tenant list. The
+ * donor NP board runs the same value (verified 2026-07-02). With the
+ * current 58-slug tenant list that is ~15 boards per chunk — 4 chunks
+ * complete comfortably inside the 240s budget.
  *
  * MUST match the number of /api/cron/ingest?source=greenhouse&chunk=N
- * entries in vercel.json — see tests/aggregators/chunk-count.test.ts.
+ * entries in vercel.json — see tests/aggregators/chunk-count.test.ts —
+ * and CHUNKED_SOURCE_TOTAL_CHUNKS in lib/health/chunked-presence.ts.
  */
 export const GREENHOUSE_TOTAL_CHUNKS = 4;
 const GREENHOUSE_CHUNK_SIZE = Math.ceil(GREENHOUSE_COMPANIES.length / GREENHOUSE_TOTAL_CHUNKS);

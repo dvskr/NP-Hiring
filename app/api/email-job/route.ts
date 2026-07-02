@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       `<p style="margin:0 0 4px;font-family:${SANS};font-size:12px;color:${V2.textMuted};">
         <a href="${BASE_URL}/job-alerts" style="color:${V2.textMuted};text-decoration:underline;">Set up job alerts</a>
         &nbsp;&middot;&nbsp;
-        <a href="mailto:support@pmhnphiring.com" style="color:${V2.textMuted};text-decoration:underline;">Contact us</a>
+        <a href="mailto:${brand.email.support}" style="color:${V2.textMuted};text-decoration:underline;">Contact us</a>
       </p>`,
       `You saved "${safeTitle}" — view the full listing and apply!`
     )

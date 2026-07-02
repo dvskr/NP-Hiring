@@ -302,24 +302,29 @@ async function findRepresentativeJobId(
 // per-chunk cron entries (chunked-presence sums all chunks into one cycle).
 // Derived directly from vercel.json: a drifted value miscalibrates the presence
 // guard (too-low baseline → false skipped_partial_fetch; too-high → missed
-// orphan detection). Verified 2026-06-11 against the live cron schedule.
+// orphan detection). Verified 2026-07-02 against the ATS-only rebuild of
+// config/cron-schedule.ts: all 8 ATS sources run 2 cycles/day (Wave A + Wave B).
 const RUNS_PER_DAY: Readonly<Record<string, number>> = {
+    // ── ATS sources (scheduled twice daily; see config/cron-schedule.ts) ──
+    greenhouse: 2,       // 4 chunks × 2 cycles, presence math uses cycles
+    lever: 2,            // runs at 10:50 and 23:50
+    workday: 2,          // 5 chunks × 2 cycles, presence math uses cycles
+    smartrecruiters: 2,  // runs at 11:35 and 00:35
+    ashby: 2,            // runs at 11:40 and 00:40
+    bamboohr: 2,         // runs at 11:50 and 00:45
+    jazzhr: 2,           // runs at 11:55 and 00:48
+    workable: 2,         // runs at 12:00 and 00:52
+    // ── Disabled on this board (DISABLED_SOURCES in config/cron-schedule.ts);
+    //    values kept as template defaults for boards that re-enable them ──
     adzuna: 3,
-    jooble: 3,            // not currently scheduled in vercel.json
-    lever: 3,
-    usajobs: 1,          // was 3 — vercel.json schedules usajobs once/day
-    ashby: 2,            // was 3 — runs at 11:40 and 00:40
-    workday: 3,          // 5 chunks × 3 cycles, but presence math uses cycles
-    greenhouse: 3,       // 4 chunks × 3 cycles, presence math uses cycles
+    usajobs: 1,
     'fantastic-jobs-db': 2,
-    smartrecruiters: 3,
-    icims: 3,            // not currently scheduled in vercel.json
-    jazzhr: 2,           // was 3 — runs at 11:55 and 00:48
-    bamboohr: 2,         // was missing (defaulted to 1) — runs 2×/day
-    workable: 2,         // was missing — runs 2×/day
-    doccafe: 2,          // was missing — runs 2×/day
-    healthcareercenter: 2, // was missing — runs 2×/day
-    'ats-jobs-db': 3,    // not currently scheduled in vercel.json
+    doccafe: 2,
+    healthcareercenter: 2,
+    // ── Not present in this template's registry at all ──
+    jooble: 3,
+    icims: 3,
+    'ats-jobs-db': 3,
 };
 
 /**

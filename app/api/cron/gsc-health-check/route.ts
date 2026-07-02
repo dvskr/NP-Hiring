@@ -30,8 +30,9 @@ export const maxDuration = 60;
  *      JSON, different OAuth scope at token-exchange time. The service
  *      account must also be added as a "Restricted" user in GSC →
  *      Settings → Users and permissions → with the property selected.)
- *   GSC_SITE_URL env var = "sc-domain:pmhnphiring.com" or
- *                          "https://pmhnphiring.com/"  (default if not set)
+ *   GSC_SITE_URL env var = "sc-domain:<brand.domain>" or a URL-prefix
+ *                          property like "https://<brand.domain>/"
+ *                          (defaults to "sc-domain:<brand.domain>" if not set)
  *
  * If env vars are missing, the cron logs and exits 200 (skipped, not failed)
  * so missing setup doesn't trigger noise.

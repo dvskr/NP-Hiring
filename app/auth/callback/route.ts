@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
   // Open-redirect guard: `${origin}${next}` with an unsanitized next allows
-  // e.g. next='@evil.com' -> https://pmhnphiring.com@evil.com (external host).
+  // e.g. next='@evil.com' -> https://<brand.domain>@evil.com (external host).
   const next = safeInternalPath(requestUrl.searchParams.get('next'), '/dashboard')
   const origin = requestUrl.origin
 

@@ -254,7 +254,13 @@ async function fetchCompanyJobs(company: WorkdayCompany): Promise<WorkdayJobRaw[
 }
 
 /**
- * Total number of chunks for Workday (~95 companies / ~19 per chunk = 5)
+ * Total number of chunks for Workday. The donor NP board runs the same
+ * value (verified 2026-07-02). Current tenant list is 112 companies →
+ * ~23 per chunk = 5 chunks.
+ *
+ * MUST match the number of /api/cron/ingest?source=workday&chunk=N
+ * entries in vercel.json — see tests/aggregators/chunk-count.test.ts —
+ * and CHUNKED_SOURCE_TOTAL_CHUNKS in lib/health/chunked-presence.ts.
  */
 export const WORKDAY_TOTAL_CHUNKS = 5;
 const WORKDAY_CHUNK_SIZE = Math.ceil(WORKDAY_COMPANIES.length / WORKDAY_TOTAL_CHUNKS);

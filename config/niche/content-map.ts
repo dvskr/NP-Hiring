@@ -4,6 +4,21 @@
  * This file is DATA ONLY; the selection and rendering logic stays in
  * the consuming components.
  *
+ * ── NP HIRING LAUNCH STATUS (2026-07-02) ─────────────────────────────
+ * This board has NO authored blog content yet (content/blog/ posts are
+ * inherited PMHNP articles slated for removal; the donor NP board also
+ * launched with an empty blog). Every slug list below is therefore
+ * EMPTY, and the license-guide series is gated OFF via
+ * LICENSE_GUIDE_SERIES_PUBLISHED until the series is written. The
+ * consumers handle empty gracefully:
+ *   - components/RelatedBlogPosts.tsx returns null for zero posts;
+ *   - components/HomepageBlogSection.tsx returns null for an empty
+ *     featured list (mirrors the donor's "no dead links" launch state);
+ *   - the pSEO/salary-guide licensure links render only when
+ *     LICENSE_GUIDE_SERIES_PUBLISHED is true.
+ * Seeding 5–10 NP posts and flipping these lists back on is a
+ * post-launch content task.
+ *
  * ── WHAT EACH MAP FEEDS ───────────────────────────────────────────────
  *   RELATED_BLOG_SLUGS       getRelevantBlogSlugs() in
  *                            components/RelatedBlogPosts.tsx — the
@@ -16,7 +31,7 @@
  *                            "From the blog" section on the homepage.
  *                            These render as direct <Link> hrefs, so a
  *                            missing post is a live sitewide internal
- *                            404.
+ *                            404. Keep EMPTY until posts exist.
  *
  * ── FOR FORKS ─────────────────────────────────────────────────────────
  * Every slug listed here MUST exist as a post in content/blog/ or the
@@ -31,6 +46,11 @@
  * job attribute that makes them relevant. Selection order and the
  * 3-post cap live in getRelevantBlogSlugs() in
  * components/RelatedBlogPosts.tsx.
+ *
+ * NP HIRING: all groups EMPTY — no NP posts authored yet. With every
+ * group empty the sidebar renders nothing (RelatedBlogPosts returns
+ * null on zero posts). Populate as NP guides are published (salary
+ * guide first — it's the `always` slot).
  */
 export const RELATED_BLOG_SLUGS: {
     /** Always included on every job page. */
@@ -42,35 +62,43 @@ export const RELATED_BLOG_SLUGS: {
     /** General career guides used to fill up to 3 posts. */
     generalFallback: string[];
 } = {
-    always: ['pmhnp-salary-guide-2026'],
-    remoteOrTelehealth: [
-        'telehealth-pmhnp-guide',
-        'ultimate-guide-remote-pmhnp-jobs-2026',
-    ],
-    newGrad: [
-        'new-grad-pmhnp-first-job',
-        '5-tips-new-grad-pmhnp-job-market',
-    ],
-    generalFallback: [
-        'pmhnp-interview-questions',
-        'pmhnp-salary-negotiation',
-    ],
+    always: [],
+    remoteOrTelehealth: [],
+    newGrad: [],
+    generalFallback: [],
 };
 
 /**
- * Slug prefix of the authored state-licensure blog series
- * ('pmhnp-license-alabama' … 'pmhnp-license-wyoming', all 50 states + DC).
- * CODE derives links and lookups from this prefix in four places:
+ * Slug prefix of the state-licensure blog series ('np-license-alabama'
+ * … 'np-license-wyoming', 50 states + DC).
+ *
+ * ⚠️ NP HIRING: this series is UNWRITTEN — the prefix is reserved, but
+ * zero posts exist under it. All code-derived links to the series are
+ * gated behind LICENSE_GUIDE_SERIES_PUBLISHED (below) so nothing links
+ * to it until it ships. CODE derives links and lookups from this prefix
+ * in four places:
  *   - lib/pseo/category-city-template.tsx (a link on EVERY category×city page)
- *   - app/salary-guide/[state]/page.tsx (related-guide lookup)
+ *   - app/salary-guide/[state]/page.tsx (related-guide link)
  *   - app/blog/[slug]/page.tsx (license-post detection for related content)
  *   - app/resources/page.tsx (series listing)
- * A fork MUST author its own state-guide series under its own prefix (or
- * point this at an equivalent series) — the pSEO templates link it from
- * ~100K pages, so a missing series means internal 404s at scale.
+ * The blog-side consumers (detection/listing) are lookup-only and simply
+ * match nothing while the series is empty.
  * Keep the value free of regex metacharacters (it is compiled into a RegExp).
  */
-export const LICENSE_GUIDE_SLUG_PREFIX = 'pmhnp-license-';
+export const LICENSE_GUIDE_SLUG_PREFIX = 'np-license-';
+
+/**
+ * Master gate for every CODE-rendered link into the license-guide
+ * series. While false, the licensure links on category×city pSEO pages
+ * and salary-guide state pages are NOT rendered (they would otherwise
+ * be internal 404s at pSEO scale — the category×city template alone
+ * links from ~100K+ pages).
+ *
+ * FLIP TO true ONLY once all 51 posts ('np-license-<state-slug>' for
+ * every state slug + district-of-columbia) exist in content/blog/ —
+ * partial publication still 404s the missing states.
+ */
+export const LICENSE_GUIDE_SERIES_PUBLISHED = false;
 
 /** Build the license-guide slug for a state slug (e.g. 'california'). */
 export function licenseGuideSlug(stateSlug: string): string {
@@ -89,45 +117,13 @@ export interface FeaturedBlogPost {
 }
 
 /**
- * The six posts featured on the homepage, rendered in order by
+ * Posts featured on the homepage, rendered in order by
  * components/HomepageBlogSection.tsx. hrefs must point at published
  * posts in content/blog/.
+ *
+ * NP HIRING: EMPTY — no NP posts authored yet. The component returns
+ * null for an empty list, so the homepage simply skips the section (no
+ * dead links, no empty chrome). Populate with six NP posts once the
+ * initial content batch ships.
  */
-export const HOMEPAGE_FEATURED_POSTS: FeaturedBlogPost[] = [
-    {
-        category: 'Salary Guide',
-        title: 'PMHNP Salary Guide 2026: State-by-State Analysis',
-        description: 'Data from 8,500+ job postings reveals top-paying states, specialty premiums, and negotiation strategies that can add $15K–$25K to your offer.',
-        href: '/blog/pmhnp-salary-guide-2026',
-    },
-    {
-        category: 'Career Path',
-        title: 'How to Become a PMHNP: The Complete Roadmap',
-        description: 'From BSN to board certification — every step, timeline, and insider tip for launching your psychiatric NP career in 2026.',
-        href: '/blog/how-to-become-a-pmhnp',
-    },
-    {
-        category: 'Job Market',
-        title: 'PMHNP Job Outlook: 45% Growth Through 2032',
-        description: '123 million Americans live in mental health shortage areas. Here\'s what that means for your career trajectory and earning potential.',
-        href: '/blog/pmhnp-job-outlook',
-    },
-    {
-        category: 'Remote Work',
-        title: 'The Ultimate Guide to Remote PMHNP Jobs',
-        description: '62% of psych NP positions now offer telehealth. Find out which companies pay $130K–$200K for remote psychiatric care.',
-        href: '/blog/ultimate-guide-remote-pmhnp-jobs-2026',
-    },
-    {
-        category: 'New Graduates',
-        title: 'New Grad PMHNP: Landing Your First Role',
-        description: 'Residency programs, interview prep, salary benchmarks, and the resume strategies that get callbacks within 48 hours.',
-        href: '/blog/new-grad-pmhnp-guide-2026',
-    },
-    {
-        category: 'Private Practice',
-        title: 'PMHNP Private Practice Income: What to Expect',
-        description: 'Cash-pay vs insurance, overhead costs, and how practice owners in FPA states are clearing $200K–$300K+ annually.',
-        href: '/blog/pmhnp-private-practice-income-2026',
-    },
-];
+export const HOMEPAGE_FEATURED_POSTS: FeaturedBlogPost[] = [];

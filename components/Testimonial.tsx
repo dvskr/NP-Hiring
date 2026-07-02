@@ -6,6 +6,11 @@ import { Star, Quote } from 'lucide-react';
 import { TESTIMONIALS } from '@/config/niche/stats';
 
 export default function Testimonial() {
+    // Fresh board ships zero testimonials (TESTIMONIALS is empty until
+    // real, consented quotes exist) — render nothing rather than a
+    // heading over an empty grid.
+    if (TESTIMONIALS.length === 0) return null;
+
     return (
         <div style={{ maxWidth: '960px', margin: '0 auto', padding: '0 20px' }}>
             {/* Section heading */}
@@ -14,10 +19,10 @@ export default function Testimonial() {
                     fontSize: '28px', fontWeight: 700,
                     color: 'var(--text-primary)', margin: '0 0 8px',
                 }}>
-                    What PMHNPs Are Saying
+                    What NPs Are Saying
                 </h2>
                 <p style={{ fontSize: '15px', color: 'var(--text-muted)', margin: 0 }}>
-                    Real feedback from psychiatric nurse practitioners
+                    Real feedback from nurse practitioners
                 </p>
             </div>
 

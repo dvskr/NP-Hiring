@@ -1,6 +1,12 @@
 /**
  * Adzuna search terms.
  *
+ * ⛔ SOURCE DISABLED ON THIS BOARD — NP Hiring runs ATS-only ingestion
+ * (see DISABLED_SOURCES in config/cron-schedule.ts). No cron schedules
+ * adzuna; the adapter and this file remain in the engine for other
+ * boards. The terms below are the inherited PMHNP set and are inert
+ * here — refresh them for the niche if a board re-enables the source.
+ *
  * Each entry becomes one search query against the Adzuna API. Adzuna's
  * search supports keywords + location filters but each call is a single
  * literal phrase, so each variant is its own paginated query.

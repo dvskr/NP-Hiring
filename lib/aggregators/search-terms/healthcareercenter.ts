@@ -1,6 +1,13 @@
 /**
  * Health eCareer Center (Naylor association job board) search terms.
  *
+ * ⛔ SOURCE DISABLED ON THIS BOARD — NP Hiring runs ATS-only ingestion
+ * (see DISABLED_SOURCES in config/cron-schedule.ts). No cron schedules
+ * healthcareercenter; the adapter and this file remain in the engine
+ * for other boards. The terms below are the inherited PMHNP set and are
+ * inert here — refresh them for the niche if a board re-enables the
+ * source.
+ *
  * Each entry becomes one paginated keywords search against the shared
  * Naylor platform root
  * (https://jobs.healthcareercenter.com/jobs/search?keywords={q}&page={N}).

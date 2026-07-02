@@ -1,6 +1,13 @@
 /**
  * Fantastic-Jobs-DB (Active Jobs DB via RapidAPI) search terms.
  *
+ * ⛔ SOURCE DISABLED ON THIS BOARD — NP Hiring runs ATS-only ingestion
+ * (see DISABLED_SOURCES in config/cron-schedule.ts). No cron schedules
+ * fantastic-jobs-db; the adapter and this file remain in the engine for
+ * other boards. The terms below are the inherited PMHNP set and are
+ * inert here — refresh them for the niche if a board re-enables the
+ * source.
+ *
  * Two-pass strategy:
  *   PASS A — TITLE_TERMS: literal title-phrase matches. The API only
  *     accepts a single literal phrase per `title_filter`, so each

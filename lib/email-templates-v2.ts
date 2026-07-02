@@ -2,7 +2,7 @@
 // EMAIL TEMPLATES V2 — "Warm Diorama" Design System
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// Light-mode, warm-tone email design system for pmhnphiring.com
+// Light-mode, warm-tone email design system for the board (brand.baseUrl)
 // Typography: Lora (headings + body) + Inter (UI/buttons/labels)
 // Palette: warm off-white → soft cream → peach accents
 //
@@ -72,7 +72,7 @@ export const V2 = {
 // Structure matches the hand-crafted Supabase auth templates:
 // - 600px card, 8px radius, #FFF8EE bg
 // - Padding: 24px top, 48px bottom
-// - Footer: simple ©, pmhnphiring.com, hello@
+// - Footer: simple ©, brand domain, hello@
 
 export function emailShellV2(content: string, footerContent: string = '', preheaderText: string = ''): string {
   const preheader = preheaderText || EMAIL_DEFAULT_PREHEADER;

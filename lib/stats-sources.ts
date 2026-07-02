@@ -1,6 +1,20 @@
 // FORK NOTE: Per-board citation data — every stat below is PMHNP/US-specific.
 // A fork MUST re-source each value (and URL, and asOf date) for its own niche
 // before launch; shipping these unedited publishes false, cited-looking claims.
+//
+// ⚠️ NP HIRING LAUNCH TODO (2026-07-02): the donor NP board never re-sourced
+// this file, so NO harvested NP version exists — the values below are STILL
+// the PMHNP-era figures and were deliberately left untouched. Before launch:
+//   - averageSalary: re-source to the NP-wide BLS OEWS figure (~$126k; the
+//     current $155,000 is the PMHNP-era value). The retuned UI constants in
+//     config/niche/stats.ts already use $126k and will disagree with any
+//     surface citing this file until this lands.
+//   - blsGrowth2032: 45% is already the BLS NP-wide projection — verify the
+//     latest OOH release and bump asOf.
+//   - hrsaShortagePopulation: mental-health-HPSA-specific; replace with an
+//     NP-relevant shortage stat (e.g. primary-care HPSA population) or drop.
+//   - fullPracticeStates: NP-wide already — verify against AANP and bump asOf.
+// Then bump STATS_LAST_REVIEWED.
 /**
  * Single source of truth for cited statistics rendered across the site.
  *

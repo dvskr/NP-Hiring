@@ -1,68 +1,48 @@
 {
   "crons": [
     {
-      "path": "/api/cron/ingest?source=adzuna",
-      "schedule": "0 10,16 * * *"
-    },
-    {
       "path": "/api/cron/ingest?source=greenhouse&chunk=0",
-      "schedule": "10 10,16 * * *"
+      "schedule": "10 10 * * *"
     },
     {
       "path": "/api/cron/ingest?source=greenhouse&chunk=1",
-      "schedule": "15 10,16 * * *"
+      "schedule": "15 10 * * *"
     },
     {
       "path": "/api/cron/ingest?source=greenhouse&chunk=2",
-      "schedule": "20 10,16 * * *"
+      "schedule": "20 10 * * *"
     },
     {
       "path": "/api/cron/ingest?source=greenhouse&chunk=3",
-      "schedule": "25 10,16 * * *"
+      "schedule": "25 10 * * *"
     },
     {
       "path": "/api/cron/ingest?source=lever",
-      "schedule": "50 10,16 * * *"
+      "schedule": "50 10 * * *"
     },
     {
       "path": "/api/cron/ingest?source=workday&chunk=0",
-      "schedule": "5 11,17 * * *"
+      "schedule": "5 11 * * *"
     },
     {
       "path": "/api/cron/ingest?source=workday&chunk=1",
-      "schedule": "10 11,17 * * *"
+      "schedule": "10 11 * * *"
     },
     {
       "path": "/api/cron/ingest?source=workday&chunk=2",
-      "schedule": "15 11,17 * * *"
+      "schedule": "15 11 * * *"
     },
     {
       "path": "/api/cron/ingest?source=workday&chunk=3",
-      "schedule": "20 11,17 * * *"
+      "schedule": "20 11 * * *"
     },
     {
       "path": "/api/cron/ingest?source=workday&chunk=4",
-      "schedule": "25 11,17 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=fantastic-jobs-db&endpoint=24h",
-      "schedule": "30 12 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=fantastic-jobs-db&endpoint=24h",
-      "schedule": "0 21 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=fantastic-jobs-db&endpoint=6m",
-      "schedule": "0 0 1 1 *"
+      "schedule": "25 11 * * *"
     },
     {
       "path": "/api/cron/ingest?source=smartrecruiters",
-      "schedule": "35 11,17 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=usajobs",
-      "schedule": "45 11 * * *"
+      "schedule": "35 11 * * *"
     },
     {
       "path": "/api/cron/ingest?source=ashby",
@@ -81,24 +61,8 @@
       "schedule": "0 12 * * *"
     },
     {
-      "path": "/api/cron/ingest?source=doccafe",
-      "schedule": "5 12 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=healthcareercenter",
-      "schedule": "10 12 * * *"
-    },
-    {
       "path": "/api/cron/ingest-wave-summary",
       "schedule": "50 12 * * *"
-    },
-    {
-      "path": "/api/cron/ingest-wave-summary",
-      "schedule": "55 17 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=adzuna",
-      "schedule": "0 23 * * *"
     },
     {
       "path": "/api/cron/ingest?source=greenhouse&chunk=0",
@@ -159,14 +123,6 @@
     {
       "path": "/api/cron/ingest?source=workable",
       "schedule": "52 0 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=doccafe",
-      "schedule": "53 0 * * *"
-    },
-    {
-      "path": "/api/cron/ingest?source=healthcareercenter",
-      "schedule": "54 0 * * *"
     },
     {
       "path": "/api/cron/ingest-wave-summary",

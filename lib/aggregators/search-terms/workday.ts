@@ -23,10 +23,21 @@
  * are dropped before the real relevance gate ever sees them. See the
  * pre-filter comments in lib/aggregators/workday.ts.
  *
+ * NP HIRING PORT (2026-07-02): terms ported VERBATIM from the donor NP
+ * board's workday adapter — the donor shipped its all-NP board with
+ * this exact wide-net list unchanged. It works for NP breadth because
+ * Workday search is fuzzy/tokenized (a "Psychiatric Nurse Practitioner"
+ * query surfaces plain "Nurse Practitioner" postings too), the title
+ * pre-screen below includes the bare 'nurse practitioner' substring,
+ * and the central isRelevantJob gate accepts the full NP/APRN cohort.
+ * If Workday yield looks thin, adding broader query terms (e.g.
+ * 'Nurse Practitioner', 'APRN') is the first knob — but that deviates
+ * from the donor baseline, so measure before/after.
+ *
  * Edit this file to add or remove terms. Adapter unchanged.
  */
 
-// PMHNP search terms - cast a wide net, let isRelevantJob filter precisely
+// Donor wide-net search terms — cast a wide net, let isRelevantJob filter precisely
 export const WORKDAY_SEARCH_TERMS: readonly string[] = [
     'Psychiatric Nurse Practitioner',
     'PMHNP',

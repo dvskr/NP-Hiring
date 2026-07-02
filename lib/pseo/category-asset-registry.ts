@@ -59,7 +59,8 @@ export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
       { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
       { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
       { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
-      { href: '/jobs/substance-abuse', label: 'Substance Abuse', sub: 'Addiction care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_substance.webp` },
+      // NP taxonomy migration (2026-07): /jobs/substance-abuse was removed — repointed to a live NP category.
+      { href: '/jobs/psychiatric-mental-health', label: 'Psychiatric', sub: 'Mental health care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_substance.webp` },
       { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
       { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
     ],
@@ -81,7 +82,8 @@ export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
     exploreCards: [
       { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
       { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-      { href: '/jobs/crisis', label: 'Crisis', sub: 'Emergency psych', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_crisis.webp` },
+      // NP taxonomy migration (2026-07): /jobs/crisis was removed — repointed to a live NP category.
+      { href: '/jobs/emergency', label: 'Emergency', sub: 'ED & urgent psych', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_crisis.webp` },
       { href: '/jobs/correctional', label: 'Correctional', sub: 'Forensic settings', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_correctional.webp` },
       { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
       { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
@@ -640,7 +642,8 @@ export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
     ],
     exploreCards: [
       { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
-      { href: '/jobs/crisis', label: 'Crisis', sub: 'Emergency psych', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_crisis.webp` },
+      // NP taxonomy migration (2026-07): /jobs/crisis was removed — repointed to a live NP category.
+      { href: '/jobs/emergency', label: 'Emergency', sub: 'ED & urgent psych', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_crisis.webp` },
       { href: '/jobs/va', label: 'VA', sub: 'Federal roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_va.webp` },
       { href: '/jobs/veterans', label: 'Veterans', sub: 'Military mental health', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_veterans.webp` },
       { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },

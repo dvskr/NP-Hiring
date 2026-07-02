@@ -19,12 +19,14 @@
  * 2. ingest-wave-summary coupling: WINDOW_MINUTES in
  *    app/api/cron/ingest-wave-summary/route.ts (currently 200) must
  *    cover the span from a wave's first ingest entry to its summary
- *    entry. If a wave stretches (more chunks, later offsets), re-check
- *    that window before regenerating.
- * 3. Vercel plan cron limits — OPEN QUESTION, deliberately unresolved:
- *    README claims Pro=64 but the file has 69. (README also still says
- *    "55 total cron entries".) Whether the 64 limit is stale docs, a
- *    plan difference, or a real overage has not been verified here.
+ *    entry. Wave A spans 10:10 → 12:50 (160m); Wave B spans
+ *    23:10 → 00:55 (105m) — both inside the window. If a wave
+ *    stretches (more chunks, later offsets), re-check before
+ *    regenerating.
+ * 3. Vercel plan cron limits: this board schedules 58 entries, under
+ *    the Pro plan's documented 64-cron cap. (The template shipped 69
+ *    with the non-ATS sources scheduled — see DISABLED_SOURCES below
+ *    for why this board runs fewer.)
  * ─────────────────────────────────────────────────────────────────────
  */
 
@@ -36,6 +38,32 @@ export interface CronEntry {
     readonly path: string;
     readonly schedule: string;
 }
+
+/**
+ * Sources that exist in the engine's registry but are NOT scheduled on
+ * this board. Per-board decision: NP Hiring runs ATS-ONLY ingestion, a
+ * strategy ported from the donor NP board (its 2026-05-23 "ATS-only
+ * ingestion" decision): employer-authoritative feeds, fewer duplicates,
+ * healthier apply links, and zero external API quota cost. The adapters
+ * remain in the engine for other boards — only the scheduling is
+ * per-board.
+ *
+ * The 8 scheduled ATS sources: greenhouse, lever, workday,
+ * smartrecruiters, ashby, bamboohr, jazzhr, workable.
+ *
+ * (jooble / jsearch / ats-jobs-db were also rejected by the donor but
+ * are not present in this template's registry, so they are not listed.)
+ *
+ * tests/aggregators/cron-schedule-drift.test.ts asserts every registry
+ * source is either scheduled below or listed here — both directions.
+ */
+export const DISABLED_SOURCES: readonly JobSource[] = [
+    'adzuna',              // job aggregator (scraped, not employer-controlled)
+    'fantastic-jobs-db',   // RapidAPI aggregator (paid 20k/mo quota)
+    'usajobs',             // federal job board
+    'doccafe',             // healthcare niche board, not employer-controlled
+    'healthcareercenter',  // healthcare niche board, not employer-controlled
+];
 
 const INGEST_PATH = '/api/cron/ingest';
 
@@ -82,45 +110,40 @@ function chunkedIngest(
 }
 
 /**
- * Wave A — twice-daily daytime wave (10:00–12:10 UTC and a partial
- * 16:00–17:35 UTC repeat). Sources scheduled only at the single-hour
- * specs (11, 12, 21) intentionally run once per day in this wave
- * (API quotas / low churn); do not "fix" them to twice daily.
+ * Wave A — morning ingestion wave (10:10–12:00 UTC), ATS sources only.
+ * Minute/hour offsets mirror the donor NP board's Inngest schedule
+ * (its lib/inngest/functions/scheduled-crons.ts) as the reference
+ * cadence: twice-daily waves, 5-minute staggers, chunked
+ * greenhouse/workday. This board stays on the vercel.json mechanism.
  */
 const WAVE_A_INGESTION: readonly CronEntry[] = [
-    ingest('adzuna', 0, '10,16'),
-    ...chunkedIngest('greenhouse', GREENHOUSE_TOTAL_CHUNKS, 10, '10,16'),
-    ingest('lever', 50, '10,16'),
-    ...chunkedIngest('workday', WORKDAY_TOTAL_CHUNKS, 5, '11,17'),
-    // fantastic-jobs-db is hand-tuned and irregular: two once-daily 24h
-    // pulls plus an annual 6-month backfill — kept literal.
-    { path: `${INGEST_PATH}?source=fantastic-jobs-db&endpoint=24h`, schedule: '30 12 * * *' },
-    { path: `${INGEST_PATH}?source=fantastic-jobs-db&endpoint=24h`, schedule: '0 21 * * *' },
-    { path: `${INGEST_PATH}?source=fantastic-jobs-db&endpoint=6m`, schedule: '0 0 1 1 *' },
-    ingest('smartrecruiters', 35, '11,17'),
-    ingest('usajobs', 45, '11'),
+    ...chunkedIngest('greenhouse', GREENHOUSE_TOTAL_CHUNKS, 10, '10'),
+    ingest('lever', 50, '10'),
+    ...chunkedIngest('workday', WORKDAY_TOTAL_CHUNKS, 5, '11'),
+    ingest('smartrecruiters', 35, '11'),
     ingest('ashby', 40, '11'),
     ingest('bamboohr', 50, '11'),
     ingest('jazzhr', 55, '11'),
     ingest('workable', 0, '12'),
-    ingest('doccafe', 5, '12'),
-    ingest('healthcareercenter', 10, '12'),
-];
-
-/** Wave A summaries — one per daytime pass (see WINDOW_MINUTES, note 2). */
-const WAVE_A_SUMMARIES: readonly CronEntry[] = [
-    { path: '/api/cron/ingest-wave-summary', schedule: '50 12 * * *' },
-    { path: '/api/cron/ingest-wave-summary', schedule: '55 17 * * *' },
 ];
 
 /**
- * Wave B — nightly wave (23:00–00:55 UTC). Mirrors Wave A minus
- * fantastic-jobs-db and usajobs (once-daily sources). The tail offsets
- * (45/48/52/53/54) are hand-compressed to finish before the 00:55
- * summary — irregular by design, kept literal.
+ * Wave A summary — 12:50 covers 10:10 → 12:50 (see WINDOW_MINUTES,
+ * note 2). The donor also fired a 17:55 summary left over from a
+ * 16:00 repeat wave neither board schedules — dropped here as dead
+ * weight (a summary with no ingest runs in its window no-ops).
+ */
+const WAVE_A_SUMMARIES: readonly CronEntry[] = [
+    { path: '/api/cron/ingest-wave-summary', schedule: '50 12 * * *' },
+];
+
+/**
+ * Wave B — nightly wave (23:10–00:55 UTC). Mirrors Wave A across the
+ * midnight boundary. The tail offsets (45/48/52) are hand-compressed to
+ * finish before the 00:55 summary — irregular by design (donor
+ * cadence), kept literal.
  */
 const WAVE_B_INGESTION: readonly CronEntry[] = [
-    ingest('adzuna', 0, '23'),
     ...chunkedIngest('greenhouse', GREENHOUSE_TOTAL_CHUNKS, 10, '23'),
     ingest('lever', 50, '23'),
     ...chunkedIngest('workday', WORKDAY_TOTAL_CHUNKS, 5, '0'),
@@ -129,8 +152,6 @@ const WAVE_B_INGESTION: readonly CronEntry[] = [
     ingest('bamboohr', 45, '0'),
     ingest('jazzhr', 48, '0'),
     ingest('workable', 52, '0'),
-    ingest('doccafe', 53, '0'),
-    ingest('healthcareercenter', 54, '0'),
     { path: '/api/cron/ingest-wave-summary', schedule: '55 0 * * *' },
 ];
 

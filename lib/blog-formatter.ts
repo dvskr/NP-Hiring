@@ -6,39 +6,56 @@
  * numbered steps, blockquotes, and proper internal links.
  */
 
+import { brand } from '@/config/brand';
+
 // ─── Internal Link Formatting ────────────────────────────────────────────────
 
+/** brand.domain with dots escaped, safe to embed in RegExp sources. */
+const DOMAIN_SOURCE = brand.domain.replace(/\./g, '\\.');
+
+/** Build a `https?://<brand.domain><pathSuffix>` matcher (global). */
+function internalUrlPattern(pathSuffix: string): RegExp {
+    return new RegExp(`https?:\\/\\/${DOMAIN_SOURCE}${pathSuffix}`, 'g');
+}
+
 /**
- * Map of known PMHNP Hiring URL patterns to descriptive link text.
+ * Map of known board URL patterns to descriptive link text.
+ * Patterns are derived from brand.domain so the map follows the board.
  * Order matters: more specific patterns first to avoid partial matches.
  */
 const INTERNAL_LINK_MAP: [RegExp, string][] = [
-    [/https?:\/\/pmhnphiring\.com\/jobs\?type=remote\b/g, 'Browse remote PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\?type=telehealth\b/g, 'Browse telehealth PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\?type=travel\b/g, 'Browse travel PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\/remote\b/g, 'Browse remote PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\/telehealth\b/g, 'Browse telehealth jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\/travel\b/g, 'Browse travel PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\/new-grad\b/g, 'Browse new grad PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\/per-diem\b/g, 'Browse per diem PMHNP jobs →'],
-    [/https?:\/\/pmhnphiring\.com\/salary-guide\b/g, 'PMHNP Salary Guide'],
-    [/https?:\/\/pmhnphiring\.com\/salaries\b/g, 'PMHNP Salary Data'],
-    [/https?:\/\/pmhnphiring\.com\/job-alerts\b/g, 'Set up job alerts'],
-    [/https?:\/\/pmhnphiring\.com\/jobs\b/g, 'Browse all PMHNP jobs →'],
+    [internalUrlPattern('\\/jobs\\?type=remote\\b'), 'Browse remote NP jobs →'],
+    [internalUrlPattern('\\/jobs\\?type=telehealth\\b'), 'Browse telehealth NP jobs →'],
+    [internalUrlPattern('\\/jobs\\?type=travel\\b'), 'Browse travel NP jobs →'],
+    [internalUrlPattern('\\/jobs\\/remote\\b'), 'Browse remote NP jobs →'],
+    [internalUrlPattern('\\/jobs\\/telehealth\\b'), 'Browse telehealth jobs →'],
+    [internalUrlPattern('\\/jobs\\/travel\\b'), 'Browse travel NP jobs →'],
+    [internalUrlPattern('\\/jobs\\/new-grad\\b'), 'Browse new grad NP jobs →'],
+    [internalUrlPattern('\\/jobs\\/per-diem\\b'), 'Browse per diem NP jobs →'],
+    [internalUrlPattern('\\/salary-guide\\b'), 'NP Salary Guide'],
+    [internalUrlPattern('\\/salaries\\b'), 'NP Salary Data'],
+    [internalUrlPattern('\\/job-alerts\\b'), 'Set up job alerts'],
+    [internalUrlPattern('\\/jobs\\b'), 'Browse all NP jobs →'],
 ];
 
-/** Regex to match a raw URL (not already inside a markdown link) */
-const RAW_URL_RE = /(?<!\]\()(?<!\()(?<!")(?<!\[)(https?:\/\/pmhnphiring\.com\/[^\s)"',;!<>\]]*[^\s)"',;!.<>\]])/g;
+/** Regex to match a raw board URL (not already inside a markdown link) */
+const RAW_URL_RE = new RegExp(
+    `(?<!\\]\\()(?<!\\()(?<!")(?<!\\[)(https?:\\/\\/${DOMAIN_SOURCE}\\/[^\\s)"',;!<>\\]]*[^\\s)"',;!.<>\\]])`,
+    'g',
+);
 
-/** Convert raw pmhnphiring.com URLs into descriptive markdown links */
+/** Detects lines that already contain well-formed markdown links to the board */
+const MARKDOWN_LINK_RE = new RegExp(`\\[.+?\\]\\(https?:\\/\\/${DOMAIN_SOURCE}`);
+
+/** Convert raw board-domain URLs into descriptive markdown links */
 function formatInternalLinks(content: string): string {
     return content
         .split('\n')
         .map((line) => {
-            // Skip lines that already contain well-formed markdown links to pmhnphiring.com
-            if (/\[.+?\]\(https?:\/\/pmhnphiring\.com/.test(line)) return line;
+            // Skip lines that already contain well-formed markdown links to the board
+            if (MARKDOWN_LINK_RE.test(line)) return line;
 
-            // Handle state page URLs: /states/california → "PMHNP jobs in California"
+            // Handle state page URLs: /states/california → "NP jobs in California"
             line = line.replace(
                 RAW_URL_RE,
                 (url) => {
@@ -49,7 +66,7 @@ function formatInternalLinks(content: string): string {
                             .split('-')
                             .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
                             .join(' ');
-                        return `[PMHNP jobs in ${stateName}](${url})`;
+                        return `[NP jobs in ${stateName}](${url})`;
                     }
 
                     // Match known URL patterns

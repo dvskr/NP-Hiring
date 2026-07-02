@@ -165,6 +165,127 @@ function buildKeywordWhere(_legacy: string[], stateName: string, tag: CategoryTa
   };
 }
 
+// ─── NP specialty / APRN state configs (2026-07 taxonomy migration) ──────────
+//
+// TODO(content): per-board editorial copy — see docs/pilot-fork-runbook.md §3.
+// These entries carry honest generic copy so the new /jobs/<slug>/[state]
+// routes are functional; salary ranges are broad national figures pending
+// per-board research.
+//
+// QUERY NOTE: lib/pseo/category-tagger.ts still emits the legacy PMHNP tag
+// set (withTagFallback() is typed to that union), so these buildWhere
+// clauses match the precomputed `categoryTags` column directly. State pages
+// 404 by design (totalJobs === 0) until the classifier is migrated to the
+// NP taxonomy and rows are re-tagged.
+
+interface NpSpecialtyConfigInput {
+  slug: string;
+  label: string;
+  fullLabel: string;
+  heroSubtitle: string;
+  salaryRange: string;
+  keywords: string[];
+}
+
+function buildNpSpecialtyConfig(input: NpSpecialtyConfigInput): SettingConfig {
+  return {
+    ...input,
+    faqCategory: input.slug, // CategoryFAQ renders nothing for unmapped keys
+    buildWhere: (stateName: string) => ({
+      isPublished: true,
+      state: { equals: stateName, mode: 'insensitive' },
+      categoryTags: { has: input.slug },
+    }),
+    benefits: [
+      { title: 'Growing Demand', description: `${input.fullLabel} roles are among the fastest-growing advanced practice positions nationwide.`, iconName: 'TrendingUp' },
+      { title: 'Practice Variety', description: 'Openings span health systems, private groups, and community settings across the state.', iconName: 'Building2' },
+      { title: 'Career Mobility', description: 'State licensure plus national certification keeps your options open across employers and settings.', iconName: 'Users' },
+    ],
+    tips: [
+      'Verify state APRN licensure and prescriptive authority requirements',
+      'Keep national certification and CE credits current',
+      'Compare total compensation — base, incentives, CME, and benefits',
+      'Ask about caseload, support staffing, and documentation time',
+      'Confirm collaborative or supervisory agreement requirements in this state',
+    ],
+  };
+}
+
+const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
+  'family-practice': buildNpSpecialtyConfig({
+    slug: 'family-practice',
+    label: 'Family Practice',
+    fullLabel: 'Family Practice NP (FNP)',
+    heroSubtitle: 'Family practice nurse practitioner positions',
+    salaryRange: '$110K-150K',
+    keywords: ['family practice nurse practitioner', 'FNP jobs', 'family nurse practitioner'],
+  }),
+  'adult-gerontology': buildNpSpecialtyConfig({
+    slug: 'adult-gerontology',
+    label: 'Adult-Gerontology',
+    fullLabel: 'Adult-Gerontology NP (AGNP)',
+    heroSubtitle: 'Adult-gerontology nurse practitioner positions',
+    salaryRange: '$110K-150K',
+    keywords: ['adult gerontology nurse practitioner', 'AGNP jobs', 'AGACNP', 'AGPCNP'],
+  }),
+  pediatric: buildNpSpecialtyConfig({
+    slug: 'pediatric',
+    label: 'Pediatric',
+    fullLabel: 'Pediatric NP (PNP)',
+    heroSubtitle: 'Pediatric nurse practitioner positions',
+    salaryRange: '$105K-145K',
+    keywords: ['pediatric nurse practitioner', 'PNP jobs', 'peds NP'],
+  }),
+  'women-health': buildNpSpecialtyConfig({
+    slug: 'women-health',
+    label: "Women's Health",
+    fullLabel: "Women's Health NP (WHNP)",
+    heroSubtitle: "Women's health nurse practitioner positions",
+    salaryRange: '$105K-145K',
+    keywords: ["women's health nurse practitioner", 'WHNP jobs', 'OB/GYN nurse practitioner'],
+  }),
+  'acute-care': buildNpSpecialtyConfig({
+    slug: 'acute-care',
+    label: 'Acute Care',
+    fullLabel: 'Acute Care NP (ACNP)',
+    heroSubtitle: 'Acute care nurse practitioner positions',
+    salaryRange: '$115K-160K',
+    keywords: ['acute care nurse practitioner', 'ACNP jobs', 'ICU nurse practitioner'],
+  }),
+  emergency: buildNpSpecialtyConfig({
+    slug: 'emergency',
+    label: 'Emergency',
+    fullLabel: 'Emergency NP (ENP)',
+    heroSubtitle: 'Emergency nurse practitioner positions',
+    salaryRange: '$115K-160K',
+    keywords: ['emergency nurse practitioner', 'ENP jobs', 'ER nurse practitioner'],
+  }),
+  'psychiatric-mental-health': buildNpSpecialtyConfig({
+    slug: 'psychiatric-mental-health',
+    label: 'Psychiatric Mental Health',
+    fullLabel: 'Psychiatric Mental Health NP (PMHNP)',
+    heroSubtitle: 'Psychiatric mental health nurse practitioner positions',
+    salaryRange: '$120K-170K',
+    keywords: ['psychiatric nurse practitioner', 'PMHNP jobs', 'psych NP'],
+  }),
+  anesthesia: buildNpSpecialtyConfig({
+    slug: 'anesthesia',
+    label: 'Nurse Anesthetist',
+    fullLabel: 'Nurse Anesthetist (CRNA)',
+    heroSubtitle: 'Certified registered nurse anesthetist positions',
+    salaryRange: '$180K-250K',
+    keywords: ['CRNA jobs', 'nurse anesthetist', 'certified registered nurse anesthetist'],
+  }),
+  midwifery: buildNpSpecialtyConfig({
+    slug: 'midwifery',
+    label: 'Nurse Midwife',
+    fullLabel: 'Nurse Midwife (CNM)',
+    heroSubtitle: 'Certified nurse midwife positions',
+    salaryRange: '$105K-140K',
+    keywords: ['CNM jobs', 'certified nurse midwife', 'nurse midwifery'],
+  }),
+};
+
 export const SETTING_CONFIGS: Record<string, SettingConfig> = {
   remote: {
     slug: 'remote',
@@ -303,32 +424,6 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       'Build relationships for repeat assignments',
     ],
   },
-  addiction: {
-    slug: 'addiction',
-    label: 'Addiction',
-    fullLabel: 'Addiction PMHNP',
-    heroSubtitle: 'Substance abuse & addiction treatment positions',
-    salaryRange: '$120K-180K',
-    keywords: ['addiction pmhnp', 'substance abuse pmhnp', 'addiction psychiatry', 'MAT provider', 'suboxone prescriber'],
-    faqCategory: 'addiction',
-    buildWhere: (stateName: string) => buildKeywordWhere(
-      ['addiction', 'substance abuse', 'substance use', 'MAT', 'suboxone', 'buprenorphine', 'methadone', 'recovery', 'detox'],
-      stateName,
-      'addiction',
-    ),
-    benefits: [
-      { title: 'Critical Need', description: 'The opioid epidemic has created unprecedented demand for addiction-trained PMHNPs across every state.', iconName: 'AlertTriangle' },
-      { title: 'MAT Prescribing', description: 'PMHNPs can prescribe buprenorphine (Suboxone) and naltrexone — essential medications for opioid use disorder.', iconName: 'Shield' },
-      { title: 'Loan Repayment', description: 'Many addiction treatment centers qualify for NHSC loan repayment programs, offering up to $50K in student loan forgiveness.', iconName: 'DollarSign' },
-    ],
-    tips: [
-      'Obtain X-waiver/DEA certification for MAT prescribing',
-      'Build expertise in motivational interviewing (MI)',
-      'Understand the continuum of care from detox to recovery',
-      'Stay current on dual-diagnosis treatment approaches',
-      'Explore NHSC loan repayment at qualifying facilities',
-    ],
-  },
   'full-time': {
     slug: 'full-time',
     label: 'Full-Time',
@@ -459,58 +554,61 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       'Work with a healthcare-specialized CPA for tax optimization',
     ],
   },
-  'behavioral-health': {
-    slug: 'behavioral-health',
-    label: 'Behavioral Health',
-    fullLabel: 'Behavioral Health PMHNP',
-    heroSubtitle: 'Integrated behavioral health positions',
-    salaryRange: '$120K-185K',
-    keywords: ['behavioral health pmhnp', 'integrated behavioral health', 'behavioral health nurse practitioner'],
-    faqCategory: 'behavioral-health',
-    buildWhere: (stateName: string) => buildKeywordWhere(
-      ['behavioral health', 'behavioral', 'integrated care', 'integrated behavioral'],
-      stateName,
-      'behavioral-health',
-    ),
+  'per-diem': {
+    slug: 'per-diem',
+    label: 'Per Diem',
+    fullLabel: 'Per Diem NP',
+    // TODO(content): per-board editorial copy — see docs/pilot-fork-runbook.md §3
+    heroSubtitle: 'Flexible per-diem and PRN nurse practitioner shifts',
+    salaryRange: '$60-110/hr',
+    keywords: ['per diem nurse practitioner', 'PRN nurse practitioner', 'per diem NP', 'PRN NP jobs'],
+    faqCategory: 'per-diem',
+    buildWhere: (stateName: string) => ({
+      isPublished: true,
+      state: { equals: stateName, mode: 'insensitive' },
+      ...withTagFallback('per-diem'),
+    }),
     benefits: [
-      { title: 'Integrated Care Model', description: 'Work alongside primary care, social workers, and therapists in a collaborative care team.', iconName: 'Users' },
-      { title: 'Growing Sector', description: 'Behavioral health integration is expanding rapidly with federal funding — demand far outpaces supply.', iconName: 'TrendingUp' },
-      { title: 'Diverse Settings', description: 'Practice in FQHCs, hospitals, school-based clinics, corporate wellness, and community health centers.', iconName: 'Building2' },
+      { title: 'Shift Flexibility', description: 'Pick up shifts that fit your schedule — no fixed weekly commitment.', iconName: 'Clock' },
+      { title: 'Higher Hourly Rates', description: 'Per-diem NPs typically earn a premium over salaried equivalents in exchange for forgoing benefits.', iconName: 'DollarSign' },
+      { title: 'Setting Variety', description: 'Rotate across facilities and care settings while keeping your primary role or practice.', iconName: 'Activity' },
     ],
     tips: [
-      'Build competency in brief, evidence-based interventions (PHQ-9, GAD-7)',
-      'Develop strong collaborative relationships with PCPs and therapists',
-      'Learn to manage patients with co-morbid medical and psychiatric conditions',
-      'Explore FQHC positions for loan repayment eligibility',
-      'Stay current on integrated care models and measurement-based care',
+      'Clarify minimum-shift commitments and cancellation policies up front',
+      'Maintain your own malpractice coverage if not facility-provided',
+      'Track credentialing paperwork — each facility onboards separately',
+      'Stack per-diem shifts across 2-3 facilities for steadier volume',
+      'Confirm whether holiday and weekend differentials apply',
     ],
   },
-  correctional: {
-    slug: 'correctional',
-    label: 'Correctional',
-    fullLabel: 'Correctional PMHNP',
-    heroSubtitle: 'Forensic & correctional psychiatric positions',
-    salaryRange: '$130K-200K',
-    keywords: ['correctional pmhnp', 'forensic pmhnp', 'prison pmhnp', 'jail psychiatric nurse practitioner'],
-    faqCategory: 'correctional',
-    buildWhere: (stateName: string) => buildKeywordWhere(
-      ['correctional', 'corrections', 'forensic', 'prison', 'jail', 'detention', 'incarcerated'],
-      stateName,
-      'correctional',
-    ),
+  'locum-tenens': {
+    slug: 'locum-tenens',
+    label: 'Locum Tenens',
+    fullLabel: 'Locum Tenens NP',
+    // TODO(content): per-board editorial copy — see docs/pilot-fork-runbook.md §3
+    heroSubtitle: 'Short-term locum tenens nurse practitioner assignments',
+    salaryRange: '$80-150/hr',
+    keywords: ['locum tenens nurse practitioner', 'locum NP', 'locum tenens NP jobs', 'temporary NP assignment'],
+    faqCategory: 'locum-tenens',
+    buildWhere: (stateName: string) => ({
+      isPublished: true,
+      state: { equals: stateName, mode: 'insensitive' },
+      ...withTagFallback('locum-tenens'),
+    }),
     benefits: [
-      { title: 'Premium Compensation', description: 'Correctional PMHNPs earn $130K-200K+ with government benefits, pension, and loan repayment programs.', iconName: 'DollarSign' },
-      { title: 'Loan Forgiveness', description: 'Federal and state correctional facilities qualify for PSLF (Public Service Loan Forgiveness) after 120 payments.', iconName: 'Shield' },
-      { title: 'Unique Clinical Skills', description: 'Develop expertise in forensic psychiatry, competency evaluations, and complex dual-diagnosis populations.', iconName: 'Lightbulb' },
+      { title: 'Premium Pay', description: 'Locum assignments typically pay 20-40% above permanent rates, often with housing and travel stipends.', iconName: 'DollarSign' },
+      { title: 'Defined Terms', description: 'Assignments run from a few weeks to several months with clear start and end dates.', iconName: 'Calendar' },
+      { title: 'Geographic Freedom', description: 'Work across states while an agency handles licensing and credentialing logistics.', iconName: 'MapPin' },
     ],
     tips: [
-      'Complete security clearance and background check requirements',
-      'Develop skills in de-escalation and crisis intervention',
-      'Understand the legal and ethical framework of correctional healthcare',
-      'Build competency in forensic evaluations and court testimony',
-      'Explore PSLF eligibility for government correctional positions',
+      'Work with reputable staffing agencies and compare contract terms',
+      'Negotiate housing, travel, and completion bonuses',
+      'Keep credentials and licensure documents ready for fast onboarding',
+      'Understand IRS tax-home rules before taking travel stipends',
+      'Build agency relationships for repeat assignments',
     ],
   },
+  ...NP_SPECIALTY_STATE_CONFIGS,
 };
 
 /** Get all valid setting slugs */

@@ -88,8 +88,9 @@ export async function GET(request: NextRequest) {
                         redirect: 'manual',
                         signal: controller.signal,
                         headers: {
-                            // Audit 25 M-5: a proprietary "PMHNPHiringIndexer/1.0"
-                            // UA was being blocked by Cloudflare WAFs on
+                            // Audit 25 M-5: a bare proprietary
+                            // "<brand.indexerUserAgent>/1.0" UA was being
+                            // blocked by Cloudflare WAFs on
                             // employer ATS career pages, causing legitimate
                             // live URLs to look dead and never get the
                             // URL_DELETED submission they needed. A standard
