@@ -37,8 +37,12 @@ import { RELATED_BLOG_SLUGS, HOMEPAGE_FEATURED_POSTS } from '../config/niche/con
 import { scanBrandLeaks } from '../tests/regressions/brand-leak-scan';
 
 const ROOT = path.resolve(__dirname, '..');
-const TEMPLATE_DOMAIN = 'pmhnphiring.com';
-const IS_FORK = brand.domain !== TEMPLATE_DOMAIN;
+// Widened to `string` deliberately: brand.domain is an `as const` literal
+// type, and comparing two DIFFERENT literals is a TS2367 compile error on
+// every fork (it only compiled on the template where the literals match).
+// Found by the first real fork (NP Hiring, 2026-07-02).
+const TEMPLATE_DOMAIN: string = 'pmhnphiring.com';
+const IS_FORK = (brand.domain as string) !== TEMPLATE_DOMAIN;
 const CRON_SECRET_MIN_LENGTH = 16;
 const LEFTOVER_SCAN_DIRS = ['app', 'lib', 'components', 'public'];
 const MAX_LEFTOVER_FILES_LISTED = 20;
