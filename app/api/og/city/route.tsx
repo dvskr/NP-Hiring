@@ -11,7 +11,7 @@ export const runtime = 'edge';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
-  const category = searchParams.get('category') || 'PMHNP';
+  const category = searchParams.get('category') || brand.niche.short;
   const city = searchParams.get('city') || 'United States';
   const jobs = searchParams.get('jobs') || '0';
   const salary = searchParams.get('salary') || '';
@@ -105,10 +105,10 @@ export async function GET(request: NextRequest) {
             marginBottom: 24,
           }}>
             {logoSrc ? (
-              <img src={logoSrc} alt="PMHNP Hiring" width={180} height={60} style={{ objectFit: 'contain' }} />
+              <img src={logoSrc} alt={brand.name} width={180} height={60} style={{ objectFit: 'contain' }} />
             ) : (
               <div style={{ display: 'flex', fontSize: 26, fontWeight: 800, color: '#0D9488' }}>
-                PMHNP Hiring
+                {brand.name}
               </div>
             )}
             {/* Category badge */}

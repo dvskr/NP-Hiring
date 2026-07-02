@@ -34,6 +34,10 @@ beforeEach(() => {
 });
 
 describe('sendNewCandidateAlertEmail — E3 suppression + List-Unsubscribe', () => {
+  // 15s timeout: this is the suite's first dynamic import of the very large
+  // email-service module; under a full parallel run on a loaded machine that
+  // import alone can blow vitest's 5s default (observed flake), while the
+  // test passes in ~2s in isolation.
   it('skips the send when the address is suppressed (emailLead.isSuppressed)', async () => {
     vi.mocked(prisma.emailLead.findUnique).mockResolvedValue({ isSuppressed: true } as never);
     vi.mocked(prisma.userProfile.findUnique).mockResolvedValue(null as never);
@@ -44,7 +48,7 @@ describe('sendNewCandidateAlertEmail — E3 suppression + List-Unsubscribe', () 
     expect(result.success).toBe(false);
     expect(result.error).toBe('suppressed');
     expect(resendSendMock).not.toHaveBeenCalled();
-  });
+  }, 15_000);
 
   it('skips the send when suppressed via userProfile.emailSuppressed', async () => {
     vi.mocked(prisma.emailLead.findUnique).mockResolvedValue(null as never);

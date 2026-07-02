@@ -10,7 +10,6 @@
   "app/api/email-job/route.ts": 1,
   "app/api/email-preview/route.ts": 2,
   "app/api/email-preview/v2-templates.ts": 3,
-  "app/api/og/city/route.tsx": 2,
   "app/api/og/route.tsx": 7,
   "app/auth/callback/route.ts": 1,
   "app/blog/[slug]/page.tsx": 12,

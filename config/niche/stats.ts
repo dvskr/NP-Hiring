@@ -285,3 +285,188 @@ export const DASHBOARD_MARKET_PULSE = {
     metric: '18%',
     tail: ' this quarter. Telehealth surging.',
 } as const;
+
+/* ══════════════════════════════════════════════════════════════════════
+ * ── Scattered salary claims ──────────────────────────────────────────
+ *
+ * Salary figures that were hardcoded inside individual UI components,
+ * extracted here verbatim. This is a THIRD family of salary numbers on
+ * this board, independent of the other two:
+ *   1. config/niche/salary.ts — pipeline validation/clamp/period bands
+ *      (e.g. "typical" $100k–$160k, annual $80k–$350k);
+ *   2. lib/stats-sources.ts — CITATION-BACKED figures ($155,000 average,
+ *      $155,000–$165,000 range; BLS OEWS, May 2024 release).
+ * A fork must retune all three families TOGETHER — the pipeline bands
+ * decide which salaries survive ingestion, the cited figures anchor
+ * SEO/E-E-A-T copy, and the UI claims below are what users actually see
+ * next to real job salaries.
+ *
+ * INTERNAL CONTRADICTIONS — copied verbatim, deliberately NOT reconciled
+ * (each value was tuned/authored separately; reconciling is a content
+ * decision, not a refactor):
+ *   • SALARY_COMPARISON_NATIONAL_AVG_K claims a $158k national average
+ *     (job-detail salary widget);
+ *   • SALARY_INSIGHTS_DEFAULT_NATIONAL_AVG_K claims $155k — a different
+ *     "national average" for the SAME job-detail surface;
+ *   • STATE_FAQ_NATIONAL_AVG_SALARY_TEXT claims '$155,000' (state-page
+ *     FAQ prose + FAQPage JSON-LD);
+ *   • CAREER_PULSE_STATS above claims '$160K+' median (job-detail
+ *     sidebar);
+ *   • lib/stats-sources.ts cites $155,000 — the only SOURCED value.
+ * So a single job-detail page can simultaneously render "$158k national
+ * average" (comparison widget) and "$160K+ median" (career pulse), while
+ * state FAQs and cited stats say $155,000.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════════════
+ * components/jobs/LinkedInFilters.tsx — "Salary" checkbox buckets in the
+ * jobs-list filter sidebar (app/jobs/JobsPageClient.tsx) and the mobile
+ * filter drawer (components/MobileFilterDrawer.tsx).
+ *
+ * NOT display-only — each field is query-coupled:
+ *   • `value` is written to the `salaryMin` URL param on toggle
+ *     (lib/filters.ts filtersToParams / parseFiltersFromParams) and used
+ *     verbatim as the DB threshold (normalizedMin/MaxSalary >= salaryMin);
+ *   • `countKey` must be one of the FIXED FilterCounts.salary keys
+ *     (types/filters.ts) computed by POST /api/jobs/filter-counts.
+ * Changing a `label` here is safe; changing a `value` changes query
+ * behavior (still valid — the API accepts any salaryMin); adding or
+ * re-thresholding a bucket ALSO requires a matching count bucket in the
+ * filter-counts API or its badge renders 0.
+ *
+ * FORK WARNING: the $100k/$150k/$200k thresholds assume THIS niche's pay
+ * distribution (pipeline "typical" band $100k–$160k in
+ * config/niche/salary.ts). On a lower-paying niche every listing falls
+ * below the first bucket and all three badges read 0 forever. Retune
+ * together with config/niche/salary.ts and the filter-counts API.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+export interface SalaryFilterBucket {
+    /** Checkbox label rendered in the "Salary" filter section. */
+    label: string;
+    /** Annual USD minimum written verbatim to the `salaryMin` query param. */
+    value: number;
+    /** FilterCounts.salary key holding this bucket's live job count. */
+    countKey: 'over100k' | 'over150k' | 'over200k';
+}
+
+export const SALARY_FILTER_BUCKETS: readonly SalaryFilterBucket[] = [
+    { label: '$100,000+', value: 100000, countKey: 'over100k' },
+    { label: '$150,000+', value: 150000, countKey: 'over150k' },
+    { label: '$200,000+', value: 200000, countKey: 'over200k' },
+];
+
+/* ══════════════════════════════════════════════════════════════════════
+ * components/SalaryComparisonWidget.tsx — "National Avg" figure (in $k)
+ * in the "💰 Salary Insights for {state}" card on the job-detail page
+ * (app/jobs/[slug]/page.tsx). Also the DENOMINATOR of the "{state} pays
+ * ±N% above/below the national average" comparison line, so changing it
+ * silently changes every state-vs-national percentage. The component's
+ * original inline comment read "$158k national average for PMHNPs" — no
+ * source cited.
+ *
+ * FORK WARNING + CONTRADICTION: $158k disagrees with every other
+ * national figure on this board — $155k
+ * (SALARY_INSIGHTS_DEFAULT_NATIONAL_AVG_K, STATE_FAQ_NATIONAL_AVG_SALARY_TEXT,
+ * and the cited lib/stats-sources.ts averageSalary) and '$160K+'
+ * (CAREER_PULSE_STATS). Copied verbatim, NOT reconciled.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+export const SALARY_COMPARISON_NATIONAL_AVG_K = 158; // $158k national average for PMHNPs
+
+/* ══════════════════════════════════════════════════════════════════════
+ * components/SalaryInsights.tsx — default for the optional
+ * `nationalAvgSalary` prop (in $k): the "National average: $155k"
+ * footnote under the state-average card. The component is imported by
+ * app/jobs/[slug]/page.tsx but NOT currently rendered on any route, so
+ * this default is LATENT — it applies the moment a call site mounts the
+ * component without passing the prop.
+ *
+ * CONTRADICTION: $155k here vs $158k in SALARY_COMPARISON_NATIONAL_AVG_K
+ * — two different "national average" defaults aimed at the same
+ * job-detail surface. Numerically matches the cited lib/stats-sources.ts
+ * value ($155,000) but the component cites nothing.
+ *
+ * FORK WARNING: a PMHNP/US figure; re-source per niche (ideally from
+ * lib/stats-sources.ts) before mounting the component.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+export const SALARY_INSIGHTS_DEFAULT_NATIONAL_AVG_K = 155;
+
+/* ══════════════════════════════════════════════════════════════════════
+ * components/StateFAQ.tsx — display string templated MID-SENTENCE into
+ * the no-state-data fallback answer of "What is the average PMHNP salary
+ * in {state}?" on state pages (app/jobs/state/[state]/page.tsx). The
+ * answer string is emitted BOTH as visible accordion copy
+ * (StateFAQAccordion) and inside FAQPage JSON-LD, so this must remain
+ * the exact display form ('$155,000') — not a number to re-format — for
+ * the sentence to reassemble byte-identically.
+ *
+ * CONTRADICTION: matches lib/stats-sources.ts averageSalary.formatted
+ * ('$155,000', BLS OEWS May 2024) numerically, but this FAQ copy cites
+ * no source and disagrees with SALARY_COMPARISON_NATIONAL_AVG_K ($158k)
+ * and CAREER_PULSE_STATS ('$160K+').
+ *
+ * FORK WARNING: uncited US-PMHNP salary claim inside SEO-visible
+ * structured data. Re-author (or wire to lib/stats-sources.ts) per niche.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+export const STATE_FAQ_NATIONAL_AVG_SALARY_TEXT = '$155,000';
+
+/* ══════════════════════════════════════════════════════════════════════
+ * components/SalaryCalculator.tsx — multiplier tables for the "PMHNP
+ * Salary Calculator" on the salary guide (app/salary-guide/page.tsx).
+ * The three multipliers are applied MULTIPLICATIVELY to a live base
+ * (selected state average, or the DB-computed national average passed in
+ * as `nationalAvg` — the base is NOT hardcoded). The component's
+ * original comment read "Multipliers based on industry data" — no source
+ * cited. The ±10% low/high band, the 2080 hours/yr hourly conversion,
+ * and the "* Estimates based on BLS, ZipRecruiter, Indeed, and 10,000+
+ * job postings" footnote remain in the component as calculation/layout.
+ *
+ * COUPLING: the component's default selections are useState('mid'),
+ * useState('outpatient'), useState('general') — those `value` strings
+ * must keep existing entries here or the selects start out unmatched.
+ *
+ * FORK WARNING: both the OPTION LISTS (practice settings, psychiatric
+ * sub-specialties) and the MULTIPLIER values are PMHNP-tuned claims.
+ * Combined with the other two salary families (config/niche/salary.ts
+ * bands gate which salaries exist; lib/stats-sources.ts anchors cited
+ * copy), a fork must retune these percentages per niche or the
+ * calculator fabricates plausible-looking wrong estimates.
+ * ══════════════════════════════════════════════════════════════════════ */
+
+export interface SalaryCalcOption {
+    /** <option> text shown in the calculator dropdown. */
+    label: string;
+    /** Stable option value — coupled to the component's useState defaults. */
+    value: string;
+    /** Factor applied to the running salary estimate. */
+    multiplier: number;
+}
+
+export const SALARY_CALC_EXPERIENCE_OPTIONS: readonly SalaryCalcOption[] = [
+    { label: 'New Grad (0-1 yr)', value: 'new-grad', multiplier: 0.82 },
+    { label: 'Early Career (1-3 yrs)', value: 'early', multiplier: 0.93 },
+    { label: 'Mid-Career (3-7 yrs)', value: 'mid', multiplier: 1.0 },
+    { label: 'Experienced (7-15 yrs)', value: 'experienced', multiplier: 1.12 },
+    { label: 'Expert (15+ yrs)', value: 'expert', multiplier: 1.28 },
+];
+
+export const SALARY_CALC_SETTING_OPTIONS: readonly SalaryCalcOption[] = [
+    { label: 'Private Practice (Owner)', value: 'private', multiplier: 1.35 },
+    { label: 'Travel / Locum Tenens', value: 'travel', multiplier: 1.20 },
+    { label: 'Telehealth / Remote', value: 'telehealth', multiplier: 1.02 },
+    { label: 'Outpatient Clinic', value: 'outpatient', multiplier: 0.95 },
+    { label: 'Hospital / Inpatient', value: 'hospital', multiplier: 0.90 },
+    { label: 'Community Mental Health', value: 'community', multiplier: 0.78 },
+];
+
+export const SALARY_CALC_SPECIALTY_OPTIONS: readonly SalaryCalcOption[] = [
+    { label: 'General Psychiatry', value: 'general', multiplier: 1.0 },
+    { label: 'Addiction / MAT', value: 'addiction', multiplier: 1.17 },
+    { label: 'Child & Adolescent', value: 'child', multiplier: 1.12 },
+    { label: 'Forensic Psychiatry', value: 'forensic', multiplier: 1.20 },
+    { label: 'Emergency / Crisis', value: 'emergency', multiplier: 1.15 },
+    { label: 'Geriatric Psychiatry', value: 'geriatric', multiplier: 1.07 },
+];

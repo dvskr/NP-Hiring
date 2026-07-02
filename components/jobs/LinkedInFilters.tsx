@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { X, ChevronDown, ChevronUp, Search, MapPin } from 'lucide-react';
 import { FilterState, FilterCounts, DEFAULT_FILTERS } from '@/types/filters';
 import { filtersToParams, parseFiltersFromParams } from '@/lib/filters';
+import { SALARY_FILTER_BUCKETS } from '@/config/niche/stats';
 import { trackSearch, trackFilterChange } from '@/lib/analytics';
 
 interface CheckboxFilterProps {
@@ -620,26 +621,20 @@ export default function LinkedInFilters() {
               />
             </FilterSection>
 
-            {/* Salary */}
+            {/* Salary — bucket labels/values/count keys live in
+                config/niche/stats.ts (SALARY_FILTER_BUCKETS). `value` flows
+                into the salaryMin query param; `countKey` must match the
+                filter-counts API's fixed salary buckets. */}
             <FilterSection title="Salary">
-              <CheckboxFilter
-                label="$100,000+"
-                count={counts?.salary.over100k || 0}
-                checked={filters.salaryMin === 100000}
-                onChange={() => setSingleFilter('salaryMin', filters.salaryMin === 100000 ? null : 100000)}
-              />
-              <CheckboxFilter
-                label="$150,000+"
-                count={counts?.salary.over150k || 0}
-                checked={filters.salaryMin === 150000}
-                onChange={() => setSingleFilter('salaryMin', filters.salaryMin === 150000 ? null : 150000)}
-              />
-              <CheckboxFilter
-                label="$200,000+"
-                count={counts?.salary.over200k || 0}
-                checked={filters.salaryMin === 200000}
-                onChange={() => setSingleFilter('salaryMin', filters.salaryMin === 200000 ? null : 200000)}
-              />
+              {SALARY_FILTER_BUCKETS.map((bucket) => (
+                <CheckboxFilter
+                  key={bucket.value}
+                  label={bucket.label}
+                  count={counts?.salary[bucket.countKey] || 0}
+                  checked={filters.salaryMin === bucket.value}
+                  onChange={() => setSingleFilter('salaryMin', filters.salaryMin === bucket.value ? null : bucket.value)}
+                />
+              ))}
             </FilterSection>
           </div>
         </div>

@@ -29,7 +29,12 @@ const ENDPOINT = 'https://api.indexnow.org/IndexNow';
 const HOST = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 
 function getKey(): string | null {
-  const key = process.env.INDEXNOW_KEY;
+  // Historically this module read INDEXNOW_KEY while lib/search-indexing.ts
+  // read INDEXNOW_API_KEY — with only one var set, half the indexing
+  // pipeline silently no-oped while reporting success. Accept either
+  // (own name first) so a single configured key works everywhere;
+  // scripts/fork-preflight.ts still warns until both are set identically.
+  const key = process.env.INDEXNOW_KEY || process.env.INDEXNOW_API_KEY;
   if (!key || key.length < 8) return null;
   return key;
 }

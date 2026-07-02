@@ -2,6 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { ChevronDown, Sparkles } from 'lucide-react';
+import {
+  SALARY_CALC_EXPERIENCE_OPTIONS,
+  SALARY_CALC_SETTING_OPTIONS,
+  SALARY_CALC_SPECIALTY_OPTIONS,
+} from '@/config/niche/stats';
 
 interface StateSalary {
   state: string;
@@ -16,32 +21,11 @@ interface Props {
   nationalAvg: number;
 }
 
-/* ═══ Multipliers based on industry data ═══ */
-const EXPERIENCE_OPTIONS = [
-  { label: 'New Grad (0-1 yr)', value: 'new-grad', multiplier: 0.82 },
-  { label: 'Early Career (1-3 yrs)', value: 'early', multiplier: 0.93 },
-  { label: 'Mid-Career (3-7 yrs)', value: 'mid', multiplier: 1.0 },
-  { label: 'Experienced (7-15 yrs)', value: 'experienced', multiplier: 1.12 },
-  { label: 'Expert (15+ yrs)', value: 'expert', multiplier: 1.28 },
-];
-
-const SETTING_OPTIONS = [
-  { label: 'Private Practice (Owner)', value: 'private', multiplier: 1.35 },
-  { label: 'Travel / Locum Tenens', value: 'travel', multiplier: 1.20 },
-  { label: 'Telehealth / Remote', value: 'telehealth', multiplier: 1.02 },
-  { label: 'Outpatient Clinic', value: 'outpatient', multiplier: 0.95 },
-  { label: 'Hospital / Inpatient', value: 'hospital', multiplier: 0.90 },
-  { label: 'Community Mental Health', value: 'community', multiplier: 0.78 },
-];
-
-const SPECIALTY_OPTIONS = [
-  { label: 'General Psychiatry', value: 'general', multiplier: 1.0 },
-  { label: 'Addiction / MAT', value: 'addiction', multiplier: 1.17 },
-  { label: 'Child & Adolescent', value: 'child', multiplier: 1.12 },
-  { label: 'Forensic Psychiatry', value: 'forensic', multiplier: 1.20 },
-  { label: 'Emergency / Crisis', value: 'emergency', multiplier: 1.15 },
-  { label: 'Geriatric Psychiatry', value: 'geriatric', multiplier: 1.07 },
-];
+/* Multiplier tables live in config/niche/stats.ts — option `value`
+   strings are coupled to the useState defaults below. */
+const EXPERIENCE_OPTIONS = SALARY_CALC_EXPERIENCE_OPTIONS;
+const SETTING_OPTIONS = SALARY_CALC_SETTING_OPTIONS;
+const SPECIALTY_OPTIONS = SALARY_CALC_SPECIALTY_OPTIONS;
 
 const clayCard: React.CSSProperties = {
   background: '#FFFFFF', borderRadius: '20px',

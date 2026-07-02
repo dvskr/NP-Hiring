@@ -1,5 +1,7 @@
 'use client';
 
+import { SALARY_COMPARISON_NATIONAL_AVG_K } from '@/config/niche/stats';
+
 interface SalaryComparisonWidgetProps {
     stateName: string | null;
     stateAvgSalary: number; // in thousands (e.g., 155 = $155k)
@@ -7,7 +9,8 @@ interface SalaryComparisonWidgetProps {
     jobMaxSalary?: number | null;
 }
 
-const NATIONAL_AVG_SALARY = 158; // $158k national average for PMHNPs
+// National-average figure ($k) lives in config/niche/stats.ts.
+const NATIONAL_AVG_SALARY = SALARY_COMPARISON_NATIONAL_AVG_K;
 
 export default function SalaryComparisonWidget({
     stateName,
