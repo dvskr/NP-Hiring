@@ -78,23 +78,23 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} Child & Adolescent PMHNP Jobs — Pediatric Psych NP Positions`,
-    description: `Find ${stats.totalJobs} child and adolescent PMHNP jobs. Pediatric psychiatric nurse practitioner positions in schools, children's hospitals, and youth behavioral health clinics with specialized training and family-centered care.`,
+    title: `${stats.totalJobs} Child & Adolescent ${brand.niche.short} Jobs — Pediatric Psych NP Positions`,
+    description: `Find ${stats.totalJobs} child and adolescent ${brand.niche.short} jobs. Pediatric ${brand.niche.adjective} nurse practitioner positions in schools, children's hospitals, and youth behavioral health clinics with specialized training and family-centered care.`,
     keywords: ['child pmhnp jobs', 'adolescent pmhnp', 'pediatric psychiatric nurse practitioner', 'child psychiatry np', 'CAPMHNP jobs'],
     openGraph: {
-      title: `${stats.totalJobs} Child & Adolescent PMHNP Jobs`,
-      description: 'Browse pediatric psychiatric nurse practitioner positions in schools, hospitals, and clinics.',
+      title: `${stats.totalJobs} Child & Adolescent ${brand.niche.short} Jobs`,
+      description: `Browse pediatric ${brand.niche.adjective} nurse practitioner positions in schools, hospitals, and clinics.`,
       type: 'website',
       url: `${brand.baseUrl}/jobs/child-adolescent`,
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Child & Adolescent PMHNP Jobs`)}&subtitle=${encodeURIComponent('Pediatric psychiatric NP positions in schools, hospitals & clinics')}`,
-        width: 1200, height: 630, alt: 'Child & Adolescent PMHNP Jobs',
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Child & Adolescent ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Pediatric ${brand.niche.adjective} NP positions in schools, hospitals & clinics`)}`,
+        width: 1200, height: 630, alt: `Child & Adolescent ${brand.niche.short} Jobs`,
       }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${stats.totalJobs} Child & Adolescent PMHNP Jobs`,
-      description: 'Pediatric PMHNP positions with specialized training and family-centered care.',
+      title: `${stats.totalJobs} Child & Adolescent ${brand.niche.short} Jobs`,
+      description: `Pediatric ${brand.niche.short} positions with specialized training and family-centered care.`,
     },
     alternates: { canonical: `${brand.baseUrl}/jobs/child-adolescent` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
@@ -116,20 +116,20 @@ export default async function ChildAdolescentJobsPage({ searchParams }: PageProp
 
   const childAdolescentFaqs = [
     {
-      question: "What do child & adolescent PMHNPs do?",
-      answer: "Child & adolescent PMHNPs specialize in diagnosing and treating psychiatric disorders in children, teens, and young adults aged 0–21. They manage ADHD, anxiety, depression, autism spectrum disorders, behavioral disorders, eating disorders, and trauma-related conditions using medication management and family-centered therapeutic approaches."
+      question: `What do child & adolescent ${brand.niche.short}s do?`,
+      answer: `Child & adolescent ${brand.niche.short}s specialize in diagnosing and treating ${brand.niche.adjective} disorders in children, teens, and young adults aged 0–21. They manage ADHD, anxiety, depression, autism spectrum disorders, behavioral disorders, eating disorders, and trauma-related conditions using medication management and family-centered therapeutic approaches.`
     },
     {
-      question: "How much do pediatric psychiatric NPs earn?",
-      answer: "Child & adolescent PMHNPs earn $125,000–$180,000+ annually depending on setting and location. School-based roles often follow academic calendars with summers off, while children's hospital positions offer shift differentials and sign-on bonuses."
+      question: `How much do pediatric ${brand.niche.adjective} NPs earn?`,
+      answer: `Child & adolescent ${brand.niche.short}s earn $125,000–$180,000+ annually depending on setting and location. School-based roles often follow academic calendars with summers off, while children's hospital positions offer shift differentials and sign-on bonuses.`
     },
     {
       question: "Do you need special certification for pediatric psychiatry?",
       answer: "The standard PMHNP-BC certification (ANCC) is across-the-lifespan and qualifies you to treat children. However, employers strongly prefer candidates with pediatric clinical experience. Some programs offer child/adolescent concentrations, and post-graduate fellowships provide specialized training."
     },
     {
-      question: "Are school-based PMHNP positions available?",
-      answer: "Yes — school-based PMHNP positions are growing rapidly as districts address the youth mental health crisis. These roles typically follow the school calendar with summers off, offer competitive salaries, and provide a rewarding opportunity to serve children where they spend most of their day."
+      question: `Are school-based ${brand.niche.short} positions available?`,
+      answer: `Yes — school-based ${brand.niche.short} positions are growing rapidly as districts address the youth ${brand.niche.category} crisis. These roles typically follow the school calendar with summers off, offer competitive salaries, and provide a rewarding opportunity to serve children where they spend most of their day.`
     },
   ];
 
@@ -161,7 +161,7 @@ export default async function ChildAdolescentJobsPage({ searchParams }: PageProp
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'ItemList',
-              name: 'Child & Adolescent PMHNP Jobs',
+              name: `Child & Adolescent ${brand.niche.short} Jobs`,
               numberOfItems: stats.totalJobs,
               itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({
                 '@type': 'ListItem',
@@ -173,18 +173,18 @@ export default async function ChildAdolescentJobsPage({ searchParams }: PageProp
           }}
         />
       )}
-      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Child & Adolescent PMHNP Jobs" />
+      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName={`Child & Adolescent ${brand.niche.short} Jobs`} />
 
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#e3ac73"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_childadolescent.webp`}
-        heroAlt="Child and adolescent PMHNP pediatric care"
+        heroAlt={`Child and adolescent ${brand.niche.short} pediatric care`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Child & Adolescent']}
         indexLabel="№ 16 / 28"
         headlineLine1="Child & Adolescent"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, pediatric psych."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -211,7 +211,7 @@ export default async function ChildAdolescentJobsPage({ searchParams }: PageProp
               <div className="text-center py-12 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
                 <Building2 className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-tertiary)' }} />
                 <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No child & adolescent positions at this time</h3>
-                <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>New pediatric PMHNP openings are added daily.</p>
+                <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>New pediatric {brand.niche.short} openings are added daily.</p>
                 <Link href="/jobs" className="inline-block px-6 py-3 text-white rounded-lg font-medium" style={{ backgroundColor: 'var(--color-primary)' }}>Browse All Jobs</Link>
               </div>
             ) : (
@@ -274,7 +274,7 @@ export default async function ChildAdolescentJobsPage({ searchParams }: PageProp
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose Child & Adolescent</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Built for Pediatric Psychiatry</h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Specialized roles addressing the youth mental health crisis with family-centered, developmental care.</p>
+          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Specialized roles addressing the youth {brand.niche.category} crisis with family-centered, developmental care.</p>
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Children's Clinic (8) + School-Based (4) */}
@@ -286,13 +286,13 @@ export default async function ChildAdolescentJobsPage({ searchParams }: PageProp
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_child_clinic.webp`} alt="Children's psychiatric clinic playroom" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_child_clinic.webp`} alt={`Children's ${brand.niche.adjective} clinic playroom`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
             <div className="cat-bento-hero-2 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_child_school.webp`} alt="School-based mental health clinic" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_child_school.webp`} alt={`School-based ${brand.niche.category} clinic`} width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
               </div>
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>School-Based Care</h3>
@@ -329,12 +329,11 @@ export default async function ChildAdolescentJobsPage({ searchParams }: PageProp
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary + Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Child & adolescent PMHNPs earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$125K–$180K'} annually. School-based roles offer academic calendars with summers off.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Child & adolescent {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$125K–$180K'} annually. School-based roles offer academic calendars with summers off.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_child_salary.webp`} alt="Child PMHNP salary and career growth" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_child_salary.webp`} alt={`Child ${brand.niche.short} salary and career growth`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
@@ -370,7 +369,7 @@ export default async function ChildAdolescentJobsPage({ searchParams }: PageProp
               <div key="01" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>01</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Pediatric Training</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Ensure your PMHNP program included child/adolescent psychiatric rotations and developmental assessments.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Ensure your {brand.niche.short} program included child/adolescent {brand.niche.adjective} rotations and developmental assessments.</p>
               </div>
               <div key="02" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>02</span>
@@ -424,7 +423,7 @@ export default async function ChildAdolescentJobsPage({ searchParams }: PageProp
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Child & Adolescent PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Child & Adolescent {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {childAdolescentFaqs.map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px 28px' }}>

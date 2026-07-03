@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { brand } from '@/config/brand';
 import { formatCT } from '@/lib/format-ct';
 import {
   Briefcase, Target, TrendingUp, ArrowRight, Users, BarChart3,
@@ -211,7 +212,7 @@ export default function AdminDashboard() {
       <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ ...heading, fontSize: '30px', marginBottom: '4px', letterSpacing: '-0.5px' }}>Admin Dashboard</h1>
-          <p style={sub}>PMHNP Hiring — Overview · Last 30 days</p>
+          <p style={sub}>{brand.name} — Overview · Last 30 days</p>
         </div>
         <button onClick={fetchAnalytics} style={{
           padding: '10px 22px', borderRadius: '20px', cursor: 'pointer',

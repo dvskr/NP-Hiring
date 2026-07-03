@@ -21,6 +21,12 @@
   fork:preflight` (env/config/coherence/pack validator), docs updated.
 - **Phase 3** — see `docs/pilot-fork-runbook.md`; requires niche/domain/account
   decisions, so it executes per-fork rather than in the template.
+- **Niche copy tokenized template-wide (2026-07-03)** — niche identity strings
+  in app/, components/, and lib/ derive from `brand.niche` tokens
+  (config/brand.ts); the niche-copy debt scanner
+  (`tests/regressions/niche-copy-debt.test.ts` ratchet + fork-preflight §5,
+  WARN-only) tracks the residual authored reference-niche content that tokens
+  can't express (facts, regulatory claims, editorial prose).
 
 ---
 

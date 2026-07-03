@@ -7,6 +7,7 @@ import {
     clayInput, clayLabel, clayBtnPrimary, clayBtnOutline, clayBtnOutlineSmall,
     clayPalette,
 } from './clay-tokens'
+import { brand } from '@/config/brand'
 
 const US_STATES = [
     'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN',
@@ -179,7 +180,7 @@ export default function WorkExperienceSection({ showMsg }: Props) {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                    <div><label style={labelStyle}>Job Title *</label><input type="text" value={form.jobTitle} onChange={(e) => setForm({ ...form, jobTitle: e.target.value })} placeholder="Psychiatric NP" style={inputStyle} /></div>
+                    <div><label style={labelStyle}>Job Title *</label><input type="text" value={form.jobTitle} onChange={(e) => setForm({ ...form, jobTitle: e.target.value })} placeholder={brand.niche.medium} style={inputStyle} /></div>
                     <div><label style={labelStyle}>Employer *</label><input type="text" value={form.employerName} onChange={(e) => setForm({ ...form, employerName: e.target.value })} placeholder="ABC Health System" style={inputStyle} /></div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr', gap: '14px' }}>

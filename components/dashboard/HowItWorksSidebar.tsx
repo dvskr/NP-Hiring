@@ -11,6 +11,7 @@
 
 import React from 'react';
 import { Zap, ExternalLink, Globe, ShieldCheck } from 'lucide-react';
+import { brand } from '@/config/brand';
 
 const cardBase: React.CSSProperties = {
     background: '#FFFFFF',
@@ -74,7 +75,7 @@ export default function HowItWorksSidebar(): React.JSX.Element {
                     iconBg="#A7F3D0"
                     iconColor="#065F46"
                     title="⚡ Easy Apply"
-                    body="One-click application right here. Fastest path. Posted by employers who hire on PMHNP Hiring."
+                    body={`One-click application right here. Fastest path. Posted by employers who hire on ${brand.name}.`}
                 />
 
                 <Row

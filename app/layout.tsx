@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     template: `%s | ${brand.name}`,
   },
 
-  description: 'Browse thousands of PMHNP jobs updated daily. Remote, telehealth & in-person psychiatric NP positions with salary transparency. Free for job seekers.',
+  description: `Browse thousands of ${brand.niche.short} jobs updated daily. Remote, telehealth & in-person ${brand.niche.adjective} NP positions with salary transparency. Free for job seekers.`,
 
   keywords: [
     'PMHNP jobs',

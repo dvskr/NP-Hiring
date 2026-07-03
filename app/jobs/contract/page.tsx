@@ -41,10 +41,10 @@ async function getStats() {
 }
 
 const contractFaqs = [
-  { question: 'What is a Contract PMHNP role?', answer: 'Contract PMHNP positions are fixed-term assignments (3-12 months) with staffing agencies or health systems. They offer higher hourly rates, diverse clinical exposure, and geographic flexibility.' },
-  { question: 'How much more do contract PMHNPs earn?', answer: 'Contract PMHNPs typically earn 15-30% more than permanent roles, with hourly rates from $75-$120/hr. W-2 contracts may include benefits; 1099 roles offer maximum flexibility and tax advantages.' },
+  { question: `What is a Contract ${brand.niche.short} role?`, answer: `Contract ${brand.niche.short} positions are fixed-term assignments (3-12 months) with staffing agencies or health systems. They offer higher hourly rates, diverse clinical exposure, and geographic flexibility.` },
+  { question: `How much more do contract ${brand.niche.short}s earn?`, answer: `Contract ${brand.niche.short}s typically earn 15-30% more than permanent roles, with hourly rates from $75-$120/hr. W-2 contracts may include benefits; 1099 roles offer maximum flexibility and tax advantages.` },
   { question: 'What qualifications are needed for contract work?', answer: 'Active PMHNP-BC certification, state APRN licensure, DEA registration, and typically 1-2 years of clinical experience. Multi-state licensure is a major advantage.' },
-  { question: 'Do contract PMHNPs get benefits?', answer: 'W-2 contracts through staffing agencies often include health insurance, malpractice coverage, housing stipends, and travel reimbursement. 1099 contractors arrange their own benefits.' },
+  { question: `Do contract ${brand.niche.short}s get benefits?`, answer: 'W-2 contracts through staffing agencies often include health insurance, malpractice coverage, housing stipends, and travel reimbursement. 1099 contractors arrange their own benefits.' },
   { question: 'Can contract roles convert to permanent?', answer: 'Yes — many facilities use contract-to-perm arrangements. This lets both parties evaluate fit before committing to a permanent position, reducing hiring risk.' },
 ];
 
@@ -52,8 +52,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Contract PMHNP Jobs ($130K-180K)`,
-    description: `Find ${stats.totalJobs} contract PMHNP jobs paying $130K-180K+. Browse psychiatric nurse practitioner contract positions with premium rates.`,
+    title: `${stats.totalJobs} Contract ${brand.niche.short} Jobs ($130K-180K)`,
+    description: `Find ${stats.totalJobs} contract ${brand.niche.short} jobs paying $130K-180K+. Browse ${brand.niche.adjective} nurse practitioner contract positions with premium rates.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/contract` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
@@ -77,19 +77,19 @@ export default async function ContractPage({ searchParams }: PageProps) {
       ]} />
       <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Contract Jobs" />
       {jobs.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Contract PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Contract ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
 
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#adc2d7"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_contract.webp`}
-        heroAlt="Contract PMHNP signing agreement"
+        heroAlt={`Contract ${brand.niche.short} signing agreement`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Contract']}
         indexLabel="№ 06 / 28"
         headlineLine1="Contract"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, fixed-term roles."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -179,7 +179,7 @@ export default async function ContractPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ct_rates.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Higher Rates</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Contract PMHNPs typically earn 15-30% more than permanent.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Contract {brand.niche.short}s typically earn 15-30% more than permanent.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ct_settings.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -196,10 +196,10 @@ export default async function ContractPage({ searchParams }: PageProps) {
               <div>
                 <TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} />
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Premium Rates</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average contract PMHNP salary:</p>
+                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average contract {brand.niche.short} salary:</p>
                 <p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p>
               </div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ct_salary.webp`} alt="Contract PMHNP pay" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ct_salary.webp`} alt={`Contract ${brand.niche.short} pay`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)' }}>
               <Bell size={32} style={{ color: '#0D9488', marginBottom: '14px' }} />
@@ -221,7 +221,7 @@ export default async function ContractPage({ searchParams }: PageProps) {
               { num: '01', title: 'PMHNP-BC', desc: 'Active PMHNP-BC certification through ANCC.' },
               { num: '02', title: 'State License', desc: 'APRN licensure and prescriptive authority.' },
               { num: '03', title: 'DEA Number', desc: 'DEA registration for controlled substances.' },
-              { num: '04', title: 'Experience', desc: 'Clinical experience in psychiatric settings.' },
+              { num: '04', title: 'Experience', desc: `Clinical experience in ${brand.niche.adjective} settings.` },
             ].map(item => (
               <div key={item.num} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>{item.num}</span>
@@ -264,7 +264,7 @@ export default async function ContractPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Contract PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Contract {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {contractFaqs.map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}>

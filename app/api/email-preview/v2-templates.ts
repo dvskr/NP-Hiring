@@ -13,7 +13,7 @@ const IMG = process.env.EMAIL_ASSETS_URL || `${BASE_URL}/images/email`;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function hero(file: string, alt: string = 'PMHNP Hiring'): string {
+function hero(file: string, alt: string = brand.name): string {
   return `<tr><td style="padding:0 40px;" bgcolor="${V2.bgCard}"><img src="${IMG}/${file}" alt="${alt}" width="520" height="280" style="width:100%;max-width:520px;height:auto;display:block;border-radius:12px;margin:0 auto;border:0;background-color:${V2.bgCard};color:${V2.teal};font-family:${SERIF};font-size:20px;font-weight:700;text-align:center;line-height:280px;" /></td></tr>`;
 }
 
@@ -91,9 +91,9 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
     label: 'Welcome (Alert Subscription)',
     desc: 'Sent immediately when a user subscribes \u2014 alerts active',
     fn: () => simple('hero-alert-subscription.png', 'Your Alerts Are Live',
-      'Your job alerts are now active. We scan thousands of PMHNP positions daily and deliver matches straight to your inbox \u2014 so you never miss the right opportunity.',
+      `Your job alerts are now active. We scan thousands of ${brand.niche.short} positions daily and deliver matches straight to your inbox \u2014 so you never miss the right opportunity.`,
       'Browse Open Positions', `${BASE_URL}/jobs`,
-      'Your PMHNP job alerts are active.'),
+      `Your ${brand.niche.short} job alerts are active.`),
   },
 
   // 2a. Signup - Job Seeker
@@ -101,7 +101,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
     label: 'Signup Welcome (Job Seeker)',
     desc: 'Sent when a new job seeker creates an account',
     fn: () => emailShellV2(`
-      ${headerBlockV2('Welcome to PMHNP Hiring', '')}
+      ${headerBlockV2(`Welcome to ${brand.name}`, '')}
       ${spacerV2(20)}
       ${bodyText('You have unlocked a new way to find your perfect role. Search curated positions, get matched by AI, and connect directly with hiring managers \u2014 no recruiters, no middlemen.')}
       ${spacerV2(36)}
@@ -118,7 +118,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
       ${secondary(`Want the data first? <a href="${BASE_URL}/salary-guide" style="color:${V2.teal};text-decoration:underline;">Download the 2026 Salary Guide</a>.`)}
       ${spacerV2(48)}
       ${closeContentV2()}`, unsubscribeFooterV2('sample'),
-      'Welcome to PMHNP Hiring \u2014 find your perfect PMHNP role.'),
+      `Welcome to ${brand.name} \u2014 find your perfect ${brand.niche.short} role.`),
   },
 
   // 2b. Signup - Employer
@@ -128,7 +128,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
     fn: () => emailShellV2(`
       ${headerBlockV2('Your Employer Account Is Ready', '')}
       ${spacerV2(12)}
-      ${bodyText('Post positions, track engagement, and connect with qualified Psychiatric Mental Health Nurse Practitioners \u2014 all from one dashboard.')}
+      ${bodyText(`Post positions, track engagement, and connect with qualified ${brand.niche.long}s \u2014 all from one dashboard.`)}
       ${spacerV2(36)}
       ${sectionHead('Three steps to your first hire')}
       ${spacerV2(20)}
@@ -136,12 +136,12 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
       ${spacerV2(16)}
       ${step('icon-emp-analytics.png', 'Track engagement', 'Monitor views, apply clicks, and applicant quality in real time.')}
       ${spacerV2(16)}
-      ${step('icon-emp-handshake.png', 'Connect with candidates', 'Message qualified PMHNPs directly through the platform.')}
+      ${step('icon-emp-handshake.png', 'Connect with candidates', `Message qualified ${brand.niche.short}s directly through the platform.`)}
       ${spacerV2(32)}
       ${centeredCta('Post Your First Job', `${BASE_URL}/post-job`)}
       ${spacerV2(48)}
       ${closeContentV2()}`, unsubscribeFooterV2('sample'),
-      'Your employer account is ready \u2014 start hiring PMHNPs today.'),
+      `Your employer account is ready \u2014 start hiring ${brand.niche.short}s today.`),
   },
 
   // 3. Job Alert
@@ -213,7 +213,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
         ${centeredCta('View All Matching Jobs', `${BASE_URL}/jobs`)}
         ${spacerV2(48)}
         ${closeContentV2()}`, unsubscribeFooterV2('sample'),
-        '3 new PMHNP jobs matching your alert.');
+        `3 new ${brand.niche.short} jobs matching your alert.`);
     },
   },
 
@@ -222,7 +222,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
     label: 'Job Post Confirmation',
     desc: 'Sent to employers after a job is published',
     fn: () => simple('hero-job-post.png', 'Your Listing Is Live',
-      'Your posting is now visible to thousands of PMHNPs actively searching for their next role. The listing will remain active for 30 days.',
+      `Your posting is now visible to thousands of ${brand.niche.short}s actively searching for their next role. The listing will remain active for 30 days.`,
       'View Your Listing', `${BASE_URL}/jobs`, 'Your job posting is now live.',
       `${spacerV2(16)}${secondary(`Need to edit? <a href="${BASE_URL}/employer/dashboard" style="color:${V2.teal};text-decoration:underline;">Open your dashboard</a>.`)}`),
   },
@@ -356,9 +356,9 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
     label: 'Salary Guide Delivery',
     desc: 'Sent when a user requests the salary guide',
     fn: () => simple('hero-salary-guide.png', 'Your 2026 Salary Guide',
-      'Your comprehensive PMHNP compensation report is ready. It includes salary ranges across all 50 states, remote versus in-person pay differentials, and negotiation strategies.',
+      `Your comprehensive ${brand.niche.short} compensation report is ready. It includes salary ranges across all 50 states, remote versus in-person pay differentials, and negotiation strategies.`,
       'Download Salary Guide (PDF)', `${STORAGE_BASE}/storage/v1/object/public/resources/PMHNP_Salary_Guide_2026.pdf`,
-      'Your 2026 PMHNP Salary Guide is ready.',
+      `Your 2026 ${brand.niche.short} Salary Guide is ready.`,
       `${spacerV2(16)}${secondary(`Looking for opportunities? <a href="${BASE_URL}/jobs" style="color:${V2.teal};text-decoration:underline;">Browse open positions</a>.`)}`),
   },
 

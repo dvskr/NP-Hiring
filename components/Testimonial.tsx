@@ -4,6 +4,7 @@ import { Star, Quote } from 'lucide-react';
 // TODO: Replace with real testimonials — TESTIMONIALS holds placeholder
 // quotes; see the FORK WARNING on its export.
 import { TESTIMONIALS } from '@/config/niche/stats';
+import { brand } from '@/config/brand';
 
 export default function Testimonial() {
     return (
@@ -14,10 +15,10 @@ export default function Testimonial() {
                     fontSize: '28px', fontWeight: 700,
                     color: 'var(--text-primary)', margin: '0 0 8px',
                 }}>
-                    What PMHNPs Are Saying
+                    What {brand.niche.short}s Are Saying
                 </h2>
                 <p style={{ fontSize: '15px', color: 'var(--text-muted)', margin: 0 }}>
-                    Real feedback from psychiatric nurse practitioners
+                    Real feedback from {brand.niche.adjective} nurse practitioners
                 </p>
             </div>
 

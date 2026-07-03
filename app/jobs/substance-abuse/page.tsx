@@ -64,9 +64,9 @@ async function getSubstanceAbuseStats() {
 
 
 const substanceFaqs = [
-  { question: 'What is a Substance Abuse PMHNP?', answer: 'A PMHNP specializing in addiction treatment, including medication-assisted treatment (MAT), detox management, and dual-diagnosis care.' },
+  { question: `What is a Substance Abuse ${brand.niche.short}?`, answer: `A ${brand.niche.short} specializing in addiction treatment, including medication-assisted treatment (MAT), detox management, and dual-diagnosis care.` },
   { question: 'What is MAT?', answer: 'Medication-Assisted Treatment uses FDA-approved medications like buprenorphine and naltrexone alongside counseling to treat opioid and alcohol use disorders.' },
-  { question: 'What is the salary range?', answer: 'Substance abuse PMHNPs earn $130K-$180K, with MAT-certified providers commanding premium rates.' },
+  { question: 'What is the salary range?', answer: `Substance abuse ${brand.niche.short}s earn $130K-$180K, with MAT-certified providers commanding premium rates.` },
   { question: 'What certifications help?', answer: 'DEA registration, buprenorphine prescribing knowledge, and ASAM certification strengthen candidacy for addiction roles.' },
 ];
 
@@ -75,16 +75,16 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     const page = parseInt(params.page || '1');
 
     return {
-        title: `${stats.totalJobs} Substance Abuse PMHNP Jobs — Addiction & MAT Psych NP ($130K-180K)`,
-        description: `Find ${stats.totalJobs} substance abuse and addiction PMHNP jobs paying $130K-$180K+. MAT clinics, dual diagnosis, Suboxone prescriber, and rehab psychiatric nurse practitioner positions. High demand, rewarding work.`,
+        title: `${stats.totalJobs} Substance Abuse ${brand.niche.short} Jobs — Addiction & MAT Psych NP ($130K-180K)`,
+        description: `Find ${stats.totalJobs} substance abuse and addiction ${brand.niche.short} jobs paying $130K-$180K+. MAT clinics, dual diagnosis, Suboxone prescriber, and rehab ${brand.niche.adjective} nurse practitioner positions. High demand, rewarding work.`,
         keywords: ['substance abuse pmhnp', 'addiction pmhnp jobs', 'MAT pmhnp', 'suboxone prescriber', 'dual diagnosis pmhnp', 'SUD nurse practitioner'],
         openGraph: {
-            title: `${stats.totalJobs} Substance Abuse PMHNP Jobs — Addiction Treatment`,
-            description: 'Browse addiction and substance abuse psychiatric nurse practitioner positions. MAT clinics, rehab, dual diagnosis roles.',
+            title: `${stats.totalJobs} Substance Abuse ${brand.niche.short} Jobs — Addiction Treatment`,
+            description: `Browse addiction and substance abuse ${brand.niche.adjective} nurse practitioner positions. MAT clinics, rehab, dual diagnosis roles.`,
             type: 'website',
             images: [{
-                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Substance Abuse PMHNP Jobs`)}&subtitle=${encodeURIComponent('Addiction & MAT psychiatric NP positions')}`,
-                width: 1200, height: 630, alt: 'Substance Abuse PMHNP Jobs',
+                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Substance Abuse ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Addiction & MAT ${brand.niche.adjective} NP positions`)}`,
+                width: 1200, height: 630, alt: `Substance Abuse ${brand.niche.short} Jobs`,
             }],
         },
         alternates: { canonical: `${brand.baseUrl}/jobs/substance-abuse` },
@@ -108,18 +108,18 @@ export default async function SubstanceAbuseJobsPage({ searchParams }: PageProps
     return (
         <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {jobs.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Substance Abuse PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Substance Abuse ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#9bb7a5"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_sa_people.webp`}
-        heroAlt="Substance Abuse PMHNP counseling session"
+        heroAlt={`Substance Abuse ${brand.niche.short} counseling session`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Substance Abuse']}
         indexLabel="№ 13 / 28"
         headlineLine1="Substance Abuse"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, addiction care."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -228,10 +228,10 @@ export default async function SubstanceAbuseJobsPage({ searchParams }: PageProps
               <div>
                 <TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} />
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Salary & Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average substance abuse PMHNP salary:</p>
+                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average substance abuse {brand.niche.short} salary:</p>
                 <p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p>
               </div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_sa_salary.webp`} alt="Addiction PMHNP salary" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_sa_salary.webp`} alt={`Addiction ${brand.niche.short} salary`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)' }}>
               <Bell size={32} style={{ color: '#0D9488', marginBottom: '14px' }} />
@@ -267,7 +267,7 @@ export default async function SubstanceAbuseJobsPage({ searchParams }: PageProps
             <div className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
               <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>04</span>
               <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Dual Diagnosis</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Prepare for co-occurring mental health and SUD treatment.</p>
+              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Prepare for co-occurring {brand.niche.category} and SUD treatment.</p>
             </div>
           </div>
         </section>
@@ -306,7 +306,7 @@ export default async function SubstanceAbuseJobsPage({ searchParams }: PageProps
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Substance Abuse PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Substance Abuse {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {substanceFaqs.map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}>

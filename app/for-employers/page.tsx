@@ -16,12 +16,12 @@ const STORAGE_BASE = brand.assets.storageBase;
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: 'For Employers — Hire PMHNPs | PMHNP Job Board',
+  title: `For Employers — Hire ${brand.niche.short}s | ${brand.niche.short} Job Board`,
   // Trimmed from 189 chars to ~145 for SERP display (audit 09 M-20).
   description:
-    'Hire Psychiatric Mental Health Nurse Practitioners. First post free — all features included. Reach thousands actively searching for PMHNP roles.',
+    `Hire ${brand.niche.long}s. First post free — all features included. Reach thousands actively searching for ${brand.niche.short} roles.`,
   openGraph: {
-    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`, width: 1280, height: 900, alt: 'PMHNP employer hiring solutions' }],
+    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`, width: 1280, height: 900, alt: `${brand.niche.short} employer hiring solutions` }],
   },
   twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`] },
   alternates: { canonical: `${brand.baseUrl}/for-employers` },
@@ -50,7 +50,7 @@ async function getEmployerStats() {
 }
 
 const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: true | false | 'partial'; linkedin: true | false | 'partial'; note?: string }[] = [
-  { feature: '100% Psychiatric NP Audience', us: true, indeed: false, linkedin: false },
+  { feature: `100% ${brand.niche.medium} Audience`, us: true, indeed: false, linkedin: false },
   { feature: 'No Unqualified Applicants', us: true, indeed: false, linkedin: false },
   { feature: `First Post Free (No Card)`, us: true, indeed: false, linkedin: false },
   { feature: `Flat $${config.postingPrice}/Post — No Bidding`, us: true, indeed: false, linkedin: false, note: 'Indeed is pay-per-click' },
@@ -84,14 +84,14 @@ export default async function ForEmployersPage() {
               }}>
                 The #1 Job Board Built<br />
                 <span style={{ color: '#0D9488' }}>Exclusively</span>{' '}
-                for PMHNPs
+                for {brand.niche.short}s
               </h1>
 
               <p style={{
                 fontSize: '16.5px', color: '#3D2E26', lineHeight: 1.75,
                 margin: '0 0 36px', maxWidth: '460px', fontWeight: 400,
               }}>
-                Reach thousands of psychiatric nurse practitioners actively searching for their next role. Every candidate is a qualified PMHNP — zero noise, maximum relevance.
+                Reach thousands of {brand.niche.adjective} nurse practitioners actively searching for their next role. Every candidate is a qualified {brand.niche.short} — zero noise, maximum relevance.
               </p>
 
               {/* CTA Buttons */}
@@ -119,7 +119,7 @@ export default async function ForEmployersPage() {
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
               <Image
                 src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/hero-v4.webp`}
-                alt="Employer posting job and receiving qualified PMHNP candidates"
+                alt={`Employer posting job and receiving qualified ${brand.niche.short} candidates`}
                 width={520} height={520}
                 style={{ width: '100%', maxWidth: '520px', height: 'auto' }}
                 priority
@@ -234,7 +234,7 @@ export default async function ForEmployersPage() {
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Daily Job Alerts</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Highlighted in daily email digests to opted-in PMHNPs.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Highlighted in daily email digests to opted-in {brand.niche.short}s.</p>
             </div>
 
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -316,7 +316,7 @@ export default async function ForEmployersPage() {
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, rgba(13,148,136,0.08), rgba(13,148,136,0.02))' }}>
                     <th style={{ width: '40%', padding: '16px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Feature</th>
-                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '12px' }}>PMHNP Hiring</th>
+                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '12px' }}>{brand.name}</th>
                     <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>Indeed</th>
                     <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>LinkedIn</th>
                   </tr>
@@ -362,7 +362,7 @@ export default async function ForEmployersPage() {
               }}>
                 <Image
                   src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/cta-illustration.webp`}
-                  alt="Successful PMHNP hiring celebration"
+                  alt={`Successful ${brand.niche.short} hiring celebration`}
                   width={280} height={220}
                   style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px' }}
                 />
@@ -375,7 +375,7 @@ export default async function ForEmployersPage() {
                   color: '#1A2E35', margin: '0 0 10px',
                 }}>
                   Ready to Hire Your{' '}
-                  <span style={{ color: '#0D9488' }}>Next PMHNP</span>?
+                  <span style={{ color: '#0D9488' }}>Next {brand.niche.short}</span>?
                 </h3>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px' }}>
                   First post free — all features included. Then just ${config.postingPrice}/post.

@@ -20,10 +20,10 @@ const linkColumns = [
   {
     title: 'For Job Seekers',
     links: [
-      { label: 'Browse PMHNP Jobs', href: '/jobs' },
+      { label: `Browse ${brand.niche.short} Jobs`, href: '/jobs' },
       { label: 'Saved Jobs', href: '/saved' },
       { label: 'Job Alerts', href: '/job-alerts' },
-      { label: 'PMHNP Salary Guide', href: '/salary-guide' },
+      { label: `${brand.niche.short} Salary Guide`, href: '/salary-guide' },
       { label: 'FAQ', href: '/faq' },
     ],
   },
@@ -33,21 +33,21 @@ const linkColumns = [
     // are weaker than the noun phrase the page actually targets.
     title: 'Browse by Setting',
     links: [
-      { label: 'Remote PMHNP Jobs', href: '/jobs/remote' },
-      { label: 'Telehealth PMHNP Jobs', href: '/jobs/telehealth' },
-      { label: 'Inpatient PMHNP Jobs', href: '/jobs/inpatient' },
-      { label: 'Outpatient PMHNP Jobs', href: '/jobs/outpatient' },
-      { label: 'Hospital PMHNP Jobs', href: '/jobs/hospital' },
-      { label: 'Travel PMHNP Jobs', href: '/jobs/travel' },
+      { label: `Remote ${brand.niche.short} Jobs`, href: '/jobs/remote' },
+      { label: `Telehealth ${brand.niche.short} Jobs`, href: '/jobs/telehealth' },
+      { label: `Inpatient ${brand.niche.short} Jobs`, href: '/jobs/inpatient' },
+      { label: `Outpatient ${brand.niche.short} Jobs`, href: '/jobs/outpatient' },
+      { label: `Hospital ${brand.niche.short} Jobs`, href: '/jobs/hospital' },
+      { label: `Travel ${brand.niche.short} Jobs`, href: '/jobs/travel' },
       { label: 'Locum Tenens', href: '/jobs/locum-tenens' },
     ],
   },
   {
     title: 'Browse by Specialty',
     links: [
-      { label: 'VA PMHNP Jobs', href: '/jobs/va' },
-      { label: 'Veterans PMHNP Jobs', href: '/jobs/veterans' },
-      { label: 'New Grad PMHNP', href: '/jobs/new-grad' },
+      { label: `VA ${brand.niche.short} Jobs`, href: '/jobs/va' },
+      { label: `Veterans ${brand.niche.short} Jobs`, href: '/jobs/veterans' },
+      { label: `New Grad ${brand.niche.short}`, href: '/jobs/new-grad' },
       { label: 'Behavioral Health', href: '/jobs/behavioral-health' },
       { label: 'Substance Abuse', href: '/jobs/substance-abuse' },
       { label: 'Child & Adolescent', href: '/jobs/child-adolescent' },
@@ -56,11 +56,11 @@ const linkColumns = [
   {
     title: 'Browse by Location',
     links: [
-      { label: 'PMHNP Jobs in New York', href: '/jobs/state/new-york' },
-      { label: 'PMHNP Jobs in California', href: '/jobs/state/california' },
-      { label: 'PMHNP Jobs in Florida', href: '/jobs/state/florida' },
-      { label: 'PMHNP Jobs in Texas', href: '/jobs/state/texas' },
-      { label: 'PMHNP Jobs in Massachusetts', href: '/jobs/state/massachusetts' },
+      { label: `${brand.niche.short} Jobs in New York`, href: '/jobs/state/new-york' },
+      { label: `${brand.niche.short} Jobs in California`, href: '/jobs/state/california' },
+      { label: `${brand.niche.short} Jobs in Florida`, href: '/jobs/state/florida' },
+      { label: `${brand.niche.short} Jobs in Texas`, href: '/jobs/state/texas' },
+      { label: `${brand.niche.short} Jobs in Massachusetts`, href: '/jobs/state/massachusetts' },
       { label: 'Browse All 50 States', href: '/jobs/locations' },
     ],
   },
@@ -258,14 +258,14 @@ export default function Footer() {
             {/* Left: Logo + Name + Tagline */}
             <div className="footer-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
-                <img src="/logo.png" alt="PMHNP Hiring" width="36" height="36" loading="lazy" decoding="async" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                <img src="/logo.png" alt={brand.name} width="36" height="36" loading="lazy" decoding="async" style={{ width: 36, height: 36, objectFit: 'contain' }} />
                 <span className="font-heading" style={{ fontSize: '16px', fontWeight: 700, color: '#fff', marginLeft: '-4px', whiteSpace: 'nowrap' }}>
-                  PMHNP Hiring
+                  {brand.name}
                 </span>
               </Link>
               <span className="footer-pipe" style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)' }} />
               <p className="footer-tagline" style={{ fontSize: '13px', color: '#78716c', margin: 0, whiteSpace: 'nowrap' }}>
-                The #1 specialized job board for psychiatric nurse practitioners.
+                The #1 specialized job board for {brand.niche.adjective} nurse practitioners.
               </p>
             </div>
 

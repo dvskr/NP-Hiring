@@ -7,6 +7,7 @@ import {
   SALARY_CALC_SETTING_OPTIONS,
   SALARY_CALC_SPECIALTY_OPTIONS,
 } from '@/config/niche/stats';
+import { brand } from '@/config/brand';
 
 interface StateSalary {
   state: string;
@@ -99,7 +100,7 @@ export default function SalaryCalculator({ stateSalaries, nationalAvg }: Props) 
           <Sparkles size={20} color="#fff" />
         </div>
         <div>
-          <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: 0 }}>PMHNP Salary Calculator</h2>
+          <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: 0 }}>{brand.niche.short} Salary Calculator</h2>
           <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', margin: '2px 0 0' }}>Get a personalized estimate based on your profile</p>
         </div>
       </div>

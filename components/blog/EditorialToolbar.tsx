@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { Bookmark, Printer, Link2, BookOpen, Quote } from 'lucide-react';
 import BlogEmailSignup from '@/components/BlogEmailSignup';
+import { brand } from '@/config/brand';
 
 interface EditorialToolbarProps {
   slug: string;
@@ -44,7 +45,7 @@ export default function EditorialToolbar({ slug, title, url }: EditorialToolbarP
   }, [url]);
 
   const handleCite = useCallback(async () => {
-    const citation = `PMHNP Hiring Editorial Team. "${title}". PMHNP Hiring, ${new Date().getFullYear()}. ${url}`;
+    const citation = `${brand.name} Editorial Team. "${title}". ${brand.name}, ${new Date().getFullYear()}. ${url}`;
     try {
       await navigator.clipboard.writeText(citation);
     } catch {
@@ -149,13 +150,13 @@ export default function EditorialToolbar({ slug, title, url }: EditorialToolbarP
       <div className="ed-sidebar-newsletter">
         <div className="ed-newsletter-kicker">
           <BookOpen size={12} style={{ display: 'inline', marginRight: 4 }} />
-          The PMHNP Dispatch
+          The {brand.niche.short} Dispatch
         </div>
         <h4 className="ed-sidebar-newsletter-title">
           Clinical <em>insights</em>, delivered weekly
         </h4>
         <p className="ed-sidebar-newsletter-desc">
-          Career strategies, salary data, and evidence-based practice updates for PMHNPs.
+          Career strategies, salary data, and evidence-based practice updates for {brand.niche.short}s.
         </p>
         <div className="ed-newsletter-form">
           <BlogEmailSignup source={`blog_sidebar_${slug}`} />

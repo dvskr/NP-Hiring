@@ -115,7 +115,7 @@ export async function GET(req: Request) {
             const employerName = alert.employer.company || [alert.employer.firstName, alert.employer.lastName].filter(Boolean).join(' ') || 'Employer';
 
             const digest = matchingCandidates.map(c => ({
-                name: [c.firstName, c.lastName?.[0] ? c.lastName[0] + '.' : null].filter(Boolean).join(' ') || 'PMHNP Candidate',
+                name: [c.firstName, c.lastName?.[0] ? c.lastName[0] + '.' : null].filter(Boolean).join(' ') || `${brand.niche.short} Candidate`,
                 headline: c.headline,
                 profileUrl: `${brand.baseUrl}/employer/candidates/${c.supabaseId}`,
                 specialties: c.specialties ? c.specialties.split(',').map(s => s.trim()) : [],

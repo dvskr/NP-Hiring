@@ -121,18 +121,18 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} Remote PMHNP Jobs — Work From Home ($130K-200K)`,
+    title: `${stats.totalJobs} Remote ${brand.niche.short} Jobs — Work From Home ($130K-200K)`,
     // SEO Fix #7: trim to ≤160 chars (Google SERP cap).
-    description: `Find ${stats.totalJobs} remote PMHNP jobs paying $130K-$200K+. Work from home psychiatric nurse practitioner positions — telehealth, flexible, no commute.`,
+    description: `Find ${stats.totalJobs} remote ${brand.niche.short} jobs paying $130K-$200K+. Work from home ${brand.niche.adjective} nurse practitioner positions — telehealth, flexible, no commute.`,
     openGraph: {
-      title: `${stats.totalJobs} Remote PMHNP Jobs - Work From Home`,
-      description: 'Browse telehealth and remote psychiatric mental health nurse practitioner positions. Flexible schedules, competitive pay.',
+      title: `${stats.totalJobs} Remote ${brand.niche.short} Jobs - Work From Home`,
+      description: `Browse telehealth and remote ${brand.niche.descriptor} positions. Flexible schedules, competitive pay.`,
       type: 'website',
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Remote PMHNP Jobs`)}&subtitle=${encodeURIComponent('Work from home psychiatric NP positions')}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Remote ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Work from home ${brand.niche.adjective} NP positions`)}`,
         width: 1200,
         height: 630,
-        alt: 'Remote PMHNP Jobs',
+        alt: `Remote ${brand.niche.short} Jobs`,
       }],
     },
     alternates: {
@@ -185,7 +185,7 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'ItemList',
-              name: 'Remote PMHNP Jobs',
+              name: `Remote ${brand.niche.short} Jobs`,
               numberOfItems: stats.totalJobs,
               itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({
                 '@type': 'ListItem',
@@ -197,17 +197,17 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
           }}
         />
       )}
-      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Remote PMHNP Jobs" />
+      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName={`Remote ${brand.niche.short} Jobs`} />
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#e8af9b"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
-        heroAlt="PMHNP working remotely from home via telehealth"
+        heroAlt={`${brand.niche.short} working remotely from home via telehealth`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Remote']}
         indexLabel="№ 02 / 28"
         headlineLine1="Remote"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, work from anywhere."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -246,9 +246,7 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
                   <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
                     No remote positions at this time
                   </h3>
-                  <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-                    New remote PMHNP openings are added daily. Set an alert or check back soon.
-                  </p>
+                  <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>New remote {brand.niche.short} openings are added daily. Set an alert or check back soon.</p>
                   <Link
                     href="/jobs"
                     className="inline-block px-6 py-3 text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
@@ -334,7 +332,7 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
                   </div>
                   <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.avgSalary}k</div>
                   <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Average annual salary</div>
-                  <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Based on remote PMHNP positions with salary data.</p>
+                  <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Based on remote {brand.niche.short} positions with salary data.</p>
                 </div>
               )}
             </div>
@@ -365,7 +363,7 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_remote_office.webp`} alt="Remote PMHNP home office setup" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_remote_office.webp`} alt={`Remote ${brand.niche.short} home office setup`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
@@ -408,12 +406,11 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Parity</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Remote PMHNPs earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K'} annually — on par with or above in-office equivalents.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Remote {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K'} annually — on par with or above in-office equivalents.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_salary_growth.webp`} alt="Remote PMHNP salary growth chart" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_salary_growth.webp`} alt={`Remote ${brand.niche.short} salary growth chart`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 

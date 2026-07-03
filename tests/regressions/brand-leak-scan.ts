@@ -1,13 +1,20 @@
 /**
- * Shared brand-leak scanner.
+ * Shared brand-leak + niche-copy scanners.
  *
- * Inventories occurrences of brand-identifying strings (domain, brand
- * name, legal entity) across production source. Two consumers:
+ * Two scanners over the same production-source walk:
  *
- *   - tests/regressions/brand-leak-ratchet.test.ts — CI ratchet that
- *     compares the scan against a checked-in baseline.
- *   - scripts/fork-preflight.ts — fork launch preflight that reports
- *     leftover original-brand strings on a re-niched board.
+ *   1. `scanBrandLeaks` — occurrences of brand-identifying strings
+ *      (domain, brand name, legal entity). Consumers:
+ *        - tests/regressions/brand-leak-ratchet.test.ts — CI ratchet that
+ *          compares the scan against a checked-in baseline.
+ *        - scripts/fork-preflight.ts — fork launch preflight that reports
+ *          leftover original-brand strings on a re-niched board.
+ *
+ *   2. `scanNicheCopyDebt` — occurrences of the template's REFERENCE-NICHE
+ *      terms (PMHNP / psychiatric / mental health). Consumers:
+ *        - tests/regressions/niche-copy-debt.test.ts — CI ratchet with its
+ *          own baseline (niche-copy-debt-baseline.json).
+ *        - scripts/fork-preflight.ts §5 — WARN-level debt report.
  *
  * Pure filesystem walk — no database, no network.
  */
@@ -90,6 +97,40 @@ export interface BrandLeakScanOptions {
     patterns?: ReadonlyArray<BrandLeakPattern>;
 }
 
+function collectScanFiles(
+    root: string,
+    dirs: ReadonlyArray<string>,
+    rootFiles: ReadonlyArray<string>,
+): string[] {
+    const files: string[] = [];
+    for (const dir of dirs) {
+        const abs = path.join(root, dir);
+        if (fs.existsSync(abs)) walk(abs, files);
+    }
+    for (const f of rootFiles) {
+        const abs = path.join(root, f);
+        if (fs.existsSync(abs)) files.push(abs);
+    }
+    return files;
+}
+
+function countPerFile(
+    root: string,
+    files: ReadonlyArray<string>,
+    patterns: ReadonlyArray<BrandLeakPattern>,
+    excludePathPrefixes: ReadonlyArray<string>,
+): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const file of files) {
+        const rel = path.relative(root, file).replace(/\\/g, '/');
+        if (excludePathPrefixes.some((p) => rel.startsWith(p))) continue;
+        const content = fs.readFileSync(file, 'utf-8');
+        const n = countMatches(content, patterns);
+        if (n > 0) counts[rel] = n;
+    }
+    return counts;
+}
+
 /**
  * Returns a map of repo-relative file path (forward slashes) → number of
  * brand-string occurrences, for every scanned file with at least one hit.
@@ -102,23 +143,61 @@ export function scanBrandLeaks(options: BrandLeakScanOptions): Record<string, nu
         patterns = BRAND_LEAK_PATTERNS,
     } = options;
 
-    const files: string[] = [];
-    for (const dir of dirs) {
-        const abs = path.join(root, dir);
-        if (fs.existsSync(abs)) walk(abs, files);
-    }
-    for (const f of rootFiles) {
-        const abs = path.join(root, f);
-        if (fs.existsSync(abs)) files.push(abs);
-    }
+    const files = collectScanFiles(root, dirs, rootFiles);
+    return countPerFile(root, files, patterns, EXCLUDE_PATH_PREFIXES);
+}
 
-    const counts: Record<string, number> = {};
-    for (const file of files) {
-        const rel = path.relative(root, file).replace(/\\/g, '/');
-        if (EXCLUDE_PATH_PREFIXES.some((p) => rel.startsWith(p))) continue;
-        const content = fs.readFileSync(file, 'utf-8');
-        const n = countMatches(content, patterns);
-        if (n > 0) counts[rel] = n;
-    }
-    return counts;
+// ─── niche-copy debt scanner ────────────────────────────────────────────────
+
+/**
+ * Terms that identify the TEMPLATE's reference niche (PMHNP). Unlike the
+ * brand-leak patterns, these are not "must never appear" strings — they
+ * track copy still WRITTEN FOR the reference niche rather than derived
+ * from `brand.niche` tokens in config/brand.ts.
+ */
+export const TEMPLATE_REFERENCE_NICHE_TERMS: ReadonlyArray<RegExp> = [
+    /pmhnp/gi,
+    /psychiatric/gi,
+    /mental health/gi,
+];
+
+// Same exclusions as the brand scan, PLUS config/ — config/brand.ts and
+// config/niche/* are the sanctioned source of truth for niche terms, so
+// hits there are definitionally not debt.
+const NICHE_COPY_EXCLUDE_PATH_PREFIXES = [
+    ...EXCLUDE_PATH_PREFIXES,
+    'config/',
+];
+
+export interface NicheCopyDebtScanOptions {
+    /** Repo root the scan dirs / root files are resolved against. */
+    root: string;
+}
+
+/**
+ * Inventories occurrences of the template's reference-niche terms across
+ * the same production surfaces as the brand scan (same dirs, root files,
+ * and exclusions — plus config/, the source of truth).
+ *
+ * Returns a map of repo-relative file path (forward slashes) → number of
+ * reference-niche-term occurrences, for every file with at least one hit.
+ *
+ * Interpretation:
+ *   - On the TEMPLATE, most hits are expected — PMHNP *is* the reference
+ *     niche, so its own copy legitimately says "psychiatric", "mental
+ *     health", etc. The ratchet only guards against NEW hardcoded niche
+ *     copy creeping in where a `brand.niche` token should be used.
+ *   - On a FORK, this is where the scanner earns its keep: every hit is
+ *     either an intentional specialty mention (e.g. a psych category on a
+ *     general NP board) or copy that was never rewritten for the new
+ *     niche. The per-file counts are the fork's copy-rewrite worklist.
+ */
+export function scanNicheCopyDebt(options: NicheCopyDebtScanOptions): Record<string, number> {
+    const { root } = options;
+    const files = collectScanFiles(root, BRAND_LEAK_SCAN_DIRS, BRAND_LEAK_SCAN_ROOT_FILES);
+    const patterns: BrandLeakPattern[] = TEMPLATE_REFERENCE_NICHE_TERMS.map((re, i) => ({
+        name: `reference-niche-term-${i}`,
+        re,
+    }));
+    return countPerFile(root, files, patterns, NICHE_COPY_EXCLUDE_PATH_PREFIXES);
 }

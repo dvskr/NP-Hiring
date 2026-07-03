@@ -46,43 +46,43 @@ async function getStats() {
 // trauma practices). /jobs/va = federal employment with GS pay + FEHB.
 const veteransFaqs = [
   {
-    question: "What's the difference between Veterans PMHNP roles and federal VA employment?",
-    answer: 'Veterans PMHNP roles span multiple sectors — VA medical centers (federal employment), Vet Centers (community-readjustment counseling), Community Care Network (CCN) civilian providers, and private trauma practices specializing in veterans care. /jobs/va focuses specifically on federal Veterans Affairs employment with the GS pay scale, FEHB benefits, and EDRP loan repayment.',
+    question: `What's the difference between Veterans ${brand.niche.short} roles and federal VA employment?`,
+    answer: `Veterans ${brand.niche.short} roles span multiple sectors — VA medical centers (federal employment), Vet Centers (community-readjustment counseling), Community Care Network (CCN) civilian providers, and private trauma practices specializing in veterans care. /jobs/va focuses specifically on federal Veterans Affairs employment with the GS pay scale, FEHB benefits, and EDRP loan repayment.`,
   },
   {
-    question: 'What clinical specialties matter most in veterans-focused PMHNP work?',
+    question: `What clinical specialties matter most in veterans-focused ${brand.niche.short} work?`,
     answer: 'PTSD, combat stress, military sexual trauma (MST), traumatic brain injury (TBI), substance use disorders, and family reintegration. Trauma-informed care training is essential. Credentials in EMDR, prolonged exposure therapy (PE), or cognitive processing therapy (CPT) are valued by veterans-care employers.',
   },
   {
     question: 'Do I need military experience to work in veterans care?',
-    answer: 'No — military experience is not required, but cultural competency is. Many employers value veterans-care training certificates such as Star Behavioral Health Providers, PsychArmor, and the VA Center for Compassionate Care training. Prior experience in trauma services, addiction medicine, or community mental health translates well.',
+    answer: `No — military experience is not required, but cultural competency is. Many employers value veterans-care training certificates such as Star Behavioral Health Providers, PsychArmor, and the VA Center for Compassionate Care training. Prior experience in trauma services, addiction medicine, or community ${brand.niche.category} translates well.`,
   },
   {
-    question: 'How does the VA Community Care Network (CCN) affect PMHNP employment?',
-    answer: 'CCN contracts civilian providers to deliver mental health care to eligible veterans. PMHNPs in private practice, telehealth platforms, and community clinics can join CCN to expand their caseload with VA-funded patients while keeping their existing employer relationship — an alternative path to serving veterans without entering federal employment.',
+    question: `How does the VA Community Care Network (CCN) affect ${brand.niche.short} employment?`,
+    answer: `CCN contracts civilian providers to deliver ${brand.niche.category} care to eligible veterans. ${brand.niche.short}s in private practice, telehealth platforms, and community clinics can join CCN to expand their caseload with VA-funded patients while keeping their existing employer relationship — an alternative path to serving veterans without entering federal employment.`,
   },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
   return {
-    title: `${stats.totalJobs} Veterans PMHNP Jobs — Trauma-Informed Care ($130K-180K)`,
-    description: `Find ${stats.totalJobs} PMHNP jobs serving veterans across VA, Vet Centers, Community Care Network civilian providers, and trauma practices. PTSD, MST, and TBI specialty roles.`,
+    title: `${stats.totalJobs} Veterans ${brand.niche.short} Jobs — Trauma-Informed Care ($130K-180K)`,
+    description: `Find ${stats.totalJobs} ${brand.niche.short} jobs serving veterans across VA, Vet Centers, Community Care Network civilian providers, and trauma practices. PTSD, MST, and TBI specialty roles.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/veterans` },
     openGraph: {
-      title: `${stats.totalJobs} Veterans PMHNP Jobs`,
-      description: 'Trauma-informed psychiatric NP roles serving veterans across VA, Vet Centers, and civilian providers.',
+      title: `${stats.totalJobs} Veterans ${brand.niche.short} Jobs`,
+      description: `Trauma-informed ${brand.niche.adjective} NP roles serving veterans across VA, Vet Centers, and civilian providers.`,
       type: 'website',
       url: `${brand.baseUrl}/jobs/veterans`,
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Veterans PMHNP Jobs`)}&subtitle=${encodeURIComponent('Trauma-informed care across VA, Vet Centers & CCN')}`,
-        width: 1200, height: 630, alt: 'Veterans PMHNP Jobs',
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Veterans ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent('Trauma-informed care across VA, Vet Centers & CCN')}`,
+        width: 1200, height: 630, alt: `Veterans ${brand.niche.short} Jobs`,
       }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${stats.totalJobs} Veterans PMHNP Jobs`,
-      description: 'PMHNP roles serving veterans across VA, Vet Centers, CCN, and trauma practices.',
+      title: `${stats.totalJobs} Veterans ${brand.niche.short} Jobs`,
+      description: `${brand.niche.short} roles serving veterans across VA, Vet Centers, CCN, and trauma practices.`,
     },
   };
 }
@@ -105,26 +105,26 @@ export default async function VeteransPage({ searchParams }: PageProps) {
       ]} />
       <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Veterans Jobs" />
       {jobs.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Veterans PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Veterans ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
 
             {/* HERO */}
       <CategoryHero
         bgColor="#b8c8d4"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_veterans.webp`}
-        heroAlt="Veterans mental health PMHNP care"
+        heroAlt={`Veterans ${brand.niche.category} ${brand.niche.short} care`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Veterans']}
         indexLabel="? 28 / 28"
         headlineLine1="Veterans"
-        headlineLine2="PMHNP"
-        headlineSub="jobs, veteran mental health."
+        headlineLine2={brand.niche.short}
+        headlineSub={`jobs, veteran ${brand.niche.category}.`}
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$150K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description="Serve veterans with specialized psychiatric care for PTSD, TBI, MST, and combat-related conditions."
+        description={`Serve veterans with specialized ${brand.niche.adjective} care for PTSD, TBI, MST, and combat-related conditions.`}
         ctaLabel="Browse Veterans Jobs"
         ctaHref="/jobs?category=veterans"
         secondaryCtaLabel="Set Alert"
@@ -187,7 +187,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Serve Heroes</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Treat PTSD, TBI, and combat-related mental health conditions.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Treat PTSD, TBI, and combat-related {brand.niche.category} conditions.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Federal Benefits</h3>
@@ -199,7 +199,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Mission-Driven</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Honor military service by providing expert psychiatric care.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Honor military service by providing expert {brand.niche.adjective} care.</p>
             </div>          </div>
         </section>
       </div>
@@ -228,7 +228,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
               <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>04</span>
               <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>Experience</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Clinical experience in psychiatric settings.</p>
+              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Clinical experience in {brand.niche.adjective} settings.</p>
             </div>
           </div>
         </section>
@@ -267,7 +267,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Veterans PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Veterans {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {veteransFaqs.map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}>

@@ -61,7 +61,7 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
             {/* ── Nurse crowd background — fills viewport, anchored bottom ── */}
             <Image
                 src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/hero-nurses.webp`}
-                alt="Diverse community of PMHNP professionals"
+                alt={`Diverse community of ${brand.niche.short} professionals`}
                 fill
                 priority
                 fetchPriority="high"
@@ -133,7 +133,7 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
                     }}
                 >
                     Find Your Next{' '}
-                    <span style={{ color: '#0D9488' }}>PMHNP Role</span>
+                    <span style={{ color: '#0D9488' }}>{brand.niche.short} Role</span>
                 </m.h1>
 
                 {/* ── Subtitle ── */}

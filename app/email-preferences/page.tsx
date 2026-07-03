@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { brand } from '@/config/brand';
 
 interface PreferencesData {
   email: string;
@@ -242,7 +243,7 @@ function EmailPreferencesContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-gray-900 text-sm">Weekly Job Alerts</p>
-                <p className="text-xs text-gray-500 mt-1">New PMHNP job listings delivered weekly</p>
+                <p className="text-xs text-gray-500 mt-1">New {brand.niche.short} job listings delivered weekly</p>
               </div>
               <div className="flex items-center gap-2">
                 {preferences?.isSubscribed ? (
@@ -269,7 +270,7 @@ function EmailPreferencesContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-gray-900 text-sm">Monthly Newsletter</p>
-                <p className="text-xs text-gray-500 mt-1">PMHNP industry news, salary trends & career tips</p>
+                <p className="text-xs text-gray-500 mt-1">{brand.niche.short} industry news, salary trends & career tips</p>
               </div>
               <div className="flex items-center gap-2">
                 {preferences?.newsletterOptIn ? (

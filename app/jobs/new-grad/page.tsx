@@ -112,10 +112,10 @@ async function getNewGradStats() {
  */
 
 const newGradFaqs = [
-  { question: 'Can new grads get PMHNP jobs?', answer: 'Yes! Many employers actively recruit new PMHNP graduates, especially in underserved areas and community health settings.' },
+  { question: `Can new grads get ${brand.niche.short} jobs?`, answer: `Yes! Many employers actively recruit new ${brand.niche.short} graduates, especially in underserved areas and community health settings.` },
   { question: 'What should new grads expect?', answer: 'Structured onboarding, clinical supervision, mentorship programs, and gradual caseload increase over 3-6 months.' },
-  { question: 'What is the starting salary?', answer: 'New grad PMHNPs typically start at $100K-$140K, with rapid increases after the first year of experience.' },
-  { question: 'Do I need experience to apply?', answer: 'Clinical rotation hours count as experience. Highlight any psychiatric nursing background and relevant certifications.' },
+  { question: 'What is the starting salary?', answer: `New grad ${brand.niche.short}s typically start at $100K-$140K, with rapid increases after the first year of experience.` },
+  { question: 'Do I need experience to apply?', answer: `Clinical rotation hours count as experience. Highlight any ${brand.niche.adjective} nursing background and relevant certifications.` },
 ];
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
@@ -123,18 +123,18 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     const page = parseInt(params.page || '1');
 
     return {
-        title: `${stats.totalJobs} New Grad PMHNP Jobs — Entry-Level Psych NP ($120K-160K)`,
-        description: `Find ${stats.totalJobs} new grad PMHNP jobs starting at $120K+. Entry-level psychiatric nurse practitioner positions with mentorship, fellowships, and residency programs. No experience required — start your PMHNP career today.`,
+        title: `${stats.totalJobs} New Grad ${brand.niche.short} Jobs — Entry-Level Psych NP ($120K-160K)`,
+        description: `Find ${stats.totalJobs} new grad ${brand.niche.short} jobs starting at $120K+. Entry-level ${brand.niche.adjective} nurse practitioner positions with mentorship, fellowships, and residency programs. No experience required — start your ${brand.niche.short} career today.`,
         keywords: ['new grad pmhnp', 'entry level pmhnp', 'pmhnp fellowship', 'new graduate psychiatric nurse practitioner', 'pmhnp residency'],
         openGraph: {
-            title: `${stats.totalJobs} New Grad PMHNP Jobs - Entry Level Positions`,
-            description: 'Browse new graduate and entry-level psychiatric mental health nurse practitioner positions. Fellowships, residencies, mentorship programs.',
+            title: `${stats.totalJobs} New Grad ${brand.niche.short} Jobs - Entry Level Positions`,
+            description: `Browse new graduate and entry-level ${brand.niche.descriptor} positions. Fellowships, residencies, mentorship programs.`,
             type: 'website',
             images: [{
-                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} New Grad PMHNP Jobs`)}&subtitle=${encodeURIComponent('Entry-level psychiatric NP positions')}`,
+                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} New Grad ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Entry-level ${brand.niche.adjective} NP positions`)}`,
                 width: 1200,
                 height: 630,
-                alt: 'New Grad PMHNP Jobs',
+                alt: `New Grad ${brand.niche.short} Jobs`,
             }],
         },
         alternates: {
@@ -173,18 +173,18 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
     return (
         <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {jobs.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'New Grad PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `New Grad ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#99a7d4"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_newgrad.webp`}
-        heroAlt="New grad PMHNP career launch"
+        heroAlt={`New grad ${brand.niche.short} career launch`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'New Grad']}
         indexLabel="№ 09 / 28"
         headlineLine1="New Grad"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, launch your career."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -257,9 +257,9 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
                 <div>
                   <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Mentorship Programs</h3>
-                  <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>Structured clinical supervision with experienced psychiatric providers. Graduate from supervised practice to independent caseload management.</p>
+                  <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>Structured clinical supervision with experienced {brand.niche.adjective} providers. Graduate from supervised practice to independent caseload management.</p>
                 </div>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_newgrad_mentorship.webp`} alt="PMHNP mentorship" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_newgrad_mentorship.webp`} alt={`${brand.niche.short} mentorship`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
               </div>
             </div>
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FEF3C7, #FDE68A)', textAlign: 'center' }}>
@@ -272,7 +272,7 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_newgrad_diploma.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>New Grad Welcome</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Employers actively seeking newly certified PMHNPs.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Employers actively seeking newly certified {brand.niche.short}s.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_newgrad_bulb.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -296,9 +296,9 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
                 <div>
                   <TrendingUp size={24} style={{ color: '#0D9488', marginBottom: '10px' }} />
                   <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Starting Salary</h3>
-                  <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>New grad PMHNPs typically earn ${stats.avgSalary}k+ with rapid salary growth after year one. Many roles include signing bonuses and loan repayment.</p>
+                  <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>New grad {brand.niche.short}s typically earn ${stats.avgSalary}k+ with rapid salary growth after year one. Many roles include signing bonuses and loan repayment.</p>
                 </div>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_newgrad_salary.webp`} alt="New grad PMHNP salary" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_newgrad_salary.webp`} alt={`New grad ${brand.niche.short} salary`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
               </div>
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', textAlign: 'center' }}>
@@ -372,7 +372,7 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>New Grad PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>New Grad {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {newGradFaqs.map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}>

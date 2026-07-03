@@ -32,19 +32,19 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: 'What is a Travel PMHNP?', a: 'A PMHNP who takes temporary assignments (8-26 weeks) at healthcare facilities across the country through staffing agencies.' },
-  { q: 'What is the pay like?', a: 'Travel PMHNPs earn 20-50% more than permanent roles, plus tax-free housing stipends, travel reimbursement, and completion bonuses.' },
+  { q: `What is a Travel ${brand.niche.short}?`, a: `A ${brand.niche.short} who takes temporary assignments (8-26 weeks) at healthcare facilities across the country through staffing agencies.` },
+  { q: 'What is the pay like?', a: `Travel ${brand.niche.short}s earn 20-50% more than permanent roles, plus tax-free housing stipends, travel reimbursement, and completion bonuses.` },
   { q: 'Is housing provided?', a: 'Yes, most agencies offer furnished housing or generous housing stipends. Meals and incidental per diems are also common.' },
   { q: 'Do I need multi-state licenses?', a: 'You need licensure in each state you work in. Many agencies assist with licensure and the Nurse Licensure Compact helps.' },
-  { q: 'How long are typical assignments?', a: 'Most travel PMHNP assignments are 13 weeks (one quarter), though 8-week and 26-week contracts are also common. Extensions are frequently offered if the facility and provider are a good fit.' },
+  { q: 'How long are typical assignments?', a: `Most travel ${brand.niche.short} assignments are 13 weeks (one quarter), though 8-week and 26-week contracts are also common. Extensions are frequently offered if the facility and provider are a good fit.` },
 ];
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Travel PMHNP Jobs — Locum Tenens ($80-150/hr)`,
-    description: `Find ${stats.totalJobs} travel PMHNP and locum tenens positions paying $80-150/hr. Housing stipends, flexible nationwide assignments, premium pay.`,
+    title: `${stats.totalJobs} Travel ${brand.niche.short} Jobs — Locum Tenens ($80-150/hr)`,
+    description: `Find ${stats.totalJobs} travel ${brand.niche.short} and locum tenens positions paying $80-150/hr. Housing stipends, flexible nationwide assignments, premium pay.`,
     keywords: ['travel pmhnp jobs', 'locum tenens psych NP', 'travel psychiatric nurse practitioner', 'traveling PMHNP positions'],
     alternates: { canonical: `${brand.baseUrl}/jobs/travel` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
@@ -63,19 +63,19 @@ export default async function TravelJobsPage({ searchParams }: PageProps) {
       <BreadcrumbSchema items={[{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Travel", url: `${brand.baseUrl}/jobs/travel` }]} />
       <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Travel Jobs" />
       {jobs.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Travel PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Travel ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
 
       {/* 1. HERO */}
       <CategoryHero
         bgColor="#81c1da"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_travel.webp`}
-        heroAlt="Travel PMHNP nationwide assignments"
+        heroAlt={`Travel ${brand.niche.short} nationwide assignments`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Travel']}
         indexLabel="№ 10 / 28"
         headlineLine1="Travel"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, explore the country."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -113,7 +113,7 @@ export default async function TravelJobsPage({ searchParams }: PageProps) {
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
               <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Explore the Country</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Take 8-26 week assignments at top facilities nationwide. Experience new cities, cultures, and clinical environments while building a diverse resume.</p></div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_travel_adventure.webp`} alt="Travel PMHNP exploring new locations" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_travel_adventure.webp`} alt={`Travel ${brand.niche.short} exploring new locations`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_travel_housing.webp`} alt="Furnished housing provided" width={200} height={140} style={{ width: '100%', maxWidth: '180px', height: 'auto', borderRadius: '12px', marginBottom: '16px' }} />
@@ -125,8 +125,8 @@ export default async function TravelJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_travel_housing.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Stipends</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Tax-free housing, meals, and travel reimbursements.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_travel_dollar.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Premium Pay</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Earn 20-50% more than permanent positions.</p></div>
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Travel Pay</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average travel PMHNP salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p></div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_travel_compensation.webp`} alt="Travel PMHNP compensation" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Travel Pay</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average travel {brand.niche.short} salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p></div>
+              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_travel_compensation.webp`} alt={`Travel ${brand.niche.short} compensation`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)' }}>
               <Bell size={32} style={{ color: '#0D9488', marginBottom: '14px' }} /><h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#134E4A', margin: '0 0 10px' }}>Get Travel Alerts</h3><p style={{ fontSize: '13px', color: '#0D9488', lineHeight: 1.6, margin: '0 0 20px' }}>New assignments posted daily.</p>
@@ -171,7 +171,7 @@ export default async function TravelJobsPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Travel PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Travel {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>{faqs.map((faq, idx) => (<div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}><h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>{faq.a}</p></div>))}</div>
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>

@@ -57,17 +57,17 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     // SEO Fix #7: trim title to ≤60 chars (Google SERP cap). Previous title
     // ran 77 chars and got truncated mid-phrase, costing CTR.
-    title: `${jobCountDisplay} PMHNP Jobs — Psychiatric NP Job Board`,
-    description: `Browse ${jobCountDisplay} PMHNP jobs updated daily. Remote, telehealth & in-person psychiatric NP positions with salary transparency. Free for job seekers.`,
+    title: `${jobCountDisplay} ${brand.niche.short} Jobs — ${brand.niche.medium} Job Board`,
+    description: `Browse ${jobCountDisplay} ${brand.niche.short} jobs updated daily. Remote, telehealth & in-person ${brand.niche.adjective} NP positions with salary transparency. Free for job seekers.`,
     openGraph: {
-      title: `${jobCountDisplay} PMHNP Jobs - Find Your Next Position`,
-      description: `Browse ${jobCountDisplay} psychiatric nurse practitioner jobs. Remote, hybrid, and in-person positions with salary transparency.`,
+      title: `${jobCountDisplay} ${brand.niche.short} Jobs - Find Your Next Position`,
+      description: `Browse ${jobCountDisplay} ${brand.niche.adjective} nurse practitioner jobs. Remote, hybrid, and in-person positions with salary transparency.`,
       images: [
         {
           url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`,
           width: 1280,
           height: 900,
-          alt: `PMHNP Hiring job board homepage showing ${jobCountDisplay} psychiatric nurse practitioner jobs from ${uniqueEmployerCount}+ companies across 50 states`,
+          alt: `${brand.name} job board homepage showing ${jobCountDisplay} ${brand.niche.adjective} nurse practitioner jobs from ${uniqueEmployerCount}+ companies across 50 states`,
         },
       ],
     },
@@ -115,61 +115,61 @@ export default async function Home() {
             mainEntity: [
               {
                 "@type": "Question",
-                name: "What is a PMHNP?",
+                name: `What is a ${brand.niche.short}?`,
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "A PMHNP (Psychiatric Mental Health Nurse Practitioner) is an advanced practice registered nurse (APRN) who specializes in mental health care. PMHNPs — also called Psych NPs or behavioral health nurse practitioners — can diagnose and treat mental health conditions, prescribe medications, and provide psychotherapy. They hold a Master's or Doctoral degree in psychiatric nursing and are certified by the ANCC as PMHNP-BC.",
+                  text: `A ${brand.niche.short} (${brand.niche.long}) is an advanced practice registered nurse (APRN) who specializes in ${brand.niche.category} care. ${brand.niche.short}s — also called Psych NPs or behavioral health nurse practitioners — can diagnose and treat ${brand.niche.category} conditions, prescribe medications, and provide psychotherapy. They hold a Master's or Doctoral degree in ${brand.niche.adjective} nursing and are certified by the ANCC as PMHNP-BC.`,
                 },
               },
               {
                 "@type": "Question",
-                name: "How much do PMHNPs make?",
+                name: `How much do ${brand.niche.short}s make?`,
                 acceptedAnswer: {
                   // SEO Fix C5/C6: salary range pulled from lib/stats-sources.ts so the
                   // same number lands on homepage, blog FAQ, and About copy. Source +
                   // asOf appended in plain prose for verifiable citation.
                   "@type": "Answer",
-                  text: `PMHNPs earn an average annual salary of ${STAT_SOURCES.averageSalary.range} based on the ${STAT_SOURCES.averageSalary.source} (${STAT_SOURCES.averageSalary.asOf}). Salaries range from ~$120,000 for new graduates to $200,000+ for experienced PMHNPs in high-demand areas. Remote and telehealth positions typically pay $130,000–$200,000; private practice PMHNPs can earn $200,000+ depending on caseload and overhead.`,
+                  text: `${brand.niche.short}s earn an average annual salary of ${STAT_SOURCES.averageSalary.range} based on the ${STAT_SOURCES.averageSalary.source} (${STAT_SOURCES.averageSalary.asOf}). Salaries range from ~$120,000 for new graduates to $200,000+ for experienced ${brand.niche.short}s in high-demand areas. Remote and telehealth positions typically pay $130,000–$200,000; private practice ${brand.niche.short}s can earn $200,000+ depending on caseload and overhead.`,
                 },
               },
               {
                 "@type": "Question",
-                name: "What is the PMHNP job outlook?",
+                name: `What is the ${brand.niche.short} job outlook?`,
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: `The PMHNP job outlook is strong: ${STAT_SOURCES.blsGrowth2032.source} projects ${STAT_SOURCES.blsGrowth2032.formatted} employment growth for nurse practitioners through 2032 — much faster than average. Roughly ${STAT_SOURCES.hrsaShortagePopulation.formatted} Americans live in mental-health Health Professional Shortage Areas (${STAT_SOURCES.hrsaShortagePopulation.source}, ${STAT_SOURCES.hrsaShortagePopulation.asOf}), so demand for psychiatric NPs continues to expand alongside telehealth access.`,
+                  text: `The ${brand.niche.short} job outlook is strong: ${STAT_SOURCES.blsGrowth2032.source} projects ${STAT_SOURCES.blsGrowth2032.formatted} employment growth for nurse practitioners through 2032 — much faster than average. Roughly ${STAT_SOURCES.hrsaShortagePopulation.formatted} Americans live in mental-health Health Professional Shortage Areas (${STAT_SOURCES.hrsaShortagePopulation.source}, ${STAT_SOURCES.hrsaShortagePopulation.asOf}), so demand for ${brand.niche.adjective} NPs continues to expand alongside telehealth access.`,
                 },
               },
               {
                 "@type": "Question",
-                name: "How long does it take to become a PMHNP?",
+                name: `How long does it take to become a ${brand.niche.short}?`,
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Becoming a PMHNP typically takes 6-8 years total: 4 years for a BSN, 1-2 years of RN experience (recommended), and 2-3 years for a MSN or DNP with PMHNP specialization. Accelerated BSN-to-DNP programs can shorten this timeline. After graduation, you must pass the ANCC PMHNP-BC certification exam.",
+                  text: `Becoming a ${brand.niche.short} typically takes 6-8 years total: 4 years for a BSN, 1-2 years of RN experience (recommended), and 2-3 years for a MSN or DNP with ${brand.niche.short} specialization. Accelerated BSN-to-DNP programs can shorten this timeline. After graduation, you must pass the ANCC PMHNP-BC certification exam.`,
                 },
               },
               {
                 "@type": "Question",
-                name: "Can PMHNPs prescribe medication?",
+                name: `Can ${brand.niche.short}s prescribe medication?`,
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Yes, PMHNPs can prescribe medications including controlled substances in all 50 states. In states with full practice authority (34 states plus DC), PMHNPs prescribe independently. In reduced or restricted practice states, a collaborative agreement with a physician may be required. PMHNPs commonly prescribe antidepressants, anxiolytics, antipsychotics, mood stabilizers, and stimulants.",
+                  text: `Yes, ${brand.niche.short}s can prescribe medications including controlled substances in all 50 states. In states with full practice authority (34 states plus DC), ${brand.niche.short}s prescribe independently. In reduced or restricted practice states, a collaborative agreement with a physician may be required. ${brand.niche.short}s commonly prescribe antidepressants, anxiolytics, antipsychotics, mood stabilizers, and stimulants.`,
                 },
               },
               {
                 "@type": "Question",
-                name: "What is the difference between a PMHNP and a psychiatrist?",
+                name: `What is the difference between a ${brand.niche.short} and a psychiatrist?`,
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: `PMHNPs hold a Master's or Doctoral degree in nursing with psychiatric specialization (2–4 years of graduate school), while psychiatrists complete medical school plus a 4-year residency. Both can diagnose mental health conditions and prescribe medications. In full practice authority states, PMHNPs practice independently. PMHNPs typically earn ${STAT_SOURCES.averageSalary.range} (${STAT_SOURCES.averageSalary.source}, ${STAT_SOURCES.averageSalary.asOf}) compared to psychiatrists at $250,000+, but PMHNPs reach full practice much faster with less educational debt.`,
+                  text: `${brand.niche.short}s hold a Master's or Doctoral degree in nursing with ${brand.niche.adjective} specialization (2–4 years of graduate school), while psychiatrists complete medical school plus a 4-year residency. Both can diagnose ${brand.niche.category} conditions and prescribe medications. In full practice authority states, ${brand.niche.short}s practice independently. ${brand.niche.short}s typically earn ${STAT_SOURCES.averageSalary.range} (${STAT_SOURCES.averageSalary.source}, ${STAT_SOURCES.averageSalary.asOf}) compared to psychiatrists at $250,000+, but ${brand.niche.short}s reach full practice much faster with less educational debt.`,
                 },
               },
               {
                 "@type": "Question",
-                name: "What does a psychiatric nurse practitioner do on a typical workday?",
+                name: `What does a ${brand.niche.adjective} nurse practitioner do on a typical workday?`,
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "A typical PMHNP workday includes conducting psychiatric evaluations, diagnosing mental health conditions (depression, anxiety, PTSD, bipolar disorder, schizophrenia), prescribing and managing psychotropic medications, providing psychotherapy (CBT, motivational interviewing), collaborating with interdisciplinary teams, and documenting in EHR systems. Outpatient PMHNPs typically see 8-16 patients per day, while inpatient roles involve rounding on hospitalized patients.",
+                  text: `A typical ${brand.niche.short} workday includes conducting psychiatric evaluations, diagnosing ${brand.niche.category} conditions (depression, anxiety, PTSD, bipolar disorder, schizophrenia), prescribing and managing psychotropic medications, providing psychotherapy (CBT, motivational interviewing), collaborating with interdisciplinary teams, and documenting in EHR systems. Outpatient ${brand.niche.short}s typically see 8-16 patients per day, while inpatient roles involve rounding on hospitalized patients.`,
                 },
               },
               {
@@ -177,39 +177,39 @@ export default async function Home() {
                 name: "Are there remote psych NP jobs?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Yes, remote PMHNP jobs are rapidly growing — approximately 62% of psychiatric NP positions now offer remote or telehealth options. Remote psych NP roles include telehealth patient care, medication management via video, utilization review, and clinical documentation. Salaries for remote PMHNPs range from $130,000 to $200,000+, with companies like Talkiatry, Cerebral, and Lyra Health actively hiring.",
+                  text: `Yes, remote ${brand.niche.short} jobs are rapidly growing — approximately 62% of ${brand.niche.adjective} NP positions now offer remote or telehealth options. Remote psych NP roles include telehealth patient care, medication management via video, utilization review, and clinical documentation. Salaries for remote ${brand.niche.short}s range from $130,000 to $200,000+, with companies like Talkiatry, Cerebral, and Lyra Health actively hiring.`,
                 },
               },
               {
                 "@type": "Question",
-                name: "Can PMHNPs own a private practice?",
+                name: `Can ${brand.niche.short}s own a private practice?`,
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Yes, PMHNPs can own a private practice in all 50 states, though the level of independence varies. In the 34 states with Full Practice Authority, PMHNPs can practice and prescribe without physician oversight. In restricted states, a collaborative agreement with a physician may be required. Private practice PMHNPs can earn $180,000-$300,000+ annually, though they must manage business operations, insurance credentialing, and overhead costs.",
+                  text: `Yes, ${brand.niche.short}s can own a private practice in all 50 states, though the level of independence varies. In the 34 states with Full Practice Authority, ${brand.niche.short}s can practice and prescribe without physician oversight. In restricted states, a collaborative agreement with a physician may be required. Private practice ${brand.niche.short}s can earn $180,000-$300,000+ annually, though they must manage business operations, insurance credentialing, and overhead costs.`,
                 },
               },
               {
                 "@type": "Question",
-                name: "Which states have the highest demand for psychiatric nurse practitioners?",
+                name: `Which states have the highest demand for ${brand.niche.adjective} nurse practitioners?`,
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "The states with the highest demand for PMHNPs in 2026 are California (2,500+ openings), Texas (2,240+), Florida (2,190+), New York (1,640+), and Tennessee (1,570+). Other high-demand states include Ohio, North Carolina, Georgia, Arizona, and Illinois. Full Practice Authority states generally have more job openings due to fewer practice restrictions.",
+                  text: `The states with the highest demand for ${brand.niche.short}s in 2026 are California (2,500+ openings), Texas (2,240+), Florida (2,190+), New York (1,640+), and Tennessee (1,570+). Other high-demand states include Ohio, North Carolina, Georgia, Arizona, and Illinois. Full Practice Authority states generally have more job openings due to fewer practice restrictions.`,
                 },
               },
               {
                 "@type": "Question",
-                name: "What are the most in-demand PMHNP specializations?",
+                name: `What are the most in-demand ${brand.niche.short} specializations?`,
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "The most in-demand PMHNP specializations include addiction/substance abuse (MAT certification, +15-20% salary premium), child and adolescent psychiatry (+10-15% premium), forensic psychiatry in correctional settings (+15-25% premium), geriatric psychiatry, crisis/emergency psychiatry, and telehealth-focused medication management. Dual certification (PMHNP + FNP) is also increasingly valuable.",
+                  text: `The most in-demand ${brand.niche.short} specializations include addiction/substance abuse (MAT certification, +15-20% salary premium), child and adolescent psychiatry (+10-15% premium), forensic psychiatry in correctional settings (+15-25% premium), geriatric psychiatry, crisis/emergency psychiatry, and telehealth-focused medication management. Dual certification (PMHNP + FNP) is also increasingly valuable.`,
                 },
               },
               {
                 "@type": "Question",
-                name: "Are PMHNPs eligible for loan forgiveness or incentive programs?",
+                name: `Are ${brand.niche.short}s eligible for loan forgiveness or incentive programs?`,
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Yes, PMHNPs working in designated Health Professional Shortage Areas (HPSAs) may qualify for HRSA's National Health Service Corps (NHSC) loan repayment, which offers up to $50,000 for a 2-year commitment. VA psychiatric NPs may qualify for the Education Debt Reduction Program (EDRP). PMHNPs in community mental health centers and rural areas often have additional state-level loan forgiveness programs available.",
+                  text: `Yes, ${brand.niche.short}s working in designated Health Professional Shortage Areas (HPSAs) may qualify for HRSA's National Health Service Corps (NHSC) loan repayment, which offers up to $50,000 for a 2-year commitment. VA ${brand.niche.adjective} NPs may qualify for the Education Debt Reduction Program (EDRP). ${brand.niche.short}s in community ${brand.niche.category} centers and rural areas often have additional state-level loan forgiveness programs available.`,
                 },
               },
             ],

@@ -84,15 +84,15 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     const page = parseInt(params.page || '1');
 
     return {
-        title: `${stats.totalJobs} Behavioral Health PMHNP Jobs — Psych NP Positions`,
-        description: `Find ${stats.totalJobs} behavioral health nurse practitioner jobs. Positions across inpatient, outpatient, community mental health, telehealth, and residential settings. Average salary $${stats.avgSalary || 155}K+.`,
+        title: `${stats.totalJobs} Behavioral Health ${brand.niche.short} Jobs — Psych NP Positions`,
+        description: `Find ${stats.totalJobs} behavioral health nurse practitioner jobs. Positions across inpatient, outpatient, community ${brand.niche.category}, telehealth, and residential settings. Average salary $${stats.avgSalary || 155}K+.`,
         keywords: ['behavioral health NP jobs', 'behavioral health nurse practitioner', 'mental health NP jobs', 'psychiatric NP positions', 'PMHNP behavioral health'],
         openGraph: {
             title: `${stats.totalJobs} Behavioral Health NP Jobs`,
-            description: 'Browse behavioral health and psychiatric nurse practitioner positions across all settings.',
+            description: `Browse behavioral health and ${brand.niche.adjective} nurse practitioner positions across all settings.`,
             type: 'website',
             images: [{
-                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Behavioral Health NP Jobs`)}&subtitle=${encodeURIComponent('Psychiatric & mental health positions')}`,
+                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Behavioral Health NP Jobs`)}&subtitle=${encodeURIComponent(`Psychiatric & ${brand.niche.category} positions`)}`,
                 width: 1200, height: 630, alt: 'Behavioral Health NP Jobs',
             }],
         },
@@ -126,7 +126,7 @@ export default async function BehavioralHealthJobsPage({ searchParams }: PagePro
                 { name: "Behavioral Health", url: `${brand.baseUrl}/jobs/behavioral-health` }
             ]} />
             {jobs.length > 0 && (
-              <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Behavioral Health PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+              <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Behavioral Health ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
             )}
 
             {/* ═══ HERO ═══ */}
@@ -145,7 +145,7 @@ export default async function BehavioralHealthJobsPage({ searchParams }: PagePro
           { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$155K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description="Psychiatric and mental health positions across inpatient, outpatient, telehealth, and community settings."
+        description={`Psychiatric and ${brand.niche.category} positions across inpatient, outpatient, telehealth, and community settings.`}
         ctaLabel="Browse BH Jobs"
         ctaHref="/jobs?category=behavioral-health"
         secondaryCtaLabel="Set Alert"
@@ -222,7 +222,7 @@ export default async function BehavioralHealthJobsPage({ searchParams }: PagePro
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose Behavioral Health</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Built for Whole-Person Care</h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Behavioral health roles integrate mental health into primary care, community health, and wellness programs.</p>
+          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Behavioral health roles integrate {brand.niche.category} into primary care, community health, and wellness programs.</p>
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Integrated Care (8) + Population Health (4) */}
@@ -264,7 +264,7 @@ export default async function BehavioralHealthJobsPage({ searchParams }: PagePro
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_bh_demand.webp`} alt="Growing demand" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>High Demand</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>BH integration driving massive growth in PMHNP positions nationwide.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>BH integration driving massive growth in {brand.niche.short} positions nationwide.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_bh_prevention.webp`} alt="Preventive care" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -277,8 +277,7 @@ export default async function BehavioralHealthJobsPage({ searchParams }: PagePro
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Career Growth</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  BH PMHNPs earn ${stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$130K–$170K'} annually with strong benefits and loan repayment in underserved areas.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>BH {brand.niche.short}s earn ${stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$130K–$170K'} annually with strong benefits and loan repayment in underserved areas.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
@@ -370,13 +369,13 @@ export default async function BehavioralHealthJobsPage({ searchParams }: PagePro
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Behavioral Health PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Behavioral Health {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {[
-              { q: "What is behavioral health vs mental health?", a: "Behavioral health is a broader term encompassing mental health, substance use, and health behaviors. BH PMHNPs work in integrated settings alongside primary care, addressing the whole person rather than just psychiatric diagnoses in isolation." },
-              { q: "What settings do BH PMHNPs work in?", a: "Behavioral health PMHNPs work in community mental health centers (CMHCs), federally qualified health centers (FQHCs), school-based clinics, primary care offices with integrated BH, corporate wellness, residential facilities, and telehealth platforms." },
-              { q: "How much do behavioral health PMHNPs earn?", a: "BH PMHNPs typically earn $130K–$170K annually. FQHC and CMHC positions often include loan repayment programs (NHSC up to $50K), sign-on bonuses, and excellent benefits packages." },
-              { q: "What skills are important for BH PMHNPs?", a: "Key skills include collaborative care model experience, proficiency with screening tools (PHQ-9, GAD-7, AUDIT), cultural competency, EHR documentation, brief intervention techniques, and trauma-informed care approaches." },
+              { q: `What is behavioral health vs ${brand.niche.category}?`, a: `Behavioral health is a broader term encompassing ${brand.niche.category}, substance use, and health behaviors. BH ${brand.niche.short}s work in integrated settings alongside primary care, addressing the whole person rather than just ${brand.niche.adjective} diagnoses in isolation.` },
+              { q: `What settings do BH ${brand.niche.short}s work in?`, a: `Behavioral health ${brand.niche.short}s work in community ${brand.niche.category} centers (CMHCs), federally qualified health centers (FQHCs), school-based clinics, primary care offices with integrated BH, corporate wellness, residential facilities, and telehealth platforms.` },
+              { q: `How much do behavioral health ${brand.niche.short}s earn?`, a: `BH ${brand.niche.short}s typically earn $130K–$170K annually. FQHC and CMHC positions often include loan repayment programs (NHSC up to $50K), sign-on bonuses, and excellent benefits packages.` },
+              { q: `What skills are important for BH ${brand.niche.short}s?`, a: "Key skills include collaborative care model experience, proficiency with screening tools (PHQ-9, GAD-7, AUDIT), cultural competency, EHR documentation, brief intervention techniques, and trauma-informed care approaches." },
             ].map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px 28px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3>
@@ -384,7 +383,7 @@ export default async function BehavioralHealthJobsPage({ searchParams }: PagePro
               </div>
             ))}
           </div>
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{q:"What is behavioral health vs mental health?",a:"Behavioral health is a broader term encompassing mental health, substance use, and health behaviors. BH PMHNPs work in integrated settings alongside primary care."},{q:"What settings do BH PMHNPs work in?",a:"CMHCs, FQHCs, school-based clinics, primary care offices with integrated BH, corporate wellness, residential facilities, and telehealth platforms."},{q:"How much do behavioral health PMHNPs earn?",a:"BH PMHNPs typically earn $130K–$170K annually. FQHC and CMHC positions often include loan repayment programs up to $50K."},{q:"What skills are important for BH PMHNPs?",a:"Collaborative care model experience, proficiency with screening tools (PHQ-9, GAD-7, AUDIT), cultural competency, EHR documentation, and trauma-informed care."}].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{q:`What is behavioral health vs ${brand.niche.category}?`,a:`Behavioral health is a broader term encompassing ${brand.niche.category}, substance use, and health behaviors. BH ${brand.niche.short}s work in integrated settings alongside primary care.`},{q:`What settings do BH ${brand.niche.short}s work in?`,a:"CMHCs, FQHCs, school-based clinics, primary care offices with integrated BH, corporate wellness, residential facilities, and telehealth platforms."},{q:`How much do behavioral health ${brand.niche.short}s earn?`,a:`BH ${brand.niche.short}s typically earn $130K–$170K annually. FQHC and CMHC positions often include loan repayment programs up to $50K.`},{q:`What skills are important for BH ${brand.niche.short}s?`,a:"Collaborative care model experience, proficiency with screening tools (PHQ-9, GAD-7, AUDIT), cultural competency, EHR documentation, and trauma-informed care."}].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>
       </div>
 

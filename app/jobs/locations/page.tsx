@@ -142,17 +142,17 @@ async function getLocationStats() {
  * Generate metadata for SEO
  */
 export const metadata: Metadata = {
-  title: 'PMHNP Jobs by Location - All States',
-  description: 'Find psychiatric mental health nurse practitioner jobs in all 50 states. Browse PMHNP positions by location, including remote opportunities.',
+  title: `${brand.niche.short} Jobs by Location - All States`,
+  description: `Find ${brand.niche.descriptor} jobs in all 50 states. Browse ${brand.niche.short} positions by location, including remote opportunities.`,
   openGraph: {
-    title: 'PMHNP Jobs by Location',
-    description: 'Browse psychiatric mental health nurse practitioner jobs in all 50 states and remote positions.',
+    title: `${brand.niche.short} Jobs by Location`,
+    description: `Browse ${brand.niche.descriptor} jobs in all 50 states and remote positions.`,
     type: 'website',
     images: [{
-      url: `/api/og?type=page&title=${encodeURIComponent('PMHNP Jobs by Location')}&subtitle=${encodeURIComponent('Browse positions across all 50 states')}`,
+      url: `/api/og?type=page&title=${encodeURIComponent(`${brand.niche.short} Jobs by Location`)}&subtitle=${encodeURIComponent('Browse positions across all 50 states')}`,
       width: 1200,
       height: 630,
-      alt: 'PMHNP Jobs by Location',
+      alt: `${brand.niche.short} Jobs by Location`,
     }],
   },
   alternates: {
@@ -180,8 +180,8 @@ export default async function LocationsPage() {
   const collectionSchema = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'PMHNP Jobs by Location',
-    description: `Directory of psychiatric mental health nurse practitioner jobs across ${stats.states.length} US states and ${stats.topCities.length} top metros.`,
+    name: `${brand.niche.short} Jobs by Location`,
+    description: `Directory of ${brand.niche.descriptor} jobs across ${stats.states.length} US states and ${stats.topCities.length} top metros.`,
     url: `${brand.baseUrl}/jobs/locations`,
     mainEntity: {
       '@type': 'ItemList',
@@ -189,7 +189,7 @@ export default async function LocationsPage() {
       itemListElement: stats.states.slice(0, 50).map((s: ProcessedState, idx: number) => ({
         '@type': 'ListItem',
         position: idx + 1,
-        name: `PMHNP Jobs in ${s.name}`,
+        name: `${brand.niche.short} Jobs in ${s.name}`,
         url: `${brand.baseUrl}/jobs/state/${s.slug}`,
       })),
     },
@@ -212,11 +212,11 @@ export default async function LocationsPage() {
       <CategoryHero
         bgColor="#0D9488"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp`}
-        heroAlt="PMHNP Jobs by Location"
+        heroAlt={`${brand.niche.short} Jobs by Location`}
         badgeText="Nationwide"
         breadcrumbs={['Home', 'Jobs', 'Locations']}
         indexLabel="№ 02"
-        headlineLine1="PMHNP"
+        headlineLine1={brand.niche.short}
         headlineLine2="Locations"
         headlineSub="Search by State & City"
         stats={[
@@ -225,7 +225,7 @@ export default async function LocationsPage() {
           { value: `${stats.topCities.length}+`, label: 'Cities' },
           { value: stats.remoteCount.toString(), label: 'Remote' },
         ]}
-        description={`Explore ${stats.totalJobs.toLocaleString()} psychiatric nurse practitioner positions across the United States. Find opportunities in all 50 states, top metropolitan areas, and remote positions.`}
+        description={`Explore ${stats.totalJobs.toLocaleString()} ${brand.niche.adjective} nurse practitioner positions across the United States. Find opportunities in all 50 states, top metropolitan areas, and remote positions.`}
         ctaLabel="Browse All Jobs"
         ctaHref="/jobs"
       />
@@ -262,9 +262,7 @@ export default async function LocationsPage() {
                           fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 800,
                           fontFamily: 'var(--font-lora, Georgia, serif)',
                           color: '#1A2E35', margin: '0 0 6px', lineHeight: 1.2,
-                        }}>
-                          Remote PMHNP Jobs
-                        </h2>
+                        }}>Remote {brand.niche.short} Jobs</h2>
                         <p style={{ fontSize: '14px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
                           Work from anywhere — telehealth &amp; fully remote positions across all 50 states
                         </p>
@@ -412,7 +410,7 @@ export default async function LocationsPage() {
                       {/* SEO Fix H15: StateImage falls back if per-state webp is missing. */}
                       <StateImage
                         slug={state.slug}
-                        alt={`${state.name} PMHNP Jobs`}
+                        alt={`${state.name} ${brand.niche.short} Jobs`}
                         width={300}
                         height={300}
                         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
@@ -453,9 +451,7 @@ export default async function LocationsPage() {
             <div>
               <div className="flex items-center gap-3 mb-6">
                 <TrendingUp className="h-6 w-6 text-green-500" />
-                <h2 className="text-2xl md:text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                  Top Cities with PMHNP Jobs
-                </h2>
+                <h2 className="text-2xl md:text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Top Cities with {brand.niche.short} Jobs</h2>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -509,41 +505,23 @@ export default async function LocationsPage() {
 
           {/* Info Section */}
           <div className="mt-12 rounded-xl p-6 md:p-8" style={clayCard}>
-            <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
-              About PMHNP Job Locations
-            </h2>
+            <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>About {brand.niche.short} Job Locations</h2>
             <div className="grid md:grid-cols-2 gap-6 text-sm" style={{ color: 'var(--text-secondary)' }}>
               <div>
                 <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>State-by-State Opportunities</h3>
-                <p className="leading-relaxed">
-                  Each state offers unique opportunities for psychiatric mental health nurse practitioners.
-                  Browse by state to find positions that match your location preferences, licensing, and
-                  career goals. States vary in demand, salary ranges, and practice requirements.
-                </p>
+                <p className="leading-relaxed">Each state offers unique opportunities for {brand.niche.descriptor}s. Browse by state to find positions that match your location preferences, licensing, and career goals. States vary in demand, salary ranges, and practice requirements.</p>
               </div>
               <div>
                 <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Metropolitan Markets</h3>
-                <p className="leading-relaxed">
-                  Major cities typically offer higher concentrations of PMHNP positions across diverse
-                  settings including hospitals, clinics, private practices, and telehealth companies.
-                  Urban areas often provide competitive salaries and career advancement opportunities.
-                </p>
+                <p className="leading-relaxed">Major cities typically offer higher concentrations of {brand.niche.short} positions across diverse settings including hospitals, clinics, private practices, and telehealth companies. Urban areas often provide competitive salaries and career advancement opportunities.</p>
               </div>
               <div>
                 <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Remote Work Options</h3>
-                <p className="leading-relaxed">
-                  Telehealth has expanded opportunities for PMHNPs to work from anywhere. Remote positions
-                  offer flexibility, work-life balance, and the ability to serve patients across state lines
-                  with appropriate licensure.
-                </p>
+                <p className="leading-relaxed">Telehealth has expanded opportunities for {brand.niche.short}s to work from anywhere. Remote positions offer flexibility, work-life balance, and the ability to serve patients across state lines with appropriate licensure.</p>
               </div>
               <div>
                 <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Location Considerations</h3>
-                <p className="leading-relaxed">
-                  When choosing a location, consider factors like cost of living, state licensing requirements,
-                  scope of practice regulations, professional development opportunities, and quality of life.
-                  Research each state&apos;s specific PMHNP practice environment.
-                </p>
+                <p className="leading-relaxed">When choosing a location, consider factors like cost of living, state licensing requirements, scope of practice regulations, professional development opportunities, and quality of life. Research each state&apos;s specific {brand.niche.short} practice environment.</p>
               </div>
             </div>
           </div>

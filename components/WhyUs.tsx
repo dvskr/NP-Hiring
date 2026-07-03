@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { WHY_US_FEATURES } from '@/config/niche/stats';
+import { brand } from '@/config/brand';
 
 export default function WhyUs() {
     const sectionRef = useRef<HTMLElement>(null);
@@ -72,12 +73,12 @@ export default function WhyUs() {
                         fontSize: '28px', fontWeight: 700,
                         color: 'var(--text-primary)', margin: '0 0 8px',
                     }}>
-                        Why PMHNPs Choose Us
+                        Why {brand.niche.short}s Choose Us
                     </h2>
                     <p style={{
                         fontSize: '15px', color: 'var(--text-muted)', margin: 0,
                     }}>
-                        Built exclusively for Psychiatric Mental Health Nurse Practitioners — not a generic job board
+                        Built exclusively for {brand.niche.long}s — not a generic job board
                     </p>
                 </div>
 

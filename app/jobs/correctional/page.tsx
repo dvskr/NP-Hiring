@@ -78,24 +78,24 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} Correctional PMHNP Jobs — Forensic ($160K+)`,
+    title: `${stats.totalJobs} Correctional ${brand.niche.short} Jobs — Forensic ($160K+)`,
     // SEO Fix #7: trim description to ≤160 chars.
-    description: `Find ${stats.totalJobs} correctional & forensic PMHNP jobs in prisons, jails, and detention facilities. 15-25% salary premiums + loan forgiveness eligibility.`,
+    description: `Find ${stats.totalJobs} correctional & forensic ${brand.niche.short} jobs in prisons, jails, and detention facilities. 15-25% salary premiums + loan forgiveness eligibility.`,
     keywords: ['correctional pmhnp jobs', 'forensic psychiatric nurse practitioner', 'prison pmhnp', 'corrections psych NP', 'forensic mental health NP jobs'],
     openGraph: {
-      title: `${stats.totalJobs} Correctional PMHNP Jobs`,
-      description: 'Browse correctional and forensic psychiatric mental health nurse practitioner positions.',
+      title: `${stats.totalJobs} Correctional ${brand.niche.short} Jobs`,
+      description: `Browse correctional and forensic ${brand.niche.descriptor} positions.`,
       type: 'website',
       url: `${brand.baseUrl}/jobs/correctional`,
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Correctional PMHNP Jobs`)}&subtitle=${encodeURIComponent('Forensic psychiatric NP positions — $160K+ with PSLF')}`,
-        width: 1200, height: 630, alt: 'Correctional PMHNP Jobs',
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Correctional ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Forensic ${brand.niche.adjective} NP positions — $160K+ with PSLF`)}`,
+        width: 1200, height: 630, alt: `Correctional ${brand.niche.short} Jobs`,
       }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${stats.totalJobs} Correctional PMHNP Jobs`,
-      description: 'Forensic PMHNP positions in prisons, jails, and detention facilities.',
+      title: `${stats.totalJobs} Correctional ${brand.niche.short} Jobs`,
+      description: `Forensic ${brand.niche.short} positions in prisons, jails, and detention facilities.`,
     },
     alternates: { canonical: `${brand.baseUrl}/jobs/correctional` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
@@ -117,19 +117,19 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
 
   const correctionalFaqs = [
     {
-      question: "What do correctional PMHNPs do?",
-      answer: "Correctional PMHNPs provide psychiatric care to incarcerated individuals in prisons, jails, and detention facilities. They conduct mental health assessments, manage psychotropic medications, provide crisis intervention, diagnose disorders, and develop treatment plans. They often work with complex presentations including co-occurring substance use disorders."
+      question: `What do correctional ${brand.niche.short}s do?`,
+      answer: `Correctional ${brand.niche.short}s provide ${brand.niche.adjective} care to incarcerated individuals in prisons, jails, and detention facilities. They conduct ${brand.niche.category} assessments, manage psychotropic medications, provide crisis intervention, diagnose disorders, and develop treatment plans. They often work with complex presentations including co-occurring substance use disorders.`
     },
     {
-      question: "How much do forensic psychiatric nurse practitioners earn?",
-      answer: "Forensic and correctional PMHNPs earn 15-25% more than standard psychiatric NP roles, with average salaries of $160,000-$200,000+. Federal Bureau of Prisons positions offer additional benefits including federal pension, health insurance, and student loan repayment programs."
+      question: `How much do forensic ${brand.niche.adjective} nurse practitioners earn?`,
+      answer: `Forensic and correctional ${brand.niche.short}s earn 15-25% more than standard ${brand.niche.adjective} NP roles, with average salaries of $160,000-$200,000+. Federal Bureau of Prisons positions offer additional benefits including federal pension, health insurance, and student loan repayment programs.`
     },
     {
-      question: "Is correctional psychiatric nursing dangerous?",
-      answer: "Correctional facilities have security protocols to protect healthcare providers. While the environment requires awareness and de-escalation skills, most PMHNPs report feeling safe. Facilities provide training on security procedures, and mental health providers are typically highly respected by the incarcerated population."
+      question: `Is correctional ${brand.niche.adjective} nursing dangerous?`,
+      answer: `Correctional facilities have security protocols to protect healthcare providers. While the environment requires awareness and de-escalation skills, most ${brand.niche.short}s report feeling safe. Facilities provide training on security procedures, and ${brand.niche.category} providers are typically highly respected by the incarcerated population.`
     },
     {
-      question: "Do you need special certification for forensic PMHNP work?",
+      question: `Do you need special certification for forensic ${brand.niche.short} work?`,
       answer: "While not required, Forensic Nursing Certification (AFN-BC) can enhance your candidacy and earning potential. Most employers provide facility-specific training. Experience with substance abuse treatment, crisis intervention, and dual-diagnosis populations is highly valued."
     },
   ];
@@ -162,7 +162,7 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'ItemList',
-              name: 'Correctional PMHNP Jobs',
+              name: `Correctional ${brand.niche.short} Jobs`,
               numberOfItems: stats.totalJobs,
               itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({
                 '@type': 'ListItem',
@@ -174,25 +174,25 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
           }}
         />
       )}
-      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Correctional PMHNP Jobs" />
+      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName={`Correctional ${brand.niche.short} Jobs`} />
 
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#95aabd"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v2_correctional.webp`}
-        heroAlt="Correctional PMHNP forensic practice"
+        heroAlt={`Correctional ${brand.niche.short} forensic practice`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Correctional']}
         indexLabel="№ 18 / 28"
         headlineLine1="Correctional"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, forensic psych."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$180K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description="Forensic psychiatric positions with premium pay, high autonomy, and federal loan forgiveness eligibility."
+        description={`Forensic ${brand.niche.adjective} positions with premium pay, high autonomy, and federal loan forgiveness eligibility.`}
         ctaLabel="Browse Correctional Jobs"
         ctaHref="/jobs?category=correctional"
         secondaryCtaLabel="Set Alert"
@@ -211,7 +211,7 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
               <div className="text-center py-12 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
                 <Shield className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-tertiary)' }} />
                 <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No correctional positions at this time</h3>
-                <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>New correctional PMHNP openings are added daily.</p>
+                <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>New correctional {brand.niche.short} openings are added daily.</p>
                 <Link href="/jobs" className="inline-block px-6 py-3 text-white rounded-lg font-medium" style={{ backgroundColor: 'var(--color-primary)' }}>Browse All Jobs</Link>
               </div>
             ) : (
@@ -310,7 +310,7 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_corr_loan.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Premium Pay</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Earn 15-25% more than standard PMHNP roles with federal benefits packages.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Earn 15-25% more than standard {brand.niche.short} roles with federal benefits packages.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_corr_security.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -328,12 +328,11 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary + Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Correctional PMHNPs earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$160K–$200K'} annually with federal pension, health insurance, and loan repayment.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Correctional {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$160K–$200K'} annually with federal pension, health insurance, and loan repayment.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_corr_salary.webp`} alt="Correctional PMHNP salary premium" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_corr_salary.webp`} alt={`Correctional ${brand.niche.short} salary premium`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
@@ -423,7 +422,7 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Correctional PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Correctional {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {correctionalFaqs.map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px 28px' }}>

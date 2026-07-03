@@ -101,7 +101,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
   // hydration. isHydrated is already wired via useViewedJobs() above.
   const freshness = isHydrated ? getJobFreshness(job) : '';
   const shareTitle = `${job.title} at ${job.employer}`;
-  const shareDescription = `Check out this PMHNP job: ${job.title} at ${job.employer}`;
+  const shareDescription = `Check out this ${brand.niche.short} job: ${job.title} at ${job.employer}`;
   const viewed = isHydrated && isViewed(jobSlug);
   const easyApply = job.applyOnPlatform === true;
   // "Direct Apply" = employer posted the job here AND links to their own

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
+import { brand } from '@/config/brand';
 
 interface FAQItem {
     question: string;
@@ -23,7 +24,7 @@ export default function StateFAQAccordion({ stateName, faqs }: StateFAQAccordion
             <div className="flex items-center gap-2 mb-6">
                 <HelpCircle className="w-6 h-6 text-teal-600" />
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-[var(--text-primary)]">
-                    Frequently Asked Questions About PMHNP Jobs in {stateName}
+                    Frequently Asked Questions About {brand.niche.short} Jobs in {stateName}
                 </h2>
             </div>
 

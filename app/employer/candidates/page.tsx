@@ -1,10 +1,11 @@
 import { Suspense } from 'react'
+import { brand } from '@/config/brand'
 import { requireEmployer } from '@/lib/auth/protect'
 import CandidateSearchClient from '@/components/employer/CandidateSearchClient'
 
 export const metadata = {
-    title: 'PMHNP Talent Pool | Browse Candidates',
-    description: 'Browse qualified Psychiatric Mental Health Nurse Practitioners actively looking for new opportunities.',
+    title: `${brand.niche.short} Talent Pool | Browse Candidates`,
+    description: `Browse qualified ${brand.niche.long}s actively looking for new opportunities.`,
 }
 
 export default async function CandidatesPage() {

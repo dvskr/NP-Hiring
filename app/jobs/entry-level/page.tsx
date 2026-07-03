@@ -32,16 +32,16 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: 'What is an entry-level PMHNP role?', a: 'Positions designed for newly certified PMHNPs with structured onboarding, mentorship, and gradual caseload ramp-up over 3-6 months.' },
-  { q: 'What salary can new grad PMHNPs expect?', a: 'Entry-level PMHNPs earn $100K-$140K in year one, with rapid increases to $140K-$170K by year two as caseloads grow.' },
+  { q: `What is an entry-level ${brand.niche.short} role?`, a: `Positions designed for newly certified ${brand.niche.short}s with structured onboarding, mentorship, and gradual caseload ramp-up over 3-6 months.` },
+  { q: `What salary can new grad ${brand.niche.short}s expect?`, a: `Entry-level ${brand.niche.short}s earn $100K-$140K in year one, with rapid increases to $140K-$170K by year two as caseloads grow.` },
   { q: 'Do I need experience beyond clinical rotations?', a: 'Most entry-level roles accept new grads with PMHNP-BC certification. Clinical rotation hours count as experience at many employers.' },
-  { q: 'What support do new PMHNPs receive?', a: 'Expect structured mentorship, collaborative agreements, peer case consultation, and gradually increasing patient panels.' },
-  { q: 'Which settings hire new grads most?', a: 'Community mental health centers, telehealth platforms, group practices, and FQHCs are the most new-grad-friendly employers.' },
+  { q: `What support do new ${brand.niche.short}s receive?`, a: 'Expect structured mentorship, collaborative agreements, peer case consultation, and gradually increasing patient panels.' },
+  { q: 'Which settings hire new grads most?', a: `Community ${brand.niche.category} centers, telehealth platforms, group practices, and FQHCs are the most new-grad-friendly employers.` },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
-  return { title: `${stats.totalJobs} Entry Level PMHNP Jobs ($100K-140K)`, description: `Find ${stats.totalJobs} entry-level PMHNP jobs. New grad friendly positions with mentorship and structured onboarding.`, alternates: { canonical: `${brand.baseUrl}/jobs/entry-level` } };
+  return { title: `${stats.totalJobs} Entry Level ${brand.niche.short} Jobs ($100K-140K)`, description: `Find ${stats.totalJobs} entry-level ${brand.niche.short} jobs. New grad friendly positions with mentorship and structured onboarding.`, alternates: { canonical: `${brand.baseUrl}/jobs/entry-level` } };
 }
 
 interface PageProps { searchParams: Promise<{ page?: string }>; }
@@ -57,26 +57,26 @@ export default async function EntryLevelPage({ searchParams }: PageProps) {
       <BreadcrumbSchema items={[{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Entry Level", url: `${brand.baseUrl}/jobs/entry-level` }]} />
       <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Entry Level Jobs" />
       {jobs.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Entry Level PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Entry Level ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
 
             {/* HERO */}
       <CategoryHero
         bgColor="#cbd9b8"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_entrylevel.webp`}
-        heroAlt="Entry-level PMHNP new graduate careers"
+        heroAlt={`Entry-level ${brand.niche.short} new graduate careers`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Entry-Level']}
         indexLabel="? 24 / 28"
         headlineLine1="Entry-Level"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, start your career."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$125K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description="Launch your PMHNP career with supervised positions, mentorship, and structured training programs."
+        description={`Launch your ${brand.niche.short} career with supervised positions, mentorship, and structured training programs.`}
         ctaLabel="Browse Entry-Level Jobs"
         ctaHref="/jobs?category=entry-level"
         secondaryCtaLabel="Set Alert"
@@ -110,14 +110,14 @@ export default async function EntryLevelPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #F0FDFA 0%, #E6FAF5 50%, #F0FDFA 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose Entry Level</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Start Your PMHNP Career</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Start Your {brand.niche.short} Career</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
               <div>
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Structured Mentorship</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Work alongside experienced providers who guide your clinical decision-making, prescribing confidence, and diagnostic skills.</p>
               </div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_el_mentorship.webp`} alt="PMHNP mentorship" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_el_mentorship.webp`} alt={`${brand.niche.short} mentorship`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_el_growth.webp`} alt="Career growth" width={200} height={140} style={{ width: '100%', maxWidth: '180px', height: 'auto', borderRadius: '12px', marginBottom: '16px' }} />
@@ -149,7 +149,7 @@ export default async function EntryLevelPage({ searchParams }: PageProps) {
               <div>
                 <TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} />
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Starting Salary</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average entry-level PMHNP salary:</p>
+                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average entry-level {brand.niche.short} salary:</p>
                 <p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p>
               </div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_el_salary.webp`} alt="Entry level salary" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
@@ -206,7 +206,7 @@ export default async function EntryLevelPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Entry Level PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Entry Level {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {faqs.map((faq, idx) => (<div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}><h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>{faq.a}</p></div>))}
           </div>

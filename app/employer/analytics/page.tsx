@@ -13,11 +13,12 @@
  *     there is no second-aggregation work to do in the browser.
  */
 import { requireEmployer } from '@/lib/auth/protect';
+import { brand } from '@/config/brand';
 import EmployerAnalyticsClient from './EmployerAnalyticsClient';
 
 export const metadata = {
-  title: 'Job Analytics | PMHNP Hiring',
-  description: 'Per-job views, apply clicks, and CTR for your active and historical PMHNP postings.',
+  title: `Job Analytics | ${brand.name}`,
+  description: `Per-job views, apply clicks, and CTR for your active and historical ${brand.niche.short} postings.`,
 };
 
 export default async function EmployerAnalyticsPage() {

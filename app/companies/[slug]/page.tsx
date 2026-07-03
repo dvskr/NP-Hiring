@@ -63,20 +63,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         });
 
         return {
-            title: `${company.name} PMHNP Jobs`,
+            title: `${company.name} ${brand.niche.short} Jobs`,
             description: company.description
-                ? `${company.description.substring(0, 150)}... View open PMHNP positions at ${company.name}.`
-                : `Browse open Psychiatric Mental Health Nurse Practitioner (PMHNP) positions at ${company.name}. Find salary info, locations, and apply today.`,
+                ? `${company.description.substring(0, 150)}... View open ${brand.niche.short} positions at ${company.name}.`
+                : `Browse open ${brand.niche.long} (${brand.niche.short}) positions at ${company.name}. Find salary info, locations, and apply today.`,
             openGraph: {
-                title: `${company.name} — PMHNP Jobs`,
+                title: `${company.name} — ${brand.niche.short} Jobs`,
                 // Expanded from a 30-char default so social cards (LinkedIn,
                 // Facebook) have enough copy to render a usable preview.
                 description: company.description
-                    ? `${company.description.substring(0, 140)}... View ${activeJobCount} open PMHNP role${activeJobCount === 1 ? '' : 's'} at ${company.name}.`
-                    : `Browse ${activeJobCount} open PMHNP position${activeJobCount === 1 ? '' : 's'} at ${company.name}. Salary info, locations, and direct apply.`,
+                    ? `${company.description.substring(0, 140)}... View ${activeJobCount} open ${brand.niche.short} role${activeJobCount === 1 ? '' : 's'} at ${company.name}.`
+                    : `Browse ${activeJobCount} open ${brand.niche.short} position${activeJobCount === 1 ? '' : 's'} at ${company.name}. Salary info, locations, and direct apply.`,
                 url: `${brand.baseUrl}/companies/${slug}`,
                 type: 'website',
-                siteName: 'PMHNP Hiring',
+                siteName: brand.name,
             },
             alternates: {
                 canonical: `${brand.baseUrl}/companies/${slug}`,
@@ -252,7 +252,7 @@ export default async function CompanyPage({ params }: Props) {
                                 No open positions at {company.name} right now.
                             </p>
                             <p className="text-sm mb-6" style={{ color: 'var(--text-tertiary)' }}>
-                                Check back later or browse other PMHNP jobs.
+                                Check back later or browse other {brand.niche.short} jobs.
                             </p>
                             <Link
                                 href="/jobs"
@@ -308,7 +308,7 @@ export default async function CompanyPage({ params }: Props) {
                             href="/jobs"
                             className="text-teal-600 hover:text-teal-800 font-medium text-sm hover:underline"
                         >
-                            ← Browse All PMHNP Jobs
+                            ← Browse All {brand.niche.short} Jobs
                         </Link>
                     </div>
                 </div>

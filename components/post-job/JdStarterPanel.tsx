@@ -41,6 +41,7 @@ import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { Sparkles, FileText, PenSquare, X, Loader2, RotateCcw, Check, Wand2, AlertTriangle, Bookmark, Trash2, Pencil } from 'lucide-react';
 import { JD_TEMPLATES, renderTemplate, TEMPLATE_CATEGORY_LABELS, type JdTemplate, type JdTemplateId, type JdTemplateCategory } from '@/lib/jd-templates';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { brand } from '@/config/brand';
 
 // ─── Custom (employer-saved) templates ─────────────────────────────
 //
@@ -811,7 +812,7 @@ function EmptyStateHero({
           }}
         >
           <FileText size={12} />
-          Or browse {JD_TEMPLATES.length} PMHNP skeleton starters
+          Or browse {JD_TEMPLATES.length} {brand.niche.short} skeleton starters
         </button>
       </div>
     </div>
@@ -1009,7 +1010,7 @@ function TemplatePicker({
       <div style={{ ...sx.modalCard, maxWidth: 900 }} onClick={(e) => e.stopPropagation()}>
         <div style={sx.modalHeader}>
           <div>
-            <h3 style={sx.modalTitle}>Browse PMHNP skeleton starters</h3>
+            <h3 style={sx.modalTitle}>Browse {brand.niche.short} skeleton starters</h3>
             <p style={{ ...sx.heroSub, marginTop: 4 }}>
               {builtInTotal} built-in bullet skeletons plus your saved templates. [bracketed] prompts are where you fill in real specifics.
             </p>
@@ -1272,7 +1273,7 @@ const FACTS_SUMMARY_PLACEHOLDER = `• Patient mix: adults + adolescents, mood/a
 • Schedule: M-Th in-clinic, F telehealth; no weekends; 1 admin half-day
 • EHR: Athena with templated notes
 • Comp: $145-165k base + quarterly outcomes bonus; $15k sign-on
-• Team: 4 PMHNPs, 2 psychiatrists, 6 therapists, dedicated MA support
+• Team: 4 ${brand.niche.short}s, 2 psychiatrists, 6 therapists, dedicated MA support
 • What's unique: low panel cap (250), real admin team handles auth/PA`;
 
 // Visual usage badge — shows current AI generation count vs daily cap
@@ -1673,7 +1674,7 @@ function SaveTemplateDialog({
               value={label}
               maxLength={120}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. Outpatient PMHNP — North Austin clinic"
+              placeholder={`e.g. Outpatient ${brand.niche.short} — North Austin clinic`}
               autoFocus
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 14,

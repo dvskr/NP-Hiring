@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Building2, Globe, Briefcase, ExternalLink } from 'lucide-react';
+import { brand } from '@/config/brand';
 
 interface Company {
     id: string;
@@ -175,8 +176,8 @@ export default function AboutEmployer({
             </div>
 
             <p style={{ fontSize: '14px', lineHeight: 1.65, color: 'var(--text-secondary)', margin: '0 0 14px' }}>
-                {employerName} is hiring for this PMHNP position. Psychiatric Mental Health Nurse Practitioners
-                play a critical role in addressing the growing demand for mental health services across the United States.
+                {employerName} is hiring for this {brand.niche.short} position. {brand.niche.long}s
+                play a critical role in addressing the growing demand for {brand.niche.category} services across the United States.
                 This employer is actively seeking qualified candidates to join their team.
             </p>
 

@@ -18,17 +18,17 @@ export const metadata: Metadata = {
   // `absolute` opts out of the layout title template so we don't end up
   // with "FAQ | PMHNP Jobs | PMHNP Hiring" (the brand-confusing form
   // audit 09 M-18 flagged — "PMHNP Jobs" is not the brand name).
-  title: { absolute: 'PMHNP Hiring FAQ — Job Search, Posting & Alerts' },
-  description: 'Frequently asked questions about PMHNP Hiring. Learn how to search jobs, post positions, set up alerts, and make the most of the #1 PMHNP job board.',
+  title: { absolute: `${brand.name} FAQ — Job Search, Posting & Alerts` },
+  description: `Frequently asked questions about ${brand.name}. Learn how to search jobs, post positions, set up alerts, and make the most of the #1 ${brand.niche.short} job board.`,
   openGraph: {
-    title: 'PMHNP Hiring FAQ',
-    description: 'Common questions about searching, posting, and managing PMHNP jobs.',
+    title: `${brand.name} FAQ`,
+    description: `Common questions about searching, posting, and managing ${brand.niche.short} jobs.`,
     type: 'website',
     url: `${brand.baseUrl}/faq`,
-    siteName: 'PMHNP Hiring',
-    images: [{ url: FAQ_OG_IMAGE, width: 1280, height: 900, alt: 'PMHNP Hiring FAQ — job posting, salary transparency, job alerts, employer features' }],
+    siteName: brand.name,
+    images: [{ url: FAQ_OG_IMAGE, width: 1280, height: 900, alt: `${brand.name} FAQ — job posting, salary transparency, job alerts, employer features` }],
   },
-  twitter: { card: 'summary_large_image', title: 'PMHNP Hiring FAQ', images: [FAQ_OG_IMAGE] },
+  twitter: { card: 'summary_large_image', title: `${brand.name} FAQ`, images: [FAQ_OG_IMAGE] },
   alternates: {
     canonical: `${brand.baseUrl}/faq`,
   },
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 export default function FAQPage() {
   const jobSeekerFaqs = [
     {
-      question: "Is PMHNP Jobs free to use?",
+      question: `Is ${brand.niche.short} Jobs free to use?`,
       answer: "Yes! Job seekers can browse, save, and apply to jobs completely free. There are no hidden fees, subscriptions, or charges for candidates."
     },
     {
@@ -50,7 +50,7 @@ export default function FAQPage() {
     },
     {
       question: "Where do the jobs come from?",
-      answer: "We aggregate jobs from multiple sources including job boards, company career pages, and direct employer postings. This gives you access to the most comprehensive collection of PMHNP opportunities in one place."
+      answer: `We aggregate jobs from multiple sources including job boards, company career pages, and direct employer postings. This gives you access to the most comprehensive collection of ${brand.niche.short} opportunities in one place.`
     },
     {
       question: "How do I apply to a job?",
@@ -118,86 +118,86 @@ export default function FAQPage() {
 
   const careerFaqs = [
     {
-      question: "How long does it take to become a psychiatric mental health nurse practitioner?",
-      answer: "Becoming a PMHNP typically takes 6-8 years: 4 years for a BSN, 1-2 years of RN experience, and 2-3 years for an MSN or DNP with PMHNP specialization. Accelerated BSN-to-DNP programs can shorten this timeline."
+      question: `How long does it take to become a ${brand.niche.descriptor}?`,
+      answer: `Becoming a ${brand.niche.short} typically takes 6-8 years: 4 years for a BSN, 1-2 years of RN experience, and 2-3 years for an MSN or DNP with ${brand.niche.short} specialization. Accelerated BSN-to-DNP programs can shorten this timeline.`
     },
     {
-      question: "What educational background is required for a PMHNP role?",
+      question: `What educational background is required for a ${brand.niche.short} role?`,
       answer: "You need a Bachelor of Science in Nursing (BSN), then a Master's (MSN) or Doctoral (DNP) degree with psychiatric-mental health specialization from a CCNE or ACEN accredited program. You must also pass the ANCC PMHNP-BC certification exam."
     },
     {
-      question: "What is the difference between a PMHNP and a psychiatrist?",
-      answer: "PMHNPs hold a Master's or Doctoral degree in nursing (2-4 years of graduate school), while psychiatrists complete medical school plus a 4-year residency. Both can diagnose and prescribe. In full practice authority states, PMHNPs practice independently. PMHNPs earn $155,000-$200,000+ vs psychiatrists' $250,000-$350,000+."
+      question: `What is the difference between a ${brand.niche.short} and a psychiatrist?`,
+      answer: `${brand.niche.short}s hold a Master's or Doctoral degree in nursing (2-4 years of graduate school), while psychiatrists complete medical school plus a 4-year residency. Both can diagnose and prescribe. In full practice authority states, ${brand.niche.short}s practice independently. ${brand.niche.short}s earn $155,000-$200,000+ vs psychiatrists' $250,000-$350,000+.`
     },
     {
-      question: "What is the difference between a PMHNP and an FNP?",
-      answer: "A PMHNP (Psychiatric Mental Health NP) specializes in diagnosing and treating mental health conditions across the lifespan, including prescribing psychotropic medications. An FNP (Family NP) provides primary care for all ages. PMHNPs focus on psychiatric disorders, psychotherapy, and psychopharmacology, while FNPs handle general medical conditions."
+      question: `What is the difference between a ${brand.niche.short} and an FNP?`,
+      answer: `A ${brand.niche.short} (Psychiatric Mental Health NP) specializes in diagnosing and treating ${brand.niche.category} conditions across the lifespan, including prescribing psychotropic medications. An FNP (Family NP) provides primary care for all ages. ${brand.niche.short}s focus on psychiatric disorders, psychotherapy, and psychopharmacology, while FNPs handle general medical conditions.`
     },
     {
-      question: "Can I complete a PMHNP program online?",
-      answer: "Yes, many accredited universities offer online PMHNP programs. Didactic coursework is completed online, but you'll still need to complete 500+ clinical hours in person at approved sites. Top online programs include Vanderbilt, Rush, and University of Cincinnati."
+      question: `Can I complete a ${brand.niche.short} program online?`,
+      answer: `Yes, many accredited universities offer online ${brand.niche.short} programs. Didactic coursework is completed online, but you'll still need to complete 500+ clinical hours in person at approved sites. Top online programs include Vanderbilt, Rush, and University of Cincinnati.`
     },
     {
-      question: "What is the ROI of a PMHNP degree?",
-      answer: "The ROI is excellent. Graduate school costs $35,000-$80,000 for an MSN. PMHNPs earn an average of $155,000+ — roughly $75,000 more per year than an RN. Most PMHNPs pay off their graduate degree investment within 2-3 years of working."
+      question: `What is the ROI of a ${brand.niche.short} degree?`,
+      answer: `The ROI is excellent. Graduate school costs $35,000-$80,000 for an MSN. ${brand.niche.short}s earn an average of $155,000+ — roughly $75,000 more per year than an RN. Most ${brand.niche.short}s pay off their graduate degree investment within 2-3 years of working.`
     },
     {
-      question: "What are the top 3 PMHNP jobs for new grads?",
-      answer: "1) Community Mental Health Centers — structured settings with mentorship, often qualifying for HRSA loan repayment. 2) Outpatient group practices — collaborative environments with gradual caseload ramp-up. 3) VA psychiatric NP positions — federal benefits, pension, and residency programs for new graduates."
+      question: `What are the top 3 ${brand.niche.short} jobs for new grads?`,
+      answer: `1) Community Mental Health Centers — structured settings with mentorship, often qualifying for HRSA loan repayment. 2) Outpatient group practices — collaborative environments with gradual caseload ramp-up. 3) VA ${brand.niche.adjective} NP positions — federal benefits, pension, and residency programs for new graduates.`
     },
   ];
 
   const salaryFaqs = [
     {
-      question: "What is the average salary of a psychiatric nurse practitioner in the United States?",
-      answer: "The average PMHNP salary in 2026 is $155,000-$165,000 per year. New graduates start at $115,000-$145,000, while experienced PMHNPs (7-15 years) earn $180,000-$210,000. Private practice owners can earn $200,000-$300,000+. The top 10% earn over $210,000 annually."
+      question: `What is the average salary of a ${brand.niche.adjective} nurse practitioner in the United States?`,
+      answer: `The average ${brand.niche.short} salary in 2026 is $155,000-$165,000 per year. New graduates start at $115,000-$145,000, while experienced ${brand.niche.short}s (7-15 years) earn $180,000-$210,000. Private practice owners can earn $200,000-$300,000+. The top 10% earn over $210,000 annually.`
     },
     {
-      question: "Which states pay the highest salaries for PMHNPs?",
-      answer: "The highest-paying states for PMHNPs include Idaho ($205,080 average), New Jersey ($182,022), California ($181,670), Rhode Island ($175,530), and Washington ($173,331). When adjusted for cost of living, Idaho, Louisiana, Pennsylvania, Arkansas, and Missouri offer the best value."
+      question: `Which states pay the highest salaries for ${brand.niche.short}s?`,
+      answer: `The highest-paying states for ${brand.niche.short}s include Idaho ($205,080 average), New Jersey ($182,022), California ($181,670), Rhode Island ($175,530), and Washington ($173,331). When adjusted for cost of living, Idaho, Louisiana, Pennsylvania, Arkansas, and Missouri offer the best value.`
     },
     {
-      question: "How do psychiatric nurse practitioner salaries compare to other NP roles?",
-      answer: "PMHNPs are among the highest-paid NP specialties. They earn 10-20% more than Family NPs (average $120,000-$135,000) and comparable to Acute Care NPs. This premium reflects the critical shortage of mental health providers and the specialized nature of psychiatric care."
+      question: `How do ${brand.niche.adjective} nurse practitioner salaries compare to other NP roles?`,
+      answer: `${brand.niche.short}s are among the highest-paid NP specialties. They earn 10-20% more than Family NPs (average $120,000-$135,000) and comparable to Acute Care NPs. This premium reflects the critical shortage of ${brand.niche.category} providers and the specialized nature of ${brand.niche.adjective} care.`
     },
     {
-      question: "Does having a DNP vs MSN affect a PMHNP's salary?",
-      answer: "In clinical roles, DNP and MSN PMHNPs typically earn similar salaries — the degree itself rarely commands a higher clinical wage. However, DNP holders have advantages in academic positions, executive leadership roles, and may qualify for higher-tier positions in hospital systems."
+      question: `Does having a DNP vs MSN affect a ${brand.niche.short}'s salary?`,
+      answer: `In clinical roles, DNP and MSN ${brand.niche.short}s typically earn similar salaries — the degree itself rarely commands a higher clinical wage. However, DNP holders have advantages in academic positions, executive leadership roles, and may qualify for higher-tier positions in hospital systems.`
     },
     {
-      question: "How can you make the most money as a PMHNP?",
+      question: `How can you make the most money as a ${brand.niche.short}?`,
       answer: "Top strategies include: owning a private practice ($200K-$300K+), specializing in high-demand areas like addiction (+15-20% premium) or forensic psychiatry (+15-25%), practicing in Full Practice Authority states (+12-15% premium), working locum tenens ($150K-$250K), and always negotiating total compensation."
     },
     {
-      question: "What is the salary range for locum tenens PMHNP jobs?",
-      answer: "Locum tenens PMHNPs earn $150,000-$250,000+ annually, with hourly rates of $85-$150+. This includes housing stipends, travel allowances, and malpractice coverage. Locum tenens pay rates are typically 20-50% higher than permanent positions, making it one of the highest-earning PMHNP career paths."
+      question: `What is the salary range for locum tenens ${brand.niche.short} jobs?`,
+      answer: `Locum tenens ${brand.niche.short}s earn $150,000-$250,000+ annually, with hourly rates of $85-$150+. This includes housing stipends, travel allowances, and malpractice coverage. Locum tenens pay rates are typically 20-50% higher than permanent positions, making it one of the highest-earning ${brand.niche.short} career paths.`
     },
   ];
 
   const scopeFaqs = [
     {
-      question: "What is the scope of practice for a PMHNP?",
-      answer: "A PMHNP's scope of practice includes conducting psychiatric evaluations, diagnosing mental health disorders (using DSM-5-TR criteria), prescribing psychotropic medications including controlled substances, providing psychotherapy (CBT, DBT, motivational interviewing), ordering and interpreting diagnostic tests, and managing treatment plans. The specific scope varies by state practice authority laws."
+      question: `What is the scope of practice for a ${brand.niche.short}?`,
+      answer: `A ${brand.niche.short}'s scope of practice includes conducting psychiatric evaluations, diagnosing ${brand.niche.category} disorders (using DSM-5-TR criteria), prescribing psychotropic medications including controlled substances, providing psychotherapy (CBT, DBT, motivational interviewing), ordering and interpreting diagnostic tests, and managing treatment plans. The specific scope varies by state practice authority laws.`
     },
     {
-      question: "What are the certification requirements for PMHNP graduates?",
-      answer: "After graduating from an accredited PMHNP program, you must pass the ANCC PMHNP-BC exam ($395), apply for state APRN licensure, obtain an NPI number, register with the DEA for prescriptive authority ($888/3 years), and create a CAQH ProView profile for insurance credentialing. Board certification must be renewed every 5 years with 75 CE hours."
+      question: `What are the certification requirements for ${brand.niche.short} graduates?`,
+      answer: `After graduating from an accredited ${brand.niche.short} program, you must pass the ANCC PMHNP-BC exam ($395), apply for state APRN licensure, obtain an NPI number, register with the DEA for prescriptive authority ($888/3 years), and create a CAQH ProView profile for insurance credentialing. Board certification must be renewed every 5 years with 75 CE hours.`
     },
     {
-      question: "What extra certifications can a PMHNP get?",
-      answer: "PMHNPs can pursue additional credentials including MAT/DATA waiver for addiction treatment, child and adolescent psychiatry specialization, addiction nursing certification (CARN-AP), forensic nursing certification, and geriatric psychiatry specialization. These certifications command 10-25% salary premiums."
+      question: `What extra certifications can a ${brand.niche.short} get?`,
+      answer: `${brand.niche.short}s can pursue additional credentials including MAT/DATA waiver for addiction treatment, child and adolescent psychiatry specialization, addiction nursing certification (CARN-AP), forensic nursing certification, and geriatric psychiatry specialization. These certifications command 10-25% salary premiums.`
     },
     {
-      question: "Are there state licensure rules that affect demand for PMHNPs?",
-      answer: "Yes. States with Full Practice Authority (34 states + DC) allow PMHNPs to practice independently, driving higher demand and salaries. Reduced and restricted practice states require physician collaboration or supervision, which can limit the number of available positions and affect compensation."
+      question: `Are there state licensure rules that affect demand for ${brand.niche.short}s?`,
+      answer: `Yes. States with Full Practice Authority (34 states + DC) allow ${brand.niche.short}s to practice independently, driving higher demand and salaries. Reduced and restricted practice states require physician collaboration or supervision, which can limit the number of available positions and affect compensation.`
     },
     {
-      question: "What skills are employers seeking in PMHNP graduates?",
+      question: `What skills are employers seeking in ${brand.niche.short} graduates?`,
       answer: "Top skills employers seek include psychopharmacology expertise, prescriptive authority management, Epic/Cerner EHR proficiency, crisis intervention and de-escalation, evidence-based psychotherapy (CBT, motivational interviewing), cultural competence, telehealth platform experience, and experience with diverse populations including children, geriatric, and veterans."
     },
     {
-      question: "What negotiation strategies can enhance salary offers for PMHNPs?",
-      answer: "Key strategies include researching market rates by state and setting, negotiating total compensation (not just base salary), asking for sign-on bonuses ($5,000-$30,000), requesting CME allowance ($2,000-$5,000/year), student loan repayment assistance, additional PTO, and flexible scheduling. PMHNPs who negotiate typically secure 5-15% higher starting salaries."
+      question: `What negotiation strategies can enhance salary offers for ${brand.niche.short}s?`,
+      answer: `Key strategies include researching market rates by state and setting, negotiating total compensation (not just base salary), asking for sign-on bonuses ($5,000-$30,000), requesting CME allowance ($2,000-$5,000/year), student loan repayment assistance, additional PTO, and flexible scheduling. ${brand.niche.short}s who negotiate typically secure 5-15% higher starting salaries.`
     },
   ];
 
@@ -237,11 +237,11 @@ export default function FAQPage() {
                       Frequently Asked <span style={{ color: '#E11D48' }}>Questions</span>
                   </h1>
                   <p style={{ fontSize: '20px', color: '#6B7F8A', lineHeight: 1.6, margin: 0, maxWidth: '500px' }}>
-                      Find answers to common questions about PMHNP Jobs, platform features, salary benchmarks, and clinical credentials.
+                      Find answers to common questions about {brand.niche.short} Jobs, platform features, salary benchmarks, and clinical credentials.
                   </p>
               </div>
               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/clay_hero_faq.webp`} alt="FAQ PMHNP Jobs" width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
+                  <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/clay_hero_faq.webp`} alt={`FAQ ${brand.niche.short} Jobs`} width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
               </div>
           </div>
       </section>
@@ -272,7 +272,7 @@ export default function FAQPage() {
         <section className="mb-12">
           <Card padding="lg" variant="elevated">
             <h2 className="text-2xl font-bold mb-6 pb-4 border-b" style={{ color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}>
-              PMHNP Career &amp; Education
+              {brand.niche.short} Career &amp; Education
             </h2>
             <FAQAccordion items={careerFaqs} />
           </Card>

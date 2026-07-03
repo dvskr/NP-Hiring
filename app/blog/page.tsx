@@ -20,11 +20,11 @@ const STORAGE_BASE = brand.assets.storageBase;
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-    title: 'PMHNP Career Blog | Expert Guides & Insights',
+    title: `${brand.niche.short} Career Blog | Expert Guides & Insights`,
     description:
-        'PMHNP career guides, salary insights, and job market trends from the #1 psychiatric NP job board.',
+        `${brand.niche.short} career guides, salary insights, and job market trends from the #1 ${brand.niche.adjective} NP job board.`,
     openGraph: {
-        images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp`, width: 1280, height: 900, alt: 'PMHNP career blog with expert guides on salary negotiation, state spotlights, and job market insights' }],
+        images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp`, width: 1280, height: 900, alt: `${brand.niche.short} career blog with expert guides on salary negotiation, state spotlights, and job market insights` }],
     },
     twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp`] },
     alternates: {
@@ -122,8 +122,8 @@ export default async function BlogIndexPage({
                         {
                             '@type': 'Blog',
                             '@id': `${brand.baseUrl}/blog#blog`,
-                            name: 'PMHNP Career Blog',
-                            description: 'Career guides, salary insights, and job market trends for psychiatric mental health nurse practitioners.',
+                            name: `${brand.niche.short} Career Blog`,
+                            description: `Career guides, salary insights, and job market trends for ${brand.niche.descriptor}s.`,
                             url: `${brand.baseUrl}/blog`,
                             inLanguage: 'en-US',
                             publisher: { '@id': `${brand.baseUrl}/#organization` },
@@ -137,7 +137,7 @@ export default async function BlogIndexPage({
                         {
                             '@type': 'ItemList',
                             '@id': `${brand.baseUrl}/blog#postlist`,
-                            name: 'PMHNP Career Blog',
+                            name: `${brand.niche.short} Career Blog`,
                             numberOfItems: totalCount,
                             itemListElement: posts.slice(0, 10).map((post, i) => ({
                                 '@type': 'ListItem',
@@ -160,11 +160,11 @@ export default async function BlogIndexPage({
                         fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, lineHeight: 1.15,
                         color: '#1A2E35', marginBottom: '16px',
                     }}>
-                        PMHNP Career Blog
+                        {brand.niche.short} Career Blog
                     </h1>
                     <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto 32px', lineHeight: 1.6 }}>
                         Data-driven guides, salary negotiation tips, and career strategies
-                        for psychiatric mental health nurse practitioners.
+                        for {brand.niche.descriptor}s.
                     </p>
 
                     {/* Stat Pills */}
@@ -428,7 +428,7 @@ export default async function BlogIndexPage({
                     <div className="blog-cta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                         {[
                             { href: '/salary-guide', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`, title: 'Salary Guide', desc: '2026 data with state breakdowns' },
-                            { href: '/jobs', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp`, title: 'Browse Jobs', desc: '10,000+ PMHNP positions' },
+                            { href: '/jobs', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp`, title: 'Browse Jobs', desc: `10,000+ ${brand.niche.short} positions` },
                             { href: '/resources', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-chart.webp`, title: 'Resources', desc: 'Licensure guides & tools' },
                         ].map(item => (
                             <Link key={item.href} href={item.href} className="blog-cta-card" style={{

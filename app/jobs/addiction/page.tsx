@@ -87,16 +87,16 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     const page = parseInt(params.page || '1');
 
     return {
-        title: `${stats.totalJobs} Addiction PMHNP Jobs — Substance Use & MAT Psych NP Positions`,
-        description: `Find ${stats.totalJobs} addiction & substance use disorder PMHNP jobs. MAT programs, opioid treatment, detox, and recovery centers. Avg $${stats.avgSalary || 155}K+.`,
+        title: `${stats.totalJobs} Addiction ${brand.niche.short} Jobs — Substance Use & MAT Psych NP Positions`,
+        description: `Find ${stats.totalJobs} addiction & substance use disorder ${brand.niche.short} jobs. MAT programs, opioid treatment, detox, and recovery centers. Avg $${stats.avgSalary || 155}K+.`,
         keywords: ['addiction pmhnp jobs', 'substance use pmhnp', 'MAT pmhnp', 'suboxone prescriber jobs', 'addiction psychiatry NP'],
         openGraph: {
-            title: `${stats.totalJobs} Addiction PMHNP Jobs - Substance Use & MAT Positions`,
-            description: 'Browse addiction and substance use disorder psychiatric nurse practitioner positions. MAT, detox, and recovery center roles.',
+            title: `${stats.totalJobs} Addiction ${brand.niche.short} Jobs - Substance Use & MAT Positions`,
+            description: `Browse addiction and substance use disorder ${brand.niche.adjective} nurse practitioner positions. MAT, detox, and recovery center roles.`,
             type: 'website',
             images: [{
-                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Addiction PMHNP Jobs`)}&subtitle=${encodeURIComponent('Substance use & MAT psych NP positions')}`,
-                width: 1200, height: 630, alt: 'Addiction PMHNP Jobs',
+                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Addiction ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent('Substance use & MAT psych NP positions')}`,
+                width: 1200, height: 630, alt: `Addiction ${brand.niche.short} Jobs`,
             }],
         },
         alternates: { canonical: `${brand.baseUrl}/jobs/addiction` },
@@ -129,19 +129,19 @@ export default async function AddictionJobsPage({ searchParams }: PageProps) {
                 { name: "Addiction", url: `${brand.baseUrl}/jobs/addiction` }
             ]} />
             {jobs.length > 0 && (
-              <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Addiction PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+              <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Addiction ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
             )}
 
             {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#aabe9c"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v2_addiction.webp`}
-        heroAlt="PMHNP addiction medicine practice"
+        heroAlt={`${brand.niche.short} addiction medicine practice`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Addiction']}
         indexLabel="№ 15 / 28"
         headlineLine1="Addiction"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, SUD & MAT roles."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -257,7 +257,7 @@ export default async function AddictionJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_addiction_dual.webp`} alt="Dual diagnosis treatment" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Dual Diagnosis</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Treat co-occurring mental health and substance use disorders simultaneously.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Treat co-occurring {brand.niche.category} and substance use disorders simultaneously.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_addiction_demand.webp`} alt="Growing demand" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -280,12 +280,11 @@ export default async function AddictionJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary + Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Addiction PMHNPs earn ${stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K\u2013$180K'} annually with loan repayment programs and sign-on bonuses at many facilities.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Addiction {brand.niche.short}s earn ${stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K\u2013$180K'} annually with loan repayment programs and sign-on bonuses at many facilities.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_addiction_impact.webp`} alt="Addiction PMHNP career impact" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_addiction_impact.webp`} alt={`Addiction ${brand.niche.short} career impact`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
@@ -375,13 +374,13 @@ export default async function AddictionJobsPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Addiction PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Addiction {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {[
-              { q: "What does an addiction PMHNP do?", a: "An addiction PMHNP specializes in treating substance use disorders (SUD) and co-occurring mental health conditions. They prescribe medications like buprenorphine and naltrexone for medication-assisted treatment (MAT), manage detox protocols, provide therapy, and coordinate comprehensive recovery plans." },
-              { q: "Do I need special certification for addiction PMHNP work?", a: "While not always required, the DEA X-waiver (now integrated into standard DEA registration) is essential for prescribing buprenorphine. ASAM certification or CARN (Certified Addictions Registered Nurse) credentials significantly strengthen your candidacy and are preferred by many employers." },
-              { q: "How much do addiction PMHNPs earn?", a: "Addiction PMHNPs typically earn $130K–$180K annually, with some positions in high-demand areas exceeding $200K. Many roles include loan repayment programs, sign-on bonuses, and relocation assistance due to the critical shortage of addiction medicine providers." },
-              { q: "Is addiction psychiatry a good PMHNP specialty?", a: "Yes — addiction psychiatry is one of the fastest-growing PMHNP specialties. The opioid crisis has driven 40%+ growth in positions, and there's a severe shortage of qualified providers. The work is deeply meaningful, with high job security and competitive compensation." },
+              { q: `What does an addiction ${brand.niche.short} do?`, a: `An addiction ${brand.niche.short} specializes in treating substance use disorders (SUD) and co-occurring ${brand.niche.category} conditions. They prescribe medications like buprenorphine and naltrexone for medication-assisted treatment (MAT), manage detox protocols, provide therapy, and coordinate comprehensive recovery plans.` },
+              { q: `Do I need special certification for addiction ${brand.niche.short} work?`, a: "While not always required, the DEA X-waiver (now integrated into standard DEA registration) is essential for prescribing buprenorphine. ASAM certification or CARN (Certified Addictions Registered Nurse) credentials significantly strengthen your candidacy and are preferred by many employers." },
+              { q: `How much do addiction ${brand.niche.short}s earn?`, a: `Addiction ${brand.niche.short}s typically earn $130K–$180K annually, with some positions in high-demand areas exceeding $200K. Many roles include loan repayment programs, sign-on bonuses, and relocation assistance due to the critical shortage of addiction medicine providers.` },
+              { q: `Is addiction psychiatry a good ${brand.niche.short} specialty?`, a: `Yes — addiction psychiatry is one of the fastest-growing ${brand.niche.short} specialties. The opioid crisis has driven 40%+ growth in positions, and there's a severe shortage of qualified providers. The work is deeply meaningful, with high job security and competitive compensation.` },
             ].map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px 28px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3>
@@ -389,7 +388,7 @@ export default async function AddictionJobsPage({ searchParams }: PageProps) {
               </div>
             ))}
           </div>
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{q:"What does an addiction PMHNP do?",a:"An addiction PMHNP specializes in treating substance use disorders (SUD) and co-occurring mental health conditions. They prescribe medications like buprenorphine and naltrexone for medication-assisted treatment (MAT), manage detox protocols, provide therapy, and coordinate comprehensive recovery plans."},{q:"Do I need special certification for addiction PMHNP work?",a:"While not always required, the DEA X-waiver (now integrated into standard DEA registration) is essential for prescribing buprenorphine. ASAM certification or CARN credentials significantly strengthen your candidacy and are preferred by many employers."},{q:"How much do addiction PMHNPs earn?",a:"Addiction PMHNPs typically earn $130K–$180K annually, with some positions in high-demand areas exceeding $200K. Many roles include loan repayment programs, sign-on bonuses, and relocation assistance."},{q:"Is addiction psychiatry a good PMHNP specialty?",a:"Yes — addiction psychiatry is one of the fastest-growing PMHNP specialties with 40%+ growth in positions. The work is deeply meaningful, with high job security and competitive compensation."}].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{q:`What does an addiction ${brand.niche.short} do?`,a:`An addiction ${brand.niche.short} specializes in treating substance use disorders (SUD) and co-occurring ${brand.niche.category} conditions. They prescribe medications like buprenorphine and naltrexone for medication-assisted treatment (MAT), manage detox protocols, provide therapy, and coordinate comprehensive recovery plans.`},{q:`Do I need special certification for addiction ${brand.niche.short} work?`,a:"While not always required, the DEA X-waiver (now integrated into standard DEA registration) is essential for prescribing buprenorphine. ASAM certification or CARN credentials significantly strengthen your candidacy and are preferred by many employers."},{q:`How much do addiction ${brand.niche.short}s earn?`,a:`Addiction ${brand.niche.short}s typically earn $130K–$180K annually, with some positions in high-demand areas exceeding $200K. Many roles include loan repayment programs, sign-on bonuses, and relocation assistance.`},{q:`Is addiction psychiatry a good ${brand.niche.short} specialty?`,a:`Yes — addiction psychiatry is one of the fastest-growing ${brand.niche.short} specialties with 40%+ growth in positions. The work is deeply meaningful, with high job security and competitive compensation.`}].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>
       </div>
 

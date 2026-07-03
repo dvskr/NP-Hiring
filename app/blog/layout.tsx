@@ -1,5 +1,6 @@
 import { Newsreader } from 'next/font/google';
 import type { Metadata } from 'next';
+import { brand } from '@/config/brand';
 
 /**
  * Blog-segment layout: loads Newsreader only for /blog/* routes.
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
     alternates: {
         types: {
             'application/rss+xml': [
-                { url: '/blog/feed.xml', title: 'PMHNP Hiring — Career Blog & Insights' },
+                { url: '/blog/feed.xml', title: `${brand.name} — Career Blog & Insights` },
             ],
         },
     },

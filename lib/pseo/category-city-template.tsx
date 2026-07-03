@@ -71,7 +71,7 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   addiction: {
     slug: 'addiction',
     label: 'Addiction',
-    fullLabel: 'Addiction PMHNP',
+    fullLabel: `Addiction ${brand.niche.short}`,
     heroSubtitle: 'Substance abuse & addiction treatment positions',
     salaryRange: '$120K-180K',
     keywords: ['addiction pmhnp', 'substance abuse pmhnp', 'MAT pmhnp', 'suboxone pmhnp'],
@@ -92,14 +92,14 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       'Build motivational interviewing skills',
       'Understand MAT protocols (Suboxone, Vivitrol)',
       'Stay current on state opioid prescribing laws',
-      'Consider dual diagnosis (addiction + mental health) training',
+      `Consider dual diagnosis (addiction + ${brand.niche.category}) training`,
     ],
   },
   'child-adolescent': {
     slug: 'child-adolescent',
     label: 'Child & Adolescent',
-    fullLabel: 'Child & Adolescent PMHNP',
-    heroSubtitle: 'Pediatric & youth psychiatric positions',
+    fullLabel: `Child & Adolescent ${brand.niche.short}`,
+    heroSubtitle: `Pediatric & youth ${brand.niche.adjective} positions`,
     salaryRange: '$125K-185K',
     keywords: ['child pmhnp', 'adolescent pmhnp', 'pediatric psychiatric NP', 'youth mental health'],
     faqCategory: 'child-adolescent',
@@ -110,9 +110,9 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('child-adolescent'),
     }),
     benefits: [
-      { title: 'Critical Need', description: 'Youth mental health crisis means massive demand — 1 in 5 children has a diagnosable mental disorder.', iconName: 'Users' },
+      { title: 'Critical Need', description: `Youth ${brand.niche.category} crisis means massive demand — 1 in 5 children has a diagnosable mental disorder.`, iconName: 'Users' },
       { title: 'School-Based Options', description: 'School-based positions follow the academic calendar with summers off and competitive benefits.', iconName: 'Building2' },
-      { title: 'Early Intervention Impact', description: 'Shape lifelong outcomes through early identification and treatment of childhood psychiatric conditions.', iconName: 'Heart' },
+      { title: 'Early Intervention Impact', description: `Shape lifelong outcomes through early identification and treatment of childhood ${brand.niche.adjective} conditions.`, iconName: 'Heart' },
     ],
     tips: [
       'Get experience with ADHD, anxiety, and ASD in children',
@@ -125,7 +125,7 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   'substance-abuse': {
     slug: 'substance-abuse',
     label: 'Substance Abuse',
-    fullLabel: 'Substance Abuse PMHNP',
+    fullLabel: `Substance Abuse ${brand.niche.short}`,
     heroSubtitle: 'Substance use disorder treatment positions',
     salaryRange: '$120K-180K',
     keywords: ['substance abuse pmhnp', 'SUD pmhnp', 'detox pmhnp', 'rehab pmhnp'],
@@ -152,7 +152,7 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   'new-grad': {
     slug: 'new-grad',
     label: 'New Grad',
-    fullLabel: 'New Graduate PMHNP',
+    fullLabel: `New Graduate ${brand.niche.short}`,
     heroSubtitle: 'Entry-level & new graduate positions',
     salaryRange: '$115K-160K',
     keywords: ['new grad pmhnp', 'entry level pmhnp', 'new graduate pmhnp', 'pmhnp fellowship'],
@@ -165,7 +165,7 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Mentorship', description: 'Many new grad positions include structured mentorship and supervision from experienced psychiatrists.', iconName: 'Users' },
-      { title: 'High Demand', description: 'PMHNP shortage means even new graduates are highly sought after with strong starting salaries.', iconName: 'TrendingUp' },
+      { title: 'High Demand', description: `${brand.niche.short} shortage means even new graduates are highly sought after with strong starting salaries.`, iconName: 'TrendingUp' },
       { title: 'Career Foundation', description: 'Build clinical confidence and skills that set you up for advanced roles or private practice later.', iconName: 'Shield' },
     ],
     tips: [
@@ -179,7 +179,7 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   'per-diem': {
     slug: 'per-diem',
     label: 'Per Diem',
-    fullLabel: 'Per Diem PMHNP',
+    fullLabel: `Per Diem ${brand.niche.short}`,
     heroSubtitle: 'PRN & flexible schedule positions',
     salaryRange: '$80-150/hr',
     keywords: ['per diem pmhnp', 'PRN pmhnp', 'part time pmhnp', 'flexible pmhnp'],
@@ -210,8 +210,8 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   'full-time': {
     slug: 'full-time',
     label: 'Full-Time',
-    fullLabel: 'Full-Time PMHNP',
-    heroSubtitle: 'Permanent full-time psychiatric NP positions with benefits',
+    fullLabel: `Full-Time ${brand.niche.short}`,
+    heroSubtitle: `Permanent full-time ${brand.niche.adjective} NP positions with benefits`,
     salaryRange: '$120K-190K',
     keywords: ['full time pmhnp', 'permanent pmhnp', 'salaried pmhnp'],
     faqCategory: 'remote', // Use remote FAQ as closest match
@@ -237,8 +237,8 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   'part-time': {
     slug: 'part-time',
     label: 'Part-Time',
-    fullLabel: 'Part-Time PMHNP',
-    heroSubtitle: 'Flexible part-time psychiatric NP positions',
+    fullLabel: `Part-Time ${brand.niche.short}`,
+    heroSubtitle: `Flexible part-time ${brand.niche.adjective} NP positions`,
     salaryRange: '$55-95/hr',
     keywords: ['part time pmhnp', 'half time pmhnp', 'flexible pmhnp'],
     faqCategory: 'per-diem',
@@ -251,7 +251,7 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     benefits: [
       { title: 'Work-Life Balance', description: 'Set your own schedule — work 2-3 days per week while maintaining clinical skills and income.', iconName: 'Activity' },
       { title: 'Multiple Income Streams', description: 'Combine part-time with private practice, telehealth, or consulting for maximum earning.', iconName: 'DollarSign' },
-      { title: 'Reduced Burnout', description: 'Lower caseloads and schedule flexibility help prevent the burnout epidemic in mental health.', iconName: 'Heart' },
+      { title: 'Reduced Burnout', description: `Lower caseloads and schedule flexibility help prevent the burnout epidemic in ${brand.niche.category}.`, iconName: 'Heart' },
     ],
     tips: [
       'Clarify whether benefits (health, dental) are included',
@@ -264,8 +264,8 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   contract: {
     slug: 'contract',
     label: 'Contract',
-    fullLabel: 'Contract PMHNP',
-    heroSubtitle: 'Contract & locum tenens psychiatric NP assignments',
+    fullLabel: `Contract ${brand.niche.short}`,
+    heroSubtitle: `Contract & locum tenens ${brand.niche.adjective} NP assignments`,
     salaryRange: '$85-160/hr',
     keywords: ['contract pmhnp', 'locum tenens pmhnp', '1099 pmhnp', 'temp pmhnp'],
     faqCategory: 'travel',
@@ -295,8 +295,8 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
   'entry-level': {
     slug: 'entry-level',
     label: 'Entry-Level',
-    fullLabel: 'Entry-Level PMHNP',
-    heroSubtitle: 'New graduate & early-career psychiatric NP positions with mentorship',
+    fullLabel: `Entry-Level ${brand.niche.short}`,
+    heroSubtitle: `New graduate & early-career ${brand.niche.adjective} NP positions with mentorship`,
     salaryRange: '$105K-145K',
     keywords: ['entry level pmhnp', 'new grad pmhnp', 'junior pmhnp', '0-2 years pmhnp'],
     faqCategory: 'new-grad',
@@ -307,8 +307,8 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('entry-level'),
     }),
     benefits: [
-      { title: 'Structured Mentorship', description: 'Most entry-level positions include 6-12 months of supervised practice with experienced psychiatrists or PMHNPs.', iconName: 'Users' },
-      { title: 'Competitive Starting Pay', description: 'PMHNP shortage means entry-level pay starts at $105K-$145K — higher than most other NP specialties.', iconName: 'DollarSign' },
+      { title: 'Structured Mentorship', description: `Most entry-level positions include 6-12 months of supervised practice with experienced psychiatrists or ${brand.niche.short}s.`, iconName: 'Users' },
+      { title: 'Competitive Starting Pay', description: `${brand.niche.short} shortage means entry-level pay starts at $105K-$145K — higher than most other NP specialties.`, iconName: 'DollarSign' },
       { title: 'Career Launchpad', description: 'Build your clinical foundation with manageable caseloads (8-12 patients/day) before scaling up.', iconName: 'TrendingUp' },
     ],
     tips: [
@@ -322,8 +322,8 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
   'mid-career': {
     slug: 'mid-career',
     label: 'Mid-Career',
-    fullLabel: 'Mid-Career PMHNP',
-    heroSubtitle: 'Experienced PMHNP positions for 3-7 years of practice',
+    fullLabel: `Mid-Career ${brand.niche.short}`,
+    heroSubtitle: `Experienced ${brand.niche.short} positions for 3-7 years of practice`,
     salaryRange: '$135K-175K',
     keywords: ['experienced pmhnp', 'mid career pmhnp', '3-5 years pmhnp', 'senior pmhnp positions'],
     faqCategory: 'remote',
@@ -334,7 +334,7 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('mid-career'),
     }),
     benefits: [
-      { title: 'Higher Compensation', description: 'Mid-career PMHNPs earn $135K-$175K with premium benefits, CME budgets, and leadership bonuses.', iconName: 'DollarSign' },
+      { title: 'Higher Compensation', description: `Mid-career ${brand.niche.short}s earn $135K-$175K with premium benefits, CME budgets, and leadership bonuses.`, iconName: 'DollarSign' },
       { title: 'Autonomy & Flexibility', description: 'With proven experience, choose between independent practice, hybrid schedules, or specialized roles.', iconName: 'Activity' },
       { title: 'Specialization Options', description: 'Pivot into addiction medicine, child/adolescent, forensic psych, or private practice consulting.', iconName: 'Shield' },
     ],
@@ -349,7 +349,7 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
   senior: {
     slug: 'senior',
     label: 'Senior',
-    fullLabel: 'Senior PMHNP',
+    fullLabel: `Senior ${brand.niche.short}`,
     heroSubtitle: 'Leadership & advanced practice positions for 7+ years experience',
     salaryRange: '$160K-220K+',
     keywords: ['senior pmhnp', 'lead pmhnp', 'director pmhnp', 'advanced practice pmhnp'],
@@ -361,8 +361,8 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('senior'),
     }),
     benefits: [
-      { title: 'Top-Tier Compensation', description: 'Senior PMHNPs earn $160K-$220K+ with equity, executive benefits, and performance bonuses.', iconName: 'DollarSign' },
-      { title: 'Leadership Impact', description: 'Shape clinical programs, mentor junior providers, and influence organizational mental health strategy.', iconName: 'Users' },
+      { title: 'Top-Tier Compensation', description: `Senior ${brand.niche.short}s earn $160K-$220K+ with equity, executive benefits, and performance bonuses.`, iconName: 'DollarSign' },
+      { title: 'Leadership Impact', description: `Shape clinical programs, mentor junior providers, and influence organizational ${brand.niche.category} strategy.`, iconName: 'Users' },
       { title: 'Private Practice Ready', description: 'Your reputation and network support a thriving independent or group practice transition.', iconName: 'TrendingUp' },
     ],
     tips: [
@@ -380,8 +380,8 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   hospital: {
     slug: 'hospital',
     label: 'Hospital',
-    fullLabel: 'Hospital PMHNP',
-    heroSubtitle: 'Hospital-based psychiatric NP positions with full benefits',
+    fullLabel: `Hospital ${brand.niche.short}`,
+    heroSubtitle: `Hospital-based ${brand.niche.adjective} NP positions with full benefits`,
     salaryRange: '$125K-180K',
     keywords: ['hospital pmhnp', 'inpatient hospital pmhnp', 'academic medical center pmhnp'],
     faqCategory: 'inpatient',
@@ -394,7 +394,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     benefits: [
       { title: 'Full Benefits Package', description: 'Health/dental/vision, pension or 403(b) match, malpractice coverage, CME funding, and tuition reimbursement.', iconName: 'Heart' },
       { title: 'Multidisciplinary Teams', description: 'Collaborate with psychiatrists, social workers, and residents in a structured care environment.', iconName: 'Users' },
-      { title: 'Career Advancement', description: 'Clear promotion tracks from staff PMHNP to clinical lead, program director, or department head.', iconName: 'TrendingUp' },
+      { title: 'Career Advancement', description: `Clear promotion tracks from staff ${brand.niche.short} to clinical lead, program director, or department head.`, iconName: 'TrendingUp' },
     ],
     tips: [
       'Large systems (HCA, Kaiser, Ascension) offer the best benefits',
@@ -407,8 +407,8 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   'private-practice': {
     slug: 'private-practice',
     label: 'Private Practice',
-    fullLabel: 'Private Practice PMHNP',
-    heroSubtitle: 'Independent & group practice psychiatric NP opportunities',
+    fullLabel: `Private Practice ${brand.niche.short}`,
+    heroSubtitle: `Independent & group practice ${brand.niche.adjective} NP opportunities`,
     salaryRange: '$140K-250K+',
     keywords: ['private practice pmhnp', 'independent pmhnp', 'group practice pmhnp', 'own practice pmhnp'],
     faqCategory: 'outpatient',
@@ -419,7 +419,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('private-practice'),
     }),
     benefits: [
-      { title: 'Highest Earning Potential', description: 'Private practice PMHNPs can earn $200K-$250K+ with autonomy over fee schedules and patient volume.', iconName: 'DollarSign' },
+      { title: 'Highest Earning Potential', description: `Private practice ${brand.niche.short}s can earn $200K-$250K+ with autonomy over fee schedules and patient volume.`, iconName: 'DollarSign' },
       { title: 'Schedule Control', description: 'Set your own hours, choose your patient mix, and build a practice that fits your lifestyle.', iconName: 'Activity' },
       { title: 'Clinical Autonomy', description: 'Full control over treatment plans, medication management, and therapy integration without corporate protocols.', iconName: 'Shield' },
     ],
@@ -434,8 +434,8 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   'community-health': {
     slug: 'community-health',
     label: 'Community Health',
-    fullLabel: 'Community Health PMHNP',
-    heroSubtitle: 'FQHC, community mental health & public health positions',
+    fullLabel: `Community Health ${brand.niche.short}`,
+    heroSubtitle: `FQHC, community ${brand.niche.category} & public health positions`,
     salaryRange: '$110K-160K',
     keywords: ['community health pmhnp', 'FQHC pmhnp', 'community mental health pmhnp', 'public health pmhnp'],
     faqCategory: 'outpatient',
@@ -447,7 +447,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Loan Repayment', description: 'NHSC loan repayment up to $50K for 2 years of service at qualifying FQHCs and underserved sites.', iconName: 'DollarSign' },
-      { title: 'Mission-Driven Work', description: 'Serve underserved populations and make a direct impact on community mental health outcomes.', iconName: 'Heart' },
+      { title: 'Mission-Driven Work', description: `Serve underserved populations and make a direct impact on community ${brand.niche.category} outcomes.`, iconName: 'Heart' },
       { title: 'Diverse Experience', description: 'Treat a wide range of conditions across all ages, building broad clinical expertise quickly.', iconName: 'Activity' },
     ],
     tips: [
@@ -461,8 +461,8 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   va: {
     slug: 'va',
     label: 'VA',
-    fullLabel: 'VA PMHNP',
-    heroSubtitle: 'Veterans Affairs psychiatric NP positions with federal benefits',
+    fullLabel: `VA ${brand.niche.short}`,
+    heroSubtitle: `Veterans Affairs ${brand.niche.adjective} NP positions with federal benefits`,
     salaryRange: '$120K-170K',
     keywords: ['VA pmhnp', 'veterans affairs pmhnp', 'military pmhnp', 'federal pmhnp'],
     faqCategory: 'inpatient',
@@ -474,7 +474,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Federal Benefits', description: 'Federal pension (FERS), TSP retirement matching, FEHB health insurance, and 26 days PTO starting.', iconName: 'Shield' },
-      { title: 'Full Practice Authority', description: 'VA grants PMHNPs full practice authority nationwide regardless of state laws — prescribe independently.', iconName: 'Heart' },
+      { title: 'Full Practice Authority', description: `VA grants ${brand.niche.short}s full practice authority nationwide regardless of state laws — prescribe independently.`, iconName: 'Heart' },
       { title: 'Student Loan Repayment', description: 'EDRP offers up to $200K in student loan repayment for qualifying VA positions.', iconName: 'DollarSign' },
     ],
     tips: [
@@ -492,8 +492,8 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   geriatric: {
     slug: 'geriatric',
     label: 'Geriatric',
-    fullLabel: 'Geriatric PMHNP',
-    heroSubtitle: 'Older adult & geriatric psychiatric NP positions',
+    fullLabel: `Geriatric ${brand.niche.short}`,
+    heroSubtitle: `Older adult & geriatric ${brand.niche.adjective} NP positions`,
     salaryRange: '$125K-180K',
     keywords: ['geriatric pmhnp', 'geropsych pmhnp', 'elderly psychiatric NP', 'older adult mental health'],
     faqCategory: 'inpatient',
@@ -504,8 +504,8 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('geriatric'),
     }),
     benefits: [
-      { title: 'Growing Demand', description: '10,000 baby boomers turn 65 daily — geriatric psych is one of the fastest-growing PMHNP niches.', iconName: 'TrendingUp' },
-      { title: 'Meaningful Care', description: 'Help older adults maintain independence and quality of life through expert psychiatric medication management.', iconName: 'Heart' },
+      { title: 'Growing Demand', description: `10,000 baby boomers turn 65 daily — geriatric psych is one of the fastest-growing ${brand.niche.short} niches.`, iconName: 'TrendingUp' },
+      { title: 'Meaningful Care', description: `Help older adults maintain independence and quality of life through expert ${brand.niche.adjective} medication management.`, iconName: 'Heart' },
       { title: 'Diverse Settings', description: 'Work in SNFs, memory care units, home health, outpatient clinics, or consultation-liaison services.', iconName: 'Building2' },
     ],
     tips: [
@@ -519,8 +519,8 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   veterans: {
     slug: 'veterans',
     label: 'Veterans',
-    fullLabel: 'Veterans Mental Health PMHNP',
-    heroSubtitle: 'Military & veteran-focused psychiatric NP positions',
+    fullLabel: `Veterans Mental Health ${brand.niche.short}`,
+    heroSubtitle: `Military & veteran-focused ${brand.niche.adjective} NP positions`,
     salaryRange: '$120K-175K',
     keywords: ['veterans pmhnp', 'military mental health pmhnp', 'PTSD pmhnp', 'combat veteran psychiatric NP'],
     faqCategory: 'inpatient',
@@ -531,7 +531,7 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('veterans'),
     }),
     benefits: [
-      { title: 'Critical Mission', description: '22 veterans die by suicide daily — veteran-focused PMHNPs directly save lives through expert care.', iconName: 'Heart' },
+      { title: 'Critical Mission', description: `22 veterans die by suicide daily — veteran-focused ${brand.niche.short}s directly save lives through expert care.`, iconName: 'Heart' },
       { title: 'Specialized Training', description: 'Access to VA-funded CPT, PE, and EMDR training — gold-standard trauma therapies at no cost.', iconName: 'Shield' },
       { title: 'Federal Benefits', description: 'VA positions include federal pension, TSP matching, 26+ days PTO, and up to $200K loan repayment.', iconName: 'DollarSign' },
     ],
@@ -539,15 +539,15 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       'PTSD and TBI expertise is the most in-demand skill set',
       'Get trained in CPT (Cognitive Processing Therapy) and PE (Prolonged Exposure)',
       'Military-connected clinicians are especially valued',
-      'Community-based veteran organizations also hire PMHNPs',
+      `Community-based veteran organizations also hire ${brand.niche.short}s`,
       'Tri-care network providers serve military families outside VA system',
     ],
   },
   lgbtq: {
     slug: 'lgbtq',
     label: 'LGBTQ+',
-    fullLabel: 'LGBTQ+ Affirming PMHNP',
-    heroSubtitle: 'LGBTQ+ affirming psychiatric NP positions',
+    fullLabel: `LGBTQ+ Affirming ${brand.niche.short}`,
+    heroSubtitle: `LGBTQ+ affirming ${brand.niche.adjective} NP positions`,
     salaryRange: '$120K-175K',
     keywords: ['lgbtq pmhnp', 'gender affirming pmhnp', 'transgender mental health', 'queer affirming psychiatric NP'],
     faqCategory: 'outpatient',
@@ -558,13 +558,13 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('lgbtq'),
     }),
     benefits: [
-      { title: 'Underserved Niche', description: 'LGBTQ+ individuals face 2.5× higher rates of mental health conditions — trained providers are critically needed.', iconName: 'Heart' },
+      { title: 'Underserved Niche', description: `LGBTQ+ individuals face 2.5× higher rates of ${brand.niche.category} conditions — trained providers are critically needed.`, iconName: 'Heart' },
       { title: 'Growing Demand', description: 'Gender-affirming care is expanding rapidly with new clinics and telehealth platforms specifically serving the community.', iconName: 'TrendingUp' },
-      { title: 'Meaningful Impact', description: 'Help reduce health disparities by providing culturally competent psychiatric care to marginalized populations.', iconName: 'Users' },
+      { title: 'Meaningful Impact', description: `Help reduce health disparities by providing culturally competent ${brand.niche.adjective} care to marginalized populations.`, iconName: 'Users' },
     ],
     tips: [
       'Complete WPATH SOC training for gender-affirming care fundamentals',
-      'Understand hormone therapy interactions with psychiatric medications',
+      `Understand hormone therapy interactions with ${brand.niche.adjective} medications`,
       'Build cultural competency through LGBTQ+ affirming practice workshops',
       'Fenway Health and Callen-Lorde are model programs to study',
       'Telehealth expands reach to LGBTQ+ patients in underserved areas',
@@ -573,7 +573,7 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   crisis: {
     slug: 'crisis',
     label: 'Crisis',
-    fullLabel: 'Crisis PMHNP',
+    fullLabel: `Crisis ${brand.niche.short}`,
     heroSubtitle: 'Psychiatric emergency & crisis intervention positions',
     salaryRange: '$130K-195K',
     keywords: ['crisis pmhnp', 'psychiatric emergency pmhnp', '988 suicide hotline pmhnp', 'crisis intervention NP'],
@@ -634,8 +634,8 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   '1099': {
     slug: '1099',
     label: '1099',
-    fullLabel: '1099 / Independent Contractor PMHNP',
-    heroSubtitle: 'Independent contractor & 1099 psychiatric NP positions',
+    fullLabel: `1099 / Independent Contractor ${brand.niche.short}`,
+    heroSubtitle: `Independent contractor & 1099 ${brand.niche.adjective} NP positions`,
     salaryRange: '$75-150/hr',
     keywords: ['1099 pmhnp', 'independent contractor pmhnp', '1099 psychiatric nurse practitioner', 'contract psych NP'],
     faqCategory: 'outpatient',
@@ -646,7 +646,7 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('1099'),
     }),
     benefits: [
-      { title: 'Higher Gross Pay', description: '1099 PMHNPs earn $75-$150+/hr — 20-40% higher than W2 rates with significant tax deduction opportunities.', iconName: 'DollarSign' },
+      { title: 'Higher Gross Pay', description: `1099 ${brand.niche.short}s earn $75-$150+/hr — 20-40% higher than W2 rates with significant tax deduction opportunities.`, iconName: 'DollarSign' },
       { title: 'Schedule Control', description: 'Set your own hours, work with multiple clients, and control your patient volume and caseload.', iconName: 'Clock' },
       { title: 'Tax Advantages', description: 'Deduct business expenses, contribute $66K/year to SEP-IRA, and write off home office and mileage.', iconName: 'DollarSign' },
     ],
@@ -661,7 +661,7 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   'behavioral-health': {
     slug: 'behavioral-health',
     label: 'Behavioral Health',
-    fullLabel: 'Behavioral Health PMHNP',
+    fullLabel: `Behavioral Health ${brand.niche.short}`,
     heroSubtitle: 'Behavioral health facility & integrated care positions',
     salaryRange: '$120K-180K',
     keywords: ['behavioral health pmhnp', 'behavioral health NP', 'integrated behavioral health', 'mental health facility NP'],
@@ -673,13 +673,13 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('behavioral-health'),
     }),
     benefits: [
-      { title: 'Integrated Care', description: 'Work in multidisciplinary teams combining psychiatric care with therapy, social work, and primary care.', iconName: 'Users' },
+      { title: 'Integrated Care', description: `Work in multidisciplinary teams combining ${brand.niche.adjective} care with therapy, social work, and primary care.`, iconName: 'Users' },
       { title: 'Diverse Settings', description: 'Practice in outpatient clinics, residential treatment, partial hospitalization, or intensive outpatient programs.', iconName: 'Building2' },
       { title: 'Growing Sector', description: 'Behavioral health investment has surged — new facilities and telehealth platforms are expanding rapidly.', iconName: 'TrendingUp' },
     ],
     tips: [
       'Integrated behavioral health models are the fastest-growing employer type',
-      'Experience with co-occurring disorders (mental health + substance use) is highly valued',
+      `Experience with co-occurring disorders (${brand.niche.category} + substance use) is highly valued`,
       'PHPs and IOPs offer structured environments with predictable schedules',
       'Many behavioral health companies offer equity or profit-sharing',
       'Get comfortable with brief intervention models for primary care integration',
@@ -688,8 +688,8 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   correctional: {
     slug: 'correctional',
     label: 'Correctional',
-    fullLabel: 'Correctional PMHNP',
-    heroSubtitle: 'Prison, jail & forensic psychiatric NP positions',
+    fullLabel: `Correctional ${brand.niche.short}`,
+    heroSubtitle: `Prison, jail & forensic ${brand.niche.adjective} NP positions`,
     salaryRange: '$130K-190K',
     keywords: ['correctional pmhnp', 'prison pmhnp', 'forensic psychiatric NP', 'jail mental health NP'],
     faqCategory: 'inpatient',
@@ -700,7 +700,7 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('correctional'),
     }),
     benefits: [
-      { title: 'Premium Pay', description: 'Correctional PMHNPs earn $130K-$190K+ due to the challenging environment and high demand for mental health providers.', iconName: 'DollarSign' },
+      { title: 'Premium Pay', description: `Correctional ${brand.niche.short}s earn $130K-$190K+ due to the challenging environment and high demand for ${brand.niche.category} providers.`, iconName: 'DollarSign' },
       { title: 'Loan Repayment', description: 'Many correctional facilities qualify for NHSC and state loan repayment programs — up to $50K for 2 years of service.', iconName: 'DollarSign' },
       { title: 'Unique Clinical Skills', description: 'Develop expertise in forensic psychiatry, crisis intervention, and managing complex comorbidities in underserved populations.', iconName: 'Shield' },
     ],
@@ -715,8 +715,8 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   'locum-tenens': {
     slug: 'locum-tenens',
     label: 'Locum Tenens',
-    fullLabel: 'Locum Tenens PMHNP',
-    heroSubtitle: 'Temporary assignment & locum tenens psychiatric NP positions',
+    fullLabel: `Locum Tenens ${brand.niche.short}`,
+    heroSubtitle: `Temporary assignment & locum tenens ${brand.niche.adjective} NP positions`,
     salaryRange: '$80-160/hr',
     keywords: ['locum tenens pmhnp', 'locum psych NP', 'temporary assignment pmhnp', 'locum psychiatric nurse practitioner'],
     faqCategory: 'travel',
@@ -727,7 +727,7 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('locum-tenens'),
     }),
     benefits: [
-      { title: 'Highest Hourly Rates', description: 'Locum tenens PMHNPs earn $80-$160/hr — the highest hourly rates in psychiatric nursing with full travel expenses covered.', iconName: 'DollarSign' },
+      { title: 'Highest Hourly Rates', description: `Locum tenens ${brand.niche.short}s earn $80-$160/hr — the highest hourly rates in ${brand.niche.adjective} nursing with full travel expenses covered.`, iconName: 'DollarSign' },
       { title: 'No Long-Term Commitment', description: 'Assignments from 2 weeks to 6+ months. Take breaks between assignments and maintain complete career flexibility.', iconName: 'Calendar' },
       { title: 'Nationwide Opportunities', description: 'Work across multiple states, experience different healthcare systems, and build a diverse clinical portfolio.', iconName: 'MapPin' },
     ],
@@ -934,27 +934,27 @@ export async function buildCategoryCityMetadata(
   });
 
   return {
-    title: `${config.label} PMHNP Jobs in ${city.name}, ${city.stateCode} (${stats.totalJobs} Open)`,
-    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} PMHNP jobs in ${city.name}, ${city.stateCode}. ${config.heroSubtitle}. Population: ${city.population.toLocaleString()}. COL index: ${city.costOfLivingIndex}. ${city.mentalHealthShortage ? 'Mental health professional shortage area.' : ''}`,
+    title: `${config.label} ${brand.niche.short} Jobs in ${city.name}, ${city.stateCode} (${stats.totalJobs} Open)`,
+    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${city.name}, ${city.stateCode}. ${config.heroSubtitle}. Population: ${city.population.toLocaleString()}. COL index: ${city.costOfLivingIndex}. ${city.mentalHealthShortage ? 'Mental health professional shortage area.' : ''}`,
     keywords: [
       `${config.label.toLowerCase()} pmhnp jobs ${city.name}`,
       `${city.name} ${config.label.toLowerCase()} psychiatric nurse practitioner`,
       `pmhnp jobs ${city.name} ${city.stateCode}`,
     ],
     openGraph: {
-      title: `${config.label} PMHNP Jobs in ${city.name}, ${city.stateCode}`,
-      description: `Browse ${config.label.toLowerCase()} psychiatric NP positions in ${city.name}. ${config.heroSubtitle}.`,
+      title: `${config.label} ${brand.niche.short} Jobs in ${city.name}, ${city.stateCode}`,
+      description: `Browse ${config.label.toLowerCase()} ${brand.niche.adjective} NP positions in ${city.name}. ${config.heroSubtitle}.`,
       type: 'website',
       images: [{
         url: `/api/og/city?${ogParams.toString()}`,
         width: 1200,
         height: 630,
-        alt: `${config.label} PMHNP Jobs in ${city.name}, ${city.stateCode}`,
+        alt: `${config.label} ${brand.niche.short} Jobs in ${city.name}, ${city.stateCode}`,
       }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${config.label} PMHNP Jobs in ${city.name}, ${city.stateCode}`,
+      title: `${config.label} ${brand.niche.short} Jobs in ${city.name}, ${city.stateCode}`,
       images: [`/api/og/city?${ogParams.toString()}`],
     },
     alternates: {
@@ -1129,7 +1129,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'ItemList',
-              name: `${config.label} PMHNP Jobs in ${city!.name}, ${city!.stateCode}`,
+              name: `${config.label} ${brand.niche.short} Jobs in ${city!.name}, ${city!.stateCode}`,
               numberOfItems: stats.totalJobs,
               itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({
                 '@type': 'ListItem',
@@ -1172,18 +1172,18 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
       <CategoryHero
         bgColor={assets?.bgColor || '#0D9488'}
         heroImage={assets?.heroImage || `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
-        heroAlt={`${config.label} PMHNP working in ${city!.name}, ${city!.stateCode}`}
+        heroAlt={`${config.label} ${brand.niche.short} working in ${city!.name}, ${city!.stateCode}`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', config.label, city!.name]}
         headlineLine1={config.label}
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub={`jobs in ${city!.name}, ${city!.stateCode}.`}
         stats={[
           { value: `${stats.totalJobs}`, label: 'positions' },
           { value: stats.rawAvgSalary > 0 ? `$${stats.rawAvgSalary}k` : config.salaryRange.split('–')[0] || '$130K+', label: 'avg salary' },
           { value: demand.label, label: 'demand' },
         ]}
-        description={`${config.label} psychiatric NP positions in ${city!.name}. ${config.heroSubtitle}.`}
+        description={`${config.label} ${brand.niche.adjective} NP positions in ${city!.name}. ${config.heroSubtitle}.`}
         ctaLabel={`Browse ${config.label} Jobs`}
         ctaHref={`/jobs/${config.slug}`}
         secondaryCtaLabel="Set Alert"
@@ -1278,7 +1278,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                     {config.label} Alerts
                   </h3>
                   <p style={{ fontSize: '13px', color: '#0D9488', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
-                    New {config.label.toLowerCase()} PMHNP positions in {city!.name} — delivered daily.
+                    New {config.label.toLowerCase()} {brand.niche.short} positions in {city!.name} — delivered daily.
                   </p>
                   <Link href="/job-alerts" className="pseo-cta-primary" style={{
                     display: 'block', width: '100%', textAlign: 'center',
@@ -1347,7 +1347,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                     </p>
                   </div>
                   <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
-                    <Image src={assets.bentoImages[0]} alt={`${config.label} PMHNP`} width={280} height={200} sizes="(max-width: 768px) 90vw, 280px" style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                    <Image src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} width={280} height={200} sizes="(max-width: 768px) 90vw, 280px" style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
                   </div>
                 </div>
 
@@ -1385,7 +1385,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                       <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                       <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary & Compensation</h3>
                       <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                        {config.label} PMHNPs in {city!.name} earn {stats.rawAvgSalary > 0 ? `$${stats.rawAvgSalary}k` : config.salaryRange} annually.
+                        {config.label} {brand.niche.short}s in {city!.name} earn {stats.rawAvgSalary > 0 ? `$${stats.rawAvgSalary}k` : config.salaryRange} annually.
                       </p>
                     </div>
                     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
@@ -1518,7 +1518,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
       {nearbyCities.length > 0 && (
         <section style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px' }}>
           <h2 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', marginBottom: '16px', textAlign: 'center' }}>
-            {config.label} PMHNP Jobs in Nearby Cities
+            {config.label} {brand.niche.short} Jobs in Nearby Cities
           </h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px' }}>
             {nearbyCities.map((nc) => (
@@ -1539,7 +1539,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             Keep Exploring
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
-            Other PMHNP Job Types in {city!.name}
+            Other {brand.niche.short} Job Types in {city!.name}
           </h2>
           <div className="pseo-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
             {assets?.exploreCards && assets.exploreCards.length > 0 ? (
@@ -1602,7 +1602,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             data-speakable="true"
           >
             <h2 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', marginBottom: '12px' }}>
-              {config.label} PMHNP Market in {city!.name}, {city!.stateCode}
+              {config.label} {brand.niche.short} Market in {city!.name}, {city!.stateCode}
             </h2>
             <p style={{ fontSize: '14px', lineHeight: 1.7, color: '#5A4A42', margin: 0 }}>
               {taxonomyCityNarrative}
@@ -1616,26 +1616,26 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
           {(() => {
             const faqs = [
               {
-                q: `How many ${config.label.toLowerCase()} PMHNP jobs are available in ${city!.name}, ${city!.stateCode}?`,
-                a: `There ${stats.totalJobs === 1 ? 'is' : 'are'} currently ${stats.totalJobs} ${config.label.toLowerCase()} PMHNP ${stats.totalJobs === 1 ? 'position' : 'positions'} available in ${city!.name}, ${city!.stateCode}. New positions are posted regularly as demand for psychiatric nurse practitioners continues to grow.`,
+                q: `How many ${config.label.toLowerCase()} ${brand.niche.short} jobs are available in ${city!.name}, ${city!.stateCode}?`,
+                a: `There ${stats.totalJobs === 1 ? 'is' : 'are'} currently ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} ${stats.totalJobs === 1 ? 'position' : 'positions'} available in ${city!.name}, ${city!.stateCode}. New positions are posted regularly as demand for ${brand.niche.adjective} nurse practitioners continues to grow.`,
               },
               {
-                q: `What is the average PMHNP salary in ${city!.name}?`,
+                q: `What is the average ${brand.niche.short} salary in ${city!.name}?`,
                 a: stats.rawAvgSalary > 0
-                  ? `The average ${config.label.toLowerCase()} PMHNP salary in ${city!.name} is approximately $${stats.rawAvgSalary}K per year. Adjusted for the local cost of living (index: ${city!.costOfLivingIndex}), this equates to about $${stats.colAdjustedSalary}K in purchasing power. The typical range for ${config.label.toLowerCase()} positions is ${config.salaryRange}.`
-                  : `${config.label} PMHNP positions in ${city!.name} typically pay ${config.salaryRange}. Actual compensation depends on experience, employer type, and whether the role includes benefits. ${city!.name}'s cost of living index is ${city!.costOfLivingIndex} (national average = 100).`,
+                  ? `The average ${config.label.toLowerCase()} ${brand.niche.short} salary in ${city!.name} is approximately $${stats.rawAvgSalary}K per year. Adjusted for the local cost of living (index: ${city!.costOfLivingIndex}), this equates to about $${stats.colAdjustedSalary}K in purchasing power. The typical range for ${config.label.toLowerCase()} positions is ${config.salaryRange}.`
+                  : `${config.label} ${brand.niche.short} positions in ${city!.name} typically pay ${config.salaryRange}. Actual compensation depends on experience, employer type, and whether the role includes benefits. ${city!.name}'s cost of living index is ${city!.costOfLivingIndex} (national average = 100).`,
               },
               {
-                q: `Does ${city!.state} allow PMHNPs full practice authority?`,
-                a: practiceAuthority ? `${city!.state} has ${practiceAuthority.authority.toLowerCase()} practice authority for nurse practitioners. ${String(practiceAuthority.authority).includes('Full') ? 'PMHNPs can practice independently, prescribe medications, and diagnose without physician oversight.' : String(practiceAuthority.authority).includes('Reduced') ? 'PMHNPs require a collaborative agreement with a physician but can prescribe and diagnose with that arrangement.' : 'PMHNPs must practice under physician supervision for prescribing and some clinical decisions.'}` : `Contact the ${city!.state} Board of Nursing for current practice authority information.`,
+                q: `Does ${city!.state} allow ${brand.niche.short}s full practice authority?`,
+                a: practiceAuthority ? `${city!.state} has ${practiceAuthority.authority.toLowerCase()} practice authority for nurse practitioners. ${String(practiceAuthority.authority).includes('Full') ? `${brand.niche.short}s can practice independently, prescribe medications, and diagnose without physician oversight.` : String(practiceAuthority.authority).includes('Reduced') ? `${brand.niche.short}s require a collaborative agreement with a physician but can prescribe and diagnose with that arrangement.` : `${brand.niche.short}s must practice under physician supervision for prescribing and some clinical decisions.`}` : `Contact the ${city!.state} Board of Nursing for current practice authority information.`,
               },
               {
-                q: `Is ${city!.name} a good place for PMHNP careers?`,
-                a: `${city!.name} ${city!.mentalHealthShortage ? 'is designated as a Mental Health Professional Shortage Area (HPSA), meaning there is high demand and often sign-on bonuses, loan repayment programs, and competitive salaries for PMHNPs.' : 'has growing demand for mental health providers.'} With a population of ${city!.population.toLocaleString('en-US')}${city!.metroArea ? ` and part of the ${city!.metroArea} metro area` : ''}, ${city!.name} offers ${city!.healthcareSystems.length > 0 ? `access to major health systems including ${city!.healthcareSystems.join(', ')}` : 'a variety of practice settings'}.`,
+                q: `Is ${city!.name} a good place for ${brand.niche.short} careers?`,
+                a: `${city!.name} ${city!.mentalHealthShortage ? `is designated as a Mental Health Professional Shortage Area (HPSA), meaning there is high demand and often sign-on bonuses, loan repayment programs, and competitive salaries for ${brand.niche.short}s.` : `has growing demand for ${brand.niche.category} providers.`} With a population of ${city!.population.toLocaleString('en-US')}${city!.metroArea ? ` and part of the ${city!.metroArea} metro area` : ''}, ${city!.name} offers ${city!.healthcareSystems.length > 0 ? `access to major health systems including ${city!.healthcareSystems.join(', ')}` : 'a variety of practice settings'}.`,
               },
               {
-                q: `What qualifications do I need for ${config.label.toLowerCase()} PMHNP jobs in ${city!.name}?`,
-                a: `To work as a PMHNP in ${city!.name}, ${city!.stateCode}, you need: (1) A Master's or Doctoral degree in psychiatric-mental health nursing, (2) National certification as a PMHNP (ANCC-certified), (3) An active RN and APRN license in ${city!.state}, and (4) DEA registration for prescribing controlled substances. ${config.label === 'Entry-Level' ? 'Many entry-level positions accept new graduates and provide structured mentorship.' : config.label === 'Senior' ? 'Senior positions typically require 7+ years of experience and may require subspecialty certifications.' : `${config.label} positions may have additional requirements specific to the employer and setting.`}`,
+                q: `What qualifications do I need for ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${city!.name}?`,
+                a: `To work as a ${brand.niche.short} in ${city!.name}, ${city!.stateCode}, you need: (1) A Master's or Doctoral degree in psychiatric-mental health nursing, (2) National certification as a ${brand.niche.short} (ANCC-certified), (3) An active RN and APRN license in ${city!.state}, and (4) DEA registration for prescribing controlled substances. ${config.label === 'Entry-Level' ? 'Many entry-level positions accept new graduates and provide structured mentorship.' : config.label === 'Senior' ? 'Senior positions typically require 7+ years of experience and may require subspecialty certifications.' : `${config.label} positions may have additional requirements specific to the employer and setting.`}`,
               },
             ];
             return (
@@ -1665,7 +1665,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                     __html: JSON.stringify({
                       '@context': 'https://schema.org',
                       '@type': 'WebPage',
-                      name: `${config.label} PMHNP Jobs in ${city!.name}, ${city!.stateCode}`,
+                      name: `${config.label} ${brand.niche.short} Jobs in ${city!.name}, ${city!.stateCode}`,
                       speakable: {
                         '@type': 'SpeakableSpecification',
                         cssSelector: ['#answer-summary', '.faq-answer'],
@@ -1688,33 +1688,33 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             Common Questions
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
-            {config.label} PMHNP Jobs in {city!.name} — FAQ
+            {config.label} {brand.niche.short} Jobs in {city!.name} — FAQ
           </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {(() => {
               const faqs = [
                 {
-                  q: `How many ${config.label.toLowerCase()} PMHNP jobs are available in ${city!.name}, ${city!.stateCode}?`,
-                  a: `There ${stats.totalJobs === 1 ? 'is' : 'are'} currently ${stats.totalJobs} ${config.label.toLowerCase()} PMHNP ${stats.totalJobs === 1 ? 'position' : 'positions'} available in ${city!.name}, ${city!.stateCode}. New positions are posted regularly as demand for psychiatric nurse practitioners continues to grow.`,
+                  q: `How many ${config.label.toLowerCase()} ${brand.niche.short} jobs are available in ${city!.name}, ${city!.stateCode}?`,
+                  a: `There ${stats.totalJobs === 1 ? 'is' : 'are'} currently ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} ${stats.totalJobs === 1 ? 'position' : 'positions'} available in ${city!.name}, ${city!.stateCode}. New positions are posted regularly as demand for ${brand.niche.adjective} nurse practitioners continues to grow.`,
                 },
                 {
-                  q: `What is the average PMHNP salary in ${city!.name}?`,
+                  q: `What is the average ${brand.niche.short} salary in ${city!.name}?`,
                   a: stats.rawAvgSalary > 0
-                    ? `The average ${config.label.toLowerCase()} PMHNP salary in ${city!.name} is approximately $${stats.rawAvgSalary}K per year. Adjusted for the local cost of living (index: ${city!.costOfLivingIndex}), this equates to about $${stats.colAdjustedSalary}K in purchasing power.`
-                    : `${config.label} PMHNP positions in ${city!.name} typically pay ${config.salaryRange}. Actual compensation depends on experience, employer type, and whether the role includes benefits.`,
+                    ? `The average ${config.label.toLowerCase()} ${brand.niche.short} salary in ${city!.name} is approximately $${stats.rawAvgSalary}K per year. Adjusted for the local cost of living (index: ${city!.costOfLivingIndex}), this equates to about $${stats.colAdjustedSalary}K in purchasing power.`
+                    : `${config.label} ${brand.niche.short} positions in ${city!.name} typically pay ${config.salaryRange}. Actual compensation depends on experience, employer type, and whether the role includes benefits.`,
                 },
                 {
-                  q: `Does ${city!.state} allow PMHNPs full practice authority?`,
-                  a: practiceAuthority ? `${city!.state} has ${practiceAuthority.authority.toLowerCase()} practice authority for nurse practitioners. ${String(practiceAuthority.authority).includes('Full') ? 'PMHNPs can practice independently without physician oversight.' : String(practiceAuthority.authority).includes('Reduced') ? 'PMHNPs require a collaborative agreement with a physician.' : 'PMHNPs must practice under physician supervision for prescribing and some clinical decisions.'}` : `Contact the ${city!.state} Board of Nursing for current practice authority information.`,
+                  q: `Does ${city!.state} allow ${brand.niche.short}s full practice authority?`,
+                  a: practiceAuthority ? `${city!.state} has ${practiceAuthority.authority.toLowerCase()} practice authority for nurse practitioners. ${String(practiceAuthority.authority).includes('Full') ? `${brand.niche.short}s can practice independently without physician oversight.` : String(practiceAuthority.authority).includes('Reduced') ? `${brand.niche.short}s require a collaborative agreement with a physician.` : `${brand.niche.short}s must practice under physician supervision for prescribing and some clinical decisions.`}` : `Contact the ${city!.state} Board of Nursing for current practice authority information.`,
                 },
                 {
-                  q: `Is ${city!.name} a good place for PMHNP careers?`,
-                  a: `${city!.name} ${city!.mentalHealthShortage ? 'is designated as a Mental Health Professional Shortage Area (HPSA), meaning there is high demand and often sign-on bonuses and loan repayment programs.' : 'has growing demand for mental health providers.'} With a population of ${city!.population.toLocaleString('en-US')}${city!.metroArea ? ` in the ${city!.metroArea} metro` : ''}, ${city!.name} offers ${city!.healthcareSystems.length > 0 ? `access to major health systems including ${city!.healthcareSystems.slice(0, 3).join(', ')}` : 'a variety of practice settings'}.`,
+                  q: `Is ${city!.name} a good place for ${brand.niche.short} careers?`,
+                  a: `${city!.name} ${city!.mentalHealthShortage ? 'is designated as a Mental Health Professional Shortage Area (HPSA), meaning there is high demand and often sign-on bonuses and loan repayment programs.' : `has growing demand for ${brand.niche.category} providers.`} With a population of ${city!.population.toLocaleString('en-US')}${city!.metroArea ? ` in the ${city!.metroArea} metro` : ''}, ${city!.name} offers ${city!.healthcareSystems.length > 0 ? `access to major health systems including ${city!.healthcareSystems.slice(0, 3).join(', ')}` : 'a variety of practice settings'}.`,
                 },
                 {
-                  q: `What qualifications do I need for ${config.label.toLowerCase()} PMHNP jobs?`,
-                  a: `To work as a PMHNP in ${city!.name}, you need: a Master's or Doctoral degree in psychiatric-mental health nursing, ANCC PMHNP-BC certification, an active RN and APRN license in ${city!.state}, and DEA registration for prescribing controlled substances.`,
+                  q: `What qualifications do I need for ${config.label.toLowerCase()} ${brand.niche.short} jobs?`,
+                  a: `To work as a ${brand.niche.short} in ${city!.name}, you need: a Master's or Doctoral degree in psychiatric-mental health nursing, ANCC PMHNP-BC certification, an active RN and APRN license in ${city!.state}, and DEA registration for prescribing controlled substances.`,
                 },
               ];
               return faqs.map((faq, i) => (

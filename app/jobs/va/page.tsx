@@ -91,17 +91,17 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} VA PMHNP Jobs — Federal Benefits, EDRP & Pension ($120K-175K)`,
-    description: `Find ${stats.totalJobs} VA PMHNP jobs with federal pension, EDRP loan repayment up to $200K, FEHB coverage, and full practice authority nationwide. Updated daily.`,
+    title: `${stats.totalJobs} VA ${brand.niche.short} Jobs — Federal Benefits, EDRP & Pension ($120K-175K)`,
+    description: `Find ${stats.totalJobs} VA ${brand.niche.short} jobs with federal pension, EDRP loan repayment up to $200K, FEHB coverage, and full practice authority nationwide. Updated daily.`,
     openGraph: {
-      title: `${stats.totalJobs} VA PMHNP Jobs - Veterans Affairs`,
-      description: 'Browse VA psychiatric mental health nurse practitioner positions. Federal benefits, loan repayment, clinical autonomy.',
+      title: `${stats.totalJobs} VA ${brand.niche.short} Jobs - Veterans Affairs`,
+      description: `Browse VA ${brand.niche.descriptor} positions. Federal benefits, loan repayment, clinical autonomy.`,
       type: 'website',
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} VA PMHNP Jobs`)}&subtitle=${encodeURIComponent('Federal benefits & EDRP loan repayment')}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} VA ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent('Federal benefits & EDRP loan repayment')}`,
         width: 1200,
         height: 630,
-        alt: 'VA PMHNP Jobs',
+        alt: `VA ${brand.niche.short} Jobs`,
       }],
     },
     alternates: {
@@ -152,7 +152,7 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'ItemList',
-              name: 'VA PMHNP Jobs',
+              name: `VA ${brand.niche.short} Jobs`,
               numberOfItems: stats.totalJobs,
               itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({
                 '@type': 'ListItem',
@@ -164,18 +164,18 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
           }}
         />
       )}
-      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="VA PMHNP Jobs" />
+      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName={`VA ${brand.niche.short} Jobs`} />
 
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#97b0c9"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v2_va.webp`}
-        heroAlt="VA PMHNP Veterans Affairs medical center"
+        heroAlt={`VA ${brand.niche.short} Veterans Affairs medical center`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'VA']}
         indexLabel="№ 20 / 28"
         headlineLine1="VA"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, federal benefits."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -268,7 +268,7 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_va_flag.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Serve Veterans</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Provide mental health care to veterans with PTSD, TBI, MST, and combat-related conditions.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Provide {brand.niche.category} care to veterans with PTSD, TBI, MST, and combat-related conditions.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_va_pension.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />

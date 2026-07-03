@@ -41,8 +41,8 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
         <div className="ab-wrap" style={{ textAlign: 'center' }}>
           <div className="ab-eyebrow"><span className="pulse" /> Dedicated Infrastructure · Est. 2026</div>
           <div className="ab-hero-head">
-            <h1>We&apos;re shaping the <em>future</em><br />of <span className="clay-underline">PMHNP</span> careers.</h1>
-            <p className="ab-hero-sub" style={{ textAlign: 'center' }}>The only job platform built exclusively for Psychiatric Mental Health Nurse Practitioners. No generic noise — just roles that match your scope.</p>
+            <h1>We&apos;re shaping the <em>future</em><br />of <span className="clay-underline">{brand.niche.short}</span> careers.</h1>
+            <p className="ab-hero-sub" style={{ textAlign: 'center' }}>The only job platform built exclusively for {brand.niche.long}s. No generic noise — just roles that match your scope.</p>
             <div className="ab-hero-cta">
               <Link href="/jobs" className="ab-btn ab-btn-primary">Browse open roles <ArrowRight size={16} /></Link>
               <Link href="/resources" className="ab-btn ab-btn-ghost">All Resources</Link>
@@ -57,8 +57,8 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
                 <div style={{ padding: '16px 20px' }}><div className="label">New&nbsp;Grad<br />friendly</div><div className="meta" style={{ marginTop: 10 }}>{fmt(counts.newGrad)} roles</div></div>
               </div>
               <div className="ab-scene teal" style={{ minHeight: 380, padding: 0 }}>
-                <img src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/about/diorama_inpatient.webp`} alt="Inpatient psychiatric" width={800} height={600} loading="lazy" decoding="async" style={{ width: '100%', flex: 1, objectFit: 'cover', borderRadius: '28px 28px 0 0' }} />
-                <div style={{ padding: '16px 20px' }}><div className="label">Acute<br />psychiatric units</div><div className="meta" style={{ marginTop: 10 }}>{fmt(counts.inpatient)} roles</div></div>
+                <img src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/about/diorama_inpatient.webp`} alt={`Inpatient ${brand.niche.adjective}`} width={800} height={600} loading="lazy" decoding="async" style={{ width: '100%', flex: 1, objectFit: 'cover', borderRadius: '28px 28px 0 0' }} />
+                <div style={{ padding: '16px 20px' }}><div className="label">Acute<br />{brand.niche.adjective} units</div><div className="meta" style={{ marginTop: 10 }}>{fmt(counts.inpatient)} roles</div></div>
               </div>
               <div className="ab-scene coral" style={{ minHeight: 350, padding: 0 }}>
                 <img src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/about/diorama_telehealth.webp`} alt="Telehealth remote practice" width={800} height={600} loading="lazy" decoding="async" style={{ width: '100%', flex: 1, objectFit: 'cover', borderRadius: '28px 28px 0 0' }} />
@@ -86,11 +86,11 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
       <section className="ab-pad"><div className="ab-wrap">
         <div className="ab-two-col">
           <div>
-            <span className="ab-kicker"><Target size={12} /> For PMHNPs</span>
+            <span className="ab-kicker"><Target size={12} /> For {brand.niche.short}s</span>
             <h2 style={{ marginTop: 20 }}>Stop scrolling past generic <em>RN postings.</em></h2>
-            <p style={{ marginTop: 22, color: 'var(--ink-soft)', fontSize: 18, maxWidth: 540 }}>General nursing boards bury psychiatric NP roles under thousands of primary-care postings. This site only lists psychiatric mental health NP jobs — filtered by setting, salary, license, and the actual scope of practice you train in.</p>
+            <p style={{ marginTop: 22, color: 'var(--ink-soft)', fontSize: 18, maxWidth: 540 }}>General nursing boards bury {brand.niche.adjective} NP roles under thousands of primary-care postings. This site only lists {brand.niche.adjective} {brand.niche.category} NP jobs — filtered by setting, salary, license, and the actual scope of practice you train in.</p>
             <div className="ab-feat-list">
-              <div className="ab-feat"><div className="ab-feat-ico"><CheckCircle size={22} /></div><div><h4>100% Specialized Filters</h4><p>Search by psychiatric setting — Inpatient, Outpatient, Telehealth, Correctional, Addiction, Geriatric — instead of typical nursing tags.</p></div></div>
+              <div className="ab-feat"><div className="ab-feat-ico"><CheckCircle size={22} /></div><div><h4>100% Specialized Filters</h4><p>Search by {brand.niche.adjective} setting — Inpatient, Outpatient, Telehealth, Correctional, Addiction, Geriatric — instead of typical nursing tags.</p></div></div>
               <div className="ab-feat"><div className="ab-feat-ico coral"><DollarSign size={22} /></div><div><h4>Unmatched Salary Transparency</h4><p>We pierce the veil on compensation, comparing state benchmarks with thousands of real-time listings so you can negotiate fairly.</p></div></div>
               <div className="ab-feat"><div className="ab-feat-ico" style={{ color: '#6F63C0' }}><CalendarDays size={22} /></div><div><h4>Licensure-aware Alerts</h4><p>Your compact and state licensure drive the feed — you only ever see roles you can actually accept.</p></div></div>
             </div>
@@ -98,10 +98,10 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
           </div>
           <div>
             <div className="ab-diorama-card mint" style={{ padding: 0 }}>
-              <img src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/about/diorama_candidates.webp`} alt="Career growth for PMHNPs" width={1000} height={750} loading="lazy" decoding="async" style={{ width: '100%', flex: 1, objectFit: 'cover', borderRadius: '40px 40px 0 0' }} />
+              <img src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/about/diorama_candidates.webp`} alt={`Career growth for ${brand.niche.short}s`} width={1000} height={750} loading="lazy" decoding="async" style={{ width: '100%', flex: 1, objectFit: 'cover', borderRadius: '40px 40px 0 0' }} />
               <div style={{ padding: '20px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <b style={{ fontFamily: "var(--font-lora), 'Lora', serif", fontSize: 18 }}>Chart your path, step by step.</b>
-                <span className="chip">PMHNP · 2026</span>
+                <span className="chip">{brand.niche.short} · 2026</span>
               </div>
             </div>
           </div>
@@ -123,9 +123,9 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
           <div>
             <span className="ab-kicker coral"><ArrowRight size={12} /> For Employers</span>
             <h2 style={{ marginTop: 20 }}>Zero-waste <em>candidate sourcing.</em></h2>
-            <p style={{ marginTop: 22, color: 'var(--ink-soft)', fontSize: 18, maxWidth: 540 }}>Skip generic aggregators where most applicants are unqualified. Post directly to a board where every visitor is a practicing or about-to-practice PMHNP.</p>
+            <p style={{ marginTop: 22, color: 'var(--ink-soft)', fontSize: 18, maxWidth: 540 }}>Skip generic aggregators where most applicants are unqualified. Post directly to a board where every visitor is a practicing or about-to-practice {brand.niche.short}.</p>
             <div className="ab-feat-list">
-              <div className="ab-feat"><div className="ab-feat-ico coral"><Target size={22} /></div><div><h4>High-Intent Audience</h4><p>The talent on PMHNP Hiring is actively surveying psychiatric scopes — not casually browsing — leading to vastly higher conversion rates.</p></div></div>
+              <div className="ab-feat"><div className="ab-feat-ico coral"><Target size={22} /></div><div><h4>High-Intent Audience</h4><p>The talent on {brand.name} is actively surveying {brand.niche.adjective} scopes — not casually browsing — leading to vastly higher conversion rates.</p></div></div>
               <div className="ab-feat"><div className="ab-feat-ico" style={{ color: '#6F63C0' }}><BarChart3 size={22} /></div><div><h4>Analytics & Placements</h4><p>Secure featured placements and monitor actionable apply-funnel analytics directly from your verified employer dashboard.</p></div></div>
               <div className="ab-feat"><div className="ab-feat-ico"><Layers size={22} /></div><div><h4>Calibrated Matching</h4><p>Our taxonomy maps exact subspecialties — SMI, C/L, substance use, perinatal — so you spend less time filtering and more time hiring.</p></div></div>
             </div>
@@ -161,7 +161,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
           <div className="ab-creator-body">
             <span className="ab-kicker"><Users size={12} /> Who built this</span>
             <h2 style={{ marginTop: 20 }}>One person, one focused job board.</h2>
-            <p>I built PMHNP Hiring because every general nursing job site I looked at made psychiatric NPs do the same thing over and over: filter out hundreds of unrelated RN postings just to find the handful of psych roles. There was no good reason for that, so I built something focused on one specialty instead.</p>
+            <p>I built {brand.name} because every general nursing job site I looked at made {brand.niche.adjective} NPs do the same thing over and over: filter out hundreds of unrelated RN postings just to find the handful of psych roles. There was no good reason for that, so I built something focused on one specialty instead.</p>
             <p>I&apos;m a solo developer who built this entire project end to end, and I&apos;m not a clinician. My job here is the data pipeline — pulling job postings, normalizing salary fields, mapping state licensure rules, and surfacing the result through a fast, ad-light interface. The clinical content on this site is editorial commentary aggregated from public sources, not medical advice.</p>
             <p>If something on the site is wrong, missing, or could be better, the fastest way to reach me is the <Link href="/contact" style={{ color: 'inherit', textDecoration: 'underline' }}>contact page</Link>.</p>
             <div className="ab-sig">
@@ -192,7 +192,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
           <div>
             <span className="ab-kicker coral" style={{ background: 'rgba(255,255,255,0.28)', color: '#fff', boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(170,80,55,0.2)' }}><CheckCircle size={12} /> Ready when you are</span>
             <h2 style={{ marginTop: 20 }}>Initialize <em>your search.</em></h2>
-            <p>Browse open PMHNP roles by state, scope, and care setting — or open a direct conduit with our team to talk through a role you&apos;ve had your eye on.</p>
+            <p>Browse open {brand.niche.short} roles by state, scope, and care setting — or open a direct conduit with our team to talk through a role you&apos;ve had your eye on.</p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 32, flexWrap: 'wrap' }}>
               <Link href="/jobs" className="ab-btn ab-btn-dark">Browse all jobs</Link>
             </div>

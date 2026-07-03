@@ -76,18 +76,18 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 
     return {
         // SEO Fix #7: trim title to ≤60 chars and description to ≤160 chars.
-        title: `${stats.totalJobs} Telehealth PMHNP Jobs ($130K-200K)`,
-        description: `Find ${stats.totalJobs} telehealth PMHNP and telepsychiatry jobs paying $130K-$200K+. Work from home — flexible hours, no commute, video-visit roles. Updated daily.`,
+        title: `${stats.totalJobs} Telehealth ${brand.niche.short} Jobs ($130K-200K)`,
+        description: `Find ${stats.totalJobs} telehealth ${brand.niche.short} and telepsychiatry jobs paying $130K-$200K+. Work from home — flexible hours, no commute, video-visit roles. Updated daily.`,
         keywords: ['telehealth pmhnp', 'telepsychiatry jobs', 'virtual pmhnp', 'telemedicine psychiatric nurse practitioner', 'behavioral health NP telehealth', 'telepsychiatry nurse practitioner jobs', 'remote psych NP telehealth'],
         openGraph: {
-            title: `${stats.totalJobs} Telehealth PMHNP Jobs - Virtual Psychiatric Care`,
-            description: 'Browse telehealth and telepsychiatry psychiatric mental health nurse practitioner positions. Work from home, competitive pay.',
+            title: `${stats.totalJobs} Telehealth ${brand.niche.short} Jobs - Virtual Psychiatric Care`,
+            description: `Browse telehealth and telepsychiatry ${brand.niche.descriptor} positions. Work from home, competitive pay.`,
             type: 'website',
             images: [{
-                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Telehealth PMHNP Jobs`)}&subtitle=${encodeURIComponent('Virtual psychiatric care positions')}`,
+                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Telehealth ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Virtual ${brand.niche.adjective} care positions`)}`,
                 width: 1200,
                 height: 630,
-                alt: 'Telehealth PMHNP Jobs',
+                alt: `Telehealth ${brand.niche.short} Jobs`,
             }],
         },
         alternates: {
@@ -139,7 +139,7 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
                         __html: JSON.stringify({
                             '@context': 'https://schema.org',
                             '@type': 'ItemList',
-                            name: 'Telehealth PMHNP Jobs',
+                            name: `Telehealth ${brand.niche.short} Jobs`,
                             numberOfItems: stats.totalJobs,
                             itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({
                                 '@type': 'ListItem',
@@ -151,24 +151,24 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
                     }}
                 />
             )}
-            <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Telehealth PMHNP Jobs" />
+            <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName={`Telehealth ${brand.niche.short} Jobs`} />
             {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#f1d49c"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_th_people.webp`}
-        heroAlt="Telehealth PMHNP virtual session"
+        heroAlt={`Telehealth ${brand.niche.short} virtual session`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Telehealth']}
         indexLabel="№ 03 / 28"
         headlineLine1="Telehealth"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, virtual care."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'companies' },
         ]}
-        description="Virtual psychiatric care positions with flexible hours, no commute, and multi-state practice opportunities."
+        description={`Virtual ${brand.niche.adjective} care positions with flexible hours, no commute, and multi-state practice opportunities.`}
         ctaLabel="Browse All Telehealth Jobs"
         ctaHref="/jobs?category=telehealth"
         secondaryCtaLabel="Set Alert"
@@ -288,10 +288,10 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
               <div>
                 <TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} />
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Salary & Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average telehealth PMHNP salary:</p>
+                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average telehealth {brand.niche.short} salary:</p>
                 <p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p>
               </div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_th_salary.webp`} alt="Telehealth PMHNP salary" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_th_salary.webp`} alt={`Telehealth ${brand.niche.short} salary`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)' }}>
               <Bell size={32} style={{ color: '#0D9488', marginBottom: '14px' }} />
@@ -366,14 +366,14 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Telehealth PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Telehealth {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {[
               { q: 'Do I need special licensure for telehealth?', a: 'You need an active NP license in the state where your patient is located. PSYPACT and the Nurse Licensure Compact can streamline multi-state practice.' },
               { q: 'What technology do I need for telehealth?', a: 'A HIPAA-compliant video platform, reliable high-speed internet, dual monitors, a private workspace, and EPCS-enabled e-prescribing software.' },
-              { q: 'What is the salary range for telehealth PMHNPs?', a: 'Telehealth PMHNP salaries range from $130K to $200K+, depending on patient volume, state, and whether the role is W-2 or 1099 contract.' },
+              { q: `What is the salary range for telehealth ${brand.niche.short}s?`, a: `Telehealth ${brand.niche.short} salaries range from $130K to $200K+, depending on patient volume, state, and whether the role is W-2 or 1099 contract.` },
               { q: 'Can I prescribe controlled substances via telehealth?', a: 'Yes, with proper DEA registration and EPCS setup. The DEA now permits initial prescriptions via telehealth in many circumstances.' },
-              { q: 'How many patients do telehealth PMHNPs see per day?', a: 'Typically 12-20 patients per day, with 30-minute follow-ups and 60-minute intakes. Some platforms allow flexible scheduling.' },
+              { q: `How many patients do telehealth ${brand.niche.short}s see per day?`, a: 'Typically 12-20 patients per day, with 30-minute follow-ups and 60-minute intakes. Some platforms allow flexible scheduling.' },
             ].map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3>
@@ -381,7 +381,7 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
               </div>
             ))}
           </div>
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{q:'Do I need special licensure for telehealth?',a:'You need an active NP license in the state where your patient is located. PSYPACT and the Nurse Licensure Compact can streamline multi-state practice.'},{q:'What technology do I need for telehealth?',a:'A HIPAA-compliant video platform, reliable high-speed internet, dual monitors, a private workspace, and EPCS-enabled e-prescribing software.'},{q:'What is the salary range for telehealth PMHNPs?',a:'Telehealth PMHNP salaries range from $130K to $200K+, depending on patient volume, state, and whether the role is W-2 or 1099 contract.'},{q:'Can I prescribe controlled substances via telehealth?',a:'Yes, with proper DEA registration and EPCS setup. The DEA now permits initial prescriptions via telehealth in many circumstances.'},{q:'How many patients do telehealth PMHNPs see per day?',a:'Typically 12-20 patients per day, with 30-minute follow-ups and 60-minute intakes.'}].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{q:'Do I need special licensure for telehealth?',a:'You need an active NP license in the state where your patient is located. PSYPACT and the Nurse Licensure Compact can streamline multi-state practice.'},{q:'What technology do I need for telehealth?',a:'A HIPAA-compliant video platform, reliable high-speed internet, dual monitors, a private workspace, and EPCS-enabled e-prescribing software.'},{q:`What is the salary range for telehealth ${brand.niche.short}s?`,a:`Telehealth ${brand.niche.short} salaries range from $130K to $200K+, depending on patient volume, state, and whether the role is W-2 or 1099 contract.`},{q:'Can I prescribe controlled substances via telehealth?',a:'Yes, with proper DEA registration and EPCS setup. The DEA now permits initial prescriptions via telehealth in many circumstances.'},{q:`How many patients do telehealth ${brand.niche.short}s see per day?`,a:'Typically 12-20 patients per day, with 30-minute follow-ups and 60-minute intakes.'}].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>
       </div>
 

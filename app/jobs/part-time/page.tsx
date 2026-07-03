@@ -32,10 +32,10 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: 'How many hours do part-time PMHNPs work?', a: 'Part-time PMHNP roles typically involve 10-30 hours per week. Common schedules include 2-3 days per week, half-day clinics, or weekend-only coverage. PRN roles offer even more flexibility with no minimum hour commitments.' },
-  { q: 'What do part-time PMHNPs earn?', a: 'Part-time PMHNPs earn $60-$85+ per hour, translating to $60K-$110K annually depending on hours worked. PRN rates are often higher ($75-$100/hr) to compensate for lack of benefits.' },
-  { q: 'Do part-time PMHNPs get benefits?', a: 'Benefits vary. Positions at 20+ hours/week often include prorated health insurance, PTO, and CME allowances. PRN roles typically pay higher hourly rates but without benefits. Some employers offer 401(k) to all staff regardless of hours.' },
-  { q: 'Can I combine part-time roles?', a: 'Yes — many PMHNPs stack 2-3 part-time positions across different settings (outpatient + telehealth, for example) to maximize income flexibility. Ensure non-compete clauses allow this and maintain separate malpractice coverage.' },
+  { q: `How many hours do part-time ${brand.niche.short}s work?`, a: `Part-time ${brand.niche.short} roles typically involve 10-30 hours per week. Common schedules include 2-3 days per week, half-day clinics, or weekend-only coverage. PRN roles offer even more flexibility with no minimum hour commitments.` },
+  { q: `What do part-time ${brand.niche.short}s earn?`, a: `Part-time ${brand.niche.short}s earn $60-$85+ per hour, translating to $60K-$110K annually depending on hours worked. PRN rates are often higher ($75-$100/hr) to compensate for lack of benefits.` },
+  { q: `Do part-time ${brand.niche.short}s get benefits?`, a: 'Benefits vary. Positions at 20+ hours/week often include prorated health insurance, PTO, and CME allowances. PRN roles typically pay higher hourly rates but without benefits. Some employers offer 401(k) to all staff regardless of hours.' },
+  { q: 'Can I combine part-time roles?', a: `Yes — many ${brand.niche.short}s stack 2-3 part-time positions across different settings (outpatient + telehealth, for example) to maximize income flexibility. Ensure non-compete clauses allow this and maintain separate malpractice coverage.` },
   { q: 'Is part-time good for new grads?', a: 'Part-time can work for new grads who want gradual clinical exposure, but most employers prefer candidates who can commit to consistent schedules. Starting with a full-time role that offers mentorship may build skills faster.' },
 ];
 
@@ -43,8 +43,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Part-Time PMHNP Jobs ($60-85/hr)`,
-    description: `Find ${stats.totalJobs} part-time PMHNP jobs paying $60-85+/hr. Flexible schedules, PRN positions, and work-life balance.`,
+    title: `${stats.totalJobs} Part-Time ${brand.niche.short} Jobs ($60-85/hr)`,
+    description: `Find ${stats.totalJobs} part-time ${brand.niche.short} jobs paying $60-85+/hr. Flexible schedules, PRN positions, and work-life balance.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/part-time` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
@@ -62,26 +62,26 @@ export default async function PartTimePage({ searchParams }: PageProps) {
       <BreadcrumbSchema items={[{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Part-Time", url: `${brand.baseUrl}/jobs/part-time` }]} />
       <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Part-Time Jobs" />
       {jobs.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Part-Time PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Part-Time ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
 
       {/* 1. HERO */}
       <CategoryHero
         bgColor="#c5bc77"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_parttime.webp`}
-        heroAlt="Part-time PMHNP leaving clinic"
+        heroAlt={`Part-time ${brand.niche.short} leaving clinic`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Part-Time']}
         indexLabel="№ 08 / 28"
         headlineLine1="Part-Time"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, work on your terms."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$60/hr+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description="Flexible schedules, PRN options, and work-life balance for psychiatric nurse practitioners."
+        description={`Flexible schedules, PRN options, and work-life balance for ${brand.niche.adjective} nurse practitioners.`}
         ctaLabel="Browse Part-Time Jobs"
         ctaHref="/jobs?category=part-time"
         secondaryCtaLabel="Set Alert"
@@ -124,7 +124,7 @@ export default async function PartTimePage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_pt_prn.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>PRN Options</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Pick up shifts as needed with no minimum hours.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_pt_balance.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Work-Life Balance</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Prioritize family, education, or personal growth.</p></div>
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Part-Time Pay</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average part-time PMHNP salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p></div>
+              <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Part-Time Pay</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average part-time {brand.niche.short} salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p></div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_pt_salary.webp`} alt="Part-time pay" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)' }}>
@@ -170,7 +170,7 @@ export default async function PartTimePage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Part-Time PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Part-Time {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>{faqs.map((faq, idx) => (<div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}><h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>{faq.a}</p></div>))}</div>
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>

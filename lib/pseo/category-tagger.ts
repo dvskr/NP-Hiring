@@ -3,7 +3,7 @@
  *
  * Why this exists: pre-P9, taxonomy×city and taxonomy×state pages used
  * `OR title.contains 'X' OR description.contains 'X'` matchers at QUERY
- * time. A typical PMHNP description mentions "behavioral health",
+ * time. A typical ${brand.niche.short} description mentions "behavioral health",
  * "outpatient", "community health", and "mental health" all at once, so
  * the same job appeared on 4–5 different taxonomy pages with near-
  * identical chrome. Google's quality model flags this as duplicate.
@@ -175,7 +175,7 @@ const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
         matchDescription: false,
         // Exclude "behavioral-health" from generic mental-health roles —
         // only tag when explicitly integrated. Otherwise this category
-        // catches every PMHNP job and reintroduces the duplication.
+        // catches every ${brand.niche.short} job and reintroduces the duplication.
     },
     crisis: {
         keywords: ['crisis stabilization', 'emergency psych', 'urgent psych'],

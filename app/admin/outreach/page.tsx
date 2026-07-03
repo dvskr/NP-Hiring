@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { brand } from '@/config/brand';
 import { Plus, Mail, Copy, Check } from 'lucide-react';
 import { formatCT } from '@/lib/format-ct';
 
@@ -331,7 +332,7 @@ export default function OutreachPage() {
       {suggestions.length > 0 && (
         <div style={{ ...card, padding: '24px', marginBottom: '24px' }}>
           <h3 style={{ ...heading, fontSize: '16px', marginBottom: '6px' }}>Companies to Reach Out To</h3>
-          <p style={{ ...sub, marginBottom: '16px' }}>Top companies actively hiring PMHNPs (3+ job postings)</p>
+          <p style={{ ...sub, marginBottom: '16px' }}>Top companies actively hiring {brand.niche.short}s (3+ job postings)</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {suggestions.slice(0, 12).map((company: string) => (
               <div
