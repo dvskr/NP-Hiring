@@ -13,11 +13,24 @@ export const brand = {
     /** Display name used in copy, OG titles, email subjects. */
     name: 'NP Hiring',
 
-    /** Niche descriptor used in long-form prose, schema descriptions. */
+    /**
+     * Niche descriptor used across ALL site copy. Every niche-identity
+     * string in app/, components/, and lib/ derives from these tokens —
+     * page copy must never hardcode the niche name (the niche-copy debt
+     * scanner tracks violations). Plurals derive as `${short}s`.
+     */
     niche: {
+        /** Credential/abbreviation: 'PMHNP', 'NP', 'CRNA'. */
         short: 'NP',
+        /** Mid-length label for titles/badges: 'Psychiatric NP', 'Family NP'. */
+        medium: 'NP',
+        /** Full role name, Title Case. */
         long: 'Nurse Practitioner',
+        /** Full role name, lowercase prose form. */
         descriptor: 'nurse practitioner',
+        /** Bare adjective used mid-sentence: 'psychiatric roles/care'. */
+        adjective: 'advanced practice',
+        /** Care-domain noun: 'mental health', 'primary care'. */
         category: 'advanced practice nursing',
     },
 

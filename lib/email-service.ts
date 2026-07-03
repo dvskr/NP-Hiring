@@ -245,7 +245,7 @@ export async function sendWelcomeEmail(email: string, unsubscribeToken: string):
     const html = emailShellV2(`
       ${headerBlockV2('Your Alerts Are Live', '')}
       ${spacerV2(12)}
-      ${simpleBlock('hero-alert-subscription.png', 'Your job alerts are now active. We scan thousands of PMHNP positions daily and deliver matches straight to your inbox \u2014 so you never miss the right opportunity.')}
+      ${simpleBlock('hero-alert-subscription.png', `Your job alerts are now active. We scan thousands of ${brand.niche.short} positions daily and deliver matches straight to your inbox \u2014 so you never miss the right opportunity.`)}
       ${spacerV2(32)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
         ${primaryButtonV2('Browse Open Positions', `${BASE_URL}/jobs`)}
@@ -253,7 +253,7 @@ export async function sendWelcomeEmail(email: string, unsubscribeToken: string):
       ${spacerV2(48)}
       ${closeContentV2()}`,
       unsubscribeFooterV2(unsubscribeToken),
-      'Your PMHNP job alerts are active.'
+      `Your ${brand.niche.short} job alerts are active.`
     );
 
     await sendAndLog({
@@ -291,7 +291,7 @@ export async function sendSignupWelcomeEmail(
       html = emailShellV2(`
       ${headerBlockV2('Your Employer Account Is Ready', '')}
       ${spacerV2(12)}
-      ${bodyTextV2('Post positions, track engagement, and connect with qualified Psychiatric Mental Health Nurse Practitioners \u2014 all from one dashboard.')}
+      ${bodyTextV2(`Post positions, track engagement, and connect with qualified ${brand.niche.long}s \u2014 all from one dashboard.`)}
       ${spacerV2(20)}
       <tr><td class="content-pad" style="padding:0 40px;">
         <div style="background:#F0FDFA;border:1px solid rgba(13,148,136,0.15);border-radius:12px;padding:16px 20px;text-align:center;">
@@ -306,7 +306,7 @@ export async function sendSignupWelcomeEmail(
       ${spacerV2(16)}
       ${stepBlock('icon-emp-analytics.png', 'Track engagement', 'Monitor views, apply clicks, and applicant quality in real time.')}
       ${spacerV2(16)}
-      ${stepBlock('icon-emp-handshake.png', 'Connect with candidates', 'Message qualified PMHNPs directly through the platform. Candidates you unlock stay accessible forever.')}
+      ${stepBlock('icon-emp-handshake.png', 'Connect with candidates', `Message qualified ${brand.niche.short}s directly through the platform. Candidates you unlock stay accessible forever.`)}
       ${spacerV2(32)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
         ${primaryButtonV2('Post Your First Job', `${SITE_URL}/post-job`)}
@@ -318,7 +318,7 @@ export async function sendSignupWelcomeEmail(
       );
     } else {
       html = emailShellV2(`
-            ${headerBlockV2('Welcome to PMHNP Hiring', '')}
+            ${headerBlockV2(`Welcome to ${brand.name}`, '')}
             ${spacerV2(20)}
             <tr><td class="content-pad" style="padding:0 40px;"><p style="margin:0;font-family:${SERIF_V2};font-size:17px;color:${V2.textBody};line-height:1.7;text-align:center;">You have unlocked a new way to find your perfect role. Search curated positions, get matched by AI, and connect directly with hiring managers \u2014 no recruiters, no middlemen.</p></td></tr>
             ${spacerV2(36)}
@@ -336,7 +336,7 @@ export async function sendSignupWelcomeEmail(
             ${spacerV2(48)}
             ${closeContentV2()}`,
           unsubscribeFooterV2('sample'),
-          `Welcome ${firstName || ''} \u2014 find your perfect PMHNP role.`
+          `Welcome ${firstName || ''} \u2014 find your perfect ${brand.niche.short} role.`
       );
     }
 
@@ -345,8 +345,8 @@ export async function sendSignupWelcomeEmail(
       from: EMAIL_FROM,
       to: email,
       subject: isEmployer
-        ? 'Welcome to PMHNP Hiring — Start Hiring Today'
-        : `Welcome to PMHNP Hiring, ${firstName || 'there'}!`,
+        ? `Welcome to ${brand.name} — Start Hiring Today`
+        : `Welcome to ${brand.name}, ${firstName || 'there'}!`,
       html,
     }, 'welcome_signup', { role }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
 
@@ -409,7 +409,7 @@ export async function sendConfirmationEmail(
     const html = emailShellV2(`
       ${headerBlockV2('Your Listing Is Live', '')}
       ${spacerV2(12)}
-      ${simpleBlock('hero-job-post.png', `Your posting is now visible to thousands of PMHNPs actively searching for their next role. The listing will remain active for ${durationDays} days.`)}
+      ${simpleBlock('hero-job-post.png', `Your posting is now visible to thousands of ${brand.niche.short}s actively searching for their next role. The listing will remain active for ${durationDays} days.`)}
       ${spacerV2(20)}
       <tr><td class="content-pad" style="padding:0 40px;">
         <div style="background:#F0FDFA;border:1px solid rgba(13,148,136,0.15);border-radius:12px;padding:16px 20px;">
@@ -434,7 +434,7 @@ export async function sendConfirmationEmail(
     await sendAndLog({
       from: EMAIL_FROM,
       to: employerEmail,
-      subject: `✅ Your PMHNP job post is live — "${jobTitle}"`,
+      subject: `✅ Your ${brand.niche.short} job post is live — "${jobTitle}"`,
       html,
     }, 'job_confirmation', { jobId }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
 
@@ -681,7 +681,7 @@ export async function sendDraftSavedEmail(
     await sendAndLog({
       from: EMAIL_FROM,
       to: email,
-      subject: '📝 Continue your PMHNP job posting',
+      subject: `📝 Continue your ${brand.niche.short} job posting`,
       html,
     }, 'draft_saved');
 
@@ -797,7 +797,7 @@ export function buildSalaryGuideHtml(pdfUrl: string, unsubscribeToken: string): 
   return emailShellV2(`
     ${headerBlockV2('Your 2026 Salary Guide', '')}
     ${spacerV2(12)}
-    ${simpleBlock('hero-salary-guide.png', 'Your comprehensive PMHNP compensation report is ready. It includes salary ranges across all 50 states, remote versus in-person pay differentials, and negotiation strategies.')}
+    ${simpleBlock('hero-salary-guide.png', `Your comprehensive ${brand.niche.short} compensation report is ready. It includes salary ranges across all 50 states, remote versus in-person pay differentials, and negotiation strategies.`)}
     ${spacerV2(32)}
     <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
       ${primaryButtonV2('Download Salary Guide (PDF)', pdfUrl)}
@@ -807,7 +807,7 @@ export function buildSalaryGuideHtml(pdfUrl: string, unsubscribeToken: string): 
     ${spacerV2(48)}
     ${closeContentV2()}`,
     unsubscribeFooterV2(unsubscribeToken),
-    'Your 2026 PMHNP Salary Guide is ready.'
+    `Your 2026 ${brand.niche.short} Salary Guide is ready.`
   );
 }
 
@@ -1006,7 +1006,7 @@ export async function sendNewCandidateAlertEmail(
     const html = emailShellV2(`
       ${headerBlockV2('New Candidate Match', '')}
       ${spacerV2(12)}
-      ${simpleBlock('hero-new-candidate.png', `A new candidate matching your hiring criteria has joined the platform. They specialize in psychiatric mental health nursing and are open to new positions.`)}
+      ${simpleBlock('hero-new-candidate.png', `A new candidate matching your hiring criteria has joined the platform. They specialize in ${brand.niche.adjective} ${brand.niche.category} nursing and are open to new positions.`)}
       ${spacerV2(32)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
         ${primaryButtonV2('View Candidate Profile', `${SITE_URL}/employer/candidates`)}
@@ -1041,17 +1041,17 @@ export async function sendNewCandidateAlertEmail(
 
 export function buildBroadcastHtml(body: string, preheaderText: string = '', unsubscribeToken?: string): string {
   return emailShellV2(`
-    ${headerBlockV2('PMHNP Hiring', '')}
+    ${headerBlockV2(brand.name, '')}
     ${spacerV2(12)}
     ${bodyTextV2(body)}
     ${spacerV2(32)}
     <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
-      ${primaryButtonV2('Visit PMHNP Hiring', `${BASE_URL}`)}
+      ${primaryButtonV2(`Visit ${brand.name}`, `${BASE_URL}`)}
     </td></tr>
     ${spacerV2(48)}
     ${closeContentV2()}`,
     unsubscribeFooterV2(unsubscribeToken || 'sample'),
-    preheaderText || 'A message from PMHNP Hiring'
+    preheaderText || `A message from ${brand.name}`
   );
 }
 
@@ -1451,9 +1451,9 @@ export async function sendInactivityPurgeWarningEmail(
   try {
     const unsubToken = await getOrCreateUnsubToken(email);
     const html = emailShellV2(`
-      ${headerBlockV2('Your PMHNP Hiring account is scheduled for deletion', '')}
+      ${headerBlockV2(`Your ${brand.name} account is scheduled for deletion`, '')}
       ${spacerV2(12)}
-      ${bodyTextV2(`We noticed you haven't used your PMHNP Hiring account in a while. To respect your privacy, accounts that stay inactive are automatically removed.`)}
+      ${bodyTextV2(`We noticed you haven't used your ${brand.name} account in a while. To respect your privacy, accounts that stay inactive are automatically removed.`)}
       ${spacerV2(8)}
       ${bodyTextV2(`<strong>If you do nothing, your account and data will be deleted in ${graceDays} days.</strong> To keep it, just sign in once — that's all it takes.`)}
       ${spacerV2(24)}
@@ -1463,13 +1463,13 @@ export async function sendInactivityPurgeWarningEmail(
       ${spacerV2(48)}
       ${closeContentV2()}`,
       contactFooterV2(),
-      `Your inactive PMHNP Hiring account will be deleted in ${graceDays} days unless you sign in.`
+      `Your inactive ${brand.name} account will be deleted in ${graceDays} days unless you sign in.`
     );
 
     await sendAndLog({
       from: EMAIL_FROM_TRANSACTIONAL,
       to: email,
-      subject: `Action needed: your PMHNP Hiring account will be deleted in ${graceDays} days`,
+      subject: `Action needed: your ${brand.name} account will be deleted in ${graceDays} days`,
       html,
     }, 'account_purge_warning', { graceDays }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
 

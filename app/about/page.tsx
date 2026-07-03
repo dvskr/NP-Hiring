@@ -12,21 +12,21 @@ export const revalidate = 3600;
 const ABOUT_OG_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/about-pmhnp-hiring-platform.webp`;
 
 export const metadata: Metadata = {
-  title: 'About Us - The #1 Job Board for Psychiatric NPs',
-  description: 'Learn about PMHNP Hiring - the #1 dedicated job board for Psychiatric Mental Health Nurse Practitioners. Thousands of jobs from thousands of companies across all 50 states.',
+  title: `About Us - The #1 Job Board for ${brand.niche.medium}s`,
+  description: `Learn about ${brand.name} - the #1 dedicated job board for ${brand.niche.long}s. Thousands of jobs from thousands of companies across all 50 states.`,
   openGraph: {
     // OG block was previously images-only — when a non-overriding child page
     // inherits this layout's defaults the social card pulled the wrong title
     // and description (audit 09 M-22). Spelled-out fields ensure the share
     // card matches the page identity.
-    title: 'About PMHNP Hiring — The #1 Psychiatric NP Job Board',
-    description: 'Built for the PMHNP community — thousands of psychiatric nurse practitioner jobs across all 50 states, free for job seekers, transparent for employers.',
+    title: `About ${brand.name} — The #1 ${brand.niche.medium} Job Board`,
+    description: `Built for the ${brand.niche.short} community — thousands of ${brand.niche.adjective} nurse practitioner jobs across all 50 states, free for job seekers, transparent for employers.`,
     type: 'website',
     url: `${brand.baseUrl}/about`,
-    siteName: 'PMHNP Hiring',
-    images: [{ url: ABOUT_OG_IMAGE, width: 1280, height: 900, alt: 'About PMHNP Hiring' }],
+    siteName: brand.name,
+    images: [{ url: ABOUT_OG_IMAGE, width: 1280, height: 900, alt: `About ${brand.name}` }],
   },
-  twitter: { card: 'summary_large_image', title: 'About PMHNP Hiring', images: [ABOUT_OG_IMAGE] },
+  twitter: { card: 'summary_large_image', title: `About ${brand.name}`, images: [ABOUT_OG_IMAGE] },
   alternates: { canonical: `${brand.baseUrl}/about` },
 };
 

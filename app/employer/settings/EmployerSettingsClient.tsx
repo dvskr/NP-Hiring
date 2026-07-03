@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { brand } from '@/config/brand';
 import {
     Save, Loader2, Globe, Mail,
     Phone, CheckCircle, AlertTriangle, FileText, Lock,
@@ -746,7 +747,7 @@ export default function EmployerSettingsClient() {
                         </div>
                     </div>
                     <p style={{ color: '#8A9BA6', fontSize: '13px', marginBottom: '20px' }}>
-                        Get notified when new PMHNP candidates match your criteria.
+                        Get notified when new {brand.niche.short} candidates match your criteria.
                     </p>
 
                     {/* Specialties */}
@@ -821,7 +822,7 @@ export default function EmployerSettingsClient() {
                                 Employer Newsletter
                             </h3>
                             <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '4px 0 0' }}>
-                                Hiring tips, salary benchmarks, and PMHNP market insights delivered monthly.
+                                Hiring tips, salary benchmarks, and {brand.niche.short} market insights delivered monthly.
                             </p>
                         </div>
                         {newsletterChecked ? (

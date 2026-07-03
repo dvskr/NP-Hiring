@@ -20,9 +20,9 @@ import {
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: 'For Program Directors — Free PMHNP Jobs Widget | PMHNP Hiring',
+  title: `For Program Directors — Free ${brand.niche.short} Jobs Widget | ${brand.name}`,
   description:
-    'Help your PMHNP students land their first job. Free embeddable jobs widget for your career services page, plus quarterly placement reports for your accreditation file.',
+    `Help your ${brand.niche.short} students land their first job. Free embeddable jobs widget for your career services page, plus quarterly placement reports for your accreditation file.`,
   alternates: { canonical: `${brand.baseUrl}/for-programs` },
 }
 
@@ -36,9 +36,9 @@ const clayCard: React.CSSProperties = {
 }
 
 const CONTACT_EMAIL = brand.email.hello
-const CONTACT_SUBJECT = encodeURIComponent('PMHNP Hiring widget for our program')
+const CONTACT_SUBJECT = encodeURIComponent(`${brand.name} widget for our program`)
 const CONTACT_BODY = encodeURIComponent(
-  `Hi Sathish,\n\nI'm the program director (or coordinator) at <UNIVERSITY> in <STATE>. I'd like to learn more about the free PMHNP jobs widget for our career services page.\n\nA couple of times that work for a 15-minute chat:\n  • <DAY/TIME 1>\n  • <DAY/TIME 2>\n  • <DAY/TIME 3>\n\nThanks,\n<NAME>\n<TITLE, PROGRAM>`,
+  `Hi Sathish,\n\nI'm the program director (or coordinator) at <UNIVERSITY> in <STATE>. I'd like to learn more about the free ${brand.niche.short} jobs widget for our career services page.\n\nA couple of times that work for a 15-minute chat:\n  • <DAY/TIME 1>\n  • <DAY/TIME 2>\n  • <DAY/TIME 3>\n\nThanks,\n<NAME>\n<TITLE, PROGRAM>`,
 )
 const MAILTO = `mailto:${CONTACT_EMAIL}?subject=${CONTACT_SUBJECT}&body=${CONTACT_BODY}`
 
@@ -120,7 +120,7 @@ export default async function ForProgramsPage() {
                 }}
               >
                 <GraduationCap size={15} strokeWidth={2.25} />
-                For PMHNP Program Directors
+                For {brand.niche.short} Program Directors
               </div>
 
               <h1
@@ -133,7 +133,7 @@ export default async function ForProgramsPage() {
                   margin: '0 0 20px',
                 }}
               >
-                Help Your PMHNP Students<br />
+                Help Your {brand.niche.short} Students<br />
                 Land Their{' '}
                 <span style={{ color: '#0D9488' }}>First Role</span>
               </h1>
@@ -148,7 +148,7 @@ export default async function ForProgramsPage() {
                   fontWeight: 400,
                 }}
               >
-                Two free tools for accredited PMHNP programs — an
+                Two free tools for accredited {brand.niche.short} programs — an
                 embeddable jobs widget for your career services page,
                 plus quarterly placement reports for your accreditation
                 file.
@@ -275,7 +275,7 @@ export default async function ForProgramsPage() {
                       marginBottom: '14px',
                     }}
                   >
-                    Psychiatric Mental Health Nurse Practitioner
+                    {brand.niche.long}
                   </div>
                   <div
                     style={{
@@ -323,7 +323,7 @@ export default async function ForProgramsPage() {
                       marginBottom: '4px',
                     }}
                   >
-                    Outpatient PMHNP
+                    Outpatient {brand.niche.short}
                   </div>
                   <div
                     style={{
@@ -368,7 +368,7 @@ export default async function ForProgramsPage() {
             {[
               {
                 value: fmt(stats.totalJobs),
-                label: 'Active PMHNP Roles',
+                label: `Active ${brand.niche.short} Roles`,
                 icon: Building2,
                 bg: '#D4F5E9',
                 iconBg: '#34D399',
@@ -386,7 +386,7 @@ export default async function ForProgramsPage() {
               },
               {
                 value: fmt(stats.subscribers),
-                label: 'PMHNPs in Network',
+                label: `${brand.niche.short}s in Network`,
                 icon: GraduationCap,
                 bg: '#E8DAFE',
                 iconBg: '#A855F7',
@@ -509,7 +509,7 @@ export default async function ForProgramsPage() {
             }}
           >
             No fees, no student data shared with us, no contract.
-            Designed for accredited PMHNP programs.
+            Designed for accredited {brand.niche.short} programs.
           </p>
 
           <div
@@ -570,7 +570,7 @@ export default async function ForProgramsPage() {
                   }}
                 >
                   One line of HTML on your career services page. Shows
-                  the latest PMHNP roles in your state, refreshes daily,
+                  the latest {brand.niche.short} roles in your state, refreshes daily,
                   co-branded with your program.
                 </p>
                 <a
@@ -617,11 +617,11 @@ export default async function ForProgramsPage() {
                       marginBottom: '8px',
                     }}
                   >
-                    Latest PMHNP Jobs
+                    Latest {brand.niche.short} Jobs
                   </div>
                   {[
-                    { t: 'Outpatient PMHNP — Telehealth', c: '#1A2E35' },
-                    { t: 'Inpatient PMHNP — UCSF Med Cntr', c: '#1A2E35' },
+                    { t: `Outpatient ${brand.niche.short} — Telehealth`, c: '#1A2E35' },
+                    { t: `Inpatient ${brand.niche.short} — UCSF Med Cntr`, c: '#1A2E35' },
                     { t: 'TMS NP — Bay Area Mental Health', c: '#1A2E35' },
                   ].map((row, i) => (
                     <div
@@ -1184,7 +1184,7 @@ export default async function ForProgramsPage() {
               {
                 step: '03',
                 title: 'Students see fresh roles',
-                body: 'Daily-refreshed PMHNP roles. We send you a quarterly placement report by email.',
+                body: `Daily-refreshed ${brand.niche.short} roles. We send you a quarterly placement report by email.`,
                 accent: '#A855F7',
                 bg: '#FAF5FF',
               },
@@ -1278,7 +1278,7 @@ export default async function ForProgramsPage() {
           {[
             {
               q: 'Is there a cost to my program?',
-              a: 'No. The widget and quarterly placement report are both free for accredited PMHNP programs. We make money from employers who post jobs on the main site.',
+              a: `No. The widget and quarterly placement report are both free for accredited ${brand.niche.short} programs. We make money from employers who post jobs on the main site.`,
             },
             {
               q: 'Do you collect data on our students?',
@@ -1290,7 +1290,7 @@ export default async function ForProgramsPage() {
             },
             {
               q: 'How is the placement report compiled?',
-              a: 'We aggregate the active PMHNP listings in your state by setting (outpatient, inpatient, telehealth, etc.), salary range, and employer type. After your widget has been live for ~90 days we add cohort-specific data showing where students from your program have been viewing roles.',
+              a: `We aggregate the active ${brand.niche.short} listings in your state by setting (outpatient, inpatient, telehealth, etc.), salary range, and employer type. After your widget has been live for ~90 days we add cohort-specific data showing where students from your program have been viewing roles.`,
             },
             {
               q: 'Can I see another program using the widget?',

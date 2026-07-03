@@ -32,19 +32,19 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: 'What is a per diem PMHNP?', a: 'A per diem PMHNP works on an as-needed basis, picking up shifts at healthcare facilities without a fixed schedule or long-term commitment. Per diem means "per day" — you get paid for each day you work, typically at higher hourly rates than permanent staff.' },
-  { q: 'How much do per diem PMHNPs earn?', a: 'Per diem PMHNPs earn $80-$120+ per hour, which is 15-30% higher than permanent staff rates. Premium shifts (nights, weekends, holidays) can pay $100-$150/hour. Annual income varies based on shifts worked.' },
+  { q: `What is a per diem ${brand.niche.short}?`, a: `A per diem ${brand.niche.short} works on an as-needed basis, picking up shifts at healthcare facilities without a fixed schedule or long-term commitment. Per diem means "per day" — you get paid for each day you work, typically at higher hourly rates than permanent staff.` },
+  { q: `How much do per diem ${brand.niche.short}s earn?`, a: `Per diem ${brand.niche.short}s earn $80-$120+ per hour, which is 15-30% higher than permanent staff rates. Premium shifts (nights, weekends, holidays) can pay $100-$150/hour. Annual income varies based on shifts worked.` },
   { q: 'What\'s the difference between per diem and PRN?', a: 'Per diem and PRN (pro re nata, meaning "as needed") are often used interchangeably. Both refer to on-call, shift-based work without guaranteed hours. Some facilities distinguish them — per diem may have minimum shift requirements while PRN is truly as-needed.' },
-  { q: 'Do per diem PMHNPs get benefits?', a: 'Most per diem positions do not include benefits like health insurance or PTO, which is why hourly rates are higher. Some hospital systems offer limited benefits (401k, employee discounts) to per diem staff who work a minimum number of shifts per month.' },
-  { q: 'Can I work per diem at multiple facilities?', a: 'Yes — many per diem PMHNPs are credentialed at 2-4 facilities simultaneously. This maximizes shift availability and income flexibility. Check non-compete clauses and ensure each facility provides or accepts your malpractice coverage.' },
+  { q: `Do per diem ${brand.niche.short}s get benefits?`, a: 'Most per diem positions do not include benefits like health insurance or PTO, which is why hourly rates are higher. Some hospital systems offer limited benefits (401k, employee discounts) to per diem staff who work a minimum number of shifts per month.' },
+  { q: 'Can I work per diem at multiple facilities?', a: `Yes — many per diem ${brand.niche.short}s are credentialed at 2-4 facilities simultaneously. This maximizes shift availability and income flexibility. Check non-compete clauses and ensure each facility provides or accepts your malpractice coverage.` },
 ];
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Per Diem PMHNP Jobs ($80-120/hr)`,
-    description: `Find ${stats.totalJobs} per diem PMHNP positions paying $80-120+/hr. Pick your shifts, no long-term commitment.`,
+    title: `${stats.totalJobs} Per Diem ${brand.niche.short} Jobs ($80-120/hr)`,
+    description: `Find ${stats.totalJobs} per diem ${brand.niche.short} positions paying $80-120+/hr. Pick your shifts, no long-term commitment.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/per-diem` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
@@ -62,19 +62,19 @@ export default async function PerDiemPage({ searchParams }: PageProps) {
       <BreadcrumbSchema items={[{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Per Diem", url: `${brand.baseUrl}/jobs/per-diem` }]} />
       <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Per Diem Jobs" />
       {jobs.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Per Diem PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Per Diem ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
 
       {/* 1. HERO */}
       <CategoryHero
         bgColor="#dcba74"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v2_perdiem.webp`}
-        heroAlt="Per diem PMHNP flexible scheduling"
+        heroAlt={`Per diem ${brand.niche.short} flexible scheduling`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Per Diem']}
         indexLabel="№ 05 / 28"
         headlineLine1="Per Diem"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, pick your shifts."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -124,7 +124,7 @@ export default async function PerDiemPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_perdiem_nosign.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Multiple Sites</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Work at several facilities to diversify experience.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_perdiem_variety.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Low Commitment</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>No admin overhead — just clinical work.</p></div>
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Per Diem Pay</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average per diem PMHNP salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p></div>
+              <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Per Diem Pay</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average per diem {brand.niche.short} salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p></div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_pd_salary.webp`} alt="Per diem pay" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)' }}>
@@ -170,7 +170,7 @@ export default async function PerDiemPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Per Diem PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Per Diem {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>{faqs.map((faq, idx) => (<div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}><h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>{faq.a}</p></div>))}</div>
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>

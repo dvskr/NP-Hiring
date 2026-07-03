@@ -14,6 +14,12 @@
  *                           (shares the scanner with tests/regressions/brand-leak-ratchet.test.ts)
  *   4. PACK PRESENCE      — config/niche/* packs, content/blog posts,
  *                           content-map slugs resolve to real posts
+ *   5. NICHE-COPY DEBT    — reference-niche terms (PMHNP/psychiatric/mental
+ *                           health) still hardcoded in production source.
+ *                           WARN-only, never FAILs: on a fork each hit is
+ *                           either an intentional specialty mention or copy
+ *                           to rewrite (shares the scanner with
+ *                           tests/regressions/niche-copy-debt.test.ts)
  *
  * Usage:
  *   npm run fork:preflight
@@ -34,12 +40,13 @@ import * as path from 'node:path';
 import { brand } from '../config/brand';
 import { POSITIVE_KEYWORDS, NEGATIVE_KEYWORDS } from '../config/niche/relevance';
 import { RELATED_BLOG_SLUGS, HOMEPAGE_FEATURED_POSTS } from '../config/niche/content-map';
-import { scanBrandLeaks } from '../tests/regressions/brand-leak-scan';
+import { scanBrandLeaks, scanNicheCopyDebt } from '../tests/regressions/brand-leak-scan';
 
 const ROOT = path.resolve(__dirname, '..');
 // Widened to `string` deliberately: brand.domain is an `as const` literal
 // type, and comparing two DIFFERENT literals is a TS2367 compile error on
 // every fork (it only compiled on the template where the literals match).
+// Found by the first real fork (NP Hiring, 2026-07-02).
 const TEMPLATE_DOMAIN: string = 'pmhnphiring.com';
 const IS_FORK = (brand.domain as string) !== TEMPLATE_DOMAIN;
 const CRON_SECRET_MIN_LENGTH = 16;
@@ -437,6 +444,36 @@ function checkContentMapSlugs(existingSlugs: Set<string>): void {
     }
 }
 
+// ─── 5. NICHE-COPY DEBT ─────────────────────────────────────────────────────
+
+const MAX_NICHE_DEBT_FILES_LISTED = 15;
+
+/**
+ * WARN-only (never FAIL) inventory of reference-niche terms (PMHNP /
+ * psychiatric / mental health) still present in production source. Runs on
+ * template AND fork: on the template most hits are expected (it IS the
+ * reference niche); on a fork every hit is either an intentional specialty
+ * mention or copy that still needs rewriting for the new niche.
+ */
+function checkNicheCopyDebt(): void {
+    const debt = scanNicheCopyDebt({ root: ROOT });
+    const entries = Object.entries(debt).sort(
+        ([fileA, a], [fileB, b]) => b - a || fileA.localeCompare(fileB),
+    );
+    if (entries.length === 0) {
+        pass('no reference-niche terms (PMHNP/psychiatric/mental health) remain in production source');
+        return;
+    }
+    const total = entries.reduce((sum, [, n]) => sum + n, 0);
+    warn(`${total} reference-niche term occurrence(s) across ${entries.length} file(s) — on a fork, each is EITHER an intentional specialty mention OR copy still written for the template's PMHNP niche; rewrite the latter (derive identity strings from brand.niche tokens), then regenerate the baseline (UPDATE_NICHE_COPY_BASELINE=1 npx vitest run tests/regressions/niche-copy-debt.test.ts). Top ${Math.min(entries.length, MAX_NICHE_DEBT_FILES_LISTED)} file(s) by count:`);
+    for (const [file, n] of entries.slice(0, MAX_NICHE_DEBT_FILES_LISTED)) {
+        console.log(`       - ${file} (${n})`);
+    }
+    if (entries.length > MAX_NICHE_DEBT_FILES_LISTED) {
+        console.log(`       … and ${entries.length - MAX_NICHE_DEBT_FILES_LISTED} more file(s)`);
+    }
+}
+
 // ─── main ───────────────────────────────────────────────────────────────────
 
 function main(): void {
@@ -462,6 +499,9 @@ function main(): void {
     const existingSlugs = listBlogSlugs();
     checkBlogContent(existingSlugs);
     checkContentMapSlugs(existingSlugs);
+
+    section('5. NICHE-COPY DEBT');
+    checkNicheCopyDebt();
 
     section('SUMMARY');
     console.log(`  ✅ ${counts.PASS} passed   ⚠️  ${counts.WARN} warnings   ❌ ${counts.FAIL} failures`);

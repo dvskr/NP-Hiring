@@ -32,16 +32,16 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: 'What is an LGBTQ+ affirming PMHNP role?', a: 'LGBTQ+ affirming PMHNP positions focus on culturally competent psychiatric care for queer, transgender, and gender-diverse individuals. These roles involve specialized training in minority stress, gender dysphoria, and the unique mental health needs of LGBTQ+ communities.' },
+  { q: `What is an LGBTQ+ affirming ${brand.niche.short} role?`, a: `LGBTQ+ affirming ${brand.niche.short} positions focus on culturally competent ${brand.niche.adjective} care for queer, transgender, and gender-diverse individuals. These roles involve specialized training in minority stress, gender dysphoria, and the unique ${brand.niche.category} needs of LGBTQ+ communities.` },
   { q: 'What qualifications are needed?', a: 'Active PMHNP-BC, state APRN licensure, DEA registration, plus specialized training or experience in LGBTQ+ affirming care, gender-affirming treatment protocols, and culturally responsive therapeutic approaches.' },
-  { q: 'What settings hire LGBTQ+ affirming PMHNPs?', a: 'Community health centers, LGBTQ+ specialty clinics, university counseling centers, telehealth platforms focused on queer communities, gender health clinics, and progressive health systems with dedicated LGBTQ+ programs.' },
-  { q: 'Why is LGBTQ+ mental health care important?', a: 'LGBTQ+ individuals face disproportionately higher rates of depression, anxiety, suicidality, and substance use due to minority stress, discrimination, and systemic barriers. Affirming providers help close this critical health equity gap.' },
-  { q: 'What does a gender-affirming PMHNP do?', a: 'Gender-affirming PMHNPs provide mental health assessments for gender-diverse patients, support hormone therapy readiness evaluations, treat gender dysphoria-related conditions, and offer ongoing psychiatric care within a trans-competent framework.' },
+  { q: `What settings hire LGBTQ+ affirming ${brand.niche.short}s?`, a: 'Community health centers, LGBTQ+ specialty clinics, university counseling centers, telehealth platforms focused on queer communities, gender health clinics, and progressive health systems with dedicated LGBTQ+ programs.' },
+  { q: `Why is LGBTQ+ ${brand.niche.category} care important?`, a: 'LGBTQ+ individuals face disproportionately higher rates of depression, anxiety, suicidality, and substance use due to minority stress, discrimination, and systemic barriers. Affirming providers help close this critical health equity gap.' },
+  { q: `What does a gender-affirming ${brand.niche.short} do?`, a: `Gender-affirming ${brand.niche.short}s provide ${brand.niche.category} assessments for gender-diverse patients, support hormone therapy readiness evaluations, treat gender dysphoria-related conditions, and offer ongoing ${brand.niche.adjective} care within a trans-competent framework.` },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
-  return { title: `LGBTQ+ Affirming PMHNP Jobs | Gender-Affirming Care`, description: `Find LGBTQ+ affirming PMHNP positions. Gender-affirming care, inclusive mental health, and culturally competent psychiatric roles.`, alternates: { canonical: `${brand.baseUrl}/jobs/lgbtq` } };
+  return { title: `LGBTQ+ Affirming ${brand.niche.short} Jobs | Gender-Affirming Care`, description: `Find LGBTQ+ affirming ${brand.niche.short} positions. Gender-affirming care, inclusive ${brand.niche.category}, and culturally competent ${brand.niche.adjective} roles.`, alternates: { canonical: `${brand.baseUrl}/jobs/lgbtq` } };
 }
 
 interface PageProps { searchParams: Promise<{ page?: string }>; }
@@ -56,26 +56,26 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
       <BreadcrumbSchema items={[{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "LGBTQ+", url: `${brand.baseUrl}/jobs/lgbtq` }]} />
       <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="LGBTQ+ Jobs" />
       {jobs.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'LGBTQ+ Affirming PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `LGBTQ+ Affirming ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
 
             {/* HERO */}
       <CategoryHero
         bgColor="#e0c7a9"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_lgbtq.webp`}
-        heroAlt="LGBTQ+ affirming PMHNP psychiatric care"
+        heroAlt={`LGBTQ+ affirming ${brand.niche.short} ${brand.niche.adjective} care`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'LGBTQ+']}
         indexLabel="? 25 / 28"
         headlineLine1="LGBTQ+"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, affirming care."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$150K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description="Gender-affirming and LGBTQ+-focused psychiatric positions with inclusive, culturally competent care."
+        description={`Gender-affirming and LGBTQ+-focused ${brand.niche.adjective} positions with inclusive, culturally competent care.`}
         ctaLabel="Browse LGBTQ+ Jobs"
         ctaHref="/jobs?category=lgbtq"
         secondaryCtaLabel="Set Alert"
@@ -104,7 +104,7 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Affirming Mental Health</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Affirming Care</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Provide culturally competent psychiatric care for LGBTQ+ individuals, addressing minority stress, identity-related challenges, and systemic health disparities.</p></div>
+              <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Affirming Care</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Provide culturally competent {brand.niche.adjective} care for LGBTQ+ individuals, addressing minority stress, identity-related challenges, and systemic health disparities.</p></div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_lg_affirm.webp`} alt="Affirming counseling" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -113,11 +113,11 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Work in organizations committed to equity, diversity, and inclusion.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_lg_affirm.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Affirming Care</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Culturally competent care for LGBTQ+ communities.</p></div>
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_lg_gender.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Gender Health</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Support gender-affirming treatment and mental health.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_lg_gender.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Gender Health</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Support gender-affirming treatment and {brand.niche.category}.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_lg_safe.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Safe Spaces</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Work in welcoming environments for all identities.</p></div>
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_lg_impact.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>High Impact</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Address mental health disparities in marginalized communities.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_lg_impact.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>High Impact</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Address {brand.niche.category} disparities in marginalized communities.</p></div>
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Growing Demand</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>LGBTQ+ affirming mental health providers are critically needed. The demand for specialized, culturally competent psychiatric care continues to grow as awareness and access expand.</p></div>
+              <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Growing Demand</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>LGBTQ+ affirming {brand.niche.category} providers are critically needed. The demand for specialized, culturally competent {brand.niche.adjective} care continues to grow as awareness and access expand.</p></div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_lg_salary.webp`} alt="LGBTQ+ care demand" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)' }}>
@@ -163,7 +163,7 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>LGBTQ+ PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>LGBTQ+ {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>{faqs.map((faq, idx) => (<div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}><h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>{faq.a}</p></div>))}</div>
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>

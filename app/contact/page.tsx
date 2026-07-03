@@ -13,7 +13,7 @@ const STORAGE_BASE = brand.assets.storageBase;
 // rendered into <head>-adjacent script) and the visible accordion (client-
 // rendered for the toggle UX) consume this list — they cannot diverge.
 const FAQ_ITEMS = [
-    { q: 'Is PMHNP Hiring free for job seekers?', a: 'Yes! Browsing jobs, setting up alerts, and applying are completely free. We never charge job seekers.' },
+    { q: `Is ${brand.name} free for job seekers?`, a: 'Yes! Browsing jobs, setting up alerts, and applying are completely free. We never charge job seekers.' },
     { q: 'How often are jobs updated?', a: 'Our pipeline runs twice daily, pulling from 3,000+ companies across major job boards and direct career pages.' },
     { q: 'How do I post a job as an employer?', a: 'Create a free employer account and post your job listing. Featured listings are available for enhanced visibility.' },
     { q: 'Can I get daily job alerts?', a: 'Absolutely! Sign up for free and set your preferences (location, job type, salary range). We\'ll email you matching jobs daily.' },
@@ -24,17 +24,17 @@ const FAQ_ITEMS = [
 export const metadata: Metadata = {
     // `absolute` opts out of the layout title template so we don't
     // double-suffix " | PMHNP Hiring".
-    title: { absolute: 'Contact PMHNP Hiring — Support, Employer & Partnership Inquiries' },
-    description: 'Reach the PMHNP Hiring team for job-seeker support, employer questions, partnerships, or feedback. We respond within 24-48 hours.',
+    title: { absolute: `Contact ${brand.name} — Support, Employer & Partnership Inquiries` },
+    description: `Reach the ${brand.name} team for job-seeker support, employer questions, partnerships, or feedback. We respond within 24-48 hours.`,
     alternates: { canonical: `${brand.baseUrl}/contact` },
     openGraph: {
-        title: 'Contact PMHNP Hiring',
-        description: 'Get in touch with the team behind the #1 PMHNP job board — support, employer, and partnership inquiries.',
+        title: `Contact ${brand.name}`,
+        description: `Get in touch with the team behind the #1 ${brand.niche.short} job board — support, employer, and partnership inquiries.`,
         type: 'website',
         url: `${brand.baseUrl}/contact`,
-        siteName: 'PMHNP Hiring',
+        siteName: brand.name,
     },
-    twitter: { card: 'summary_large_image', title: 'Contact PMHNP Hiring', description: 'Get in touch with the team — support, employer, and partnership inquiries.' },
+    twitter: { card: 'summary_large_image', title: `Contact ${brand.name}`, description: 'Get in touch with the team — support, employer, and partnership inquiries.' },
 };
 
 const clayCard: React.CSSProperties = {
@@ -57,11 +57,11 @@ export default function ContactPage() {
         '@type': 'ContactPage',
         '@id': `${brand.baseUrl}/contact#contactpage`,
         url: `${brand.baseUrl}/contact`,
-        name: 'Contact PMHNP Hiring',
-        description: 'Reach the PMHNP Hiring team for support, employer, and partnership inquiries.',
+        name: `Contact ${brand.name}`,
+        description: `Reach the ${brand.name} team for support, employer, and partnership inquiries.`,
         mainEntity: {
             '@type': 'Organization',
-            name: 'PMHNP Hiring',
+            name: brand.name,
             url: brand.baseUrl,
             contactPoint: {
                 '@type': 'ContactPoint',
@@ -110,11 +110,11 @@ export default function ContactPage() {
                             We&apos;d love to <span style={{ color: '#0D9488' }}>hear from you</span>
                         </h1>
                         <p style={{ fontSize: '20px', color: '#6B7F8A', lineHeight: 1.6, margin: 0, maxWidth: '500px' }}>
-                            Whether you represent a clinic seeking your next top-tier PMHNP, or you&apos;re a candidate looking for the perfect match, our team is standing by.
+                            Whether you represent a clinic seeking your next top-tier {brand.niche.short}, or you&apos;re a candidate looking for the perfect match, our team is standing by.
                         </p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/clay_hero_contact.webp`} alt="Contact PMHNP Jobs" width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
+                        <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/clay_hero_contact.webp`} alt={`Contact ${brand.niche.short} Jobs`} width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
                     </div>
                 </div>
             </section>
@@ -174,7 +174,7 @@ export default function ContactPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 {[
                                     { label: 'FAQ', href: '/faq' },
-                                    { label: 'About PMHNP Jobs', href: '/about' },
+                                    { label: `About ${brand.niche.short} Jobs`, href: '/about' },
                                     { label: 'Terms of Service', href: '/terms' },
                                     { label: 'Privacy Policy', href: '/privacy' },
                                 ].map(link => (

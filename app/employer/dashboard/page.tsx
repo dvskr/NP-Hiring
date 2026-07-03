@@ -10,7 +10,7 @@ import UnfinishedPostBanner from '@/components/employer/UnfinishedPostBanner';
 
 export const metadata: Metadata = {
     title: 'Employer Dashboard',
-    description: 'Manage your PMHNP job postings, track applicants, and view analytics.',
+    description: `Manage your ${brand.niche.short} job postings, track applicants, and view analytics.`,
     robots: { index: false, follow: false },
 };
 

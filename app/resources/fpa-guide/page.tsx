@@ -16,18 +16,18 @@ const LAST_REVIEWED = '2026-03-19';
 const HERO_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp`;
 
 export const metadata: Metadata = {
-  title: 'PMHNP Full Practice Authority Guide 2026 — All 50 States',
-  description: 'Complete state-by-state Full Practice Authority (FPA) guide for psychiatric nurse practitioners. See which states allow independent PMHNP practice, prescriptive authority rules, Nurse Licensure Compact states, and how FPA impacts salary (+12-15% premium).',
+  title: `${brand.niche.short} Full Practice Authority Guide 2026 — All 50 States`,
+  description: `Complete state-by-state Full Practice Authority (FPA) guide for ${brand.niche.adjective} nurse practitioners. See which states allow independent ${brand.niche.short} practice, prescriptive authority rules, Nurse Licensure Compact states, and how FPA impacts salary (+12-15% premium).`,
   keywords: ['PMHNP full practice authority', 'nurse practitioner independent practice states', 'FPA states 2026', 'PMHNP prescriptive authority by state', 'psych NP scope of practice', 'NLC compact states for NP'],
   openGraph: {
-    title: 'Full Practice Authority Guide for PMHNPs — 2026',
-    description: 'State-by-state FPA classifications. See where psychiatric nurse practitioners can practice independently.',
+    title: `Full Practice Authority Guide for ${brand.niche.short}s — 2026`,
+    description: `State-by-state FPA classifications. See where ${brand.niche.adjective} nurse practitioners can practice independently.`,
     type: 'article',
-    images: [{ url: HERO_IMAGE, width: 1280, height: 900, alt: 'PMHNP Full Practice Authority Guide 2026' }],
+    images: [{ url: HERO_IMAGE, width: 1280, height: 900, alt: `${brand.niche.short} Full Practice Authority Guide 2026` }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'PMHNP Full Practice Authority Guide 2026',
+    title: `${brand.niche.short} Full Practice Authority Guide 2026`,
     images: [HERO_IMAGE],
   },
   alternates: { canonical: `${brand.baseUrl}/resources/fpa-guide` },
@@ -42,24 +42,24 @@ export default function FPAGuidePage() {
 
   const fpaFaqs = [
     {
-      question: "What is Full Practice Authority for PMHNPs?",
-      answer: "Full Practice Authority (FPA) means a PMHNP can evaluate patients, diagnose conditions, order and interpret tests, prescribe medications (including controlled substances), and manage treatment plans without physician oversight or a collaborative agreement. FPA states grant PMHNPs the same level of autonomy as physicians in their scope of practice."
+      question: `What is Full Practice Authority for ${brand.niche.short}s?`,
+      answer: `Full Practice Authority (FPA) means a ${brand.niche.short} can evaluate patients, diagnose conditions, order and interpret tests, prescribe medications (including controlled substances), and manage treatment plans without physician oversight or a collaborative agreement. FPA states grant ${brand.niche.short}s the same level of autonomy as physicians in their scope of practice.`
     },
     {
       question: "How many states have Full Practice Authority for nurse practitioners?",
-      answer: `As of 2026, ${fullStates.length} states (plus Washington D.C.) grant Full Practice Authority to PMHNPs. ${reducedStates.length} states have Reduced Practice (requiring collaborative agreements), and ${restrictedStates.length} states have Restricted Practice (requiring physician supervision).`
+      answer: `As of 2026, ${fullStates.length} states (plus Washington D.C.) grant Full Practice Authority to ${brand.niche.short}s. ${reducedStates.length} states have Reduced Practice (requiring collaborative agreements), and ${restrictedStates.length} states have Restricted Practice (requiring physician supervision).`
     },
     {
-      question: "Does Full Practice Authority affect PMHNP salary?",
-      answer: "Yes. PMHNPs in Full Practice Authority states earn 12-15% more on average than those in restricted states, due to increased autonomy, private practice opportunities, and higher demand. FPA states also have more job openings per capita."
+      question: `Does Full Practice Authority affect ${brand.niche.short} salary?`,
+      answer: `Yes. ${brand.niche.short}s in Full Practice Authority states earn 12-15% more on average than those in restricted states, due to increased autonomy, private practice opportunities, and higher demand. FPA states also have more job openings per capita.`
     },
     {
-      question: "Can PMHNPs prescribe controlled substances in all states?",
-      answer: "PMHNPs can prescribe controlled substances in all 50 states, but the requirements differ. In FPA states, prescribing is independent. In reduced practice states, a collaborative agreement is needed. In restricted states, a supervisory protocol with a physician is required. All PMHNPs need DEA registration."
+      question: `Can ${brand.niche.short}s prescribe controlled substances in all states?`,
+      answer: `${brand.niche.short}s can prescribe controlled substances in all 50 states, but the requirements differ. In FPA states, prescribing is independent. In reduced practice states, a collaborative agreement is needed. In restricted states, a supervisory protocol with a physician is required. All ${brand.niche.short}s need DEA registration.`
     },
     {
-      question: "What is the Nurse Licensure Compact (NLC) and how does it help PMHNPs?",
-      answer: "The NLC allows registered nurses to hold one multistate license and practice in all member states. While the NLC covers RN licensure, PMHNPs still need individual state APRN licenses. However, having an NLC RN license simplifies the APRN application process in many compact states. As of 2026, 41 states are NLC members."
+      question: `What is the Nurse Licensure Compact (NLC) and how does it help ${brand.niche.short}s?`,
+      answer: `The NLC allows registered nurses to hold one multistate license and practice in all member states. While the NLC covers RN licensure, ${brand.niche.short}s still need individual state APRN licenses. However, having an NLC RN license simplifies the APRN application process in many compact states. As of 2026, 41 states are NLC members.`
     },
   ];
 
@@ -90,13 +90,13 @@ export default function FPAGuidePage() {
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'Article',
-            headline: 'PMHNP Full Practice Authority Guide 2026 — All 50 States',
-            description: 'Complete state-by-state guide to Full Practice Authority for psychiatric nurse practitioners.',
+            headline: `${brand.niche.short} Full Practice Authority Guide 2026 — All 50 States`,
+            description: `Complete state-by-state guide to Full Practice Authority for ${brand.niche.adjective} nurse practitioners.`,
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
             image: HERO_IMAGE,
-            author: { '@type': 'Organization', name: 'PMHNP Hiring' },
-            publisher: { '@type': 'Organization', name: 'PMHNP Hiring', url: brand.baseUrl },
+            author: { '@type': 'Organization', name: brand.name },
+            publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
           }),
         }}
       />
@@ -109,13 +109,13 @@ export default function FPAGuidePage() {
               <Shield className="w-8 h-8" />
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              PMHNP Full Practice Authority Guide 2026
+              {brand.niche.short} Full Practice Authority Guide 2026
             </h1>
             <p className="text-sm text-teal-200 text-center mt-2 mb-4">
               Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </p>
             <p className="text-lg md:text-xl text-teal-100 mb-6">
-              State-by-state practice authority classifications for psychiatric nurse practitioners
+              State-by-state practice authority classifications for {brand.niche.adjective} nurse practitioners
             </p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-8 mt-8">
               <div className="text-center">
@@ -145,7 +145,7 @@ export default function FPAGuidePage() {
                 What is Full Practice Authority (FPA)?
               </h2>
               <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                Full Practice Authority allows PMHNPs — also known as Psych NPs or psychiatric nurse practitioners — to evaluate patients, diagnose conditions, order and interpret diagnostic tests, prescribe medications (including controlled substances), and manage treatment plans <strong>without physician oversight</strong> or a collaborative agreement.
+                Full Practice Authority allows {brand.niche.short}s — also known as Psych NPs or {brand.niche.adjective} nurse practitioners — to evaluate patients, diagnose conditions, order and interpret diagnostic tests, prescribe medications (including controlled substances), and manage treatment plans <strong>without physician oversight</strong> or a collaborative agreement.
               </p>
               <div className="grid md:grid-cols-3 gap-4 mt-6">
                 <div className="p-4 rounded-lg bg-green-50 border border-green-200">
@@ -229,10 +229,10 @@ export default function FPAGuidePage() {
           <div className="mb-8 md:mb-12">
             <div className="rounded-xl p-6 md:p-8" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
-                How Practice Authority Impacts PMHNP Salary
+                How Practice Authority Impacts {brand.niche.short} Salary
               </h2>
               <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                Practice authority directly impacts earning potential. PMHNPs in Full Practice Authority states benefit from:
+                Practice authority directly impacts earning potential. {brand.niche.short}s in Full Practice Authority states benefit from:
               </p>
               <div className="grid md:grid-cols-2 gap-4 mb-6">
                 <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
@@ -247,7 +247,7 @@ export default function FPAGuidePage() {
                 </div>
               </div>
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                See our full <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>2026 PMHNP Salary Guide</Link> for state-by-state salary data and our <Link href="/resources/private-practice-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>Private Practice Startup Guide</Link> for step-by-step instructions.
+                See our full <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>2026 {brand.niche.short} Salary Guide</Link> for state-by-state salary data and our <Link href="/resources/private-practice-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>Private Practice Startup Guide</Link> for step-by-step instructions.
               </p>
             </div>
           </div>
@@ -262,7 +262,7 @@ export default function FPAGuidePage() {
                 </h2>
               </div>
               <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                For remote and telehealth PMHNPs, practice authority in the <strong>patient&apos;s state</strong> determines your scope — not your home state. Key considerations:
+                For remote and telehealth {brand.niche.short}s, practice authority in the <strong>patient&apos;s state</strong> determines your scope — not your home state. Key considerations:
               </p>
               <ul className="space-y-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>You must hold an APRN license in each state where your patients are located</span></li>
@@ -272,7 +272,7 @@ export default function FPAGuidePage() {
                 <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span>Pandemic-era telehealth waivers have mostly expired — verify current requirements</span></li>
               </ul>
               <p className="text-sm mt-4" style={{ color: 'var(--text-secondary)' }}>
-                Browse <Link href="/jobs/remote" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>remote PMHNP jobs</Link> or <Link href="/jobs/telehealth" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>telehealth positions</Link> that handle multi-state licensing.
+                Browse <Link href="/jobs/remote" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>remote {brand.niche.short} jobs</Link> or <Link href="/jobs/telehealth" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>telehealth positions</Link> that handle multi-state licensing.
               </p>
             </div>
           </div>
@@ -293,10 +293,10 @@ export default function FPAGuidePage() {
           {/* CTA */}
           <div className="text-center py-8">
             <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
-              Find PMHNP Jobs in Your State
+              Find {brand.niche.short} Jobs in Your State
             </h2>
             <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-              Browse thousands of psychiatric nurse practitioner positions updated daily.
+              Browse thousands of {brand.niche.adjective} nurse practitioner positions updated daily.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/jobs" className="inline-block bg-teal-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-teal-700 transition-colors">Browse All Jobs</Link>

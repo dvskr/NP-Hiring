@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { brand } from '@/config/brand';
 import { formatCT } from '@/lib/format-ct';
 import {
     Send, Mail, History, FileText, Eye, Users, ChevronDown,
@@ -299,7 +300,7 @@ export default function AdminEmailPage() {
                             type="text"
                             value={subject}
                             onChange={e => setSubject(e.target.value)}
-                            placeholder="e.g. Exciting new features on PMHNP Hiring!"
+                            placeholder={`e.g. Exciting new features on ${brand.name}!`}
                             style={{ ...inputStyle, marginBottom: '16px' }}
                         />
 
@@ -310,7 +311,7 @@ export default function AdminEmailPage() {
                         <textarea
                             value={body}
                             onChange={e => setBody(e.target.value)}
-                            placeholder={`Hi {{firstName}},\n\nWe're excited to share some news with you...\n\n**Bold text** and *italic text* work.\n\nBest,\nThe PMHNP Hiring Team`}
+                            placeholder={`Hi {{firstName}},\n\nWe're excited to share some news with you...\n\n**Bold text** and *italic text* work.\n\nBest,\nThe ${brand.name} Team`}
                             style={{ ...inputStyle, minHeight: '260px', resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.6' }}
                         />
 

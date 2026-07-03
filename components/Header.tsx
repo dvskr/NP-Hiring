@@ -13,6 +13,7 @@ import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import HeaderAuth from '@/components/auth/HeaderAuth';
 import { WORDMARK } from '@/config/niche/copy';
+import { brand } from '@/config/brand';
 
 /*
  * Header — Floating claymorphic navbar.
@@ -218,7 +219,7 @@ export default function Header() {
                   above the fold on every page. */}
               <Image
                 src="/logo.png"
-                alt="PMHNP Hiring"
+                alt={brand.name}
                 width={56}
                 height={56}
                 priority

@@ -9,6 +9,7 @@ import { shouldLabelDirectApply } from '@/lib/direct-apply';
 import InPlatformApplyForm from '@/components/InPlatformApplyForm';
 import { trackJobApply, buildJobItem } from '@/lib/analytics';
 import Link from 'next/link';
+import { brand } from '@/config/brand';
 
 interface ApplyButtonProps {
   jobId: string;
@@ -234,7 +235,7 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
           {/* Benefits */}
           <div className="space-y-2 mb-4">
             {[
-              { icon: '👀', text: 'Get noticed by employers hiring PMHNPs' },
+              { icon: '👀', text: `Get noticed by employers hiring ${brand.niche.short}s` },
               { icon: '💬', text: 'Receive direct messages from recruiters' },
               { icon: '⚡', text: 'Auto-fill applications with our Chrome extension (Coming soon)' },
             ].map((item) => (

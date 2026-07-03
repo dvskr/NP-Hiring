@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import { brand } from '@/config/brand';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Bell, Plus, Trash2, Pause, Play, Clock, Calendar, MapPin, Briefcase, ChevronDown, ChevronUp, Loader2, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
@@ -89,7 +90,7 @@ function buildCriteriaSummary(alert: JobAlert): string {
       parts.push(`up to $${(alert.maxSalary / 1000).toFixed(0)}k`);
     }
   }
-  return parts.length > 0 ? parts.join(' · ') : 'All PMHNP jobs';
+  return parts.length > 0 ? parts.join(' · ') : `All ${brand.niche.short} jobs`;
 }
 
 function formatDate(dateString: string): string {
@@ -487,7 +488,7 @@ function ManageAlertsContent() {
               color: '#1A2E35', marginBottom: '6px',
             }}>No alerts yet</h2>
             <p style={{ fontSize: '13px', color: '#8A9BA6', marginBottom: '20px', maxWidth: '300px', marginInline: 'auto' }}>
-              Create your first alert and never miss a new PMHNP position.
+              Create your first alert and never miss a new {brand.niche.short} position.
             </p>
             <button
               onClick={() => setShowCreate(true)}

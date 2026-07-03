@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { MapPin, ArrowRight } from 'lucide-react';
+import { brand } from '@/config/brand';
 
 interface StateData {
     state: string;
@@ -24,7 +25,7 @@ export default function BrowseByState({ states }: BrowseByStateProps) {
                         fontSize: '28px', fontWeight: 700,
                         color: 'var(--text-primary)', margin: '0 0 8px',
                     }}>
-                        Find PMHNP Jobs by State
+                        Find {brand.niche.short} Jobs by State
                     </h2>
                     <p style={{
                         fontSize: '15px', color: 'var(--text-muted)', margin: 0,

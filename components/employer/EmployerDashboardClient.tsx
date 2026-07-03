@@ -12,6 +12,7 @@ import AnalyticsTab from '@/components/employer/AnalyticsTab';
 import SavedCandidatesTab from '@/components/employer/SavedCandidatesTab';
 import MessagesTab from '@/components/employer/MessagesTab';
 import UsageWidget from '@/components/employer/UsageWidget';
+import { brand } from '@/config/brand';
 
 /* ═══════════════════════════════════════════
    TYPES
@@ -430,7 +431,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                 </div>
                                 <div>
                                     <p style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: 0 }}>Browse Talent Pool</p>
-                                    <p style={{ fontSize: '11px', color: '#8A9BA6', margin: 0 }}>Search qualified PMHNP candidates</p>
+                                    <p style={{ fontSize: '11px', color: '#8A9BA6', margin: 0 }}>Search qualified {brand.niche.short} candidates</p>
                                 </div>
                             </div>
                             <span style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>Browse →</span>
@@ -542,7 +543,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                     color: '#1A2E35', marginBottom: '6px',
                                 }}>Welcome! Let&apos;s get started</h3>
                                 <p style={{ fontSize: '13px', color: '#8A9BA6', marginBottom: '24px' }}>
-                                    Follow these steps to start hiring qualified PMHNPs
+                                    Follow these steps to start hiring qualified {brand.niche.short}s
                                 </p>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', maxWidth: '560px', marginInline: 'auto', marginBottom: '24px' }}>
@@ -1221,7 +1222,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                             Talent Pool
                         </h3>
                         <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 10px', lineHeight: 1.5 }}>
-                            Browse qualified PMHNP candidates. Save, tag, and manage your pipeline.
+                            Browse qualified {brand.niche.short} candidates. Save, tag, and manage your pipeline.
                         </p>
                         <Link href="/employer/candidates" className="emp-cta-card" style={{
                             fontSize: '12px', fontWeight: 600, color: '#0D9488',
@@ -1407,7 +1408,7 @@ function EmployerFeedbackCard() {
                 Rate Your Experience
             </h3>
             <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 14px', lineHeight: 1.4 }}>
-                How would you rate PMHNP Hiring so far?
+                How would you rate {brand.name} so far?
             </p>
             <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
                 {[1, 2, 3, 4, 5].map((n) => (
@@ -1536,12 +1537,12 @@ function EmployerTestimonialCard({ employerName }: { employerName: string }) {
                 Share Your Story
             </h3>
             <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 12px', lineHeight: 1.4 }}>
-                {employerName}, your hiring experience matters! Help others discover PMHNP Hiring.
+                {employerName}, your hiring experience matters! Help others discover {brand.name}.
             </p>
             <textarea
                 value={review}
                 onChange={(e) => { setReview(e.target.value); if (error) setError(null); }}
-                placeholder="How has PMHNP Hiring helped your recruitment?"
+                placeholder={`How has ${brand.name} helped your recruitment?`}
                 rows={3}
                 maxLength={TESTIMONIAL_MAX_CHARS}
                 style={{

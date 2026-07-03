@@ -11,6 +11,7 @@ import {
   inputStyle, inputWithRightIcon, inputWithLeftIcon, labelStyle, helperStyle,
   eyeBtnStyle, errorBannerStyle, optInCardStyle, linkStyle,
 } from './authTokens'
+import { brand } from '@/config/brand'
 
 type Role = 'seeker' | 'employer';
 
@@ -253,8 +254,8 @@ export default function SignUpForm() {
       </h1>
       <p style={{ fontSize: '14px', color: '#6B7F8A', marginBottom: '14px', textAlign: 'center' }}>
         {role === 'employer'
-          ? 'Start posting jobs and hiring qualified PMHNPs'
-          : 'Join thousands of PMHNPs finding their perfect role'}
+          ? `Start posting jobs and hiring qualified ${brand.niche.short}s`
+          : `Join thousands of ${brand.niche.short}s finding their perfect role`}
       </p>
 
       {/* ═══ ROLE TOGGLE ═══ */}
@@ -449,7 +450,7 @@ export default function SignUpForm() {
                 <input type="checkbox" checked={newsletterOptIn} onChange={(e) => setNewsletterOptIn(e.target.checked)}
                   style={{ accentColor: '#B45309', width: '15px', height: '15px', marginTop: '2px', flexShrink: 0 }} />
                 <span style={{ fontSize: '13px', color: '#4B5E68' }}>
-                  Send me hiring tips, salary benchmarks &amp; PMHNP market insights
+                  Send me hiring tips, salary benchmarks &amp; {brand.niche.short} market insights
                 </span>
               </label>
             </div>

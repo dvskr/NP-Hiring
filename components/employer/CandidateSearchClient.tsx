@@ -6,6 +6,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import CandidateCard from './CandidateCard';
 import { SPECIALTY_PRESETS } from '@/config/niche/credentials';
+import { brand } from '@/config/brand';
 
 /* ═══════════════════════════════════════════
    CONSTANTS
@@ -649,7 +650,7 @@ export default function CandidateSearchClient() {
                                                 setJdSearchTitle(null);
                                             }
                                         }}
-                                        placeholder='Describe the candidate you need (e.g., "experienced CA-licensed telehealth PMHNP")'
+                                        placeholder={`Describe the candidate you need (e.g., "experienced CA-licensed telehealth ${brand.niche.short}")`}
                                         style={{
                                             ...clayInput,
                                             paddingLeft: '38px',

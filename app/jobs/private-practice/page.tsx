@@ -32,19 +32,19 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: 'What types of private practice PMHNP roles exist?', a: 'Private practice roles include solo practice (you own and operate), group practice (join an established multi-provider office), independent contractor (1099 work for a practice), and hybrid roles combining in-person and telehealth. Each offers different levels of autonomy, risk, and earning potential.' },
-  { q: 'How much do private practice PMHNPs earn?', a: 'Private practice PMHNPs earn $150K-$300K+ annually. Solo practice owners can earn even more but must cover overhead. Group practice employees typically earn $150K-$200K with benefits. Independent contractors earn $175K-$250K on 1099 arrangements.' },
-  { q: 'Do I need business experience for private practice?', a: 'For group practice employee roles, no — you focus on clinical work. For starting your own practice, understanding billing, credentialing, marketing, and operations is essential. Many PMHNPs start in group practices before launching solo practices.' },
+  { q: `What types of private practice ${brand.niche.short} roles exist?`, a: 'Private practice roles include solo practice (you own and operate), group practice (join an established multi-provider office), independent contractor (1099 work for a practice), and hybrid roles combining in-person and telehealth. Each offers different levels of autonomy, risk, and earning potential.' },
+  { q: `How much do private practice ${brand.niche.short}s earn?`, a: `Private practice ${brand.niche.short}s earn $150K-$300K+ annually. Solo practice owners can earn even more but must cover overhead. Group practice employees typically earn $150K-$200K with benefits. Independent contractors earn $175K-$250K on 1099 arrangements.` },
+  { q: 'Do I need business experience for private practice?', a: `For group practice employee roles, no — you focus on clinical work. For starting your own practice, understanding billing, credentialing, marketing, and operations is essential. Many ${brand.niche.short}s start in group practices before launching solo practices.` },
   { q: 'What\'s needed to start a private practice?', a: 'You need: PMHNP-BC certification, state APRN licensure with full practice authority (or collaborating physician), DEA registration, NPI number, malpractice insurance, EHR system, office space or telehealth platform, and insurance panel credentialing.' },
-  { q: 'Is group practice or solo practice better?', a: 'Group practice offers built-in referrals, shared overhead, administrative support, and lower financial risk. Solo practice offers maximum autonomy, higher earning ceiling, and full control of your schedule. Most PMHNPs recommend 2-3 years in group practice before going solo.' },
+  { q: 'Is group practice or solo practice better?', a: `Group practice offers built-in referrals, shared overhead, administrative support, and lower financial risk. Solo practice offers maximum autonomy, higher earning ceiling, and full control of your schedule. Most ${brand.niche.short}s recommend 2-3 years in group practice before going solo.` },
 ];
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Private Practice PMHNP Jobs ($150K-300K)`,
-    description: `Find ${stats.totalJobs} private practice PMHNP positions. Solo, group, and independent practice roles paying $150K-300K+.`,
+    title: `${stats.totalJobs} Private Practice ${brand.niche.short} Jobs ($150K-300K)`,
+    description: `Find ${stats.totalJobs} private practice ${brand.niche.short} positions. Solo, group, and independent practice roles paying $150K-300K+.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/private-practice` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
@@ -62,19 +62,19 @@ export default async function PrivatePracticePage({ searchParams }: PageProps) {
       <BreadcrumbSchema items={[{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Private Practice", url: `${brand.baseUrl}/jobs/private-practice` }]} />
       <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Private Practice Jobs" />
       {jobs.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Private Practice PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Private Practice ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
 
             {/* HERO */}
       <CategoryHero
         bgColor="#d4b0a3"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_privatepractice.webp`}
-        heroAlt="Private practice PMHNP entrepreneurial independence"
+        heroAlt={`Private practice ${brand.niche.short} entrepreneurial independence`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Private Practice']}
         indexLabel="? 21 / 28"
         headlineLine1="Private Practice"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, own your practice."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -120,7 +120,7 @@ export default async function PrivatePracticePage({ searchParams }: PageProps) {
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Join established groups with built-in referral networks.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_pp_autonomy.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Autonomy</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Set your schedule, rates, and clinical approach.</p></div>
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_pp_earning.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Top Earnings</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Private practice PMHNPs earn $200K-$300K+.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_pp_earning.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Top Earnings</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Private practice {brand.niche.short}s earn $200K-$300K+.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_pp_group.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Group Practice</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Join groups with referral networks and shared overhead.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_pp_hybrid.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Telehealth Hybrid</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Combine in-person and virtual sessions.</p></div>
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
@@ -170,7 +170,7 @@ export default async function PrivatePracticePage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Private Practice PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Private Practice {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>{faqs.map((faq, idx) => (<div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}><h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>{faq.a}</p></div>))}</div>
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>

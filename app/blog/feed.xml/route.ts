@@ -41,8 +41,8 @@ export async function GET() {
       <guid isPermaLink="true">${url}</guid>
       <description><![CDATA[${escape(description)}]]></description>
       <pubDate>${pubDate}</pubDate>
-      <category>${escape(post.category || 'PMHNP Career')}</category>
-      <author>${brand.email.contact} (PMHNP Hiring)</author>
+      <category>${escape(post.category || `${brand.niche.short} Career`)}</category>
+      <author>${brand.email.contact} (${brand.name})</author>
 ${post.image_url ? `      <enclosure url="${escape(post.image_url)}" type="image/webp"/>` : ''}
     </item>`;
         }).join('\n');
@@ -50,15 +50,15 @@ ${post.image_url ? `      <enclosure url="${escape(post.image_url)}" type="image
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>PMHNP Hiring — Career Blog &amp; Industry Insights</title>
+    <title>${brand.name} — Career Blog &amp; Industry Insights</title>
     <link>${BASE_URL}/blog</link>
-    <description>PMHNP career guides, salary trends, licensure changes, and industry analysis from the #1 psychiatric nurse practitioner job board.</description>
+    <description>${brand.niche.short} career guides, salary trends, licensure changes, and industry analysis from the #1 ${brand.niche.adjective} nurse practitioner job board.</description>
     <language>en-us</language>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
     <atom:link href="${BASE_URL}/blog/feed.xml" rel="self" type="application/rss+xml"/>
     <image>
       <url>${BASE_URL}/pmhnp_logo.png</url>
-      <title>PMHNP Hiring</title>
+      <title>${brand.name}</title>
       <link>${BASE_URL}/blog</link>
     </image>
     <ttl>60</ttl>

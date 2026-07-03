@@ -145,22 +145,22 @@ export async function buildSettingStateMetadata(
   const basePath = `/jobs/${config.slug}/${stateSlug}`;
 
   return {
-    title: `${stats.totalJobs} ${config.label} PMHNP Jobs in ${stateName} (${config.salaryRange})`,
-    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} PMHNP jobs in ${stateName} paying ${config.salaryRange}. ${config.heroSubtitle}. Browse ${config.label.toLowerCase()} psychiatric nurse practitioner positions in ${stateName} updated daily.`,
+    title: `${stats.totalJobs} ${config.label} ${brand.niche.short} Jobs in ${stateName} (${config.salaryRange})`,
+    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${stateName} paying ${config.salaryRange}. ${config.heroSubtitle}. Browse ${config.label.toLowerCase()} ${brand.niche.adjective} nurse practitioner positions in ${stateName} updated daily.`,
     keywords: [
       ...config.keywords,
       `${config.label.toLowerCase()} pmhnp jobs ${stateName.toLowerCase()}`,
       `${stateName.toLowerCase()} ${config.label.toLowerCase()} psychiatric nurse practitioner`,
     ],
     openGraph: {
-      title: `${stats.totalJobs} ${config.label} PMHNP Jobs in ${stateName}`,
-      description: `Browse ${config.label.toLowerCase()} psychiatric nurse practitioner positions in ${stateName}. ${config.heroSubtitle}.`,
+      title: `${stats.totalJobs} ${config.label} ${brand.niche.short} Jobs in ${stateName}`,
+      description: `Browse ${config.label.toLowerCase()} ${brand.niche.adjective} nurse practitioner positions in ${stateName}. ${config.heroSubtitle}.`,
       type: 'website',
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} ${config.label} PMHNP Jobs in ${stateName}`)}&subtitle=${encodeURIComponent(config.heroSubtitle)}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} ${config.label} ${brand.niche.short} Jobs in ${stateName}`)}&subtitle=${encodeURIComponent(config.heroSubtitle)}`,
         width: 1200,
         height: 630,
-        alt: `${config.label} PMHNP Jobs in ${stateName}`,
+        alt: `${config.label} ${brand.niche.short} Jobs in ${stateName}`,
       }],
     },
     alternates: {
@@ -330,7 +330,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'ItemList',
-              name: `${config.label} PMHNP Jobs in ${stateName}`,
+              name: `${config.label} ${brand.niche.short} Jobs in ${stateName}`,
               numberOfItems: stats.totalJobs,
               itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({
                 '@type': 'ListItem',
@@ -354,18 +354,18 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
       <CategoryHero
         bgColor={assets?.bgColor || '#0D9488'}
         heroImage={assets?.heroImage || `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
-        heroAlt={`${config.label} PMHNP jobs in ${stateName}`}
+        heroAlt={`${config.label} ${brand.niche.short} jobs in ${stateName}`}
         badgeText={`${stats.totalJobs} live roles Â· updated today`}
         breadcrumbs={['Careers', config.label, stateName!]}
         headlineLine1={config.label}
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub={`jobs in ${stateName}.`}
         stats={[
           { value: `${stats.totalJobs}`, label: 'positions' },
           { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : config.salaryRange.split('â€“')[0] || '$130K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}`, label: 'employers' },
         ]}
-        description={`${config.label} psychiatric NP positions in ${stateName}. ${config.heroSubtitle}.`}
+        description={`${config.label} ${brand.niche.adjective} NP positions in ${stateName}. ${config.heroSubtitle}.`}
         ctaLabel={`Browse ${config.label} Jobs`}
         ctaHref={`/jobs/${config.slug}`}
         secondaryCtaLabel="Set Alert"
@@ -447,7 +447,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     {config.label} Alerts
                   </h3>
                   <p style={{ fontSize: '13px', color: '#0D9488', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
-                    New {config.label.toLowerCase()} PMHNP positions in {stateName} â€” delivered daily.
+                    New {config.label.toLowerCase()} {brand.niche.short} positions in {stateName} â€” delivered daily.
                   </p>
                   <Link href="/job-alerts" style={{
                     display: 'block', width: '100%', textAlign: 'center',
@@ -537,7 +537,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                   </p>
                 </div>
                 <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
-                  <Image src={assets.bentoImages[0]} alt={`${config.label} PMHNP`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                  <Image src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
                 </div>
               </div>
 
@@ -550,7 +550,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     Salary & Compensation
                   </h3>
                   <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                    {config.label} PMHNPs in {stateName} earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : config.salaryRange} annually.
+                    {config.label} {brand.niche.short}s in {stateName} earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : config.salaryRange} annually.
                   </p>
                 </div>
               </div>
@@ -571,7 +571,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                     <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growth & Outlook</h3>
                     <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                      {config.label} PMHNP demand in {stateName} continues to grow with {stats.totalJobs} active positions.
+                      {config.label} {brand.niche.short} demand in {stateName} continues to grow with {stats.totalJobs} active positions.
                     </p>
                   </div>
                   <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>

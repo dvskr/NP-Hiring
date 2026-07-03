@@ -4,12 +4,12 @@ import { brand } from '@/config/brand';
 
 const TEMPLATES = {
   initial: {
-    subject: 'Reach qualified PMHNPs with {{companyName}}',
+    subject: `Reach qualified ${brand.niche.short}s with {{companyName}}`,
     body: `Hi {{contactName}},
 
-I noticed {{companyName}} is hiring psychiatric nurse practitioners. I'm reaching out because we run PMHNP Hiring, the specialized job board for psychiatric mental health nurse practitioners.
+I noticed {{companyName}} is hiring ${brand.niche.adjective} nurse practitioners. I'm reaching out because we run ${brand.name}, the specialized job board for ${brand.niche.descriptor}s.
 
-We have over 1,000 PMHNPs subscribed to job alerts, and our site gets targeted traffic from practitioners actively looking for new opportunities.
+We have over 1,000 ${brand.niche.short}s subscribed to job alerts, and our site gets targeted traffic from practitioners actively looking for new opportunities.
 
 Right now, we're offering free featured job posts during our launch period.
 
@@ -17,16 +17,16 @@ Would you be interested in posting your open positions? I'm happy to set up your
 
 Best,
 [Your name]
-PMHNP Hiring
+${brand.name}
 
 P.S. You can check out our site at ${brand.domain}`
   },
 
   followUp: {
-    subject: 'Following up: PMHNP job posting',
+    subject: `Following up: ${brand.niche.short} job posting`,
     body: `Hi {{contactName}},
 
-Just following up on my previous email about posting your PMHNP positions on our job board.
+Just following up on my previous email about posting your ${brand.niche.short} positions on our job board.
 
 We've had great results helping companies like Talkiatry and LifeStance reach qualified candidates.
 
@@ -37,12 +37,12 @@ Best,
   },
 
   freeOffer: {
-    subject: 'Free PMHNP job posting for {{companyName}}',
+    subject: `Free ${brand.niche.short} job posting for {{companyName}}`,
     body: `Hi {{contactName}},
 
-I'd like to offer {{companyName}} a free featured job posting on PMHNP Hiring.
+I'd like to offer {{companyName}} a free featured job posting on ${brand.name}.
 
-No strings attached - I want to help you reach our audience of psychiatric nurse practitioners.
+No strings attached - I want to help you reach our audience of ${brand.niche.adjective} nurse practitioners.
 
 Just reply to this email with your job details, or post directly at ${brand.domain}/post-job
 

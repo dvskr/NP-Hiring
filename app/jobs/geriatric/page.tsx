@@ -32,16 +32,16 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: 'What does a geriatric PMHNP do?', a: 'Geriatric PMHNPs specialize in treating psychiatric conditions in older adults: dementia-related behavioral symptoms, late-life depression, anxiety, delirium, and polypharmacy management in nursing homes, assisted living, and outpatient settings.' },
-  { q: 'What salary do geriatric PMHNPs earn?', a: 'Geriatric PMHNPs earn $130K-$175K annually. Nursing home circuit roles with multiple facility coverage often pay premium rates due to travel and autonomous practice requirements.' },
+  { q: `What does a geriatric ${brand.niche.short} do?`, a: `Geriatric ${brand.niche.short}s specialize in treating ${brand.niche.adjective} conditions in older adults: dementia-related behavioral symptoms, late-life depression, anxiety, delirium, and polypharmacy management in nursing homes, assisted living, and outpatient settings.` },
+  { q: `What salary do geriatric ${brand.niche.short}s earn?`, a: `Geriatric ${brand.niche.short}s earn $130K-$175K annually. Nursing home circuit roles with multiple facility coverage often pay premium rates due to travel and autonomous practice requirements.` },
   { q: 'What qualifications are needed?', a: 'Active PMHNP-BC, state APRN licensure, DEA registration, and experience with geriatric populations. Knowledge of Medicare billing, capacity evaluations, and age-specific pharmacokinetics is highly valued.' },
-  { q: 'What settings hire geriatric PMHNPs?', a: 'Skilled nursing facilities (SNFs), memory care units, assisted living communities, geriatric outpatient clinics, home health agencies, and hospital geropsychiatry units.' },
-  { q: 'Why is demand for geriatric PMHNPs growing?', a: 'Over 10,000 Americans turn 65 daily. The aging population has increasing rates of dementia, depression, and anxiety — creating critical demand for specialized psychiatric providers in elder care.' },
+  { q: `What settings hire geriatric ${brand.niche.short}s?`, a: 'Skilled nursing facilities (SNFs), memory care units, assisted living communities, geriatric outpatient clinics, home health agencies, and hospital geropsychiatry units.' },
+  { q: `Why is demand for geriatric ${brand.niche.short}s growing?`, a: `Over 10,000 Americans turn 65 daily. The aging population has increasing rates of dementia, depression, and anxiety — creating critical demand for specialized ${brand.niche.adjective} providers in elder care.` },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
-  return { title: `${stats.totalJobs} Geriatric PMHNP Jobs ($130K-175K)`, description: `Find ${stats.totalJobs} geriatric PMHNP jobs. Memory care, nursing home, and geropsychiatry positions paying $130K-175K+.`, alternates: { canonical: `${brand.baseUrl}/jobs/geriatric` } };
+  return { title: `${stats.totalJobs} Geriatric ${brand.niche.short} Jobs ($130K-175K)`, description: `Find ${stats.totalJobs} geriatric ${brand.niche.short} jobs. Memory care, nursing home, and geropsychiatry positions paying $130K-175K+.`, alternates: { canonical: `${brand.baseUrl}/jobs/geriatric` } };
 }
 
 interface PageProps { searchParams: Promise<{ page?: string }>; }
@@ -56,19 +56,19 @@ export default async function GeriatricPage({ searchParams }: PageProps) {
       <BreadcrumbSchema items={[{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Geriatric", url: `${brand.baseUrl}/jobs/geriatric` }]} />
       <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Geriatric Jobs" />
       {jobs.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Geriatric PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Geriatric ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
 
       {/* 1. HERO */}
       <CategoryHero
         bgColor="#d5c6e7"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_geriatric.webp`}
-        heroAlt="Geriatric PMHNP with elderly patient"
+        heroAlt={`Geriatric ${brand.niche.short} with elderly patient`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Geriatric']}
         indexLabel="№ 17 / 28"
         headlineLine1="Geriatric"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, elder care psych."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -121,7 +121,7 @@ export default async function GeriatricPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ge_pills.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Polypharmacy</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Expert medication management for complex geriatric patients.</p></div>
             {/* ROW 3 */}
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Geriatric Salary</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average geriatric PMHNP salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p></div>
+              <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Geriatric Salary</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average geriatric {brand.niche.short} salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p></div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ge_salary.webp`} alt="Geriatric salary" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)' }}>
@@ -167,7 +167,7 @@ export default async function GeriatricPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Geriatric PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Geriatric {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>{faqs.map((faq, idx) => (<div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}><h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>{faq.a}</p></div>))}</div>
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>

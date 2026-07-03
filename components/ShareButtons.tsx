@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { brand } from '@/config/brand';
 
 // Custom SVG icons for brand accuracy
 const XIcon = () => (
@@ -85,7 +86,7 @@ export default function ShareButtons({ url, title, company }: ShareButtonsProps)
   const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
   const xUrl = `https://x.com/intent/tweet?text=${encodedTitle}%20at%20${encodedCompany}&url=${encodedUrl}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + url)}`;
-  const emailUrl = `mailto:?subject=${encodedTitle}&body=Check%20out%20this%20PMHNP%20job:%20${url}`;
+  const emailUrl = `mailto:?subject=${encodedTitle}&body=Check%20out%20this%20${brand.niche.short}%20job:%20${url}`;
 
   const handleCopyLink = async () => {
     try {

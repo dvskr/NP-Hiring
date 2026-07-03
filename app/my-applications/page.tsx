@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Briefcase, Clock, ChevronRight, AlertCircle, Trash2, Loader2, ArrowRight, FileCheck, MapPin } from 'lucide-react';
+import { brand } from '@/config/brand';
 
 interface Application {
     id: string;
@@ -204,7 +205,7 @@ export default function MyApplicationsPage() {
                             color: '#8A9BA6', fontSize: '14px', marginBottom: '24px',
                             maxWidth: '340px', marginInline: 'auto', lineHeight: 1.6,
                         }}>
-                            Find your next PMHNP role and apply today.
+                            Find your next {brand.niche.short} role and apply today.
                         </p>
                         <Link href="/jobs" style={{
                             display: 'inline-flex', alignItems: 'center', gap: '8px',

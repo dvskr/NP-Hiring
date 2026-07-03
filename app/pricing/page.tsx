@@ -9,13 +9,13 @@ import { Check, ArrowRight, X, HelpCircle, RefreshCw } from 'lucide-react';
 const STORAGE_BASE = brand.assets.storageBase;
 
 export const metadata: Metadata = {
-    title: `Pricing — PMHNP Job Board | First Post Free, Then $${config.postingPrice}`,
+    title: `Pricing — ${brand.niche.short} Job Board | First Post Free, Then $${config.postingPrice}`,
     description:
-        `Simple, transparent pricing for PMHNP job postings. Your first post is free with all features. After that, $${config.postingPrice} per post. No subscriptions, no contracts.`,
+        `Simple, transparent pricing for ${brand.niche.short} job postings. Your first post is free with all features. After that, $${config.postingPrice} per post. No subscriptions, no contracts.`,
     openGraph: {
-        title: 'Pricing — PMHNP Job Board',
-        description: `Post PMHNP jobs — first one free, then $${config.postingPrice}/post. Every post gets the full package.`,
-        images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`, width: 1280, height: 900, alt: 'PMHNP job board pricing' }],
+        title: `Pricing — ${brand.niche.short} Job Board`,
+        description: `Post ${brand.niche.short} jobs — first one free, then $${config.postingPrice}/post. Every post gets the full package.`,
+        images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`, width: 1280, height: 900, alt: `${brand.niche.short} job board pricing` }],
     },
     twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`] },
     alternates: { canonical: `${brand.baseUrl}/pricing` },
@@ -38,7 +38,7 @@ const clayIconWrap = (gradient: string): React.CSSProperties => ({
 
 /* ═══ Comparison Data — same as employer page ═══ */
 const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: true | false | 'partial'; linkedin: true | false | 'partial'; note?: string }[] = [
-    { feature: '100% Psychiatric NP Audience', us: true, indeed: false, linkedin: false },
+    { feature: `100% ${brand.niche.medium} Audience`, us: true, indeed: false, linkedin: false },
     { feature: 'No Unqualified Applicants', us: true, indeed: false, linkedin: false },
     { feature: `First Post Free (No Card)`, us: true, indeed: false, linkedin: false },
     { feature: `Flat $${config.postingPrice}/Post — No Bidding`, us: true, indeed: false, linkedin: false, note: 'Indeed is pay-per-click' },
@@ -218,7 +218,7 @@ export default function PricingPage() {
                         <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
                             <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
                             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Daily Job Alerts</h3>
-                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Highlighted in daily email digests to opted-in PMHNPs.</p>
+                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Highlighted in daily email digests to opted-in {brand.niche.short}s.</p>
                         </div>
 
                         <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -278,7 +278,7 @@ export default function PricingPage() {
                                 <thead>
                                     <tr style={{ background: 'linear-gradient(135deg, rgba(13,148,136,0.08), rgba(13,148,136,0.02))' }}>
                                         <th style={{ width: '40%', padding: '16px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Feature</th>
-                                        <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '12px' }}>PMHNP Hiring</th>
+                                        <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '12px' }}>{brand.name}</th>
                                         <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>Indeed</th>
                                         <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>LinkedIn</th>
                                     </tr>
@@ -323,7 +323,7 @@ export default function PricingPage() {
                             }}>
                                 <Image
                                     src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/cta-illustration.webp`}
-                                    alt="Successful PMHNP hiring celebration"
+                                    alt={`Successful ${brand.niche.short} hiring celebration`}
                                     width={280} height={220}
                                     style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px' }}
                                 />
@@ -334,7 +334,7 @@ export default function PricingPage() {
                                     color: '#1A2E35', margin: '0 0 10px',
                                 }}>
                                     Ready to Hire Your{' '}
-                                    <span style={{ color: '#0D9488' }}>Next PMHNP</span>?
+                                    <span style={{ color: '#0D9488' }}>Next {brand.niche.short}</span>?
                                 </h3>
                                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px' }}>
                                     First post free — all features included. Then just ${config.postingPrice}/post.

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { brand } from '@/config/brand';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -46,7 +47,7 @@ export default function AuthLayout({ children, illustration, testimonial }: Auth
           >
             <img
               src="/logo.png"
-              alt="PMHNP Hiring"
+              alt={brand.name}
               width="100"
               height="100"
               style={{ width: 100, height: 100, objectFit: 'contain', flexShrink: 0 }}
@@ -64,7 +65,7 @@ export default function AuthLayout({ children, illustration, testimonial }: Auth
                 marginLeft: '-24px',
               }}
             >
-              PMHNP Hiring
+              {brand.name}
             </span>
           </Link>
 

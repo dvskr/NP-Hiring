@@ -47,10 +47,10 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
     : totalJobs.toLocaleString();
 
   // Build dynamic title and description based on filters
-  let title = `Browse ${jobCountDisplay} PMHNP & Psychiatric NP Jobs Near Me`;
+  let title = `Browse ${jobCountDisplay} ${brand.niche.short} & ${brand.niche.medium} Jobs Near Me`;
   // SEO Fix #7: trim default desc to ≤160 chars (Google SERP cap). Previous
   // 280-char default got truncated and lost the value-prop tail.
-  let description = `Search ${jobCountDisplay} PMHNP & psychiatric NP jobs by state, salary, and type — remote, telehealth, in-person, travel, locum & per diem. Updated daily.`;
+  let description = `Search ${jobCountDisplay} ${brand.niche.short} & ${brand.niche.adjective} NP jobs by state, salary, and type — remote, telehealth, in-person, travel, locum & per diem. Updated daily.`;
 
   // Customize based on active filters
   const titleParts: string[] = [];
@@ -66,8 +66,8 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
   }
 
   if (titleParts.length > 0) {
-    title = `${jobCountDisplay} ${titleParts.join(' ')} PMHNP Jobs`;
-    description = `Find ${jobCountDisplay} ${titleParts.join(' ').toLowerCase()} psychiatric nurse practitioner positions. ${description}`;
+    title = `${jobCountDisplay} ${titleParts.join(' ')} ${brand.niche.short} Jobs`;
+    description = `Find ${jobCountDisplay} ${titleParts.join(' ').toLowerCase()} ${brand.niche.adjective} nurse practitioner positions. ${description}`;
   }
 
   // Distinguish user filters from nav params (?page, ?sort).
@@ -105,7 +105,7 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
       // returns 404 from Supabase, breaking every social share of /jobs and
       // every filtered jobs URL. Pointing at the existing homepage asset
       // until a dedicated OG image is uploaded.
-      images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`, width: 1280, height: 900, alt: 'PMHNP Job Board — Browse psychiatric nurse practitioner jobs' }],
+      images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`, width: 1280, height: 900, alt: `${brand.niche.short} Job Board — Browse ${brand.niche.adjective} nurse practitioner jobs` }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -206,7 +206,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
     const jobListSchema = {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
-      name: 'PMHNP & Psychiatric Nurse Practitioner Jobs',
+      name: `${brand.niche.short} & Psychiatric Nurse Practitioner Jobs`,
       numberOfItems: total,
       itemListElement: jobs.slice(0, 10).map((job, i) => {
         const j = job as { id: string; slug?: string | null; title: string };

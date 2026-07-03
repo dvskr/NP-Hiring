@@ -1,5 +1,6 @@
 'use client';
 
+import { brand } from '@/config/brand';
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -909,7 +910,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                         style={{ marginTop: '3px', accentColor: '#0D9488', width: '16px', height: '16px' }}
                       />
                       <div>
-                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on PMHNP Hiring</span>
+                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on {brand.name}</span>
                         <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly — applications arrive in your dashboard</p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
                           {['Resume', 'Cover letter', 'Email alerts'].map(f => (

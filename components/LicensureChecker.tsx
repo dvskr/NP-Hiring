@@ -145,7 +145,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
         }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2 }}>
-            {selectedState ? `${selectedState} Licensure` : 'PMHNP Licensure Checker'}
+            {selectedState ? `${selectedState} Licensure` : `${brand.niche.short} Licensure Checker`}
           </h2>
           <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: '4px 0 0' }}>
             {selectedState ? 'Requirements, timeline, and salary data' : 'Select your state to see requirements, timeline, and salary data'}
@@ -365,7 +365,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
       }}>
         <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>📋 Cite This Page</h3>
         <p style={{ fontSize: '13px', color: '#5A4A42', marginBottom: '14px' }}>Use the following citation when referencing data from this licensure tool:</p>
-        <CopyCitation citation={`${brand.name}. "2026 NP State Licensure Checker: Practice Authority & Requirements by State." ${brand.name}, April 2026, ${brand.domain}/resources.`} />
+        <CopyCitation citation={`${brand.name}. "2026 ${brand.niche.short} State Licensure Checker: Practice Authority & Requirements by State." ${brand.name}, April 2026, ${brand.domain}/resources.`} />
         <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '10px' }}>For media inquiries or custom data requests, contact {brand.email.press}</p>
       </div>
 

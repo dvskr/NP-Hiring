@@ -13,6 +13,7 @@
  * template. Two cats (e.g. remote/CA vs telehealth/CA) read 95% identical
  * to GoogleBot. This file fixes that.
  */
+import { brand } from '@/config/brand';
 import {
     getStatePracticeAuthority,
     PracticeAuthority,
@@ -92,20 +93,20 @@ type SettingLeadFn = (ctx: StateCtx) => string;
 
 const SETTING_LEADS: Record<string, SettingLeadFn> = {
     'remote': (c) => isNlcMember(c.stateName)
-        ? `Remote PMHNP positions covering patients in ${c.stateName} typically pay $130K–$200K+ and require active ${c.stateCode} state licensure plus a HIPAA-compliant home setup. Most postings welcome multi-state Compact licensure to broaden caseload reach.`
-        : `Remote PMHNP positions covering patients in ${c.stateName} typically pay $130K–$200K+ and require active ${c.stateCode} state licensure plus a HIPAA-compliant home setup. ${c.stateName} is not a Nurse Licensure Compact member, so a separate ${c.stateCode} license is required even if you already hold a multistate license elsewhere.`,
+        ? `Remote ${brand.niche.short} positions covering patients in ${c.stateName} typically pay $130K–$200K+ and require active ${c.stateCode} state licensure plus a HIPAA-compliant home setup. Most postings welcome multi-state Compact licensure to broaden caseload reach.`
+        : `Remote ${brand.niche.short} positions covering patients in ${c.stateName} typically pay $130K–$200K+ and require active ${c.stateCode} state licensure plus a HIPAA-compliant home setup. ${c.stateName} is not a Nurse Licensure Compact member, so a separate ${c.stateCode} license is required even if you already hold a multistate license elsewhere.`,
     'telehealth': (c) => isNlcMember(c.stateName)
-        ? `Telehealth PMHNP roles serving the ${c.stateName} market combine asynchronous documentation with scheduled video visits. Employers require HIPAA-compliant equipment and at least a ${c.stateCode} license; multi-state Compact licensure expands earning potential.`
-        : `Telehealth PMHNP roles serving the ${c.stateName} market combine asynchronous documentation with scheduled video visits. Employers require HIPAA-compliant equipment and a ${c.stateCode} license — ${c.stateName} is not a Compact member, so multistate-licensed clinicians still need a separate ${c.stateCode} credential.`,
-    'inpatient': (c) => `Inpatient PMHNP positions across ${c.stateName} cover acute psychiatric units, consult-liaison services, and crisis stabilization. Shift differentials, weekend premiums, and on-call stipends are standard alongside base salary.`,
-    'outpatient': (c) => `Outpatient PMHNP roles in ${c.stateName} span community mental health centers, group practices, and integrated primary-care settings. Caseloads typically run 12–18 patients per day with documentation time built in.`,
-    'travel': (c) => `Travel PMHNP assignments in ${c.stateName} are usually 8–26 weeks with tax-free housing stipends, completion bonuses, and 20–50% premium pay over permanent equivalents. Most agencies handle multi-state licensure logistics.`,
-    'contract': (c) => `Contract PMHNP positions in ${c.stateName} are typically defined-term W-2 engagements (90 days to 24 months) booked through staffing agencies, paying $90–$150 per hour with agency-provided malpractice. Distinct from 1099 independent contracting, contract roles preserve employer payroll-tax handling and often include short-term health coverage.`,
-    'correctional': (c) => `Correctional PMHNP roles in ${c.stateName} facilities often offer state-employee benefits, robust pension plans, and educational debt forgiveness through state-specific programs alongside NHSC eligibility.`,
-    'full-time': (c) => `Full-time PMHNP positions in ${c.stateName} typically bundle employer-sponsored health insurance, 401(k) match, CME allowance, malpractice coverage, and 3–4 weeks of PTO into a $130K–$190K base. Total-comp comparisons against contract or per-diem rates should net out the benefits self-funded employers don't have to cover.`,
-    'part-time': (c) => `Part-time PMHNP roles in ${c.stateName} generally pay $60–$100 per hour and run 16–32 scheduled hours weekly, with prorated benefits at larger health systems and none at smaller practices. The structure is popular for clinicians maintaining a private practice on the side or stepping down from a full caseload.`,
-    'new-grad': (c) => `New-grad PMHNP positions in ${c.stateName} typically start at $110K–$160K and emphasize structured onboarding — formal preceptorship, gradual caseload ramp over 3–6 months, and protected supervision time. Community mental health centers and FQHCs broadly qualify for NHSC loan repayment up to $75K for a two-year commitment.`,
-    '1099': (c) => `Independent-contractor (1099) PMHNP roles in ${c.stateName} pay $75–$150+ per hour without benefits or employer-paid malpractice. Clinicians self-fund quarterly estimated taxes, occurrence-based malpractice, and any LLC or PLLC structure — net take-home depends heavily on those offsets and ${c.stateCode} self-employment tax exposure.`,
+        ? `Telehealth ${brand.niche.short} roles serving the ${c.stateName} market combine asynchronous documentation with scheduled video visits. Employers require HIPAA-compliant equipment and at least a ${c.stateCode} license; multi-state Compact licensure expands earning potential.`
+        : `Telehealth ${brand.niche.short} roles serving the ${c.stateName} market combine asynchronous documentation with scheduled video visits. Employers require HIPAA-compliant equipment and a ${c.stateCode} license — ${c.stateName} is not a Compact member, so multistate-licensed clinicians still need a separate ${c.stateCode} credential.`,
+    'inpatient': (c) => `Inpatient ${brand.niche.short} positions across ${c.stateName} cover acute ${brand.niche.adjective} units, consult-liaison services, and crisis stabilization. Shift differentials, weekend premiums, and on-call stipends are standard alongside base salary.`,
+    'outpatient': (c) => `Outpatient ${brand.niche.short} roles in ${c.stateName} span community ${brand.niche.category} centers, group practices, and integrated primary-care settings. Caseloads typically run 12–18 patients per day with documentation time built in.`,
+    'travel': (c) => `Travel ${brand.niche.short} assignments in ${c.stateName} are usually 8–26 weeks with tax-free housing stipends, completion bonuses, and 20–50% premium pay over permanent equivalents. Most agencies handle multi-state licensure logistics.`,
+    'contract': (c) => `Contract ${brand.niche.short} positions in ${c.stateName} are typically defined-term W-2 engagements (90 days to 24 months) booked through staffing agencies, paying $90–$150 per hour with agency-provided malpractice. Distinct from 1099 independent contracting, contract roles preserve employer payroll-tax handling and often include short-term health coverage.`,
+    'correctional': (c) => `Correctional ${brand.niche.short} roles in ${c.stateName} facilities often offer state-employee benefits, robust pension plans, and educational debt forgiveness through state-specific programs alongside NHSC eligibility.`,
+    'full-time': (c) => `Full-time ${brand.niche.short} positions in ${c.stateName} typically bundle employer-sponsored health insurance, 401(k) match, CME allowance, malpractice coverage, and 3–4 weeks of PTO into a $130K–$190K base. Total-comp comparisons against contract or per-diem rates should net out the benefits self-funded employers don't have to cover.`,
+    'part-time': (c) => `Part-time ${brand.niche.short} roles in ${c.stateName} generally pay $60–$100 per hour and run 16–32 scheduled hours weekly, with prorated benefits at larger health systems and none at smaller practices. The structure is popular for clinicians maintaining a private practice on the side or stepping down from a full caseload.`,
+    'new-grad': (c) => `New-grad ${brand.niche.short} positions in ${c.stateName} typically start at $110K–$160K and emphasize structured onboarding — formal preceptorship, gradual caseload ramp over 3–6 months, and protected supervision time. Community ${brand.niche.category} centers and FQHCs broadly qualify for NHSC loan repayment up to $75K for a two-year commitment.`,
+    '1099': (c) => `Independent-contractor (1099) ${brand.niche.short} roles in ${c.stateName} pay $75–$150+ per hour without benefits or employer-paid malpractice. Clinicians self-fund quarterly estimated taxes, occurrence-based malpractice, and any LLC or PLLC structure — net take-home depends heavily on those offsets and ${c.stateCode} self-employment tax exposure.`,
 };
 
 // ─── Composite narrative ────────────────────────────────────────────────────
@@ -137,18 +138,18 @@ export function buildSettingStateNarrative(
         ? AUTHORITY_PHRASES[ctx.practiceAuthority]
         : 'state-specific practice rules';
     parts.push(
-        `${stateName} grants ${authPhrase}, and the state's ${COST_PHRASES[colTier(avgCOL)]} (index ${avgCOL}) directly shapes PMHNP compensation expectations.`,
+        `${stateName} grants ${authPhrase}, and the state's ${COST_PHRASES[colTier(avgCOL)]} (index ${avgCOL}) directly shapes ${brand.niche.short} compensation expectations.`,
     );
 
     // Sentence 3: demand + shortage signal — drives federal-loan framing.
     const demandPhrase = DEMAND_PHRASES[demandTier(totalJobs)];
     if (shortageCityCount > 0) {
         parts.push(
-            `${shortageCityCount} of the state's top metros carry federal Mental Health Professional Shortage Area designation, so positions in those areas typically qualify for NHSC Loan Repayment. The current ${totalJobs} active postings reflect ${demandPhrase} for psychiatric nurse practitioners across ${stateName}.`,
+            `${shortageCityCount} of the state's top metros carry federal Mental Health Professional Shortage Area designation, so positions in those areas typically qualify for NHSC Loan Repayment. The current ${totalJobs} active postings reflect ${demandPhrase} for ${brand.niche.adjective} nurse practitioners across ${stateName}.`,
         );
     } else {
         parts.push(
-            `Top metros in ${stateName} are not currently federally designated mental health shortage areas, but regional psychiatric demand and reimbursement structure shape compensation. The ${totalJobs} active postings reflect ${demandPhrase} for PMHNPs in the state.`,
+            `Top metros in ${stateName} are not currently federally designated ${brand.niche.category} shortage areas, but regional ${brand.niche.adjective} demand and reimbursement structure shape compensation. The ${totalJobs} active postings reflect ${demandPhrase} for ${brand.niche.short}s in the state.`,
         );
     }
 

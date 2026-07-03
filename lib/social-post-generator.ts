@@ -140,7 +140,7 @@ export async function fetchTopJobsForSocial(): Promise<SocialJob[]> {
 const JOB_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 
 export function buildFacebookCaption(jobs: SocialJob[]): string {
-    const lines = ['🔥 Today\'s Top PMHNP Jobs!\n'];
+    const lines = [`🔥 Today\'s Top ${brand.niche.short} Jobs!\n`];
 
     jobs.forEach((job, i) => {
         const emoji = JOB_EMOJIS[i] ?? `${i + 1}.`;
@@ -171,7 +171,7 @@ export function buildFacebookCaption(jobs: SocialJob[]): string {
 
 export function buildInstagramCaption(jobs: SocialJob[]): string {
     const lines = [
-        '🔥 Swipe through today\'s top PMHNP job openings! ➡️\n',
+        `🔥 Swipe through today\'s top ${brand.niche.short} job openings! ➡️\n`,
     ];
 
     jobs.forEach((job, i) => {

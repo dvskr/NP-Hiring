@@ -950,7 +950,7 @@ function PostJobContent() {
                 {/* Job Title */}
                 <div>
                   <Label required htmlFor="title">Job Title</Label>
-                  <input type="text" id="title" placeholder="e.g. Remote PMHNP - Telepsychiatry"
+                  <input type="text" id="title" placeholder={`e.g. Remote ${brand.niche.short} - Telepsychiatry`}
                     {...register('title')}
                     style={errors.title ? clayInputError : clayInput}
                   />
@@ -1118,7 +1118,7 @@ function PostJobContent() {
                       type="text"
                       id="experienceQualifier"
                       maxLength={80}
-                      placeholder="e.g. Prefer inpatient psychiatric background"
+                      placeholder={`e.g. Prefer inpatient ${brand.niche.adjective} background`}
                       {...register('experienceQualifier')}
                       style={errors.experienceQualifier ? clayInputError : clayInput}
                     />
@@ -1213,7 +1213,7 @@ function PostJobContent() {
                   </span>
                 </div>
                 <InfoBox emoji="💡" color="blue">
-                  <strong>Writing tip:</strong> Include sections for <em>About the Role</em>, <em>Responsibilities</em>, <em>Requirements</em>, and <em>Why Join Us</em> to attract top PMHNP talent.
+                  <strong>Writing tip:</strong> Include sections for <em>About the Role</em>, <em>Responsibilities</em>, <em>Requirements</em>, and <em>Why Join Us</em> to attract top {brand.niche.short} talent.
                 </InfoBox>
               </div>
             </div>
@@ -1333,7 +1333,7 @@ function PostJobContent() {
                           style={{ marginTop: '3px', accentColor: '#0D9488', width: '16px', height: '16px' }}
                         />
                         <div>
-                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on PMHNP Hiring</span>
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on {brand.name}</span>
                           <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly — no website needed</p>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
                             {['Resume', 'Cover letter', 'Email alerts'].map(f => (

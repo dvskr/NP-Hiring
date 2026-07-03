@@ -170,8 +170,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // needs to drop the URL).
     // Title trimmed to <60 chars (was 77-82 — reliably truncated mid-phrase).
     // The "Average Pay, Jobs & Cost of Living" suffix moved into the description.
-    const title = `PMHNP Salary in ${stateName} (${code}) 2026 — Avg Pay & Jobs`;
-    const description = `PMHNP salary data for ${stateName}: average pay by practice setting, top employers, and open positions. Updated daily.`;
+    const title = `${brand.niche.short} Salary in ${stateName} (${code}) 2026 — Avg Pay & Jobs`;
+    const description = `${brand.niche.short} salary data for ${stateName}: average pay by practice setting, top employers, and open positions. Updated daily.`;
     const ogImage = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`;
 
     return {
@@ -179,16 +179,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         description,
         alternates: { canonical: `${brand.baseUrl}/salary-guide/${slug}` },
         openGraph: {
-            title: `PMHNP Salary in ${stateName} (${code}) — 2026 Data`,
-            description: `Average PMHNP salary in ${stateName} by practice setting, top employers, and open positions.`,
+            title: `${brand.niche.short} Salary in ${stateName} (${code}) — 2026 Data`,
+            description: `Average ${brand.niche.short} salary in ${stateName} by practice setting, top employers, and open positions.`,
             type: 'website',
             url: `${brand.baseUrl}/salary-guide/${slug}`,
-            siteName: 'PMHNP Hiring',
-            images: [{ url: ogImage, width: 1280, height: 900, alt: `PMHNP Salary in ${stateName} 2026` }],
+            siteName: brand.name,
+            images: [{ url: ogImage, width: 1280, height: 900, alt: `${brand.niche.short} Salary in ${stateName} 2026` }],
         },
         twitter: {
             card: 'summary_large_image',
-            title: `PMHNP Salary in ${stateName} (${code}) 2026`,
+            title: `${brand.niche.short} Salary in ${stateName} (${code}) 2026`,
             description,
             images: [ogImage],
         },
@@ -276,7 +276,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                             marginBottom: '14px',
                         }}
                     >
-                        PMHNP Salary in {stateName}
+                        {brand.niche.short} Salary in {stateName}
                     </h1>
 
                     <p
@@ -288,7 +288,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                             lineHeight: 1.6,
                         }}
                     >
-                        Average psychiatric nurse practitioner compensation in {stateName}, broken down by
+                        Average {brand.niche.adjective} nurse practitioner compensation in {stateName}, broken down by
                         practice setting, top employers, and cities.
                     </p>
                 </div>
@@ -579,7 +579,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                         <Briefcase size={22} style={{ color: '#2DD4BF', flexShrink: 0 }} />
                         <div>
                             <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>
-                                Browse All {stateCode} PMHNP Jobs →
+                                Browse All {stateCode} {brand.niche.short} Jobs →
                             </p>
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                                 {salaryData.jobCount} open positions in {stateName}
@@ -664,7 +664,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                             marginBottom: '12px',
                         }}
                     >
-                        Find PMHNP Jobs in {stateName}
+                        Find {brand.niche.short} Jobs in {stateName}
                     </h2>
                     <p
                         style={{

@@ -50,22 +50,22 @@ export async function GET() {
       <description><![CDATA[${desc}]]></description>
       <pubDate>${new Date(job.createdAt).toUTCString()}</pubDate>
       <category>${job.isRemote ? 'Remote' : (job.location || 'United States')}</category>
-      <author>${brand.email.contact} (PMHNP Hiring)</author>
+      <author>${brand.email.contact} (${brand.name})</author>
     </item>`;
     }).join('\n');
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>PMHNP Hiring — Latest Psychiatric NP Jobs</title>
+    <title>${brand.name} — Latest ${brand.niche.medium} Jobs</title>
     <link>${BASE_URL}</link>
-    <description>The latest PMHNP job listings from the #1 psychiatric nurse practitioner job board. 10,000+ positions across all 50 states, updated daily.</description>
+    <description>The latest ${brand.niche.short} job listings from the #1 ${brand.niche.adjective} nurse practitioner job board. 10,000+ positions across all 50 states, updated daily.</description>
     <language>en-us</language>
     <lastBuildDate>${pubDate}</lastBuildDate>
     <atom:link href="${BASE_URL}/feed.xml" rel="self" type="application/rss+xml"/>
     <image>
       <url>${BASE_URL}/pmhnp_logo.png</url>
-      <title>PMHNP Hiring</title>
+      <title>${brand.name}</title>
       <link>${BASE_URL}</link>
     </image>
     <ttl>60</ttl>

@@ -17,15 +17,15 @@ const STORAGE_BASE = brand.assets.storageBase;
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: 'For Job Seekers — Find Your Next PMHNP Role | PMHNP Hiring',
+  title: `For Job Seekers — Find Your Next ${brand.niche.short} Role | ${brand.name}`,
   // Removed the hardcoded "9,000+" job count (audit 09 M-21) — the actual
   // count drifts and a stale figure in metadata that doesn't match the
   // live UI is a credibility hit. Description now describes the platform
   // value without a numeric claim.
   description:
-    'Find your next PMHNP opportunity — remote and in-person psychiatric nurse practitioner jobs with salary transparency, AI matching, and one-click apply. Free for job seekers.',
+    `Find your next ${brand.niche.short} opportunity — remote and in-person ${brand.niche.adjective} nurse practitioner jobs with salary transparency, AI matching, and one-click apply. Free for job seekers.`,
   openGraph: {
-    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-seeker-career-resources.webp`, width: 1280, height: 900, alt: 'PMHNP job seeker career resources' }],
+    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-seeker-career-resources.webp`, width: 1280, height: 900, alt: `${brand.niche.short} job seeker career resources` }],
   },
   twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-seeker-career-resources.webp`] },
   alternates: { canonical: `${brand.baseUrl}/for-job-seekers` },
@@ -53,7 +53,7 @@ async function getStats() {
 }
 
 const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: true | false | 'partial'; linkedin: true | false | 'partial'; note?: string }[] = [
-  { feature: '100% PMHNP-Only Jobs', us: true, indeed: false, linkedin: false },
+  { feature: `100% ${brand.niche.short}-Only Jobs`, us: true, indeed: false, linkedin: false },
   { feature: 'Salary Transparency on Every Listing', us: true, indeed: false, linkedin: false, note: 'Others hide salary' },
   { feature: 'Completely Free for Job Seekers', us: true, indeed: true, linkedin: 'partial', note: 'LinkedIn: premium features cost' },
   { feature: 'AI Match Scoring', us: true, indeed: false, linkedin: false },
@@ -102,7 +102,7 @@ export default async function ForJobSeekersPage() {
             Everything You Need — For Free
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>
-            Every feature, every tool, every resource — completely free for PMHNP job seekers.
+            Every feature, every tool, every resource — completely free for {brand.niche.short} job seekers.
           </p>
 
           {/* Bento Grid */}
@@ -228,7 +228,7 @@ export default async function ForJobSeekersPage() {
             {[
               { title: 'Remote / Telehealth', desc: 'Work from anywhere with telepsychiatry', href: '/jobs?mode=Remote', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/remote-telehealth.webp` },
               { title: 'In-Person Clinical', desc: 'Hospital, clinic, and outpatient roles', href: '/jobs?mode=In-Person', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/clinical-inperson.webp` },
-              { title: 'Private Practice', desc: 'Start or join a psychiatric practice', href: '/resources/private-practice-guide', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/private-practice.webp` },
+              { title: 'Private Practice', desc: `Start or join a ${brand.niche.adjective} practice`, href: '/resources/private-practice-guide', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/private-practice.webp` },
               { title: 'Part-Time / PRN', desc: 'Flexible schedules and per diem', href: '/jobs?jobType=Part-Time', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/parttime-prn.webp` },
             ].map(t => (
               <Link key={t.title} href={t.href} className="emp-bento-card" style={{
@@ -260,7 +260,7 @@ export default async function ForJobSeekersPage() {
             How We Compare
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '440px', margin: '0 auto 44px', lineHeight: 1.6 }}>
-            Built exclusively for PMHNPs — not a generic job board.
+            Built exclusively for {brand.niche.short}s — not a generic job board.
           </p>
 
           <div className="seeker-compare-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '24px', alignItems: 'start' }}>
@@ -270,7 +270,7 @@ export default async function ForJobSeekersPage() {
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, rgba(13,148,136,0.08), rgba(13,148,136,0.02))' }}>
                     <th style={{ width: '40%', padding: '16px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Feature</th>
-                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '12px' }}>PMHNP Hiring</th>
+                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '12px' }}>{brand.name}</th>
                     <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>Indeed</th>
                     <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>LinkedIn</th>
                   </tr>
@@ -315,7 +315,7 @@ export default async function ForJobSeekersPage() {
               }}>
                 <Image
                   src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/cta-dream-role.webp`}
-                  alt="Start your PMHNP job search"
+                  alt={`Start your ${brand.niche.short} job search`}
                   width={280} height={220}
                   style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px' }}
                 />
@@ -361,7 +361,7 @@ export default async function ForJobSeekersPage() {
             Career Resources
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
-            Tools Built for Your PMHNP Career
+            Tools Built for Your {brand.niche.short} Career
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '450px', margin: '0 auto 44px', lineHeight: 1.6 }}>
             Research salaries, check licensure requirements, and plan your next move — all in one place.
@@ -370,8 +370,8 @@ export default async function ForJobSeekersPage() {
           <div className="seeker-resource-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
             {[
               {
-                title: '2026 PMHNP Salary Guide',
-                desc: 'State-by-state salary data, experience-based ranges, and negotiation strategies. See what PMHNPs actually earn.',
+                title: `2026 ${brand.niche.short} Salary Guide`,
+                desc: `State-by-state salary data, experience-based ranges, and negotiation strategies. See what ${brand.niche.short}s actually earn.`,
                 href: '/salary-guide',
                 icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-salary.webp`,
                 gradient: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
@@ -386,8 +386,8 @@ export default async function ForJobSeekersPage() {
                 cta: 'Check Your State',
               },
               {
-                title: 'PMHNP Career Blog',
-                desc: 'Interview tips, resume advice, CE requirements, and industry trends — written by PMHNPs, for PMHNPs.',
+                title: `${brand.niche.short} Career Blog`,
+                desc: `Interview tips, resume advice, CE requirements, and industry trends — written by ${brand.niche.short}s, for ${brand.niche.short}s.`,
                 href: '/blog',
                 icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-blog.webp`,
                 gradient: 'linear-gradient(145deg, #EEF2FF, #E0E7FF)',

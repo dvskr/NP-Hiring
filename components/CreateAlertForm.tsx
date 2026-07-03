@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { brand } from '@/config/brand';
 
 interface InitialFilters {
   keyword?: string;
@@ -39,7 +40,7 @@ function buildCriteriaSummary(filters: InitialFilters): string {
     }
   }
 
-  return parts.length > 0 ? parts.join(' · ') : 'all PMHNP jobs';
+  return parts.length > 0 ? parts.join(' · ') : `all ${brand.niche.short} jobs`;
 }
 
 export default function CreateAlertForm({ initialFilters = {}, onSuccess }: CreateAlertFormProps) {

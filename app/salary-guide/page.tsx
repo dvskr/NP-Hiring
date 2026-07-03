@@ -96,15 +96,15 @@ export const metadata: Metadata = {
   // `absolute` opts out of the layout title template so the brand suffix
   // doesn't get appended a second time (was rendering "... | PMHNP Hiring
   // | PMHNP Hiring" — audit 09 M-17).
-  title: { absolute: 'PMHNP Salary Guide 2026 — $155K+ Avg by State | PMHNP Hiring' },
-  description: 'Complete 2026 PMHNP salary data: national avg $155K+, top 10% earn $210K+. All 50 states, by experience level, practice setting, and negotiation tips.',
+  title: { absolute: `${brand.niche.short} Salary Guide 2026 — $155K+ Avg by State | ${brand.name}` },
+  description: `Complete 2026 ${brand.niche.short} salary data: national avg $155K+, top 10% earn $210K+. All 50 states, by experience level, practice setting, and negotiation tips.`,
   keywords: ['pmhnp salary', 'psych np salary', 'psychiatric nurse practitioner salary', 'pmhnp salary by state', 'how much do pmhnps make', 'pmhnp pay', 'pmhnp salary 2026', 'psychiatric np salary', 'pmhnp salary guide'],
   openGraph: {
-    title: 'PMHNP Salary Guide 2026 | $155,000+ Average',
-    description: 'Complete guide to PMHNP salaries. National average $155,000+, top 10% earn $210,000+. State-by-state breakdown and tips to maximize earnings.',
+    title: `${brand.niche.short} Salary Guide 2026 | $155,000+ Average`,
+    description: `Complete guide to ${brand.niche.short} salaries. National average $155,000+, top 10% earn $210,000+. State-by-state breakdown and tips to maximize earnings.`,
     type: 'website',
     url: `${BASE_URL}/salary-guide`,
-    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`, width: 1280, height: 900, alt: 'PMHNP salary guide 2026 showing psychiatric nurse practitioner pay by state with interactive salary comparison table' }],
+    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`, width: 1280, height: 900, alt: `${brand.niche.short} salary guide 2026 showing ${brand.niche.adjective} nurse practitioner pay by state with interactive salary comparison table` }],
   },
   twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`] },
   alternates: { canonical: `${brand.baseUrl}/salary-guide` },
@@ -119,9 +119,9 @@ const clayCard: React.CSSProperties = {
 
 /* ═══ Experience / Setting / Specialty data ═══ */
 const experienceData = [
-  { exp: 'New Grad (0-1 yr)', range: '$115,000 - $145,000', roles: 'Staff PMHNP, Outpatient Clinic' },
-  { exp: 'Early Career (1-3 yrs)', range: '$145,000 - $165,000', roles: 'Staff PMHNP, Telehealth Provider' },
-  { exp: 'Mid-Career (3-7 yrs)', range: '$165,000 - $185,000', roles: 'Senior PMHNP, Team Lead' },
+  { exp: 'New Grad (0-1 yr)', range: '$115,000 - $145,000', roles: `Staff ${brand.niche.short}, Outpatient Clinic` },
+  { exp: 'Early Career (1-3 yrs)', range: '$145,000 - $165,000', roles: `Staff ${brand.niche.short}, Telehealth Provider` },
+  { exp: 'Mid-Career (3-7 yrs)', range: '$165,000 - $185,000', roles: `Senior ${brand.niche.short}, Team Lead` },
   { exp: 'Experienced (7-15 yrs)', range: '$180,000 - $210,000', roles: 'Clinical Director, Supervisor' },
   { exp: 'Expert (15+ yrs)', range: '$200,000 - $250,000+', roles: 'Director, Consultant, Private Practice' },
 ];
@@ -147,19 +147,19 @@ const specialtyData = [
 
 const factorCards = [
   { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/clay-icon-match.webp`, title: 'Geographic Location', desc: 'States with higher cost of living and greater demand (CA, NY, MA) typically offer 20-40% higher salaries than rural areas.' },
-  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp`, title: 'Experience Level', desc: 'Entry-level PMHNPs start around $115-145k. With 5+ years experience, salaries can reach $180-210k or more.' },
+  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp`, title: 'Experience Level', desc: `Entry-level ${brand.niche.short}s start around $115-145k. With 5+ years experience, salaries can reach $180-210k or more.` },
   { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-briefcase.webp`, title: 'Practice Setting', desc: 'Private practice and telehealth positions often pay more than hospital or community health settings.' },
-  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-people.webp`, title: 'Employment Type', desc: '1099 contractors and travel PMHNPs often earn 20-50% more than W2 employees, though without traditional benefits.' },
+  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-people.webp`, title: 'Employment Type', desc: `1099 contractors and travel ${brand.niche.short}s often earn 20-50% more than W2 employees, though without traditional benefits.` },
   { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp`, title: 'Specialization', desc: 'Subspecialties like addiction psychiatry, child/adolescent, or forensic psychiatry can command premium pay (+10-25%).' },
-  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`, title: 'Negotiation', desc: 'PMHNPs who negotiate can often secure 5-15% higher starting salaries plus signing bonuses ($5,000-$30,000).' },
+  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`, title: 'Negotiation', desc: `${brand.niche.short}s who negotiate can often secure 5-15% higher starting salaries plus signing bonuses ($5,000-$30,000).` },
 ];
 
 const faqData = [
-  { q: 'How much do PMHNPs make in 2026?', a: 'The national average PMHNP salary is $155,000+ per year in 2026, based on data from BLS, ZipRecruiter, Indeed, PayScale, Glassdoor, and CompHealth. The top 10% earn $210,000 or more. New graduates start at $115,000-$145,000, while experienced PMHNPs earn $180,000-$210,000.' },
-  { q: 'Which state pays PMHNPs the most?', a: 'Idaho offers the highest PMHNP salary at $205,080 per year, followed by New Jersey ($182,022), California ($181,670), Rhode Island ($175,530), and Washington ($173,331). When adjusted for cost of living, Idaho, Louisiana, Pennsylvania, Arkansas, and Missouri offer the best value.' },
-  { q: 'Do telehealth PMHNPs make less than in-person?', a: 'Telehealth PMHNPs earn $130,000 to $175,000, while in-person PMHNPs earn $145,000 to $185,000. However, telehealth offers excellent flexibility and some companies like Talkiatry pay $180,000-$215,000+ for experienced PMHNPs with multi-state licenses.' },
-  { q: 'How can I increase my PMHNP salary?', a: 'Top strategies include: specializing in high-demand areas like addiction psychiatry (+15-20% premium) or forensic psychiatry (+15-25%), practicing in Full Practice Authority states (+12-15% premium), considering private practice ownership ($180,000-$300,000+), working in rural/underserved areas for loan repayment incentives, and always negotiating total compensation.' },
-  { q: 'How much do travel PMHNPs make?', a: 'Travel and locum tenens PMHNPs typically earn 20-50% more than permanent positions, with compensation ranging from $150,000 to $250,000+ including housing stipends and travel allowances.' },
+  { q: `How much do ${brand.niche.short}s make in 2026?`, a: `The national average ${brand.niche.short} salary is $155,000+ per year in 2026, based on data from BLS, ZipRecruiter, Indeed, PayScale, Glassdoor, and CompHealth. The top 10% earn $210,000 or more. New graduates start at $115,000-$145,000, while experienced ${brand.niche.short}s earn $180,000-$210,000.` },
+  { q: `Which state pays ${brand.niche.short}s the most?`, a: `Idaho offers the highest ${brand.niche.short} salary at $205,080 per year, followed by New Jersey ($182,022), California ($181,670), Rhode Island ($175,530), and Washington ($173,331). When adjusted for cost of living, Idaho, Louisiana, Pennsylvania, Arkansas, and Missouri offer the best value.` },
+  { q: `Do telehealth ${brand.niche.short}s make less than in-person?`, a: `Telehealth ${brand.niche.short}s earn $130,000 to $175,000, while in-person ${brand.niche.short}s earn $145,000 to $185,000. However, telehealth offers excellent flexibility and some companies like Talkiatry pay $180,000-$215,000+ for experienced ${brand.niche.short}s with multi-state licenses.` },
+  { q: `How can I increase my ${brand.niche.short} salary?`, a: 'Top strategies include: specializing in high-demand areas like addiction psychiatry (+15-20% premium) or forensic psychiatry (+15-25%), practicing in Full Practice Authority states (+12-15% premium), considering private practice ownership ($180,000-$300,000+), working in rural/underserved areas for loan repayment incentives, and always negotiating total compensation.' },
+  { q: `How much do travel ${brand.niche.short}s make?`, a: `Travel and locum tenens ${brand.niche.short}s typically earn 20-50% more than permanent positions, with compensation ranging from $150,000 to $250,000+ including housing stipends and travel allowances.` },
 ];
 
 export default async function SalaryGuidePage() {
@@ -185,13 +185,13 @@ export default async function SalaryGuidePage() {
   const articleSchema = {
     "@context": "https://schema.org",
     "@type": "Article",
-    "headline": "2026 PMHNP Salary Guide: Psychiatric NP Pay by State",
-    "description": "Comprehensive PMHNP salary data for 2026 including state-by-state pay, experience levels, specialty premiums, and market trends. Based on BLS, ZipRecruiter, Indeed, and 10,000+ job postings.",
+    "headline": `2026 ${brand.niche.short} Salary Guide: ${brand.niche.medium} Pay by State`,
+    "description": `Comprehensive ${brand.niche.short} salary data for 2026 including state-by-state pay, experience levels, specialty premiums, and market trends. Based on BLS, ZipRecruiter, Indeed, and 10,000+ job postings.`,
     "image": `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`,
     "datePublished": "2026-01-01T00:00:00Z",
     "dateModified": new Date().toISOString(),
-    "author": { "@type": "Organization", "name": "PMHNP Hiring", "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.png` } },
-    "publisher": { "@type": "Organization", "name": "PMHNP Hiring", "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.svg` } },
+    "author": { "@type": "Organization", "name": brand.name, "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.png` } },
+    "publisher": { "@type": "Organization", "name": brand.name, "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.svg` } },
     "mainEntityOfPage": { "@type": "WebPage", "@id": `${brand.baseUrl}/salary-guide` }
   };
 
@@ -212,7 +212,7 @@ export default async function SalaryGuidePage() {
       ]} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: sanitizeJson({
         "@context": "https://schema.org", "@type": "WebPage",
-        "name": `${currentYear} PMHNP Salary Guide`,
+        "name": `${currentYear} ${brand.niche.short} Salary Guide`,
         "speakable": { "@type": "SpeakableSpecification", "cssSelector": [".quick-answer-box", "h1"] },
         "url": `${brand.baseUrl}/salary-guide`
       }) }} />
@@ -231,7 +231,7 @@ export default async function SalaryGuidePage() {
               fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, lineHeight: 1.15,
               color: '#1A2E35', marginBottom: '16px',
             }}>
-              PMHNP Salary Guide
+              {brand.niche.short} Salary Guide
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
               National average <strong>$155,000+</strong> per year. State-by-state breakdown, experience levels, practice settings, and tips to maximize earnings.
@@ -302,10 +302,10 @@ export default async function SalaryGuidePage() {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
                 <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`} alt="Salary" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px', flexShrink: 0 }} />
                 <div>
-                  <h2 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Quick Answer: PMHNP Salary in {currentYear}</h2>
+                  <h2 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Quick Answer: {brand.niche.short} Salary in {currentYear}</h2>
                   <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>
-                    The average PMHNP salary is <strong>$155,000+ per year</strong> in {currentYear}. The top 10% earn <strong>$210,000+</strong>.
-                    New graduates start at $115,000-$145,000, while experienced PMHNPs (7-15 years) earn $180,000-$210,000.
+                    The average {brand.niche.short} salary is <strong>$155,000+ per year</strong> in {currentYear}. The top 10% earn <strong>$210,000+</strong>.
+                    New graduates start at $115,000-$145,000, while experienced {brand.niche.short}s (7-15 years) earn $180,000-$210,000.
                     Private practice owners can earn $180,000-$300,000+. The highest-paying state is Idaho at $205,080,
                     followed by New Jersey ($182,022) and California ($181,670).
                   </p>
@@ -343,10 +343,10 @@ export default async function SalaryGuidePage() {
               Salary by Location
             </p>
             <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
-              PMHNP Salary by State
+              {brand.niche.short} Salary by State
             </h2>
             <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '500px', margin: '0 auto 12px', lineHeight: 1.6 }}>
-              See how PMHNP salaries compare across different states. Click any state to view available jobs.
+              See how {brand.niche.short} salaries compare across different states. Click any state to view available jobs.
             </p>
 
             {/* Note */}
@@ -355,7 +355,7 @@ export default async function SalaryGuidePage() {
               background: '#F0FDFA', border: '1px solid #99F6E4',
             }}>
               <p style={{ fontSize: '12px', color: '#134E4A', margin: 0, lineHeight: 1.5 }}>
-                <strong>Note:</strong> Real-time salary data from active PMHNP job postings.
+                <strong>Note:</strong> Real-time salary data from active {brand.niche.short} job postings.
                 For comprehensive state-by-state data including cost-of-living adjustments, download our full PDF guide above.
               </p>
             </div>
@@ -505,7 +505,7 @@ export default async function SalaryGuidePage() {
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Full Practice Authority</h3>
               </div>
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 16px' }}>
-                <strong>34 states + DC</strong> have FPA. PMHNPs in FPA states earn <strong style={{ color: '#0D9488' }}>12-15% more</strong> on average.
+                <strong>34 states + DC</strong> have FPA. {brand.niche.short}s in FPA states earn <strong style={{ color: '#0D9488' }}>12-15% more</strong> on average.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div style={{ padding: '14px 16px', borderRadius: '14px', background: '#F0FDFA', border: '1px solid #99F6E4' }}>
@@ -540,7 +540,7 @@ export default async function SalaryGuidePage() {
             Market Intelligence
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '36px' }}>
-            {currentYear} PMHNP Market Trends
+            {currentYear} {brand.niche.short} Market Trends
           </h2>
 
           <div className="emp-compare-table" style={{ ...clayCard, padding: '0', overflowX: 'auto', marginBottom: '20px' }}>
@@ -592,7 +592,7 @@ export default async function SalaryGuidePage() {
             Maximize Your Pay
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '36px' }}>
-            Factors Affecting PMHNP Salary
+            Factors Affecting {brand.niche.short} Salary
           </h2>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
@@ -645,14 +645,14 @@ export default async function SalaryGuidePage() {
           <div style={{ ...clayCard, padding: '24px 28px', marginBottom: '24px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>📋 Cite This Page</h3>
             <p style={{ fontSize: '13px', color: '#5A4A42', marginBottom: '14px' }}>Use the following citation when referencing data from this salary guide:</p>
-            <CopyCitation citation={`PMHNP Hiring. "2026 PMHNP Salary Guide: Psychiatric NP Pay by State." PMHNP Hiring, February 2026, ${brand.domain}/salary-guide.`} />
+            <CopyCitation citation={`${brand.name}. "2026 ${brand.niche.short} Salary Guide: ${brand.niche.medium} Pay by State." ${brand.name}, February 2026, ${brand.domain}/salary-guide.`} />
             <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '10px' }}>For media inquiries or custom data requests, contact {brand.email.press}</p>
           </div>
 
           {/* Data Sources */}
           <div style={{ ...clayCard, padding: '16px 24px', background: 'rgba(0,0,0,0.02)', marginBottom: '24px', textAlign: 'center' }}>
             <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
-              <strong>Data Sources & Methodology:</strong> Bureau of Labor Statistics (BLS), ZipRecruiter, Indeed, PayScale, Glassdoor, CompHealth, and analysis of 10,000+ active PMHNP job postings. Industry data updated January {currentYear}. Real-time job posting data updated daily.
+              <strong>Data Sources & Methodology:</strong> Bureau of Labor Statistics (BLS), ZipRecruiter, Indeed, PayScale, Glassdoor, CompHealth, and analysis of 10,000+ active {brand.niche.short} job postings. Industry data updated January {currentYear}. Real-time job posting data updated daily.
             </p>
           </div>
 
@@ -664,7 +664,7 @@ export default async function SalaryGuidePage() {
             <div style={{ padding: '36px 32px' }}>
               <h2 className="font-lora" style={{ fontSize: '22px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>
                 Find Your Next High-Paying{' '}
-                <span style={{ color: '#0D9488' }}>PMHNP Job</span>
+                <span style={{ color: '#0D9488' }}>{brand.niche.short} Job</span>
               </h2>
               <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px', maxWidth: '380px' }}>
                 Browse positions with competitive salaries. Filter by location, salary, and work type.
@@ -698,7 +698,7 @@ export default async function SalaryGuidePage() {
             <div style={{ display: 'flex', justifyContent: 'center', padding: '24px', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)' }}>
               <Image
                 src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/cta-illustration.webp`}
-                alt="Find high-paying PMHNP jobs"
+                alt={`Find high-paying ${brand.niche.short} jobs`}
                 width={280} height={220}
                 style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px' }}
               />

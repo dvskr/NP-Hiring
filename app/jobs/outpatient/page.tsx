@@ -72,16 +72,16 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     const page = parseInt(params.page || '1');
 
     return {
-        title: `${stats.totalJobs} Outpatient PMHNP Jobs — Clinic & Private Practice ($130K-190K)`,
-        description: `Find ${stats.totalJobs} outpatient PMHNP jobs paying $130K-$190K+. Clinic, private practice, and community mental health psychiatric nurse practitioner positions with M-F schedules. Apply today.`,
+        title: `${stats.totalJobs} Outpatient ${brand.niche.short} Jobs — Clinic & Private Practice ($130K-190K)`,
+        description: `Find ${stats.totalJobs} outpatient ${brand.niche.short} jobs paying $130K-$190K+. Clinic, private practice, and community ${brand.niche.category} ${brand.niche.adjective} nurse practitioner positions with M-F schedules. Apply today.`,
         keywords: ['outpatient pmhnp jobs', 'outpatient psychiatric nurse practitioner', 'pmhnp private practice', 'clinic pmhnp jobs', 'community mental health pmhnp'],
         openGraph: {
-            title: `${stats.totalJobs} Outpatient PMHNP Jobs — Clinic & Private Practice`,
-            description: 'Browse outpatient psychiatric nurse practitioner positions in clinics, private practices, and community mental health centers.',
+            title: `${stats.totalJobs} Outpatient ${brand.niche.short} Jobs — Clinic & Private Practice`,
+            description: `Browse outpatient ${brand.niche.adjective} nurse practitioner positions in clinics, private practices, and community ${brand.niche.category} centers.`,
             type: 'website',
             images: [{
-                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Outpatient PMHNP Jobs`)}&subtitle=${encodeURIComponent('Clinic & private practice positions')}`,
-                width: 1200, height: 630, alt: 'Outpatient PMHNP Jobs',
+                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Outpatient ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent('Clinic & private practice positions')}`,
+                width: 1200, height: 630, alt: `Outpatient ${brand.niche.short} Jobs`,
             }],
         },
         alternates: { canonical: `${brand.baseUrl}/jobs/outpatient` },
@@ -110,19 +110,19 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
                 { name: "Outpatient", url: `${brand.baseUrl}/jobs/outpatient` }
             ]} />
             {jobs.length > 0 && (
-              <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Outpatient PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+              <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Outpatient ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
             )}
 
             {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#9ed2ba"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v2_outpatient.webp`}
-        heroAlt="Outpatient PMHNP clinic setting"
+        heroAlt={`Outpatient ${brand.niche.short} clinic setting`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Outpatient']}
         indexLabel="№ 11 / 28"
         headlineLine1="Outpatient"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, clinic & practice."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -253,10 +253,10 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
               <div>
                 <TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} />
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Salary & Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average outpatient PMHNP salary:</p>
+                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average outpatient {brand.niche.short} salary:</p>
                 <p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p>
               </div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_outpatient_salary.webp`} alt="Outpatient PMHNP salary" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_outpatient_salary.webp`} alt={`Outpatient ${brand.niche.short} salary`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)' }}>
               <Bell size={32} style={{ color: '#0D9488', marginBottom: '14px' }} />
@@ -331,13 +331,13 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Outpatient PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Outpatient {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {[
-              { q: 'What does a typical outpatient PMHNP schedule look like?', a: 'Most outpatient positions offer Monday-Friday, 8am-5pm schedules with no nights, weekends, or on-call. Some roles include a half-day administrative block for charting and follow-ups.' },
-              { q: 'How many patients will I see per day?', a: 'Outpatient PMHNPs typically see 15-20 patients per day, with a mix of 30-minute follow-ups and 60-minute initial evaluations. Private practice caseloads may be lower.' },
-              { q: 'What is the salary range for outpatient PMHNPs?', a: 'Outpatient PMHNP salaries range from $130K to $190K+, depending on location, experience, and practice setting. Private practice roles may offer higher earning potential through patient volume.' },
-              { q: 'Do outpatient PMHNPs need to be credentialed with insurers?', a: 'In most group practices and clinics, the employer handles insurance credentialing. If you join a private practice, you may need to apply for your own panel memberships.' },
+              { q: `What does a typical outpatient ${brand.niche.short} schedule look like?`, a: 'Most outpatient positions offer Monday-Friday, 8am-5pm schedules with no nights, weekends, or on-call. Some roles include a half-day administrative block for charting and follow-ups.' },
+              { q: 'How many patients will I see per day?', a: `Outpatient ${brand.niche.short}s typically see 15-20 patients per day, with a mix of 30-minute follow-ups and 60-minute initial evaluations. Private practice caseloads may be lower.` },
+              { q: `What is the salary range for outpatient ${brand.niche.short}s?`, a: `Outpatient ${brand.niche.short} salaries range from $130K to $190K+, depending on location, experience, and practice setting. Private practice roles may offer higher earning potential through patient volume.` },
+              { q: `Do outpatient ${brand.niche.short}s need to be credentialed with insurers?`, a: 'In most group practices and clinics, the employer handles insurance credentialing. If you join a private practice, you may need to apply for your own panel memberships.' },
               { q: 'What EHR systems are common in outpatient settings?', a: 'Common outpatient EHRs include SimplePractice, Valant, TherapyNotes, and Epic Ambulatory. Most employers provide EHR training during onboarding.' },
             ].map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}>
@@ -346,7 +346,7 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
               </div>
             ))}
           </div>
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{q:'What does a typical outpatient PMHNP schedule look like?',a:'Most outpatient positions offer Monday-Friday, 8am-5pm schedules with no nights, weekends, or on-call.'},{q:'How many patients will I see per day?',a:'Outpatient PMHNPs typically see 15-20 patients per day, with a mix of 30-minute follow-ups and 60-minute initial evaluations.'},{q:'What is the salary range for outpatient PMHNPs?',a:'Outpatient PMHNP salaries range from $130K to $190K+, depending on location, experience, and practice setting.'},{q:'Do outpatient PMHNPs need to be credentialed with insurers?',a:'In most group practices, the employer handles insurance credentialing. Private practice may require your own panel memberships.'},{q:'What EHR systems are common in outpatient settings?',a:'Common outpatient EHRs include SimplePractice, Valant, TherapyNotes, and Epic Ambulatory.'}].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{q:`What does a typical outpatient ${brand.niche.short} schedule look like?`,a:'Most outpatient positions offer Monday-Friday, 8am-5pm schedules with no nights, weekends, or on-call.'},{q:'How many patients will I see per day?',a:`Outpatient ${brand.niche.short}s typically see 15-20 patients per day, with a mix of 30-minute follow-ups and 60-minute initial evaluations.`},{q:`What is the salary range for outpatient ${brand.niche.short}s?`,a:`Outpatient ${brand.niche.short} salaries range from $130K to $190K+, depending on location, experience, and practice setting.`},{q:`Do outpatient ${brand.niche.short}s need to be credentialed with insurers?`,a:'In most group practices, the employer handles insurance credentialing. Private practice may require your own panel memberships.'},{q:'What EHR systems are common in outpatient settings?',a:'Common outpatient EHRs include SimplePractice, Valant, TherapyNotes, and Epic Ambulatory.'}].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>
       </div>
 

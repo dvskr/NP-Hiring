@@ -169,9 +169,9 @@ export function headerBlockV2(title: string, subtitle: string = ''): string {
   return `<tr><td class="header-bg" align="center" bgcolor="${V2.bgPeach}" style="background-color:${V2.bgPeach};padding:24px 0 16px;text-align:center;">
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;">
       <tr>
-        <td valign="middle" style="padding-right:6px;"><img src="${logoUrl}" alt="PMHNP Hiring logo" width="48" height="55" style="display:block;width:48px;height:55px;border:0;background-color:${V2.bgPeach};color:${V2.textPrimary};font-family:${SERIF};font-size:13px;font-weight:700;text-align:center;line-height:55px;" /></td>
+        <td valign="middle" style="padding-right:6px;"><img src="${logoUrl}" alt="${brand.name} logo" width="48" height="55" style="display:block;width:48px;height:55px;border:0;background-color:${V2.bgPeach};color:${V2.textPrimary};font-family:${SERIF};font-size:13px;font-weight:700;text-align:center;line-height:55px;" /></td>
         <td valign="middle">
-          <p class="brand-text" style="margin:0;font-family:${SERIF};font-size:26px;font-weight:700;color:#1F2937;-webkit-text-fill-color:#1F2937;mso-line-height-rule:exactly;letter-spacing:-0.02em;line-height:1;text-align:center;">PMHNP Hiring</p>
+          <p class="brand-text" style="margin:0;font-family:${SERIF};font-size:26px;font-weight:700;color:#1F2937;-webkit-text-fill-color:#1F2937;mso-line-height-rule:exactly;letter-spacing:-0.02em;line-height:1;text-align:center;">${brand.name}</p>
           <p class="tagline-text" style="margin:4px 0 0;font-family:${SANS};font-size:10px;font-weight:700;color:#0d9488;-webkit-text-fill-color:#0d9488;mso-line-height-rule:exactly;letter-spacing:0.08em;text-transform:uppercase;line-height:1;text-align:center;">${EMAIL_HEADER_TAGLINE}</p>
         </td>
       </tr>
@@ -201,10 +201,10 @@ export function amberHeaderV2(title: string, subtitle: string = ''): string {
               <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto;">
                 <tr>
                   <td valign="middle">
-                    <img src="${BASE_URL}/logo.png" alt="PMHNP Hiring" width="100" height="100" style="display:block;width:100px;height:100px;object-fit:contain;border:0;background-color:${V2.bgAmberWarn};color:${V2.amber};font-family:${SERIF};font-size:14px;font-weight:700;text-align:center;line-height:100px;" />
+                    <img src="${BASE_URL}/logo.png" alt="${brand.name}" width="100" height="100" style="display:block;width:100px;height:100px;object-fit:contain;border:0;background-color:${V2.bgAmberWarn};color:${V2.amber};font-family:${SERIF};font-size:14px;font-weight:700;text-align:center;line-height:100px;" />
                   </td>
                   <td valign="bottom" style="padding-bottom:24px;">
-                    <span style="font-family:${SERIF};font-size:28px;font-weight:700;color:${V2.textPrimary};letter-spacing:-0.02em;display:block;line-height:1;margin-left:-24px;">PMHNP Hiring</span>
+                    <span style="font-family:${SERIF};font-size:28px;font-weight:700;color:${V2.textPrimary};letter-spacing:-0.02em;display:block;line-height:1;margin-left:-24px;">${brand.name}</span>
                     <span style="font-family:${SANS};font-size:10px;font-weight:500;color:${V2.textLabel};letter-spacing:0.08em;text-transform:uppercase;display:block;line-height:1;margin-left:-24px;margin-top:4px;">${EMAIL_HEADER_TAGLINE}</span>
                   </td>
                 </tr>

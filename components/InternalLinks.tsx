@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, Briefcase, Wifi, Video, GraduationCap, Calendar } from 'lucide-react';
+import { brand } from '@/config/brand';
 
 interface InternalLinksProps {
     state?: string | null;
@@ -36,7 +37,7 @@ export default function InternalLinks({
         const stateSlug = state.toLowerCase().replace(/\s+/g, '-');
         links.push({
             href: `/jobs/state/${stateSlug}`,
-            label: `All PMHNP Jobs in ${state}`,
+            label: `All ${brand.niche.short} Jobs in ${state}`,
             icon: <MapPin style={{ width: '14px', height: '14px' }} />,
         });
     }
@@ -45,7 +46,7 @@ export default function InternalLinks({
     if (isRemote || mode?.toLowerCase().includes('remote')) {
         links.push({
             href: '/jobs/remote',
-            label: 'More Remote PMHNP Jobs',
+            label: `More Remote ${brand.niche.short} Jobs`,
             icon: <Wifi style={{ width: '14px', height: '14px' }} />,
         });
     }
@@ -63,7 +64,7 @@ export default function InternalLinks({
     if (jobType?.toLowerCase().includes('per diem') || jobType?.toLowerCase().includes('prn')) {
         links.push({
             href: '/jobs/per-diem',
-            label: 'View Per Diem PMHNP Jobs',
+            label: `View Per Diem ${brand.niche.short} Jobs`,
             icon: <Calendar style={{ width: '14px', height: '14px' }} />,
         });
     }
@@ -71,7 +72,7 @@ export default function InternalLinks({
     if (jobType?.toLowerCase().includes('contract') || jobType?.toLowerCase().includes('travel')) {
         links.push({
             href: '/jobs/travel',
-            label: 'Explore Travel PMHNP Positions',
+            label: `Explore Travel ${brand.niche.short} Positions`,
             icon: <Briefcase style={{ width: '14px', height: '14px' }} />,
         });
     }
@@ -79,7 +80,7 @@ export default function InternalLinks({
     if (links.length === 0) {
         links.push({
             href: '/jobs',
-            label: 'Browse All PMHNP Jobs',
+            label: `Browse All ${brand.niche.short} Jobs`,
             icon: <Briefcase style={{ width: '14px', height: '14px' }} />,
         });
     }

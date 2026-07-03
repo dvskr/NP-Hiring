@@ -85,7 +85,7 @@ function UnsubscribeContent() {
             <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
                 {/* Logo */}
                 <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900">PMHNP Hiring</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">{brand.name}</h1>
                 </div>
 
                 {/* Loading State */}
@@ -111,7 +111,7 @@ function UnsubscribeContent() {
                             Welcome back!
                         </h2>
                         <p className="text-gray-700 mb-6">
-                            You've been resubscribed to PMHNP Hiring emails.
+                            You've been resubscribed to {brand.name} emails.
                         </p>
 
                         <Link href="/">
@@ -132,7 +132,7 @@ function UnsubscribeContent() {
                             You've been unsubscribed
                         </h2>
                         <p className="text-gray-700 mb-2">
-                            You will no longer receive emails from PMHNP Hiring.
+                            You will no longer receive emails from {brand.name}.
                         </p>
                         <p className="text-gray-600 mb-6">
                             We're sorry to see you go.

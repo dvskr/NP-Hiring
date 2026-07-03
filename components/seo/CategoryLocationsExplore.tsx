@@ -21,6 +21,7 @@ import { ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getCityBySlug } from '@/lib/pseo/city-data/cities';
 import { CODE_TO_STATE } from '@/lib/pseo/setting-state-config';
+import { brand } from '@/config/brand';
 
 interface CategoryLocationsExploreProps {
     /** The category slug, matching pseoStats.categorySlug (e.g. 'full-time'). */
@@ -137,7 +138,7 @@ export default async function CategoryLocationsExplore({
                         marginBottom: '40px',
                     }}
                 >
-                    {categoryLabel} PMHNP Jobs by Location
+                    {categoryLabel} {brand.niche.short} Jobs by Location
                 </h2>
 
                 {stateLinks.length > 0 && (

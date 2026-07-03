@@ -17,6 +17,7 @@ import HowItWorksSidebar from './HowItWorksSidebar'
 import JobCard from '@/components/JobCard'
 import type { Job as JobCardJob } from '@/lib/types'
 import { DASHBOARD_MARKET_PULSE, DASHBOARD_PROFILE_NUDGE_CLAIM } from '@/config/niche/stats'
+import { brand } from '@/config/brand'
 
 /* ── Types ── */
 interface DashboardJob {
@@ -259,7 +260,7 @@ function FeedbackRatingCard() {
                     color: '#0D9488', margin: '0 0 4px',
                 }}>Thank You!</h3>
                 <p style={{ fontSize: '13px', color: '#6B7F8A', margin: 0 }}>
-                    Your feedback helps us build a better experience for all PMHNPs.
+                    Your feedback helps us build a better experience for all {brand.niche.short}s.
                 </p>
             </div>
         )
@@ -277,7 +278,7 @@ function FeedbackRatingCard() {
                 Rate Your Experience
             </h3>
             <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 14px', lineHeight: 1.4 }}>
-                How would you rate PMHNP Hiring so far?
+                How would you rate {brand.name} so far?
             </p>
 
             {/* Stars */}
@@ -404,13 +405,13 @@ function TestimonialCard({ firstName }: { firstName: string | null }) {
                 Share Your Story
             </h3>
             <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 12px', lineHeight: 1.4 }}>
-                {firstName ? `${firstName}, your` : 'Your'} experience matters! Help other PMHNPs discover opportunities.
+                {firstName ? `${firstName}, your` : 'Your'} experience matters! Help other {brand.niche.short}s discover opportunities.
             </p>
 
             <textarea
                 value={review}
                 onChange={(e) => setReview(e.target.value)}
-                placeholder="What has your experience been like using PMHNP Hiring?"
+                placeholder={`What has your experience been like using ${brand.name}?`}
                 rows={3}
                 maxLength={500}
                 style={{

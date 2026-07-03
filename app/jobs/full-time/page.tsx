@@ -41,9 +41,9 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: 'What benefits do full-time PMHNPs receive?', a: 'Full-time PMHNPs typically receive comprehensive health/dental/vision insurance, 401k matching, 3-6 weeks PTO, CME stipends ($2-5K/yr), malpractice coverage, and student loan repayment programs at qualifying employers.' },
-  { q: 'What is the average full-time PMHNP salary?', a: 'Full-time PMHNPs earn $130K-$180K base salary depending on location, setting, and experience. Many roles add RVU bonuses, quality incentives, and sign-on bonuses of $10-30K.' },
-  { q: 'What schedule do full-time PMHNPs work?', a: 'Most outpatient full-time roles are Monday-Friday, 8am-5pm with no weekends. Inpatient roles often use 7-on/7-off schedules. Some positions offer 4x10-hour day options.' },
+  { q: `What benefits do full-time ${brand.niche.short}s receive?`, a: `Full-time ${brand.niche.short}s typically receive comprehensive health/dental/vision insurance, 401k matching, 3-6 weeks PTO, CME stipends ($2-5K/yr), malpractice coverage, and student loan repayment programs at qualifying employers.` },
+  { q: `What is the average full-time ${brand.niche.short} salary?`, a: `Full-time ${brand.niche.short}s earn $130K-$180K base salary depending on location, setting, and experience. Many roles add RVU bonuses, quality incentives, and sign-on bonuses of $10-30K.` },
+  { q: `What schedule do full-time ${brand.niche.short}s work?`, a: 'Most outpatient full-time roles are Monday-Friday, 8am-5pm with no weekends. Inpatient roles often use 7-on/7-off schedules. Some positions offer 4x10-hour day options.' },
   { q: 'How does full-time compare to contract or PRN?', a: 'Full-time offers job security, benefits, PTO, and retirement contributions. Contract/PRN pay higher hourly rates but lack benefits and stability. Full-time is ideal for long-term career building.' },
   { q: 'What qualifications are needed?', a: 'Active PMHNP-BC certification, state APRN licensure, DEA registration, and typically 1+ years of clinical experience. New grads are welcomed at many full-time positions.' },
 ];
@@ -51,8 +51,8 @@ const faqs = [
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
   return {
-    title: `${stats.totalJobs} Full-Time PMHNP Jobs ($130K-180K)`,
-    description: `Find ${stats.totalJobs} full-time PMHNP jobs with benefits, PTO, and retirement. Permanent psychiatric NP positions paying $130K-180K+.`,
+    title: `${stats.totalJobs} Full-Time ${brand.niche.short} Jobs ($130K-180K)`,
+    description: `Find ${stats.totalJobs} full-time ${brand.niche.short} jobs with benefits, PTO, and retirement. Permanent ${brand.niche.adjective} NP positions paying $130K-180K+.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/full-time` },
   };
 }
@@ -70,19 +70,19 @@ export default async function FullTimePage({ searchParams }: PageProps) {
       <BreadcrumbSchema items={[{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Full-Time", url: `${brand.baseUrl}/jobs/full-time` }]} />
       <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Full-Time Jobs" />
       {jobs.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Full-Time PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Full-Time ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
 
       {/* ═══ 1. HERO ═══ */}
       <CategoryHero
         bgColor="#88a7c4"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_fulltime.webp`}
-        heroAlt="Full-time PMHNP in clinic office"
+        heroAlt={`Full-time ${brand.niche.short} in clinic office`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Full-Time']}
         indexLabel="№ 07 / 28"
         headlineLine1="Full-Time"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, stability & benefits."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -156,7 +156,7 @@ export default async function FullTimePage({ searchParams }: PageProps) {
               <div>
                 <TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} />
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Competitive Salary</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average full-time PMHNP salary:</p>
+                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average full-time {brand.niche.short} salary:</p>
                 <p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p>
               </div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ft_salary.webp`} alt="Full-time salary" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
@@ -212,7 +212,7 @@ export default async function FullTimePage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Full-Time PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Full-Time {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {faqs.map((faq, idx) => (<div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}><h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>{faq.a}</p></div>))}
           </div>

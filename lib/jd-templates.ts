@@ -22,6 +22,8 @@
  * the human to fill in.
  */
 
+import { brand } from '@/config/brand';
+
 export type JdTemplateCategory = 'outpatient' | 'inpatient' | 'telehealth' | 'specialty';
 
 export type JdTemplateId =
@@ -57,7 +59,7 @@ export interface JdTemplate {
 
 const REQUIRED_QUALS_BLOCK = `<h3>Required qualifications</h3>
 <ul>
-<li>Master's or Doctoral degree (MSN, DNP) from an accredited PMHNP program</li>
+<li>Master's or Doctoral degree (MSN, DNP) from an accredited ${brand.niche.short} program</li>
 <li>Active, unrestricted PMHNP-BC certification (ANCC)</li>
 <li>Active RN and APRN/NP licensure in {{state}}</li>
 <li>Active, unrestricted DEA registration with Schedule II authority (or willingness to obtain by start date)</li>
@@ -88,7 +90,7 @@ function buildTemplate(parts: {
   whyJoin: string;
 }): string {
   return [
-    `<h2>About {{employer}}</h2><p>{{employer}} is hiring a Psychiatric Mental Health Nurse Practitioner (PMHNP) in {{city}}, {{state}}. ${parts.aboutBlurb}</p>`,
+    `<h2>About {{employer}}</h2><p>{{employer}} is hiring a ${brand.niche.long} (${brand.niche.short}) in {{city}}, {{state}}. ${parts.aboutBlurb}</p>`,
     `<h2>Position summary</h2><p>${parts.positionSummary}</p>`,
     `<h3>Key responsibilities</h3><ul>${parts.responsibilities.map((r) => `<li>${r}</li>`).join('')}</ul>`,
     REQUIRED_QUALS_BLOCK,
@@ -104,11 +106,11 @@ function buildTemplate(parts: {
 
 const OUTPATIENT_ADULT_BODY = buildTemplate({
   aboutBlurb:
-    'We are a [mission/values phrase — e.g. clinician-led, evidence-based] outpatient psychiatric practice serving adults with [primary diagnostic mix — e.g. mood, anxiety, ADHD, trauma].',
+    `We are a [mission/values phrase — e.g. clinician-led, evidence-based] outpatient ${brand.niche.adjective} practice serving adults with [primary diagnostic mix — e.g. mood, anxiety, ADHD, trauma].`,
   positionSummary:
-    'This is a [full-time / part-time] outpatient PMHNP role with autonomy over your panel and treatment decisions. You will conduct psychiatric evaluations, manage psychotropic medications, and coordinate care with our [therapy / primary care / case management] team. Our EHR is [Athena / Epic / NextGen / specify] with [templated notes / AI-assisted documentation / specify any tooling].',
+    `This is a [full-time / part-time] outpatient ${brand.niche.short} role with autonomy over your panel and treatment decisions. You will conduct ${brand.niche.adjective} evaluations, manage psychotropic medications, and coordinate care with our [therapy / primary care / case management] team. Our EHR is [Athena / Epic / NextGen / specify] with [templated notes / AI-assisted documentation / specify any tooling].`,
   responsibilities: [
-    'Conduct [45 / 60]-minute initial psychiatric evaluations and [20 / 30]-minute medication-management follow-ups',
+    `Conduct [45 / 60]-minute initial ${brand.niche.adjective} evaluations and [20 / 30]-minute medication-management follow-ups`,
     'Diagnose and treat [list common diagnoses you accept]',
     'Prescribe and titrate psychotropic medications including [SSRIs / SNRIs / stimulants / mood stabilizers / antipsychotics — adjust to your formulary]',
     'Provide brief supportive psychotherapy and psychoeducation alongside medication management',
@@ -117,7 +119,7 @@ const OUTPATIENT_ADULT_BODY = buildTemplate({
     'Participate in [weekly / monthly] case-consultation meetings',
   ],
   preferredQuals: [
-    '[N]+ years of outpatient psychiatric experience',
+    `[N]+ years of outpatient ${brand.niche.adjective} experience`,
     'Experience with measurement-based care (PHQ-9, GAD-7, ASRS, AUDIT)',
     '[Spanish / Mandarin / other language] fluency for our patient population',
     '[Specific modality experience: TMS, ketamine, ECT consult]',
@@ -130,19 +132,19 @@ const OUTPATIENT_ADULT_BODY = buildTemplate({
 
 const OUTPATIENT_CHILD_ADOLESCENT_BODY = buildTemplate({
   aboutBlurb:
-    'We are a child & adolescent outpatient psychiatric practice serving patients ages [6–17 / 4–21 / specify] with [ADHD, mood, anxiety, autism spectrum, trauma — adjust to your population].',
+    `We are a child & adolescent outpatient ${brand.niche.adjective} practice serving patients ages [6–17 / 4–21 / specify] with [ADHD, mood, anxiety, autism spectrum, trauma — adjust to your population].`,
   positionSummary:
-    'This is a child & adolescent PMHNP role with focus on developmentally-informed psychiatric care. You will conduct comprehensive evaluations, prescribe psychotropic medications, and partner closely with parents, schools, and other treating providers.',
+    `This is a child & adolescent ${brand.niche.short} role with focus on developmentally-informed ${brand.niche.adjective} care. You will conduct comprehensive evaluations, prescribe psychotropic medications, and partner closely with parents, schools, and other treating providers.`,
   responsibilities: [
-    'Conduct comprehensive psychiatric evaluations including developmental history, parent/caregiver interview, and school collateral',
+    `Conduct comprehensive ${brand.niche.adjective} evaluations including developmental history, parent/caregiver interview, and school collateral`,
     'Diagnose and treat ADHD, mood disorders, anxiety, OCD, PTSD, [autism spectrum, eating disorders, specify]',
     'Prescribe and titrate psychotropic medications appropriate for pediatric populations',
     'Lead family meetings and psychoeducation sessions for parents/caregivers',
     'Coordinate with schools, IEP/504 teams, and pediatric primary care',
-    'Maintain documentation per [your state] child mental health regulations',
+    `Maintain documentation per [your state] child ${brand.niche.category} regulations`,
   ],
   preferredQuals: [
-    '[N]+ years of child & adolescent psychiatric experience',
+    `[N]+ years of child & adolescent ${brand.niche.adjective} experience`,
     'CAP-PMHNP certification or equivalent specialty training',
     'Experience with developmental screening tools and parent rating scales',
     '[Spanish / specify] fluency for our patient population',
@@ -155,11 +157,11 @@ const OUTPATIENT_CHILD_ADOLESCENT_BODY = buildTemplate({
 
 const OUTPATIENT_GERIATRIC_BODY = buildTemplate({
   aboutBlurb:
-    'We are a geriatric psychiatry practice serving older adults (age [55+ / 65+]) with mood disorders, cognitive concerns, late-life psychiatric conditions, and behavioral symptoms of dementia.',
+    `We are a geriatric psychiatry practice serving older adults (age [55+ / 65+]) with mood disorders, cognitive concerns, late-life ${brand.niche.adjective} conditions, and behavioral symptoms of dementia.`,
   positionSummary:
-    'This is a geriatric PMHNP role centered on careful psychotropic management in medically complex older adults, often in collaboration with primary care, neurology, and skilled nursing teams.',
+    `This is a geriatric ${brand.niche.short} role centered on careful psychotropic management in medically complex older adults, often in collaboration with primary care, neurology, and skilled nursing teams.`,
   responsibilities: [
-    'Conduct psychiatric evaluations including cognitive screening (MoCA / MMSE), depression scales (PHQ-9, GDS), and functional assessment',
+    `Conduct ${brand.niche.adjective} evaluations including cognitive screening (MoCA / MMSE), depression scales (PHQ-9, GDS), and functional assessment`,
     'Diagnose and manage late-life depression, anxiety, psychotic disorders, and behavioral symptoms of dementia',
     'Prescribe psychotropic medications with attention to polypharmacy, renal/hepatic adjustments, and fall risk',
     'Coordinate with primary care, neurology, and [SNF / ALF / memory-care facility] staff',
@@ -167,9 +169,9 @@ const OUTPATIENT_GERIATRIC_BODY = buildTemplate({
     '[Optional: conduct in-facility consults at assisted-living or skilled-nursing partners]',
   ],
   preferredQuals: [
-    '[N]+ years of geriatric or general adult psychiatric experience',
+    `[N]+ years of geriatric or general adult ${brand.niche.adjective} experience`,
     'Familiarity with Beers Criteria and STOPP/START prescribing in older adults',
-    'Comfort with dementia care, capacity assessments, and end-of-life psychiatric care',
+    `Comfort with dementia care, capacity assessments, and end-of-life ${brand.niche.adjective} care`,
     '[Spanish / specify] fluency',
   ],
   schedule:
@@ -180,12 +182,12 @@ const OUTPATIENT_GERIATRIC_BODY = buildTemplate({
 
 const OUTPATIENT_SUBSTANCE_USE_BODY = buildTemplate({
   aboutBlurb:
-    'We are an outpatient practice specializing in substance use disorders and co-occurring psychiatric conditions. We provide medication-assisted treatment (MAT) for opioid use disorder, alcohol use disorder, and other substance-related diagnoses.',
+    `We are an outpatient practice specializing in substance use disorders and co-occurring ${brand.niche.adjective} conditions. We provide medication-assisted treatment (MAT) for opioid use disorder, alcohol use disorder, and other substance-related diagnoses.`,
   positionSummary:
-    'This is a PMHNP role focused on MAT and dual-diagnosis care. You will manage buprenorphine, naltrexone, and acamprosate alongside psychiatric medication management for co-occurring mood, anxiety, and trauma disorders.',
+    `This is a ${brand.niche.short} role focused on MAT and dual-diagnosis care. You will manage buprenorphine, naltrexone, and acamprosate alongside ${brand.niche.adjective} medication management for co-occurring mood, anxiety, and trauma disorders.`,
   responsibilities: [
     'Initiate and manage MAT (buprenorphine/naloxone, extended-release naltrexone, acamprosate, [specify])',
-    'Conduct psychiatric evaluations for co-occurring SUD and mental-health diagnoses',
+    `Conduct ${brand.niche.adjective} evaluations for co-occurring SUD and mental-health diagnoses`,
     'Manage psychotropic medications alongside MAT with attention to interactions',
     'Coordinate care with substance use counselors, peer-recovery specialists, and primary care',
     'Document per [42 CFR Part 2 / state regulations] for SUD records',
@@ -207,9 +209,9 @@ const OUTPATIENT_SUBSTANCE_USE_BODY = buildTemplate({
 
 const INPATIENT_ADULT_ACUTE_BODY = buildTemplate({
   aboutBlurb:
-    'We are a [N]-bed acute adult inpatient psychiatric unit at [community hospital / academic medical center / specify], providing stabilization for patients in acute psychiatric crisis.',
+    `We are a [N]-bed acute adult inpatient ${brand.niche.adjective} unit at [community hospital / academic medical center / specify], providing stabilization for patients in acute ${brand.niche.adjective} crisis.`,
   positionSummary:
-    'This is an inpatient PMHNP role with shared admitting and rounding responsibility alongside a [board-certified psychiatrist / attending physician group]. Caseload is [8–12] acute patients with average length of stay [N] days.',
+    `This is an inpatient ${brand.niche.short} role with shared admitting and rounding responsibility alongside a [board-certified psychiatrist / attending physician group]. Caseload is [8–12] acute patients with average length of stay [N] days.`,
   responsibilities: [
     'Perform initial admissions within [4] hours of arrival including history, mental-status exam, risk assessment, and provisional diagnosis',
     'Round daily on assigned patients with progress notes documenting clinical status, response to medications, and discharge readiness',
@@ -220,7 +222,7 @@ const INPATIENT_ADULT_ACUTE_BODY = buildTemplate({
     'Lead family meetings for discharge planning and safety planning',
   ],
   preferredQuals: [
-    '[N]+ years of acute inpatient psychiatric experience',
+    `[N]+ years of acute inpatient ${brand.niche.adjective} experience`,
     'BLS required; ACLS preferred',
     'Comfort with involuntary commitment paperwork and capacity assessments in {{state}}',
     'Experience with [clozapine REMS / ECT / specify high-acuity modalities]',
@@ -233,9 +235,9 @@ const INPATIENT_ADULT_ACUTE_BODY = buildTemplate({
 
 const INPATIENT_CHILD_ADOLESCENT_BODY = buildTemplate({
   aboutBlurb:
-    'We are a [N]-bed child & adolescent inpatient psychiatric unit serving patients ages [4–18 / specify] in acute crisis — suicidal ideation, aggression, psychotic decompensation, severe mood episodes.',
+    `We are a [N]-bed child & adolescent inpatient ${brand.niche.adjective} unit serving patients ages [4–18 / specify] in acute crisis — suicidal ideation, aggression, psychotic decompensation, severe mood episodes.`,
   positionSummary:
-    'This is a child & adolescent inpatient PMHNP role focused on rapid stabilization, family-centered treatment planning, and coordinated discharge into outpatient or step-down care.',
+    `This is a child & adolescent inpatient ${brand.niche.short} role focused on rapid stabilization, family-centered treatment planning, and coordinated discharge into outpatient or step-down care.`,
   responsibilities: [
     'Perform admissions including developmental history, parent/caregiver interview, and risk assessment',
     'Round daily; document clinical status, medication response, milieu observations',
@@ -245,7 +247,7 @@ const INPATIENT_CHILD_ADOLESCENT_BODY = buildTemplate({
     'Lead family meetings on diagnosis, treatment, and post-discharge safety planning',
   ],
   preferredQuals: [
-    '[N]+ years of child & adolescent psychiatric experience (inpatient strongly preferred)',
+    `[N]+ years of child & adolescent ${brand.niche.adjective} experience (inpatient strongly preferred)`,
     'CAP-PMHNP certification or equivalent specialty training',
     'Comfort with [42 CFR / juvenile-court / child-welfare] documentation requirements',
     'BLS required; PALS preferred',
@@ -262,17 +264,17 @@ const TELEHEALTH_ADULT_BODY = buildTemplate({
   aboutBlurb:
     'We are a 100% remote telepsychiatry practice serving adults in [single state / {{state}} only — specify if multi-state]. We operate exclusively over [HIPAA-compliant video platform] with [asynchronous messaging / chat as adjunct, specify].',
   positionSummary:
-    'This is a fully-remote PMHNP role. You see patients exclusively over video from a home office of your choosing. We have invested in [low panel cap / measurement-based care / clinician-led policy / specify your differentiator].',
+    `This is a fully-remote ${brand.niche.short} role. You see patients exclusively over video from a home office of your choosing. We have invested in [low panel cap / measurement-based care / clinician-led policy / specify your differentiator].`,
   responsibilities: [
     'Conduct [45–60]-minute initial telehealth evaluations and [20–30]-minute follow-ups',
-    'Diagnose and treat adult psychiatric conditions: depression, anxiety, ADHD, PTSD, OCD, bipolar spectrum',
+    `Diagnose and treat adult ${brand.niche.adjective} conditions: depression, anxiety, ADHD, PTSD, OCD, bipolar spectrum`,
     'Prescribe psychotropic medications via [EPCS] in compliance with state telehealth and DEA controlled-substance rules',
     'Manage an active panel of approximately [250–350] patients',
     'Respond to asynchronous patient messages within [N] business days',
     'Coordinate care with primary care, therapists, and family members as appropriate',
   ],
   preferredQuals: [
-    '[N]+ years of clinical psychiatric experience (any setting)',
+    `[N]+ years of clinical ${brand.niche.adjective} experience (any setting)`,
     'Existing multi-state licensure (compact RN preferred)',
     'Comfort with asynchronous patient messaging workflows',
     '[Spanish / specify] fluency',
@@ -287,9 +289,9 @@ const TELEHEALTH_MULTISTATE_BODY = buildTemplate({
   aboutBlurb:
     'We are a multi-state telepsychiatry practice licensed in [N] states, serving adults across the country. We invest heavily in licensing support — our credentialing team handles the paperwork for additional state licenses.',
   positionSummary:
-    'This is a fully-remote multi-state PMHNP role. You will see patients across multiple states using a unified video platform and EHR. We support clinicians in expanding their state portfolio over time.',
+    `This is a fully-remote multi-state ${brand.niche.short} role. You will see patients across multiple states using a unified video platform and EHR. We support clinicians in expanding their state portfolio over time.`,
   responsibilities: [
-    'Conduct telehealth psychiatric evaluations and follow-ups across [N] states',
+    `Conduct telehealth ${brand.niche.adjective} evaluations and follow-ups across [N] states`,
     'Maintain awareness of state-specific prescribing restrictions and telehealth rules',
     'Prescribe controlled substances via EPCS in compliance with each state\'s requirements',
     'Manage a multi-state patient panel with our scheduling team',
@@ -313,9 +315,9 @@ const FQHC_COMMUNITY_HEALTH_BODY = buildTemplate({
   aboutBlurb:
     'We are a Federally Qualified Health Center (FQHC) serving [rural / urban underserved / specify] patients. Our behavioral health team is integrated within primary care using a [collaborative care / co-located] model.',
   positionSummary:
-    'This is a PMHNP role embedded in our primary-care team. You will see patients of all ages and acuity levels, with a strong emphasis on accessibility, harm reduction, and culturally responsive care.',
+    `This is a ${brand.niche.short} role embedded in our primary-care team. You will see patients of all ages and acuity levels, with a strong emphasis on accessibility, harm reduction, and culturally responsive care.`,
   responsibilities: [
-    'Conduct psychiatric evaluations for adults [and pediatrics — specify scope]',
+    `Conduct ${brand.niche.adjective} evaluations for adults [and pediatrics — specify scope]`,
     'Provide warm hand-offs with primary-care providers',
     'Manage psychotropic medications across diagnostic categories',
     'Coordinate with [behavioral-health consultants / care managers / community-health workers]',
@@ -336,11 +338,11 @@ const FQHC_COMMUNITY_HEALTH_BODY = buildTemplate({
 
 const CORRECTIONAL_FORENSIC_BODY = buildTemplate({
   aboutBlurb:
-    'We provide psychiatric care within [state / county / federal] correctional settings, serving incarcerated adults with mental-health needs.',
+    `We provide ${brand.niche.adjective} care within [state / county / federal] correctional settings, serving incarcerated adults with mental-health needs.`,
   positionSummary:
-    'This is a correctional PMHNP role focused on psychiatric evaluation, medication management, and crisis response within a [secure facility / specify]. You will work as part of a multidisciplinary team alongside corrections staff, mental-health counselors, and medical providers.',
+    `This is a correctional ${brand.niche.short} role focused on ${brand.niche.adjective} evaluation, medication management, and crisis response within a [secure facility / specify]. You will work as part of a multidisciplinary team alongside corrections staff, mental-health counselors, and medical providers.`,
   responsibilities: [
-    'Conduct psychiatric evaluations for newly incarcerated individuals and chronic-care follow-ups',
+    `Conduct ${brand.niche.adjective} evaluations for newly incarcerated individuals and chronic-care follow-ups`,
     'Prescribe and titrate psychotropic medications appropriate for correctional settings',
     'Respond to mental-health crises and acute decompensations within the facility',
     'Coordinate with corrections officers, counselors, and medical staff',
@@ -348,7 +350,7 @@ const CORRECTIONAL_FORENSIC_BODY = buildTemplate({
     'Participate in suicide prevention and segregation review processes',
   ],
   preferredQuals: [
-    '[N]+ years of psychiatric experience (correctional experience preferred)',
+    `[N]+ years of ${brand.niche.adjective} experience (correctional experience preferred)`,
     'Comfort with [NCCHC / ACA accreditation] requirements',
     'Trauma-informed care training',
     'Experience with [substance use / SMI / forensic populations]',
@@ -361,9 +363,9 @@ const CORRECTIONAL_FORENSIC_BODY = buildTemplate({
 
 const ECT_INTERVENTIONAL_BODY = buildTemplate({
   aboutBlurb:
-    'We are an interventional psychiatry program offering ECT, TMS, [ketamine / esketamine / specify] alongside traditional psychiatric care for treatment-resistant conditions.',
+    `We are an interventional psychiatry program offering ECT, TMS, [ketamine / esketamine / specify] alongside traditional ${brand.niche.adjective} care for treatment-resistant conditions.`,
   positionSummary:
-    'This is a PMHNP role within our interventional psychiatry team. You will manage referrals, conduct pre- and post-treatment evaluations, and provide medication management for patients undergoing ECT, TMS, or [other modalities].',
+    `This is a ${brand.niche.short} role within our interventional psychiatry team. You will manage referrals, conduct pre- and post-treatment evaluations, and provide medication management for patients undergoing ECT, TMS, or [other modalities].`,
   responsibilities: [
     'Conduct pre-treatment evaluations for ECT/TMS candidates',
     'Manage psychotropic medications before, during, and after interventional treatment courses',
@@ -373,7 +375,7 @@ const ECT_INTERVENTIONAL_BODY = buildTemplate({
     'Document per [your facility / Joint Commission] requirements',
   ],
   preferredQuals: [
-    '[N]+ years of psychiatric experience including treatment-resistant cases',
+    `[N]+ years of ${brand.niche.adjective} experience including treatment-resistant cases`,
     'Familiarity with ECT, TMS, and ketamine/esketamine protocols',
     'Comfort with cognitive screening tools and outcome measurement',
     '[Specific training in interventional psychiatry a plus]',
@@ -386,11 +388,11 @@ const ECT_INTERVENTIONAL_BODY = buildTemplate({
 
 const CRISIS_EMERGENCY_BODY = buildTemplate({
   aboutBlurb:
-    'We provide psychiatric crisis assessment and stabilization in [emergency department / crisis stabilization unit / mobile crisis team — specify].',
+    `We provide ${brand.niche.adjective} crisis assessment and stabilization in [emergency department / crisis stabilization unit / mobile crisis team — specify].`,
   positionSummary:
-    'This is a crisis PMHNP role focused on rapid psychiatric evaluation, risk stratification, disposition planning, and short-term stabilization. You will work alongside ED physicians, crisis counselors, and case managers.',
+    `This is a crisis ${brand.niche.short} role focused on rapid ${brand.niche.adjective} evaluation, risk stratification, disposition planning, and short-term stabilization. You will work alongside ED physicians, crisis counselors, and case managers.`,
   responsibilities: [
-    'Conduct emergency psychiatric evaluations with rapid risk and disposition assessment',
+    `Conduct emergency ${brand.niche.adjective} evaluations with rapid risk and disposition assessment`,
     'Initiate stabilization including medication, brief crisis intervention, and safety planning',
     'Coordinate inpatient admissions, outpatient referrals, and community resources',
     'Document and complete involuntary-commitment paperwork per {{state}} law',
@@ -398,7 +400,7 @@ const CRISIS_EMERGENCY_BODY = buildTemplate({
     'Participate in team debriefs and quality reviews',
   ],
   preferredQuals: [
-    '[N]+ years of psychiatric experience (acute or ED preferred)',
+    `[N]+ years of ${brand.niche.adjective} experience (acute or ED preferred)`,
     'BLS required; ACLS preferred',
     'Familiarity with civil commitment statutes in {{state}}',
     'Comfort with high-acuity, high-volume environments',

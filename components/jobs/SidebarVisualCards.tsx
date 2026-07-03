@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { CAREER_PULSE_STATS } from '@/config/niche/stats';
+import { brand } from '@/config/brand';
 
 /* ──────────────────────────────────────────────
  *  SidebarVisualCards
@@ -129,10 +130,10 @@ export function CareerPulseCard() {
           margin: '0 0 4px',
           letterSpacing: '-0.01em',
         }}>
-          PMHNP Career Pulse
+          {brand.niche.short} Career Pulse
         </h3>
         <p style={{ fontSize: '12px', color: '#6B7280', margin: '0 0 14px', lineHeight: 1.4 }}>
-          Why now is the best time to be a Psychiatric NP
+          Why now is the best time to be a {brand.niche.medium}
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

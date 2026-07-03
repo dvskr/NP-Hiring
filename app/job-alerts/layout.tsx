@@ -2,8 +2,8 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Job Alerts | PMHNP Jobs',
-    description: 'Set up personalized job alerts and get notified when new PMHNP positions match your criteria.',
+    title: `Job Alerts | ${brand.niche.short} Jobs`,
+    description: `Set up personalized job alerts and get notified when new ${brand.niche.short} positions match your criteria.`,
     alternates: {
         canonical: `${brand.baseUrl}/job-alerts`,
     },

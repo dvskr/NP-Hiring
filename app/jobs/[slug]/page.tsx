@@ -370,7 +370,7 @@ export async function generateMetadata({ params }: JobPageProps) {
     // not a 410 (deleted job). Use generic page-not-found metadata.
     return {
       title: 'Page Not Found',
-      description: 'The page you are trying to access doesn’t exist. Browse current PMHNP jobs on PMHNP Hiring.',
+      description: `The page you are trying to access doesn’t exist. Browse current ${brand.niche.short} jobs on ${brand.name}.`,
       robots: { index: false, follow: true },
     };
   }
@@ -384,7 +384,7 @@ export async function generateMetadata({ params }: JobPageProps) {
   if (result.status === 'gone') {
     return {
       title: 'Page Not Found',
-      description: 'This PMHNP position is no longer available. Browse current job openings on PMHNP Hiring.',
+      description: `This ${brand.niche.short} position is no longer available. Browse current job openings on ${brand.name}.`,
       robots: { index: false, follow: true },
     };
   }
@@ -394,11 +394,11 @@ export async function generateMetadata({ params }: JobPageProps) {
   // A 200 + noindex + rich content (links to similar jobs) tells Google to de-index
   // the URL without wasting crawl budget re-crawling 404s.
   if (result.status === 'expired') {
-    const expiredTitle = result.title || 'PMHNP Position';
+    const expiredTitle = result.title || `${brand.niche.short} Position`;
     const expiredEmployer = result.employer || 'Employer';
     return {
       title: `${expiredTitle} — Position Filled`,
-      description: `This ${expiredTitle} position at ${expiredEmployer} is no longer available. Browse similar PMHNP jobs on PMHNP Hiring.`,
+      description: `This ${expiredTitle} position at ${expiredEmployer} is no longer available. Browse similar ${brand.niche.short} jobs on ${brand.name}.`,
       robots: {
         index: false,
         follow: true,
@@ -505,7 +505,7 @@ export async function generateMetadata({ params }: JobPageProps) {
       description,
       type: 'article',
       url: canonicalUrl,
-      siteName: 'PMHNP Hiring',
+      siteName: brand.name,
       images: [
         {
           url: ogImageUrl.toString(),
@@ -548,7 +548,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
   const actionCards = [
     { href: '/jobs', label: 'Browse All Jobs', sub: 'View all open positions', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
     { href: '/jobs/remote', label: 'Remote Jobs', sub: 'Work from anywhere', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-    { href: '/jobs/telehealth', label: 'Telehealth Jobs', sub: 'Virtual psychiatric care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
+    { href: '/jobs/telehealth', label: 'Telehealth Jobs', sub: `Virtual ${brand.niche.adjective} care`, icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
     { href: '/jobs/travel', label: 'Travel Jobs', sub: 'Explore new locations', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_travel.webp` },
     { href: '/jobs/outpatient', label: 'Outpatient Jobs', sub: 'Clinic-based roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
     { href: '/jobs/inpatient', label: 'Inpatient Jobs', sub: 'Hospital settings', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
@@ -593,9 +593,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
           <p style={{ fontSize: '15px', color: '#7A6A62', marginBottom: '0', lineHeight: 1.6 }}>
             {subtext}
           </p>
-          <p style={{ fontSize: '14px', color: '#7A6A62', marginTop: '8px' }}>
-            Don&apos;t worry — we have hundreds of similar PMHNP positions available right now.
-          </p>
+          <p style={{ fontSize: '14px', color: '#7A6A62', marginTop: '8px' }}>Don&apos;t worry — we have hundreds of similar {brand.niche.short} positions available right now.</p>
         </div>
 
         {/* Action Cards — 3×2 Grid */}
@@ -621,9 +619,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
 
         {/* Salary Guide CTA */}
         <div style={{ ...clayCard, padding: '28px 32px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#7A6A62', marginBottom: '16px' }}>
-            While you&apos;re here, check out the latest PMHNP salary data:
-          </p>
+          <p style={{ fontSize: '14px', color: '#7A6A62', marginBottom: '16px' }}>While you&apos;re here, check out the latest {brand.niche.short} salary data:</p>
           <a href="/salary-guide"
             className="gone-cta"
             style={{
@@ -633,9 +629,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
               background: 'linear-gradient(135deg, #0D9488, #0F766E)',
               boxShadow: '4px 4px 12px rgba(13,148,136,0.2), -2px -2px 6px rgba(255,255,255,0.3), inset 1px 1px 2px rgba(255,255,255,0.2)',
             }}>
-            <img src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp`} alt="" width={22} height={22} loading="lazy" decoding="async" style={{ objectFit: 'contain' }} />
-            2026 PMHNP Salary Guide →
-          </a>
+            <img src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp`} alt="" width={22} height={22} loading="lazy" decoding="async" style={{ objectFit: 'contain' }} />2026 {brand.niche.short} Salary Guide →</a>
         </div>
 
       </div>
@@ -673,7 +667,7 @@ export default async function JobPage({ params }: JobPageProps) {
   // Job exists but expired/unpublished → render rich expired page
   // (not notFound() — see generateMetadata for rationale)
   if (result.status === 'expired') {
-    const expiredTitle = result.title || 'PMHNP Position';
+    const expiredTitle = result.title || `${brand.niche.short} Position`;
     const expiredEmployer = result.employer || 'an employer';
 
     return renderRemovedPage({
@@ -1186,7 +1180,7 @@ export default async function JobPage({ params }: JobPageProps) {
           <RelatedJobs
             jobs={relatedJobs}
             currentJobId={job.id}
-            title="Similar PMHNP Jobs"
+            title={`Similar ${brand.niche.short} Jobs`}
           />
         )}
 
@@ -1204,14 +1198,14 @@ export default async function JobPage({ params }: JobPageProps) {
           <RelatedJobs
             jobs={internalLinkBuckets.moreInCity}
             currentJobId={job.id}
-            title={`More PMHNP jobs in ${internalLinkBuckets.cityName}`}
+            title={`More ${brand.niche.short} jobs in ${internalLinkBuckets.cityName}`}
           />
         )}
         {internalLinkBuckets.moreNewGrad.length > 0 && (
           <RelatedJobs
             jobs={internalLinkBuckets.moreNewGrad}
             currentJobId={job.id}
-            title="More new-grad-friendly PMHNP jobs"
+            title={`More new-grad-friendly ${brand.niche.short} jobs`}
           />
         )}
 

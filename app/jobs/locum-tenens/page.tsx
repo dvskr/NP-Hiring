@@ -88,18 +88,18 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} Locum Tenens PMHNP Jobs — Agency Staffing ($85-150/hr)`,
-    description: `Find ${stats.totalJobs} locum tenens PMHNP jobs paying $85-$150+/hr. Multi-state assignments with housing stipends, malpractice coverage, and premium pay. Updated daily.`,
+    title: `${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs — Agency Staffing ($85-150/hr)`,
+    description: `Find ${stats.totalJobs} locum tenens ${brand.niche.short} jobs paying $85-$150+/hr. Multi-state assignments with housing stipends, malpractice coverage, and premium pay. Updated daily.`,
     keywords: ['locum tenens pmhnp', 'travel pmhnp jobs', 'locum psychiatric nurse practitioner', 'psych NP travel assignments', 'temporary pmhnp positions', 'locum tenens psych nurse practitioner'],
     openGraph: {
-      title: `${stats.totalJobs} Locum Tenens PMHNP Jobs - Travel Assignments`,
-      description: 'Browse locum tenens and travel psychiatric mental health nurse practitioner positions. Premium pay, housing, and malpractice coverage.',
+      title: `${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs - Travel Assignments`,
+      description: `Browse locum tenens and travel ${brand.niche.descriptor} positions. Premium pay, housing, and malpractice coverage.`,
       type: 'website',
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Locum Tenens PMHNP Jobs`)}&subtitle=${encodeURIComponent('Travel psych NP assignments with premium pay')}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent('Travel psych NP assignments with premium pay')}`,
         width: 1200,
         height: 630,
-        alt: 'Locum Tenens PMHNP Jobs',
+        alt: `Locum Tenens ${brand.niche.short} Jobs`,
       }],
     },
     alternates: {
@@ -134,23 +134,23 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
   // Locum tenens FAQ schema
   const locumFaqs = [
     {
-      question: "What is a locum tenens PMHNP?",
-      answer: "A locum tenens PMHNP is a psychiatric nurse practitioner who fills temporary staffing needs at healthcare facilities. Assignments typically last 2-13 weeks and include housing stipends, travel reimbursement, malpractice coverage, and premium hourly rates of $85-$150+."
+      question: `What is a locum tenens ${brand.niche.short}?`,
+      answer: `A locum tenens ${brand.niche.short} is a ${brand.niche.adjective} nurse practitioner who fills temporary staffing needs at healthcare facilities. Assignments typically last 2-13 weeks and include housing stipends, travel reimbursement, malpractice coverage, and premium hourly rates of $85-$150+.`
     },
     {
-      question: "How much do locum tenens psychiatric nurse practitioners earn?",
-      answer: "Locum tenens PMHNPs earn $85-$150+ per hour, translating to $150,000-$250,000+ annually. This is 20-50% higher than permanent positions. Additionally, locum PMHNPs receive tax-free housing stipends ($1,500-$3,500/month), travel reimbursement, and malpractice coverage."
+      question: `How much do locum tenens ${brand.niche.adjective} nurse practitioners earn?`,
+      answer: `Locum tenens ${brand.niche.short}s earn $85-$150+ per hour, translating to $150,000-$250,000+ annually. This is 20-50% higher than permanent positions. Additionally, locum ${brand.niche.short}s receive tax-free housing stipends ($1,500-$3,500/month), travel reimbursement, and malpractice coverage.`
     },
     {
-      question: "Do locum tenens PMHNPs get benefits?",
+      question: `Do locum tenens ${brand.niche.short}s get benefits?`,
       answer: "Most locum tenens staffing agencies offer benefits including health insurance, 401(k) plans, malpractice coverage, CEU reimbursement, housing stipends, and travel allowances. Benefits vary by agency and assignment length. Some agencies also offer completion bonuses."
     },
     {
-      question: "What are the licensing requirements for locum tenens PMHNP work?",
-      answer: "Locum tenens PMHNPs need an active APRN license in the state of each assignment. States participating in the Nurse Licensure Compact (NLC) make multi-state practice easier. Most staffing agencies assist with state licensure and credentialing for new assignments."
+      question: `What are the licensing requirements for locum tenens ${brand.niche.short} work?`,
+      answer: `Locum tenens ${brand.niche.short}s need an active APRN license in the state of each assignment. States participating in the Nurse Licensure Compact (NLC) make multi-state practice easier. Most staffing agencies assist with state licensure and credentialing for new assignments.`
     },
     {
-      question: "Is locum tenens work good for new grad PMHNPs?",
+      question: `Is locum tenens work good for new grad ${brand.niche.short}s?`,
       answer: "Locum tenens can work for new grads who are confident in their clinical skills, but most agencies prefer 1-2 years of experience. New grads may find short-term assignments challenging due to rapid onboarding. Consider starting with permanent positions that offer mentorship before transitioning to locum work."
     },
   ];
@@ -189,7 +189,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'ItemList',
-              name: 'Locum Tenens PMHNP Jobs',
+              name: `Locum Tenens ${brand.niche.short} Jobs`,
               numberOfItems: stats.totalJobs,
               itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({
                 '@type': 'ListItem',
@@ -201,17 +201,17 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
           }}
         />
       )}
-      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Locum Tenens PMHNP Jobs" />
+      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName={`Locum Tenens ${brand.niche.short} Jobs`} />
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#91c9e7"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v2_locumtenens.webp`}
-        heroAlt="Locum tenens travel PMHNP assignment"
+        heroAlt={`Locum tenens travel ${brand.niche.short} assignment`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Locum Tenens']}
         indexLabel="№ 04 / 28"
         headlineLine1="Locum Tenens"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, travel & flexibility."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -353,12 +353,11 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Compensation</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Locum PMHNPs earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$150K–$250K'} annually equivalent with tax-free housing and malpractice coverage.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Locum {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$150K–$250K'} annually equivalent with tax-free housing and malpractice coverage.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_locum_salary.webp`} alt="Locum PMHNP compensation" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_locum_salary.webp`} alt={`Locum ${brand.niche.short} compensation`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
@@ -441,7 +440,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Locum Tenens PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Locum Tenens {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {locumFaqs.map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px 28px' }}>

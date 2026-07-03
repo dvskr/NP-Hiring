@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { TrendingUp, TrendingDown, Minus, DollarSign } from 'lucide-react';
 import { SALARY_INSIGHTS_DEFAULT_NATIONAL_AVG_K } from '@/config/niche/stats';
+import { brand } from '@/config/brand';
 
 interface SalaryInsightsProps {
     stateName: string | null;
@@ -52,7 +53,7 @@ export default function SalaryInsights({
                     style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}
                 >
                     <div className="text-sm mb-1" style={{ color: 'var(--text-tertiary)' }}>
-                        {stateName ? `Average PMHNP Salary in ${stateName}` : 'National Average PMHNP Salary'}
+                        {stateName ? `Average ${brand.niche.short} Salary in ${stateName}` : `National Average ${brand.niche.short} Salary`}
                     </div>
                     <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
                         ${stateAvgSalary}k
@@ -113,7 +114,7 @@ export default function SalaryInsights({
 
             <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
                 <p className="text-sm mb-2" style={{ color: 'var(--text-tertiary)' }}>
-                    PMHNP salaries vary based on experience, setting, and location.
+                    {brand.niche.short} salaries vary based on experience, setting, and location.
                     Telehealth positions often offer competitive rates with added flexibility.
                 </p>
                 <Link
@@ -121,7 +122,7 @@ export default function SalaryInsights({
                     className="text-sm font-medium hover:underline"
                     style={{ color: '#2DD4BF' }}
                 >
-                    View complete 2026 PMHNP Salary Guide →
+                    View complete 2026 {brand.niche.short} Salary Guide →
                 </Link>
             </div>
         </section>

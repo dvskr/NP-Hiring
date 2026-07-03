@@ -6,8 +6,8 @@ import type { Metadata } from 'next';
 // noindexed regardless — this just gives the route a stable title +
 // canonical so inbound link variants don't splinter.
 export const metadata: Metadata = {
-    title: 'Account Settings | PMHNP Hiring',
-    description: 'Manage your PMHNP Hiring account — profile, resume, job preferences, alerts, and notifications.',
+    title: `Account Settings | ${brand.name}`,
+    description: `Manage your ${brand.name} account — profile, resume, job preferences, alerts, and notifications.`,
     alternates: { canonical: `${brand.baseUrl}/settings` },
     robots: { index: false, follow: false },
 };

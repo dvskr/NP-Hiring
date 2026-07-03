@@ -7,6 +7,7 @@ import {
     COMPARISON_PLATFORMS,
     type ComparisonStatus,
 } from '@/config/niche/stats';
+import { brand } from '@/config/brand';
 
 function StatusIcon({ status }: { status: ComparisonStatus }) {
     if (status === 'yes') return <Check size={16} style={{ color: '#22c55e' }} />;
@@ -28,7 +29,7 @@ export default function Comparison() {
                     <p style={{
                         fontSize: '15px', color: 'var(--text-muted)', margin: 0,
                     }}>
-                        See why PMHNPs prefer a specialized job board
+                        See why {brand.niche.short}s prefer a specialized job board
                     </p>
                 </div>
 

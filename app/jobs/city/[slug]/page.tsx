@@ -298,7 +298,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
         // /jobs/city/* to /jobs/metro/* lives in app/jobs/city/[slug]/
         // page.tsx:354-358 (priority resolution path).
         const metroMatch = getMetroCity(slug);
-        if (metroMatch) return { title: `PMHNP Jobs in ${metroMatch.city}` };
+        if (metroMatch) return { title: `${brand.niche.short} Jobs in ${metroMatch.city}` };
 
         let parsed = parseCitySlug(slug);
 
@@ -316,25 +316,25 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
         // suffix rather than the city name (long names like "Colorado Springs"
         // were pushing the title past 60 chars and cutting "Avg" mid-phrase).
         // Salary appended only if there's room.
-        const baseTitle = `${stats.totalJobs} PMHNP Jobs in ${cityName}, ${stateCode}`;
+        const baseTitle = `${stats.totalJobs} ${brand.niche.short} Jobs in ${cityName}, ${stateCode}`;
         const salarySuffix = stats.avgSalary > 0 ? ` — $${stats.avgSalary}k Avg` : '';
         const title = (baseTitle + salarySuffix).length <= 60
             ? baseTitle + salarySuffix
             : baseTitle;
-        const description = `Find ${stats.totalJobs} PMHNP jobs in ${cityName}, ${stateName}. Psychiatric NP positions with salary transparency. Remote, telehealth, and in-person roles updated daily.`;
+        const description = `Find ${stats.totalJobs} ${brand.niche.short} jobs in ${cityName}, ${stateName}. ${brand.niche.medium} positions with salary transparency. Remote, telehealth, and in-person roles updated daily.`;
 
         return {
             title,
             description,
             openGraph: {
-                title: `${stats.totalJobs} PMHNP Jobs in ${cityName}, ${stateCode}${salarySuffix}`,
+                title: `${stats.totalJobs} ${brand.niche.short} Jobs in ${cityName}, ${stateCode}${salarySuffix}`,
                 description,
                 type: 'website',
                 images: [{
-                    url: `/api/og?type=page&title=${encodeURIComponent(`PMHNP Jobs in ${cityName}, ${stateCode}`)}&subtitle=${encodeURIComponent(`${stats.totalJobs} psychiatric NP positions`)}`,
+                    url: `/api/og?type=page&title=${encodeURIComponent(`${brand.niche.short} Jobs in ${cityName}, ${stateCode}`)}&subtitle=${encodeURIComponent(`${stats.totalJobs} ${brand.niche.adjective} NP positions`)}`,
                     width: 1200,
                     height: 630,
-                    alt: `PMHNP Jobs in ${cityName}, ${stateCode}`,
+                    alt: `${brand.niche.short} Jobs in ${cityName}, ${stateCode}`,
                 }],
             },
             alternates: {
@@ -351,8 +351,8 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
     } catch (error) {
         console.error('Error generating city metadata:', error);
         return {
-            title: 'PMHNP Jobs by City',
-            description: 'Find psychiatric mental health nurse practitioner jobs by city.',
+            title: `${brand.niche.short} Jobs by City`,
+            description: `Find ${brand.niche.descriptor} jobs by city.`,
         };
     }
 }
@@ -450,7 +450,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                         __html: JSON.stringify({
                             '@context': 'https://schema.org',
                             '@type': 'ItemList',
-                            name: `PMHNP Jobs in ${cityName}, ${stateCode}`,
+                            name: `${brand.niche.short} Jobs in ${cityName}, ${stateCode}`,
                             numberOfItems: stats.totalJobs,
                             itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({
                                 '@type': 'ListItem',
@@ -485,18 +485,18 @@ export default async function CityJobsPage({ params }: CityPageProps) {
             <CategoryHero
                 bgColor="#7eb8c9"
                 heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp`}
-                heroAlt={`PMHNP jobs in ${cityName}, ${stateCode}`}
+                heroAlt={`${brand.niche.short} jobs in ${cityName}, ${stateCode}`}
                 badgeText={`${stats.totalJobs} live roles · updated today`}
                 breadcrumbs={['Careers', stateName, cityName]}
                 headlineLine1={cityName}
-                headlineLine2="PMHNP"
+                headlineLine2={brand.niche.short}
                 headlineSub={`jobs in ${stateCode}, find your fit.`}
                 stats={[
                     { value: `${stats.totalJobs}`, label: 'positions' },
                     { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K+', label: 'avg salary' },
                     { value: `${stats.uniqueEmployerCount}+`, label: 'employers' },
                 ]}
-                description={`Browse ${stats.totalJobs} PMHNP positions in ${cityName}, ${stateName}. ${salaryRange ? `Salary range: ${salaryRange}/yr.` : ''} Remote, telehealth, inpatient, and outpatient roles updated daily.`}
+                description={`Browse ${stats.totalJobs} ${brand.niche.short} positions in ${cityName}, ${stateName}. ${salaryRange ? `Salary range: ${salaryRange}/yr.` : ''} Remote, telehealth, inpatient, and outpatient roles updated daily.`}
                 ctaLabel={`View All ${cityName} Jobs`}
                 ctaHref={`/jobs?location=${encodeURIComponent(cityName)}`}
                 secondaryCtaLabel="Set Alert"
@@ -520,7 +520,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                             <div className="text-center py-12 rounded-xl" style={{ background: '#FFF', borderRadius: '18px', padding: '48px 24px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
                                 <MapPin className="h-12 w-12 mx-auto mb-4" style={{ color: '#A09080' }} />
                                 <h3 className="text-lg font-semibold mb-2" style={{ color: '#1A2E35' }}>No positions at this time</h3>
-                                <p className="mb-6" style={{ color: '#5A4A42' }}>New {cityName} PMHNP openings are added daily.</p>
+                                <p className="mb-6" style={{ color: '#5A4A42' }}>New {cityName} {brand.niche.short} openings are added daily.</p>
                                 <Link href="/jobs" style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px', background: '#0D9488', color: '#fff', textDecoration: 'none', display: 'inline-block' }}>Browse All Jobs</Link>
                             </div>
                         ) : (
@@ -610,7 +610,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                 {[
                                     { href: `/jobs/state/${stateSlug}`, label: `📍 All ${stateName} Jobs` },
                                     { href: `/salary-guide/${stateSlug}`, label: `💰 ${stateName} Salary Guide` },
-                                    { href: '/jobs/remote', label: '🏠 Remote PMHNP Jobs' },
+                                    { href: '/jobs/remote', label: `🏠 Remote ${brand.niche.short} Jobs` },
                                     { href: '/salary-guide', label: '📊 2026 Salary Guide' },
                                 ].map(link => (
                                     <li key={link.href} style={{ padding: '6px 0' }}>
@@ -629,8 +629,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                     <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
                         Why This Market
                     </p>
-                    <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
-                        Why PMHNPs Choose {cityName}
+                    <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Why {brand.niche.short}s Choose {cityName}
                     </h2>
                     <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>
                         {stats.totalJobs} open positions · {stats.uniqueEmployerCount}+ employers · {salaryRange ? `${salaryRange}/yr` : 'Competitive pay'}
@@ -640,13 +639,13 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                         {/* ROW 1: Job Market (8) + Employers (4) */}
                         <div className="city-bento-hero-1" style={{ gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
                             <div style={{ padding: '32px 28px' }}>
-                                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growing PMHNP Market</h3>
+                                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growing {brand.niche.short} Market</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                                    {cityName}, {stateName} has {stats.totalJobs} active PMHNP positions across {stats.uniqueEmployerCount}+ employers, with roles in outpatient, inpatient, and telehealth settings.
+                                    {cityName}, {stateName} has {stats.totalJobs} active {brand.niche.short} positions across {stats.uniqueEmployerCount}+ employers, with roles in outpatient, inpatient, and telehealth settings.
                                 </p>
                             </div>
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_practice.webp`} alt={`${cityName} PMHNP market`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_practice.webp`} alt={`${cityName} ${brand.niche.short} market`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
                             </div>
                         </div>
 
@@ -664,7 +663,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
 
                         {/* ROW 2: 4 compact cards */}
                         {[
-                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp`, text: `Average salary ${stats.avgSalary > 0 ? `$${stats.avgSalary}k/yr` : '$130K+'} for PMHNPs in ${cityName}.` },
+                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp`, text: `Average salary ${stats.avgSalary > 0 ? `$${stats.avgSalary}k/yr` : '$130K+'} for ${brand.niche.short}s in ${cityName}.` },
                             { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_hospital.webp`, text: `${stats.uniqueEmployerCount}+ healthcare employers actively hiring in ${cityName}.` },
                             { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_community.webp`, text: `Inpatient, outpatient, community health, and private practice settings available.` },
                             { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp`, text: `Telehealth and remote opportunities expanding in ${stateName}.` },
@@ -681,11 +680,11 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Outlook</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                                    {cityName} PMHNPs earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K'} annually. {salaryRange ? `Range: ${salaryRange}/yr.` : 'Competitive compensation with benefits.'}
+                                    {cityName} {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K'} annually. {salaryRange ? `Range: ${salaryRange}/yr.` : 'Competitive compensation with benefits.'}
                                 </p>
                             </div>
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_salary.webp`} alt={`${cityName} PMHNP salary`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_salary.webp`} alt={`${cityName} ${brand.niche.short} salary`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
                             </div>
                         </div>
 
@@ -724,8 +723,8 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                     </h2>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
                         {[
-                            { step: '01', title: 'Check Licensure', text: `Verify your ${stateName} PMHNP licensure requirements. Each state has different scope-of-practice regulations.` },
-                            { step: '02', title: 'Research Salary', text: `${cityName} PMHNPs earn ${stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K+'} on average. Check our salary guide for ${stateName}.` },
+                            { step: '01', title: 'Check Licensure', text: `Verify your ${stateName} ${brand.niche.short} licensure requirements. Each state has different scope-of-practice regulations.` },
+                            { step: '02', title: 'Research Salary', text: `${cityName} ${brand.niche.short}s earn ${stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K+'} on average. Check our salary guide for ${stateName}.` },
                             { step: '03', title: 'Explore Settings', text: `Popular settings in ${cityName} include outpatient clinics, hospitals, telehealth, and community health centers.` },
                             { step: '04', title: 'Apply', text: `Browse ${stats.totalJobs}+ positions in ${cityName} and set up job alerts to be the first to apply.` },
                         ].map(r => (
@@ -773,8 +772,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                     <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
                         Nearby Markets
                     </p>
-                    <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
-                        PMHNP Jobs Near {cityName}
+                    <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>{brand.niche.short} Jobs Near {cityName}
                     </h2>
 
                     {/* Related Cities in Same State */}
@@ -804,10 +802,10 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                     {/* State & Resource Links */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
                         {[
-                            { href: `/jobs/state/${stateSlug}`, label: `All ${stateName} PMHNP Jobs`, desc: `Browse every open position in ${stateCode}`, icon: '📍' },
+                            { href: `/jobs/state/${stateSlug}`, label: `All ${stateName} ${brand.niche.short} Jobs`, desc: `Browse every open position in ${stateCode}`, icon: '📍' },
                             { href: `/salary-guide/${stateSlug}`, label: `${stateName} Salary Guide`, desc: `Compensation data and trends`, icon: '💰' },
-                            { href: '/jobs/locations', label: 'All Locations', desc: 'PMHNP jobs in all 50 states', icon: '🗺️' },
-                            { href: '/jobs/remote', label: 'Remote PMHNP Jobs', desc: 'Work from anywhere positions', icon: '🏠' },
+                            { href: '/jobs/locations', label: 'All Locations', desc: `${brand.niche.short} jobs in all 50 states`, icon: '🗺️' },
+                            { href: '/jobs/remote', label: `Remote ${brand.niche.short} Jobs`, desc: 'Work from anywhere positions', icon: '🏠' },
                             { href: '/jobs/telehealth', label: 'Telehealth Positions', desc: 'Virtual care opportunities', icon: '💻' },
                         ].map(link => (
                             <Link key={link.href} href={link.href} className="city-card" style={{
@@ -846,8 +844,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                             className="font-lora"
                             style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', marginBottom: '10px' }}
                         >
-                            {cityName}, {stateCode} — PMHNP Market Context
-                        </h2>
+                            {cityName}, {stateCode} — {brand.niche.short} Market Context</h2>
                         <p style={{ fontSize: '14px', lineHeight: 1.7, color: '#5A4A42', margin: 0 }}>
                             {narrative}
                         </p>
@@ -857,11 +854,11 @@ export default async function CityJobsPage({ params }: CityPageProps) {
 
             {/* ═══ FAQ ═══ */}
             <CategoryFAQ category="remote" totalJobs={stats.totalJobs} avgSalary={stats.avgSalary} customFaqs={[
-                { question: `How many PMHNP jobs are in ${cityName}?`, answer: `There are currently ${stats.totalJobs} active PMHNP positions in ${cityName}, ${stateName}. New roles are added daily across outpatient, inpatient, telehealth, and community health settings.` },
-                { question: `What is the average PMHNP salary in ${cityName}?`, answer: stats.avgSalary > 0 ? `PMHNPs in ${cityName} earn an average salary of $${stats.avgSalary}k per year.${salaryRange ? ` The range is ${salaryRange}/yr depending on experience, setting, and whether the position is W-2 or 1099.` : ''}` : `PMHNP salaries in ${cityName} typically range from $130,000 to $200,000+ per year, depending on experience, practice setting, and employment type.` },
-                { question: `What types of PMHNP jobs are available in ${cityName}?`, answer: `${cityName} offers a variety of PMHNP positions including outpatient clinics, inpatient psychiatric units, community health centers, private practices, telehealth roles, and substance abuse treatment facilities. Both full-time and part-time options are available.` },
-                { question: `Who are the top PMHNP employers in ${cityName}?`, answer: `Top employers hiring PMHNPs in ${cityName} include ${stats.topEmployers.slice(0, 5).map(e => e.name).join(', ')}. These organizations offer competitive salaries, benefits, and growth opportunities.` },
-                { question: `Do I need a ${stateName} license to work as a PMHNP in ${cityName}?`, answer: `Yes, you need an active ${stateName} nursing license and PMHNP certification to practice in ${cityName}. Requirements vary by state — check our ${stateName} licensure guide for specific details on scope of practice, prescriptive authority, and continuing education requirements.` },
+                { question: `How many ${brand.niche.short} jobs are in ${cityName}?`, answer: `There are currently ${stats.totalJobs} active ${brand.niche.short} positions in ${cityName}, ${stateName}. New roles are added daily across outpatient, inpatient, telehealth, and community health settings.` },
+                { question: `What is the average ${brand.niche.short} salary in ${cityName}?`, answer: stats.avgSalary > 0 ? `${brand.niche.short}s in ${cityName} earn an average salary of $${stats.avgSalary}k per year.${salaryRange ? ` The range is ${salaryRange}/yr depending on experience, setting, and whether the position is W-2 or 1099.` : ''}` : `${brand.niche.short} salaries in ${cityName} typically range from $130,000 to $200,000+ per year, depending on experience, practice setting, and employment type.` },
+                { question: `What types of ${brand.niche.short} jobs are available in ${cityName}?`, answer: `${cityName} offers a variety of ${brand.niche.short} positions including outpatient clinics, inpatient ${brand.niche.adjective} units, community health centers, private practices, telehealth roles, and substance abuse treatment facilities. Both full-time and part-time options are available.` },
+                { question: `Who are the top ${brand.niche.short} employers in ${cityName}?`, answer: `Top employers hiring ${brand.niche.short}s in ${cityName} include ${stats.topEmployers.slice(0, 5).map(e => e.name).join(', ')}. These organizations offer competitive salaries, benefits, and growth opportunities.` },
+                { question: `Do I need a ${stateName} license to work as a ${brand.niche.short} in ${cityName}?`, answer: `Yes, you need an active ${stateName} nursing license and ${brand.niche.short} certification to practice in ${cityName}. Requirements vary by state — check our ${stateName} licensure guide for specific details on scope of practice, prescriptive authority, and continuing education requirements.` },
             ]} />
 
             {/* ═══ Hover + Responsive CSS ═══ */}

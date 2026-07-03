@@ -8,6 +8,7 @@ import {
 } from './clay-tokens'
 // Niche credential taxonomy — see config/niche/credentials.ts for FORK NOTEs.
 import { DEGREE_TYPES } from '@/config/niche/credentials'
+import { brand } from '@/config/brand'
 
 const MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -175,7 +176,7 @@ export default function EducationSection({ showMsg }: Props) {
                 </div>
                 <div>
                     <label style={labelStyle}>Field of Study / Program</label>
-                    <input type="text" value={form.fieldOfStudy} onChange={(e) => setForm({ ...form, fieldOfStudy: e.target.value })} placeholder="e.g. Psychiatric Mental Health Nurse Practitioner" style={inputStyle} />
+                    <input type="text" value={form.fieldOfStudy} onChange={(e) => setForm({ ...form, fieldOfStudy: e.target.value })} placeholder={`e.g. ${brand.niche.long}`} style={inputStyle} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
                     <div>

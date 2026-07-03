@@ -292,7 +292,7 @@ function renderHtml(args: {
   jobs: readonly RenderedJob[]
 }): string {
   const { state, program, jobs } = args
-  const heading = `Latest PMHNP Jobs in ${escape(state)}`
+  const heading = `Latest ${brand.niche.short} Jobs in ${escape(state)}`
   const subheading = program
     ? `Curated for ${escape(program)} students`
     : 'Updated daily'
@@ -304,8 +304,8 @@ function renderHtml(args: {
   const emptyState =
     jobs.length === 0
       ? `<div class="pd-empty">
-          <p>No PMHNP roles currently listed in <strong>${escape(state)}</strong>.</p>
-          <p>New jobs are added daily — <a href="${escape(baseUrl())}/jobs?utm_source=widget&amp;utm_medium=embed&amp;utm_campaign=${utmCampaign}" target="_blank" rel="noopener">browse all PMHNP jobs →</a></p>
+          <p>No ${brand.niche.short} roles currently listed in <strong>${escape(state)}</strong>.</p>
+          <p>New jobs are added daily — <a href="${escape(baseUrl())}/jobs?utm_source=widget&amp;utm_medium=embed&amp;utm_campaign=${utmCampaign}" target="_blank" rel="noopener">browse all ${brand.niche.short} jobs →</a></p>
         </div>`
       : ''
 
@@ -740,7 +740,7 @@ function renderHtml(args: {
   <header class="pd-header">
     <!-- Top row: brand wordmark (left) + primary CTA (right), vertically aligned. -->
     <div class="pd-header-top">
-      <a class="pd-brand" href="${escape(brandUrl)}" target="_blank" rel="noopener" aria-label="PMHNP Hiring">
+      <a class="pd-brand" href="${escape(brandUrl)}" target="_blank" rel="noopener" aria-label="${brand.name}">
         <img class="pd-brand-logo" src="${escape(baseUrl())}/logo.png" alt="" width="72" height="72" loading="eager" decoding="async">
         <span class="pd-brand-mark">${WORDMARK.primary} <span class="pd-brand-mark-accent">${WORDMARK.accent}</span></span>
       </a>
@@ -781,7 +781,7 @@ function renderErrorHtml(args: { reason: string }): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>PMHNP Hiring — widget</title>
+<title>${brand.name} — widget</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@600;700;800&display=swap" rel="stylesheet">
@@ -891,7 +891,7 @@ function renderErrorHtml(args: { reason: string }): string {
 </head>
 <body>
 <div class="pd-wrap">
-  <a class="pd-brand" href="${escape(brandUrl)}" target="_blank" rel="noopener" aria-label="PMHNP Hiring">
+  <a class="pd-brand" href="${escape(brandUrl)}" target="_blank" rel="noopener" aria-label="${brand.name}">
     <img class="pd-brand-logo" src="${escape(baseUrl())}/logo.png" alt="" width="56" height="56">
     <span class="pd-brand-mark">${WORDMARK.primary} <span class="pd-brand-mark-accent">${WORDMARK.accent}</span></span>
   </a>
@@ -900,7 +900,7 @@ function renderErrorHtml(args: { reason: string }): string {
     <h2 class="pd-error-heading">We couldn&rsquo;t load this widget</h2>
     <p class="pd-error-reason">${args.reason}</p>
     <a class="pd-error-cta" href="${escape(browseAllUrl)}" target="_blank" rel="noopener">
-      Browse all PMHNP jobs
+      Browse all ${brand.niche.short} jobs
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
     </a>
   </div>
@@ -958,7 +958,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     } else if (fieldErrors.has('limit')) {
       reason = `Jobs to show must be a number between ${LIMIT_MIN} and ${LIMIT_MAX}. Received "${escape(String(rawLimit ?? ''))}".`
     } else {
-      reason = 'We couldn\'t load PMHNP jobs for that request. Try again with a valid state code.'
+      reason = `We couldn't load ${brand.niche.short} jobs for that request. Try again with a valid state code.`
     }
     return withWidgetHeaders(
       new NextResponse(renderErrorHtml({ reason }), { status: 400 }),

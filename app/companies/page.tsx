@@ -9,26 +9,26 @@ const STORAGE_BASE = brand.assets.storageBase;
 export const revalidate = 3600; // ISR: revalidate every hour
 
 export const metadata: Metadata = {
-  title: 'PMHNP Employers — Companies Hiring Psychiatric Nurse Practitioners',
+  title: `${brand.niche.short} Employers — Companies Hiring Psychiatric Nurse Practitioners`,
   description:
-    'Browse companies actively hiring PMHNPs. See open positions, salary data, and apply directly. Updated daily with 3,000+ employers across all 50 states.',
+    `Browse companies actively hiring ${brand.niche.short}s. See open positions, salary data, and apply directly. Updated daily with 3,000+ employers across all 50 states.`,
   openGraph: {
-    title: 'Companies Hiring PMHNPs — PMHNP Hiring',
-    description: 'Explore employers with open psychiatric nurse practitioner positions.',
+    title: `Companies Hiring ${brand.niche.short}s — ${brand.name}`,
+    description: `Explore employers with open ${brand.niche.adjective} nurse practitioner positions.`,
     url: `${brand.baseUrl}/companies`,
     type: 'website',
-    siteName: 'PMHNP Hiring',
+    siteName: brand.name,
     images: [{
       url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`,
       width: 1280,
       height: 900,
-      alt: 'Companies hiring PMHNPs',
+      alt: `Companies hiring ${brand.niche.short}s`,
     }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Companies Hiring PMHNPs',
-    description: 'Browse 3,000+ employers actively hiring psychiatric nurse practitioners.',
+    title: `Companies Hiring ${brand.niche.short}s`,
+    description: `Browse 3,000+ employers actively hiring ${brand.niche.adjective} nurse practitioners.`,
     images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`],
   },
   alternates: {
@@ -120,10 +120,10 @@ export default async function CompaniesIndexPage() {
               marginBottom: '12px',
             }}
           >
-            Companies Hiring PMHNPs
+            Companies Hiring {brand.niche.short}s
           </h1>
           <p style={{ fontSize: '16px', color: '#5A4A42', maxWidth: '560px', margin: '0 auto', lineHeight: 1.6 }}>
-            {totalCompanies} employers with active psychiatric nurse practitioner positions. Browse by company, see open roles, and apply directly.
+            {totalCompanies} employers with active {brand.niche.adjective} nurse practitioner positions. Browse by company, see open roles, and apply directly.
           </p>
         </section>
 
@@ -134,18 +134,18 @@ export default async function CompaniesIndexPage() {
         <section style={{ maxWidth: '760px', margin: '0 auto', padding: '32px 24px 0' }}>
           <div style={{ fontSize: '15px', color: '#3D3530', lineHeight: 1.75 }}>
             <p style={{ marginBottom: '16px' }}>
-              Every employer below has at least one currently published PMHNP role on
-              PMHNP Hiring. The list is a mix of <strong>direct employers</strong> —
-              health systems, community mental health centers (CMHCs), Federally
+              Every employer below has at least one currently published {brand.niche.short} role on
+              {' '}{brand.name}. The list is a mix of <strong>direct employers</strong> —
+              health systems, community {brand.niche.category} centers (CMHCs), Federally
               Qualified Health Centers (FQHCs), VA medical centers, telehealth
               platforms, and private practices — alongside <strong>staffing agencies</strong>{' '}
-              that place PMHNPs into locum and travel assignments. We pull active
+              that place {brand.niche.short}s into locum and travel assignments. We pull active
               postings from each employer&apos;s career pages and ATS feeds twice
               daily, so the company list reflects who is genuinely hiring now, not
               a static directory.
             </p>
             <p style={{ marginBottom: '16px' }}>
-              When evaluating a PMHNP employer, the questions that matter most are
+              When evaluating a {brand.niche.short} employer, the questions that matter most are
               practical: <strong>practice authority</strong> in the states they hire
               for (full vs. reduced vs. restricted, plus Nurse Licensure Compact
               membership), <strong>caseload structure</strong> (15-minute med checks
@@ -284,7 +284,7 @@ export default async function CompaniesIndexPage() {
                   '4px 4px 12px rgba(13,148,136,0.25), -2px -2px 6px rgba(255,255,255,0.3)',
               }}
             >
-              Browse All PMHNP Jobs
+              Browse All {brand.niche.short} Jobs
             </Link>
           </div>
         </section>

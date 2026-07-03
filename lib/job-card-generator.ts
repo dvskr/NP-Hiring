@@ -461,7 +461,7 @@ export async function generateFBSummaryPng(
                                                     fontSize: '28px',
                                                     fontWeight: 700,
                                                 },
-                                                children: "Today's Top PMHNP Jobs",
+                                                children: `Today's Top ${brand.niche.short} Jobs`,
                                             },
                                         },
                                         {

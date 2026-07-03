@@ -1,5 +1,6 @@
 'use client';
 
+import { brand } from '@/config/brand';
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -348,14 +349,10 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                     lineHeight: 1.2,
                     letterSpacing: '-0.015em',
                   }}
-                >
-                  PMHNP &amp; Psychiatric Nurse Practitioner Jobs
-                </h1>
+                >{brand.niche.short} &amp; Psychiatric Nurse Practitioner Jobs</h1>
                 <p style={{
                   fontSize: '13px', color: '#6B7F8A', margin: 0, fontWeight: 500,
-                }}>
-                  Browse fresh PMHNP roles across the US — telehealth, on-site, hybrid, and locum.
-                </p>
+                }}>Browse fresh {brand.niche.short} roles across the US — telehealth, on-site, hybrid, and locum.</p>
               </header>
               {/* Empty right column mirrors the breadcrumb column so the
                   middle <header> stays optically centered. */}

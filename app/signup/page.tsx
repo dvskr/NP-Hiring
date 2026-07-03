@@ -7,8 +7,8 @@ import { safeInternalPath } from '@/lib/auth/safe-redirect'
 import { Suspense } from 'react'
 
 export const metadata = {
-  title: 'Create Account | PMHNP Hiring',
-  description: 'Create your free PMHNP Hiring account. Save jobs, set up alerts, and get matched with psychiatric nurse practitioner positions.',
+  title: `Create Account | ${brand.name}`,
+  description: `Create your free ${brand.name} account. Save jobs, set up alerts, and get matched with ${brand.niche.adjective} nurse practitioner positions.`,
   // Page is noindexed via middleware X-Robots-Tag (per app/robots.ts P2.3
   // unblock window). Self-canonical consolidates ?redirectTo=… variants
   // to the bare /signup URL.
@@ -33,7 +33,7 @@ export default async function SignUpPage({
       illustration="/illustrations/auth-signup.png"
       testimonial={{
         quote: '"Setting up my profile took 2 minutes, and I was getting matched with relevant positions the same day."',
-        name: 'James R., PMHNP',
+        name: `James R., ${brand.niche.short}`,
         title: 'Denver, CO',
       }}
     >

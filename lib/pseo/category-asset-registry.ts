@@ -530,7 +530,7 @@ export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
       // NP taxonomy migration (2026-07): /jobs/crisis was removed — repointed to a live NP category.
       { href: '/jobs/emergency', label: 'Emergency', sub: 'ED & urgent psych', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_crisis.webp` },
       { href: '/jobs/va', label: 'VA', sub: 'Federal roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_va.webp` },
-      { href: '/jobs/veterans', label: 'Veterans', sub: 'Military mental health', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_veterans.webp` },
+      { href: '/jobs/veterans', label: 'Veterans', sub: `Military ${brand.niche.category}`, icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_veterans.webp` },
       { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
       { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
     ],

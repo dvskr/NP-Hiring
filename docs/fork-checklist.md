@@ -17,7 +17,17 @@
 4. **DB** — point a new Supabase project, run `prisma migrate deploy`
    (bootstrap works end-to-end as of the 20260702 baseline migration;
    `tests/db/migrations-cover-schema.test.ts` guards column-level coverage).
-5. **Marketing copy** — rewrite home, about, FAQ, blog (niche-specific anyway).
+5. **Marketing copy** — niche IDENTITY strings (role name, credential,
+   adjective, care category) now derive automatically from the `brand.niche`
+   tokens in `config/brand.ts` — no find-replace sweep across pages. The
+   per-board work is: (a) set the `brand.niche` token values (short / medium /
+   long / descriptor / adjective / category); (b) rewrite the niche FACTS the
+   niche-copy debt scanner flags — salary claims, regulatory statements,
+   editorial prose that tokens can't express (`npx vitest run
+   tests/regressions/niche-copy-debt.test.ts`, also reported WARN-level by
+   `npm run fork:preflight` §5); (c) regenerate BOTH baselines:
+   `UPDATE_BRAND_LEAK_BASELINE=1` and `UPDATE_NICHE_COPY_BASELINE=1` against
+   their respective vitest runs.
 6. **Reissue DPIA** — `docs/dpia.md` is a template; replace brand placeholders
    AND re-verify the data-category inventory (e.g. DEA/NPI may not apply).
 7. **Confirm sub-processor list** — same vendors usually, but verify.

@@ -80,7 +80,7 @@ function buildCriteriaSummary(alert: { keyword?: string | null; location?: strin
     else if (minK) parts.push(`$${minK}k+`)
     else parts.push(`up to $${maxK}k`)
   }
-  return parts.length > 0 ? parts.join(' · ') : 'All PMHNP jobs'
+  return parts.length > 0 ? parts.join(' · ') : `All ${brand.niche.short} jobs`
 }
 
 // ─── Build pre-filtered jobs URL from alert criteria ──────────────────────────
@@ -172,7 +172,7 @@ function buildAlertHtml(
       &nbsp;&middot;&nbsp;
       <a href="${BASE_URL}/job-alerts/unsubscribe?token=${alertToken}" style="color:${V2.textMuted};text-decoration:underline;">Delete alert</a>
     </p>`,
-    `${jobCount} new PMHNP jobs matching your alert — view them before they're filled!`
+    `${jobCount} new ${brand.niche.short} jobs matching your alert — view them before they're filled!`
   )
 }
 
@@ -572,7 +572,7 @@ export async function sendJobAlerts(): Promise<{
       const oneClickUrl = oneClickUnsubscribeUrl(BASE_URL, oneClickToken)
       const html = buildAlertHtml(displayJobs, primary.token, combinedCriteria, filteredUrl, dedupedTotal)
       const alertWord = group.length > 1 ? 'Alerts' : 'Alert'
-      const subject = `${dedupedTotal} New PMHNP Job${dedupedTotal > 1 ? 's' : ''} Match Your ${alertWord}`
+      const subject = `${dedupedTotal} New ${brand.niche.short} Job${dedupedTotal > 1 ? 's' : ''} Match Your ${alertWord}`
 
       emailPayloads.push({
         alertIds: group.map(r => r.alert.id),

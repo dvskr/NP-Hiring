@@ -6,25 +6,27 @@
  * to cover job categories, employment types, and career resources.
  */
 
+import { brand } from '@/config/brand';
+
 // Category keywords → internal page mappings
 const CATEGORY_LINKS: { pattern: RegExp; href: string; label: string }[] = [
     // Employment types
-    { pattern: /\b(remote\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/remote', label: 'remote PMHNP jobs' },
-    { pattern: /\b(telehealth\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/telehealth', label: 'telehealth PMHNP jobs' },
-    { pattern: /\b(travel\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/travel', label: 'travel PMHNP jobs' },
-    { pattern: /\b(per\s*[-\s]?diem\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/per-diem', label: 'per diem PMHNP jobs' },
-    { pattern: /\b(inpatient\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/inpatient', label: 'inpatient PMHNP jobs' },
-    { pattern: /\b(outpatient\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/outpatient', label: 'outpatient PMHNP jobs' },
+    { pattern: /\b(remote\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/remote', label: `remote ${brand.niche.short} jobs` },
+    { pattern: /\b(telehealth\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/telehealth', label: `telehealth ${brand.niche.short} jobs` },
+    { pattern: /\b(travel\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/travel', label: `travel ${brand.niche.short} jobs` },
+    { pattern: /\b(per\s*[-\s]?diem\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/per-diem', label: `per diem ${brand.niche.short} jobs` },
+    { pattern: /\b(inpatient\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/inpatient', label: `inpatient ${brand.niche.short} jobs` },
+    { pattern: /\b(outpatient\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/outpatient', label: `outpatient ${brand.niche.short} jobs` },
 
     // Specialties
-    { pattern: /\b(new\s*[-\s]?grad\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/new-grad', label: 'new grad PMHNP jobs' },
-    { pattern: /\b(child\s+(?:and\s+)?adolescent\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/child-adolescent', label: 'child & adolescent PMHNP jobs' },
-    { pattern: /\b(substance\s+abuse\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/substance-abuse', label: 'substance abuse PMHNP jobs' },
-    { pattern: /\b(addiction\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/addiction', label: 'addiction PMHNP jobs' },
+    { pattern: /\b(new\s*[-\s]?grad\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/new-grad', label: `new grad ${brand.niche.short} jobs` },
+    { pattern: /\b(child\s+(?:and\s+)?adolescent\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/child-adolescent', label: `child & adolescent ${brand.niche.short} jobs` },
+    { pattern: /\b(substance\s+abuse\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/substance-abuse', label: `substance abuse ${brand.niche.short} jobs` },
+    { pattern: /\b(addiction\s+(?:PMHNP|psychiatric|psych\s+NP)\s+(?:jobs?|positions?|opportunities?))\b/gi, href: '/jobs/addiction', label: `addiction ${brand.niche.short} jobs` },
 
     // Resources
-    { pattern: /\b(PMHNP\s+salary\s+(?:guide|data|information|comparison))\b/gi, href: '/salary-guide', label: 'PMHNP salary guide' },
-    { pattern: /\b(PMHNP\s+job\s+alerts?)\b/gi, href: '/job-alerts', label: 'PMHNP job alerts' },
+    { pattern: /\b(PMHNP\s+salary\s+(?:guide|data|information|comparison))\b/gi, href: '/salary-guide', label: `${brand.niche.short} salary guide` },
+    { pattern: /\b(PMHNP\s+job\s+alerts?)\b/gi, href: '/job-alerts', label: `${brand.niche.short} job alerts` },
 ];
 
 // Link limit per article to avoid over-optimization
@@ -104,46 +106,46 @@ export function getJobRelatedResources(job: {
     if (job.state) {
         const stateSlug = job.state.toLowerCase().replace(/\s+/g, '-');
         links.push({
-            label: `All PMHNP Jobs in ${job.state}`,
+            label: `All ${brand.niche.short} Jobs in ${job.state}`,
             href: `/jobs/state/${stateSlug}`,
         });
     }
 
     // Work mode
     if (job.isRemote) {
-        links.push({ label: 'Remote PMHNP Jobs', href: '/jobs/remote' });
+        links.push({ label: `Remote ${brand.niche.short} Jobs`, href: '/jobs/remote' });
     }
     if (job.mode?.toLowerCase().includes('telehealth')) {
-        links.push({ label: 'Telehealth PMHNP Jobs', href: '/jobs/telehealth' });
+        links.push({ label: `Telehealth ${brand.niche.short} Jobs`, href: '/jobs/telehealth' });
     }
 
     // Job type
     if (job.jobType?.toLowerCase() === 'per diem') {
-        links.push({ label: 'Per Diem PMHNP Jobs', href: '/jobs/per-diem' });
+        links.push({ label: `Per Diem ${brand.niche.short} Jobs`, href: '/jobs/per-diem' });
     } else if (job.jobType?.toLowerCase() === 'travel') {
-        links.push({ label: 'Travel PMHNP Jobs', href: '/jobs/travel' });
+        links.push({ label: `Travel ${brand.niche.short} Jobs`, href: '/jobs/travel' });
     }
 
     // Title-based specialties
     const titleLower = job.title?.toLowerCase() || '';
     if (titleLower.includes('new grad') || titleLower.includes('entry level')) {
-        links.push({ label: 'New Grad PMHNP Jobs', href: '/jobs/new-grad' });
+        links.push({ label: `New Grad ${brand.niche.short} Jobs`, href: '/jobs/new-grad' });
     }
     if (titleLower.includes('child') || titleLower.includes('adolescent') || titleLower.includes('pediatric')) {
-        links.push({ label: 'Child & Adolescent PMHNP Jobs', href: '/jobs/child-adolescent' });
+        links.push({ label: `Child & Adolescent ${brand.niche.short} Jobs`, href: '/jobs/child-adolescent' });
     }
     if (titleLower.includes('substance') || titleLower.includes('addiction')) {
-        links.push({ label: 'Addiction PMHNP Jobs', href: '/jobs/addiction' });
+        links.push({ label: `Addiction ${brand.niche.short} Jobs`, href: '/jobs/addiction' });
     }
     if (titleLower.includes('inpatient')) {
-        links.push({ label: 'Inpatient PMHNP Jobs', href: '/jobs/inpatient' });
+        links.push({ label: `Inpatient ${brand.niche.short} Jobs`, href: '/jobs/inpatient' });
     }
     if (titleLower.includes('outpatient')) {
-        links.push({ label: 'Outpatient PMHNP Jobs', href: '/jobs/outpatient' });
+        links.push({ label: `Outpatient ${brand.niche.short} Jobs`, href: '/jobs/outpatient' });
     }
 
     // Always add salary guide
-    links.push({ label: '2026 PMHNP Salary Guide', href: '/salary-guide' });
+    links.push({ label: `2026 ${brand.niche.short} Salary Guide`, href: '/salary-guide' });
 
     return links;
 }

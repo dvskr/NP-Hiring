@@ -32,16 +32,16 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: 'What does a hospital-based PMHNP do?', a: 'Hospital PMHNPs manage acute psychiatric emergencies, perform psychiatric evaluations in the ER, stabilize inpatients on psychiatric holds, and coordinate discharge planning with multidisciplinary teams.' },
-  { q: 'What salary do hospital PMHNPs earn?', a: 'Hospital PMHNPs earn $140K-$200K annually with shift differentials for nights/weekends, sign-on bonuses, and comprehensive benefits. Academic medical centers and urban hospitals often pay at the higher end.' },
-  { q: 'What schedule do hospital PMHNPs work?', a: 'Most hospital roles use 7-on/7-off, 3x12-hour shifts, or rotating day/night schedules. Some partial hospitalization programs (PHP) offer traditional Monday-Friday hours.' },
-  { q: 'What qualifications are required?', a: 'Active PMHNP-BC, state APRN licensure, DEA registration, BLS/ACLS certification, and typically 1+ years inpatient psychiatric experience. New grads may find opportunities in residency-style hospital programs.' },
+  { q: `What does a hospital-based ${brand.niche.short} do?`, a: `Hospital ${brand.niche.short}s manage acute ${brand.niche.adjective} emergencies, perform ${brand.niche.adjective} evaluations in the ER, stabilize inpatients on ${brand.niche.adjective} holds, and coordinate discharge planning with multidisciplinary teams.` },
+  { q: `What salary do hospital ${brand.niche.short}s earn?`, a: `Hospital ${brand.niche.short}s earn $140K-$200K annually with shift differentials for nights/weekends, sign-on bonuses, and comprehensive benefits. Academic medical centers and urban hospitals often pay at the higher end.` },
+  { q: `What schedule do hospital ${brand.niche.short}s work?`, a: 'Most hospital roles use 7-on/7-off, 3x12-hour shifts, or rotating day/night schedules. Some partial hospitalization programs (PHP) offer traditional Monday-Friday hours.' },
+  { q: 'What qualifications are required?', a: `Active PMHNP-BC, state APRN licensure, DEA registration, BLS/ACLS certification, and typically 1+ years inpatient ${brand.niche.adjective} experience. New grads may find opportunities in residency-style hospital programs.` },
   { q: 'Do hospital systems offer loan forgiveness?', a: 'Yes — many hospital systems qualify as 501(c)(3) nonprofits eligible for Public Service Loan Forgiveness (PSLF). After 120 qualifying payments, remaining federal student loan balance is forgiven.' },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
-  return { title: `${stats.totalJobs} Hospital PMHNP Jobs ($140K-200K)`, description: `Find ${stats.totalJobs} hospital PMHNP jobs. Acute care, ER psych, and inpatient positions paying $140K-200K+ with PSLF eligibility.`, alternates: { canonical: `${brand.baseUrl}/jobs/hospital` } };
+  return { title: `${stats.totalJobs} Hospital ${brand.niche.short} Jobs ($140K-200K)`, description: `Find ${stats.totalJobs} hospital ${brand.niche.short} jobs. Acute care, ER psych, and inpatient positions paying $140K-200K+ with PSLF eligibility.`, alternates: { canonical: `${brand.baseUrl}/jobs/hospital` } };
 }
 
 interface PageProps { searchParams: Promise<{ page?: string }>; }
@@ -56,26 +56,26 @@ export default async function HospitalPage({ searchParams }: PageProps) {
       <BreadcrumbSchema items={[{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Hospital", url: `${brand.baseUrl}/jobs/hospital` }]} />
       <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName="Hospital Jobs" />
       {jobs.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: 'Hospital PMHNP Jobs', numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `Hospital ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
 
             {/* HERO */}
       <CategoryHero
         bgColor="#a0c3d6"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_hospital.webp`}
-        heroAlt="Hospital PMHNP acute psychiatric care"
+        heroAlt={`Hospital ${brand.niche.short} acute ${brand.niche.adjective} care`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Hospital']}
         indexLabel="? 22 / 28"
         headlineLine1="Hospital"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, acute care psych."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$155K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description="Acute psychiatric care in hospital settings with interdisciplinary teams and comprehensive benefits."
+        description={`Acute ${brand.niche.adjective} care in hospital settings with interdisciplinary teams and comprehensive benefits.`}
         ctaLabel="Browse Hospital Jobs"
         ctaHref="/jobs?category=hospital"
         secondaryCtaLabel="Set Alert"
@@ -106,8 +106,8 @@ export default async function HospitalPage({ searchParams }: PageProps) {
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1 */}
             <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Acute Psychiatric Unit</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Manage psychiatric emergencies, inpatient stabilization, and ER psychiatric consultations in fast-paced hospital environments.</p></div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ho_acute.webp`} alt="Acute psychiatric unit" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Acute Psychiatric Unit</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Manage {brand.niche.adjective} emergencies, inpatient stabilization, and ER {brand.niche.adjective} consultations in fast-paced hospital environments.</p></div>
+              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ho_acute.webp`} alt={`Acute ${brand.niche.adjective} unit`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ho_team.webp`} alt="Hospital care team" width={200} height={140} style={{ width: '100%', maxWidth: '180px', height: 'auto', borderRadius: '12px', marginBottom: '16px' }} />
@@ -115,13 +115,13 @@ export default async function HospitalPage({ searchParams }: PageProps) {
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Collaborate with psychiatrists, ER physicians, and social workers.</p>
             </div>
             {/* ROW 2: Icon Cards */}
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ho_acute.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Acute Care</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Manage psychiatric emergencies and inpatient stabilization.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ho_acute.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Acute Care</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Manage {brand.niche.adjective} emergencies and inpatient stabilization.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ho_pay.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Top Pay</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Premium salaries with shift differentials for nights and weekends.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ho_team.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Team Support</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Collaborate with psychiatrists, RNs, and social workers.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ho_loan.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Loan Forgiveness</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Many hospital systems qualify for PSLF loan repayment.</p></div>
             {/* ROW 3 */}
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Hospital Salary</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average hospital PMHNP salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p></div>
+              <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Hospital Salary</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average hospital {brand.niche.short} salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p></div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ho_salary.webp`} alt="Hospital salary" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)' }}>
@@ -138,7 +138,7 @@ export default async function HospitalPage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Before You Apply</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>What You Need</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            {[{ n: '01', t: 'PMHNP-BC', d: 'Active certification through ANCC.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: 'DEA + BLS/ACLS', d: 'DEA registration and basic/advanced life support.' }, { n: '04', t: 'Inpatient Experience', d: 'Acute psychiatric care experience preferred; residencies available.' }].map(item => (
+            {[{ n: '01', t: 'PMHNP-BC', d: 'Active certification through ANCC.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: 'DEA + BLS/ACLS', d: 'DEA registration and basic/advanced life support.' }, { n: '04', t: 'Inpatient Experience', d: `Acute ${brand.niche.adjective} care experience preferred; residencies available.` }].map(item => (
               <div key={item.n} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}><span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>{item.n}</span><h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>{item.t}</h3><p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>{item.d}</p></div>
             ))}
           </div>
@@ -167,7 +167,7 @@ export default async function HospitalPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Hospital PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Hospital {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>{faqs.map((faq, idx) => (<div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}><h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>{faq.a}</p></div>))}</div>
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>

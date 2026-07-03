@@ -7,8 +7,8 @@ import AuthLayout from '@/components/auth/AuthLayout'
 import { Suspense } from 'react'
 
 export const metadata = {
-  title: 'Sign In | PMHNP Hiring',
-  description: 'Sign in to your PMHNP Hiring account to manage saved jobs, job alerts, and applications.',
+  title: `Sign In | ${brand.name}`,
+  description: `Sign in to your ${brand.name} account to manage saved jobs, job alerts, and applications.`,
   // Page is noindexed via middleware X-Robots-Tag (per app/robots.ts P2.3
   // unblock window). Self-canonical still emitted so any inbound link
   // variants (?redirectTo=…) consolidate to the bare /login URL.
@@ -32,7 +32,7 @@ export default async function LoginPage({
     <AuthLayout
       illustration="/illustrations/auth-login.png"
       testimonial={{
-        quote: '"I found my dream remote PMHNP position in less than a week. The job matching was incredibly accurate."',
+        quote: `"I found my dream remote ${brand.niche.short} position in less than a week. The job matching was incredibly accurate."`,
         name: 'Sarah M., PMHNP-BC',
         title: 'Austin, TX',
       }}

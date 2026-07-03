@@ -41,9 +41,9 @@ async function getStats() {
 }
 
 const seniorFaqs = [
-  { question: 'What qualifies as a Senior PMHNP role?', answer: 'Senior PMHNP roles include positions like Clinical Director, Program Director, Medical Director, Lead PMHNP, and Supervisor. These roles combine direct patient care with leadership responsibilities such as team oversight, program development, and quality improvement.' },
-  { question: 'What salary range can Senior PMHNPs expect?', answer: 'Senior PMHNPs typically earn $160K-$250K+ annually. Clinical Directors and Medical Directors at larger organizations can exceed $250K with bonuses, equity, and comprehensive benefits packages.' },
-  { question: 'How many years of experience are needed for senior positions?', answer: 'Most senior PMHNP roles require 5-10+ years of clinical psychiatric experience. Director-level positions often require demonstrated leadership experience, program development skills, and expertise in a specific psychiatric subspecialty.' },
+  { question: `What qualifies as a Senior ${brand.niche.short} role?`, answer: `Senior ${brand.niche.short} roles include positions like Clinical Director, Program Director, Medical Director, Lead ${brand.niche.short}, and Supervisor. These roles combine direct patient care with leadership responsibilities such as team oversight, program development, and quality improvement.` },
+  { question: `What salary range can Senior ${brand.niche.short}s expect?`, answer: `Senior ${brand.niche.short}s typically earn $160K-$250K+ annually. Clinical Directors and Medical Directors at larger organizations can exceed $250K with bonuses, equity, and comprehensive benefits packages.` },
+  { question: 'How many years of experience are needed for senior positions?', answer: `Most senior ${brand.niche.short} roles require 5-10+ years of clinical ${brand.niche.adjective} experience. Director-level positions often require demonstrated leadership experience, program development skills, and expertise in a specific ${brand.niche.adjective} subspecialty.` },
   { question: 'What additional certifications help for leadership roles?', answer: 'Beyond the PMHNP-BC, certifications in healthcare administration (FACHE), nursing leadership (CENP/NEA-BC), or subspecialty certifications strengthen candidacy. Many senior roles also value advanced training in evidence-based therapies and quality improvement methodologies.' },
 ];
 
@@ -51,11 +51,11 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Senior PMHNP Jobs — Director & Leadership ($160K-250K+)`,
-    description: `Browse ${stats.totalJobs} senior PMHNP leadership positions. Clinical Director, Program Director, Medical Director, and Lead PMHNP roles paying $160K-$250K+.`,
+    title: `${stats.totalJobs} Senior ${brand.niche.short} Jobs — Director & Leadership ($160K-250K+)`,
+    description: `Browse ${stats.totalJobs} senior ${brand.niche.short} leadership positions. Clinical Director, Program Director, Medical Director, and Lead ${brand.niche.short} roles paying $160K-$250K+.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/senior` },
     keywords: ['senior PMHNP jobs', 'PMHNP director', 'PMHNP leadership', 'clinical director psychiatric', 'PMHNP supervisor'],
-    openGraph: { title: `Senior PMHNP Jobs — ${stats.totalJobs} Leadership Positions`, description: `Find ${stats.totalJobs} senior psychiatric NP roles.`, url: `${brand.baseUrl}/jobs/senior`, type: 'website' },
+    openGraph: { title: `Senior ${brand.niche.short} Jobs — ${stats.totalJobs} Leadership Positions`, description: `Find ${stats.totalJobs} senior ${brand.niche.adjective} NP roles.`, url: `${brand.baseUrl}/jobs/senior`, type: 'website' },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
 }
@@ -84,7 +84,7 @@ export default async function SeniorPage({ searchParams }: PageProps) {
         mainEntity: seniorFaqs.map(f => ({ '@type': 'Question', name: f.question, acceptedAnswer: { '@type': 'Answer', text: f.answer } })),
       }) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        '@context': 'https://schema.org', '@type': 'ItemList', name: 'Senior PMHNP Jobs',
+        '@context': 'https://schema.org', '@type': 'ItemList', name: `Senior ${brand.niche.short} Jobs`,
         numberOfItems: stats.totalJobs, itemListOrder: 'https://schema.org/ItemListOrderDescending',
         itemListElement: jobs.slice(0, 10).map((j: Job, i: number) => ({ '@type': 'ListItem', position: i + 1, url: `${brand.baseUrl}/jobs/${j.slug}`, name: j.title })),
       }) }} />
@@ -93,19 +93,19 @@ export default async function SeniorPage({ searchParams }: PageProps) {
       <CategoryHero
         bgColor="#6a85a0"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_senior.webp`}
-        heroAlt="Senior PMHNP clinical leadership roles"
+        heroAlt={`Senior ${brand.niche.short} clinical leadership roles`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Senior']}
         indexLabel="? 27 / 28"
         headlineLine1="Senior"
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub="jobs, leadership roles."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$175K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description="Senior-level PMHNP positions with clinical leadership, program development, and executive compensation."
+        description={`Senior-level ${brand.niche.short} positions with clinical leadership, program development, and executive compensation.`}
         ctaLabel="Browse Senior Jobs"
         ctaHref="/jobs?category=senior"
         secondaryCtaLabel="Set Alert"
@@ -170,20 +170,20 @@ export default async function SeniorPage({ searchParams }: PageProps) {
             <div className="cat-bento-card cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '28px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'center' }}>
               <div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Lead Clinical Programs</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>Direct psychiatric programs, mentor NP teams, and drive quality improvement initiatives as a clinical leader.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>Direct {brand.niche.adjective} programs, mentor NP teams, and drive quality improvement initiatives as a clinical leader.</p>
               </div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_senior_leadership.webp`} alt="PMHNP leadership diorama" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_senior_leadership.webp`} alt={`${brand.niche.short} leadership diorama`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
             </div>
             <div className="cat-bento-card cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_senior_strategy.webp`} alt="Strategic planning diorama" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '12px', marginBottom: '14px' }} />
               <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Strategic Impact</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Shape mental health policy and organizational strategy at the executive level.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Shape {brand.niche.category} policy and organizational strategy at the executive level.</p>
             </div>
             {/* ROW 2: 4 icon cards */}
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_senior_crown.webp`} alt="Executive roles" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Executive Roles</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Chief PMHNP, clinical director, and VP positions.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Chief {brand.niche.short}, clinical director, and VP positions.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_senior_chart.webp`} alt="Top compensation" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -193,12 +193,12 @@ export default async function SeniorPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_senior_blueprint.webp`} alt="Program design" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Program Design</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Build and lead psychiatric programs from scratch.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Build and lead {brand.niche.adjective} programs from scratch.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_senior_globe.webp`} alt="Industry influence" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Industry Influence</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Shape mental health policy and best practices.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Shape {brand.niche.category} policy and best practices.</p>
             </div>
             {/* ROW 3 */}
             <div className="cat-bento-card cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '28px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'center' }}>
@@ -208,7 +208,7 @@ export default async function SeniorPage({ searchParams }: PageProps) {
                   <span style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35' }}>Salary + Benefits</span>
                 </div>
                 <div style={{ fontSize: '36px', fontWeight: 800, color: '#1A2E35', marginBottom: '6px' }}>${`${stats.avgSalary}k`}</div>
-                <p style={{ fontSize: '13px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Average senior PMHNP salary with executive bonuses, equity packages, and comprehensive benefits.</p>
+                <p style={{ fontSize: '13px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Average senior {brand.niche.short} salary with executive bonuses, equity packages, and comprehensive benefits.</p>
               </div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_senior_compensation.webp`} alt="Senior compensation diorama" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
             </div>
@@ -276,7 +276,7 @@ export default async function SeniorPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Senior PMHNP Questions</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Senior {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {seniorFaqs.map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}>

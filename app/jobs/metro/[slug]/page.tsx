@@ -111,11 +111,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // Title trimmed to <60 chars for SERP display. Salary/licensure/employer
   // detail moved to the description; longer "Top Employers (YYYY)" suffix
   // was reliably truncated mid-phrase.
-  const title = `${stats.totalJobs > 0 ? `${stats.totalJobs} ` : ''}PMHNP Jobs in ${metro.city}, ${metro.stateCode} (${new Date().getFullYear()})`;
+  const title = `${stats.totalJobs > 0 ? `${stats.totalJobs} ` : ''}${brand.niche.short} Jobs in ${metro.city}, ${metro.stateCode} (${new Date().getFullYear()})`;
   // Description capped at ~155 chars to avoid SERP truncation. Full hero
   // copy still renders on the page for users.
   const description = [
-    `Find PMHNP jobs in ${metro.city}, ${metro.stateCode}.`,
+    `Find ${brand.niche.short} jobs in ${metro.city}, ${metro.stateCode}.`,
     `${metro.practiceAuthority} practice authority.`,
     stats.avgSalary > 0 ? `Avg salary $${stats.avgSalary}K.` : '',
     `${metro.heroDescription.slice(0, 70).trim()}.`,
@@ -131,13 +131,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       `mental health np jobs ${metro.stateCode.toLowerCase()}`,
     ],
     openGraph: {
-      title: `PMHNP Jobs in ${metro.city}, ${metro.stateCode}`,
+      title: `${brand.niche.short} Jobs in ${metro.city}, ${metro.stateCode}`,
       description,
       type: 'website',
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`PMHNP Jobs in ${metro.city}`)}&subtitle=${encodeURIComponent(`${metro.practiceAuthority} Practice Authority • ${metro.avgCostOfLiving} cost of living`)}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(`${brand.niche.short} Jobs in ${metro.city}`)}&subtitle=${encodeURIComponent(`${metro.practiceAuthority} Practice Authority • ${metro.avgCostOfLiving} cost of living`)}`,
         width: 1200, height: 630,
-        alt: `PMHNP Jobs in ${metro.city}, ${metro.stateCode}`,
+        alt: `${brand.niche.short} Jobs in ${metro.city}, ${metro.stateCode}`,
       }],
     },
     alternates: {
@@ -166,7 +166,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
         { name: "Home", url: brand.baseUrl },
         { name: "Jobs", url: `${brand.baseUrl}/jobs` },
         { name: metro.state, url: `${brand.baseUrl}/jobs/state/${metro.stateSlug}` },
-        { name: `${metro.city} PMHNP Jobs`, url: `${brand.baseUrl}/jobs/metro/${slug}` },
+        { name: `${metro.city} ${brand.niche.short} Jobs`, url: `${brand.baseUrl}/jobs/metro/${slug}` },
       ]} />
 
       {/* FAQ Schema */}
@@ -193,7 +193,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
       {stats.recentJobs.length > 0 && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           '@context': 'https://schema.org', '@type': 'ItemList',
-          name: `PMHNP Jobs in ${metro.city}, ${metro.stateCode}`,
+          name: `${brand.niche.short} Jobs in ${metro.city}, ${metro.stateCode}`,
           numberOfItems: stats.totalJobs,
           itemListElement: stats.recentJobs.slice(0, 6).map((job: Job, idx: number) => ({
             '@type': 'ListItem', position: idx + 1, name: job.title,
@@ -205,11 +205,11 @@ export default async function MetroLandingPage({ params }: PageProps) {
       <CategoryHero
         bgColor={metro.practiceAuthority === 'Full' ? '#86c1a8' : metro.practiceAuthority === 'Reduced' ? '#c1a886' : '#c1868a'}
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp`}
-        heroAlt={`PMHNP jobs in ${metro.city}, ${metro.stateCode}`}
+        heroAlt={`${brand.niche.short} jobs in ${metro.city}, ${metro.stateCode}`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', metro.state, metro.city]}
         headlineLine1={metro.city}
-        headlineLine2="PMHNP"
+        headlineLine2={brand.niche.short}
         headlineSub={`jobs in ${metro.stateCode}, find your fit.`}
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
@@ -248,8 +248,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
                   No positions at this time
                 </h3>
                 <p className="mb-6" style={{ color: '#5A4A42' }}>
-                  New {metro.city} PMHNP openings are added daily. Set an alert or check back soon.
-                </p>
+                  New {metro.city} {brand.niche.short} openings are added daily. Set an alert or check back soon.</p>
                 <Link
                   href="/jobs"
                   className="metro-cta"
@@ -329,7 +328,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
                 </div>
                 <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.avgSalary}k</div>
                 <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Average annual salary</div>
-                <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Based on {metro.city} PMHNP positions with salary data.</p>
+                <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Based on {metro.city} {brand.niche.short} positions with salary data.</p>
               </div>
             )}
 
@@ -340,7 +339,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
                 {[
                   { href: `/jobs/state/${metro.stateSlug}`, icon: '📍', label: `All ${metro.state} Jobs (${stateStats.totalJobs})` },
                   { href: `/salary-guide/${metro.stateSlug}`, icon: '💰', label: `${metro.state} Salary Guide` },
-                  { href: '/jobs/remote', icon: '🏠', label: 'Remote PMHNP Jobs' },
+                  { href: '/jobs/remote', icon: '🏠', label: `Remote ${brand.niche.short} Jobs` },
                   { href: '/jobs/telehealth', icon: '💻', label: 'Telehealth Positions' },
                 ].map(link => (
                   <li key={link.href} style={{ padding: '6px 0' }}>
@@ -361,8 +360,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Why This Market
           </p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
-            Why PMHNPs Choose {metro.city}
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Why {brand.niche.short}s Choose {metro.city}
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>
             {metro.practiceAuthority} Practice Authority · {metro.avgCostOfLiving} cost of living · {metro.population.split(' ')[0]} population
@@ -413,11 +411,11 @@ export default async function MetroLandingPage({ params }: PageProps) {
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Outlook</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  {metro.city} PMHNPs earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K'} annually — {metro.costOfLivingNote.split('.')[0].toLowerCase()}.
+                  {metro.city} {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K'} annually — {metro.costOfLivingNote.split('.')[0].toLowerCase()}.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_salary.webp`} alt={`${metro.city} PMHNP salary`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_salary.webp`} alt={`${metro.city} ${brand.niche.short} salary`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 

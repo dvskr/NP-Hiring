@@ -13,18 +13,18 @@ const LAST_REVIEWED = '2026-03-19';
 const HERO_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp`;
 
 export const metadata: Metadata = {
-  title: 'How to Start a PMHNP Private Practice — Step-by-Step Guide 2026',
-  description: 'Complete guide to starting your own psychiatric NP private practice. LLC formation, insurance credentialing (CAQH, NPI), EHR setup, malpractice insurance, billing, overhead costs, and income projections ($200K-$300K+).',
+  title: `How to Start a ${brand.niche.short} Private Practice — Step-by-Step Guide 2026`,
+  description: `Complete guide to starting your own ${brand.niche.adjective} NP private practice. LLC formation, insurance credentialing (CAQH, NPI), EHR setup, malpractice insurance, billing, overhead costs, and income projections ($200K-$300K+).`,
   keywords: ['PMHNP private practice', 'how to start psychiatric NP private practice', 'PMHNP private practice income', 'psychiatric nurse practitioner own practice', 'PMHNP business startup', 'psych NP private practice'],
   openGraph: {
-    title: 'How to Start a PMHNP Private Practice — 2026 Guide',
-    description: 'Step-by-step guide to launching your own psychiatric nurse practitioner private practice.',
+    title: `How to Start a ${brand.niche.short} Private Practice — 2026 Guide`,
+    description: `Step-by-step guide to launching your own ${brand.niche.adjective} nurse practitioner private practice.`,
     type: 'article',
-    images: [{ url: HERO_IMAGE, width: 1280, height: 900, alt: 'How to Start a PMHNP Private Practice — 2026 Guide' }],
+    images: [{ url: HERO_IMAGE, width: 1280, height: 900, alt: `How to Start a ${brand.niche.short} Private Practice — 2026 Guide` }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'How to Start a PMHNP Private Practice — 2026 Guide',
+    title: `How to Start a ${brand.niche.short} Private Practice — 2026 Guide`,
     images: [HERO_IMAGE],
   },
   alternates: { canonical: `${brand.baseUrl}/resources/private-practice-guide` },
@@ -43,7 +43,7 @@ export default function PrivatePracticeGuidePage() {
       number: 2,
       title: 'Form Your Business Entity',
       icon: Landmark,
-      content: 'Most PMHNPs choose a Professional Limited Liability Company (PLLC) for liability protection and tax flexibility. Key steps: choose a business name, file with your Secretary of State ($100-$500), get an EIN from the IRS (free), and open a business bank account.',
+      content: `Most ${brand.niche.short}s choose a Professional Limited Liability Company (PLLC) for liability protection and tax flexibility. Key steps: choose a business name, file with your Secretary of State ($100-$500), get an EIN from the IRS (free), and open a business bank account.`,
       details: [
         'LLC/PLLC: Best for most solo practitioners ($100-$500 to form)',
         'S-Corp election: Consider when income exceeds $80K+ for tax savings',
@@ -68,7 +68,7 @@ export default function PrivatePracticeGuidePage() {
       number: 4,
       title: 'Set Up Your EHR & Billing',
       icon: BookOpen,
-      content: 'Choose an EHR (Electronic Health Records) system with integrated billing. Popular options for psychiatric private practices include:',
+      content: `Choose an EHR (Electronic Health Records) system with integrated billing. Popular options for ${brand.niche.adjective} private practices include:`,
       details: [
         'SimplePractice: $69-$99/month — Popular for psych practices, includes telehealth',
         'TherapyNotes: $49-$59/month — Designed for mental health, excellent documentation',
@@ -81,7 +81,7 @@ export default function PrivatePracticeGuidePage() {
       number: 5,
       title: 'Secure Malpractice Insurance',
       icon: Shield,
-      content: 'Individual malpractice (professional liability) insurance is essential. Most private practice PMHNPs need:',
+      content: `Individual malpractice (professional liability) insurance is essential. Most private practice ${brand.niche.short}s need:`,
       details: [
         'Occurrence-based policy (preferred): $1,500-$3,000/year',
         'Coverage: Minimum $1M per occurrence / $3M aggregate',
@@ -94,7 +94,7 @@ export default function PrivatePracticeGuidePage() {
       number: 6,
       title: 'Launch & Build Your Caseload',
       icon: Users,
-      content: 'Plan for 3-6 months to build a full caseload. A typical full-time private practice PMHNP sees 20-30 patients per week.',
+      content: `Plan for 3-6 months to build a full caseload. A typical full-time private practice ${brand.niche.short} sees 20-30 patients per week.`,
       details: [
         'Create a professional website with online scheduling',
         'Register on Psychology Today ($29.95/month) and Zocdoc',
@@ -107,24 +107,24 @@ export default function PrivatePracticeGuidePage() {
 
   const ppFaqs = [
     {
-      question: "How much does it cost to start a PMHNP private practice?",
-      answer: "Startup costs range from $5,000-$20,000 for a lean telehealth practice to $30,000-$75,000 for a brick-and-mortar office. Core costs include PLLC formation ($100-500), EHR ($50-200/month), malpractice insurance ($1,500-3,000/year), credentialing fees, and marketing. Many PMHNPs start with a virtual practice to minimize overhead."
+      question: `How much does it cost to start a ${brand.niche.short} private practice?`,
+      answer: `Startup costs range from $5,000-$20,000 for a lean telehealth practice to $30,000-$75,000 for a brick-and-mortar office. Core costs include PLLC formation ($100-500), EHR ($50-200/month), malpractice insurance ($1,500-3,000/year), credentialing fees, and marketing. Many ${brand.niche.short}s start with a virtual practice to minimize overhead.`
     },
     {
-      question: "How much can a PMHNP private practice owner earn?",
-      answer: "After building a full caseload (20-30 patients/week), private practice PMHNPs typically earn $200,000-$300,000+ gross revenue. After overhead (25-40%), net income is $120,000-$225,000+. Top earners seeing 30+ patients/week with efficient overhead can net $250,000+. Telehealth practices generally have lower overhead (15-25%)."
+      question: `How much can a ${brand.niche.short} private practice owner earn?`,
+      answer: `After building a full caseload (20-30 patients/week), private practice ${brand.niche.short}s typically earn $200,000-$300,000+ gross revenue. After overhead (25-40%), net income is $120,000-$225,000+. Top earners seeing 30+ patients/week with efficient overhead can net $250,000+. Telehealth practices generally have lower overhead (15-25%).`
     },
     {
       question: "How long does it take to build a full private practice caseload?",
-      answer: "Most PMHNPs reach a full caseload within 6-12 months. Factors that speed this up include accepting insurance (vs cash-only), being in an underserved area, Psychology Today listing, networking with local therapists, and having a specialty niche. Many PMHNPs maintain part-time employment while building their practice."
+      answer: `Most ${brand.niche.short}s reach a full caseload within 6-12 months. Factors that speed this up include accepting insurance (vs cash-only), being in an underserved area, Psychology Today listing, networking with local therapists, and having a specialty niche. Many ${brand.niche.short}s maintain part-time employment while building their practice.`
     },
     {
       question: "Should I accept insurance or go cash-pay only?",
       answer: "Insurance-based practices fill caseloads faster and serve more patients, but involve lower reimbursement rates ($100-$200/visit) and administrative burden. Cash-pay practices offer higher rates ($200-$400/visit) and less paperwork, but take longer to fill. Many successful practices accept a mix of both."
     },
     {
-      question: "Can new grad PMHNPs open a private practice?",
-      answer: "It is possible but not recommended. Most experts suggest gaining 2-3 years of clinical experience in structured settings (community mental health, group practices) before opening a private practice. This builds clinical confidence, medication management skills, and a professional network for referrals."
+      question: `Can new grad ${brand.niche.short}s open a private practice?`,
+      answer: `It is possible but not recommended. Most experts suggest gaining 2-3 years of clinical experience in structured settings (community ${brand.niche.category}, group practices) before opening a private practice. This builds clinical confidence, medication management skills, and a professional network for referrals.`
     },
   ];
 
@@ -158,13 +158,13 @@ export default function PrivatePracticeGuidePage() {
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'Article',
-            headline: 'How to Start a PMHNP Private Practice — 2026 Step-by-Step Guide',
-            description: 'Complete guide to starting your own psychiatric NP private practice — LLC formation, insurance credentialing, EHR setup, malpractice, billing, and income projections.',
+            headline: `How to Start a ${brand.niche.short} Private Practice — 2026 Step-by-Step Guide`,
+            description: `Complete guide to starting your own ${brand.niche.adjective} NP private practice — LLC formation, insurance credentialing, EHR setup, malpractice, billing, and income projections.`,
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
             image: HERO_IMAGE,
-            author: { '@type': 'Organization', name: 'PMHNP Hiring' },
-            publisher: { '@type': 'Organization', name: 'PMHNP Hiring', url: brand.baseUrl },
+            author: { '@type': 'Organization', name: brand.name },
+            publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
             mainEntityOfPage: { '@type': 'WebPage', '@id': `${brand.baseUrl}/resources/private-practice-guide` },
           }),
         }}
@@ -175,8 +175,8 @@ export default function PrivatePracticeGuidePage() {
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'HowTo',
-            name: 'How to Start a PMHNP Private Practice',
-            description: 'Step-by-step guide to launching your own psychiatric nurse practitioner private practice.',
+            name: `How to Start a ${brand.niche.short} Private Practice`,
+            description: `Step-by-step guide to launching your own ${brand.niche.adjective} nurse practitioner private practice.`,
             step: steps.map((s) => ({
               '@type': 'HowToStep',
               name: s.title,
@@ -195,13 +195,13 @@ export default function PrivatePracticeGuidePage() {
               <Building2 className="w-8 h-8" />
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              How to Start a PMHNP Private Practice
+              How to Start a {brand.niche.short} Private Practice
             </h1>
             <p className="text-sm text-teal-200 text-center mt-2 mb-4">
               Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} | Step-by-step startup guide
             </p>
             <p className="text-lg md:text-xl text-teal-100 mb-6">
-              From LLC formation to full caseload — everything you need to launch your psychiatric NP practice
+              From LLC formation to full caseload — everything you need to launch your {brand.niche.adjective} NP practice
             </p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-8 mt-8">
               <div className="text-center">
@@ -341,7 +341,7 @@ export default function PrivatePracticeGuidePage() {
             </Link>
             <Link href="/jobs/private-practice" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>💼 Private Practice Jobs</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Browse private practice PMHNP positions.</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Browse private practice {brand.niche.short} positions.</p>
             </Link>
           </div>
         </div>

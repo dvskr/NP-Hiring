@@ -211,7 +211,7 @@ export default function JobStructuredData({ job }: JobStructuredDataProps) {
     ...(job.applyOnPlatform ? { directApply: true } : {}),
     identifier: {
       '@type': 'PropertyValue',
-      name: 'PMHNP Hiring',
+      name: brand.name,
       value: job.id,
     },
   });
