@@ -71,7 +71,7 @@ Write a compelling, professional cover letter (3-4 paragraphs). Use first person
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are a professional career coach specializing in PMHNP (Psychiatric Mental Health Nurse Practitioner) career services. Write polished, compelling cover letters.',
+                        content: 'You are a professional career coach specializing in Nurse Practitioner (NP) and APRN career services across all specialties. Write polished, compelling cover letters.',
                     },
                     { role: 'user', content: prompt },
                 ],

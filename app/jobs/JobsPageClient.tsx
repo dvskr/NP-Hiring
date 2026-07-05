@@ -349,7 +349,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                     lineHeight: 1.2,
                     letterSpacing: '-0.015em',
                   }}
-                >{brand.niche.short} &amp; Psychiatric Nurse Practitioner Jobs</h1>
+                >{brand.niche.long} &amp; APRN Jobs</h1>
                 <p style={{
                   fontSize: '13px', color: '#6B7F8A', margin: 0, fontWeight: 500,
                 }}>Browse fresh {brand.niche.short} roles across the US — telehealth, on-site, hybrid, and locum.</p>

@@ -206,7 +206,7 @@ function buildProfileContext(profile: any): string {
 }
 
 function systemPrompt(): string {
-    return `You are an expert career coach and professional writer specializing in Psychiatric Mental Health Nurse Practitioner (PMHNP) job applications. 
+    return `You are an expert career coach and professional writer specializing in Nurse Practitioner (NP) and APRN job applications across all specialties.
 
 Your task is to generate professional, compelling responses to job application questions. 
 

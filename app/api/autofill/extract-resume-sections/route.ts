@@ -189,7 +189,7 @@ async function extractResumeText(resumeUrl: string): Promise<string> {
 // ─── Prompts ───
 
 function systemPrompt(): string {
-    return `You are an expert data extraction AI for healthcare professional resumes (PMHNP - Psychiatric Mental Health Nurse Practitioners).
+    return `You are an expert data extraction AI for healthcare professional resumes (Nurse Practitioners and APRNs across all specialties: FNP, AGNP, PNP, WHNP, ACNP, PMHNP, CRNA, CNM, CNS).
 
 Your task is to extract STRUCTURED data from resume text and return it as valid JSON.
 

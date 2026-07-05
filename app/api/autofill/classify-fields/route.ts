@@ -293,7 +293,7 @@ export function buildProfileContext(profile: any): string {
 // ─── Prompts ───
 
 function systemPrompt(): string {
-    return `You are an expert AI assistant for PMHNP (Psychiatric Mental Health Nurse Practitioner) job applications.
+    return `You are an expert AI assistant for Nurse Practitioner (NP) and APRN job applications across all specialties (FNP, AGNP, PNP, WHNP, ACNP, PMHNP, CRNA, CNM, CNS).
 
 Your task is to classify unknown form fields AND provide the best answer/value based on the candidate's profile and resume.
 

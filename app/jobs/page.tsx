@@ -206,7 +206,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
     const jobListSchema = {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
-      name: `${brand.niche.short} & Psychiatric Nurse Practitioner Jobs`,
+      name: `${brand.niche.long} & APRN Jobs`,
       numberOfItems: total,
       itemListElement: jobs.slice(0, 10).map((job, i) => {
         const j = job as { id: string; slug?: string | null; title: string };
