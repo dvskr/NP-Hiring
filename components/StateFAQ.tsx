@@ -51,15 +51,15 @@ function buildStateFaqs({
                     ? `${stateName} has reduced practice authority, requiring ${brand.niche.short}s to have a collaborative agreement with a physician. Requirements include an active RN license, completion of an accredited ${brand.niche.short} program, national certification, state APRN licensure, and a documented collaborative practice agreement.`
                     : practiceAuthority === 'restricted'
                         ? `${stateName} has restricted practice authority, requiring physician supervision for ${brand.niche.short}s. You'll need an active RN license, completion of an accredited ${brand.niche.short} program, national certification, state APRN licensure, and a formal supervisory agreement with a licensed physician.`
-                        : `To practice as a ${brand.niche.short} in ${stateName}, you'll typically need an active RN license, completion of an accredited ${brand.niche.short} graduate program, national certification through ANCC, and state APRN licensure. Contact the ${stateName} Board of Nursing for specific requirements.`,
+                        : `To practice as an ${brand.niche.short} in ${stateName}, you'll typically need an active RN license, completion of an accredited ${brand.niche.short} graduate program, national certification through ANCC or AANP, and state APRN licensure. Contact the ${stateName} Board of Nursing for specific requirements.`,
         },
         {
             question: `Are there telehealth ${brand.niche.short} jobs in ${stateName}?`,
-            answer: `Yes, many telehealth and remote ${brand.niche.short} positions are available that allow you to work from ${stateName}. Telehealth has expanded significantly in ${brand.niche.adjective} care, making it possible to provide services from home. Note that you'll need to be licensed in the state where your patients are located, and some employers help with multi-state licensure.`,
+            answer: `Yes, many telehealth and remote ${brand.niche.short} positions are available that allow you to work from ${stateName}. Telehealth has expanded significantly across healthcare, making it possible to provide services from home. Note that you'll need to be licensed in the state where your patients are located, and some employers help with multi-state licensure.`,
         },
         {
             question: `What settings hire ${brand.niche.short}s in ${stateName}?`,
-            answer: `${brand.niche.short}s in ${stateName} work in various settings including community ${brand.niche.category} centers, hospitals and ${brand.niche.adjective} units, private practices, correctional facilities, substance abuse treatment centers, schools and universities, Veterans Affairs facilities, and telehealth companies. Each setting offers different patient populations, schedules, and compensation structures.`,
+            answer: `${brand.niche.short}s in ${stateName} work in various settings including community health centers, hospitals and health systems, private practices, correctional facilities, urgent-care clinics, schools and universities, Veterans Affairs facilities, and telehealth companies. Each setting offers different patient populations, schedules, and compensation structures.`,
         },
     ];
 }

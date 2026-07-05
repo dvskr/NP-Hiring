@@ -8,7 +8,7 @@ import { Suspense } from 'react'
 
 export const metadata = {
   title: `Create Account | ${brand.name}`,
-  description: `Create your free ${brand.name} account. Save jobs, set up alerts, and get matched with ${brand.niche.adjective} nurse practitioner positions.`,
+  description: `Create your free ${brand.name} account. Save jobs, set up alerts, and get matched with ${brand.niche.descriptor} positions.`,
   // Page is noindexed via middleware X-Robots-Tag (per app/robots.ts P2.3
   // unblock window). Self-canonical consolidates ?redirectTo=… variants
   // to the bare /signup URL.

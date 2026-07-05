@@ -52,7 +52,7 @@ ${post.image_url ? `      <enclosure url="${escape(post.image_url)}" type="image
   <channel>
     <title>${brand.name} — Career Blog &amp; Industry Insights</title>
     <link>${BASE_URL}/blog</link>
-    <description>${brand.niche.short} career guides, salary trends, licensure changes, and industry analysis from the #1 ${brand.niche.adjective} nurse practitioner job board.</description>
+    <description>${brand.niche.short} career guides, salary trends, licensure changes, and industry analysis from the #1 ${brand.niche.descriptor} job board.</description>
     <language>en-us</language>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
     <atom:link href="${BASE_URL}/blog/feed.xml" rel="self" type="application/rss+xml"/>

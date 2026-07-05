@@ -3,13 +3,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Save, Loader2, MessageSquare, Sparkles } from 'lucide-react'
 import { clayCard, clayInnerCard, clayTitle, clayInput, clayBtnPrimary, clayPalette } from './clay-tokens'
-import { brand } from '@/config/brand'
 
 interface OEQuestion { questionKey: string; questionText: string }
 
 const QUESTIONS: OEQuestion[] = [
     { questionKey: 'why_interested', questionText: 'Why are you interested in this position?' },
-    { questionKey: 'clinical_approach', questionText: `Describe your clinical approach to ${brand.niche.adjective} evaluation and treatment` },
+    { questionKey: 'clinical_approach', questionText: 'Describe your clinical approach to patient evaluation and treatment' },
     { questionKey: 'challenging_case', questionText: 'Tell us about a challenging case you\'ve managed' },
     { questionKey: 'reason_leaving', questionText: 'Why are you leaving your current position?' },
     { questionKey: 'career_goals', questionText: 'What are your long-term career goals?' },

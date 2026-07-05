@@ -96,15 +96,24 @@ export const metadata: Metadata = {
   // `absolute` opts out of the layout title template so the brand suffix
   // doesn't get appended a second time (was rendering "... | PMHNP Hiring
   // | PMHNP Hiring" — audit 09 M-17).
-  title: { absolute: `${brand.niche.short} Salary Guide 2026 — $155K+ Avg by State | ${brand.name}` },
-  description: `Complete 2026 ${brand.niche.short} salary data: national avg $155K+, top 10% earn $210K+. All 50 states, by experience level, practice setting, and negotiation tips.`,
-  keywords: ['pmhnp salary', 'psych np salary', 'psychiatric nurse practitioner salary', 'pmhnp salary by state', 'how much do pmhnps make', 'pmhnp pay', 'pmhnp salary 2026', 'psychiatric np salary', 'pmhnp salary guide'],
+  title: { absolute: `${brand.niche.short} Salary Guide 2026 — $126K+ Avg by State | ${brand.name}` },
+  description: `Complete 2026 ${brand.niche.short} salary data: national avg $126K+, top 10% earn $165K+. All 50 states, by experience level, practice setting, and negotiation tips.`,
+  keywords: [
+    `${brand.niche.descriptor} salary`,
+    `${brand.niche.short.toLowerCase()} salary`,
+    `${brand.niche.short.toLowerCase()} salary by state`,
+    `how much do ${brand.niche.descriptor}s make`,
+    `${brand.niche.short.toLowerCase()} pay`,
+    `${brand.niche.short.toLowerCase()} salary 2026`,
+    `${brand.niche.descriptor} salary by state`,
+    `${brand.niche.short.toLowerCase()} salary guide`,
+  ],
   openGraph: {
-    title: `${brand.niche.short} Salary Guide 2026 | $155,000+ Average`,
-    description: `Complete guide to ${brand.niche.short} salaries. National average $155,000+, top 10% earn $210,000+. State-by-state breakdown and tips to maximize earnings.`,
+    title: `${brand.niche.short} Salary Guide 2026 | $126,000+ Average`,
+    description: `Complete guide to ${brand.niche.short} salaries. National average $126,000+, top 10% earn $165,000+. State-by-state breakdown and tips to maximize earnings.`,
     type: 'website',
     url: `${BASE_URL}/salary-guide`,
-    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`, width: 1280, height: 900, alt: `${brand.niche.short} salary guide 2026 showing ${brand.niche.adjective} nurse practitioner pay by state with interactive salary comparison table` }],
+    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`, width: 1280, height: 900, alt: `${brand.niche.short} salary guide 2026 showing ${brand.niche.descriptor} pay by state with interactive salary comparison table` }],
   },
   twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`] },
   alternates: { canonical: `${brand.baseUrl}/salary-guide` },
@@ -119,11 +128,11 @@ const clayCard: React.CSSProperties = {
 
 /* ═══ Experience / Setting / Specialty data ═══ */
 const experienceData = [
-  { exp: 'New Grad (0-1 yr)', range: '$115,000 - $145,000', roles: `Staff ${brand.niche.short}, Outpatient Clinic` },
-  { exp: 'Early Career (1-3 yrs)', range: '$145,000 - $165,000', roles: `Staff ${brand.niche.short}, Telehealth Provider` },
-  { exp: 'Mid-Career (3-7 yrs)', range: '$165,000 - $185,000', roles: `Senior ${brand.niche.short}, Team Lead` },
-  { exp: 'Experienced (7-15 yrs)', range: '$180,000 - $210,000', roles: 'Clinical Director, Supervisor' },
-  { exp: 'Expert (15+ yrs)', range: '$200,000 - $250,000+', roles: 'Director, Consultant, Private Practice' },
+  { exp: 'New Grad (0-1 yr)', range: '$95,000 - $115,000', roles: `Staff ${brand.niche.short}, Outpatient Clinic` },
+  { exp: 'Early Career (1-3 yrs)', range: '$110,000 - $130,000', roles: `Staff ${brand.niche.short}, Telehealth Provider` },
+  { exp: 'Mid-Career (3-7 yrs)', range: '$125,000 - $150,000', roles: `Senior ${brand.niche.short}, Team Lead` },
+  { exp: 'Experienced (7-15 yrs)', range: '$150,000 - $180,000', roles: 'Clinical Director, Supervisor' },
+  { exp: 'Expert (15+ yrs)', range: '$180,000 - $250,000+', roles: 'Director, Consultant, Private Practice' },
 ];
 
 const settingData = [
@@ -132,33 +141,33 @@ const settingData = [
   { setting: 'Telehealth / Remote', range: '$130,000 - $180,000', notes: 'Growing rapidly, flexible schedules', color: '#3B82F6' },
   { setting: 'Outpatient Clinic', range: '$120,000 - $160,000', notes: 'Most common setting, steady patient load', color: '#F59E0B' },
   { setting: 'Hospital / Inpatient', range: '$115,000 - $150,000', notes: 'Often includes shift differentials, benefits', color: '#EF4444' },
-  { setting: 'Community Mental Health', range: '$100,000 - $130,000', notes: 'May qualify for loan forgiveness programs', color: '#6B7280' },
+  { setting: 'Community Health (FQHC)', range: '$100,000 - $130,000', notes: 'May qualify for loan forgiveness programs', color: '#6B7280' },
 ];
 
 const specialtyData = [
-  { specialty: 'Addiction / MAT', premium: '+15-20%', notes: 'High demand, MAT certification' },
-  { specialty: 'Child & Adolescent', premium: '+10-15%', notes: 'Specialized training required' },
-  { specialty: 'Forensic Psychiatry', premium: '+15-25%', notes: 'Correctional facilities, courts' },
-  { specialty: 'Emergency / Crisis', premium: '+10-20%', notes: 'Dynamic environment, flexible scheduling' },
-  { specialty: 'Geriatric Psychiatry', premium: '+5-10%', notes: 'Growing aging population' },
+  { specialty: 'Acute Care / Hospitalist', premium: '+10-20%', notes: 'AGACNP certification, hospital demand' },
+  { specialty: 'Psychiatric-Mental Health', premium: '+10-20%', notes: 'PMHNP-BC certification, provider shortage' },
+  { specialty: 'Emergency / Urgent Care', premium: '+10-20%', notes: 'Dynamic environment, flexible scheduling' },
+  { specialty: 'Dermatology / Aesthetics', premium: '+10-25%', notes: 'Procedure-driven, cash-pay revenue' },
+  { specialty: 'Gerontology / Palliative', premium: '+5-10%', notes: 'Growing aging population' },
   { specialty: 'Private Practice (Owner)', premium: '+20-40%', notes: 'Higher risk, no benefits' },
   { specialty: 'Rural / Underserved', premium: '+10-15%', notes: 'Often includes loan repayment' },
 ];
 
 const factorCards = [
   { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/clay-icon-match.webp`, title: 'Geographic Location', desc: 'States with higher cost of living and greater demand (CA, NY, MA) typically offer 20-40% higher salaries than rural areas.' },
-  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp`, title: 'Experience Level', desc: `Entry-level ${brand.niche.short}s start around $115-145k. With 5+ years experience, salaries can reach $180-210k or more.` },
+  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp`, title: 'Experience Level', desc: `Entry-level ${brand.niche.short}s start around $95-115k. With 5+ years experience, salaries can reach $150-180k or more.` },
   { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-briefcase.webp`, title: 'Practice Setting', desc: 'Private practice and telehealth positions often pay more than hospital or community health settings.' },
   { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-people.webp`, title: 'Employment Type', desc: `1099 contractors and travel ${brand.niche.short}s often earn 20-50% more than W2 employees, though without traditional benefits.` },
-  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp`, title: 'Specialization', desc: 'Subspecialties like addiction psychiatry, child/adolescent, or forensic psychiatry can command premium pay (+10-25%).' },
+  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp`, title: 'Specialization', desc: 'Subspecialties like acute care, emergency, psychiatric-mental health, or dermatology can command premium pay (+10-25%).' },
   { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`, title: 'Negotiation', desc: `${brand.niche.short}s who negotiate can often secure 5-15% higher starting salaries plus signing bonuses ($5,000-$30,000).` },
 ];
 
 const faqData = [
-  { q: `How much do ${brand.niche.short}s make in 2026?`, a: `The national average ${brand.niche.short} salary is $155,000+ per year in 2026, based on data from BLS, ZipRecruiter, Indeed, PayScale, Glassdoor, and CompHealth. The top 10% earn $210,000 or more. New graduates start at $115,000-$145,000, while experienced ${brand.niche.short}s earn $180,000-$210,000.` },
-  { q: `Which state pays ${brand.niche.short}s the most?`, a: `Idaho offers the highest ${brand.niche.short} salary at $205,080 per year, followed by New Jersey ($182,022), California ($181,670), Rhode Island ($175,530), and Washington ($173,331). When adjusted for cost of living, Idaho, Louisiana, Pennsylvania, Arkansas, and Missouri offer the best value.` },
-  { q: `Do telehealth ${brand.niche.short}s make less than in-person?`, a: `Telehealth ${brand.niche.short}s earn $130,000 to $175,000, while in-person ${brand.niche.short}s earn $145,000 to $185,000. However, telehealth offers excellent flexibility and some companies like Talkiatry pay $180,000-$215,000+ for experienced ${brand.niche.short}s with multi-state licenses.` },
-  { q: `How can I increase my ${brand.niche.short} salary?`, a: 'Top strategies include: specializing in high-demand areas like addiction psychiatry (+15-20% premium) or forensic psychiatry (+15-25%), practicing in Full Practice Authority states (+12-15% premium), considering private practice ownership ($180,000-$300,000+), working in rural/underserved areas for loan repayment incentives, and always negotiating total compensation.' },
+  { q: `How much do ${brand.niche.short}s make in 2026?`, a: `The national average ${brand.niche.short} salary is about $126,000-$135,000 per year in 2026, based on data from BLS, ZipRecruiter, Indeed, PayScale, and Glassdoor. The top 10% earn $165,000 or more. New graduates start at $95,000-$115,000, while experienced ${brand.niche.short}s earn $150,000-$180,000+.` },
+  { q: `Which state pays ${brand.niche.short}s the most?`, a: `${brand.niche.short} pay is consistently highest in West Coast and Northeast markets — California, Washington, Oregon, Nevada, and New Jersey rank near the top in federal wage data. When adjusted for cost of living, several Midwest and Southern states offer stronger real purchasing power.` },
+  { q: `Do telehealth ${brand.niche.short}s make less than in-person?`, a: `Telehealth ${brand.niche.short}s typically earn $120,000 to $170,000 — broadly comparable to in-person roles, which vary more by setting and acuity. Telehealth offers excellent flexibility, and some national telehealth platforms pay $180,000+ for experienced ${brand.niche.short}s with multi-state licenses.` },
+  { q: `How can I increase my ${brand.niche.short} salary?`, a: 'Top strategies include: specializing in high-demand areas like acute care, emergency, or psychiatric-mental health (+10-25% premium), practicing in Full Practice Authority states (+12-15% premium), considering private practice ownership ($180,000-$300,000+), working in rural/underserved areas for loan repayment incentives, and always negotiating total compensation.' },
   { q: `How much do travel ${brand.niche.short}s make?`, a: `Travel and locum tenens ${brand.niche.short}s typically earn 20-50% more than permanent positions, with compensation ranging from $150,000 to $250,000+ including housing stipends and travel allowances.` },
 ];
 
@@ -185,7 +194,7 @@ export default async function SalaryGuidePage() {
   const articleSchema = {
     "@context": "https://schema.org",
     "@type": "Article",
-    "headline": `2026 ${brand.niche.short} Salary Guide: ${brand.niche.medium} Pay by State`,
+    "headline": `2026 ${brand.niche.short} Salary Guide: ${brand.niche.long} Pay by State`,
     "description": `Comprehensive ${brand.niche.short} salary data for 2026 including state-by-state pay, experience levels, specialty premiums, and market trends. Based on BLS, ZipRecruiter, Indeed, and 10,000+ job postings.`,
     "image": `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`,
     "datePublished": "2026-01-01T00:00:00Z",
@@ -234,7 +243,7 @@ export default async function SalaryGuidePage() {
               {brand.niche.short} Salary Guide
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
-              National average <strong>$155,000+</strong> per year. State-by-state breakdown, experience levels, practice settings, and tips to maximize earnings.
+              National average <strong>$126,000+</strong> per year. State-by-state breakdown, experience levels, practice settings, and tips to maximize earnings.
             </p>
           </div>
 
@@ -264,9 +273,9 @@ export default async function SalaryGuidePage() {
               }}>
                 <h3 style={{ fontSize: '13px', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Key Numbers</h3>
                 {[
-                  { value: '$155K+', label: 'National Avg', bg: '#D4F5E9', color: '#065F46' },
-                  { value: '$115K', label: 'Entry Level', bg: '#E0E7FF', color: '#3730A3' },
-                  { value: '$210K+', label: 'Top 10%', bg: '#FEF3C7', color: '#92400E' },
+                  { value: '$126K+', label: 'National Avg', bg: '#D4F5E9', color: '#065F46' },
+                  { value: '$95K', label: 'Entry Level', bg: '#E0E7FF', color: '#3730A3' },
+                  { value: '$165K+', label: 'Top 10%', bg: '#FEF3C7', color: '#92400E' },
                   { value: '45%', label: 'Job Growth', bg: '#FFE0D3', color: '#7C2D12' },
                 ].map(s => (
                   <div key={s.label} className="sal-stat-pill" style={{
@@ -304,10 +313,10 @@ export default async function SalaryGuidePage() {
                 <div>
                   <h2 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Quick Answer: {brand.niche.short} Salary in {currentYear}</h2>
                   <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>
-                    The average {brand.niche.short} salary is <strong>$155,000+ per year</strong> in {currentYear}. The top 10% earn <strong>$210,000+</strong>.
-                    New graduates start at $115,000-$145,000, while experienced {brand.niche.short}s (7-15 years) earn $180,000-$210,000.
-                    Private practice owners can earn $180,000-$300,000+. The highest-paying state is Idaho at $205,080,
-                    followed by New Jersey ($182,022) and California ($181,670).
+                    The average {brand.niche.short} salary is <strong>$126,000-$135,000 per year</strong> in {currentYear}. The top 10% earn <strong>$165,000+</strong>.
+                    New graduates start at $95,000-$115,000, while experienced {brand.niche.short}s (7-15 years) earn $150,000-$180,000.
+                    Private practice owners can earn $180,000-$300,000+. Pay runs highest in West Coast and Northeast
+                    markets, with California, Washington, and New Jersey near the top in federal wage data.
                   </p>
                 </div>
               </div>
@@ -316,8 +325,8 @@ export default async function SalaryGuidePage() {
                 paddingTop: '18px', borderTop: '1px solid rgba(0,0,0,0.06)',
               }} className="sal-quick-stats">
                 {[
-                  { value: '$155,000+', label: 'National Average', color: '#0D9488' },
-                  { value: '$210,000+', label: 'Top 10% Earn', color: '#0D9488' },
+                  { value: '$126,000+', label: 'National Average', color: '#0D9488' },
+                  { value: '$165,000+', label: 'Top 10% Earn', color: '#0D9488' },
                   { value: '45%', label: 'Job Growth by 2032', color: '#F59E0B' },
                   { value: '10,000+', label: 'Jobs Analyzed', color: '#F59E0B' },
                 ].map(s => (
@@ -645,7 +654,7 @@ export default async function SalaryGuidePage() {
           <div style={{ ...clayCard, padding: '24px 28px', marginBottom: '24px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>📋 Cite This Page</h3>
             <p style={{ fontSize: '13px', color: '#5A4A42', marginBottom: '14px' }}>Use the following citation when referencing data from this salary guide:</p>
-            <CopyCitation citation={`${brand.name}. "2026 ${brand.niche.short} Salary Guide: ${brand.niche.medium} Pay by State." ${brand.name}, February 2026, ${brand.domain}/salary-guide.`} />
+            <CopyCitation citation={`${brand.name}. "2026 ${brand.niche.short} Salary Guide: ${brand.niche.long} Pay by State." ${brand.name}, February 2026, ${brand.domain}/salary-guide.`} />
             <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '10px' }}>For media inquiries or custom data requests, contact {brand.email.press}</p>
           </div>
 

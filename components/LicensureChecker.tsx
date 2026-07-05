@@ -31,7 +31,7 @@ interface Props {
 /* ─── Requirements per state (common baseline + state-specific) ─── */
 const COMMON_REQUIREMENTS = [
   { step: 1, text: 'MSN or DNP from accredited program', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-star.webp` },
-  { step: 2, text: 'ANCC PMHNP-BC certification', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp` },
+  { step: 2, text: `National ${brand.niche.short} board certification (ANCC or AANP)`, img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp` },
   { step: 3, text: 'State APRN license application', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-briefcase.webp` },
   { step: 4, text: 'NPI number registration', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-people.webp` },
   { step: 5, text: 'DEA registration for prescribing', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp` },
@@ -316,7 +316,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {[
-                  { label: 'Certification Exam', value: 'ANCC PMHNP-BC ($395)' },
+                  { label: 'Certification Exam', value: 'ANCC or AANP ($315-$395)' },
                   { label: 'DEA Registration', value: '$888 / 3 years' },
                   { label: 'License Renewal', value: 'Every 2-3 years' },
                   { label: 'CE Hours', value: '25-50 hours / cycle' },

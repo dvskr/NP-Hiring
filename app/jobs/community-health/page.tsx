@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -79,22 +80,22 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 
   return {
     title: `${stats.totalJobs} Community Health ${brand.niche.short} Jobs — FQHC & Public Health NP Positions`,
-    description: `Find ${stats.totalJobs} community health ${brand.niche.short} jobs. Psychiatric nurse practitioner positions at FQHCs, community ${brand.niche.category} centers, and public health clinics with NHSC loan repayment eligibility and integrated care teams.`,
-    keywords: ['community health pmhnp jobs', 'FQHC psychiatric nurse practitioner', 'public health PMHNP', 'community mental health NP', 'underserved population psych NP'],
+    description: `Find ${stats.totalJobs} community health ${brand.niche.short} jobs. ${brand.niche.long} positions at FQHCs, community health centers, and public health clinics with NHSC loan repayment eligibility and integrated care teams.`,
+    keywords: ['community health np jobs', 'FQHC nurse practitioner', 'public health NP', 'community health center nurse practitioner', 'underserved population NP jobs'],
     openGraph: {
       title: `${stats.totalJobs} Community Health ${brand.niche.short} Jobs`,
       description: `Browse community health and FQHC ${brand.niche.descriptor} positions.`,
       type: 'website',
       url: `${brand.baseUrl}/jobs/community-health`,
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Community Health ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`FQHC, public health & community ${brand.niche.category} roles`)}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Community Health ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent('FQHC, public health & community health center roles')}`,
         width: 1200, height: 630, alt: `Community Health ${brand.niche.short} Jobs`,
       }],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${stats.totalJobs} Community Health ${brand.niche.short} Jobs`,
-      description: `FQHC and community ${brand.niche.category} ${brand.niche.short} positions with NHSC loan repayment eligibility.`,
+      description: `FQHC and community health center ${brand.niche.short} positions with NHSC loan repayment eligibility.`,
     },
     alternates: { canonical: `${brand.baseUrl}/jobs/community-health` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
@@ -117,11 +118,11 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
   const communityHealthFaqs = [
     {
       question: `What do community health ${brand.niche.short}s do?`,
-      answer: `Community health ${brand.niche.short}s provide ${brand.niche.adjective} care in FQHCs, community ${brand.niche.category} centers, and public health clinics. They conduct assessments, manage medications, provide crisis intervention, and collaborate with primary care teams to deliver integrated, whole-person care to underserved populations.`
+      answer: `Community health ${brand.niche.short}s provide primary and preventive care in FQHCs, community health centers, and public health clinics. They manage chronic conditions, treat acute illness, deliver screenings and preventive services, and work alongside behavioral health, dental, and social work teams to provide integrated, whole-person care to underserved populations.`
     },
     {
       question: `How much do community health ${brand.niche.short}s earn?`,
-      answer: `Community health ${brand.niche.short}s earn $120,000–$170,000+ annually. Many positions at FQHCs include NHSC loan repayment up to $50,000, PSLF eligibility, generous PTO, and federal benefits that significantly boost total compensation beyond base salary.`
+      answer: `Community health ${brand.niche.short} salaries typically fall within the standard NP range of roughly $95K-$150K, varying by location and experience. Many FQHC positions add NHSC loan repayment up to $50,000, PSLF eligibility, generous PTO, and benefits that meaningfully boost total compensation beyond base salary.`
     },
     {
       question: "Do community health positions qualify for loan repayment?",
@@ -129,7 +130,7 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
     },
     {
       question: `What qualifications are needed for community health ${brand.niche.short} roles?`,
-      answer: "You need an active PMHNP-BC certification (ANCC), state APRN licensure, DEA registration, and ideally experience working with diverse, underserved populations. Bilingual skills (especially Spanish) are highly valued. Some positions accept new graduates with structured supervision."
+      answer: "You need an active APRN license, national NP certification, DEA registration, and ideally experience working with diverse, underserved populations. Bilingual skills (especially Spanish) are highly valued. Some positions accept new graduates with structured supervision."
     },
   ];
 
@@ -182,13 +183,13 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
         heroAlt={`Community health ${brand.niche.short} integrated care`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Community Health']}
-        indexLabel="№ 19 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('community-health') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Community Health"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, FQHC & public health."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$145K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$120K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description="FQHC and public health positions with loan repayment, integrated care teams, and meaningful impact on underserved communities."
@@ -294,7 +295,7 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
               </div>
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Community Impact</h3>
-                <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>Make a direct impact on underserved populations. Reduce {brand.niche.category} disparities in your community.</p>
+                <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>Make a direct impact on underserved populations. Reduce health disparities in your community.</p>
               </div>
             </div>
 
@@ -307,12 +308,12 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ch_diversity.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Diverse Populations</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Serve diverse, multilingual communities with culturally responsive {brand.niche.adjective} care.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Serve diverse, multilingual communities with culturally responsive care.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ch_grant.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Grant-Funded Roles</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Many positions backed by federal and state {brand.niche.category} expansion grants.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Many positions backed by federal and state health center expansion grants.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ch_heart.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -325,7 +326,7 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary + Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Community health {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$120K–$170K'} annually with NHSC loan repayment, generous PTO, and federal benefits.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Community health {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$95K–$150K'} annually, and many roles add NHSC loan repayment, generous PTO, and PSLF-eligible nonprofit employment.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
@@ -364,8 +365,8 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
               <div key="01" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>01</span>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>PMHNP-BC Certification</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Active PMHNP-BC certification through ANCC is required for all community health positions.</p>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>NP Certification</h3>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>An active APRN license and national NP certification are required for all community health positions.</p>
               </div>
               <div key="02" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>02</span>

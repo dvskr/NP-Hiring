@@ -13,6 +13,7 @@ import CategoryFAQ from '@/components/CategoryFAQ';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -63,13 +64,13 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = parseInt(params.page || '1');
   return {
-    title: `${stats.totalJobs} Inpatient ${brand.niche.short} Jobs — Hospital & Acute Care ($140K-200K)`,
-    description: `Find ${stats.totalJobs} inpatient ${brand.niche.short} jobs paying $140K-$200K+. Hospital-based ${brand.niche.adjective} nurse practitioner positions in acute care, crisis stabilization, and ${brand.niche.adjective} units.`,
+    title: `${stats.totalJobs} Inpatient ${brand.niche.short} Jobs — Hospital & Acute Care`,
+    description: `Find ${stats.totalJobs} inpatient ${brand.niche.short} jobs. Hospital-based ${brand.niche.descriptor} positions in acute care, step-down, and specialty inpatient units.`,
     openGraph: {
-      title: `${stats.totalJobs} Inpatient ${brand.niche.short} Jobs — Hospital Psych NP`,
+      title: `${stats.totalJobs} Inpatient ${brand.niche.short} Jobs — Hospital-Based Roles`,
       description: `Browse inpatient ${brand.niche.descriptor} positions.`,
       type: 'website',
-      images: [{ url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Inpatient ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Hospital & acute care ${brand.niche.adjective} NP positions`)}`, width: 1200, height: 630, alt: `Inpatient ${brand.niche.short} Jobs` }],
+      images: [{ url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Inpatient ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Hospital & acute care ${brand.niche.short} positions`)}`, width: 1200, height: 630, alt: `Inpatient ${brand.niche.short} Jobs` }],
     },
     alternates: { canonical: `${brand.baseUrl}/jobs/inpatient` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
@@ -107,7 +108,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
         heroAlt={`${brand.niche.short} working in inpatient hospital setting`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Inpatient']}
-        indexLabel="№ 12 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('inpatient') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Inpatient"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, hospital & acute care."
@@ -197,7 +198,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose Inpatient</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Built for Clinical Impact</h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Inpatient roles provide structured environments, team-based care, and the highest-acuity clinical experience in psychiatry.</p>
+          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Inpatient roles provide structured environments, team-based care, and some of the highest-acuity clinical experience in {brand.niche.short} practice.</p>
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Hospital Settings (8) + Higher Base Pay (4) */}
@@ -209,7 +210,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_inp_ward.webp`} alt={`Hospital inpatient ${brand.niche.adjective} ward`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_inp_ward.webp`} alt="Hospital inpatient ward" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
@@ -220,7 +221,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Higher Base Pay</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  Earn $140K–$200K+ with shift differentials, nights/weekends premiums, and sign-on bonuses.
+                  Pay often sits at the top of the {brand.niche.short} range, with shift differentials, nights/weekends premiums, and sign-on bonuses.
                 </p>
               </div>
             </div>
@@ -233,13 +234,13 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_inp_crisis.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
-              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Crisis Expertise</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Gain critical skills in crisis intervention, psychopharmacology, and complex case management.</p>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Acute Care Skills</h3>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Gain critical skills in rapid assessment, acute management, and complex case coordination.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_inp_team.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Team-Based Care</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Collaborate with psychiatrists, social workers, nurses, and case managers daily.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Collaborate with physicians, pharmacists, nurses, and case managers daily.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_inp_mentor.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -252,7 +253,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary + Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Inpatient {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$140K–$200K'} annually with full benefits, malpractice coverage, and retirement plans.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Inpatient {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k annually` : 'competitive salaries'} with full benefits, malpractice coverage, and retirement plans.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
@@ -290,10 +291,10 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Preparing for Inpatient Practice</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
             {[
-              { step: '01', title: 'Crisis Training', text: `Get comfortable with de-escalation techniques, safety protocols, and managing ${brand.niche.adjective} emergencies.` },
-              { step: '02', title: 'Team Dynamics', text: 'Learn to collaborate with psychiatrists, social workers, nurses, and case managers in multidisciplinary rounds.' },
-              { step: '03', title: 'Pharmacology', text: 'Stay current on acute psychopharmacology — inpatient settings require rapid titration and medication management.' },
-              { step: '04', title: 'Shift Negotiation', text: 'Negotiate shift differentials for nights, weekends, and holidays — they can add $15K–$30K to your base.' },
+              { step: '01', title: 'Acute Care Readiness', text: 'Get comfortable with rapid assessment, deteriorating patients, and managing inpatient emergencies.' },
+              { step: '02', title: 'Team Dynamics', text: 'Learn to collaborate with physicians, pharmacists, nurses, and case managers in multidisciplinary rounds.' },
+              { step: '03', title: 'Pharmacology', text: 'Stay current on inpatient pharmacology — acute settings require rapid titration, IV therapies, and careful medication reconciliation.' },
+              { step: '04', title: 'Shift Negotiation', text: 'Negotiate shift differentials for nights, weekends, and holidays — they can add meaningfully to your base pay.' },
             ].map(r => (
               <div key={r.step} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>{r.step}</span>
@@ -315,7 +316,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
               { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
               { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
               { href: '/jobs/emergency', label: 'Emergency', sub: 'ED & urgent care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_crisis.webp` },
-              { href: '/jobs/correctional', label: 'Correctional', sub: 'Forensic settings', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_correctional.webp` },
+              { href: '/jobs/correctional', label: 'Correctional', sub: 'Corrections settings', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_correctional.webp` },
               { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
               { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
             ].map(c => (

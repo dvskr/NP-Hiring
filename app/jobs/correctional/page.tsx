@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -78,24 +79,24 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} Correctional ${brand.niche.short} Jobs — Forensic ($160K+)`,
+    title: `${stats.totalJobs} Correctional ${brand.niche.short} Jobs — Prison & Jail Healthcare`,
     // SEO Fix #7: trim description to ≤160 chars.
-    description: `Find ${stats.totalJobs} correctional & forensic ${brand.niche.short} jobs in prisons, jails, and detention facilities. 15-25% salary premiums + loan forgiveness eligibility.`,
-    keywords: ['correctional pmhnp jobs', 'forensic psychiatric nurse practitioner', 'prison pmhnp', 'corrections psych NP', 'forensic mental health NP jobs'],
+    description: `Find ${stats.totalJobs} correctional ${brand.niche.short} jobs in prisons, jails, and detention facilities. Structured schedules, strong benefits, and loan forgiveness eligibility.`,
+    keywords: ['correctional np jobs', 'prison nurse practitioner', 'jail NP jobs', 'correctional healthcare nurse practitioner', 'corrections NP jobs'],
     openGraph: {
       title: `${stats.totalJobs} Correctional ${brand.niche.short} Jobs`,
-      description: `Browse correctional and forensic ${brand.niche.descriptor} positions.`,
+      description: `Browse correctional healthcare ${brand.niche.descriptor} positions.`,
       type: 'website',
       url: `${brand.baseUrl}/jobs/correctional`,
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Correctional ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Forensic ${brand.niche.adjective} NP positions — $160K+ with PSLF`)}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Correctional ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent('Correctional healthcare NP positions with PSLF eligibility')}`,
         width: 1200, height: 630, alt: `Correctional ${brand.niche.short} Jobs`,
       }],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${stats.totalJobs} Correctional ${brand.niche.short} Jobs`,
-      description: `Forensic ${brand.niche.short} positions in prisons, jails, and detention facilities.`,
+      description: `Correctional ${brand.niche.short} positions in prisons, jails, and detention facilities.`,
     },
     alternates: { canonical: `${brand.baseUrl}/jobs/correctional` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
@@ -118,19 +119,19 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
   const correctionalFaqs = [
     {
       question: `What do correctional ${brand.niche.short}s do?`,
-      answer: `Correctional ${brand.niche.short}s provide ${brand.niche.adjective} care to incarcerated individuals in prisons, jails, and detention facilities. They conduct ${brand.niche.category} assessments, manage psychotropic medications, provide crisis intervention, diagnose disorders, and develop treatment plans. They often work with complex presentations including co-occurring substance use disorders.`
+      answer: `Correctional ${brand.niche.short}s provide healthcare to incarcerated individuals in prisons, jails, and detention facilities. They conduct health assessments, manage chronic and acute conditions, prescribe medications, respond to urgent medical needs, and develop treatment plans. They often care for patients with complex needs, including co-occurring chronic disease, mental health conditions, and substance use disorders.`
     },
     {
-      question: `How much do forensic ${brand.niche.adjective} nurse practitioners earn?`,
-      answer: `Forensic and correctional ${brand.niche.short}s earn 15-25% more than standard ${brand.niche.adjective} NP roles, with average salaries of $160,000-$200,000+. Federal Bureau of Prisons positions offer additional benefits including federal pension, health insurance, and student loan repayment programs.`
+      question: `How much do correctional ${brand.niche.short}s earn?`,
+      answer: `Correctional ${brand.niche.short} pay is often at or above typical NP rates because facilities compete for a limited applicant pool, and government roles carry strong benefits. Federal Bureau of Prisons positions add federal pension, health insurance, and student loan repayment program eligibility.`
     },
     {
-      question: `Is correctional ${brand.niche.adjective} nursing dangerous?`,
-      answer: `Correctional facilities have security protocols to protect healthcare providers. While the environment requires awareness and de-escalation skills, most ${brand.niche.short}s report feeling safe. Facilities provide training on security procedures, and ${brand.niche.category} providers are typically highly respected by the incarcerated population.`
+      question: `Is working as a correctional ${brand.niche.short} dangerous?`,
+      answer: `Correctional facilities have security protocols to protect healthcare providers. While the environment requires awareness and de-escalation skills, most ${brand.niche.short}s report feeling safe. Facilities provide training on security procedures, and healthcare providers are typically respected by the incarcerated population.`
     },
     {
-      question: `Do you need special certification for forensic ${brand.niche.short} work?`,
-      answer: "While not required, Forensic Nursing Certification (AFN-BC) can enhance your candidacy and earning potential. Most employers provide facility-specific training. Experience with substance abuse treatment, crisis intervention, and dual-diagnosis populations is highly valued."
+      question: `Do you need special certification for correctional ${brand.niche.short} work?`,
+      answer: "No specialty certification is required — an active APRN license and national NP certification are the baseline, and most employers provide facility-specific orientation and security training. Experience with chronic disease management, substance use treatment, and complex patient populations is highly valued."
     },
   ];
 
@@ -180,19 +181,19 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
       <CategoryHero
         bgColor="#95aabd"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v2_correctional.webp`}
-        heroAlt={`Correctional ${brand.niche.short} forensic practice`}
+        heroAlt={`Correctional ${brand.niche.short} in a secure facility`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Correctional']}
-        indexLabel="№ 18 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('correctional') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Correctional"
         headlineLine2={brand.niche.short}
-        headlineSub="jobs, forensic psych."
+        headlineSub="jobs, secure settings."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$180K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$120K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description={`Forensic ${brand.niche.adjective} positions with premium pay, high autonomy, and federal loan forgiveness eligibility.`}
+        description="Correctional healthcare positions with structured schedules, high autonomy, and federal loan forgiveness eligibility."
         ctaLabel="Browse Correctional Jobs"
         ctaHref="/jobs?category=correctional"
         secondaryCtaLabel="Set Alert"
@@ -233,7 +234,7 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
               <div style={{ padding: '24px' }}>
                 <Bell size={28} style={{ color: '#0D9488', marginBottom: '12px' }} />
                 <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#134E4A', margin: '0 0 8px' }}>Correctional Alerts</h3>
-                <p style={{ fontSize: '13px', color: '#0D9488', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>New forensic & correctional listings daily.</p>
+                <p style={{ fontSize: '13px', color: '#0D9488', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>New correctional healthcare listings daily.</p>
                 <Link href="/job-alerts" className="cat-cta-primary" style={{ display: 'block', width: '100%', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#0D9488', color: '#fff', textDecoration: 'none', boxShadow: '3px 3px 8px rgba(13,148,136,0.15)' }}>Create Alert</Link>
               </div>
             </div>
@@ -261,7 +262,7 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
                 </div>
                 <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.avgSalary}k</div>
                 <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Average annual salary</div>
-                <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Includes 15-25% correctional premium.</p>
+                <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Correctional roles often pay above typical NP rates.</p>
               </div>
             )}
           </div>
@@ -273,7 +274,7 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose Correctional</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Built for Justice-Involved Care</h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Correctional psychiatry offers structured schedules, loan repayment, and underserved population impact.</p>
+          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Correctional healthcare offers structured schedules, loan repayment, and impact on a deeply underserved population.</p>
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Secure Facility (8) + Loan Repayment (4) */}
@@ -309,8 +310,8 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_corr_loan.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
-              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Premium Pay</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Earn 15-25% more than standard {brand.niche.short} roles with federal benefits packages.</p>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Competitive Pay</h3>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Hard-to-fill settings often pay above typical {brand.niche.short} rates, with strong federal and state benefits.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_corr_security.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -319,8 +320,8 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_corr_pathology.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
-              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Diverse Pathology</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Treat PTSD, SUD, personality disorders, and psychosis in complex populations.</p>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Complex Case Mix</h3>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Manage chronic disease, infectious disease, substance use, and mental health needs in one panel.</p>
             </div>
 
             {/* ROW 3: Salary (8) + Alert CTA (4) */}
@@ -328,7 +329,7 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary + Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Correctional {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$160K–$200K'} annually with federal pension, health insurance, and loan repayment.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Correctional {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$95K–$160K'} annually, and government roles add pension, health insurance, and loan repayment.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>

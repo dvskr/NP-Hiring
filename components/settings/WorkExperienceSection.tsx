@@ -17,9 +17,9 @@ const US_STATES = [
 ]
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const PRACTICE_SETTINGS = [
-    'Outpatient Clinic', 'Inpatient Hospital', 'Residential Treatment', 'Community Mental Health Center',
+    'Outpatient Clinic', 'Inpatient Hospital', 'Residential Treatment', 'Community Health Center / FQHC',
     'Private Practice', 'Telehealth Only', 'Correctional Facility', 'School-Based',
-    'Integrated Primary Care', 'Crisis Center', 'VA/Military', 'Nursing Home/Long-Term Care', 'Home Health',
+    'Integrated Primary Care', 'Urgent Care', 'Emergency Department', 'VA/Military', 'Nursing Home/Long-Term Care', 'Home Health',
 ]
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         // Description should describe the post, not echo the title (audit
         // 09 M-24). Generic-but-relevant fallback when meta_description
         // is absent — log so editorial can backfill the missing field.
-        description: post.meta_description || `Read this ${brand.niche.short} career article on ${brand.name} — guides, salary insights, and licensure updates for ${brand.niche.adjective} nurse practitioners.`,
+        description: post.meta_description || `Read this ${brand.niche.short} career article on ${brand.name} — guides, salary insights, and licensure updates for ${brand.niche.descriptor}s.`,
         keywords: post.target_keyword ? [post.target_keyword] : undefined,
         openGraph: {
             title: post.title,
@@ -315,34 +315,34 @@ export default async function BlogPostPage({ params }: Props) {
     const blogFaqData: Record<string, Array<{ name: string; text: string }>> = {
         'how-to-become-a-pmhnp': [
             {
-                name: `How long does it take to become a ${brand.niche.short}?`,
+                name: `How long does it take to become an ${brand.niche.short}?`,
                 text: `It typically takes 6-8 years total: 4 years for a BSN, 1-2 years of RN experience, and 2-3 years for an MSN or DNP with ${brand.niche.short} specialization.`,
             },
             {
-                name: `What degree do you need to be a ${brand.niche.short}?`,
+                name: `What degree do you need to be an ${brand.niche.short}?`,
                 text: `You need a Master of Science in Nursing (MSN) or Doctor of Nursing Practice (DNP) with a ${brand.niche.long} specialization from an accredited program. You must also pass the ${brand.niche.short} certification exam through ANCC.`,
             },
             {
-                name: `Can a ${brand.niche.short} prescribe medication?`,
+                name: `Can an ${brand.niche.short} prescribe medication?`,
                 text: `Yes. ${brand.niche.short}s can prescribe psychiatric medications including antidepressants, antipsychotics, mood stabilizers, and controlled substances. Prescribing authority varies by state, with some states granting full practice authority and others requiring physician collaboration.`,
             },
             {
-                name: `What is the difference between a ${brand.niche.short} and a psychiatrist?`,
-                text: `Both can diagnose and treat ${brand.niche.category} conditions and prescribe medications. Psychiatrists complete medical school (MD/DO) plus a 4-year residency. ${brand.niche.short}s complete nursing school plus a master's or doctoral nursing program. ${brand.niche.short}s typically spend more time on therapy and holistic care, while psychiatrists often focus on medication management.`,
+                name: `What is the difference between an ${brand.niche.short} and a psychiatrist?`,
+                text: `Both can diagnose and treat behavioral health conditions and prescribe medications. Psychiatrists complete medical school (MD/DO) plus a 4-year residency. ${brand.niche.short}s complete nursing school plus a master's or doctoral nursing program. ${brand.niche.short}s typically spend more time on therapy and holistic care, while psychiatrists often focus on medication management.`,
             },
             {
                 name: `Is ${brand.niche.short} a good career?`,
-                text: `Yes. ${brand.niche.short}s are among the most in-demand healthcare providers in the US. Average salaries range from $140,000-$175,000, job growth is projected at 40%+ through 2031, and there are 10,000+ open positions nationwide. The ${brand.niche.category} provider shortage ensures strong demand for years to come.`,
+                text: `Yes. ${brand.niche.short}s are among the most in-demand healthcare providers in the US. Job growth is projected at 40%+ through 2031, and there are 10,000+ open positions nationwide. The nationwide provider shortage ensures strong demand for years to come.`,
             },
         ],
         'new-grad-pmhnp-first-job': [
             {
                 name: `Can new grad ${brand.niche.short}s get hired without experience?`,
-                text: `Yes. Due to the ${brand.niche.category} provider shortage, many employers actively hire new grad ${brand.niche.short}s. Telehealth companies, community ${brand.niche.category} centers, and large health systems commonly offer new grad ${brand.niche.short} positions with mentorship and supervision.`,
+                text: `Yes. Due to the nationwide provider shortage, many employers actively hire new grad ${brand.niche.short}s. Telehealth companies, community health centers, and large health systems commonly offer new grad ${brand.niche.short} positions with mentorship and supervision.`,
             },
             {
                 name: `What is the best setting for a new grad ${brand.niche.short}?`,
-                text: `Community ${brand.niche.category} centers and outpatient clinics are often recommended for new grads because they offer diverse patient populations, structured supervision, and exposure to a wide range of diagnoses. Inpatient settings and telehealth are also options depending on comfort level.`,
+                text: `Community health centers and outpatient clinics are often recommended for new grads because they offer diverse patient populations, structured supervision, and exposure to a wide range of diagnoses. Inpatient settings and telehealth are also options depending on comfort level.`,
             },
             {
                 name: `How many jobs are available for new grad ${brand.niche.short}s?`,
@@ -351,15 +351,15 @@ export default async function BlogPostPage({ params }: Props) {
         ],
         'pmhnp-vs-psychiatrist': [
             {
-                name: `Can a ${brand.niche.short} do everything a psychiatrist can?`,
-                text: `${brand.niche.short}s can diagnose ${brand.niche.category} conditions, prescribe medications including controlled substances, and provide therapy. The main differences are in training path and, in some states, practice authority requirements. In full practice authority states, ${brand.niche.short}s operate independently.`,
+                name: `Can an ${brand.niche.short} do everything a psychiatrist can?`,
+                text: `${brand.niche.short}s can diagnose behavioral health conditions, prescribe medications including controlled substances, and provide therapy. The main differences are in training path and, in some states, practice authority requirements. In full practice authority states, ${brand.niche.short}s operate independently.`,
             },
             {
                 name: `Do ${brand.niche.short}s make as much as psychiatrists?`,
-                text: `No. Psychiatrists earn $250,000-$400,000+ annually while ${brand.niche.short}s earn $140,000-$175,000 on average. However, ${brand.niche.short}s require significantly less training time and student debt, often resulting in a better return on investment earlier in their career.`,
+                text: `No. Psychiatrists earn $250,000-$400,000+ annually while ${brand.niche.short}s typically earn between $120,000 and $170,000. However, ${brand.niche.short}s require significantly less training time and student debt, often resulting in a better return on investment earlier in their career.`,
             },
             {
-                name: `Should I become a ${brand.niche.short} or psychiatrist?`,
+                name: `Should I become an ${brand.niche.short} or a psychiatrist?`,
                 text: `It depends on your goals. If you want a faster path to practice (6-8 years vs 12+ years), lower student debt, and a holistic nursing approach, ${brand.niche.short} is the better fit. If you want the highest salary ceiling and full medical training, psychiatry may be preferred.`,
             },
         ],
@@ -372,12 +372,12 @@ export default async function BlogPostPage({ params }: Props) {
         const stateName = stateNameRaw.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
         blogFaqData[slug] = [
             {
-                name: `How long does it take to get a ${brand.niche.short} license in ${stateName}?`,
+                name: `How long does it take to get an ${brand.niche.short} license in ${stateName}?`,
                 text: `The timeline to obtain your ${brand.niche.short} license in ${stateName} typically takes 2-4 weeks after submitting a complete application, assuming you have already earned your MSN/DNP, passed the ANCC PMHNP-BC certification exam, and hold an active RN license. Processing times vary based on ${stateName}'s Board of Nursing workload.`,
             },
             {
-                name: `What are the requirements to become a ${brand.niche.short} in ${stateName}?`,
-                text: `To practice as a ${brand.niche.short} in ${stateName}, you need: (1) an active RN license, (2) a Master's or Doctoral degree in nursing with ${brand.niche.short} specialization from an accredited program, (3) national certification as a PMHNP-BC from ANCC, and (4) an APRN license from ${stateName}'s Board of Nursing. Prescriptive authority may require additional applications.`,
+                name: `What are the requirements to become an ${brand.niche.short} in ${stateName}?`,
+                text: `To practice as an ${brand.niche.short} in ${stateName}, you need: (1) an active RN license, (2) a Master's or Doctoral degree in nursing with ${brand.niche.short} specialization from an accredited program, (3) national board certification through ANCC or AANP, and (4) an APRN license from ${stateName}'s Board of Nursing. Prescriptive authority may require additional applications.`,
             },
             {
                 name: `What is the average ${brand.niche.short} salary in ${stateName}?`,

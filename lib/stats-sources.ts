@@ -1,20 +1,27 @@
-// FORK NOTE: Per-board citation data — every stat below is PMHNP/US-specific.
-// A fork MUST re-source each value (and URL, and asOf date) for its own niche
-// before launch; shipping these unedited publishes false, cited-looking claims.
+// FORK NOTE: Per-board citation data — every stat below must be re-sourced
+// for a board's own niche (value, URL, and asOf date) before launch;
+// shipping stale figures publishes false, cited-looking claims.
 //
-// ⚠️ NP HIRING LAUNCH TODO (2026-07-02): the donor NP board never re-sourced
-// this file, so NO harvested NP version exists — the values below are STILL
-// the PMHNP-era figures and were deliberately left untouched. Before launch:
-//   - averageSalary: re-source to the NP-wide BLS OEWS figure (~$126k; the
-//     current $155,000 is the PMHNP-era value). The retuned UI constants in
-//     config/niche/stats.ts already use $126k and will disagree with any
-//     surface citing this file until this lands.
-//   - blsGrowth2032: 45% is already the BLS NP-wide projection — verify the
-//     latest OOH release and bump asOf.
-//   - hrsaShortagePopulation: mental-health-HPSA-specific; replace with an
-//     NP-relevant shortage stat (e.g. primary-care HPSA population) or drop.
-//   - fullPracticeStates: NP-wide already — verify against AANP and bump asOf.
-// Then bump STATS_LAST_REVIEWED.
+// NP HIRING RE-SOURCING (2026-07-03): the PMHNP-era donor values were
+// replaced with NP-wide figures:
+//   - averageSalary: BLS OEWS May 2024, Nurse Practitioners (29-1171),
+//     median annual wage $129,210 (replaces the PMHNP-era $155,000).
+//     NOTE: the UI constants in config/niche/stats.ts were retuned to
+//     ~$126k (an earlier OEWS vintage) — reconcile those to $129,210 /
+//     May 2024 in the next UI-constants pass so the two families agree.
+//   - blsGrowth2032: 45% kept — this is the BLS Employment Projections
+//     NP-specific 2022–2032 figure (44.5%, rounded), which the
+//     CAREER_PULSE_STATS pebble in config/niche/stats.ts mirrors.
+//     TODO(verify): the 2023–2033 projection cycle shows ~46% for NPs
+//     (40% for the combined OOH occupation group); update this entry,
+//     its key name, CAREER_PULSE_STATS, and any "through 2032" page copy
+//     together on the next review.
+//   - hrsaShortagePopulation: the donor's mental-health-HPSA figure was
+//     replaced with the PRIMARY-CARE HPSA population (the NP-relevant
+//     shortage stat). Conservative ESTIMATE — see TODO(verify) on the
+//     entry. Any page copy still describing this stat as "mental-health
+//     HPSAs" must be updated to "primary care".
+//   - fullPracticeStates: verified against AANP (27 states + DC, 2025).
 /**
  * Single source of truth for cited statistics rendered across the site.
  *
@@ -38,9 +45,9 @@
 export interface StatSource {
     /** Raw numeric value used in JSON-LD or computations. */
     value: string;
-    /** Human-formatted display value (e.g. "$155,000", "45%"). */
+    /** Human-formatted display value (e.g. "$129,210", "45%"). */
     formatted: string;
-    /** Wider range for ranges shown on listing pages, e.g. "$155K–$165K". */
+    /** Wider range for ranges shown on listing pages, e.g. "$120K–$140K". */
     range?: string;
     /** Short citation phrase rendered next to the stat. */
     source: string;
@@ -51,35 +58,57 @@ export interface StatSource {
 }
 
 /** When the stats in this file were last verified against their sources. */
-export const STATS_LAST_REVIEWED = '2026-05-08';
+export const STATS_LAST_REVIEWED = '2026-07-03';
 
 export const STAT_SOURCES = {
-    /** Average annual PMHNP salary, US-wide. */
+    /** Median annual NP salary, US-wide (BLS OEWS, all nurse practitioners). */
     averageSalary: {
-        value: '155000',
-        formatted: '$155,000',
-        range: '$155,000–$165,000',
-        source: 'BLS OEWS, Nurse Anesthetists / Nurse Practitioners (May 2024 release)',
+        value: '129210',
+        formatted: '$129,210',
+        // Single verifiable point figure (the OEWS median). Kept equal to
+        // `formatted` so surfaces that render `range` cite the same number
+        // instead of an invented spread.
+        range: '$129,210',
+        source: 'BLS OEWS, Nurse Practitioners (29-1171) — median annual wage, May 2024',
         sourceUrl: 'https://www.bls.gov/oes/current/oes291171.htm',
         asOf: '2024-05',
     },
 
-    /** BLS-projected employment growth for nurse practitioners through 2032. */
+    /**
+     * BLS-projected employment growth for nurse practitioners through 2032
+     * (NP-specific 2022–2032 projection: 44.5%, rounded to 45%).
+     *
+     * TODO(verify): the 2023–2033 Employment Projections cycle shows ~46%
+     * for NPs (and 40% for the OOH's combined nurse anesthetist / nurse
+     * midwife / nurse practitioner group). Bump value + asOf here AND the
+     * coupled CAREER_PULSE_STATS pebble (config/niche/stats.ts) together.
+     */
     blsGrowth2032: {
         value: '45',
         formatted: '45%',
-        source: 'BLS Occupational Outlook Handbook — Nurse Practitioners (2022–2032 projection)',
+        source: 'BLS Employment Projections — Nurse Practitioners (2022–2032)',
         sourceUrl: 'https://www.bls.gov/ooh/healthcare/nurse-anesthetists-nurse-midwives-and-nurse-practitioners.htm',
         asOf: '2024',
     },
 
-    /** Population of Americans living in mental-health Health Professional Shortage Areas. */
+    /**
+     * Population of Americans living in PRIMARY-CARE Health Professional
+     * Shortage Areas — the NP-relevant shortage stat (the donor figure was
+     * the mental-health-HPSA population; page copy quoting this stat must
+     * say "primary care").
+     *
+     * ESTIMATE — TODO(verify): HRSA's quarterly designation summaries have
+     * reported roughly 90–100M+ in recent releases (the figure moves each
+     * quarter as designations update). "90 million+" is deliberately the
+     * conservative floor; pin the exact current-quarter figure from the
+     * HRSA dashboard below before quoting on high-visibility surfaces.
+     */
     hrsaShortagePopulation: {
-        value: '123000000',
-        formatted: '123 million',
-        source: 'HRSA Bureau of Health Workforce, Designated HPSA Quarterly Summary',
+        value: '90000000',
+        formatted: '90 million+',
+        source: 'HRSA Bureau of Health Workforce, Designated HPSA Quarterly Summary (primary care)',
         sourceUrl: 'https://data.hrsa.gov/topics/health-workforce/shortage-areas',
-        asOf: '2024',
+        asOf: '2025',
     },
 
     /** States granting Full Practice Authority to NPs (incl. DC). */
@@ -88,14 +117,14 @@ export const STAT_SOURCES = {
         formatted: '27 states + DC',
         source: 'AANP State Practice Environment',
         sourceUrl: 'https://www.aanp.org/advocacy/state/state-practice-environment',
-        asOf: '2024',
+        asOf: '2025',
     },
 } as const satisfies Record<string, StatSource>;
 
 /**
  * Render a stat with an inline citation suitable for visible HTML or JSON-LD
  * answer text. Example output for `averageSalary`:
- *   "$155,000 (BLS OEWS, May 2024)"
+ *   "$129,210 (BLS OEWS, Nurse Practitioners (29-1171) — median annual wage, May 2024, 2024-05)"
  */
 export function citedValue(s: StatSource): string {
     return `${s.range ?? s.formatted} (${s.source}, ${s.asOf})`;

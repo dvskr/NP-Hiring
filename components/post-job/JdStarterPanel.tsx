@@ -1269,12 +1269,12 @@ function TemplateCard({ template, onPick }: { template: JdTemplate; onPick: () =
 // short bullet-style facts ("65 visits/week, Athena EHR, $15k sign-on").
 const FACTS_SUMMARY_MIN = 60;
 
-const FACTS_SUMMARY_PLACEHOLDER = `• Patient mix: adults + adolescents, mood/anxiety/ADHD, ~65 visits/week
+const FACTS_SUMMARY_PLACEHOLDER = `• Patient mix: adults + adolescents, chronic disease + preventive care, ~65 visits/week
 • Schedule: M-Th in-clinic, F telehealth; no weekends; 1 admin half-day
 • EHR: Athena with templated notes
-• Comp: $145-165k base + quarterly outcomes bonus; $15k sign-on
-• Team: 4 ${brand.niche.short}s, 2 psychiatrists, 6 therapists, dedicated MA support
-• What's unique: low panel cap (250), real admin team handles auth/PA`;
+• Comp: $115-135k base + quarterly outcomes bonus; $10k sign-on
+• Team: 4 ${brand.niche.short}s, 2 collaborating physicians, 6 MAs/RNs, dedicated front-desk support
+• What's unique: capped panel size, real admin team handles auth/PA`;
 
 // Visual usage badge — shows current AI generation count vs daily cap
 // with a small horizontal fill bar. Used in the hero card, AI dialog,

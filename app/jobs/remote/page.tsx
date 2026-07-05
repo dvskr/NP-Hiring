@@ -13,6 +13,7 @@ import CategoryFAQ from '@/components/CategoryFAQ';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -121,15 +122,15 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} Remote ${brand.niche.short} Jobs — Work From Home ($130K-200K)`,
+    title: `${stats.totalJobs} Remote ${brand.niche.short} Jobs — Work From Home`,
     // SEO Fix #7: trim to ≤160 chars (Google SERP cap).
-    description: `Find ${stats.totalJobs} remote ${brand.niche.short} jobs paying $130K-$200K+. Work from home ${brand.niche.adjective} nurse practitioner positions — telehealth, flexible, no commute.`,
+    description: `Find ${stats.totalJobs} remote ${brand.niche.short} jobs you can do from home — telehealth, utilization review, and case management roles. Flexible schedules, no commute. Updated daily.`,
     openGraph: {
       title: `${stats.totalJobs} Remote ${brand.niche.short} Jobs - Work From Home`,
       description: `Browse telehealth and remote ${brand.niche.descriptor} positions. Flexible schedules, competitive pay.`,
       type: 'website',
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Remote ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Work from home ${brand.niche.adjective} NP positions`)}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Remote ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Work-from-home ${brand.niche.descriptor} positions`)}`,
         width: 1200,
         height: 630,
         alt: `Remote ${brand.niche.short} Jobs`,
@@ -205,13 +206,13 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
         heroAlt={`${brand.niche.short} working remotely from home via telehealth`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Remote']}
-        indexLabel="№ 02 / 28"
+        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('remote') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Remote"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, work from anywhere."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$110K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'companies' },
         ]}
         description="Telehealth and remote positions with competitive pay, flexible schedules, and multi-state reach."
@@ -350,7 +351,7 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
             Built for Modern Practice
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>
-            Remote roles offer clinical autonomy, geographic freedom, and salaries that match or exceed in-person positions.
+            Remote roles offer clinical autonomy, geographic freedom, and pay competitive with in-person positions.
           </p>
 
           <div className="remote-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
@@ -374,7 +375,7 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Multi-State Licensure</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  Treat patients across state lines through compact licensure and employer-sponsored credentials.
+                  Care for patients in multiple states — many employers sponsor and pay for additional state licenses.
                 </p>
               </div>
             </div>
@@ -388,7 +389,7 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
             <div className="remote-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_telehealth.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>High Demand</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Telehealth NP roles grew 45% year-over-year — demand continues to accelerate.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Health systems keep expanding virtual care — remote NP openings are posted daily.</p>
             </div>
             <div className="remote-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_shield_lock.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -406,7 +407,7 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Parity</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Remote {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K'} annually — on par with or above in-office equivalents.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Remote {brand.niche.short}s {stats.avgSalary > 0 ? `average $${stats.avgSalary}k on current listings` : 'typically earn $95K–$160K'} — competitive with comparable in-office roles.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
@@ -449,7 +450,7 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
             {[
               { step: '01', title: 'Platform Setup', text: 'Most employers provide HIPAA-compliant platforms like Zoom for Healthcare or Doxy.me with full onboarding.' },
-              { step: '02', title: 'Licensure', text: 'Confirm NLC eligibility or employer-sponsored multi-state credentials before applying.' },
+              { step: '02', title: 'Licensure', text: 'Plan for an active license in every state where your patients are located — many employers sponsor additional licenses.' },
               { step: '03', title: 'Equipment', text: 'Reliable internet (10+ Mbps), quality webcam, noise-cancelling headset, and private workspace.' },
               { step: '04', title: 'Workspace', text: 'A quiet, well-lit room with neutral background and locked door meets HIPAA standards.' },
             ].map(r => (

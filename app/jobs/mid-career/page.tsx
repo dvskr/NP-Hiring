@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -32,19 +33,19 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: `What defines a mid-career ${brand.niche.short} role?`, a: `Mid-career ${brand.niche.short} positions target providers with 3-10+ years of experience. These roles offer leadership opportunities, higher autonomy, specialty focus, and premium compensation — typically $140K-$190K+ annually.` },
-  { q: 'What leadership roles are available?', a: `Mid-career ${brand.niche.short}s can advance to clinical supervisor, program director, lead clinician, chief NP, or clinical director positions. Many roles involve mentoring new graduates and overseeing treatment protocols.` },
-  { q: 'How do I transition into a specialty?', a: `With 3+ years of general ${brand.niche.adjective} experience, you can specialize in forensic psychiatry, addiction medicine, child/adolescent, geriatric, or consultation-liaison psychiatry. Additional certifications and targeted clinical rotations accelerate the transition.` },
-  { q: 'Is precepting valuable for mid-career growth?', a: 'Yes — precepting students and supervising new grads strengthens your clinical leadership profile, often qualifies for adjunct faculty appointments, and many employers offer preceptor bonuses of $2,000-$5,000 annually.' },
-  { q: `What salary growth can mid-career ${brand.niche.short}s expect?`, a: `Mid-career ${brand.niche.short}s earn 20-40% more than entry-level positions. Leadership roles, specialty expertise, and multi-state licensure can push compensation to $180K-$220K+ in high-demand markets.` },
+  { q: `What defines a mid-career ${brand.niche.short} role?`, a: `Mid-career ${brand.niche.short} positions target providers with 3-10+ years of experience. These roles offer leadership opportunities, higher autonomy, specialty focus, and compensation toward the top of the typical $95K-$160K ${brand.niche.short} band.` },
+  { q: 'What leadership roles are available?', a: `Mid-career ${brand.niche.short}s can advance to clinical supervisor, program director, lead clinician, chief ${brand.niche.short}, or clinical director positions. Many roles involve mentoring new graduates and overseeing clinical protocols.` },
+  { q: 'How do I transition into a specialty?', a: `With 3+ years of ${brand.niche.adjective} experience, you can move into specialties like cardiology, oncology, dermatology, emergency, or hospitalist practice. Additional certifications and targeted clinical experience accelerate the transition.` },
+  { q: 'Is precepting valuable for mid-career growth?', a: 'Yes — precepting students and supervising new grads strengthens your clinical leadership profile, often qualifies for adjunct faculty appointments, and many employers offer preceptor stipends or bonuses.' },
+  { q: `What salary growth can mid-career ${brand.niche.short}s expect?`, a: `Mid-career ${brand.niche.short}s typically out-earn entry-level colleagues by a wide margin. Leadership responsibilities, specialty expertise, and multi-state licensure push compensation toward the top of the ${brand.niche.short} pay range — and often beyond it in high-demand markets.` },
 ];
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Mid-Career ${brand.niche.short} Jobs ($140K-190K)`,
-    description: `Find ${stats.totalJobs} mid-career ${brand.niche.short} positions. Leadership, specialty, and supervisory roles paying $140K-190K+.`,
+    title: `${stats.totalJobs} Mid-Career ${brand.niche.short} Jobs — Leadership & Specialty`,
+    description: `Find ${stats.totalJobs} mid-career ${brand.niche.short} positions. Leadership, specialty, and supervisory roles for experienced ${brand.niche.descriptor}s.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/mid-career` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
@@ -72,13 +73,13 @@ export default async function MidCareerPage({ searchParams }: PageProps) {
         heroAlt={`Mid-career ${brand.niche.short} advancement opportunities`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Mid-Career']}
-        indexLabel="? 26 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('mid-career') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Mid-Career"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, advance your career."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$160K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description={`Mid-career ${brand.niche.short} positions with leadership opportunities, specialized tracks, and premium compensation.`}
@@ -117,11 +118,11 @@ export default async function MidCareerPage({ searchParams }: PageProps) {
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_mc_specialize.webp`} alt="Specialization" width={200} height={140} style={{ width: '100%', maxWidth: '180px', height: 'auto', borderRadius: '12px', marginBottom: '16px' }} />
               <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Specialization</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Deepen expertise in forensic, addiction, or child psych niches.</p>
+              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Deepen expertise in cardiology, oncology, dermatology, or acute care.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_mc_leader.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Leadership</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Supervisory and program director positions.</p></div>
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_mc_salary.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Premium Salary</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Mid-career {brand.niche.short}s command $150K-$200K+ compensation.</p></div>
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_mc_niche.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Specialization</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Deepen expertise in forensic, addiction, or child psych.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_mc_salary.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Premium Salary</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Mid-career {brand.niche.short}s command pay at the top of the typical {brand.niche.short} band.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_mc_niche.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Specialization</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Deepen expertise in a high-demand clinical specialty.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_mc_teach.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Teaching</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Precept students and mentor new graduates.</p></div>
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
               <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Mid-Career Salary</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average mid-career {brand.niche.short} salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p></div>
@@ -141,7 +142,7 @@ export default async function MidCareerPage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Before You Apply</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>What You Need</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            {[{ n: '01', t: 'PMHNP-BC', d: 'Active certification through ANCC.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: '3+ Years Experience', d: `Demonstrated ${brand.niche.adjective} clinical experience.` }, { n: '04', t: 'Leadership Skills', d: 'Supervisory, mentoring, or program management experience.' }].map(item => (
+            {[{ n: '01', t: `${brand.niche.short} Certification`, d: 'Active national certification in your specialty.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: '3+ Years Experience', d: `Demonstrated ${brand.niche.adjective} clinical experience.` }, { n: '04', t: 'Leadership Skills', d: 'Supervisory, mentoring, or program management experience.' }].map(item => (
               <div key={item.n} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}><span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>{item.n}</span><h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>{item.t}</h3><p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>{item.d}</p></div>
             ))}
           </div>

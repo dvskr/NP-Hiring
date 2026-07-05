@@ -12,6 +12,7 @@ import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -78,23 +79,23 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} 1099 ${brand.niche.short} Jobs — Independent Contractor Psych NP`,
-    description: `Find ${stats.totalJobs} 1099 ${brand.niche.short} and independent contractor ${brand.niche.adjective} nurse practitioner jobs paying $75-$150+/hr with schedule flexibility and tax advantages.`,
-    keywords: ['1099 pmhnp jobs', '1099 pmhnp telehealth', 'independent contractor pmhnp', 'contract psychiatric nurse practitioner', '1099 psych NP', 'independent contractor psychiatric NP'],
+    title: `${stats.totalJobs} 1099 ${brand.niche.short} Jobs — Independent Contractor Roles`,
+    description: `Find ${stats.totalJobs} 1099 independent contractor ${brand.niche.descriptor} jobs with schedule flexibility, Schedule C tax deductions, and higher gross pay than comparable W-2 roles.`,
+    keywords: ['1099 np jobs', '1099 nurse practitioner', 'independent contractor nurse practitioner', 'contract np jobs', '1099 np telehealth', 'independent contractor np'],
     openGraph: {
       title: `${stats.totalJobs} 1099 ${brand.niche.short} Jobs - Independent Contractor`,
       description: `Browse 1099 and independent contractor ${brand.niche.descriptor} positions.`,
       type: 'website',
       url: `${brand.baseUrl}/jobs/1099`,
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} 1099 ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Independent contractor ${brand.niche.adjective} NP positions`)}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} 1099 ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Independent contractor ${brand.niche.short} positions`)}`,
         width: 1200, height: 630, alt: `1099 ${brand.niche.short} Jobs`,
       }],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${stats.totalJobs} 1099 ${brand.niche.short} Jobs`,
-      description: `Independent contractor ${brand.niche.adjective} NP positions paying $75-$150+/hr.`,
+      description: `Independent contractor ${brand.niche.short} positions with schedule flexibility and tax advantages.`,
     },
     alternates: { canonical: `${brand.baseUrl}/jobs/1099` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
@@ -117,15 +118,15 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
   const icFaqs = [
     {
       question: `What is a 1099 ${brand.niche.short} position?`,
-      answer: `A 1099 ${brand.niche.short} works as an independent contractor rather than a W2 employee. You receive a 1099-NEC tax form instead of a W-2. You set your own schedule, pay your own taxes (including self-employment tax), and provide your own benefits. In exchange, you typically earn 20-40% higher gross pay than W2 positions.`
+      answer: `A 1099 ${brand.niche.short} works as an independent contractor rather than a W2 employee. You receive a 1099-NEC tax form instead of a W-2. You set your own schedule, pay your own taxes (including self-employment tax), and provide your own benefits. In exchange, you typically earn higher gross pay than comparable W2 positions.`
     },
     {
       question: `How much do 1099 ${brand.niche.short}s earn compared to W2?`,
-      answer: `1099 ${brand.niche.short}s typically earn $75-$150+/hour gross, which is 20-40% higher than W2 rates. However, after accounting for self-employment tax (15.3%), health insurance ($500-$1,500/month), malpractice insurance ($1,500-$3,000/year), and retirement contributions, net take-home is often comparable to a W2 position paying 15-20% less.`
+      answer: `1099 rates are quoted gross and usually run meaningfully higher than comparable W2 hourly rates, because no benefits or employer payroll taxes are attached. After accounting for self-employment tax (15.3%), health insurance, malpractice coverage, and retirement contributions, net take-home is often closer to W2 pay than the headline rate suggests — model both before accepting an offer.`
     },
     {
       question: `What are the tax advantages of 1099 ${brand.niche.short} work?`,
-      answer: `1099 ${brand.niche.short}s can deduct business expenses including home office, mileage, professional development, malpractice insurance, health insurance premiums, retirement plan contributions (SEP-IRA up to $66,000/year or Solo 401k), technology/equipment, and professional memberships. These deductions can significantly reduce taxable income.`
+      answer: `1099 ${brand.niche.short}s can deduct business expenses including home office, mileage, professional development, malpractice insurance, health insurance premiums, retirement plan contributions (SEP-IRA or Solo 401k), technology/equipment, and professional memberships. These deductions can significantly reduce taxable income.`
     },
     {
       question: `Should new grad ${brand.niche.short}s take 1099 positions?`,
@@ -186,18 +187,18 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
         heroAlt={`${brand.niche.short} independent contractor workspace`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', `1099 ${brand.niche.short}`]}
-        indexLabel="№ 01 / 28"
+        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('1099') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="1099"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, on your terms."
         photoTagTitle="This week"
         photoTagBody="New 1099 postings across telehealth, group, and private practice."
         stats={[
-          { value: '$75–150', label: 'per hour' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '—', label: 'avg salary' },
           { value: `${stats.totalJobs}+`, label: 'positions' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '—', label: 'avg salary' },
+          { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description={`Independent contractor ${brand.niche.short} roles with Schedule C deductions, flexible caseloads, and no non-compete clauses.`}
+        description={`Independent contractor ${brand.niche.short} roles with Schedule C deductions, flexible caseloads, and full control of your schedule.`}
         ctaLabel="Browse jobs"
         ctaHref="/jobs?category=1099"
         secondaryCtaLabel="Set alert"
@@ -282,7 +283,7 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
             <div className="cat-bento-hero-1 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
               <div style={{ padding: '32px 28px' }}>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Higher Gross Pay</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Earn $75–$150+/hour as a 1099 {brand.niche.short} — 20-40% higher than W2 rates with significant tax deduction opportunities.</p>
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>1099 {brand.niche.short} contracts typically pay a higher gross rate than comparable W2 roles — you trade employer-paid benefits for headline pay and tax deduction opportunities.</p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
                 <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_1099_freedom.webp`} alt={`1099 ${brand.niche.short} independent workspace`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
@@ -296,7 +297,7 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Tax Advantages</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  Deduct business expenses, contribute $66K/year to SEP-IRA, and write off home office and mileage.
+                  Deduct business expenses, make large pre-tax SEP-IRA or Solo 401k contributions, and write off home office and mileage.
                 </p>
               </div>
             </div>
@@ -328,7 +329,7 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Comparison</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>1099 {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$75–$150+/hr'} gross — 20-40% above W2 rates before accounting for self-employment tax.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>1099 {brand.niche.short}s {stats.avgSalary > 0 ? `average $${stats.avgSalary}k gross on current listings` : 'typically earn more gross than comparable W2 roles'} — before accounting for self-employment tax and the benefits you fund yourself.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
@@ -367,9 +368,9 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
             {[
               { step: '01', title: 'Form an LLC', text: 'Create an LLC or PLLC for liability protection and tax flexibility before signing your first contract.' },
-              { step: '02', title: 'Get Insurance', text: 'Secure individual malpractice insurance ($1.5-3K/year) and health coverage through the marketplace.' },
+              { step: '02', title: 'Get Insurance', text: 'Secure individual malpractice insurance and health coverage through the marketplace or a spouse\'s plan.' },
               { step: '03', title: 'Tax Setup', text: 'Get an EIN, open a business bank account, and register for quarterly estimated tax payments with the IRS.' },
-              { step: '04', title: 'Retirement Plan', text: 'Open a SEP-IRA (up to $66K/year) or Solo 401k to maximize your tax-advantaged retirement savings.' },
+              { step: '04', title: 'Retirement Plan', text: 'Open a SEP-IRA or Solo 401k to maximize your tax-advantaged retirement savings.' },
             ].map(r => (
               <div key={r.step} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>{r.step}</span>

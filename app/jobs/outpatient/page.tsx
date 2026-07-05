@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -72,12 +73,12 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     const page = parseInt(params.page || '1');
 
     return {
-        title: `${stats.totalJobs} Outpatient ${brand.niche.short} Jobs — Clinic & Private Practice ($130K-190K)`,
-        description: `Find ${stats.totalJobs} outpatient ${brand.niche.short} jobs paying $130K-$190K+. Clinic, private practice, and community ${brand.niche.category} ${brand.niche.adjective} nurse practitioner positions with M-F schedules. Apply today.`,
-        keywords: ['outpatient pmhnp jobs', 'outpatient psychiatric nurse practitioner', 'pmhnp private practice', 'clinic pmhnp jobs', 'community mental health pmhnp'],
+        title: `${stats.totalJobs} Outpatient ${brand.niche.short} Jobs — Clinic & Private Practice`,
+        description: `Find ${stats.totalJobs} outpatient ${brand.niche.short} jobs. Clinic, private practice, and community health ${brand.niche.descriptor} positions with M-F schedules. Apply today.`,
+        keywords: ['outpatient np jobs', 'outpatient nurse practitioner', 'nurse practitioner private practice', 'clinic np jobs', 'community health np jobs'],
         openGraph: {
             title: `${stats.totalJobs} Outpatient ${brand.niche.short} Jobs — Clinic & Private Practice`,
-            description: `Browse outpatient ${brand.niche.adjective} nurse practitioner positions in clinics, private practices, and community ${brand.niche.category} centers.`,
+            description: `Browse outpatient ${brand.niche.descriptor} positions in clinics, private practices, and community health centers.`,
             type: 'website',
             images: [{
                 url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Outpatient ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent('Clinic & private practice positions')}`,
@@ -120,7 +121,7 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
         heroAlt={`Outpatient ${brand.niche.short} clinic setting`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Outpatient']}
-        indexLabel="№ 11 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('outpatient') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Outpatient"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, clinic & practice."
@@ -223,7 +224,7 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_outpatient_panel.webp`} alt="Patient panel management" width={200} height={140} style={{ width: '100%', maxWidth: '180px', height: 'auto', borderRadius: '12px', marginBottom: '16px' }} />
               <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Patient Panels</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Manage a caseload of 80–120 patients with scheduled follow-ups.</p>
+              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Build and manage your own patient panel with scheduled follow-ups.</p>
             </div>
 
             {/* ROW 2: Icon Cards */}
@@ -240,7 +241,7 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_outpatient_therapy.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Community Based</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Work in clinics, group practices, and CMHCs.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Work in clinics, group practices, and FQHCs.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_outpatient_growth.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -277,7 +278,7 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
               <div key="01" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>01</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Panel Management</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Prepare for managing a caseload of 80-120 patients with follow-up scheduling.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Prepare for managing an established patient panel with follow-up scheduling.</p>
               </div>
               <div key="02" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>02</span>
@@ -287,12 +288,12 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
               <div key="03" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>03</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>EHR Systems</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Familiarize yourself with common outpatient EHRs like SimplePractice, Valant, or Epic.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Familiarize yourself with common outpatient EHRs like Epic, Athenahealth, or eClinicalWorks.</p>
               </div>
               <div key="04" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>04</span>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Therapy Integration</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Consider brief therapy modalities (CBT, MI) to complement medication management.</p>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Preventive Care Focus</h3>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Expect a mix of chronic disease management, preventive visits, and patient education.</p>
               </div>
           </div>
         </section>
@@ -335,10 +336,10 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
           <div style={{ display: 'grid', gap: '16px' }}>
             {[
               { q: `What does a typical outpatient ${brand.niche.short} schedule look like?`, a: 'Most outpatient positions offer Monday-Friday, 8am-5pm schedules with no nights, weekends, or on-call. Some roles include a half-day administrative block for charting and follow-ups.' },
-              { q: 'How many patients will I see per day?', a: `Outpatient ${brand.niche.short}s typically see 15-20 patients per day, with a mix of 30-minute follow-ups and 60-minute initial evaluations. Private practice caseloads may be lower.` },
-              { q: `What is the salary range for outpatient ${brand.niche.short}s?`, a: `Outpatient ${brand.niche.short} salaries range from $130K to $190K+, depending on location, experience, and practice setting. Private practice roles may offer higher earning potential through patient volume.` },
+              { q: 'How many patients will I see per day?', a: `Outpatient ${brand.niche.short}s typically see 15-20 patients per day, with a mix of shorter follow-up visits and longer new-patient evaluations. Exact volumes vary by specialty and practice.` },
+              { q: `What is the salary range for outpatient ${brand.niche.short}s?`, a: `Most outpatient ${brand.niche.short} salaries fall within the typical $95K-$160K range, depending on location, specialty, experience, and practice setting. Productivity-based private practice roles can earn more.` },
               { q: `Do outpatient ${brand.niche.short}s need to be credentialed with insurers?`, a: 'In most group practices and clinics, the employer handles insurance credentialing. If you join a private practice, you may need to apply for your own panel memberships.' },
-              { q: 'What EHR systems are common in outpatient settings?', a: 'Common outpatient EHRs include SimplePractice, Valant, TherapyNotes, and Epic Ambulatory. Most employers provide EHR training during onboarding.' },
+              { q: 'What EHR systems are common in outpatient settings?', a: 'Common outpatient EHRs include Epic, Athenahealth, eClinicalWorks, and NextGen. Most employers provide EHR training during onboarding.' },
             ].map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3>
@@ -346,7 +347,7 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
               </div>
             ))}
           </div>
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{q:`What does a typical outpatient ${brand.niche.short} schedule look like?`,a:'Most outpatient positions offer Monday-Friday, 8am-5pm schedules with no nights, weekends, or on-call.'},{q:'How many patients will I see per day?',a:`Outpatient ${brand.niche.short}s typically see 15-20 patients per day, with a mix of 30-minute follow-ups and 60-minute initial evaluations.`},{q:`What is the salary range for outpatient ${brand.niche.short}s?`,a:`Outpatient ${brand.niche.short} salaries range from $130K to $190K+, depending on location, experience, and practice setting.`},{q:`Do outpatient ${brand.niche.short}s need to be credentialed with insurers?`,a:'In most group practices, the employer handles insurance credentialing. Private practice may require your own panel memberships.'},{q:'What EHR systems are common in outpatient settings?',a:'Common outpatient EHRs include SimplePractice, Valant, TherapyNotes, and Epic Ambulatory.'}].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{q:`What does a typical outpatient ${brand.niche.short} schedule look like?`,a:'Most outpatient positions offer Monday-Friday, 8am-5pm schedules with no nights, weekends, or on-call.'},{q:'How many patients will I see per day?',a:`Outpatient ${brand.niche.short}s typically see 15-20 patients per day, with a mix of shorter follow-up visits and longer new-patient evaluations.`},{q:`What is the salary range for outpatient ${brand.niche.short}s?`,a:`Most outpatient ${brand.niche.short} salaries fall within the typical $95K-$160K range, depending on location, specialty, experience, and practice setting.`},{q:`Do outpatient ${brand.niche.short}s need to be credentialed with insurers?`,a:'In most group practices, the employer handles insurance credentialing. Private practice may require your own panel memberships.'},{q:'What EHR systems are common in outpatient settings?',a:'Common outpatient EHRs include Epic, Athenahealth, eClinicalWorks, and NextGen.'}].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>
       </div>
 

@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   // live UI is a credibility hit. Description now describes the platform
   // value without a numeric claim.
   description:
-    `Find your next ${brand.niche.short} opportunity — remote and in-person ${brand.niche.adjective} nurse practitioner jobs with salary transparency, AI matching, and one-click apply. Free for job seekers.`,
+    `Find your next ${brand.niche.short} opportunity — remote and in-person ${brand.niche.descriptor} jobs with salary transparency, AI matching, and one-click apply. Free for job seekers.`,
   openGraph: {
     images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-seeker-career-resources.webp`, width: 1280, height: 900, alt: `${brand.niche.short} job seeker career resources` }],
   },
@@ -226,9 +226,9 @@ export default async function ForJobSeekersPage() {
 
           <div className="seeker-types-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
             {[
-              { title: 'Remote / Telehealth', desc: 'Work from anywhere with telepsychiatry', href: '/jobs?mode=Remote', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/remote-telehealth.webp` },
+              { title: 'Remote / Telehealth', desc: 'See patients from anywhere via telehealth', href: '/jobs?mode=Remote', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/remote-telehealth.webp` },
               { title: 'In-Person Clinical', desc: 'Hospital, clinic, and outpatient roles', href: '/jobs?mode=In-Person', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/clinical-inperson.webp` },
-              { title: 'Private Practice', desc: `Start or join a ${brand.niche.adjective} practice`, href: '/resources/private-practice-guide', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/private-practice.webp` },
+              { title: 'Private Practice', desc: 'Start or join a private practice', href: '/resources/private-practice-guide', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/private-practice.webp` },
               { title: 'Part-Time / PRN', desc: 'Flexible schedules and per diem', href: '/jobs?jobType=Part-Time', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/parttime-prn.webp` },
             ].map(t => (
               <Link key={t.title} href={t.href} className="emp-bento-card" style={{

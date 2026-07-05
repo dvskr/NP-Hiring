@@ -13,6 +13,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -114,8 +115,8 @@ async function getNewGradStats() {
 const newGradFaqs = [
   { question: `Can new grads get ${brand.niche.short} jobs?`, answer: `Yes! Many employers actively recruit new ${brand.niche.short} graduates, especially in underserved areas and community health settings.` },
   { question: 'What should new grads expect?', answer: 'Structured onboarding, clinical supervision, mentorship programs, and gradual caseload increase over 3-6 months.' },
-  { question: 'What is the starting salary?', answer: `New grad ${brand.niche.short}s typically start at $100K-$140K, with rapid increases after the first year of experience.` },
-  { question: 'Do I need experience to apply?', answer: `Clinical rotation hours count as experience. Highlight any ${brand.niche.adjective} nursing background and relevant certifications.` },
+  { question: 'What is the starting salary?', answer: `New grad ${brand.niche.short}s typically start around $95K-$120K, with meaningful increases after the first year of experience.` },
+  { question: 'Do I need experience to apply?', answer: 'Clinical rotation hours count as experience. Highlight your RN background, rotation settings, and any relevant certifications.' },
 ];
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
@@ -123,15 +124,15 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     const page = parseInt(params.page || '1');
 
     return {
-        title: `${stats.totalJobs} New Grad ${brand.niche.short} Jobs — Entry-Level Psych NP ($120K-160K)`,
-        description: `Find ${stats.totalJobs} new grad ${brand.niche.short} jobs starting at $120K+. Entry-level ${brand.niche.adjective} nurse practitioner positions with mentorship, fellowships, and residency programs. No experience required — start your ${brand.niche.short} career today.`,
-        keywords: ['new grad pmhnp', 'entry level pmhnp', 'pmhnp fellowship', 'new graduate psychiatric nurse practitioner', 'pmhnp residency'],
+        title: `${stats.totalJobs} New Grad ${brand.niche.short} Jobs — Entry-Level Positions`,
+        description: `Find ${stats.totalJobs} new grad ${brand.niche.short} jobs. Entry-level ${brand.niche.descriptor} positions with mentorship, fellowships, and residency programs. No experience required — start your ${brand.niche.short} career today.`,
+        keywords: ['new grad np jobs', 'entry level nurse practitioner', 'np fellowship programs', 'new graduate nurse practitioner jobs', 'np residency'],
         openGraph: {
             title: `${stats.totalJobs} New Grad ${brand.niche.short} Jobs - Entry Level Positions`,
             description: `Browse new graduate and entry-level ${brand.niche.descriptor} positions. Fellowships, residencies, mentorship programs.`,
             type: 'website',
             images: [{
-                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} New Grad ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Entry-level ${brand.niche.adjective} NP positions`)}`,
+                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} New Grad ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Entry-level ${brand.niche.descriptor} positions`)}`,
                 width: 1200,
                 height: 630,
                 alt: `New Grad ${brand.niche.short} Jobs`,
@@ -182,13 +183,13 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
         heroAlt={`New grad ${brand.niche.short} career launch`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'New Grad']}
-        indexLabel="№ 09 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('new-grad') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="New Grad"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, launch your career."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$120K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$100K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description="Entry-level positions with structured mentorship, clinical supervision, fellowships, and clear paths to independent practice."
@@ -319,8 +320,8 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
             <div className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
               <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>01</span>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>ANCC Certification</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Complete your PMHNP-BC certification before applying.</p>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>National Certification</h3>
+              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Pass your national {brand.niche.short} certification exam before applying.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
               <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>02</span>

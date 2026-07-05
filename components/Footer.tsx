@@ -265,7 +265,7 @@ export default function Footer() {
               </Link>
               <span className="footer-pipe" style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)' }} />
               <p className="footer-tagline" style={{ fontSize: '13px', color: '#78716c', margin: 0, whiteSpace: 'nowrap' }}>
-                The #1 specialized job board for {brand.niche.adjective} nurse practitioners.
+                The #1 specialized job board for {brand.niche.descriptor}s.
               </p>
             </div>
 

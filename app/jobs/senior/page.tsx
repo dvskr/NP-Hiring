@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -42,20 +43,20 @@ async function getStats() {
 
 const seniorFaqs = [
   { question: `What qualifies as a Senior ${brand.niche.short} role?`, answer: `Senior ${brand.niche.short} roles include positions like Clinical Director, Program Director, Medical Director, Lead ${brand.niche.short}, and Supervisor. These roles combine direct patient care with leadership responsibilities such as team oversight, program development, and quality improvement.` },
-  { question: `What salary range can Senior ${brand.niche.short}s expect?`, answer: `Senior ${brand.niche.short}s typically earn $160K-$250K+ annually. Clinical Directors and Medical Directors at larger organizations can exceed $250K with bonuses, equity, and comprehensive benefits packages.` },
-  { question: 'How many years of experience are needed for senior positions?', answer: `Most senior ${brand.niche.short} roles require 5-10+ years of clinical ${brand.niche.adjective} experience. Director-level positions often require demonstrated leadership experience, program development skills, and expertise in a specific ${brand.niche.adjective} subspecialty.` },
-  { question: 'What additional certifications help for leadership roles?', answer: 'Beyond the PMHNP-BC, certifications in healthcare administration (FACHE), nursing leadership (CENP/NEA-BC), or subspecialty certifications strengthen candidacy. Many senior roles also value advanced training in evidence-based therapies and quality improvement methodologies.' },
+  { question: `What salary range can Senior ${brand.niche.short}s expect?`, answer: `Senior ${brand.niche.short}s typically earn at the top of the standard ${brand.niche.short} pay band — often $140K-$160K+ — and director-level roles at larger organizations frequently exceed that with bonuses and comprehensive benefits packages.` },
+  { question: 'How many years of experience are needed for senior positions?', answer: `Most senior ${brand.niche.short} roles require 5-10+ years of ${brand.niche.adjective} clinical experience. Director-level positions often require demonstrated leadership experience, program development skills, and expertise in a specific clinical specialty.` },
+  { question: 'What additional certifications help for leadership roles?', answer: `Beyond your national ${brand.niche.short} certification, training in healthcare administration, nursing leadership, and quality improvement strengthens candidacy. Many senior roles also value experience with evidence-based practice and program evaluation.` },
 ];
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Senior ${brand.niche.short} Jobs — Director & Leadership ($160K-250K+)`,
-    description: `Browse ${stats.totalJobs} senior ${brand.niche.short} leadership positions. Clinical Director, Program Director, Medical Director, and Lead ${brand.niche.short} roles paying $160K-$250K+.`,
+    title: `${stats.totalJobs} Senior ${brand.niche.short} Jobs — Director & Leadership`,
+    description: `Browse ${stats.totalJobs} senior ${brand.niche.short} leadership positions. Clinical Director, Program Director, Medical Director, and Lead ${brand.niche.short} roles.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/senior` },
-    keywords: ['senior PMHNP jobs', 'PMHNP director', 'PMHNP leadership', 'clinical director psychiatric', 'PMHNP supervisor'],
-    openGraph: { title: `Senior ${brand.niche.short} Jobs — ${stats.totalJobs} Leadership Positions`, description: `Find ${stats.totalJobs} senior ${brand.niche.adjective} NP roles.`, url: `${brand.baseUrl}/jobs/senior`, type: 'website' },
+    keywords: ['senior np jobs', 'nurse practitioner director', 'np leadership jobs', 'lead nurse practitioner', 'np supervisor'],
+    openGraph: { title: `Senior ${brand.niche.short} Jobs — ${stats.totalJobs} Leadership Positions`, description: `Find ${stats.totalJobs} senior ${brand.niche.descriptor} leadership roles.`, url: `${brand.baseUrl}/jobs/senior`, type: 'website' },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
 }
@@ -96,13 +97,13 @@ export default async function SeniorPage({ searchParams }: PageProps) {
         heroAlt={`Senior ${brand.niche.short} clinical leadership roles`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Senior']}
-        indexLabel="? 27 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('senior') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Senior"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, leadership roles."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$175K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$140K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description={`Senior-level ${brand.niche.short} positions with clinical leadership, program development, and executive compensation.`}
@@ -170,7 +171,7 @@ export default async function SeniorPage({ searchParams }: PageProps) {
             <div className="cat-bento-card cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '28px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'center' }}>
               <div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Lead Clinical Programs</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>Direct {brand.niche.adjective} programs, mentor NP teams, and drive quality improvement initiatives as a clinical leader.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>Direct {brand.niche.adjective} programs, mentor {brand.niche.short} teams, and drive quality improvement initiatives as a clinical leader.</p>
               </div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_senior_leadership.webp`} alt={`${brand.niche.short} leadership diorama`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
             </div>
@@ -188,7 +189,7 @@ export default async function SeniorPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_senior_chart.webp`} alt="Top compensation" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Top Compensation</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Senior roles offer $180K-$250K+ with bonuses.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Senior roles pay at the top of the {brand.niche.short} range, plus bonuses.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_senior_blueprint.webp`} alt="Program design" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -229,10 +230,10 @@ export default async function SeniorPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>What You Need</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
             {[
-              { num: '01', title: 'PMHNP-BC', desc: 'Active PMHNP-BC certification through ANCC with 5+ years clinical experience.' },
+              { num: '01', title: `${brand.niche.short} Certification`, desc: 'Active national certification in your specialty with 5+ years of clinical experience.' },
               { num: '02', title: 'State License', desc: 'APRN licensure with prescriptive authority and DEA registration.' },
               { num: '03', title: 'Leadership Track', desc: 'Demonstrated experience in team supervision, program development, or clinical operations.' },
-              { num: '04', title: 'Subspecialty Depth', desc: 'Expertise in a focused area: addiction, geriatrics, child/adolescent, or forensic psychiatry.' },
+              { num: '04', title: 'Specialty Depth', desc: 'Expertise in a focused area: acute care, oncology, cardiology, or geriatrics.' },
             ].map(item => (
               <div key={item.num} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>{item.num}</span>

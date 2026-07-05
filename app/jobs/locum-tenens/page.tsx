@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -88,15 +89,15 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs — Agency Staffing ($85-150/hr)`,
-    description: `Find ${stats.totalJobs} locum tenens ${brand.niche.short} jobs paying $85-$150+/hr. Multi-state assignments with housing stipends, malpractice coverage, and premium pay. Updated daily.`,
-    keywords: ['locum tenens pmhnp', 'travel pmhnp jobs', 'locum psychiatric nurse practitioner', 'psych NP travel assignments', 'temporary pmhnp positions', 'locum tenens psych nurse practitioner'],
+    title: `${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs — Agency Staffing`,
+    description: `Find ${stats.totalJobs} locum tenens ${brand.niche.short} jobs. Multi-state assignments with housing stipends, malpractice coverage, and premium pay. Updated daily.`,
+    keywords: ['locum tenens np', 'locum tenens nurse practitioner', 'travel np jobs', 'np travel assignments', 'temporary nurse practitioner positions', 'locum np jobs'],
     openGraph: {
       title: `${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs - Travel Assignments`,
       description: `Browse locum tenens and travel ${brand.niche.descriptor} positions. Premium pay, housing, and malpractice coverage.`,
       type: 'website',
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent('Travel psych NP assignments with premium pay')}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Travel ${brand.niche.short} assignments with premium pay`)}`,
         width: 1200,
         height: 630,
         alt: `Locum Tenens ${brand.niche.short} Jobs`,
@@ -135,11 +136,11 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
   const locumFaqs = [
     {
       question: `What is a locum tenens ${brand.niche.short}?`,
-      answer: `A locum tenens ${brand.niche.short} is a ${brand.niche.adjective} nurse practitioner who fills temporary staffing needs at healthcare facilities. Assignments typically last 2-13 weeks and include housing stipends, travel reimbursement, malpractice coverage, and premium hourly rates of $85-$150+.`
+      answer: `A locum tenens ${brand.niche.short} is a ${brand.niche.descriptor} who fills temporary staffing needs at healthcare facilities. Assignments typically last 2-13 weeks and often include housing stipends, travel reimbursement, malpractice coverage, and premium hourly rates.`
     },
     {
-      question: `How much do locum tenens ${brand.niche.adjective} nurse practitioners earn?`,
-      answer: `Locum tenens ${brand.niche.short}s earn $85-$150+ per hour, translating to $150,000-$250,000+ annually. This is 20-50% higher than permanent positions. Additionally, locum ${brand.niche.short}s receive tax-free housing stipends ($1,500-$3,500/month), travel reimbursement, and malpractice coverage.`
+      question: `How much do locum tenens ${brand.niche.short}s earn?`,
+      answer: `Locum ${brand.niche.short} assignments commonly pay $60-$150+ per hour depending on specialty, state, and setting — usually well above comparable permanent W-2 rates. Many assignments add tax-free housing stipends, travel reimbursement, and paid malpractice coverage on top of the hourly rate.`
     },
     {
       question: `Do locum tenens ${brand.niche.short}s get benefits?`,
@@ -147,7 +148,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
     },
     {
       question: `What are the licensing requirements for locum tenens ${brand.niche.short} work?`,
-      answer: `Locum tenens ${brand.niche.short}s need an active APRN license in the state of each assignment. States participating in the Nurse Licensure Compact (NLC) make multi-state practice easier. Most staffing agencies assist with state licensure and credentialing for new assignments.`
+      answer: `Locum tenens ${brand.niche.short}s need an active APRN license in the state of each assignment. Most staffing agencies assist with state licensure and credentialing for new assignments, and many reimburse application fees.`
     },
     {
       question: `Is locum tenens work good for new grad ${brand.niche.short}s?`,
@@ -209,13 +210,13 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
         heroAlt={`Locum tenens travel ${brand.niche.short} assignment`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Locum Tenens']}
-        indexLabel="№ 04 / 28"
+        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('locum-tenens') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Locum Tenens"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, travel & flexibility."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$150K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$120K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'agencies' },
         ]}
         description="Travel assignments with premium hourly rates, housing stipends, and schedule flexibility."
@@ -286,7 +287,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
                 </div>
                 <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.avgSalary}k</div>
                 <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Average annual equivalent</div>
-                <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Based on $85–$150+/hr typical rates.</p>
+                <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Annualized from locum listings with posted pay data.</p>
               </div>
             )}
           </div>
@@ -321,7 +322,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Premium Rates</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  Earn $85–$150+/hr with overtime premiums and completion bonuses.
+                  Earn $60–$150+/hr with overtime premiums and completion bonuses.
                 </p>
               </div>
             </div>
@@ -335,7 +336,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_locum_rates.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Premium Rates</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Earn $100–$200+/hr with overtime premiums and completion bonuses.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Hourly rates typically well above permanent W-2 pay, plus completion bonuses.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_locum_calendar.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -353,7 +354,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Compensation</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Locum {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$150K–$250K'} annually equivalent with tax-free housing and malpractice coverage.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Locum {brand.niche.short}s {stats.avgSalary > 0 ? `average $${stats.avgSalary}k annualized on current listings` : 'often out-earn comparable permanent roles'} — plus tax-free housing stipends and paid malpractice coverage.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>

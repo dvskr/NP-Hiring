@@ -23,7 +23,7 @@ export default function Testimonial() {
                     What {brand.niche.short}s Are Saying
                 </h2>
                 <p style={{ fontSize: '15px', color: 'var(--text-muted)', margin: 0 }}>
-                    Real feedback from {brand.niche.adjective} nurse practitioners
+                    Real feedback from {brand.niche.descriptor}s
                 </p>
             </div>
 

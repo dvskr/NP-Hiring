@@ -59,21 +59,21 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
             question: `What is the average salary for remote ${brand.niche.short} jobs?`,
             answer: avgSalary
                 ? `Remote ${brand.niche.short} positions offer an average salary of approximately $${avgSalary.toLocaleString()} per year. Remote roles often offer competitive or higher compensation compared to in-person positions due to expanded patient reach and reduced overhead costs.`
-                : `Remote ${brand.niche.short} salaries typically range from $130,000 to $200,000+ per year, depending on experience, patient panel size, and whether the position is W-2 or 1099. Many telehealth companies also offer productivity bonuses.`,
+                : `Remote ${brand.niche.short} salaries typically range from $95,000 to $160,000 per year, depending on specialty, experience, patient panel size, and whether the position is W-2 or 1099. Many virtual-care employers also offer productivity bonuses.`,
         },
         {
             question: `Do remote ${brand.niche.short} jobs require multi-state licensure?`,
-            answer: 'It depends on the employer. Some telehealth companies require you to be licensed in the states where your patients reside, while others work within the PSYPACT compact or only serve patients in states where you hold an active license. Many employers assist with multi-state licensure costs.',
+            answer: 'It depends on the employer. Some telehealth companies require you to be licensed in the states where your patients reside, while others only schedule you with patients in states where you already hold an active license. Many employers assist with multi-state licensure costs.',
         },
         {
             question: `What platforms do remote ${brand.niche.short}s use for telehealth?`,
-            answer: 'Common platforms include Zoom for Healthcare, Doxy.me, SimplePractice, TherapyNotes, and proprietary EHR systems. Most employers provide the technology platform and training. You typically need a reliable internet connection, a private workspace, and HIPAA-compliant setup.',
+            answer: 'Common platforms include Zoom for Healthcare, Doxy.me, and EHR-integrated video platforms like those built into Epic and Athenahealth. Most employers provide the technology platform and training. You typically need a reliable internet connection, a private workspace, and HIPAA-compliant setup.',
         },
     ],
     telehealth: ({ totalJobs, avgSalary }) => [
         {
             question: `How many telehealth ${brand.niche.short} positions are available?`,
-            answer: `There are currently ${totalJobs} telehealth ${brand.niche.short} positions available. Telehealth positions include video visits, phone consultations, and asynchronous ${brand.niche.adjective} care roles across major telehealth platforms and health systems.`,
+            answer: `There are currently ${totalJobs} telehealth ${brand.niche.short} positions available. Telehealth positions include video visits, phone consultations, and asynchronous virtual care roles across major telehealth platforms and health systems.`,
         },
         {
             question: `What is the difference between telehealth and remote ${brand.niche.short} jobs?`,
@@ -87,7 +87,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What qualifications do I need for telehealth ${brand.niche.short} jobs?`,
-            answer: `You need an active ${brand.niche.short} certification (ANCC), state APRN licensure, a master\'s or doctoral degree in ${brand.niche.adjective} nursing, and typically 1-2 years of clinical experience. Some entry-level telehealth positions accept new graduates with supervision. Familiarity with EHR systems and telehealth platforms is preferred.`,
+            answer: `You need an active ${brand.niche.short} certification (ANCC or AANP), state APRN licensure, a master\'s or doctoral degree in ${brand.niche.category}, and typically 1-2 years of clinical experience. Some entry-level telehealth positions accept new graduates with supervision. Familiarity with EHR systems and telehealth platforms is preferred.`,
         },
     ],
     travel: ({ totalJobs }) => [
@@ -115,7 +115,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Can new graduate ${brand.niche.short}s find jobs easily?`,
-            answer: `Yes — demand for ${brand.niche.short}s far exceeds supply. New graduates are highly sought after, with many employers offering structured orientation, mentorship, and collaborative practice agreements. The ${brand.niche.adjective} NP field has one of the highest job placement rates among all NP specialties.`,
+            answer: `Yes — demand for ${brand.niche.short}s far exceeds supply. New graduates are highly sought after, with many employers offering structured orientation, mentorship, and collaborative practice agreements. The ${brand.niche.short} field has one of the highest job placement rates among advanced practice professions.`,
         },
         {
             question: `What should new grad ${brand.niche.short}s look for in their first job?`,
@@ -147,27 +147,27 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     inpatient: ({ totalJobs, avgSalary }) => [
         {
             question: `How many inpatient ${brand.niche.short} jobs are available?`,
-            answer: `There are currently ${totalJobs} inpatient ${brand.niche.short} positions available. These include hospital-based ${brand.niche.adjective} units, acute care facilities, crisis stabilization centers, and residential treatment programs across the country.`,
+            answer: `There are currently ${totalJobs} inpatient ${brand.niche.short} positions available. These include hospitalist and hospital medicine teams, acute care units, step-down units, and specialty inpatient services across the country.`,
         },
         {
             question: `What is the average salary for inpatient ${brand.niche.short}s?`,
             answer: avgSalary
                 ? `Inpatient ${brand.niche.short} positions offer an average salary of approximately $${avgSalary.toLocaleString()} per year. Hospital-based roles often include shift differentials, sign-on bonuses, and comprehensive benefits packages.`
-                : `Inpatient ${brand.niche.short} salaries typically range from $140,000 to $200,000+ per year. Hospital roles often include night/weekend shift differentials (10-20% extra), sign-on bonuses ($5K-$25K), and full benefits including retirement and tuition reimbursement.`,
+                : `Inpatient ${brand.niche.short} salaries typically sit toward the upper end of the $95,000-$160,000 range. Hospital roles often include night/weekend shift differentials, sign-on bonuses, and full benefits including retirement and tuition reimbursement.`,
         },
         {
             question: `What does an inpatient ${brand.niche.short} do daily?`,
-            answer: `Inpatient ${brand.niche.short}s conduct ${brand.niche.adjective} evaluations for new admissions, manage acute medication regimens, perform risk assessments, lead treatment team rounds, coordinate discharge planning, and provide crisis intervention. Typical caseloads range from 12-20 patients per shift depending on acuity.`,
+            answer: `Inpatient ${brand.niche.short}s round on admitted patients, conduct admission evaluations, manage acute treatment plans, respond to changes in patient status, lead or join multidisciplinary rounds, and coordinate discharge planning. Caseloads vary by unit and acuity.`,
         },
         {
             question: `Do I need experience for inpatient ${brand.niche.short} positions?`,
-            answer: 'While many inpatient positions prefer 1-2 years of experience, some hospitals offer fellowship programs and structured orientation for new graduates. Inpatient settings provide excellent training in crisis management, psychopharmacology, and multidisciplinary collaboration that accelerates career growth.',
+            answer: 'While many inpatient positions prefer 1-2 years of experience, some hospitals offer fellowship programs and structured orientation for new graduates. Inpatient settings provide excellent training in acute care management, procedures, and multidisciplinary collaboration that accelerates career growth.',
         },
     ],
     outpatient: ({ totalJobs, avgSalary }) => [
         {
             question: `How many outpatient ${brand.niche.short} jobs are available?`,
-            answer: `There are currently ${totalJobs} outpatient ${brand.niche.short} positions available. These include private practices, community ${brand.niche.category} centers, group practices, and integrated care clinics across the country.`,
+            answer: `There are currently ${totalJobs} outpatient ${brand.niche.short} positions available. These include private practices, community health centers, group practices, and integrated care clinics across the country.`,
         },
         {
             question: `What is the average outpatient ${brand.niche.short} salary?`,
@@ -187,7 +187,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'community-health': ({ totalJobs, avgSalary }) => [
         {
             question: `How many community health ${brand.niche.short} jobs are available?`,
-            answer: `There are currently ${totalJobs} community health ${brand.niche.short} positions available. These include roles at Federally Qualified Health Centers (FQHCs), community ${brand.niche.category} centers, public health clinics, and integrated primary-care settings serving underserved populations.`,
+            answer: `There are currently ${totalJobs} community health ${brand.niche.short} positions available. These include roles at Federally Qualified Health Centers (FQHCs), community health centers, public health clinics, and integrated primary-care settings serving underserved populations.`,
         },
         {
             question: `What is the average salary for community health ${brand.niche.short}s?`,
@@ -197,7 +197,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What qualifications are needed for community health ${brand.niche.short} roles?`,
-            answer: 'You need an active PMHNP-BC certification (ANCC), state APRN licensure, DEA registration, and ideally experience working with diverse, underserved populations. Bilingual skills (especially Spanish) are highly valued. Some positions accept new graduates with structured supervision.',
+            answer: `You need an active national ${brand.niche.short} board certification (ANCC or AANP), state APRN licensure, DEA registration, and ideally experience working with diverse, underserved populations. Bilingual skills (especially Spanish) are highly valued. Some positions accept new graduates with structured supervision.`,
         },
         {
             question: `Do community health ${brand.niche.short}s qualify for loan repayment?`,

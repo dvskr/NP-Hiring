@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -91,8 +92,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} VA ${brand.niche.short} Jobs — Federal Benefits, EDRP & Pension ($120K-175K)`,
-    description: `Find ${stats.totalJobs} VA ${brand.niche.short} jobs with federal pension, EDRP loan repayment up to $200K, FEHB coverage, and full practice authority nationwide. Updated daily.`,
+    title: `${stats.totalJobs} VA ${brand.niche.short} Jobs — Federal Benefits, EDRP & Pension`,
+    description: `Find ${stats.totalJobs} VA ${brand.niche.short} jobs with federal pension, EDRP loan repayment up to $200K, FEHB coverage, and full practice authority within the VA system. Updated daily.`,
     openGraph: {
       title: `${stats.totalJobs} VA ${brand.niche.short} Jobs - Veterans Affairs`,
       description: `Browse VA ${brand.niche.descriptor} positions. Federal benefits, loan repayment, clinical autonomy.`,
@@ -121,7 +122,7 @@ interface PageProps {
 }
 
 /**
- * VA PMHNP Jobs page
+ * VA NP Jobs page
  */
 export default async function VAJobsPage({ searchParams }: PageProps) {
   const params = await searchParams;
@@ -173,16 +174,16 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
         heroAlt={`VA ${brand.niche.short} Veterans Affairs medical center`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'VA']}
-        indexLabel="№ 20 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('va') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="VA"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, federal benefits."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$150K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$120K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description="Federal benefits, EDRP loan repayment up to $200K, pension, and full practice authority nationwide."
+        description="Federal benefits, EDRP loan repayment up to $200K, pension, and full practice authority within the VA system."
         ctaLabel="Browse VA Jobs"
         ctaHref="/jobs?category=va"
         secondaryCtaLabel="Set Alert"
@@ -199,8 +200,8 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
             </div>
             {jobs.length === 0 ? (
               <div className="text-center py-12 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No va positions at this time</h3>
-                <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>New va openings are added daily.</p>
+                <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No VA positions at this time</h3>
+                <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>New VA openings are added daily.</p>
                 <Link href="/jobs" className="inline-block px-6 py-3 text-white rounded-lg font-medium" style={{ backgroundColor: 'var(--color-primary)' }}>Browse All Jobs</Link>
               </div>
             ) : (
@@ -222,7 +223,7 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '24px' }}>
                 <Bell size={28} style={{ color: '#0D9488', marginBottom: '12px' }} />
                 <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#134E4A', margin: '0 0 8px' }}>VA Alerts</h3>
-                <p style={{ fontSize: '13px', color: '#0D9488', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>New va listings delivered daily.</p>
+                <p style={{ fontSize: '13px', color: '#0D9488', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>New VA listings delivered daily.</p>
                 <Link href="/job-alerts" className="cat-cta-primary" style={{ display: 'block', width: '100%', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#0D9488', color: '#fff', textDecoration: 'none', boxShadow: '3px 3px 8px rgba(13,148,136,0.15)' }}>Create Alert</Link>
               </div>
             </div>
@@ -268,7 +269,7 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_va_flag.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Serve Veterans</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Provide {brand.niche.category} care to veterans with PTSD, TBI, MST, and combat-related conditions.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Care for veterans across primary care, specialty clinics, and mental health services at VA facilities.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_va_pension.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -283,7 +284,7 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_va_veteran.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Job Security</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Federal employment with union protection, malpractice coverage under FTCA, and no state license needed.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Federal employment with union protection, malpractice coverage under FTCA, and one active state license accepted at any VA facility.</p>
             </div>
           </div>
         </section>

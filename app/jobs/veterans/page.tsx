@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -47,42 +48,42 @@ async function getStats() {
 const veteransFaqs = [
   {
     question: `What's the difference between Veterans ${brand.niche.short} roles and federal VA employment?`,
-    answer: `Veterans ${brand.niche.short} roles span multiple sectors — VA medical centers (federal employment), Vet Centers (community-readjustment counseling), Community Care Network (CCN) civilian providers, and private trauma practices specializing in veterans care. /jobs/va focuses specifically on federal Veterans Affairs employment with the GS pay scale, FEHB benefits, and EDRP loan repayment.`,
+    answer: `Veterans ${brand.niche.short} roles span multiple sectors — VA medical centers (federal employment), Vet Centers (community readjustment counseling), Community Care Network (CCN) civilian providers, and community practices that serve veteran patients. /jobs/va focuses specifically on federal Veterans Affairs employment with the GS pay scale, FEHB benefits, and EDRP loan repayment.`,
   },
   {
-    question: `What clinical specialties matter most in veterans-focused ${brand.niche.short} work?`,
-    answer: 'PTSD, combat stress, military sexual trauma (MST), traumatic brain injury (TBI), substance use disorders, and family reintegration. Trauma-informed care training is essential. Credentials in EMDR, prolonged exposure therapy (PE), or cognitive processing therapy (CPT) are valued by veterans-care employers.',
+    question: `What clinical skills matter most in veterans-focused ${brand.niche.short} work?`,
+    answer: 'Veterans manage a distinctive mix of service-connected conditions: chronic pain and musculoskeletal injuries, traumatic brain injury (TBI), PTSD and combat stress, military sexual trauma (MST), hearing loss, substance use, and chronic disease. Trauma-informed care and comfort coordinating across specialties matter in every setting, whether you practice in primary care, rehabilitation, or behavioral health.',
   },
   {
     question: 'Do I need military experience to work in veterans care?',
-    answer: `No — military experience is not required, but cultural competency is. Many employers value veterans-care training certificates such as Star Behavioral Health Providers, PsychArmor, and the VA Center for Compassionate Care training. Prior experience in trauma services, addiction medicine, or community ${brand.niche.category} translates well.`,
+    answer: 'No — military experience is not required, but cultural competency is. Employers look for familiarity with military culture, deployment cycles, and the VA system, which you can build through employer-provided training and time with veteran patients. Prior experience in primary care, rehabilitation, pain management, or community settings that serve veterans translates well.',
   },
   {
     question: `How does the VA Community Care Network (CCN) affect ${brand.niche.short} employment?`,
-    answer: `CCN contracts civilian providers to deliver ${brand.niche.category} care to eligible veterans. ${brand.niche.short}s in private practice, telehealth platforms, and community clinics can join CCN to expand their caseload with VA-funded patients while keeping their existing employer relationship — an alternative path to serving veterans without entering federal employment.`,
+    answer: `CCN contracts civilian providers to deliver care to eligible veterans. ${brand.niche.short}s in private practice, telehealth platforms, and community clinics can join CCN to expand their caseload with VA-funded patients while keeping their existing employer relationship — an alternative path to serving veterans without entering federal employment.`,
   },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
   return {
-    title: `${stats.totalJobs} Veterans ${brand.niche.short} Jobs — Trauma-Informed Care ($130K-180K)`,
-    description: `Find ${stats.totalJobs} ${brand.niche.short} jobs serving veterans across VA, Vet Centers, Community Care Network civilian providers, and trauma practices. PTSD, MST, and TBI specialty roles.`,
+    title: `${stats.totalJobs} Veterans ${brand.niche.short} Jobs — Serve Those Who Served`,
+    description: `Find ${stats.totalJobs} ${brand.niche.short} jobs serving veterans across VA, Vet Centers, Community Care Network civilian providers, and community practices. Primary care, rehabilitation, and specialty roles.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/veterans` },
     openGraph: {
       title: `${stats.totalJobs} Veterans ${brand.niche.short} Jobs`,
-      description: `Trauma-informed ${brand.niche.adjective} NP roles serving veterans across VA, Vet Centers, and civilian providers.`,
+      description: `${brand.niche.long} roles serving veterans across VA, Vet Centers, and civilian providers.`,
       type: 'website',
       url: `${brand.baseUrl}/jobs/veterans`,
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Veterans ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent('Trauma-informed care across VA, Vet Centers & CCN')}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Veterans ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent('Serving veterans across VA, Vet Centers & CCN')}`,
         width: 1200, height: 630, alt: `Veterans ${brand.niche.short} Jobs`,
       }],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${stats.totalJobs} Veterans ${brand.niche.short} Jobs`,
-      description: `${brand.niche.short} roles serving veterans across VA, Vet Centers, CCN, and trauma practices.`,
+      description: `${brand.niche.short} roles serving veterans across VA, Vet Centers, CCN, and community practices.`,
     },
   };
 }
@@ -112,19 +113,19 @@ export default async function VeteransPage({ searchParams }: PageProps) {
       <CategoryHero
         bgColor="#b8c8d4"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_veterans.webp`}
-        heroAlt={`Veterans ${brand.niche.category} ${brand.niche.short} care`}
+        heroAlt={`${brand.niche.short} serving veteran patients`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Veterans']}
-        indexLabel="? 28 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('veterans') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Veterans"
         headlineLine2={brand.niche.short}
-        headlineSub={`jobs, veteran ${brand.niche.category}.`}
+        headlineSub="jobs, serve veterans."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$150K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$120K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description={`Serve veterans with specialized ${brand.niche.adjective} care for PTSD, TBI, MST, and combat-related conditions.`}
+        description="Care for veterans across VA medical centers, Vet Centers, and community providers — from primary care to specialty services."
         ctaLabel="Browse Veterans Jobs"
         ctaHref="/jobs?category=veterans"
         secondaryCtaLabel="Set Alert"
@@ -187,7 +188,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Serve Heroes</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Treat PTSD, TBI, and combat-related {brand.niche.category} conditions.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Care for veterans managing PTSD, TBI, chronic pain, and other service-connected health conditions.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Federal Benefits</h3>
@@ -195,11 +196,11 @@ export default async function VeteransPage({ searchParams }: PageProps) {
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>PSLF Eligible</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Public Service Loan Forgiveness after 10 years of VA service.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Public Service Loan Forgiveness after 10 years of qualifying government or nonprofit service.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Mission-Driven</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Honor military service by providing expert {brand.niche.adjective} care.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Honor military service by providing expert clinical care.</p>
             </div>          </div>
         </section>
       </div>
@@ -212,8 +213,8 @@ export default async function VeteransPage({ searchParams }: PageProps) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
             <div className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
               <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>01</span>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>PMHNP-BC</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Active PMHNP-BC certification through ANCC.</p>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>NP Certification</h3>
+              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Active national NP certification in your population focus.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
               <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>02</span>
@@ -228,7 +229,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
               <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>04</span>
               <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>Experience</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Clinical experience in {brand.niche.adjective} settings.</p>
+              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Experience with veterans, or in settings that serve them, is a plus.</p>
             </div>
           </div>
         </section>

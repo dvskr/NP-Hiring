@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -41,18 +42,18 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: `What benefits do full-time ${brand.niche.short}s receive?`, a: `Full-time ${brand.niche.short}s typically receive comprehensive health/dental/vision insurance, 401k matching, 3-6 weeks PTO, CME stipends ($2-5K/yr), malpractice coverage, and student loan repayment programs at qualifying employers.` },
-  { q: `What is the average full-time ${brand.niche.short} salary?`, a: `Full-time ${brand.niche.short}s earn $130K-$180K base salary depending on location, setting, and experience. Many roles add RVU bonuses, quality incentives, and sign-on bonuses of $10-30K.` },
-  { q: `What schedule do full-time ${brand.niche.short}s work?`, a: 'Most outpatient full-time roles are Monday-Friday, 8am-5pm with no weekends. Inpatient roles often use 7-on/7-off schedules. Some positions offer 4x10-hour day options.' },
+  { q: `What benefits do full-time ${brand.niche.short}s receive?`, a: `Full-time ${brand.niche.short}s typically receive comprehensive health/dental/vision insurance, 401k matching, PTO, CME allowances, malpractice coverage, and loan repayment programs at qualifying employers — nonprofit and public health systems often qualify for PSLF.` },
+  { q: `What is the average full-time ${brand.niche.short} salary?`, a: `Full-time ${brand.niche.short}s typically earn $95K-$160K base salary depending on specialty, location, setting, and experience — acute care, high-cost metros, and in-demand specialties often pay more. Many roles add productivity bonuses, quality incentives, and sign-on bonuses.` },
+  { q: `What schedule do full-time ${brand.niche.short}s work?`, a: 'Most outpatient full-time roles are Monday-Friday, 8am-5pm with no weekends. Inpatient and hospital roles often use 7-on/7-off or shift-based schedules. Some positions offer 4x10-hour day options.' },
   { q: 'How does full-time compare to contract or PRN?', a: 'Full-time offers job security, benefits, PTO, and retirement contributions. Contract/PRN pay higher hourly rates but lack benefits and stability. Full-time is ideal for long-term career building.' },
-  { q: 'What qualifications are needed?', a: 'Active PMHNP-BC certification, state APRN licensure, DEA registration, and typically 1+ years of clinical experience. New grads are welcomed at many full-time positions.' },
+  { q: 'What qualifications are needed?', a: 'An active APRN license, national NP certification in your specialty, DEA registration where prescribing is required, and typically 1+ years of clinical experience. New grads are welcomed at many full-time positions.' },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
   return {
-    title: `${stats.totalJobs} Full-Time ${brand.niche.short} Jobs ($130K-180K)`,
-    description: `Find ${stats.totalJobs} full-time ${brand.niche.short} jobs with benefits, PTO, and retirement. Permanent ${brand.niche.adjective} NP positions paying $130K-180K+.`,
+    title: `${stats.totalJobs} Full-Time ${brand.niche.short} Jobs — Salaried + Benefits`,
+    description: `Find ${stats.totalJobs} full-time ${brand.niche.short} jobs with benefits, PTO, and retirement. Permanent ${brand.niche.descriptor} positions updated daily.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/full-time` },
   };
 }
@@ -80,13 +81,13 @@ export default async function FullTimePage({ searchParams }: PageProps) {
         heroAlt={`Full-time ${brand.niche.short} in clinic office`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Full-Time']}
-        indexLabel="№ 07 / 28"
+        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('full-time') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Full-Time"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, stability & benefits."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$110K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description="Permanent positions with full benefits, PTO, retirement, and long-term career stability."
@@ -129,7 +130,7 @@ export default async function FullTimePage({ searchParams }: PageProps) {
             <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
               <div>
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Full Benefits Package</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Health, dental, vision, 401k matching, 3-6 weeks PTO, CME stipends, malpractice coverage, and student loan repayment at qualifying employers.</p>
+                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Health, dental, vision, 401k matching, PTO, CME allowances, malpractice coverage, and student loan repayment at qualifying employers.</p>
               </div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ft_benefits.webp`} alt="Benefits package" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
@@ -177,7 +178,7 @@ export default async function FullTimePage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Before You Apply</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>What You Need</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            {[{ n: '01', t: 'PMHNP-BC', d: 'Active certification through ANCC.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: 'DEA Registration', d: 'Required for prescribing controlled substances.' }, { n: '04', t: 'Experience', d: '1+ years preferred; many employers welcome new grads.' }].map(item => (
+            {[{ n: '01', t: 'NP Certification', d: 'Active national NP certification in your specialty.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: 'DEA Registration', d: 'Required for prescribing controlled substances.' }, { n: '04', t: 'Experience', d: '1+ years preferred; many employers welcome new grads.' }].map(item => (
               <div key={item.n} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>{item.n}</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>{item.t}</h3>

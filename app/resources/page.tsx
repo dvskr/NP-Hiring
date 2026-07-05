@@ -22,13 +22,13 @@ export const metadata: Metadata = {
   title: `${brand.niche.short} Resources & Career Guides — 85+ Free Articles`,
   description: `Free ${brand.niche.short} career resources: 50-state licensure guides, salary calculator, negotiation tips, private practice startup, 1099 vs W2 comparison, and 85+ expert articles.`,
   keywords: [
-    'pmhnp resources', 'psychiatric nurse practitioner career', 'pmhnp salary guide',
-    'pmhnp licensure by state', 'pmhnp private practice', 'pmhnp career guide',
-    'pmhnp interview tips', 'pmhnp job search',
+    `${brand.niche.short.toLowerCase()} resources`, `${brand.niche.descriptor} career`, `${brand.niche.short.toLowerCase()} salary guide`,
+    `${brand.niche.short.toLowerCase()} licensure by state`, `${brand.niche.short.toLowerCase()} private practice`, `${brand.niche.short.toLowerCase()} career guide`,
+    `${brand.niche.short.toLowerCase()} interview tips`, `${brand.niche.short.toLowerCase()} job search`,
   ],
   openGraph: {
     title: `${brand.niche.short} Resources & Career Guides — 85+ Free Articles`,
-    description: `Free career resources for ${brand.niche.adjective} nurse practitioners. Salary data, licensure guides, and expert articles.`,
+    description: `Free career resources for ${brand.niche.descriptor}s. Salary data, licensure guides, and expert articles.`,
     images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp`, width: 1280, height: 900, alt: `${brand.niche.short} career resources and guides` }],
   },
   twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp`] },
@@ -161,13 +161,13 @@ export default async function ResourcesPage() {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
         name: `${brand.niche.short} Resources & Career Guides — ${currentYear}`,
-        description: `Free career resources for ${brand.niche.adjective} nurse practitioners.`,
+        description: `Free career resources for ${brand.niche.descriptor}s.`,
         url: `${brand.baseUrl}/resources`,
         publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
         hasPart: [
           { '@type': 'Article', name: `${brand.niche.short} Full Practice Authority Guide`, url: `${brand.baseUrl}/resources/fpa-guide` },
           { '@type': 'Article', name: `1099 vs W2 for ${brand.niche.short}s — Compensation Comparison`, url: `${brand.baseUrl}/resources/1099-vs-w2` },
-          { '@type': 'Article', name: `How to Start a ${brand.niche.short} Private Practice`, url: `${brand.baseUrl}/resources/private-practice-guide` },
+          { '@type': 'Article', name: `How to Start an ${brand.niche.short} Private Practice`, url: `${brand.baseUrl}/resources/private-practice-guide` },
         ],
         numberOfItems: 3,
       }) }} />
@@ -451,7 +451,7 @@ export default async function ResourcesPage() {
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/clay-icon-match.webp`} alt="Jobs" width={56} height={56} style={{ width: '56px', height: '56px', margin: '0 auto 16px', borderRadius: '16px' }} />
               <h2 className="font-lora" style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px' }}>Ready to Find Your Next {brand.niche.short} Role?</h2>
               <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.8)', margin: '0 0 24px' }}>
-                Browse thousands of {brand.niche.adjective} nurse practitioner positions updated daily.
+                Browse thousands of {brand.niche.descriptor} positions updated daily.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
                 <Link href="/jobs" className="emp-cta-primary" style={{

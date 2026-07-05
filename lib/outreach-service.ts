@@ -7,7 +7,7 @@ const TEMPLATES = {
     subject: `Reach qualified ${brand.niche.short}s with {{companyName}}`,
     body: `Hi {{contactName}},
 
-I noticed {{companyName}} is hiring ${brand.niche.adjective} nurse practitioners. I'm reaching out because we run ${brand.name}, the specialized job board for ${brand.niche.descriptor}s.
+I noticed {{companyName}} is hiring ${brand.niche.descriptor}s. I'm reaching out because we run ${brand.name}, the specialized job board for ${brand.niche.descriptor}s.
 
 We have over 1,000 ${brand.niche.short}s subscribed to job alerts, and our site gets targeted traffic from practitioners actively looking for new opportunities.
 
@@ -28,7 +28,7 @@ P.S. You can check out our site at ${brand.domain}`
 
 Just following up on my previous email about posting your ${brand.niche.short} positions on our job board.
 
-We've had great results helping companies like Talkiatry and LifeStance reach qualified candidates.
+We've had great results helping telehealth groups and health systems reach qualified candidates.
 
 Happy to answer any questions or set up a quick call.
 
@@ -42,7 +42,7 @@ Best,
 
 I'd like to offer {{companyName}} a free featured job posting on ${brand.name}.
 
-No strings attached - I want to help you reach our audience of ${brand.niche.adjective} nurse practitioners.
+No strings attached - I want to help you reach our audience of ${brand.niche.descriptor}s.
 
 Just reply to this email with your job details, or post directly at ${brand.domain}/post-job
 

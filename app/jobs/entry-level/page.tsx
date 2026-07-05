@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -33,15 +34,15 @@ async function getStats() {
 
 const faqs = [
   { q: `What is an entry-level ${brand.niche.short} role?`, a: `Positions designed for newly certified ${brand.niche.short}s with structured onboarding, mentorship, and gradual caseload ramp-up over 3-6 months.` },
-  { q: `What salary can new grad ${brand.niche.short}s expect?`, a: `Entry-level ${brand.niche.short}s earn $100K-$140K in year one, with rapid increases to $140K-$170K by year two as caseloads grow.` },
-  { q: 'Do I need experience beyond clinical rotations?', a: 'Most entry-level roles accept new grads with PMHNP-BC certification. Clinical rotation hours count as experience at many employers.' },
+  { q: `What salary can new grad ${brand.niche.short}s expect?`, a: `Most entry-level ${brand.niche.short}s start around $95K-$120K, with meaningful increases over the first few years as caseloads and experience grow.` },
+  { q: 'Do I need experience beyond clinical rotations?', a: `Most entry-level roles accept new grads with an active APRN license and national ${brand.niche.short} certification. Clinical rotation hours count as experience at many employers.` },
   { q: `What support do new ${brand.niche.short}s receive?`, a: 'Expect structured mentorship, collaborative agreements, peer case consultation, and gradually increasing patient panels.' },
-  { q: 'Which settings hire new grads most?', a: `Community ${brand.niche.category} centers, telehealth platforms, group practices, and FQHCs are the most new-grad-friendly employers.` },
+  { q: 'Which settings hire new grads most?', a: 'Community health centers, FQHCs, telehealth platforms, group practices, and hospital residency programs are among the most new-grad-friendly employers.' },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
-  return { title: `${stats.totalJobs} Entry Level ${brand.niche.short} Jobs ($100K-140K)`, description: `Find ${stats.totalJobs} entry-level ${brand.niche.short} jobs. New grad friendly positions with mentorship and structured onboarding.`, alternates: { canonical: `${brand.baseUrl}/jobs/entry-level` } };
+  return { title: `${stats.totalJobs} Entry Level ${brand.niche.short} Jobs — New Grad Friendly`, description: `Find ${stats.totalJobs} entry-level ${brand.niche.short} jobs. New grad friendly positions with mentorship and structured onboarding.`, alternates: { canonical: `${brand.baseUrl}/jobs/entry-level` } };
 }
 
 interface PageProps { searchParams: Promise<{ page?: string }>; }
@@ -67,13 +68,13 @@ export default async function EntryLevelPage({ searchParams }: PageProps) {
         heroAlt={`Entry-level ${brand.niche.short} new graduate careers`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Entry-Level']}
-        indexLabel="? 24 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('entry-level') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Entry-Level"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, start your career."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$125K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$100K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description={`Launch your ${brand.niche.short} career with supervised positions, mentorship, and structured training programs.`}
@@ -143,7 +144,7 @@ export default async function EntryLevelPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_el_cert.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Certification</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Employers value your PMHNP-BC; experience is built on the job.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Employers value your national {brand.niche.short} certification; experience is built on the job.</p>
             </div>
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
               <div>
@@ -170,7 +171,7 @@ export default async function EntryLevelPage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Before You Apply</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>What You Need</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            {[{ n: '01', t: 'PMHNP-BC', d: 'Active certification — the key credential employers require.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority in your state.' }, { n: '03', t: 'DEA Registration', d: 'Required for prescribing controlled substances.' }, { n: '04', t: 'Clinical Hours', d: 'Your 500+ clinical rotation hours qualify you for most roles.' }].map(item => (
+            {[{ n: '01', t: `${brand.niche.short} Certification`, d: 'Active national certification — the key credential employers require.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority in your state.' }, { n: '03', t: 'DEA Registration', d: 'Required for prescribing controlled substances.' }, { n: '04', t: 'Clinical Hours', d: 'Your supervised clinical rotation hours count as experience at many employers.' }].map(item => (
               <div key={item.n} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>{item.n}</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>{item.t}</h3>

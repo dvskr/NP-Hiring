@@ -17,11 +17,11 @@ const HERO_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/
 
 export const metadata: Metadata = {
   title: `${brand.niche.short} Full Practice Authority Guide 2026 — All 50 States`,
-  description: `Complete state-by-state Full Practice Authority (FPA) guide for ${brand.niche.adjective} nurse practitioners. See which states allow independent ${brand.niche.short} practice, prescriptive authority rules, Nurse Licensure Compact states, and how FPA impacts salary (+12-15% premium).`,
-  keywords: ['PMHNP full practice authority', 'nurse practitioner independent practice states', 'FPA states 2026', 'PMHNP prescriptive authority by state', 'psych NP scope of practice', 'NLC compact states for NP'],
+  description: `Complete state-by-state Full Practice Authority (FPA) guide for ${brand.niche.descriptor}s. See which states allow independent ${brand.niche.short} practice, prescriptive authority rules, Nurse Licensure Compact states, and how FPA impacts salary (+12-15% premium).`,
+  keywords: [`${brand.niche.short} full practice authority`, 'nurse practitioner independent practice states', 'FPA states 2026', `${brand.niche.short} prescriptive authority by state`, `${brand.niche.short} scope of practice`, 'NLC compact states for NP'],
   openGraph: {
     title: `Full Practice Authority Guide for ${brand.niche.short}s — 2026`,
-    description: `State-by-state FPA classifications. See where ${brand.niche.adjective} nurse practitioners can practice independently.`,
+    description: `State-by-state FPA classifications. See where ${brand.niche.descriptor}s can practice independently.`,
     type: 'article',
     images: [{ url: HERO_IMAGE, width: 1280, height: 900, alt: `${brand.niche.short} Full Practice Authority Guide 2026` }],
   },
@@ -43,7 +43,7 @@ export default function FPAGuidePage() {
   const fpaFaqs = [
     {
       question: `What is Full Practice Authority for ${brand.niche.short}s?`,
-      answer: `Full Practice Authority (FPA) means a ${brand.niche.short} can evaluate patients, diagnose conditions, order and interpret tests, prescribe medications (including controlled substances), and manage treatment plans without physician oversight or a collaborative agreement. FPA states grant ${brand.niche.short}s the same level of autonomy as physicians in their scope of practice.`
+      answer: `Full Practice Authority (FPA) means an ${brand.niche.short} can evaluate patients, diagnose conditions, order and interpret tests, prescribe medications (including controlled substances), and manage treatment plans without physician oversight or a collaborative agreement. FPA states grant ${brand.niche.short}s the same level of autonomy as physicians in their scope of practice.`
     },
     {
       question: "How many states have Full Practice Authority for nurse practitioners?",
@@ -91,7 +91,7 @@ export default function FPAGuidePage() {
             '@context': 'https://schema.org',
             '@type': 'Article',
             headline: `${brand.niche.short} Full Practice Authority Guide 2026 — All 50 States`,
-            description: `Complete state-by-state guide to Full Practice Authority for ${brand.niche.adjective} nurse practitioners.`,
+            description: `Complete state-by-state guide to Full Practice Authority for ${brand.niche.descriptor}s.`,
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
             image: HERO_IMAGE,
@@ -115,7 +115,7 @@ export default function FPAGuidePage() {
               Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </p>
             <p className="text-lg md:text-xl text-teal-100 mb-6">
-              State-by-state practice authority classifications for {brand.niche.adjective} nurse practitioners
+              State-by-state practice authority classifications for {brand.niche.descriptor}s
             </p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-8 mt-8">
               <div className="text-center">
@@ -145,7 +145,7 @@ export default function FPAGuidePage() {
                 What is Full Practice Authority (FPA)?
               </h2>
               <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                Full Practice Authority allows {brand.niche.short}s — also known as Psych NPs or {brand.niche.adjective} nurse practitioners — to evaluate patients, diagnose conditions, order and interpret diagnostic tests, prescribe medications (including controlled substances), and manage treatment plans <strong>without physician oversight</strong> or a collaborative agreement.
+                Full Practice Authority allows {brand.niche.short}s ({brand.niche.descriptor}s) to evaluate patients, diagnose conditions, order and interpret diagnostic tests, prescribe medications (including controlled substances), and manage treatment plans <strong>without physician oversight</strong> or a collaborative agreement.
               </p>
               <div className="grid md:grid-cols-3 gap-4 mt-6">
                 <div className="p-4 rounded-lg bg-green-50 border border-green-200">
@@ -296,7 +296,7 @@ export default function FPAGuidePage() {
               Find {brand.niche.short} Jobs in Your State
             </h2>
             <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-              Browse thousands of {brand.niche.adjective} nurse practitioner positions updated daily.
+              Browse thousands of {brand.niche.descriptor} positions updated daily.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/jobs" className="inline-block bg-teal-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-teal-700 transition-colors">Browse All Jobs</Link>

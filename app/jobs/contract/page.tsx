@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -42,8 +43,8 @@ async function getStats() {
 
 const contractFaqs = [
   { question: `What is a Contract ${brand.niche.short} role?`, answer: `Contract ${brand.niche.short} positions are fixed-term assignments (3-12 months) with staffing agencies or health systems. They offer higher hourly rates, diverse clinical exposure, and geographic flexibility.` },
-  { question: `How much more do contract ${brand.niche.short}s earn?`, answer: `Contract ${brand.niche.short}s typically earn 15-30% more than permanent roles, with hourly rates from $75-$120/hr. W-2 contracts may include benefits; 1099 roles offer maximum flexibility and tax advantages.` },
-  { question: 'What qualifications are needed for contract work?', answer: 'Active PMHNP-BC certification, state APRN licensure, DEA registration, and typically 1-2 years of clinical experience. Multi-state licensure is a major advantage.' },
+  { question: `How much more do contract ${brand.niche.short}s earn?`, answer: `Contract ${brand.niche.short}s usually earn a higher hourly rate than comparable permanent staff, because benefits are lighter or absent. W-2 contracts through agencies may include benefits; 1099 contracts trade benefits for maximum flexibility and tax deductions.` },
+  { question: 'What qualifications are needed for contract work?', answer: 'An active APRN license, national NP certification in your specialty, DEA registration where prescribing is required, and typically 1-2 years of clinical experience. Multi-state licensure is a major advantage.' },
   { question: `Do contract ${brand.niche.short}s get benefits?`, answer: 'W-2 contracts through staffing agencies often include health insurance, malpractice coverage, housing stipends, and travel reimbursement. 1099 contractors arrange their own benefits.' },
   { question: 'Can contract roles convert to permanent?', answer: 'Yes — many facilities use contract-to-perm arrangements. This lets both parties evaluate fit before committing to a permanent position, reducing hiring risk.' },
 ];
@@ -52,8 +53,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Contract ${brand.niche.short} Jobs ($130K-180K)`,
-    description: `Find ${stats.totalJobs} contract ${brand.niche.short} jobs paying $130K-180K+. Browse ${brand.niche.adjective} nurse practitioner contract positions with premium rates.`,
+    title: `${stats.totalJobs} Contract ${brand.niche.short} Jobs — Fixed-Term Roles`,
+    description: `Find ${stats.totalJobs} contract ${brand.niche.short} jobs. Fixed-term ${brand.niche.descriptor} positions with premium rates, diverse settings, and contract-to-perm potential.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/contract` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
@@ -87,13 +88,13 @@ export default async function ContractPage({ searchParams }: PageProps) {
         heroAlt={`Contract ${brand.niche.short} signing agreement`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Contract']}
-        indexLabel="№ 06 / 28"
+        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('contract') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Contract"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, fixed-term roles."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$110K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description="Fixed-term assignments with premium rates, diverse settings, and geographic flexibility."
@@ -155,7 +156,7 @@ export default async function ContractPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #F0FDFA 0%, #E6FAF5 50%, #F0FDFA 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose Contract</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Built for Contract Care</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Built for Flexibility</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1 */}
             <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
@@ -179,7 +180,7 @@ export default async function ContractPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ct_rates.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Higher Rates</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Contract {brand.niche.short}s typically earn 15-30% more than permanent.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Contract {brand.niche.short}s typically earn more per hour than permanent staff.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ct_settings.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -218,9 +219,9 @@ export default async function ContractPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>What You Need</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
             {[
-              { num: '01', title: 'PMHNP-BC', desc: 'Active PMHNP-BC certification through ANCC.' },
+              { num: '01', title: 'NP Certification', desc: 'Active national NP certification in your specialty.' },
               { num: '02', title: 'State License', desc: 'APRN licensure and prescriptive authority.' },
-              { num: '03', title: 'DEA Number', desc: 'DEA registration for controlled substances.' },
+              { num: '03', title: 'DEA Number', desc: 'DEA registration if your role involves prescribing controlled substances.' },
               { num: '04', title: 'Experience', desc: `Clinical experience in ${brand.niche.adjective} settings.` },
             ].map(item => (
               <div key={item.num} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>

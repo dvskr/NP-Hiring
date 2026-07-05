@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -76,15 +77,15 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 
     return {
         // SEO Fix #7: trim title to ≤60 chars and description to ≤160 chars.
-        title: `${stats.totalJobs} Telehealth ${brand.niche.short} Jobs ($130K-200K)`,
-        description: `Find ${stats.totalJobs} telehealth ${brand.niche.short} and telepsychiatry jobs paying $130K-$200K+. Work from home — flexible hours, no commute, video-visit roles. Updated daily.`,
-        keywords: ['telehealth pmhnp', 'telepsychiatry jobs', 'virtual pmhnp', 'telemedicine psychiatric nurse practitioner', 'behavioral health NP telehealth', 'telepsychiatry nurse practitioner jobs', 'remote psych NP telehealth'],
+        title: `${stats.totalJobs} Telehealth ${brand.niche.short} Jobs — Virtual Care`,
+        description: `Find ${stats.totalJobs} telehealth ${brand.niche.short} jobs in primary care, urgent care, and specialty medicine. Work from home — flexible hours, no commute, video-visit roles.`,
+        keywords: ['telehealth np jobs', 'telemedicine nurse practitioner', 'virtual nurse practitioner jobs', 'telehealth nurse practitioner positions', 'remote np telehealth', 'video visit np jobs'],
         openGraph: {
-            title: `${stats.totalJobs} Telehealth ${brand.niche.short} Jobs - Virtual Psychiatric Care`,
-            description: `Browse telehealth and telepsychiatry ${brand.niche.descriptor} positions. Work from home, competitive pay.`,
+            title: `${stats.totalJobs} Telehealth ${brand.niche.short} Jobs - Virtual Care`,
+            description: `Browse telehealth ${brand.niche.descriptor} positions. Work from home, competitive pay.`,
             type: 'website',
             images: [{
-                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Telehealth ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Virtual ${brand.niche.adjective} care positions`)}`,
+                url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Telehealth ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Virtual ${brand.niche.short} care positions`)}`,
                 width: 1200,
                 height: 630,
                 alt: `Telehealth ${brand.niche.short} Jobs`,
@@ -159,16 +160,16 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
         heroAlt={`Telehealth ${brand.niche.short} virtual session`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Telehealth']}
-        indexLabel="№ 03 / 28"
+        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('telehealth') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Telehealth"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, virtual care."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$110K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'companies' },
         ]}
-        description={`Virtual ${brand.niche.adjective} care positions with flexible hours, no commute, and multi-state practice opportunities.`}
+        description="Virtual care from anywhere with a secure connection — flexible hours, no commute, and multi-state practice opportunities."
         ctaLabel="Browse All Telehealth Jobs"
         ctaHref="/jobs?category=telehealth"
         secondaryCtaLabel="Set Alert"
@@ -253,14 +254,14 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
               <div>
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Virtual Patient Sessions</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Conduct HIPAA-compliant video visits from home, manage medication remotely, and build lasting therapeutic relationships.</p>
+                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Conduct HIPAA-compliant video visits from home, handle follow-ups and refills remotely, and build lasting patient relationships.</p>
               </div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_th_videocall.webp`} alt="Telehealth video consultation" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_th_multistate.webp`} alt="Multi-state telehealth reach" width={200} height={140} style={{ width: '100%', maxWidth: '180px', height: 'auto', borderRadius: '12px', marginBottom: '16px' }} />
               <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Multi-State Licensure</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Practice across state lines with PSYPACT or compact licensure.</p>
+              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Practice across state lines — many employers sponsor additional state licenses.</p>
             </div>
             {/* ROW 2: Icons */}
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -271,7 +272,7 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_telehealth_home.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Multi-State Reach</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>See patients across multiple states with PSYPACT or multi-state licensure.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>See patients across multiple states with employer-supported multi-state licensure.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_telehealth_reach.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -317,17 +318,17 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
               <div key="02" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>02</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>State Licenses</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Obtain licenses in states where your patients reside or join PSYPACT for telepsych.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Hold an active license in every state where your patients are located — many employers cover added licenses.</p>
               </div>
               <div key="03" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>03</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>E-Prescribing</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Set up EPCS (Electronic Prescribing for Controlled Substances) for seamless medication management.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Get comfortable with e-prescribing workflows — most telehealth employers run EPCS-enabled EHR platforms.</p>
               </div>
               <div key="04" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px' }}>04</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Telehealth Training</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Complete telehealth-specific training on virtual rapport building and crisis management.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Complete telehealth-specific training on webside manner, virtual assessment, and escalation protocols.</p>
               </div>
           </div>
         </section>
@@ -343,7 +344,7 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
               { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
               { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
               { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
-              { href: '/jobs/psychiatric-mental-health', label: 'Psychiatric (PMHNP)', sub: 'Psych & addiction care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_substance.webp` },
+              { href: '/jobs/psychiatric-mental-health', label: 'Psychiatric (PMHNP)', sub: 'Mental health roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_substance.webp` },
               { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
               { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
             ].map(c => (
@@ -369,11 +370,11 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Telehealth {brand.niche.short} Questions</h2>
           <div style={{ display: 'grid', gap: '16px' }}>
             {[
-              { q: 'Do I need special licensure for telehealth?', a: 'You need an active NP license in the state where your patient is located. PSYPACT and the Nurse Licensure Compact can streamline multi-state practice.' },
-              { q: 'What technology do I need for telehealth?', a: 'A HIPAA-compliant video platform, reliable high-speed internet, dual monitors, a private workspace, and EPCS-enabled e-prescribing software.' },
-              { q: `What is the salary range for telehealth ${brand.niche.short}s?`, a: `Telehealth ${brand.niche.short} salaries range from $130K to $200K+, depending on patient volume, state, and whether the role is W-2 or 1099 contract.` },
-              { q: 'Can I prescribe controlled substances via telehealth?', a: 'Yes, with proper DEA registration and EPCS setup. The DEA now permits initial prescriptions via telehealth in many circumstances.' },
-              { q: `How many patients do telehealth ${brand.niche.short}s see per day?`, a: 'Typically 12-20 patients per day, with 30-minute follow-ups and 60-minute intakes. Some platforms allow flexible scheduling.' },
+              { q: 'Do I need special licensure for telehealth?', a: 'You need an active APRN license in the state where your patient is located at the time of the visit. Many telehealth employers sponsor and pay for additional state licenses as they expand coverage.' },
+              { q: 'What technology do I need for telehealth?', a: 'A HIPAA-compliant video platform, reliable high-speed internet, dual monitors, a private workspace, and the EHR and e-prescribing tools your employer provides.' },
+              { q: `What is the salary range for telehealth ${brand.niche.short}s?`, a: `Most telehealth ${brand.niche.short} roles pay in line with the broader NP market — roughly $95K to $160K — with productivity-based roles and in-demand specialties often paying more. Pay depends on visit volume, specialty, and W-2 vs 1099 status.` },
+              { q: `What kinds of visits do telehealth ${brand.niche.short}s handle?`, a: 'Follow-ups, chronic condition check-ins, medication refills, urgent care visits, and new-patient intakes, depending on the employer. Some roles are video-only; others mix video, phone, and asynchronous care.' },
+              { q: `How many patients do telehealth ${brand.niche.short}s see per day?`, a: 'Volume varies by specialty and employer — urgent care and primary care telehealth runs shorter, higher-volume visits, while intake-heavy specialty roles run longer appointments. Ask about scheduling templates and documentation time when comparing offers.' },
             ].map((faq, idx) => (
               <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.q}</h3>
@@ -381,7 +382,7 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
               </div>
             ))}
           </div>
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{q:'Do I need special licensure for telehealth?',a:'You need an active NP license in the state where your patient is located. PSYPACT and the Nurse Licensure Compact can streamline multi-state practice.'},{q:'What technology do I need for telehealth?',a:'A HIPAA-compliant video platform, reliable high-speed internet, dual monitors, a private workspace, and EPCS-enabled e-prescribing software.'},{q:`What is the salary range for telehealth ${brand.niche.short}s?`,a:`Telehealth ${brand.niche.short} salaries range from $130K to $200K+, depending on patient volume, state, and whether the role is W-2 or 1099 contract.`},{q:'Can I prescribe controlled substances via telehealth?',a:'Yes, with proper DEA registration and EPCS setup. The DEA now permits initial prescriptions via telehealth in many circumstances.'},{q:`How many patients do telehealth ${brand.niche.short}s see per day?`,a:'Typically 12-20 patients per day, with 30-minute follow-ups and 60-minute intakes.'}].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{q:'Do I need special licensure for telehealth?',a:'You need an active APRN license in the state where your patient is located at the time of the visit. Many telehealth employers sponsor and pay for additional state licenses as they expand coverage.'},{q:'What technology do I need for telehealth?',a:'A HIPAA-compliant video platform, reliable high-speed internet, dual monitors, a private workspace, and the EHR and e-prescribing tools your employer provides.'},{q:`What is the salary range for telehealth ${brand.niche.short}s?`,a:`Most telehealth ${brand.niche.short} roles pay in line with the broader NP market — roughly $95K to $160K — with productivity-based roles and in-demand specialties often paying more. Pay depends on visit volume, specialty, and W-2 vs 1099 status.`},{q:`What kinds of visits do telehealth ${brand.niche.short}s handle?`,a:'Follow-ups, chronic condition check-ins, medication refills, urgent care visits, and new-patient intakes, depending on the employer. Some roles are video-only; others mix video, phone, and asynchronous care.'},{q:`How many patients do telehealth ${brand.niche.short}s see per day?`,a:'Volume varies by specialty and employer — urgent care and primary care telehealth runs shorter, higher-volume visits, while intake-heavy specialty roles run longer appointments. Ask about scheduling templates and documentation time when comparing offers.'}].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>
       </div>
 

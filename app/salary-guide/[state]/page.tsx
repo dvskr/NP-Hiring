@@ -288,7 +288,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                             lineHeight: 1.6,
                         }}
                     >
-                        Average {brand.niche.adjective} nurse practitioner compensation in {stateName}, broken down by
+                        Average {brand.niche.descriptor} compensation in {stateName}, broken down by
                         practice setting, top employers, and cities.
                     </p>
                 </div>

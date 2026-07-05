@@ -62,17 +62,17 @@ export const metadata: Metadata = {
     template: `%s | ${brand.name}`,
   },
 
-  description: `Browse thousands of ${brand.niche.short} jobs updated daily. Remote, telehealth & in-person ${brand.niche.adjective} NP positions with salary transparency. Free for job seekers.`,
+  description: `Browse thousands of ${brand.niche.short} jobs updated daily. Remote, telehealth & in-person ${brand.niche.short} positions with salary transparency. Free for job seekers.`,
 
   keywords: [
-    'PMHNP jobs',
-    'psychiatric nurse practitioner jobs',
-    'mental health NP jobs',
-    'telepsychiatry jobs',
-    'remote PMHNP positions',
-    'psychiatric nursing jobs',
-    'PMHNP career',
-    'nurse practitioner psychiatry',
+    `${brand.niche.short} jobs`,
+    `${brand.niche.descriptor} jobs`,
+    `remote ${brand.niche.short} positions`,
+    `telehealth ${brand.niche.short} jobs`,
+    `${brand.niche.short} career`,
+    'APRN jobs',
+    'FNP jobs',
+    `${brand.niche.category} jobs`,
   ],
 
   authors: [{ name: brand.name }],

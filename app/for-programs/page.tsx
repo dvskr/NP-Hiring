@@ -622,7 +622,7 @@ export default async function ForProgramsPage() {
                   {[
                     { t: `Outpatient ${brand.niche.short} — Telehealth`, c: '#1A2E35' },
                     { t: `Inpatient ${brand.niche.short} — UCSF Med Cntr`, c: '#1A2E35' },
-                    { t: 'TMS NP — Bay Area Mental Health', c: '#1A2E35' },
+                    { t: `Urgent Care ${brand.niche.short} — Bay Area Health`, c: '#1A2E35' },
                   ].map((row, i) => (
                     <div
                       key={i}

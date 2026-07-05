@@ -1,16 +1,25 @@
 /**
  * Metro Landing Page Data
  *
- * Editorial content for the 10 top-performing metro areas by PMHNP job demand.
- * Each metro has unique, hand-curated content covering cost of living, licensure,
- * practice environment, and local context. This data powers the content-rich
- * landing pages at /jobs/metro/[slug].
+ * Editorial content for 10 major metro areas with strong nurse practitioner
+ * job demand. Each metro has unique, hand-curated content covering cost of
+ * living, licensure, practice environment, and local context. This data
+ * powers the content-rich landing pages at /jobs/metro/[slug].
  *
- * City selection criteria:
- * - GSC search volume & CTR for "pmhnp jobs [city]"
+ * City selection criteria (inherited from the donor board — re-validate as
+ * this board accrues its own GSC data):
+ * - Search demand for "np jobs [city]"-style queries
  * - Active job count on platform
  * - Geographic diversity
  * - State practice authority status
+ *
+ * Editorial policy (NP board, 2026-07): NO INVENTED STATISTICS. Cost-of-living
+ * indexes and population figures are niche-neutral data retained from the
+ * donor board. Salary language is deliberately qualitative — the only cited
+ * figures on this board live in lib/stats-sources.ts. Practice-authority
+ * classifications follow the AANP State Practice Environment map
+ * (aanp.org/advocacy/state/state-practice-environment); re-verify when
+ * state law changes.
  */
 
 export interface MetroCity {
@@ -22,12 +31,18 @@ export interface MetroCity {
   citySlug: string;  // for linking to /jobs/city/[slug]
   metroArea: string; // broader metro name for display
   population: string;
+  /** AANP State Practice Environment classification for the state. */
   practiceAuthority: 'Full' | 'Reduced' | 'Restricted';
   avgCostOfLiving: string; // relative to US average
   heroDescription: string;
   whyThisMetro: string[];
   costOfLivingNote: string;
   licensureNote: string;
+  /**
+   * General care-demand context for the metro. Field name is legacy from
+   * the donor board (where it held mental-health context); on this board it
+   * holds NP-market demand notes. Not currently rendered by the metro page.
+   */
   mentalHealthContext: string;
   topSettings: string[];
   faqs: { question: string; answer: string }[];
@@ -43,23 +58,23 @@ export const METRO_CITIES: MetroCity[] = [
     citySlug: 'new-york-ny',
     metroArea: 'New York City Metro',
     population: '8.3M (city) / 20M+ (metro)',
-    practiceAuthority: 'Reduced',
+    practiceAuthority: 'Full',
     avgCostOfLiving: '37% above US average',
-    heroDescription: 'The NYC metro is the largest PMHNP job market in the country, with major health systems, private practices, and telehealth companies actively hiring. High cost of living is offset by salaries that rank among the highest nationally.',
+    heroDescription: 'The NYC metro is one of the largest nurse practitioner job markets in the country, with major health systems, private practices, and telehealth companies hiring across every specialty. High cost of living is offset by NP salaries that rank among the highest nationally.',
     whyThisMetro: [
-      'Highest PMHNP salaries in the US — $160K–$220K+ for experienced practitioners',
-      'Dense network of academic medical centers (NYU, Columbia, Mount Sinai, Montefiore)',
-      'Massive underserved population creating constant demand across all 5 boroughs',
-      'Thriving private practice market with strong insurance reimbursement rates',
+      'NP salaries in New York rank among the highest in the country, helping offset metro living costs',
+      'Dense network of academic medical centers (NYU Langone, Columbia, Mount Sinai, Montefiore) hiring across specialties',
+      'Large, diverse patient population creating steady demand across all 5 boroughs and every practice setting',
+      'Full practice authority after a 3,600-hour transition, plus a deep telehealth and private-practice market',
     ],
-    costOfLivingNote: 'NYC cost of living is 37% above the national average, but PMHNP salaries here are 25-40% higher than most markets. Manhattan is most expensive; Brooklyn, Queens, and NJ suburbs offer better value. Many employers offer housing stipends or loan repayment.',
-    licensureNote: 'New York is a Reduced Practice Authority state — NPs must maintain a collaborative agreement with a physician for the first 3,600 hours. After that, PMHNPs can practice independently. The NY Board of Nursing processes licenses in 4-8 weeks.',
-    mentalHealthContext: 'NYC has one of the highest rates of mental health need in the nation, with 1 in 5 adults reporting a mental illness. Post-pandemic demand has surged, particularly for anxiety, depression, and substance use disorders. The city\'s diverse population requires culturally competent psychiatric care.',
-    topSettings: ['Outpatient clinics', 'Community mental health centers', 'Private practice', 'Telehealth', 'Academic medical centers', 'Inpatient psychiatry'],
+    costOfLivingNote: 'Living costs in the NYC metro run 37% above the national average, driven mostly by housing. Manhattan is the most expensive; Brooklyn, Queens, and the NJ suburbs offer better value. NP salaries here rank among the highest in the country, and many employers add housing stipends or loan repayment to help offset the premium.',
+    licensureNote: 'New York grants NPs full practice authority under the NP Modernization Act — NPs work with a collaborative agreement for their first 3,600 practice hours, then can practice independently. License applications are typically processed in 4-8 weeks.',
+    mentalHealthContext: 'New York City\'s population of over 8 million sustains NP demand across primary care, acute care, pediatrics, geriatrics, women\'s health, and behavioral health. Large hospital systems, community health centers, and a growing telehealth sector all compete for NP talent, and the city\'s diverse communities put a premium on culturally competent, multilingual care.',
+    topSettings: ['Academic medical centers', 'Hospital systems', 'Outpatient clinics', 'Private practice', 'Telehealth', 'Community health centers'],
     faqs: [
-      { question: 'What is the average PMHNP salary in New York City?', answer: 'PMHNPs in NYC earn $160,000–$220,000+ annually, with experienced practitioners in private practice potentially earning more. The average is approximately $175,000, which is 25-40% above the national average. Salaries vary by setting — hospital-based roles tend to offer slightly less base pay but include comprehensive benefits.' },
-      { question: 'Does New York have full practice authority for PMHNPs?', answer: 'New York has Reduced Practice Authority. New PMHNPs must maintain a collaborative agreement with a physician for their first 3,600 practice hours (roughly 2 years full-time). After completing this requirement, PMHNPs can practice independently without physician oversight.' },
-      { question: 'What are the best neighborhoods for PMHNP jobs in NYC?', answer: 'PMHNP positions are available across all boroughs. Manhattan has the highest concentration of hospital-based roles. The Bronx and Brooklyn have significant community mental health center opportunities with loan repayment eligibility. Queens offers diverse patient populations. Many PMHNPs live in NJ or CT suburbs and commute or work remotely via telehealth.' },
+      { question: 'What is the average NP salary in New York City?', answer: 'New York is consistently among the higher-paying states for nurse practitioners, and NYC salaries typically run above the statewide average to offset the metro\'s 37% above-average cost of living. Pay varies significantly by specialty, setting, and experience — hospital and academic roles often trade slightly lower base pay for stronger benefits. Check live NYC listings with posted salary on this board for current, real-world ranges.' },
+      { question: 'Does New York have full practice authority for NPs?', answer: 'Yes. Under New York\'s NP Modernization Act (2022), NPs with more than 3,600 hours of qualifying practice experience can practice without a written collaborative agreement. NPs still building toward that threshold practice under a collaborative relationship with a physician.' },
+      { question: 'Where are the most NP jobs in NYC?', answer: 'Positions are available across all boroughs. Manhattan has the highest concentration of hospital and academic medical center roles. The Bronx, Brooklyn, and Queens have strong community health center demand, and many of those roles qualify for federal loan repayment. Many NPs live in the NJ or CT suburbs and commute, or work remotely via telehealth.' },
     ],
   },
   {
@@ -73,21 +88,21 @@ export const METRO_CITIES: MetroCity[] = [
     population: '3.9M (city) / 13M+ (metro)',
     practiceAuthority: 'Restricted',
     avgCostOfLiving: '43% above US average',
-    heroDescription: 'Los Angeles is one of the highest-paying PMHNP markets in the country. Despite California\'s restricted practice laws, the massive population and severe mental health provider shortage create abundant opportunities across every setting.',
+    heroDescription: 'Los Angeles is one of the largest and highest-paying NP markets in the country. Despite California\'s restricted practice laws, the massive population and persistent provider shortages create abundant opportunities across every specialty and setting.',
     whyThisMetro: [
-      'California PMHNPs earn $150K–$200K+ — among the highest nationally',
-      'Severe psychiatrist shortage creates heavy PMHNP reliance, especially in underserved areas',
-      'Year-round pleasant climate and diverse cultural landscape',
-      'Kaiser Permanente, Cedars-Sinai, UCLA, and major health systems actively recruiting',
+      'California is consistently the top-paying state for nurse practitioners in BLS wage data',
+      'Kaiser Permanente, Cedars-Sinai, UCLA Health, and other major systems actively recruiting NPs',
+      'A county of 10M+ residents with persistent provider shortages, especially in underserved areas',
+      'Year-round pleasant climate, diverse communities, and a growing telehealth sector',
     ],
-    costOfLivingNote: 'LA is 43% above the national average for cost of living, driven primarily by housing. Many PMHNPs offset costs by living in suburbs like Pasadena, Long Beach, or the Inland Empire while working in central LA or via telehealth. California\'s high salaries help balance the premium.',
-    licensureNote: 'California has Restricted Practice Authority — PMHNPs must practice under standardized procedures with physician oversight. However, legislation is actively being pursued to expand NP autonomy. The BRN processes applications in 8-12 weeks. DEA registration is required for prescribing.',
-    mentalHealthContext: 'LA County has over 10 million residents but a severe shortage of mental health providers. Homelessness, substance use, and trauma are significant drivers of psychiatric need. The county\'s Mental Health Services Act (MHSA) funds extensive community programs that employ PMHNPs.',
-    topSettings: ['Community mental health centers', 'Outpatient clinics', 'Telehealth', 'Correctional facilities', 'VA medical centers', 'Private group practices'],
+    costOfLivingNote: 'Cost of living in LA runs 43% above the national average, driven primarily by housing. Many NPs offset costs by living in suburbs like Pasadena, Long Beach, or the Inland Empire while working in central LA or via telehealth. California\'s high NP salaries help balance the premium.',
+    licensureNote: 'California NPs generally practice under standardized procedures with physician involvement, though AB 890 (2020) created the 103NP/104NP pathways that let experienced NPs practice with greater independence in certain settings. The California BRN typically processes applications in 8-12 weeks, and DEA registration is required for prescribing controlled substances.',
+    mentalHealthContext: 'LA County\'s 10 million residents generate NP demand across primary care, urgent care, pediatrics, geriatrics, women\'s health, and behavioral health. County safety-net systems, community clinics, and correctional health programs rely heavily on NPs, and many roles in underserved areas qualify for loan repayment programs.',
+    topSettings: ['Community health centers', 'Outpatient clinics', 'Telehealth', 'Correctional health', 'VA medical centers', 'Private group practices'],
     faqs: [
-      { question: 'What is the average PMHNP salary in Los Angeles?', answer: 'PMHNPs in Los Angeles earn $150,000–$200,000+ annually. The average is approximately $170,000. Kaiser Permanente and academic medical centers offer competitive salaries plus excellent benefits. Private practice and telehealth roles can exceed $200K for experienced practitioners.' },
-      { question: 'Can PMHNPs practice independently in California?', answer: 'Currently, California has Restricted Practice Authority, meaning PMHNPs must work under standardized procedures with a physician. However, there is active legislation to expand NP practice authority. Many employers handle the collaborative arrangement, so it doesn\'t significantly limit job opportunities.' },
-      { question: 'What areas of LA have the most PMHNP jobs?', answer: 'PMHNP jobs are spread across LA County. Downtown LA, Hollywood, and the Westside have concentrated hospital-based roles. South LA, East LA, and the San Fernando Valley have significant community mental health opportunities with federal loan repayment. The Inland Empire (Riverside, San Bernardino) has growing demand with lower cost of living.' },
+      { question: 'What is the average NP salary in Los Angeles?', answer: 'California is the top-paying state for nurse practitioners in BLS wage data, and LA salaries generally reflect that — as well as the metro\'s 43% above-average cost of living. Kaiser Permanente and academic medical centers offer competitive salary-plus-benefits packages. Check live LA listings with posted salary on this board for current ranges by specialty and setting.' },
+      { question: 'Can NPs practice independently in California?', answer: 'California is a restricted-practice state: most NPs work under standardized procedures with physician involvement. AB 890 created the 103NP and 104NP designations, which allow qualifying experienced NPs to practice with greater independence in specified settings. Most employers handle the collaboration arrangement, so it rarely limits day-to-day job opportunities.' },
+      { question: 'What areas of LA have the most NP jobs?', answer: 'Jobs are spread across LA County. Downtown LA, Hollywood, and the Westside concentrate hospital-based roles. South LA, East LA, and the San Fernando Valley have significant community health center opportunities, many with federal loan repayment. The Inland Empire (Riverside, San Bernardino) has growing demand with a lower cost of living.' },
     ],
   },
   {
@@ -101,21 +116,21 @@ export const METRO_CITIES: MetroCity[] = [
     population: '950K (city) / 1.6M+ (metro)',
     practiceAuthority: 'Restricted',
     avgCostOfLiving: '3% below US average',
-    heroDescription: 'Jacksonville is a fast-growing PMHNP market with below-average cost of living and strong healthcare infrastructure. Multiple major hospital systems and a booming telehealth sector make it one of the best emerging markets for psychiatric NPs.',
+    heroDescription: 'Jacksonville is a fast-growing NP market with below-average cost of living and strong healthcare infrastructure. Multiple major hospital systems, a large military and veteran population, and a growing telehealth sector make it one of the best emerging markets for nurse practitioners.',
     whyThisMetro: [
-      'Cost of living is 3% below the national average — your salary goes further',
-      'No state income tax in Florida — 6-9% instant salary boost vs. most states',
-      'Rapidly growing population creating sustained mental health demand',
+      'No state income tax and living costs 3% below the national average — your salary goes further',
       'Major employers: Baptist Health, Mayo Clinic Jacksonville, UF Health, Ascension St. Vincent\'s',
+      'Rapidly growing population — including retirees and military families — sustaining demand across specialties',
+      'A pathway to autonomous primary-care practice after 3,000 supervised hours under Florida law',
     ],
-    costOfLivingNote: 'Jacksonville\'s cost of living sits 3% below the national average, making it one of the most affordable major metros for PMHNPs. Housing is particularly attractive — median home prices are roughly half of coastal California or the Northeast. Combined with Florida\'s zero state income tax, effective take-home pay is significantly higher than nominal salary suggests.',
-    licensureNote: 'Florida has Restricted Practice Authority — PMHNPs must have a supervisory relationship with a physician. However, Florida passed legislation in 2020 allowing autonomous practice for NPs with 3,000+ supervised hours in the past 5 years. The Florida Board of Nursing processes licenses in 4-6 weeks.',
-    mentalHealthContext: 'Florida has one of the highest rates of unmet mental health need in the US, with only 55% of adults with mental illness receiving treatment. Jacksonville\'s rapid population growth (particularly retirees and military families from Naval Station Mayport) is increasing demand for psychiatric services across all age groups.',
-    topSettings: ['Outpatient clinics', 'Telehealth', 'Hospital systems', 'VA medical center', 'Private practice', 'Substance abuse treatment'],
+    costOfLivingNote: 'Cost of living here sits 3% below the national average, making Jacksonville one of the most affordable major metros for NPs. Housing is particularly attractive — median home prices are well below coastal California or the Northeast. Combined with Florida\'s zero state income tax, take-home pay stretches further than the nominal salary suggests.',
+    licensureNote: 'Florida NPs practice under a supervisory protocol with a physician, and a 2020 state law allows NPs with 3,000+ supervised hours in the past 5 years to register for autonomous practice in primary care. The Florida Board of Nursing typically processes licenses in 4-6 weeks.',
+    mentalHealthContext: 'Jacksonville\'s rapid population growth — including retirees and military families around Naval Station Mayport — is increasing demand for primary care, geriatrics, and specialty services across all age groups. Health systems and the VA compete for NP talent, and the metro\'s growth keeps new clinics opening.',
+    topSettings: ['Hospital systems', 'Outpatient clinics', 'Telehealth', 'VA medical center', 'Private practice', 'Urgent care'],
     faqs: [
-      { question: 'What is the average PMHNP salary in Jacksonville, FL?', answer: 'PMHNPs in Jacksonville earn $130,000–$170,000 annually. The average is approximately $148,000. When adjusted for Florida\'s zero state income tax and below-average cost of living, effective purchasing power is comparable to earning $175K+ in high-cost cities like NYC or LA.' },
-      { question: 'Does Florida have full practice authority for PMHNPs?', answer: 'Florida recently expanded NP practice authority. PMHNPs with 3,000+ supervised clinical hours within the past 5 years can practice autonomously. New graduates start under physician supervision but can transition to independent practice within approximately 2 years.' },
-      { question: 'Is Jacksonville a good city for new grad PMHNPs?', answer: 'Yes. Jacksonville has multiple health systems with structured new-grad programs, including Baptist Health and UF Health. The VA medical center also hires new graduates. The city\'s growing population and relatively low competition compared to saturated markets make it an excellent launchpad for new PMHNP careers.' },
+      { question: 'What is the average NP salary in Jacksonville, FL?', answer: 'Florida NP salaries generally track close to national levels, but Jacksonville\'s zero state income tax and below-average cost of living mean take-home pay stretches further than in most coastal metros. Check live Jacksonville listings with posted salary on this board for current ranges by specialty and setting.' },
+      { question: 'Does Florida have full practice authority for NPs?', answer: 'Florida is a restricted-practice state, but a 2020 law created a path to autonomy: NPs with 3,000+ supervised clinical hours within the past 5 years can register for autonomous practice in primary care (family medicine, general pediatrics, and general internal medicine). NPs in other specialties continue to practice under physician supervision protocols.' },
+      { question: 'Is Jacksonville a good city for new grad NPs?', answer: 'Yes. Jacksonville has multiple health systems with structured new-grad support, including Baptist Health and UF Health, and the VA medical center also hires new graduates. Below-average living costs make the city manageable on a first NP salary, and the growing population supports long-term career stability.' },
     ],
   },
   {
@@ -127,23 +142,23 @@ export const METRO_CITIES: MetroCity[] = [
     citySlug: 'columbus-oh',
     metroArea: 'Columbus Metro',
     population: '905K (city) / 2.1M+ (metro)',
-    practiceAuthority: 'Full',
+    practiceAuthority: 'Reduced',
     avgCostOfLiving: '7% below US average',
-    heroDescription: 'Columbus offers the rare combination of Full Practice Authority, below-average cost of living, and a robust healthcare ecosystem anchored by Ohio State University Wexner Medical Center. One of the best value markets for PMHNPs in the Midwest.',
+    heroDescription: 'Columbus combines below-average cost of living, a robust healthcare ecosystem anchored by Ohio State University Wexner Medical Center, and steady population growth. One of the best value markets for nurse practitioners in the Midwest.',
     whyThisMetro: [
-      'Full Practice Authority — PMHNPs can practice independently from day one',
-      'Cost of living is 7% below the national average with strong salary growth',
-      'Ohio State Wexner Medical Center, OhioHealth, and Nationwide Children\'s Hospital',
-      'Growing tech sector driving population growth and mental health demand',
+      'Living costs 7% below the national average give NP salaries strong purchasing power',
+      'Ohio State Wexner Medical Center, OhioHealth, and Nationwide Children\'s Hospital anchor the market',
+      'Growing tech sector (including Intel\'s new fab investment) driving population growth and healthcare demand',
+      'Streamlined licensure — the Ohio Board of Nursing typically processes applications in 2-4 weeks',
     ],
-    costOfLivingNote: 'Columbus offers 7% below average cost of living with housing costs roughly 15% below national median. The city\'s growing tech sector (Intel\'s new fab plant, Amazon HQ2 runner-up) is driving economic growth without the cost spikes seen in coastal cities. PMHNPs enjoy strong purchasing power here.',
-    licensureNote: 'Ohio has Full Practice Authority for PMHNPs — no physician supervision or collaborative agreement required. This means you can practice independently, prescribe controlled substances, and even open your own practice immediately after licensure. Ohio Board of Nursing processes applications in 2-4 weeks.',
-    mentalHealthContext: 'Ohio has been heavily impacted by the opioid crisis, creating significant demand for psychiatric providers specializing in substance use disorders and co-occurring conditions. Columbus\'s growing and increasingly diverse population adds demand across the full spectrum of psychiatric care.',
-    topSettings: ['Community mental health centers', 'Outpatient clinics', 'Academic medical centers', 'Private practice', 'Substance abuse treatment', 'Telehealth'],
+    costOfLivingNote: 'Cost of living runs 7% below the national average, with housing costs roughly 15% below the national median. The city\'s growing tech sector is driving economic growth without the cost spikes seen in coastal metros, so NPs enjoy strong purchasing power here.',
+    licensureNote: 'Ohio is a reduced-practice state — NPs practice under a Standard Care Arrangement with a collaborating physician, which most employers set up during onboarding. Prescriptive authority, including controlled substances with appropriate registration, is exercised under that arrangement, and the Ohio Board of Nursing typically processes applications in 2-4 weeks.',
+    mentalHealthContext: 'Columbus is the fastest-growing major city in Ohio, and its increasingly diverse population adds demand across primary care, pediatrics, geriatrics, and behavioral health. State investment in community-based care — including the response to the opioid crisis — has expanded team-based roles that rely on NPs.',
+    topSettings: ['Academic medical centers', 'Outpatient clinics', 'Community health centers', 'Pediatrics', 'Telehealth', 'Urgent care'],
     faqs: [
-      { question: 'What is the average PMHNP salary in Columbus, OH?', answer: 'PMHNPs in Columbus earn $125,000–$160,000 annually, with the average around $140,000. Adjusted for Ohio\'s low cost of living, this provides purchasing power equivalent to $170K+ in cities like Boston or Seattle. Private practice PMHNPs with full panels can earn $180K+.' },
-      { question: 'Does Ohio have full practice authority for PMHNPs?', answer: 'Yes! Ohio grants Full Practice Authority to all nurse practitioners, including PMHNPs. No physician supervision, no collaborative agreement, no supervised hour requirements. You can prescribe schedule II-V controlled substances independently and open your own practice immediately after licensure.' },
-      { question: 'What makes Columbus a good market for PMHNPs?', answer: 'Columbus combines Full Practice Authority, below-average cost of living, and a growing population (fastest-growing major city in Ohio). The Ohio State Wexner Medical Center is one of the largest academic medical centers in the country, and the city\'s opioid crisis response has created significant demand for psychiatric providers.' },
+      { question: 'What is the average NP salary in Columbus, OH?', answer: 'Ohio NP salaries generally track near national levels, and Columbus\'s cost of living — 7% below the national average — gives that pay unusually strong purchasing power. Check live Columbus listings with posted salary on this board for current ranges by specialty and setting.' },
+      { question: 'Does Ohio have full practice authority for NPs?', answer: 'No — Ohio is a reduced-practice state. NPs work under a Standard Care Arrangement with a collaborating physician; the physician does not need to be on-site, and most employers arrange the collaboration for you. Legislation to remove the arrangement has been introduced in recent sessions, so watch the Ohio Board of Nursing for updates.' },
+      { question: 'What makes Columbus a good market for NPs?', answer: 'Columbus pairs below-average living costs with a deep healthcare ecosystem — Ohio State Wexner Medical Center is one of the largest academic medical centers in the country, and OhioHealth and Nationwide Children\'s add system-level demand. Steady population growth keeps new clinics, urgent care sites, and telehealth roles opening across the metro.' },
     ],
   },
   {
@@ -157,21 +172,21 @@ export const METRO_CITIES: MetroCity[] = [
     population: '390K (city) / 3.2M+ (metro)',
     practiceAuthority: 'Restricted',
     avgCostOfLiving: '2% above US average',
-    heroDescription: 'The Tampa Bay metro is Florida\'s fastest-growing healthcare market, with major systems like BayCare, AdventHealth, and Tampa General Hospital actively recruiting PMHNPs. Zero state income tax and year-round warm weather make it a top relocation destination.',
+    heroDescription: 'The Tampa Bay metro is one of Florida\'s fastest-growing healthcare markets, with major systems like BayCare, AdventHealth, and Tampa General Hospital actively recruiting NPs. Zero state income tax and year-round warm weather make it a top relocation destination.',
     whyThisMetro: [
-      'No state income tax — effectively boosts take-home pay by 6-9%',
-      'Tampa Bay area growing rapidly — 3.2M+ metro population and rising',
-      'BayCare, AdventHealth, Tampa General, Moffitt — world-class health systems',
-      'Booming telehealth sector with companies like Talkiatry and Cerebral hiring here',
+      'No state income tax and living costs only 2% above the national average',
+      'BayCare, AdventHealth, Tampa General, and Moffitt Cancer Center anchor a deep employer market',
+      'Fast-growing 3.2M+ metro population — including retirees and military families — sustaining demand',
+      'A booming telehealth sector plus a pathway to autonomous primary-care practice under Florida law',
     ],
-    costOfLivingNote: 'Tampa Bay\'s cost of living is only 2% above the national average — dramatically more affordable than Miami or South Florida. Housing in suburbs like Brandon, Wesley Chapel, and Riverview is particularly affordable. Combined with zero state income tax, PMHNPs in Tampa enjoy excellent value.',
-    licensureNote: 'Florida has Restricted Practice Authority with a pathway to independence — PMHNPs with 3,000+ supervised hours can practice autonomously. The Tampa Bay area has numerous physician collaborators available, making the initial supervision period straightforward.',
-    mentalHealthContext: 'Tampa Bay has seen significant population growth, particularly among retirees and military families (MacDill Air Force Base). This creates demand for geriatric psychiatry, PTSD treatment, and general psychiatric care. The area\'s substance use challenges add further demand.',
-    topSettings: ['Outpatient clinics', 'Telehealth', 'Hospital systems', 'VA medical center', 'Senior living facilities', 'Private practice'],
+    costOfLivingNote: 'Cost of living in Tampa Bay is only 2% above the national average — dramatically more affordable than Miami or South Florida. Housing in suburbs like Brandon, Wesley Chapel, and Riverview is particularly affordable, and zero state income tax stretches take-home pay further.',
+    licensureNote: 'Florida NPs practice under a supervisory protocol with a physician, with a pathway to autonomous primary-care practice after 3,000+ supervised hours under the state\'s 2020 law. The Tampa Bay area has a deep bench of physician collaborators, making the supervision requirement straightforward, and the Florida Board of Nursing typically processes licenses in 4-6 weeks.',
+    mentalHealthContext: 'Tampa Bay\'s growth skews toward retirees and military families (MacDill Air Force Base), creating strong demand for geriatric care, chronic disease management, and veteran-focused services alongside general primary care. Hospital systems and senior living operators compete for NP talent across the metro.',
+    topSettings: ['Hospital systems', 'Outpatient clinics', 'Telehealth', 'VA medical center', 'Senior living facilities', 'Private practice'],
     faqs: [
-      { question: 'What is the average PMHNP salary in Tampa, FL?', answer: 'PMHNPs in the Tampa Bay area earn $128,000–$165,000 annually, with the average around $145,000. When factoring in zero state income tax, this is equivalent to $160K-$185K in states with income tax like California or New York.' },
-      { question: 'What is the job market like for PMHNPs in Tampa?', answer: 'The Tampa Bay PMHNP job market is strong and growing. Major employers include BayCare Health System, AdventHealth, Tampa General Hospital, and the James A. Haley VA Medical Center. The telehealth sector is also booming, with several national companies headquartered or operating heavily in the Tampa area.' },
-      { question: 'Is Tampa a good city for PMHNPs relocating from out of state?', answer: 'Tampa is one of the top relocation destinations for PMHNPs. Zero state income tax, affordable cost of living, year-round warm weather, and abundant job opportunities make it extremely attractive. Florida Board of Nursing processes out-of-state license endorsements in 4-6 weeks.' },
+      { question: 'What is the average NP salary in Tampa, FL?', answer: 'Florida NP salaries generally track close to national levels, and zero state income tax plus a near-average cost of living means Tampa NPs keep more of what they earn than colleagues in most high-tax states. Check live Tampa Bay listings with posted salary on this board for current ranges by specialty and setting.' },
+      { question: 'What is the job market like for NPs in Tampa?', answer: 'Strong and growing. Major employers include BayCare Health System, AdventHealth, Tampa General Hospital, and the James A. Haley VA Medical Center, and telehealth companies operate heavily in the area. The metro\'s rapid population growth keeps demand ahead of supply in many specialties.' },
+      { question: 'Is Tampa a good city for NPs relocating from out of state?', answer: 'Tampa is one of the top relocation destinations for NPs: zero state income tax, near-average cost of living, year-round warm weather, and abundant openings. The Florida Board of Nursing typically processes out-of-state license endorsements in 4-6 weeks.' },
     ],
   },
   {
@@ -185,21 +200,21 @@ export const METRO_CITIES: MetroCity[] = [
     population: '1.6M (city) / 4.9M+ (metro)',
     practiceAuthority: 'Full',
     avgCostOfLiving: '3% above US average',
-    heroDescription: 'Phoenix is one of the fastest-growing PMHNP markets in the country, with Full Practice Authority and rapidly expanding healthcare infrastructure. Arizona\'s NP workforce is growing faster than any other state, driven by massive population influx and critical mental health provider shortages.',
+    heroDescription: 'Phoenix is one of the fastest-growing NP markets in the country, with Full Practice Authority and rapidly expanding healthcare infrastructure. Population growth keeps outpacing provider supply, creating opportunities across every specialty and setting.',
     whyThisMetro: [
-      'Full Practice Authority — independent prescribing and practice from day one',
-      'Arizona has the fastest-growing NP workforce in the nation',
-      'Banner Health, Dignity Health, HonorHealth — major systems aggressively hiring',
-      'Massive population growth (5th largest US city) outpacing provider supply',
+      'Living costs only 3% above the national average — remarkably affordable for a major metro',
+      'Banner Health, Dignity Health, HonorHealth, and Valleywise Health hiring across the Valley',
+      'Rapid population growth (5th-largest US city) outpacing provider supply, with shortage-area loan-repayment sites nearby',
+      'Full Practice Authority — independent practice and prescribing from day one',
     ],
-    costOfLivingNote: 'Phoenix\'s cost of living is only 3% above the national average, making it remarkably affordable for a major metro. Housing is significantly cheaper than California (where many Phoenix transplants originate). No state income tax on retirement income adds appeal for semi-retired practitioners.',
-    licensureNote: 'Arizona has Full Practice Authority for PMHNPs — no physician supervision or collaborative agreement needed. PMHNPs can prescribe controlled substances independently and open their own practices. Arizona Board of Nursing is one of the fastest processors in the country (2-3 weeks).',
-    mentalHealthContext: 'Arizona faces a critical mental health workforce shortage — the state has only 65% of the psychiatrists needed. The rapid population growth (primarily from California, Illinois, and the Midwest) is creating demand that far outpaces supply. Rural areas surrounding Phoenix metro have Health Professional Shortage Area (HPSA) designations with loan repayment eligibility.',
-    topSettings: ['Outpatient clinics', 'Telehealth', 'Community mental health', 'VA medical centers', 'Private practice', 'Integrated behavioral health'],
+    costOfLivingNote: 'Cost of living in Phoenix is only 3% above the national average, making it remarkably affordable for a metro of its size. Housing is significantly cheaper than coastal California, where many Phoenix transplants originate, and Arizona\'s flat 2.5% state income tax is among the lowest in the country.',
+    licensureNote: 'Arizona grants Full Practice Authority — no physician supervision or collaborative agreement is required, and NPs can prescribe controlled substances (with appropriate registration) and open independent practices. The Arizona Board of Nursing is one of the faster processors in the country, typically 2-3 weeks.',
+    mentalHealthContext: 'Maricopa County\'s rapid growth — much of it from California and the Midwest — keeps healthcare demand ahead of provider supply across primary care, geriatrics, pediatrics, and specialty care. Rural communities surrounding the Phoenix metro carry federal shortage designations, and many roles there qualify for loan repayment.',
+    topSettings: ['Outpatient clinics', 'Telehealth', 'Community health centers', 'VA medical centers', 'Private practice', 'Urgent care'],
     faqs: [
-      { question: 'What is the average PMHNP salary in Phoenix, AZ?', answer: 'PMHNPs in Phoenix earn $130,000–$175,000 annually, with the average around $150,000. The combination of competitive salary, low cost of living, Full Practice Authority, and no commute time (with telehealth) makes Phoenix one of the highest net-value PMHNP markets in the US.' },
-      { question: 'Does Arizona have full practice authority for PMHNPs?', answer: 'Yes — Arizona provides Full Practice Authority for all nurse practitioners. PMHNPs can practice independently, prescribe schedule II-V controlled substances, and open their own practices without physician oversight. Arizona is one of the most NP-friendly states in the country.' },
-      { question: 'What are the best employers for PMHNPs in Phoenix?', answer: 'Top employers include Banner Health (Arizona\'s largest health system), Dignity Health/CommonSpirit, HonorHealth, Valleywise Health (county safety net), and the Phoenix VA Health Care System. National telehealth companies like Talkiatry and Cerebral also have strong presence. Private practice opportunities are abundant due to Full Practice Authority.' },
+      { question: 'What is the average NP salary in Phoenix, AZ?', answer: 'Phoenix NP pay is competitive with other large Sun Belt metros, and the combination of near-average living costs, a low flat state income tax, and Full Practice Authority makes the net value proposition one of the strongest in the country. Check live Phoenix listings with posted salary on this board for current ranges by specialty and setting.' },
+      { question: 'Does Arizona have full practice authority for NPs?', answer: 'Yes — Arizona grants Full Practice Authority to nurse practitioners. NPs can evaluate, diagnose, treat, and prescribe (including controlled substances with appropriate registration) independently, and can open their own practices without physician oversight. Arizona is one of the most NP-friendly states in the country.' },
+      { question: 'What are the best employers for NPs in Phoenix?', answer: 'Top employers include Banner Health (Arizona\'s largest health system), Dignity Health/CommonSpirit, HonorHealth, Valleywise Health (the county safety-net system), and the Phoenix VA Health Care System. National telehealth companies also hire Arizona-licensed NPs, and Full Practice Authority makes private practice a realistic path.' },
     ],
   },
   {
@@ -211,23 +226,23 @@ export const METRO_CITIES: MetroCity[] = [
     citySlug: 'dallas-tx',
     metroArea: 'Dallas-Fort Worth Metroplex',
     population: '1.3M (city) / 7.6M+ (metro)',
-    practiceAuthority: 'Reduced',
+    practiceAuthority: 'Restricted',
     avgCostOfLiving: '2% below US average',
-    heroDescription: 'The Dallas-Fort Worth metroplex is one of the largest and fastest-growing PMHNP markets in the South. No state income tax, below-average cost of living, and massive corporate healthcare presence make DFW an excellent market for both new and experienced psychiatric NPs.',
+    heroDescription: 'The Dallas-Fort Worth metroplex is one of the largest and fastest-growing NP markets in the South. No state income tax, below-average cost of living, and a massive healthcare footprint make DFW an excellent market for both new and experienced nurse practitioners.',
     whyThisMetro: [
-      'No state income tax in Texas — immediate 6-9% take-home pay boost',
-      '7.6M+ metro population — 4th largest in the US and growing rapidly',
-      'UT Southwestern, Baylor Scott & White, Parkland — top academic and community systems',
-      'Strong private practice market with growing telehealth sector',
+      'No state income tax plus living costs 2% below the national average — exceptional purchasing power',
+      'UT Southwestern, Baylor Scott & White, and Parkland anchor top academic and community systems',
+      '7.6M+ metro population — 4th largest in the US — growing faster than provider supply',
+      'Strong private practice and telehealth markets across the metroplex',
     ],
-    costOfLivingNote: 'DFW cost of living sits 2% below the national average, with housing particularly affordable in suburbs like Frisco, McKinney, Plano, and Arlington. Combined with zero state income tax, PMHNPs in Dallas enjoy exceptional purchasing power — a $145K salary here goes as far as $185K+ in NYC.',
-    licensureNote: 'Texas has Reduced Practice Authority — PMHNPs must have a written collaborative agreement with a physician. After gaining experience, finding collaborative physicians is straightforward and many employers handle this arrangement. Texas Board of Nursing processes licenses in 4-6 weeks.',
-    mentalHealthContext: 'Texas has one of the lowest ratios of mental health providers to residents in the country, creating massive demand. The DFW metroplex\'s rapid corporate growth (Toyota, Goldman Sachs, Charles Schwab HQs) is bringing in professionals who need mental health services. Rural areas surrounding DFW have critical shortages.',
-    topSettings: ['Outpatient clinics', 'Private practice', 'Community mental health', 'Telehealth', 'Hospital systems', 'Correctional facilities'],
+    costOfLivingNote: 'Cost of living in DFW sits 2% below the national average, with housing particularly affordable in suburbs like Frisco, McKinney, Plano, and Arlington. Combined with zero state income tax, NP pay here stretches noticeably further than in coastal metros.',
+    licensureNote: 'Texas is a restricted-practice state — NPs practice under physician delegation through a Prescriptive Authority Agreement that outlines scope and protocols. Most employers facilitate the agreement, and it rarely limits day-to-day practice in employed settings. The Texas Board of Nursing typically processes licenses in 4-6 weeks.',
+    mentalHealthContext: 'DFW\'s corporate boom — Toyota, Goldman Sachs, and Charles Schwab have all located major operations here — keeps bringing new residents who need care, while rural counties surrounding the metroplex face persistent provider shortages. The result is sustained NP demand across primary care, urgent care, pediatrics, and specialty settings.',
+    topSettings: ['Hospital systems', 'Outpatient clinics', 'Private practice', 'Telehealth', 'Urgent care', 'Community health centers'],
     faqs: [
-      { question: 'What is the average PMHNP salary in Dallas, TX?', answer: 'PMHNPs in the DFW area earn $130,000–$170,000 annually, with the average around $148,000. With zero state income tax, a DFW PMHNP keeps significantly more than colleagues in states like California (13.3% top rate) or New York (8.8% top rate).' },
-      { question: 'Does Texas have full practice authority for PMHNPs?', answer: 'Texas has Reduced Practice Authority — PMHNPs must maintain a collaborative agreement with a physician. The agreement is a prescriptive authority agreement (PAA) that outlines scope and protocols. Most employers facilitate these agreements, and they don\'t significantly limit day-to-day practice.' },
-      { question: 'Why is Dallas a top market for PMHNP jobs?', answer: 'DFW combines the 4th-largest US metro population with one of the worst mental health provider-to-patient ratios in the country. Add zero state income tax, below-average cost of living, and major health systems actively recruiting, and you get one of the strongest overall value propositions for PMHNPs anywhere in the US.' },
+      { question: 'What is the average NP salary in Dallas, TX?', answer: 'Texas NP salaries generally track close to national levels, and zero state income tax means DFW NPs keep more of each paycheck than colleagues in high-tax states like California or New York. Check live DFW listings with posted salary on this board for current ranges by specialty and setting.' },
+      { question: 'Does Texas have full practice authority for NPs?', answer: 'No — Texas is a restricted-practice state. NPs work under physician delegation via a Prescriptive Authority Agreement (PAA) that outlines scope and prescribing protocols. Most employers arrange the PAA as part of onboarding, and it rarely limits day-to-day practice in employed settings.' },
+      { question: 'Why is Dallas a top market for NP jobs?', answer: 'DFW combines the 4th-largest US metro population with rapid growth, zero state income tax, and below-average living costs. Major academic and community systems — UT Southwestern, Baylor Scott & White, Parkland — hire NPs at scale, and surrounding rural shortage areas add further demand.' },
     ],
   },
   {
@@ -241,21 +256,21 @@ export const METRO_CITIES: MetroCity[] = [
     population: '2.7M (city) / 9.5M+ (metro)',
     practiceAuthority: 'Full',
     avgCostOfLiving: '7% above US average',
-    heroDescription: 'Chicago offers Full Practice Authority, a massive healthcare infrastructure, and a deep pool of opportunities across academic medical centers, community health centers, and private practices. The Midwest\'s largest metro provides strong salaries with more affordable living than coastal cities.',
+    heroDescription: 'Chicago offers Full Practice Authority for experienced NPs, a massive healthcare infrastructure, and deep opportunities across academic medical centers, community health centers, and private practices. The Midwest\'s largest metro provides competitive salaries with more affordable living than coastal cities.',
     whyThisMetro: [
-      'Full Practice Authority — independent practice with no physician oversight',
-      'World-class academic medical centers: Northwestern, Rush, UIC, Loyola',
-      'Large underserved communities on the South and West sides with loan repayment eligibility',
-      'More affordable than NYC, Boston, or LA while maintaining competitive salaries',
+      'More affordable than NYC, Boston, or LA while maintaining competitive NP salaries',
+      'World-class academic medical centers: Northwestern, Rush, UChicago Medicine, UIC, Loyola',
+      'Large underserved communities on the South and West sides with federal loan-repayment eligibility',
+      'Full Practice Authority for NPs who complete Illinois\'s transition-to-practice requirements',
     ],
-    costOfLivingNote: 'Chicago\'s cost of living is 7% above the national average, driven by housing in popular neighborhoods. Suburbs like Naperville, Schaumburg, and Oak Park offer significantly more affordable options. Compared to NYC (37% above) or LA (43% above), Chicago provides much better value for the salary range.',
-    licensureNote: 'Illinois has Full Practice Authority effective since 2023 (after 250 hours of physician collaboration). PMHNPs can prescribe controlled substances independently and open their own practices. Illinois Board of Nursing processes licenses in 4-6 weeks.',
-    mentalHealthContext: 'Chicago faces significant mental health disparities, with South and West side communities having dramatically less access to psychiatric care than affluent areas. Gun violence trauma, substance use, and generational poverty create intense demand for psychiatric services. The city\'s large immigrant population also requires culturally competent mental health care.',
-    topSettings: ['Community mental health centers', 'Academic medical centers', 'Outpatient clinics', 'Private practice', 'VA medical center', 'Telehealth'],
+    costOfLivingNote: 'Cost of living in Chicago is 7% above the national average, driven by housing in popular neighborhoods. Suburbs like Naperville, Schaumburg, and Oak Park offer significantly more affordable options, and compared with NYC (37% above) or LA (43% above), Chicago delivers much better value for the salary range.',
+    licensureNote: 'Illinois grants Full Practice Authority to NPs who complete the state\'s transition requirements — 4,000 hours of clinical experience plus 250 hours of continuing education or training after national certification — after which they can practice and prescribe independently. Until then, NPs work under a written collaborative agreement, and licenses are typically processed in 4-6 weeks.',
+    mentalHealthContext: 'Chicago\'s healthcare access varies sharply by neighborhood — South and West side communities have far fewer providers per resident than affluent areas, creating strong demand for NPs in community health centers and safety-net systems. The city\'s large immigrant population also puts a premium on multilingual, culturally competent care.',
+    topSettings: ['Academic medical centers', 'Community health centers', 'Outpatient clinics', 'Private practice', 'VA medical center', 'Telehealth'],
     faqs: [
-      { question: 'What is the average PMHNP salary in Chicago?', answer: 'PMHNPs in Chicago earn $135,000–$180,000 annually, with the average around $155,000. Academic medical center positions tend to offer slightly lower base pay but include excellent benefits and loan repayment. Community mental health and private practice roles offer the highest compensation.' },
-      { question: 'Does Illinois have full practice authority for PMHNPs?', answer: 'Yes — Illinois enacted Full Practice Authority in 2023. New PMHNPs complete 250 hours of collaboration with a physician (roughly 3-4 months), after which they can practice independently. This makes Illinois one of the most NP-friendly states in the Midwest.' },
-      { question: 'What neighborhoods have the most PMHNP opportunities in Chicago?', answer: 'PMHNP jobs are concentrated in the Loop and River North (medical district), but the highest demand is on the South Side (communities like Roseland, Englewood, Chatham) and West Side (Austin, Lawndale) where mental health provider shortages are most severe. These areas often qualify for federal loan repayment programs.' },
+      { question: 'What is the average NP salary in Chicago?', answer: 'Illinois NP pay is competitive among large Midwest metros, and Chicago\'s cost of living — well below NYC or LA — makes salaries stretch further. Academic medical centers often trade slightly lower base pay for strong benefits and loan-repayment programs. Check live Chicago listings with posted salary on this board for current ranges by specialty and setting.' },
+      { question: 'Does Illinois have full practice authority for NPs?', answer: 'Yes — Illinois grants Full Practice Authority to NPs who complete the state\'s transition requirements (4,000 clinical hours plus 250 hours of continuing education or training after national certification). Until then, NPs practice under a written collaborative agreement, and most health systems structure early-career roles to build toward full authority.' },
+      { question: 'What neighborhoods have the most NP opportunities in Chicago?', answer: 'Hospital and academic roles concentrate in the Illinois Medical District, the Loop, and Streeterville. The strongest demand, though, is on the South Side (Roseland, Englewood, Chatham) and West Side (Austin, Lawndale), where provider shortages are most severe — those roles often qualify for federal loan repayment.' },
     ],
   },
   {
@@ -269,21 +284,21 @@ export const METRO_CITIES: MetroCity[] = [
     population: '750K (city) / 4M+ (metro)',
     practiceAuthority: 'Full',
     avgCostOfLiving: '49% above US average',
-    heroDescription: 'Seattle offers some of the highest PMHNP salaries in the country, backed by Full Practice Authority and a progressive mental health landscape. The tech-driven economy creates unique psychiatric needs and willingness-to-pay, while state-level mental health crisis funding adds resources.',
+    heroDescription: 'Seattle offers some of the highest NP salaries in the country, backed by Full Practice Authority and no state income tax on wages. A deep hospital market, a tech-driven economy, and a mature telehealth sector create demand across specialties.',
     whyThisMetro: [
-      'Among the highest-paying PMHNP markets: $155K–$210K+',
-      'Full Practice Authority — independent prescribing from day one',
-      'Washington state leads in mental health crisis funding and program support',
-      'Tech-sector workforce creating demand for anxiety, burnout, and ADHD treatment',
+      'Washington is consistently among the top-paying states for NPs, with no state income tax on wages',
+      'UW Medicine, Providence Swedish, Virginia Mason Franciscan, and MultiCare anchor the hospital market',
+      'State-funded community and public health programs add roles beyond the big hospital systems',
+      'Full Practice Authority — independent practice and prescribing from day one',
     ],
-    costOfLivingNote: 'Seattle is 49% above the national average, primarily due to housing. However, Washington has no state income tax, which offsets roughly 6-9% of the cost premium. Many PMHNPs work in Seattle but live in more affordable areas like Tacoma, Everett, or Olympia. Telehealth positions eliminate the commute entirely.',
-    licensureNote: 'Washington has Full Practice Authority for PMHNPs — no physician supervision or collaborative agreement needed. PMHNPs can prescribe all controlled substances and practice independently. Washington also has robust mental health parity laws ensuring good insurance reimbursement.',
-    mentalHealthContext: 'Seattle\'s booming tech industry has created a population with high rates of anxiety, burnout, and ADHD. The city also faces significant homelessness and substance use challenges. Washington state has invested heavily in mental health crisis response, creating funded positions throughout the region.',
-    topSettings: ['Tech-company partnered clinics', 'Private practice', 'Telehealth', 'Community mental health', 'Hospital systems', 'Substance abuse treatment'],
+    costOfLivingNote: 'Cost of living in Seattle runs 49% above the national average, primarily due to housing. Washington has no state income tax on wages, which offsets part of the premium, and many NPs live in Tacoma, Everett, or Olympia — or take telehealth roles — to balance costs.',
+    licensureNote: 'Washington grants Full Practice Authority — NPs (licensed as ARNPs) practice and prescribe independently, including controlled substances with appropriate registration, with no physician supervision or collaborative agreement required. Licensure runs through the Washington State Department of Health.',
+    mentalHealthContext: 'Seattle\'s tech-driven economy supports a well-insured patient population with high engagement in care, while the region also faces housing and public-health challenges that drive demand in safety-net settings. The result is a two-sided market: well-funded private and employer-sponsored care on one side, mission-driven community health roles on the other.',
+    topSettings: ['Hospital systems', 'Private practice', 'Telehealth', 'Community health centers', 'Outpatient clinics', 'Urgent care'],
     faqs: [
-      { question: 'What is the average PMHNP salary in Seattle, WA?', answer: 'PMHNPs in Seattle earn $155,000–$210,000+ annually, making it one of the top 3 highest-paying markets nationally. The average is approximately $178,000. With no state income tax, the effective take-home pay is exceptional. Private practice and telehealth roles can exceed $220K.' },
-      { question: 'Does Washington have full practice authority for PMHNPs?', answer: 'Yes — Washington provides Full Practice Authority for all nurse practitioners. PMHNPs can practice independently, prescribe schedule II-V controlled substances, and establish their own practices. The state also has strong mental health parity laws ensuring fair insurance reimbursement for psychiatric services.' },
-      { question: 'What makes Seattle unique for PMHNP careers?', answer: 'Seattle\'s tech industry creates a unique patient population with high rates of anxiety, burnout, and ADHD. Companies like Amazon, Microsoft, and Meta have employee assistance programs that frequently refer to psychiatric providers. This creates a population with good insurance coverage and willingness to engage in mental health treatment — ideal for private practice PMHNPs.' },
+      { question: 'What is the average NP salary in Seattle, WA?', answer: 'Washington is consistently among the top-paying states for nurse practitioners in BLS wage data, and Seattle salaries typically lead the state. With no state income tax on wages, take-home pay compares favorably even against other high-paying metros. Check live Seattle listings with posted salary on this board for current ranges by specialty and setting.' },
+      { question: 'Does Washington have full practice authority for NPs?', answer: 'Yes — Washington is a full-practice-authority state. NPs evaluate, diagnose, treat, and prescribe independently (including Schedule II-V controlled substances with appropriate registration) and can establish their own practices without physician oversight.' },
+      { question: 'What makes Seattle unique for NP careers?', answer: 'Seattle combines top-tier pay, Full Practice Authority, and an unusually broad mix of settings: major hospital systems like UW Medicine and Providence Swedish, employer-sponsored clinics in the tech sector, a mature telehealth market, and mission-driven community health roles. Generous tech-sector health benefits also support strong private-practice and specialty demand.' },
     ],
   },
   {
@@ -295,23 +310,23 @@ export const METRO_CITIES: MetroCity[] = [
     citySlug: 'atlanta-ga',
     metroArea: 'Metro Atlanta',
     population: '500K (city) / 6.1M+ (metro)',
-    practiceAuthority: 'Reduced',
+    practiceAuthority: 'Restricted',
     avgCostOfLiving: '3% above US average',
-    heroDescription: 'Atlanta is the Southeast\'s largest healthcare hub, home to the CDC, Emory University, and a massive network of health systems. The 6.1M+ metro population, combined with significant mental health access gaps in surrounding areas, creates strong and sustained PMHNP demand.',
+    heroDescription: 'Atlanta is the Southeast\'s largest healthcare hub, home to the CDC, Emory Healthcare, and a deep network of health systems. A 6.1M+ metro population and significant access gaps in surrounding areas create strong, sustained NP demand.',
     whyThisMetro: [
-      'Southeast\'s largest healthcare market with world-class institutions',
-      'Emory University, Grady Health, WellStar, Piedmont — major employers',
-      'Growing metro population (6.1M+) with significant underserved communities',
-      'Cost of living only 3% above average — excellent value for the Southeast',
+      'Living costs only 3% above the national average — excellent value for a metro this size',
+      'Emory Healthcare, Grady Health, Wellstar, and Piedmont hire NPs at scale across the metro',
+      'Surrounding rural counties carry provider-shortage designations, adding loan-repayment-eligible roles',
+      'A growing 6.1M+ metro with deep telehealth and outpatient markets',
     ],
-    costOfLivingNote: 'Atlanta\'s cost of living is only 3% above the national average — dramatically more affordable than other major metros of similar size. Suburbs like Marietta, Decatur, Alpharetta, and Kennesaw offer excellent value. Georgia has a moderate state income tax (5.49% flat rate as of 2024).',
-    licensureNote: 'Georgia has Reduced Practice Authority — PMHNPs must have a collaborative agreement (protocol agreement) with a physician. The physician can supervise up to 8 NPs. Georgia Board of Nursing processes licenses in 4-8 weeks. Georgia is in the Nurse Licensure Compact (NLC).',
-    mentalHealthContext: 'Georgia ranks among the bottom 10 states for mental health workforce adequacy. Atlanta\'s underserved communities, particularly South Atlanta and surrounding rural counties, have critical psychiatric provider shortages. The city\'s large refugee and immigrant population adds cultural competency requirements to mental health care.',
-    topSettings: ['Community mental health centers', 'Hospital systems', 'Outpatient clinics', 'Telehealth', 'VA medical center', 'Private practice'],
+    costOfLivingNote: 'Cost of living in Atlanta is only 3% above the national average — dramatically more affordable than most metros of comparable size. Suburbs like Marietta, Decatur, Alpharetta, and Kennesaw offer excellent value, and Georgia\'s flat state income tax (5.49% as of 2024, with scheduled reductions) keeps take-home pay predictable.',
+    licensureNote: 'Georgia is a restricted-practice state — NPs practice under a physician protocol agreement that defines scope of practice and prescriptive guidelines, and most employers arrange the agreement as part of hiring. The Georgia Board of Nursing typically processes licenses in 4-8 weeks.',
+    mentalHealthContext: 'Metro Atlanta\'s growth is uneven — affluent northern suburbs are well served while South Atlanta and surrounding rural counties face persistent provider shortages. The city\'s large refugee and immigrant communities add demand for multilingual, culturally competent care, and safety-net systems like Grady rely heavily on NPs.',
+    topSettings: ['Hospital systems', 'Community health centers', 'Outpatient clinics', 'Telehealth', 'VA medical center', 'Private practice'],
     faqs: [
-      { question: 'What is the average PMHNP salary in Atlanta, GA?', answer: 'PMHNPs in metro Atlanta earn $125,000–$165,000 annually, with the average around $143,000. Adjusted for cost of living (only 3% above average), this provides excellent purchasing power. Community mental health roles often include federal loan repayment eligibility.' },
-      { question: 'Does Georgia have full practice authority for PMHNPs?', answer: 'Georgia has Reduced Practice Authority — PMHNPs require a protocol agreement with a physician. The agreement outlines scope of practice and prescriptive guidelines. Most employers facilitate these arrangements. Georgia is part of the Nurse Licensure Compact, making it easier for multi-state licensees to start practicing.' },
-      { question: 'Is Atlanta a good city for PMHNPs starting their career?', answer: 'Yes. Atlanta\'s large healthcare ecosystem, anchored by Emory University and Grady Health System, provides excellent mentorship and training opportunities. The VA Atlanta Healthcare System also hires new graduates. The cost of living is very manageable on a new-grad PMHNP salary, and the growing metro area ensures long-term career stability.' },
+      { question: 'What is the average NP salary in Atlanta, GA?', answer: 'Georgia NP salaries generally track close to national levels, and Atlanta\'s cost of living — only 3% above the national average — gives that pay solid purchasing power for a metro this size. Community health roles often add federal loan-repayment eligibility. Check live Atlanta listings with posted salary on this board for current ranges.' },
+      { question: 'Does Georgia have full practice authority for NPs?', answer: 'No — Georgia is a restricted-practice state. NPs work under a protocol agreement with a supervising physician that defines scope of practice and prescriptive authority. Most employers facilitate the agreement as part of hiring, so it rarely blocks employed practice, though it does constrain independent practice ownership.' },
+      { question: 'Is Atlanta a good city for NPs starting their career?', answer: 'Yes. Atlanta\'s healthcare ecosystem — anchored by Emory Healthcare and Grady Health System — offers strong mentorship and training pathways, and the Atlanta VA also hires new graduates. Near-average living costs are manageable on a new-grad salary, and metro growth supports long-term stability.' },
     ],
   },
 ];

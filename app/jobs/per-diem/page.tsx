@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -33,7 +34,7 @@ async function getStats() {
 
 const faqs = [
   { q: `What is a per diem ${brand.niche.short}?`, a: `A per diem ${brand.niche.short} works on an as-needed basis, picking up shifts at healthcare facilities without a fixed schedule or long-term commitment. Per diem means "per day" — you get paid for each day you work, typically at higher hourly rates than permanent staff.` },
-  { q: `How much do per diem ${brand.niche.short}s earn?`, a: `Per diem ${brand.niche.short}s earn $80-$120+ per hour, which is 15-30% higher than permanent staff rates. Premium shifts (nights, weekends, holidays) can pay $100-$150/hour. Annual income varies based on shifts worked.` },
+  { q: `How much do per diem ${brand.niche.short}s earn?`, a: `Per diem rates typically run higher per hour than comparable benefited staff pay, since no benefits are attached, and premium shifts (nights, weekends, holidays) usually carry differentials. Actual rates vary widely by specialty, setting, and region — annual income depends on how many shifts you pick up.` },
   { q: 'What\'s the difference between per diem and PRN?', a: 'Per diem and PRN (pro re nata, meaning "as needed") are often used interchangeably. Both refer to on-call, shift-based work without guaranteed hours. Some facilities distinguish them — per diem may have minimum shift requirements while PRN is truly as-needed.' },
   { q: `Do per diem ${brand.niche.short}s get benefits?`, a: 'Most per diem positions do not include benefits like health insurance or PTO, which is why hourly rates are higher. Some hospital systems offer limited benefits (401k, employee discounts) to per diem staff who work a minimum number of shifts per month.' },
   { q: 'Can I work per diem at multiple facilities?', a: `Yes — many per diem ${brand.niche.short}s are credentialed at 2-4 facilities simultaneously. This maximizes shift availability and income flexibility. Check non-compete clauses and ensure each facility provides or accepts your malpractice coverage.` },
@@ -43,8 +44,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Per Diem ${brand.niche.short} Jobs ($80-120/hr)`,
-    description: `Find ${stats.totalJobs} per diem ${brand.niche.short} positions paying $80-120+/hr. Pick your shifts, no long-term commitment.`,
+    title: `${stats.totalJobs} Per Diem ${brand.niche.short} Jobs — Flexible Shifts`,
+    description: `Find ${stats.totalJobs} per diem ${brand.niche.short} positions. Pick your shifts, earn premium hourly rates, and skip the long-term commitment. Updated daily.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/per-diem` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
@@ -72,13 +73,13 @@ export default async function PerDiemPage({ searchParams }: PageProps) {
         heroAlt={`Per diem ${brand.niche.short} flexible scheduling`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Per Diem']}
-        indexLabel="№ 05 / 28"
+        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('per-diem') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Per Diem"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, pick your shifts."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$80/hr+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '—', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description="Pick your shifts, earn premium hourly rates, and work at multiple facilities with no long-term commitment."
@@ -120,7 +121,7 @@ export default async function PerDiemPage({ searchParams }: PageProps) {
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>No mandatory meetings, committees, or admin overhead.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_perdiem_shift.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Pick Shifts</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Choose days you work with no minimum hours.</p></div>
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_perdiem_wallet.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Premium Rates</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Earn $80-$120+/hr with night/weekend differentials.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_perdiem_wallet.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Premium Rates</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Higher hourly pay than benefited staff roles, plus night/weekend differentials.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_perdiem_nosign.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Multiple Sites</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Work at several facilities to diversify experience.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_perdiem_variety.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Low Commitment</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>No admin overhead — just clinical work.</p></div>
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>

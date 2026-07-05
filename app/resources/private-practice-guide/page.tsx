@@ -13,18 +13,18 @@ const LAST_REVIEWED = '2026-03-19';
 const HERO_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp`;
 
 export const metadata: Metadata = {
-  title: `How to Start a ${brand.niche.short} Private Practice — Step-by-Step Guide 2026`,
-  description: `Complete guide to starting your own ${brand.niche.adjective} NP private practice. LLC formation, insurance credentialing (CAQH, NPI), EHR setup, malpractice insurance, billing, overhead costs, and income projections ($200K-$300K+).`,
-  keywords: ['PMHNP private practice', 'how to start psychiatric NP private practice', 'PMHNP private practice income', 'psychiatric nurse practitioner own practice', 'PMHNP business startup', 'psych NP private practice'],
+  title: `How to Start an ${brand.niche.short} Private Practice — Step-by-Step Guide 2026`,
+  description: `Complete guide to starting your own ${brand.niche.short} private practice. LLC formation, insurance credentialing (CAQH, NPI), EHR setup, malpractice insurance, billing, overhead costs, and income projections ($200K-$300K+).`,
+  keywords: [`${brand.niche.short} private practice`, `how to start an ${brand.niche.short} private practice`, `${brand.niche.short} private practice income`, `${brand.niche.descriptor} own practice`, `${brand.niche.short} business startup`, `independent ${brand.niche.descriptor} practice`],
   openGraph: {
-    title: `How to Start a ${brand.niche.short} Private Practice — 2026 Guide`,
-    description: `Step-by-step guide to launching your own ${brand.niche.adjective} nurse practitioner private practice.`,
+    title: `How to Start an ${brand.niche.short} Private Practice — 2026 Guide`,
+    description: `Step-by-step guide to launching your own ${brand.niche.descriptor} private practice.`,
     type: 'article',
-    images: [{ url: HERO_IMAGE, width: 1280, height: 900, alt: `How to Start a ${brand.niche.short} Private Practice — 2026 Guide` }],
+    images: [{ url: HERO_IMAGE, width: 1280, height: 900, alt: `How to Start an ${brand.niche.short} Private Practice — 2026 Guide` }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `How to Start a ${brand.niche.short} Private Practice — 2026 Guide`,
+    title: `How to Start an ${brand.niche.short} Private Practice — 2026 Guide`,
     images: [HERO_IMAGE],
   },
   alternates: { canonical: `${brand.baseUrl}/resources/private-practice-guide` },
@@ -68,12 +68,11 @@ export default function PrivatePracticeGuidePage() {
       number: 4,
       title: 'Set Up Your EHR & Billing',
       icon: BookOpen,
-      content: `Choose an EHR (Electronic Health Records) system with integrated billing. Popular options for ${brand.niche.adjective} private practices include:`,
+      content: `Choose an EHR (Electronic Health Records) system with integrated billing. Popular options for ${brand.niche.short} private practices include:`,
       details: [
-        'SimplePractice: $69-$99/month — Popular for psych practices, includes telehealth',
-        'TherapyNotes: $49-$59/month — Designed for mental health, excellent documentation',
-        'Valant: Custom pricing — Built specifically for behavioral health practices',
+        'SimplePractice: $69-$99/month — Popular for solo and telehealth practices',
         'DrChrono: $200+/month — Full-featured, good for larger practices',
+        'Tebra (formerly Kareo): Custom pricing — Built for independent medical practices',
         'Consider outsourcing billing ($500-$1,500/month or 6-8% of collections)',
       ],
     },
@@ -97,8 +96,8 @@ export default function PrivatePracticeGuidePage() {
       content: `Plan for 3-6 months to build a full caseload. A typical full-time private practice ${brand.niche.short} sees 20-30 patients per week.`,
       details: [
         'Create a professional website with online scheduling',
-        'Register on Psychology Today ($29.95/month) and Zocdoc',
-        'Network with local therapists, PCPs, and psychiatrists for referrals',
+        'Register on provider directories like Zocdoc and Healthgrades',
+        'Network with local physicians, specialists, and community organizations for referrals',
         'Consider contract work initially to maintain income while building',
         'Set competitive rates: $150-$300 for initial evaluations, $100-$200 for follow-ups',
       ],
@@ -107,16 +106,16 @@ export default function PrivatePracticeGuidePage() {
 
   const ppFaqs = [
     {
-      question: `How much does it cost to start a ${brand.niche.short} private practice?`,
+      question: `How much does it cost to start an ${brand.niche.short} private practice?`,
       answer: `Startup costs range from $5,000-$20,000 for a lean telehealth practice to $30,000-$75,000 for a brick-and-mortar office. Core costs include PLLC formation ($100-500), EHR ($50-200/month), malpractice insurance ($1,500-3,000/year), credentialing fees, and marketing. Many ${brand.niche.short}s start with a virtual practice to minimize overhead.`
     },
     {
-      question: `How much can a ${brand.niche.short} private practice owner earn?`,
+      question: `How much can an ${brand.niche.short} private practice owner earn?`,
       answer: `After building a full caseload (20-30 patients/week), private practice ${brand.niche.short}s typically earn $200,000-$300,000+ gross revenue. After overhead (25-40%), net income is $120,000-$225,000+. Top earners seeing 30+ patients/week with efficient overhead can net $250,000+. Telehealth practices generally have lower overhead (15-25%).`
     },
     {
       question: "How long does it take to build a full private practice caseload?",
-      answer: `Most ${brand.niche.short}s reach a full caseload within 6-12 months. Factors that speed this up include accepting insurance (vs cash-only), being in an underserved area, Psychology Today listing, networking with local therapists, and having a specialty niche. Many ${brand.niche.short}s maintain part-time employment while building their practice.`
+      answer: `Most ${brand.niche.short}s reach a full caseload within 6-12 months. Factors that speed this up include accepting insurance (vs cash-only), being in an underserved area, directory listings (Zocdoc, Healthgrades), networking with local providers, and having a specialty niche. Many ${brand.niche.short}s maintain part-time employment while building their practice.`
     },
     {
       question: "Should I accept insurance or go cash-pay only?",
@@ -124,7 +123,7 @@ export default function PrivatePracticeGuidePage() {
     },
     {
       question: `Can new grad ${brand.niche.short}s open a private practice?`,
-      answer: `It is possible but not recommended. Most experts suggest gaining 2-3 years of clinical experience in structured settings (community ${brand.niche.category}, group practices) before opening a private practice. This builds clinical confidence, medication management skills, and a professional network for referrals.`
+      answer: `It is possible but not recommended. Most experts suggest gaining 2-3 years of clinical experience in structured settings (community health centers, group practices) before opening a private practice. This builds clinical confidence, medication management skills, and a professional network for referrals.`
     },
   ];
 
@@ -158,8 +157,8 @@ export default function PrivatePracticeGuidePage() {
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'Article',
-            headline: `How to Start a ${brand.niche.short} Private Practice — 2026 Step-by-Step Guide`,
-            description: `Complete guide to starting your own ${brand.niche.adjective} NP private practice — LLC formation, insurance credentialing, EHR setup, malpractice, billing, and income projections.`,
+            headline: `How to Start an ${brand.niche.short} Private Practice — 2026 Step-by-Step Guide`,
+            description: `Complete guide to starting your own ${brand.niche.short} private practice — LLC formation, insurance credentialing, EHR setup, malpractice, billing, and income projections.`,
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
             image: HERO_IMAGE,
@@ -175,8 +174,8 @@ export default function PrivatePracticeGuidePage() {
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'HowTo',
-            name: `How to Start a ${brand.niche.short} Private Practice`,
-            description: `Step-by-step guide to launching your own ${brand.niche.adjective} nurse practitioner private practice.`,
+            name: `How to Start an ${brand.niche.short} Private Practice`,
+            description: `Step-by-step guide to launching your own ${brand.niche.descriptor} private practice.`,
             step: steps.map((s) => ({
               '@type': 'HowToStep',
               name: s.title,
@@ -195,13 +194,13 @@ export default function PrivatePracticeGuidePage() {
               <Building2 className="w-8 h-8" />
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              How to Start a {brand.niche.short} Private Practice
+              How to Start an {brand.niche.short} Private Practice
             </h1>
             <p className="text-sm text-teal-200 text-center mt-2 mb-4">
               Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} | Step-by-step startup guide
             </p>
             <p className="text-lg md:text-xl text-teal-100 mb-6">
-              From LLC formation to full caseload — everything you need to launch your {brand.niche.adjective} NP practice
+              From LLC formation to full caseload — everything you need to launch your {brand.niche.short} practice
             </p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-8 mt-8">
               <div className="text-center">

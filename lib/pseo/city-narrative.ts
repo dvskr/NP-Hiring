@@ -114,11 +114,11 @@ export function buildCityNarrative(
     const colPhrase = COST_PHRASES[ct];
     if (shortage) {
         parts.push(
-            `The federal HRSA designates ${city.name} as a Mental Health Professional Shortage Area, so positions here are typically eligible for NHSC Loan Repayment and federal loan forgiveness programs. The local ${colPhrase} (index ${city.costOfLivingIndex}) factors directly into compensation expectations.`,
+            `The federal HRSA designates ${city.name} as a Health Professional Shortage Area, so positions here are typically eligible for NHSC Loan Repayment and federal loan forgiveness programs. The local ${colPhrase} (index ${city.costOfLivingIndex}) factors directly into compensation expectations.`,
         );
     } else {
         parts.push(
-            `${city.name} is not currently a federally designated ${brand.niche.category} shortage area, but regional ${brand.niche.adjective} demand and the local ${colPhrase} (index ${city.costOfLivingIndex}) shape ${brand.niche.short} compensation in the market.`,
+            `${city.name} is not currently a federally designated health professional shortage area, but regional demand for ${brand.niche.short}s and the local ${colPhrase} (index ${city.costOfLivingIndex}) shape ${brand.niche.short} compensation in the market.`,
         );
     }
 
@@ -151,8 +151,8 @@ type TaxonomyLeadFn = (facts: CityNarrativeFacts) => string;
 const TAXONOMY_LEADS: Record<string, TaxonomyLeadFn> = {
     'remote': (f) => `Remote ${brand.niche.short} positions covering patients in ${f.city.stateCode} typically pay $130K–$200K+ and require active state licensure plus a HIPAA-compliant home setup. Many roles offer DEA-registered prescribing across multiple states via the Nurse Licensure Compact.`,
     'telehealth': (f) => `Telehealth ${brand.niche.short} roles serving ${f.city.name} and the wider ${f.city.state} market generally combine asynchronous documentation with scheduled video visits. Most employers require HIPAA-compliant equipment and at least one state license; multi-state Compact licensure expands earning potential.`,
-    'inpatient': (f) => `Inpatient ${brand.niche.short} positions in ${f.city.name} cover acute ${brand.niche.adjective} units, consult-liaison services, and crisis stabilization roles. Shift differentials, weekend premiums, and on-call stipends are common in addition to base salary.`,
-    'outpatient': (f) => `Outpatient ${brand.niche.short} roles in ${f.city.name} span community ${brand.niche.category} centers, group practices, and integrated primary-care settings. Typical caseloads run 12–18 patients per day with documentation time built in.`,
+    'inpatient': (f) => `Inpatient ${brand.niche.short} positions in ${f.city.name} cover acute inpatient units, hospitalist services, and step-down roles. Shift differentials, weekend premiums, and on-call stipends are common in addition to base salary.`,
+    'outpatient': (f) => `Outpatient ${brand.niche.short} roles in ${f.city.name} span community health centers, group practices, and integrated primary-care settings. Typical caseloads run 12–18 patients per day with documentation time built in.`,
     'travel': (f) => `Travel ${brand.niche.short} assignments routed through ${f.city.name} are usually 8–26 weeks with tax-free housing stipends, completion bonuses, and 20–50% premium pay over permanent equivalents. Most agencies handle multi-state licensure logistics.`,
     'full-time': (f) => `Full-time ${brand.niche.short} positions in ${f.city.name} typically offer comprehensive benefits — health, dental, vision, retirement match, malpractice coverage, and 4–6 weeks of PTO — alongside base salaries calibrated to ${COST_PHRASES[f.costTier]}.`,
     'part-time': (f) => `Part-time ${brand.niche.short} roles in ${f.city.name} commonly run 16–32 hours per week with prorated benefits or 1099 contractor structure. Many providers stack part-time roles across telehealth and in-person sites for schedule flexibility.`,
@@ -163,15 +163,15 @@ const TAXONOMY_LEADS: Record<string, TaxonomyLeadFn> = {
     'community-health': (f) => `Community-health ${brand.niche.short} roles in ${f.city.name} are based at FQHCs and similar safety-net providers. Most positions qualify for NHSC Loan Repayment ($50,000+ over a 2-year commitment) and 340B drug-pricing infrastructure expands medication access for patients.`,
     'entry-level': (f) => `Entry-level ${brand.niche.short} openings in ${f.city.name} usually accept applicants within 1–2 years of board certification and include structured onboarding plus access to senior ${brand.niche.short} mentorship for the first year.`,
     'geriatric': (f) => `Geriatric ${brand.niche.short} roles in ${f.city.name} commonly serve long-term care facilities, memory-care units, and home-based primary care. Reimbursement leans on Medicare structures and often includes per-visit RVU bonuses.`,
-    'hospital': (f) => `Hospital-based ${brand.niche.short} positions in ${f.city.name} include consult-liaison, inpatient psychiatry, and emergency ${brand.niche.adjective} assessment roles. Most carry shift differentials, on-call stipends, and CME funding.`,
-    'lgbtq': (f) => `LGBTQ-affirming ${brand.niche.short} roles in ${f.city.name} typically focus on gender-affirming ${brand.niche.adjective} care, minority stress, and integrated behavioral health within community-centered practices.`,
+    'hospital': (f) => `Hospital-based ${brand.niche.short} positions in ${f.city.name} include hospitalist, specialty service, and emergency department roles. Most carry shift differentials, on-call stipends, and CME funding.`,
+    'lgbtq': (f) => `LGBTQ-affirming ${brand.niche.short} roles in ${f.city.name} typically focus on gender-affirming care, preventive health, and integrated behavioral health within community-centered practices.`,
     'locum-tenens': (f) => `Locum tenens ${brand.niche.short} coverage in ${f.city.name} pays $90–$160 per hour with malpractice and travel costs covered by the agency. Assignments range from 4–26 weeks and are common for filling permanent-hire gaps.`,
     'mid-career': (f) => `Mid-career ${brand.niche.short} openings in ${f.city.name} target providers with 3–7 years of post-certification experience and typically include leadership-track compensation, lead-clinician roles, or expanded scope responsibilities.`,
     'per-diem': (f) => `Per-diem ${brand.niche.short} shifts in ${f.city.name} pay $80–$130 per hour without scheduled commitment. Most providers stack per-diem coverage with a primary employer for income smoothing.`,
     'private-practice': (f) => `Private-practice ${brand.niche.short} opportunities in ${f.city.name} include solo, group, and concierge models. Self-employed practitioners typically retain 65–75% of collected revenue after overhead, billing, and malpractice.`,
     'senior': (f) => `Senior ${brand.niche.short} roles in ${f.city.name} target providers with 7+ years of experience and typically include clinical leadership, supervisory authority over new graduates, and stipends for protocol development or quality improvement.`,
     'va': (f) => `VA ${brand.niche.short} positions in ${f.city.name} fall on the federal GS-12 to GS-14 pay scale with FEHB health coverage, the Thrift Savings Plan retirement match, and 26 days of paid leave annually. Federal practice authority generally supersedes state restrictions for VA-employed providers.`,
-    'veterans': (f) => `Veterans-focused ${brand.niche.short} roles in ${f.city.name} span VA medical centers, community-based outpatient clinics, and Vet Centers. Roles emphasize PTSD, military sexual trauma, and traumatic brain injury alongside general ${brand.niche.adjective} care.`,
+    'veterans': (f) => `Veterans-focused ${brand.niche.short} roles in ${f.city.name} span VA medical centers, community-based outpatient clinics, and Vet Centers. Roles emphasize service-connected conditions such as PTSD and traumatic brain injury alongside general primary care.`,
 };
 
 export function getTaxonomyLead(taxonomy: string, facts: CityNarrativeFacts): string | null {

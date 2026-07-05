@@ -636,8 +636,8 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
       <div style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FDFBF7 100%)', padding: '48px 0' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>{stateName} Overview</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Working as a {brand.niche.short} in {stateName}</h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Key information for {brand.niche.adjective} nurse practitioners practicing in {stateName}.</p>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Working as an {brand.niche.short} in {stateName}</h2>
+          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Key information for {brand.niche.descriptor}s practicing in {stateName}.</p>
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Practice Authority (8col) + Salary (4col) */}
@@ -838,7 +838,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
               { q: `What is the practice authority in ${stateName}?`, a: practiceAuthority ? practiceAuthority.details : `Practice authority in ${stateName} varies. Check state-specific NP practice regulations for the most current requirements.` },
               { q: `What is the average ${brand.niche.short} salary in ${stateName}?`, a: stats.avgSalary > 0 ? `The average ${brand.niche.short} salary in ${stateName} is $${stats.avgSalary}K/year. Salaries vary based on experience, setting, and whether the role is W-2 or 1099.` : `${brand.niche.short} salaries in ${stateName} typically range from $130K to $200K+ depending on setting and experience level.` },
               { q: `Which cities in ${stateName} have the most ${brand.niche.short} jobs?`, a: citiesWithJobs.length > 0 ? `Top cities for ${brand.niche.short} jobs in ${stateName} include ${citiesWithJobs.slice(0, 4).map(c => `${c.name} (${c.count} jobs)`).join(', ')}.` : `${brand.niche.short} positions in ${stateName} are distributed across multiple cities and include remote telehealth options.` },
-              { q: `Can I work remotely as a ${brand.niche.short} in ${stateName}?`, a: `Yes, many telehealth and remote ${brand.niche.short} positions allow you to practice from ${stateName}. You'll need an active NP license in the state where your patient resides.` },
+              { q: `Can I work remotely as an ${brand.niche.short} in ${stateName}?`, a: `Yes, many telehealth and remote ${brand.niche.short} positions allow you to practice from ${stateName}. You'll need an active NP license in the state where your patient resides.` },
             ].map((faq, idx) => (
               <details key={idx} className="faq-accordion" style={{ ...clayCard, overflow: 'hidden' }}>
                 <summary style={{ padding: '20px 28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', listStyle: 'none', fontSize: '16px', fontWeight: 700, color: '#1A2E35', lineHeight: 1.4 }}>
@@ -854,7 +854,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
             { q: `What is the practice authority in ${stateName}?`, a: practiceAuthority?.details || `Practice authority varies by state.` },
             { q: `What is the average ${brand.niche.short} salary in ${stateName}?`, a: stats.avgSalary > 0 ? `$${stats.avgSalary}K/year` : `$130K-$200K+` },
             { q: `Which cities in ${stateName} have the most ${brand.niche.short} jobs?`, a: citiesWithJobs.slice(0, 4).map(c => c.name).join(', ') || 'Multiple cities' },
-            { q: `Can I work remotely as a ${brand.niche.short} in ${stateName}?`, a: `Yes, many telehealth positions are available.` },
+            { q: `Can I work remotely as an ${brand.niche.short} in ${stateName}?`, a: `Yes, many telehealth positions are available.` },
           ].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>
       </div>

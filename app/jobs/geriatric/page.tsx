@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -32,16 +33,16 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: `What does a geriatric ${brand.niche.short} do?`, a: `Geriatric ${brand.niche.short}s specialize in treating ${brand.niche.adjective} conditions in older adults: dementia-related behavioral symptoms, late-life depression, anxiety, delirium, and polypharmacy management in nursing homes, assisted living, and outpatient settings.` },
-  { q: `What salary do geriatric ${brand.niche.short}s earn?`, a: `Geriatric ${brand.niche.short}s earn $130K-$175K annually. Nursing home circuit roles with multiple facility coverage often pay premium rates due to travel and autonomous practice requirements.` },
-  { q: 'What qualifications are needed?', a: 'Active PMHNP-BC, state APRN licensure, DEA registration, and experience with geriatric populations. Knowledge of Medicare billing, capacity evaluations, and age-specific pharmacokinetics is highly valued.' },
-  { q: `What settings hire geriatric ${brand.niche.short}s?`, a: 'Skilled nursing facilities (SNFs), memory care units, assisted living communities, geriatric outpatient clinics, home health agencies, and hospital geropsychiatry units.' },
-  { q: `Why is demand for geriatric ${brand.niche.short}s growing?`, a: `Over 10,000 Americans turn 65 daily. The aging population has increasing rates of dementia, depression, and anxiety — creating critical demand for specialized ${brand.niche.adjective} providers in elder care.` },
+  { q: `What does a geriatric ${brand.niche.short} do?`, a: `Geriatric ${brand.niche.short}s specialize in caring for older adults: chronic disease management, polypharmacy review, cognitive and functional assessment, fall prevention, and care coordination with families and facility teams — across nursing homes, assisted living, home-based care, and outpatient clinics.` },
+  { q: `What salary do geriatric ${brand.niche.short}s earn?`, a: `Geriatric ${brand.niche.short} salaries typically fall within the standard NP range of roughly $95K-$160K. Facility circuit roles covering multiple nursing homes often pay more due to travel and autonomous practice requirements.` },
+  { q: 'What qualifications are needed?', a: 'An active APRN license, national NP certification, DEA registration, and experience with geriatric populations. Knowledge of Medicare billing, capacity evaluations, and age-specific pharmacokinetics is highly valued.' },
+  { q: `What settings hire geriatric ${brand.niche.short}s?`, a: 'Skilled nursing facilities (SNFs), memory care units, assisted living communities, geriatric outpatient clinics, home-based primary care programs, home health agencies, and hospital medicine teams.' },
+  { q: `Why is demand for geriatric ${brand.niche.short}s growing?`, a: `Roughly 10,000 Americans turn 65 every day, and older adults manage more chronic conditions and more medications than any other age group — creating steady demand for ${brand.niche.short}s in long-term care and geriatric practice.` },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
-  return { title: `${stats.totalJobs} Geriatric ${brand.niche.short} Jobs ($130K-175K)`, description: `Find ${stats.totalJobs} geriatric ${brand.niche.short} jobs. Memory care, nursing home, and geropsychiatry positions paying $130K-175K+.`, alternates: { canonical: `${brand.baseUrl}/jobs/geriatric` } };
+  return { title: `${stats.totalJobs} Geriatric ${brand.niche.short} Jobs — Long-Term Care & Senior Health`, description: `Find ${stats.totalJobs} geriatric ${brand.niche.short} jobs. Skilled nursing, assisted living, memory care, and home-based primary care positions focused on older adults.`, alternates: { canonical: `${brand.baseUrl}/jobs/geriatric` } };
 }
 
 interface PageProps { searchParams: Promise<{ page?: string }>; }
@@ -66,16 +67,16 @@ export default async function GeriatricPage({ searchParams }: PageProps) {
         heroAlt={`Geriatric ${brand.niche.short} with elderly patient`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Geriatric']}
-        indexLabel="№ 17 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('geriatric') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Geriatric"
         headlineLine2={brand.niche.short}
-        headlineSub="jobs, elder care psych."
+        headlineSub="jobs, care for older adults."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$150K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$120K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description="Specialized elder care psychiatry in nursing homes, memory care units, and geropsychiatry clinics."
+        description="Care for older adults in skilled nursing, assisted living, memory care, and home-based primary care."
         ctaLabel="Browse Geriatric Jobs"
         ctaHref="/jobs?category=geriatric"
         secondaryCtaLabel="Set Alert"
@@ -102,11 +103,11 @@ export default async function GeriatricPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #F0FDFA 0%, #E6FAF5 50%, #F0FDFA 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose Geriatric</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Elder Care Psychiatry</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Built for Older-Adult Care</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1 */}
             <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Memory Care Expertise</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Assess and treat dementia-related behavioral symptoms, delirium, and late-life mood disorders with specialized pharmacological approaches.</p></div>
+              <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Memory Care Expertise</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Support residents living with dementia through cognitive assessment, careful medication review, and close coordination with families and facility care teams.</p></div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ge_memory.webp`} alt="Memory care assessment" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -116,7 +117,7 @@ export default async function GeriatricPage({ searchParams }: PageProps) {
             </div>
             {/* ROW 2: Icon Cards */}
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ge_aging.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Aging Population</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Growing demand as 10,000+ Americans turn 65 daily.</p></div>
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ge_brain.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Memory Care</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Specialize in dementia, delirium, and late-life mood disorders.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ge_brain.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Memory Care</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Work in dedicated dementia and memory-support units.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ge_home.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Nursing Homes</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Work in long-term care, assisted living, and SNF facilities.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ge_pills.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Polypharmacy</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Expert medication management for complex geriatric patients.</p></div>
             {/* ROW 3 */}
@@ -138,7 +139,7 @@ export default async function GeriatricPage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Before You Apply</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>What You Need</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            {[{ n: '01', t: 'PMHNP-BC', d: 'Active certification through ANCC.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: 'DEA Registration', d: 'Required for geriatric psychopharmacology.' }, { n: '04', t: 'Geriatric Experience', d: 'Knowledge of age-specific pharmacokinetics and Medicare billing.' }].map(item => (
+            {[{ n: '01', t: 'NP Certification', d: 'Active national NP certification in your population focus.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: 'DEA Registration', d: 'Required for prescribing controlled substances.' }, { n: '04', t: 'Geriatric Experience', d: 'Knowledge of age-specific pharmacokinetics and Medicare billing.' }].map(item => (
               <div key={item.n} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}><span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>{item.n}</span><h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>{item.t}</h3><p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>{item.d}</p></div>
             ))}
           </div>

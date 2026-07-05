@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     // and description (audit 09 M-22). Spelled-out fields ensure the share
     // card matches the page identity.
     title: `About ${brand.name} — The #1 ${brand.niche.medium} Job Board`,
-    description: `Built for the ${brand.niche.short} community — thousands of ${brand.niche.adjective} nurse practitioner jobs across all 50 states, free for job seekers, transparent for employers.`,
+    description: `Built for the ${brand.niche.short} community — thousands of ${brand.niche.descriptor} jobs across all 50 states, free for job seekers, transparent for employers.`,
     type: 'website',
     url: `${brand.baseUrl}/about`,
     siteName: brand.name,

@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -32,16 +33,16 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: `What does a hospital-based ${brand.niche.short} do?`, a: `Hospital ${brand.niche.short}s manage acute ${brand.niche.adjective} emergencies, perform ${brand.niche.adjective} evaluations in the ER, stabilize inpatients on ${brand.niche.adjective} holds, and coordinate discharge planning with multidisciplinary teams.` },
-  { q: `What salary do hospital ${brand.niche.short}s earn?`, a: `Hospital ${brand.niche.short}s earn $140K-$200K annually with shift differentials for nights/weekends, sign-on bonuses, and comprehensive benefits. Academic medical centers and urban hospitals often pay at the higher end.` },
-  { q: `What schedule do hospital ${brand.niche.short}s work?`, a: 'Most hospital roles use 7-on/7-off, 3x12-hour shifts, or rotating day/night schedules. Some partial hospitalization programs (PHP) offer traditional Monday-Friday hours.' },
-  { q: 'What qualifications are required?', a: `Active PMHNP-BC, state APRN licensure, DEA registration, BLS/ACLS certification, and typically 1+ years inpatient ${brand.niche.adjective} experience. New grads may find opportunities in residency-style hospital programs.` },
+  { q: `What does a hospital-based ${brand.niche.short} do?`, a: `Hospital ${brand.niche.short}s manage acute admissions, perform evaluations and consults in the ER and on the floors, round on and stabilize inpatients, and coordinate discharge planning with multidisciplinary teams.` },
+  { q: `What salary do hospital ${brand.niche.short}s earn?`, a: `Hospital ${brand.niche.short}s typically earn toward the upper end of the $95K-$160K ${brand.niche.short} range, with shift differentials for nights/weekends, sign-on bonuses, and comprehensive benefits. Academic medical centers and urban hospitals often pay at the higher end.` },
+  { q: `What schedule do hospital ${brand.niche.short}s work?`, a: 'Most hospital roles use 7-on/7-off, 3x12-hour shifts, or rotating day/night schedules. Some hospital-based clinics and procedural services offer traditional Monday-Friday hours.' },
+  { q: 'What qualifications are required?', a: `An active APRN license, national ${brand.niche.short} certification, DEA registration, BLS/ACLS, and typically 1+ years of acute care experience. New grads may find opportunities in hospital ${brand.niche.short} residency and fellowship programs.` },
   { q: 'Do hospital systems offer loan forgiveness?', a: 'Yes — many hospital systems qualify as 501(c)(3) nonprofits eligible for Public Service Loan Forgiveness (PSLF). After 120 qualifying payments, remaining federal student loan balance is forgiven.' },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
-  return { title: `${stats.totalJobs} Hospital ${brand.niche.short} Jobs ($140K-200K)`, description: `Find ${stats.totalJobs} hospital ${brand.niche.short} jobs. Acute care, ER psych, and inpatient positions paying $140K-200K+ with PSLF eligibility.`, alternates: { canonical: `${brand.baseUrl}/jobs/hospital` } };
+  return { title: `${stats.totalJobs} Hospital ${brand.niche.short} Jobs — Acute & Inpatient Care`, description: `Find ${stats.totalJobs} hospital ${brand.niche.short} jobs. Acute care, ER, and inpatient positions with shift differentials and PSLF-eligible employers.`, alternates: { canonical: `${brand.baseUrl}/jobs/hospital` } };
 }
 
 interface PageProps { searchParams: Promise<{ page?: string }>; }
@@ -63,19 +64,19 @@ export default async function HospitalPage({ searchParams }: PageProps) {
       <CategoryHero
         bgColor="#a0c3d6"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_hospital.webp`}
-        heroAlt={`Hospital ${brand.niche.short} acute ${brand.niche.adjective} care`}
+        heroAlt={`Hospital-based ${brand.niche.short} acute care`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Hospital']}
-        indexLabel="? 22 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('hospital') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Hospital"
         headlineLine2={brand.niche.short}
-        headlineSub="jobs, acute care psych."
+        headlineSub="jobs, acute inpatient care."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$155K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$140K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description={`Acute ${brand.niche.adjective} care in hospital settings with interdisciplinary teams and comprehensive benefits.`}
+        description={`Acute hospital-based ${brand.niche.short} care with interdisciplinary teams and comprehensive benefits.`}
         ctaLabel="Browse Hospital Jobs"
         ctaHref="/jobs?category=hospital"
         secondaryCtaLabel="Set Alert"
@@ -102,22 +103,22 @@ export default async function HospitalPage({ searchParams }: PageProps) {
       <div style={{ background: 'linear-gradient(180deg, #F0FDFA 0%, #E6FAF5 50%, #F0FDFA 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose Hospital</p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Acute Psychiatric Care</h2>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Acute, Team-Based Care</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1 */}
             <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Acute Psychiatric Unit</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Manage {brand.niche.adjective} emergencies, inpatient stabilization, and ER {brand.niche.adjective} consultations in fast-paced hospital environments.</p></div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ho_acute.webp`} alt={`Acute ${brand.niche.adjective} unit`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Acute Inpatient Care</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Manage acute admissions, inpatient stabilization, and ER consultations in fast-paced hospital environments.</p></div>
+              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ho_acute.webp`} alt="Acute inpatient hospital unit" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ho_team.webp`} alt="Hospital care team" width={200} height={140} style={{ width: '100%', maxWidth: '180px', height: 'auto', borderRadius: '12px', marginBottom: '16px' }} />
               <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Team-Based Care</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Collaborate with psychiatrists, ER physicians, and social workers.</p>
+              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Collaborate with physicians, hospitalists, and social workers.</p>
             </div>
             {/* ROW 2: Icon Cards */}
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ho_acute.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Acute Care</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Manage {brand.niche.adjective} emergencies and inpatient stabilization.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ho_acute.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Acute Care</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Manage acute admissions and inpatient stabilization.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ho_pay.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Top Pay</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Premium salaries with shift differentials for nights and weekends.</p></div>
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ho_team.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Team Support</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Collaborate with psychiatrists, RNs, and social workers.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ho_team.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Team Support</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Collaborate with physicians, RNs, and social workers.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ho_loan.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Loan Forgiveness</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Many hospital systems qualify for PSLF loan repayment.</p></div>
             {/* ROW 3 */}
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
@@ -138,7 +139,7 @@ export default async function HospitalPage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Before You Apply</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>What You Need</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            {[{ n: '01', t: 'PMHNP-BC', d: 'Active certification through ANCC.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: 'DEA + BLS/ACLS', d: 'DEA registration and basic/advanced life support.' }, { n: '04', t: 'Inpatient Experience', d: `Acute ${brand.niche.adjective} care experience preferred; residencies available.` }].map(item => (
+            {[{ n: '01', t: `${brand.niche.short} Certification`, d: 'Active national certification in your specialty.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: 'DEA + BLS/ACLS', d: 'DEA registration and basic/advanced life support.' }, { n: '04', t: 'Inpatient Experience', d: 'Acute care experience preferred; residency programs available.' }].map(item => (
               <div key={item.n} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}><span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>{item.n}</span><h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>{item.t}</h3><p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>{item.d}</p></div>
             ))}
           </div>
@@ -151,7 +152,7 @@ export default async function HospitalPage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Keep Exploring</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More Categories</h2>
           <div className="cat-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-            {[{ href: '/jobs/inpatient', label: 'Inpatient', sub: 'Psych units' }, { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` }, { href: '/jobs/emergency', label: 'Emergency', sub: 'ED & urgent care' }, { href: '/jobs/geriatric', label: 'Geriatric', sub: 'Elder care' }, { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` }, { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` }].map(c => (
+            {[{ href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital units' }, { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` }, { href: '/jobs/emergency', label: 'Emergency', sub: 'ED & urgent care' }, { href: '/jobs/geriatric', label: 'Geriatric', sub: 'Elder care' }, { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` }, { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` }].map(c => (
               <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', textAlign: 'center' }}><span style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', display: 'block', marginBottom: '4px' }}>{c.label}</span><span style={{ fontSize: '12px', color: '#7A6A62', display: 'block' }}>{c.sub}</span></Link>
             ))}
           </div>

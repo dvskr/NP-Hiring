@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 export default function FAQPage() {
   const jobSeekerFaqs = [
     {
-      question: `Is ${brand.niche.short} Jobs free to use?`,
+      question: `Is ${brand.name} free to use?`,
       answer: "Yes! Job seekers can browse, save, and apply to jobs completely free. There are no hidden fees, subscriptions, or charges for candidates."
     },
     {
@@ -119,54 +119,54 @@ export default function FAQPage() {
   const careerFaqs = [
     {
       question: `How long does it take to become a ${brand.niche.descriptor}?`,
-      answer: `Becoming a ${brand.niche.short} typically takes 6-8 years: 4 years for a BSN, 1-2 years of RN experience, and 2-3 years for an MSN or DNP with ${brand.niche.short} specialization. Accelerated BSN-to-DNP programs can shorten this timeline.`
+      answer: `Becoming an ${brand.niche.short} typically takes 6-8 years: 4 years for a BSN, 1-2 years of RN experience, and 2-3 years for an MSN or DNP with ${brand.niche.short} specialization. Accelerated BSN-to-DNP programs can shorten this timeline.`
     },
     {
-      question: `What educational background is required for a ${brand.niche.short} role?`,
-      answer: "You need a Bachelor of Science in Nursing (BSN), then a Master's (MSN) or Doctoral (DNP) degree with psychiatric-mental health specialization from a CCNE or ACEN accredited program. You must also pass the ANCC PMHNP-BC certification exam."
+      question: `What educational background is required for an ${brand.niche.short} role?`,
+      answer: `You need a Bachelor of Science in Nursing (BSN), then a Master's (MSN) or Doctoral (DNP) degree from a CCNE or ACEN accredited ${brand.niche.short} program. You must also pass a national ${brand.niche.short} board certification exam through ANCC or AANP.`
     },
     {
-      question: `What is the difference between a ${brand.niche.short} and a psychiatrist?`,
-      answer: `${brand.niche.short}s hold a Master's or Doctoral degree in nursing (2-4 years of graduate school), while psychiatrists complete medical school plus a 4-year residency. Both can diagnose and prescribe. In full practice authority states, ${brand.niche.short}s practice independently. ${brand.niche.short}s earn $155,000-$200,000+ vs psychiatrists' $250,000-$350,000+.`
+      question: `What is the difference between an ${brand.niche.short} and a physician?`,
+      answer: `${brand.niche.short}s hold a Master's or Doctoral degree in nursing (2-4 years of graduate school), while physicians complete medical school plus a 3-7 year residency. Both can diagnose, treat, and prescribe. In full practice authority states, ${brand.niche.short}s practice independently. ${brand.niche.short}s reach full practice faster and with far less educational debt, while physicians train for a broader, more specialized scope.`
     },
     {
-      question: `What is the difference between a ${brand.niche.short} and an FNP?`,
-      answer: `A ${brand.niche.short} (Psychiatric Mental Health NP) specializes in diagnosing and treating ${brand.niche.category} conditions across the lifespan, including prescribing psychotropic medications. An FNP (Family NP) provides primary care for all ages. ${brand.niche.short}s focus on psychiatric disorders, psychotherapy, and psychopharmacology, while FNPs handle general medical conditions.`
+      question: `What are the main ${brand.niche.short} specialties?`,
+      answer: `The largest ${brand.niche.short} specialty is family practice (FNP), followed by adult-gerontology (AGNP, in primary-care and acute-care tracks), psychiatric-mental health (PMHNP), pediatrics (PNP), women's health (WHNP), and neonatal (NNP). Each has its own national board certification and population focus, and most job postings list the certification they require.`
     },
     {
-      question: `Can I complete a ${brand.niche.short} program online?`,
+      question: `Can I complete an ${brand.niche.short} program online?`,
       answer: `Yes, many accredited universities offer online ${brand.niche.short} programs. Didactic coursework is completed online, but you'll still need to complete 500+ clinical hours in person at approved sites. Top online programs include Vanderbilt, Rush, and University of Cincinnati.`
     },
     {
-      question: `What is the ROI of a ${brand.niche.short} degree?`,
-      answer: `The ROI is excellent. Graduate school costs $35,000-$80,000 for an MSN. ${brand.niche.short}s earn an average of $155,000+ — roughly $75,000 more per year than an RN. Most ${brand.niche.short}s pay off their graduate degree investment within 2-3 years of working.`
+      question: `What is the ROI of an ${brand.niche.short} degree?`,
+      answer: `The ROI is excellent. Graduate school costs $35,000-$80,000 for an MSN. ${brand.niche.short}s earn a median of about $126,000 — roughly $40,000 more per year than the average RN. Most ${brand.niche.short}s pay off their graduate degree investment within 2-4 years of working.`
     },
     {
       question: `What are the top 3 ${brand.niche.short} jobs for new grads?`,
-      answer: `1) Community Mental Health Centers — structured settings with mentorship, often qualifying for HRSA loan repayment. 2) Outpatient group practices — collaborative environments with gradual caseload ramp-up. 3) VA ${brand.niche.adjective} NP positions — federal benefits, pension, and residency programs for new graduates.`
+      answer: `1) Federally Qualified Health Centers (FQHCs) — structured settings with mentorship, often qualifying for HRSA loan repayment. 2) Outpatient group practices — collaborative environments with gradual caseload ramp-up. 3) VA ${brand.niche.short} positions — federal benefits, pension, and residency programs for new graduates.`
     },
   ];
 
   const salaryFaqs = [
     {
-      question: `What is the average salary of a ${brand.niche.adjective} nurse practitioner in the United States?`,
-      answer: `The average ${brand.niche.short} salary in 2026 is $155,000-$165,000 per year. New graduates start at $115,000-$145,000, while experienced ${brand.niche.short}s (7-15 years) earn $180,000-$210,000. Private practice owners can earn $200,000-$300,000+. The top 10% earn over $210,000 annually.`
+      question: `What is the average salary of a ${brand.niche.descriptor} in the United States?`,
+      answer: `The average ${brand.niche.short} salary in 2026 is about $126,000-$135,000 per year. New graduates typically start at $95,000-$115,000, while experienced ${brand.niche.short}s in high-demand specialties and settings earn $150,000-$180,000+. Private practice owners and locum tenens providers can earn more depending on volume and overhead.`
     },
     {
       question: `Which states pay the highest salaries for ${brand.niche.short}s?`,
-      answer: `The highest-paying states for ${brand.niche.short}s include Idaho ($205,080 average), New Jersey ($182,022), California ($181,670), Rhode Island ($175,530), and Washington ($173,331). When adjusted for cost of living, Idaho, Louisiana, Pennsylvania, Arkansas, and Missouri offer the best value.`
+      answer: `${brand.niche.short} pay is consistently highest in West Coast and Northeast markets — California, Washington, Oregon, Nevada, and New Jersey rank near the top in federal wage data. When adjusted for cost of living, several Midwest and Southern states offer stronger real purchasing power. See our salary guide for state-by-state figures.`
     },
     {
-      question: `How do ${brand.niche.adjective} nurse practitioner salaries compare to other NP roles?`,
-      answer: `${brand.niche.short}s are among the highest-paid NP specialties. They earn 10-20% more than Family NPs (average $120,000-$135,000) and comparable to Acute Care NPs. This premium reflects the critical shortage of ${brand.niche.category} providers and the specialized nature of ${brand.niche.adjective} care.`
+      question: `How do ${brand.niche.descriptor} salaries vary by specialty?`,
+      answer: `Compensation varies meaningfully by specialty. Acute care, psychiatric-mental health, and emergency ${brand.niche.short}s typically sit at the higher end — often 10-20% above the national median — while family practice and primary-care roles cluster near it. Setting matters as much as specialty: hospital, VA, and correctional roles usually out-pay clinic positions, and Full Practice Authority states tend to carry a premium.`
     },
     {
-      question: `Does having a DNP vs MSN affect a ${brand.niche.short}'s salary?`,
+      question: `Does having a DNP vs MSN affect an ${brand.niche.short}'s salary?`,
       answer: `In clinical roles, DNP and MSN ${brand.niche.short}s typically earn similar salaries — the degree itself rarely commands a higher clinical wage. However, DNP holders have advantages in academic positions, executive leadership roles, and may qualify for higher-tier positions in hospital systems.`
     },
     {
-      question: `How can you make the most money as a ${brand.niche.short}?`,
-      answer: "Top strategies include: owning a private practice ($200K-$300K+), specializing in high-demand areas like addiction (+15-20% premium) or forensic psychiatry (+15-25%), practicing in Full Practice Authority states (+12-15% premium), working locum tenens ($150K-$250K), and always negotiating total compensation."
+      question: `How can you make the most money as an ${brand.niche.short}?`,
+      answer: "Top strategies include: owning a private practice ($200K-$300K+), specializing in high-demand areas like acute, emergency, or correctional care, practicing in Full Practice Authority states (+12-15% premium), working locum tenens ($150K-$250K), and always negotiating total compensation."
     },
     {
       question: `What is the salary range for locum tenens ${brand.niche.short} jobs?`,
@@ -176,16 +176,16 @@ export default function FAQPage() {
 
   const scopeFaqs = [
     {
-      question: `What is the scope of practice for a ${brand.niche.short}?`,
-      answer: `A ${brand.niche.short}'s scope of practice includes conducting psychiatric evaluations, diagnosing ${brand.niche.category} disorders (using DSM-5-TR criteria), prescribing psychotropic medications including controlled substances, providing psychotherapy (CBT, DBT, motivational interviewing), ordering and interpreting diagnostic tests, and managing treatment plans. The specific scope varies by state practice authority laws.`
+      question: `What is the scope of practice for an ${brand.niche.short}?`,
+      answer: `An ${brand.niche.short}'s scope of practice includes assessing and diagnosing acute and chronic conditions, prescribing medications including controlled substances, ordering and interpreting diagnostic tests, performing procedures within their specialty training, providing patient education and counseling, and managing treatment plans. The specific scope varies by state practice authority laws.`
     },
     {
       question: `What are the certification requirements for ${brand.niche.short} graduates?`,
-      answer: `After graduating from an accredited ${brand.niche.short} program, you must pass the ANCC PMHNP-BC exam ($395), apply for state APRN licensure, obtain an NPI number, register with the DEA for prescriptive authority ($888/3 years), and create a CAQH ProView profile for insurance credentialing. Board certification must be renewed every 5 years with 75 CE hours.`
+      answer: `After graduating from an accredited ${brand.niche.short} program, you must pass a national board certification exam for your population focus (ANCC or AANP, roughly $315-$395), apply for state APRN licensure, obtain an NPI number, register with the DEA for prescriptive authority ($888/3 years), and create a CAQH ProView profile for insurance credentialing. Board certification typically renews every 5 years with continuing-education requirements.`
     },
     {
-      question: `What extra certifications can a ${brand.niche.short} get?`,
-      answer: `${brand.niche.short}s can pursue additional credentials including MAT/DATA waiver for addiction treatment, child and adolescent psychiatry specialization, addiction nursing certification (CARN-AP), forensic nursing certification, and geriatric psychiatry specialization. These certifications command 10-25% salary premiums.`
+      question: `What extra certifications can an ${brand.niche.short} get?`,
+      answer: `${brand.niche.short}s can pursue additional credentials in areas like emergency care (ENP-C), diabetes education (CDCES), dermatology (DCNP), oncology (AOCNP), and pain management or aesthetics training. These added specializations often command salary premiums and open doors to niche roles.`
     },
     {
       question: `Are there state licensure rules that affect demand for ${brand.niche.short}s?`,
@@ -193,7 +193,7 @@ export default function FAQPage() {
     },
     {
       question: `What skills are employers seeking in ${brand.niche.short} graduates?`,
-      answer: "Top skills employers seek include psychopharmacology expertise, prescriptive authority management, Epic/Cerner EHR proficiency, crisis intervention and de-escalation, evidence-based psychotherapy (CBT, motivational interviewing), cultural competence, telehealth platform experience, and experience with diverse populations including children, geriatric, and veterans."
+      answer: "Top skills employers seek include strong clinical assessment and diagnostic skills, confident prescribing and medication management, Epic/Cerner EHR proficiency, chronic-disease management, patient education and counseling, cultural competence, telehealth platform experience, and experience with diverse populations including pediatric, geriatric, and veteran patients."
     },
     {
       question: `What negotiation strategies can enhance salary offers for ${brand.niche.short}s?`,
@@ -237,7 +237,7 @@ export default function FAQPage() {
                       Frequently Asked <span style={{ color: '#E11D48' }}>Questions</span>
                   </h1>
                   <p style={{ fontSize: '20px', color: '#6B7F8A', lineHeight: 1.6, margin: 0, maxWidth: '500px' }}>
-                      Find answers to common questions about {brand.niche.short} Jobs, platform features, salary benchmarks, and clinical credentials.
+                      Find answers to common questions about {brand.name}, platform features, salary benchmarks, and clinical credentials.
                   </p>
               </div>
               <div style={{ display: 'flex', justifyContent: 'center' }}>

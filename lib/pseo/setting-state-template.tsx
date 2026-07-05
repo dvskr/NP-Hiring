@@ -146,15 +146,15 @@ export async function buildSettingStateMetadata(
 
   return {
     title: `${stats.totalJobs} ${config.label} ${brand.niche.short} Jobs in ${stateName} (${config.salaryRange})`,
-    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${stateName} paying ${config.salaryRange}. ${config.heroSubtitle}. Browse ${config.label.toLowerCase()} ${brand.niche.adjective} nurse practitioner positions in ${stateName} updated daily.`,
+    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${stateName} paying ${config.salaryRange}. ${config.heroSubtitle}. Browse ${config.label.toLowerCase()} ${brand.niche.descriptor} positions in ${stateName} updated daily.`,
     keywords: [
       ...config.keywords,
-      `${config.label.toLowerCase()} pmhnp jobs ${stateName.toLowerCase()}`,
-      `${stateName.toLowerCase()} ${config.label.toLowerCase()} psychiatric nurse practitioner`,
+      `${config.label.toLowerCase()} ${brand.niche.short.toLowerCase()} jobs ${stateName.toLowerCase()}`,
+      `${stateName.toLowerCase()} ${config.label.toLowerCase()} ${brand.niche.descriptor}`,
     ],
     openGraph: {
       title: `${stats.totalJobs} ${config.label} ${brand.niche.short} Jobs in ${stateName}`,
-      description: `Browse ${config.label.toLowerCase()} ${brand.niche.adjective} nurse practitioner positions in ${stateName}. ${config.heroSubtitle}.`,
+      description: `Browse ${config.label.toLowerCase()} ${brand.niche.descriptor} positions in ${stateName}. ${config.heroSubtitle}.`,
       type: 'website',
       images: [{
         url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} ${config.label} ${brand.niche.short} Jobs in ${stateName}`)}&subtitle=${encodeURIComponent(config.heroSubtitle)}`,
@@ -365,7 +365,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
           { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : config.salaryRange.split('â€“')[0] || '$130K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}`, label: 'employers' },
         ]}
-        description={`${config.label} ${brand.niche.adjective} NP positions in ${stateName}. ${config.heroSubtitle}.`}
+        description={`${config.label} ${brand.niche.short} positions in ${stateName}. ${config.heroSubtitle}.`}
         ctaLabel={`Browse ${config.label} Jobs`}
         ctaHref={`/jobs/${config.slug}`}
         secondaryCtaLabel="Set Alert"

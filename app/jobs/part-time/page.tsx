@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -33,7 +34,7 @@ async function getStats() {
 
 const faqs = [
   { q: `How many hours do part-time ${brand.niche.short}s work?`, a: `Part-time ${brand.niche.short} roles typically involve 10-30 hours per week. Common schedules include 2-3 days per week, half-day clinics, or weekend-only coverage. PRN roles offer even more flexibility with no minimum hour commitments.` },
-  { q: `What do part-time ${brand.niche.short}s earn?`, a: `Part-time ${brand.niche.short}s earn $60-$85+ per hour, translating to $60K-$110K annually depending on hours worked. PRN rates are often higher ($75-$100/hr) to compensate for lack of benefits.` },
+  { q: `What do part-time ${brand.niche.short}s earn?`, a: `Part-time ${brand.niche.short} pay is usually hourly — roughly $45-$75 per hour depending on specialty, setting, and region, in line with the typical $95K-$160K full-time band. PRN rates often run higher to compensate for the lack of benefits.` },
   { q: `Do part-time ${brand.niche.short}s get benefits?`, a: 'Benefits vary. Positions at 20+ hours/week often include prorated health insurance, PTO, and CME allowances. PRN roles typically pay higher hourly rates but without benefits. Some employers offer 401(k) to all staff regardless of hours.' },
   { q: 'Can I combine part-time roles?', a: `Yes — many ${brand.niche.short}s stack 2-3 part-time positions across different settings (outpatient + telehealth, for example) to maximize income flexibility. Ensure non-compete clauses allow this and maintain separate malpractice coverage.` },
   { q: 'Is part-time good for new grads?', a: 'Part-time can work for new grads who want gradual clinical exposure, but most employers prefer candidates who can commit to consistent schedules. Starting with a full-time role that offers mentorship may build skills faster.' },
@@ -43,8 +44,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Part-Time ${brand.niche.short} Jobs ($60-85/hr)`,
-    description: `Find ${stats.totalJobs} part-time ${brand.niche.short} jobs paying $60-85+/hr. Flexible schedules, PRN positions, and work-life balance.`,
+    title: `${stats.totalJobs} Part-Time ${brand.niche.short} Jobs — Flexible & PRN`,
+    description: `Find ${stats.totalJobs} part-time ${brand.niche.short} jobs. Flexible schedules, PRN positions, and real work-life balance across every specialty.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/part-time` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
@@ -72,16 +73,16 @@ export default async function PartTimePage({ searchParams }: PageProps) {
         heroAlt={`Part-time ${brand.niche.short} leaving clinic`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Part-Time']}
-        indexLabel="№ 08 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('part-time') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Part-Time"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, work on your terms."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$60/hr+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$45/hr+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description={`Flexible schedules, PRN options, and work-life balance for ${brand.niche.adjective} nurse practitioners.`}
+        description={`Flexible schedules, PRN options, and work-life balance for ${brand.niche.descriptor}s in every specialty.`}
         ctaLabel="Browse Part-Time Jobs"
         ctaHref="/jobs?category=part-time"
         secondaryCtaLabel="Set Alert"
@@ -141,7 +142,7 @@ export default async function PartTimePage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Before You Apply</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>What You Need</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            {[{ n: '01', t: 'PMHNP-BC', d: 'Active certification through ANCC.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: 'DEA Registration', d: 'Required for prescribing controlled substances.' }, { n: '04', t: 'Schedule Clarity', d: 'Know your availability — most employers want consistent days.' }].map(item => (
+            {[{ n: '01', t: `${brand.niche.short} Certification`, d: 'Active national certification in your specialty.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: 'DEA Registration', d: 'Required for prescribing controlled substances.' }, { n: '04', t: 'Schedule Clarity', d: 'Know your availability — most employers want consistent days.' }].map(item => (
               <div key={item.n} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}><span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>{item.n}</span><h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>{item.t}</h3><p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>{item.d}</p></div>
             ))}
           </div>

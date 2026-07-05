@@ -286,18 +286,18 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
   }),
 };
 
-// TODO(content): narrative fields (heroSubtitle/benefits/tips/keywords) in the
-// legacy configs below are still PMHNP-era psych-specific copy — pending all-NP
-// editorial rewrite (docs/pilot-fork-runbook.md §3). fullLabel fields relabeled
-// to NP for the all-NP board (2026-07).
+// Narrative fields (heroSubtitle/benefits/tips/keywords) in the legacy configs
+// below were rewritten for the all-NP board (2026-07 awkward-phrase sweep).
+// TODO(content): salaryRange figures are still broad PMHNP-era bands — retune
+// alongside the lib/stats-sources.ts salary re-sourcing pass.
 export const SETTING_CONFIGS: Record<string, SettingConfig> = {
   remote: {
     slug: 'remote',
     label: 'Remote',
     fullLabel: 'Remote NP',
-    heroSubtitle: 'Work from home psychiatric NP positions',
+    heroSubtitle: 'Work from home nurse practitioner positions',
     salaryRange: '$130K-200K',
-    keywords: ['remote pmhnp', 'work from home pmhnp', 'remote psychiatric nurse practitioner', 'telehealth pmhnp'],
+    keywords: ['remote nurse practitioner', 'work from home np', 'remote np jobs', 'telehealth np'],
     faqCategory: 'remote',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -306,11 +306,11 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     }),
     benefits: [
       { title: 'Flexible Schedule', description: 'Set your own hours and work from the comfort of your home while serving patients across the state.', iconName: 'Clock' },
-      { title: 'No Commute', description: 'Eliminate commute time and overhead costs. Remote PMHNP roles let you practice from anywhere in the state.', iconName: 'Home' },
+      { title: 'No Commute', description: 'Eliminate commute time and overhead costs. Remote NP roles let you practice from anywhere in the state.', iconName: 'Home' },
       { title: 'National Reach', description: 'Serve patients statewide and expand your impact beyond your local area with telehealth flexibility.', iconName: 'Globe' },
     ],
     tips: [
-      'Ensure reliable high-speed internet for telepsychiatry',
+      'Ensure reliable high-speed internet for telehealth visits',
       'Create a private, HIPAA-compliant home office',
       'Verify state licensure requirements for remote practice',
       'Invest in quality telehealth equipment (webcam, headset)',
@@ -321,9 +321,9 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     slug: 'telehealth',
     label: 'Telehealth',
     fullLabel: 'Telehealth NP',
-    heroSubtitle: 'Virtual psychiatric care positions',
+    heroSubtitle: 'Virtual care nurse practitioner positions',
     salaryRange: '$130K-200K',
-    keywords: ['telehealth pmhnp', 'telemedicine pmhnp', 'virtual psychiatry', 'telepsychiatry nurse practitioner'],
+    keywords: ['telehealth nurse practitioner', 'telemedicine np', 'virtual care np', 'telehealth np jobs'],
     faqCategory: 'telehealth',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -331,12 +331,12 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       ...withTagFallback('telehealth'),
     }),
     benefits: [
-      { title: 'Growing Demand', description: 'Telehealth psychiatric care has seen explosive growth. Virtual providers are in high demand statewide.', iconName: 'TrendingUp' },
-      { title: 'Patient Accessibility', description: 'Reach patients in rural and underserved areas who lack access to in-person psychiatric care.', iconName: 'Users' },
+      { title: 'Growing Demand', description: 'Telehealth care has seen explosive growth. Virtual providers are in high demand statewide.', iconName: 'TrendingUp' },
+      { title: 'Patient Accessibility', description: 'Reach patients in rural and underserved areas who lack access to in-person care.', iconName: 'Users' },
       { title: 'Flexible Practice', description: 'Choose between full-time telehealth positions or supplement in-person work with virtual sessions.', iconName: 'Monitor' },
     ],
     tips: [
-      'Master telepsychiatry platforms (Zoom, Doxy.me)',
+      'Master telehealth platforms (Zoom, Doxy.me)',
       'Develop strong virtual rapport and assessment skills',
       'Stay current on state-specific telehealth regulations',
       'Maintain proper documentation for virtual visits',
@@ -347,9 +347,9 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     slug: 'inpatient',
     label: 'Inpatient',
     fullLabel: 'Inpatient NP',
-    heroSubtitle: 'Hospital & acute care psychiatric positions',
+    heroSubtitle: 'Hospital & acute care positions',
     salaryRange: '$140K-200K',
-    keywords: ['inpatient pmhnp', 'hospital pmhnp', 'acute care pmhnp', 'inpatient psychiatric nurse practitioner'],
+    keywords: ['inpatient nurse practitioner', 'hospital np', 'acute care np', 'inpatient np jobs'],
     faqCategory: 'inpatient',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -357,14 +357,14 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       ...withTagFallback('inpatient'),
     }),
     benefits: [
-      { title: 'Higher Base Pay', description: 'Inpatient PMHNPs earn $140K-$200K+ due to the demanding nature of acute psychiatric care.', iconName: 'DollarSign' },
+      { title: 'Higher Base Pay', description: 'Hospital-based NP roles typically pay a premium over clinic equivalents, plus shift differentials.', iconName: 'DollarSign' },
       { title: 'Structured Environment', description: 'Hospital settings offer built-in support teams, protocols, and multidisciplinary care teams.', iconName: 'Shield' },
       { title: 'Defined Schedules', description: 'Many inpatient roles offer shift-based schedules (7-on/7-off, 3x12s) with no after-hours calls.', iconName: 'Clock' },
     ],
     tips: [
-      'Get comfortable with crisis intervention and de-escalation',
+      'Get comfortable with rapid assessment and escalation protocols',
       'Build rapport with multidisciplinary teams',
-      'Stay current on psychopharmacology for acute conditions',
+      'Stay current on acute-care pharmacology',
       'Negotiate shift differentials for nights and weekends',
       'Consider inpatient fellowships for specialized training',
     ],
@@ -375,7 +375,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     fullLabel: 'Outpatient NP',
     heroSubtitle: 'Clinic & private practice positions',
     salaryRange: '$130K-190K',
-    keywords: ['outpatient pmhnp', 'clinic pmhnp', 'private practice pmhnp', 'outpatient psychiatric nurse practitioner'],
+    keywords: ['outpatient nurse practitioner', 'clinic np', 'private practice np', 'outpatient np jobs'],
     faqCategory: 'outpatient',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -384,15 +384,15 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     }),
     benefits: [
       { title: 'Work-Life Balance', description: 'Most outpatient positions offer M-F schedules with no nights, weekends, or on-call requirements.', iconName: 'Clock' },
-      { title: 'Long-Term Relationships', description: 'Build meaningful therapeutic relationships through ongoing medication management and therapy.', iconName: 'Heart' },
+      { title: 'Long-Term Relationships', description: 'Build meaningful patient relationships through ongoing primary, preventive, and chronic care.', iconName: 'Heart' },
       { title: 'Private Practice Path', description: 'Outpatient experience is the foundation for starting your own practice earning $200K+ with full autonomy.', iconName: 'DollarSign' },
     ],
     tips: [
       'Start with structured clinic work before private practice',
-      'Build expertise in evidence-based psychotherapy integration',
+      'Build expertise in chronic-disease management and preventive care',
       'Negotiate productivity bonuses for high patient volume',
       'Consider part-time private practice alongside W-2 work',
-      'Get comfortable with therapy modalities (CBT, DBT, MI)',
+      'Get comfortable with brief counseling and patient education',
     ],
   },
   travel: {
@@ -401,7 +401,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     fullLabel: 'Travel NP',
     heroSubtitle: 'Locum tenens & travel assignment positions',
     salaryRange: '$80-150/hr',
-    keywords: ['travel pmhnp', 'locum tenens pmhnp', 'travel psychiatric nurse practitioner', 'locum psych np'],
+    keywords: ['travel nurse practitioner', 'locum tenens np', 'travel np jobs', 'locum np'],
     faqCategory: 'travel',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -432,9 +432,9 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     slug: 'full-time',
     label: 'Full-Time',
     fullLabel: 'Full-Time NP',
-    heroSubtitle: 'Permanent full-time psychiatric NP positions',
+    heroSubtitle: 'Permanent full-time NP positions',
     salaryRange: '$130K-200K',
-    keywords: ['full-time pmhnp', 'permanent pmhnp', 'full time psychiatric nurse practitioner', 'W-2 pmhnp'],
+    keywords: ['full-time nurse practitioner', 'permanent np', 'full time np jobs', 'W-2 np'],
     faqCategory: 'full-time',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -458,9 +458,9 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     slug: 'part-time',
     label: 'Part-Time',
     fullLabel: 'Part-Time NP',
-    heroSubtitle: 'Flexible part-time psychiatric NP positions',
+    heroSubtitle: 'Flexible part-time NP positions',
     salaryRange: '$60-100/hr',
-    keywords: ['part-time pmhnp', 'part time pmhnp', 'flexible pmhnp', 'PRN pmhnp'],
+    keywords: ['part-time nurse practitioner', 'part time np', 'flexible np jobs', 'PRN np'],
     faqCategory: 'part-time',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -469,7 +469,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     }),
     benefits: [
       { title: 'Schedule Flexibility', description: 'Work 2-3 days per week, freeing time for private practice, family, or other commitments.', iconName: 'Clock' },
-      { title: 'Higher Hourly Rates', description: 'Part-time PMHNPs often earn $60-100+/hr — higher per-hour than full-time equivalents.', iconName: 'DollarSign' },
+      { title: 'Higher Hourly Rates', description: 'Part-time NPs often earn $60-100+/hr — higher per-hour than full-time equivalents.', iconName: 'DollarSign' },
       { title: 'Stack Multiple Roles', description: 'Combine part-time positions across different settings to maximize income and clinical variety.', iconName: 'Activity' },
     ],
     tips: [
@@ -484,9 +484,9 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     slug: 'contract',
     label: 'Contract',
     fullLabel: 'Contract NP',
-    heroSubtitle: 'Contract & temp-to-perm psychiatric NP positions',
+    heroSubtitle: 'Contract & temp-to-perm NP positions',
     salaryRange: '$70-130/hr',
-    keywords: ['contract pmhnp', 'temp pmhnp', 'contract psychiatric nurse practitioner', 'temp to perm pmhnp'],
+    keywords: ['contract nurse practitioner', 'temp np', 'contract np jobs', 'temp to perm np'],
     faqCategory: 'contract',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -494,7 +494,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       ...withTagFallback('contract'),
     }),
     benefits: [
-      { title: 'Premium Rates', description: 'Contract PMHNPs earn 20-50% more per hour than permanent staff, with rates of $70-130+/hr.', iconName: 'DollarSign' },
+      { title: 'Premium Rates', description: 'Contract NPs earn 20-50% more per hour than permanent staff, with rates of $70-130+/hr.', iconName: 'DollarSign' },
       { title: 'Try Before You Commit', description: 'Contract roles let you evaluate an employer, location, and patient population before converting to permanent.', iconName: 'Lightbulb' },
       { title: 'Tax Advantages', description: 'As a contract worker, deduct home office, travel, equipment, and continuing education from your taxes.', iconName: 'Shield' },
     ],
@@ -510,9 +510,9 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     slug: 'new-grad',
     label: 'New Grad',
     fullLabel: 'New Grad NP',
-    heroSubtitle: 'Entry-level positions for new PMHNP graduates',
+    heroSubtitle: 'Entry-level positions for new NP graduates',
     salaryRange: '$110K-160K',
-    keywords: ['new grad pmhnp', 'entry level pmhnp', 'new graduate pmhnp', 'pmhnp residency', 'pmhnp fellowship'],
+    keywords: ['new grad nurse practitioner', 'entry level np', 'new graduate np', 'np residency', 'np fellowship'],
     faqCategory: 'new-grad',
     buildWhere: (stateName: string) => buildKeywordWhere(
       ['new grad', 'new graduate', 'entry level', 'entry-level', 'residency', 'fellowship', 'recent graduate', 'no experience required'],

@@ -950,7 +950,7 @@ function PostJobContent() {
                 {/* Job Title */}
                 <div>
                   <Label required htmlFor="title">Job Title</Label>
-                  <input type="text" id="title" placeholder={`e.g. Remote ${brand.niche.short} - Telepsychiatry`}
+                  <input type="text" id="title" placeholder={`e.g. Remote ${brand.niche.short} - Telehealth`}
                     {...register('title')}
                     style={errors.title ? clayInputError : clayInput}
                   />
@@ -1118,7 +1118,7 @@ function PostJobContent() {
                       type="text"
                       id="experienceQualifier"
                       maxLength={80}
-                      placeholder={`e.g. Prefer inpatient ${brand.niche.adjective} background`}
+                      placeholder={`e.g. Prefer inpatient ${brand.niche.short} experience`}
                       {...register('experienceQualifier')}
                       style={errors.experienceQualifier ? clayInputError : clayInput}
                     />

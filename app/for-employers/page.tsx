@@ -91,7 +91,7 @@ export default async function ForEmployersPage() {
                 fontSize: '16.5px', color: '#3D2E26', lineHeight: 1.75,
                 margin: '0 0 36px', maxWidth: '460px', fontWeight: 400,
               }}>
-                Reach thousands of {brand.niche.adjective} nurse practitioners actively searching for their next role. Every candidate is a qualified {brand.niche.short} — zero noise, maximum relevance.
+                Reach thousands of {brand.niche.descriptor}s actively searching for their next role. Every candidate is a qualified {brand.niche.short} — zero noise, maximum relevance.
               </p>
 
               {/* CTA Buttons */}

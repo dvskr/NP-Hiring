@@ -9,12 +9,12 @@ const STORAGE_BASE = brand.assets.storageBase;
 export const revalidate = 3600; // ISR: revalidate every hour
 
 export const metadata: Metadata = {
-  title: `${brand.niche.short} Employers — Companies Hiring Psychiatric Nurse Practitioners`,
+  title: `${brand.niche.short} Employers — Companies Hiring ${brand.niche.long}s`,
   description:
     `Browse companies actively hiring ${brand.niche.short}s. See open positions, salary data, and apply directly. Updated daily with 3,000+ employers across all 50 states.`,
   openGraph: {
     title: `Companies Hiring ${brand.niche.short}s — ${brand.name}`,
-    description: `Explore employers with open ${brand.niche.adjective} nurse practitioner positions.`,
+    description: `Explore employers with open ${brand.niche.descriptor} positions.`,
     url: `${brand.baseUrl}/companies`,
     type: 'website',
     siteName: brand.name,
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: `Companies Hiring ${brand.niche.short}s`,
-    description: `Browse 3,000+ employers actively hiring ${brand.niche.adjective} nurse practitioners.`,
+    description: `Browse 3,000+ employers actively hiring ${brand.niche.descriptor}s.`,
     images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`],
   },
   alternates: {
@@ -123,7 +123,7 @@ export default async function CompaniesIndexPage() {
             Companies Hiring {brand.niche.short}s
           </h1>
           <p style={{ fontSize: '16px', color: '#5A4A42', maxWidth: '560px', margin: '0 auto', lineHeight: 1.6 }}>
-            {totalCompanies} employers with active {brand.niche.adjective} nurse practitioner positions. Browse by company, see open roles, and apply directly.
+            {totalCompanies} employers with active {brand.niche.descriptor} positions. Browse by company, see open roles, and apply directly.
           </p>
         </section>
 
@@ -136,7 +136,7 @@ export default async function CompaniesIndexPage() {
             <p style={{ marginBottom: '16px' }}>
               Every employer below has at least one currently published {brand.niche.short} role on
               {' '}{brand.name}. The list is a mix of <strong>direct employers</strong> —
-              health systems, community {brand.niche.category} centers (CMHCs), Federally
+              health systems, community health centers, Federally
               Qualified Health Centers (FQHCs), VA medical centers, telehealth
               platforms, and private practices — alongside <strong>staffing agencies</strong>{' '}
               that place {brand.niche.short}s into locum and travel assignments. We pull active
@@ -145,11 +145,11 @@ export default async function CompaniesIndexPage() {
               a static directory.
             </p>
             <p style={{ marginBottom: '16px' }}>
-              When evaluating a {brand.niche.short} employer, the questions that matter most are
+              When evaluating an {brand.niche.short} employer, the questions that matter most are
               practical: <strong>practice authority</strong> in the states they hire
               for (full vs. reduced vs. restricted, plus Nurse Licensure Compact
-              membership), <strong>caseload structure</strong> (15-minute med checks
-              vs. 30-60 minute integrated visits), <strong>productivity expectations</strong>{' '}
+              membership), <strong>caseload structure</strong> (15-minute follow-ups
+              vs. 30-60 minute comprehensive visits), <strong>productivity expectations</strong>{' '}
               (RVU targets, pace), <strong>collaborative-physician requirements</strong>{' '}
               if your state needs them, and what they cover on{' '}
               <strong>malpractice, CME, and EMR/billing infrastructure</strong>.

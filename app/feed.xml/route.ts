@@ -59,7 +59,7 @@ export async function GET() {
   <channel>
     <title>${brand.name} — Latest ${brand.niche.medium} Jobs</title>
     <link>${BASE_URL}</link>
-    <description>The latest ${brand.niche.short} job listings from the #1 ${brand.niche.adjective} nurse practitioner job board. 10,000+ positions across all 50 states, updated daily.</description>
+    <description>The latest ${brand.niche.short} job listings from the #1 ${brand.niche.descriptor} job board. 10,000+ positions across all 50 states, updated daily.</description>
     <language>en-us</language>
     <lastBuildDate>${pubDate}</lastBuildDate>
     <atom:link href="${BASE_URL}/feed.xml" rel="self" type="application/rss+xml"/>

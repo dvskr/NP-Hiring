@@ -22,7 +22,7 @@ export const revalidate = 3600;
 export const metadata: Metadata = {
     title: `${brand.niche.short} Career Blog | Expert Guides & Insights`,
     description:
-        `${brand.niche.short} career guides, salary insights, and job market trends from the #1 ${brand.niche.adjective} NP job board.`,
+        `${brand.niche.short} career guides, salary insights, and job market trends from the #1 ${brand.niche.short} job board.`,
     openGraph: {
         images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp`, width: 1280, height: 900, alt: `${brand.niche.short} career blog with expert guides on salary negotiation, state spotlights, and job market insights` }],
     },

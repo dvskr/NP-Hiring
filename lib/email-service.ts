@@ -1006,7 +1006,7 @@ export async function sendNewCandidateAlertEmail(
     const html = emailShellV2(`
       ${headerBlockV2('New Candidate Match', '')}
       ${spacerV2(12)}
-      ${simpleBlock('hero-new-candidate.png', `A new candidate matching your hiring criteria has joined the platform. They specialize in ${brand.niche.adjective} ${brand.niche.category} nursing and are open to new positions.`)}
+      ${simpleBlock('hero-new-candidate.png', `A new candidate matching your hiring criteria has joined the platform and is open to new positions.`)}
       ${spacerV2(32)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
         ${primaryButtonV2('View Candidate Profile', `${SITE_URL}/employer/candidates`)}

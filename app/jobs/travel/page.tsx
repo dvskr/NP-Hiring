@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -32,10 +33,10 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: `What is a Travel ${brand.niche.short}?`, a: `A ${brand.niche.short} who takes temporary assignments (8-26 weeks) at healthcare facilities across the country through staffing agencies.` },
-  { q: 'What is the pay like?', a: `Travel ${brand.niche.short}s earn 20-50% more than permanent roles, plus tax-free housing stipends, travel reimbursement, and completion bonuses.` },
+  { q: `What is a Travel ${brand.niche.short}?`, a: `An ${brand.niche.short} who takes temporary assignments (8-26 weeks) at healthcare facilities across the country through staffing agencies.` },
+  { q: 'What is the pay like?', a: `Travel ${brand.niche.short}s generally earn more than comparable permanent staff, plus tax-free housing stipends, travel reimbursement, and completion bonuses. Pay packages vary by state, specialty, and setting.` },
   { q: 'Is housing provided?', a: 'Yes, most agencies offer furnished housing or generous housing stipends. Meals and incidental per diems are also common.' },
-  { q: 'Do I need multi-state licenses?', a: 'You need licensure in each state you work in. Many agencies assist with licensure and the Nurse Licensure Compact helps.' },
+  { q: 'Do I need multi-state licenses?', a: 'You need APRN licensure in each state where you take an assignment. Most agencies handle the licensure paperwork and often reimburse application fees.' },
   { q: 'How long are typical assignments?', a: `Most travel ${brand.niche.short} assignments are 13 weeks (one quarter), though 8-week and 26-week contracts are also common. Extensions are frequently offered if the facility and provider are a good fit.` },
 ];
 
@@ -43,9 +44,9 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Travel ${brand.niche.short} Jobs — Locum Tenens ($80-150/hr)`,
-    description: `Find ${stats.totalJobs} travel ${brand.niche.short} and locum tenens positions paying $80-150/hr. Housing stipends, flexible nationwide assignments, premium pay.`,
-    keywords: ['travel pmhnp jobs', 'locum tenens psych NP', 'travel psychiatric nurse practitioner', 'traveling PMHNP positions'],
+    title: `${stats.totalJobs} Travel ${brand.niche.short} Jobs — Nationwide Assignments`,
+    description: `Find ${stats.totalJobs} travel ${brand.niche.short} and locum tenens positions. Housing stipends, flexible nationwide assignments, and premium pay packages. Updated daily.`,
+    keywords: ['travel np jobs', 'travel nurse practitioner', 'locum tenens nurse practitioner', 'traveling np positions'],
     alternates: { canonical: `${brand.baseUrl}/jobs/travel` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
@@ -73,13 +74,13 @@ export default async function TravelJobsPage({ searchParams }: PageProps) {
         heroAlt={`Travel ${brand.niche.short} nationwide assignments`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Travel']}
-        indexLabel="№ 10 / 28"
+        indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('travel') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Travel"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, explore the country."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$80/hr+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$60/hr+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'agencies' },
         ]}
         description="Travel assignments with premium pay, furnished housing, and the freedom to explore new locations nationwide."
@@ -123,7 +124,7 @@ export default async function TravelJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_travel_case.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Travel Ready</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Pack your bags for assignments across the country.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_travel_plane.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Nationwide</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Work in all 50 states with agency-supported licensure.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_travel_housing.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Stipends</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Tax-free housing, meals, and travel reimbursements.</p></div>
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_travel_dollar.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Premium Pay</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Earn 20-50% more than permanent positions.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_travel_dollar.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Premium Pay</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Pay packages that typically beat comparable permanent roles.</p></div>
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
               <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Travel Pay</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average travel {brand.niche.short} salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p></div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_travel_compensation.webp`} alt={`Travel ${brand.niche.short} compensation`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
@@ -142,7 +143,7 @@ export default async function TravelJobsPage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Before You Apply</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>What You Need to Know</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            {[{ n: '01', t: 'Multi-State License', d: 'Obtain licenses in target states or join the NLC compact.' }, { n: '02', t: 'Travel Docs', d: 'Keep CV, certs, and references ready for quick credentialing.' }, { n: '03', t: 'Tax Home', d: 'Establish a tax home for maximum tax-free stipend benefits.' }, { n: '04', t: 'Agency Research', d: 'Compare staffing agencies for pay packages and support.' }].map(item => (
+            {[{ n: '01', t: 'Multi-State License', d: 'Start licensure early in target states — agencies often assist with applications and fees.' }, { n: '02', t: 'Travel Docs', d: 'Keep CV, certs, and references ready for quick credentialing.' }, { n: '03', t: 'Tax Home', d: 'Establish a tax home for maximum tax-free stipend benefits.' }, { n: '04', t: 'Agency Research', d: 'Compare staffing agencies for pay packages and support.' }].map(item => (
               <div key={item.n} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}><span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>{item.n}</span><h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>{item.t}</h3><p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>{item.d}</p></div>
             ))}
           </div>

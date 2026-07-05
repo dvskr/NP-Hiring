@@ -15,11 +15,11 @@ const HERO_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/
 
 export const metadata: Metadata = {
   title: `1099 vs W2 for ${brand.niche.short}s — Complete Compensation Comparison 2026`,
-  description: `Compare 1099 independent contractor vs W2 employee ${brand.niche.short} compensation. Tax strategies, benefits comparison, income calculator, and which model maximizes your ${brand.niche.adjective} nurse practitioner earnings.`,
-  keywords: ['1099 vs W2 PMHNP', '1099 psychiatric nurse practitioner', 'PMHNP independent contractor taxes', 'contractor vs employee NP', '1099 PMHNP telehealth pay', 'psych NP compensation comparison'],
+  description: `Compare 1099 independent contractor vs W2 employee ${brand.niche.short} compensation. Tax strategies, benefits comparison, income calculator, and which model maximizes your ${brand.niche.descriptor} earnings.`,
+  keywords: [`1099 vs W2 ${brand.niche.short}`, `1099 ${brand.niche.descriptor}`, `${brand.niche.short} independent contractor taxes`, 'contractor vs employee NP', `1099 ${brand.niche.short} telehealth pay`, `${brand.niche.short} compensation comparison`],
   openGraph: {
     title: `1099 vs W2 for ${brand.niche.short}s — Compensation Guide`,
-    description: `Which pays more? Complete comparison of independent contractor vs employee compensation for ${brand.niche.adjective} nurse practitioners.`,
+    description: `Which pays more? Complete comparison of independent contractor vs employee compensation for ${brand.niche.descriptor}s.`,
     type: 'article',
     images: [{ url: HERO_IMAGE, width: 1280, height: 900, alt: `1099 vs W2 ${brand.niche.short} Compensation Guide` }],
   },
@@ -43,14 +43,14 @@ export default function CompensationGuidePage() {
     },
     {
       question: `What tax deductions can 1099 ${brand.niche.short}s claim?`,
-      answer: "Key deductions include: home office (dedicated space), mileage/travel, health insurance premiums (100% deductible), SEP-IRA/Solo 401k contributions (up to $66K/year), CME and professional development, malpractice insurance, professional memberships (AANP, APNA), technology/equipment, phone and internet, and professional attire like scrubs."
+      answer: "Key deductions include: home office (dedicated space), mileage/travel, health insurance premiums (100% deductible), SEP-IRA/Solo 401k contributions (up to $66K/year), CME and professional development, malpractice insurance, professional memberships (AANP, state NP associations), technology/equipment, phone and internet, and professional attire like scrubs."
     },
     {
       question: `Should new grad ${brand.niche.short}s take 1099 positions?`,
       answer: `Generally, no. New grads benefit from W2 positions that offer mentorship, structured onboarding, employer-paid malpractice, and benefits. 1099 work requires clinical confidence and business management skills. Most ${brand.niche.short}s transition to 1099 after 2-3 years when they can command higher rates and handle the business aspects independently.`
     },
     {
-      question: `Can you do both 1099 and W2 as a ${brand.niche.short}?`,
+      question: `Can you do both 1099 and W2 as an ${brand.niche.short}?`,
       answer: `Yes, many ${brand.niche.short}s work a W2 job for stability and benefits while taking 1099 side contracts for extra income. This 'hybrid' approach gives you employer benefits while earning premium 1099 rates for additional hours. Check your W2 employment contract for non-compete clauses or moonlighting restrictions.`
     },
     {
@@ -87,7 +87,7 @@ export default function CompensationGuidePage() {
             '@context': 'https://schema.org',
             '@type': 'Article',
             headline: `1099 vs W2 for ${brand.niche.short}s — Complete Compensation Comparison 2026`,
-            description: `Compare independent contractor vs employee compensation for ${brand.niche.adjective} nurse practitioners.`,
+            description: `Compare independent contractor vs employee compensation for ${brand.niche.descriptor}s.`,
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
             image: HERO_IMAGE,
@@ -248,7 +248,7 @@ export default function CompensationGuidePage() {
                     <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>Health insurance premiums (100% deductible)</span></li>
                     <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>Professional liability/malpractice insurance</span></li>
                     <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>CME courses, conferences, and subscriptions</span></li>
-                    <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>Professional memberships (AANP, APNA, ISPN)</span></li>
+                    <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>Professional memberships (AANP, state and specialty {brand.niche.short} associations)</span></li>
                     <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>Technology: laptop, phone, EHR software</span></li>
                     <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>QBI deduction (20% pass-through — consult CPA for eligibility)</span></li>
                   </ul>

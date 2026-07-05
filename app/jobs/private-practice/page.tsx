@@ -12,6 +12,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -33,9 +34,9 @@ async function getStats() {
 
 const faqs = [
   { q: `What types of private practice ${brand.niche.short} roles exist?`, a: 'Private practice roles include solo practice (you own and operate), group practice (join an established multi-provider office), independent contractor (1099 work for a practice), and hybrid roles combining in-person and telehealth. Each offers different levels of autonomy, risk, and earning potential.' },
-  { q: `How much do private practice ${brand.niche.short}s earn?`, a: `Private practice ${brand.niche.short}s earn $150K-$300K+ annually. Solo practice owners can earn even more but must cover overhead. Group practice employees typically earn $150K-$200K with benefits. Independent contractors earn $175K-$250K on 1099 arrangements.` },
+  { q: `How much do private practice ${brand.niche.short}s earn?`, a: `Most employed and group-practice ${brand.niche.short}s earn within the typical NP range of roughly $95K-$160K, depending on specialty, location, and payer mix. Practice owners and 1099 contractors set their own rates, so income varies with panel size, overhead, and how much of the billing they keep.` },
   { q: 'Do I need business experience for private practice?', a: `For group practice employee roles, no — you focus on clinical work. For starting your own practice, understanding billing, credentialing, marketing, and operations is essential. Many ${brand.niche.short}s start in group practices before launching solo practices.` },
-  { q: 'What\'s needed to start a private practice?', a: 'You need: PMHNP-BC certification, state APRN licensure with full practice authority (or collaborating physician), DEA registration, NPI number, malpractice insurance, EHR system, office space or telehealth platform, and insurance panel credentialing.' },
+  { q: 'What\'s needed to start a private practice?', a: 'You need: an active APRN license, national NP certification, full practice authority or a collaborating physician agreement (depending on your state), DEA registration, an NPI number, malpractice insurance, an EHR system, office space or a telehealth platform, and insurance panel credentialing.' },
   { q: 'Is group practice or solo practice better?', a: `Group practice offers built-in referrals, shared overhead, administrative support, and lower financial risk. Solo practice offers maximum autonomy, higher earning ceiling, and full control of your schedule. Most ${brand.niche.short}s recommend 2-3 years in group practice before going solo.` },
 ];
 
@@ -43,8 +44,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Private Practice ${brand.niche.short} Jobs ($150K-300K)`,
-    description: `Find ${stats.totalJobs} private practice ${brand.niche.short} positions. Solo, group, and independent practice roles paying $150K-300K+.`,
+    title: `${stats.totalJobs} Private Practice ${brand.niche.short} Jobs — Own Your Practice`,
+    description: `Find ${stats.totalJobs} private practice ${brand.niche.short} positions. Solo, group, and independent contractor roles with clinical autonomy and ownership potential.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/private-practice` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
@@ -72,13 +73,13 @@ export default async function PrivatePracticePage({ searchParams }: PageProps) {
         heroAlt={`Private practice ${brand.niche.short} entrepreneurial independence`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'Nurse Practitioner', 'Private Practice']}
-        indexLabel="? 21 / 28"
+        indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('private-practice') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Private Practice"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, own your practice."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$160K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$120K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description="Build your own practice with clinical freedom, flexible schedules, and entrepreneurial independence."
@@ -111,7 +112,7 @@ export default async function PrivatePracticePage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Build Your Own Practice</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Your Own Practice</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Set your own schedule, clinical approach, and rates. Build long-term therapeutic relationships with your patient panel.</p></div>
+              <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Your Own Practice</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Set your own schedule, clinical approach, and rates. Build lasting relationships with a patient panel you choose.</p></div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_pp_office.webp`} alt="Private practice office" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -120,7 +121,7 @@ export default async function PrivatePracticePage({ searchParams }: PageProps) {
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Join established groups with built-in referral networks.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_pp_autonomy.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Autonomy</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Set your schedule, rates, and clinical approach.</p></div>
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_pp_earning.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Top Earnings</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Private practice {brand.niche.short}s earn $200K-$300K+.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_pp_earning.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Earning Ceiling</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Income scales with panel size, payer mix, and ownership stake.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_pp_group.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Group Practice</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Join groups with referral networks and shared overhead.</p></div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_pp_hybrid.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Telehealth Hybrid</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Combine in-person and virtual sessions.</p></div>
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
@@ -141,7 +142,7 @@ export default async function PrivatePracticePage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Before You Apply</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>What You Need</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            {[{ n: '01', t: 'PMHNP-BC', d: 'Active certification through ANCC.' }, { n: '02', t: 'Full Practice Authority', d: 'State APRN licensure or collaborating physician agreement.' }, { n: '03', t: 'DEA + NPI', d: 'DEA registration and NPI number for billing.' }, { n: '04', t: 'Malpractice Insurance', d: 'Individual policy required for independent practice.' }].map(item => (
+            {[{ n: '01', t: 'NP Certification', d: 'Active national NP certification and state APRN licensure.' }, { n: '02', t: 'Practice Authority', d: 'Full practice authority or a collaborating physician agreement, depending on your state.' }, { n: '03', t: 'DEA + NPI', d: 'DEA registration and NPI number for billing.' }, { n: '04', t: 'Malpractice Insurance', d: 'Individual policy required for independent practice.' }].map(item => (
               <div key={item.n} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}><span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1' }}>{item.n}</span><h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>{item.t}</h3><p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>{item.d}</p></div>
             ))}
           </div>
