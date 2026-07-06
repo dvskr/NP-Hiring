@@ -226,13 +226,13 @@ export default function SavedJobsPage() {
                             transition: 'all 0.2s ease',
                         }}
                     >
-                        <TabIcon size={16} style={{ color: isActive ? '#0D9488' : '#8A9BA6' }} />
+                        <TabIcon size={16} style={{ color: isActive ? '#BE185D' : '#8A9BA6' }} />
                         {tab.label}
                         {tab.count > 0 && (
                             <span style={{
                                 fontSize: '11px', fontWeight: 700,
                                 padding: '2px 8px', borderRadius: '20px',
-                                background: isActive ? '#0D9488' : '#D5E8E0',
+                                background: isActive ? '#BE185D' : '#D5E8E0',
                                 color: isActive ? '#fff' : '#6B7F8A',
                             }}>
                                 {tab.count}
@@ -405,10 +405,10 @@ export default function SavedJobsPage() {
                 <Link href="/jobs" style={{
                     display: 'inline-flex', alignItems: 'center', gap: '8px',
                     padding: '10px 20px', borderRadius: '12px',
-                    background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                    background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                     color: '#fff', fontSize: '13px', fontWeight: 600,
                     textDecoration: 'none',
-                    boxShadow: '4px 4px 10px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                    boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
                 }}>
                     Browse Jobs
                     <ArrowRight size={14} />
@@ -439,10 +439,10 @@ export default function SavedJobsPage() {
                 <Link href="/jobs" style={{
                     display: 'inline-flex', alignItems: 'center', gap: '8px',
                     padding: '10px 20px', borderRadius: '12px',
-                    background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                    background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                     color: '#fff', fontSize: '13px', fontWeight: 600,
                     textDecoration: 'none',
-                    boxShadow: '4px 4px 10px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                    boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
                 }}>
                     Find Jobs
                     <ArrowRight size={14} />
@@ -519,7 +519,7 @@ export default function SavedJobsPage() {
                             <JobCard job={job} />
                             {appliedDate && (
                                 <div style={{
-                                    fontSize: '12px', color: '#0D9488', fontWeight: 600,
+                                    fontSize: '12px', color: '#BE185D', fontWeight: 600,
                                     marginTop: '8px', marginLeft: '4px',
                                     display: 'flex', alignItems: 'center', gap: '4px',
                                 }}>

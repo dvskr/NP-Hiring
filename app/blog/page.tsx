@@ -43,7 +43,7 @@ const clayCard: React.CSSProperties = {
 
 /* ─── Category colors ─── */
 const CATEGORY_COLORS: Record<string, { color: string; bg: string }> = {
-    job_seeker_tips: { color: '#0D9488', bg: '#F0FDFA' },
+    job_seeker_tips: { color: '#BE185D', bg: '#FDF2F8' },
     career_opportunities: { color: '#6366F1', bg: '#EEF2FF' },
     salary_negotiation: { color: '#F59E0B', bg: '#FFFBEB' },
     career_myths: { color: '#A855F7', bg: '#FAF5FF' },
@@ -51,7 +51,7 @@ const CATEGORY_COLORS: Record<string, { color: string; bg: string }> = {
     employer_facing: { color: '#EF4444', bg: '#FEF2F2' },
     community_lifestyle: { color: '#EC4899', bg: '#FDF2F8' },
     industry_awareness: { color: '#8B5CF6', bg: '#F5F3FF' },
-    product_lead_gen: { color: '#14B8A6', bg: '#F0FDFA' },
+    product_lead_gen: { color: '#9D174D', bg: '#FDF2F8' }, // pink-800 for AA contrast on the pink-50 tint (DB2777 was 4.2:1)
     success_stories: { color: '#10B981', bg: '#ECFDF5' },
     mental_health_trends: { color: '#6366F1', bg: '#EEF2FF' },
     policy_industry: { color: '#64748B', bg: '#F1F5F9' },
@@ -153,7 +153,7 @@ export default async function BlogIndexPage({
             {/* ═══ HERO — Warm Cream ═══ */}
             <div style={{ background: 'linear-gradient(180deg, #FFF5EE 0%, #FDE8D8 40%, #FFF5EE 100%)' }}>
                 <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '80px 20px 48px', textAlign: 'center' }}>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
                         Career Insights
                     </p>
                     <h1 className="font-lora" style={{
@@ -200,7 +200,7 @@ export default async function BlogIndexPage({
                                 padding: '8px 20px', borderRadius: '40px', fontSize: '13px', fontWeight: 600,
                                 textDecoration: 'none', transition: 'all 0.2s ease',
                                 ...(!categoryFilter
-                                    ? { background: '#0D9488', color: '#fff', boxShadow: '0 4px 12px rgba(13,148,136,0.25)' }
+                                    ? { background: '#BE185D', color: '#fff', boxShadow: '0 4px 12px rgba(190,24,93,0.25)' }
                                     : {
                                         background: '#FFFFFF', color: '#5A4A42',
                                         border: '1px solid #EAE6DF',
@@ -311,7 +311,7 @@ export default async function BlogIndexPage({
                                             </p>
                                             {/* CTA */}
                                             <span className="blog-card-cta" style={{
-                                                fontSize: '13px', fontWeight: 600, color: '#0D9488',
+                                                fontSize: '13px', fontWeight: 600, color: '#BE185D',
                                                 display: 'inline-flex', alignItems: 'center', gap: '4px',
                                                 marginTop: 'auto',
                                             }}>
@@ -387,8 +387,8 @@ export default async function BlogIndexPage({
                                                 textDecoration: 'none', transition: 'all 0.2s ease',
                                                 ...(p === currentPage
                                                     ? {
-                                                        background: '#0D9488', color: '#fff',
-                                                        boxShadow: '0 4px 14px rgba(13,148,136,0.3)',
+                                                        background: '#BE185D', color: '#fff',
+                                                        boxShadow: '0 4px 14px rgba(190,24,93,0.3)',
                                                     }
                                                     : { ...clayCard, color: '#1A2E35' }),
                                             }}
@@ -419,7 +419,7 @@ export default async function BlogIndexPage({
             {/* ═══ BROWSE MORE — Clay CTA Section ═══ */}
             <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)', padding: '64px 20px' }}>
                 <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
                         Explore More
                     </p>
                     <h2 className="font-lora" style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 700, color: '#1A2E35', marginBottom: '32px' }}>
@@ -445,7 +445,7 @@ export default async function BlogIndexPage({
                                 </div>
                                 <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>{item.title}</h3>
                                 <p style={{ fontSize: '13px', color: '#5A4A42', margin: 0, lineHeight: 1.5 }}>{item.desc}</p>
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                     Explore <ArrowRight size={14} />
                                 </span>
                             </Link>
@@ -480,7 +480,7 @@ export default async function BlogIndexPage({
                     transform: scale(1.05);
                 }
                 .blog-card:hover .blog-card-title {
-                    color: #0D9488 !important;
+                    color: #BE185D !important;
                 }
                 .blog-card:hover .blog-card-arrow {
                     transform: translateX(3px);

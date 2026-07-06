@@ -35,12 +35,12 @@ export default function PillSelector({
                                 fontWeight: 600,
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
-                                border: isSelected ? '1.5px solid #2DD4BF' : '1.5px solid var(--border-color)',
+                                border: isSelected ? '1.5px solid #F472B6' : '1.5px solid var(--border-color)',
                                 background: isSelected
-                                    ? 'linear-gradient(135deg, rgba(45,212,191,0.15), rgba(45,212,191,0.08))'
+                                    ? 'linear-gradient(135deg, rgba(244,114,182,0.15), rgba(244,114,182,0.08))'
                                     : 'var(--bg-primary)',
-                                color: isSelected ? '#2DD4BF' : 'var(--text-secondary)',
-                                boxShadow: isSelected ? '0 0 12px rgba(45,212,191,0.1)' : 'none',
+                                color: isSelected ? '#F472B6' : 'var(--text-secondary)',
+                                boxShadow: isSelected ? '0 0 12px rgba(244,114,182,0.1)' : 'none',
                             }}
                         >
                             {option}

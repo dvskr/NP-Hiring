@@ -140,10 +140,10 @@ export default function PushNotificationPrompt() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                             <div style={{
                                 width: 32, height: 32, borderRadius: 8,
-                                background: 'rgba(45,212,191,0.12)',
+                                background: 'rgba(244,114,182,0.12)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                             }}>
-                                <Bell size={16} style={{ color: '#2DD4BF' }} />
+                                <Bell size={16} style={{ color: '#F472B6' }} />
                             </div>
                             <div>
                                 <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>
@@ -172,7 +172,7 @@ export default function PushNotificationPrompt() {
                                 style={{
                                     flex: 1, padding: '8px 12px', borderRadius: 8,
                                     border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12,
-                                    background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                                    background: 'linear-gradient(135deg, #F472B6, #BE185D)',
                                     color: '#fff', opacity: status === 'subscribing' ? 0.7 : 1,
                                 }}
                             >

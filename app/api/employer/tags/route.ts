@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
             data: {
                 employerId: profile.id,
                 name: name.trim(),
-                color: color || '#0D9488',
+                color: color || '#BE185D',
             },
         });
         return NextResponse.json({ tag }, { status: 201 });

@@ -517,7 +517,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
 
       {/* ═══ HERO ═══ */}
       <CategoryHero
-        bgColor="#0D9488"
+        bgColor="#BE185D"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp`}
         heroAlt={`${brand.niche.short} Jobs in ${stateName}`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
@@ -545,7 +545,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
               <h2 id="listings" className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>
                 Positions in {stateName} ({stats.totalJobs})
               </h2>
-              <Link href="/jobs" className="text-sm font-medium hover:opacity-80 transition-opacity" style={{ color: '#0D9488' }}>View All Jobs →</Link>
+              <Link href="/jobs" className="text-sm font-medium hover:opacity-80 transition-opacity" style={{ color: '#BE185D' }}>View All Jobs →</Link>
             </div>
             {jobs.length === 0 ? (
               <div className="text-center py-12 rounded-xl" style={{ ...clayCard, padding: '48px 24px' }}>
@@ -556,13 +556,13 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                   <div className="flex flex-wrap justify-center gap-2 mb-6">
                     {nearbyStates.slice(0, 4).map((s) => (
                       <Link key={s.code} href={`/jobs/state/${s.slug}`} className="cat-bento-card"
-                        style={{ padding: '6px 14px', borderRadius: '12px', backgroundColor: '#F0FDFA', color: '#0D9488', fontWeight: 600, fontSize: '13px', textDecoration: 'none' }}>
+                        style={{ padding: '6px 14px', borderRadius: '12px', backgroundColor: '#FDF2F8', color: '#BE185D', fontWeight: 600, fontSize: '13px', textDecoration: 'none' }}>
                         {s.name} ({s.count})
                       </Link>
                     ))}
                   </div>
                 )}
-                <Link href="/jobs/remote" className="cat-cta-primary" style={{ padding: '12px 28px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#0D9488', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(13,148,136,0.2)' }}>Browse Remote Jobs <ArrowRight size={16} /></Link>
+                <Link href="/jobs/remote" className="cat-cta-primary" style={{ padding: '12px 28px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>Browse Remote Jobs <ArrowRight size={16} /></Link>
               </div>
             ) : (
               <>
@@ -594,25 +594,25 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
           </div>
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="cat-bento-card" style={{ ...clayCard, padding: '0', overflow: 'hidden', marginBottom: '20px', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', border: '2px solid rgba(13,148,136,0.15)' }}>
+            <div className="cat-bento-card" style={{ ...clayCard, padding: '0', overflow: 'hidden', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
               <div style={{ padding: '24px' }}>
-                <Bell size={28} style={{ color: '#0D9488', marginBottom: '12px' }} />
-                <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#134E4A', margin: '0 0 8px' }}>{stateName} Alerts</h3>
-                <p style={{ fontSize: '13px', color: '#0D9488', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>New {stateName} listings delivered daily.</p>
-                <Link href={`/job-alerts?location=${encodeURIComponent(stateName)}`} className="cat-cta-primary" style={{ display: 'block', width: '100%', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#0D9488', color: '#fff', textDecoration: 'none', boxShadow: '3px 3px 8px rgba(13,148,136,0.15)' }}>Create Alert</Link>
+                <Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} />
+                <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 8px' }}>{stateName} Alerts</h3>
+                <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>New {stateName} listings delivered daily.</p>
+                <Link href={`/job-alerts?location=${encodeURIComponent(stateName)}`} className="cat-cta-primary" style={{ display: 'block', width: '100%', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none', boxShadow: '3px 3px 8px rgba(190,24,93,0.15)' }}>Create Alert</Link>
               </div>
             </div>
             {stats.topEmployers.length > 0 && (
               <div className="cat-bento-card" style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <Building2 size={20} style={{ color: '#0D9488' }} />
+                  <Building2 size={20} style={{ color: '#BE185D' }} />
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Top Employers</h3>
                 </div>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                   {stats.topEmployers.map((employer: ProcessedEmployer, index: number) => (
                     <li key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: index < stats.topEmployers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
                       <span style={{ fontSize: '13px', color: '#5A4A42', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{employer.name}</span>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#0D9488', marginLeft: '8px', whiteSpace: 'nowrap' }}>{employer.count} {employer.count === 1 ? 'job' : 'jobs'}</span>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', marginLeft: '8px', whiteSpace: 'nowrap' }}>{employer.count} {employer.count === 1 ? 'job' : 'jobs'}</span>
                     </li>
                   ))}
                 </ul>
@@ -653,7 +653,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                   </span>
                 )}
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
                 <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_practice.webp`} alt={`${brand.niche.short} practice in ${stateName}`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
@@ -686,7 +686,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
             {/* ROW 3: Growth (8col) + Alert CTA (4col) */}
             <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
               <div style={{ padding: '32px 28px' }}>
-                <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
+                <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growth & Outlook</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>{brand.niche.short} demand in {stateName} continues to grow with {stats.totalJobs} active positions.
                 </p>
@@ -696,11 +696,11 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
               </div>
             </div>
 
-            <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', border: '2px solid rgba(13,148,136,0.15)' }}>
-              <Bell size={32} style={{ color: '#0D9488', marginBottom: '14px' }} />
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#134E4A', margin: '0 0 6px' }}>{stateName} Alerts</h3>
-              <p style={{ fontSize: '13px', color: '#0D9488', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>New listings in {stateName} — delivered daily.</p>
-              <Link href={`/job-alerts?location=${encodeURIComponent(stateName)}`} className="cat-cta-primary" style={{ padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#0D9488', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content', boxShadow: '3px 3px 8px rgba(13,148,136,0.15)' }}>
+            <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
+              <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>{stateName} Alerts</h3>
+              <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>New listings in {stateName} — delivered daily.</p>
+              <Link href={`/job-alerts?location=${encodeURIComponent(stateName)}`} className="cat-cta-primary" style={{ padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content', boxShadow: '3px 3px 8px rgba(190,24,93,0.15)' }}>
                 Create Alert <ArrowRight size={14} />
               </Link>
             </div>
@@ -745,7 +745,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                     <Link key={s.code} href={`/jobs/state/${s.slug}`}
                       className="pseo-pill"
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 16px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#1A2E35', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '3px 3px 8px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                      {s.name} <ArrowRight size={12} style={{ color: '#0D9488' }} />
+                      {s.name} <ArrowRight size={12} style={{ color: '#BE185D' }} />
                     </Link>
                   ))}
                 </div>
@@ -781,7 +781,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                   <Link key={setting.slug} href={`/jobs/${setting.slug}/${stateSlug}`}
                     className="pseo-pill"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 16px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#1A2E35', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '3px 3px 8px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                    {setting.label} <ArrowRight size={12} style={{ color: '#0D9488' }} />
+                    {setting.label} <ArrowRight size={12} style={{ color: '#BE185D' }} />
                   </Link>
                 ))}
               </div>
@@ -796,7 +796,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                 <Link href={`/salary-guide/${stateSlug}`}
                   className="pseo-resource"
                   style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', textDecoration: 'none', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                  <DollarSign size={18} style={{ color: '#0D9488', flexShrink: 0 }} />
+                  <DollarSign size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>{stateName} Salary Guide</div>
                     <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Comp data by setting</div>
@@ -805,7 +805,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                 <Link href="/jobs/locations"
                   className="pseo-resource"
                   style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', textDecoration: 'none', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                  <MapPin size={18} style={{ color: '#0D9488', flexShrink: 0 }} />
+                  <MapPin size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>All Locations</div>
                     <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Browse all 50 states</div>
@@ -814,7 +814,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                 <Link href="/jobs"
                   className="pseo-resource"
                   style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', textDecoration: 'none', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                  <Users size={18} style={{ color: '#0D9488', flexShrink: 0 }} />
+                  <Users size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>All {brand.niche.short} Jobs</div>
                     <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Nationwide listings</div>
@@ -828,9 +828,9 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
       </div>
 
       {/* ═══ FAQ ═══ */}
-      <div style={{ background: 'linear-gradient(180deg, #F0FDFA 0%, #E6FAF5 50%, #F0FDFA 100%)' }}>
+      <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #FDF2F8 50%, #FDF2F8 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>{brand.niche.short} Jobs in {stateName}</h2>
           <div style={{ display: 'grid', gap: '12px' }}>
             {[
@@ -843,7 +843,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
               <details key={idx} className="faq-accordion" style={{ ...clayCard, overflow: 'hidden' }}>
                 <summary style={{ padding: '20px 28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', listStyle: 'none', fontSize: '16px', fontWeight: 700, color: '#1A2E35', lineHeight: 1.4 }}>
                   <span>{faq.q}</span>
-                  <span className="faq-chevron" style={{ flexShrink: 0, width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', background: '#F0FDFA', color: '#0D9488', fontSize: '18px', fontWeight: 700 }}>+</span>
+                  <span className="faq-chevron" style={{ flexShrink: 0, width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', background: '#FDF2F8', color: '#BE185D', fontSize: '18px', fontWeight: 700 }}>+</span>
                 </summary>
                 <div style={{ padding: '0 28px 20px', fontSize: '14px', color: '#5A4A42', lineHeight: 1.7 }}>{faq.a}</div>
               </details>
@@ -862,7 +862,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
       {/* ═══ RESPONSIVE CSS ═══ */}
       <style>{`
         .cat-cta-primary { transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease; }
-        .cat-cta-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(13,148,136,0.35) !important; filter: brightness(1.05); }
+        .cat-cta-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(190,24,93,0.35) !important; filter: brightness(1.05); }
         .cat-bento-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
         .cat-bento-card:hover { transform: translateY(-4px); box-shadow: 8px 8px 24px rgba(0,0,0,0.1), -4px -4px 12px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
         .pseo-pill { transition: transform 0.25s ease, box-shadow 0.25s ease; }
@@ -875,7 +875,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
         .faq-accordion:hover { box-shadow: 8px 8px 24px rgba(0,0,0,0.08), -4px -4px 12px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
         .faq-accordion summary::-webkit-details-marker { display: none; }
         .faq-accordion summary::marker { display: none; content: ''; }
-        .faq-accordion[open] .faq-chevron { transform: rotate(45deg); background: #0D9488; color: #fff; }
+        .faq-accordion[open] .faq-chevron { transform: rotate(45deg); background: #BE185D; color: #fff; }
         .faq-chevron { transition: transform 0.3s ease, background 0.3s ease, color 0.3s ease; }
         .cat-stat-pill { transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .cat-stat-pill:hover { transform: translateY(-2px) scale(1.02); box-shadow: 6px 6px 20px rgba(0,0,0,0.1), -3px -3px 10px rgba(255,255,255,0.9) !important; }

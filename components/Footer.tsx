@@ -161,7 +161,7 @@ export default function Footer() {
                             target="_blank"
                             rel="noopener noreferrer"
                             style={linkStyle}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = '#5eead4'; }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.color = '#a8a29e'; }}
                           >
                             {link.label}
@@ -174,7 +174,7 @@ export default function Footer() {
                         <Link
                           href={link.href}
                           style={linkStyle}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = '#5eead4'; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.color = '#a8a29e'; }}
                         >
                           {link.label}
@@ -208,27 +208,27 @@ export default function Footer() {
             }}
           >
             <Link href="/privacy" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#5eead4'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
             >Privacy</Link>
             <Link href="/terms" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#5eead4'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
             >Terms</Link>
             <Link href="/security" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#5eead4'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
             >Security</Link>
             <Link href="/sub-processors" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#5eead4'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
             >Sub-processors</Link>
             <Link href="/data-request" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#5eead4'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
             >Data Request</Link>
             <Link href="/do-not-sell" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#5eead4'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
             >Do Not Sell or Share</Link>
             <button
@@ -238,7 +238,7 @@ export default function Footer() {
                 fontSize: '13px', color: '#78716c', background: 'none', border: 'none',
                 padding: 0, cursor: 'pointer', font: 'inherit', whiteSpace: 'nowrap',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#5eead4'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
             >Cookie Settings</button>
           </nav>
@@ -276,7 +276,7 @@ export default function Footer() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {[
                   { icon: XLogo, href: brand.social.x, label: 'X', color: '#6ee7b7', shape: '54% 46% 62% 38% / 49% 55% 45% 51%' },
-                  { icon: FacebookLogo, href: brand.social.facebook, label: 'Facebook', color: '#5eead4', shape: '61% 39% 45% 55% / 40% 62% 38% 60%' },
+                  { icon: FacebookLogo, href: brand.social.facebook, label: 'Facebook', color: '#F9A8D4', shape: '61% 39% 45% 55% / 40% 62% 38% 60%' },
                   { icon: InstagramLogo, href: brand.social.instagram, label: 'Instagram', color: '#67e8f9', shape: '42% 58% 55% 45% / 58% 42% 60% 40%' },
                   { icon: LinkedinLogo, href: brand.social.linkedin, label: 'LinkedIn', color: '#a5b4fc', shape: '67% 33% 48% 52% / 45% 58% 42% 55%' },
                   { icon: YoutubeLogo, href: brand.social.youtube, label: 'YouTube', color: '#c4b5fd', shape: '50% 50% 60% 40% / 55% 45% 52% 48%' },

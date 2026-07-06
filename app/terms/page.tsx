@@ -131,7 +131,7 @@ export default function TermsPage() {
             <li style={liStyle}>All postings — free, paid, or renewed — receive the same features: 60-day duration, Featured badge, top placement in search results, 25 candidate profile unlocks, 25 InMails, and full analytics</li>
             <li style={liStyle}>Free postings cannot be renewed at the discounted rate. Once a free posting expires, the employer may post a new listing at the standard $199 rate</li>
           </ul>
-          <p style={pStyle}>Current pricing is also published at <Link href="/pricing" style={{ color: '#0D9488', textDecoration: 'none' }}>{brand.domain}/pricing</Link> and is incorporated into this Agreement by reference. We may change pricing at any time, and changes will be effective for postings created after the change date. Postings already paid for under prior pricing are not affected.</p>
+          <p style={pStyle}>Current pricing is also published at <Link href="/pricing" style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.domain}/pricing</Link> and is incorporated into this Agreement by reference. We may change pricing at any time, and changes will be effective for postings created after the change date. Postings already paid for under prior pricing are not affected.</p>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Payment terms:</p>
           <ul style={ulStyle}>
             <li style={liStyle}>Job posting and renewal fees are due at the time of purchase</li>
@@ -146,7 +146,7 @@ export default function TermsPage() {
           <ul style={ulStyle}>
             <li style={liStyle}>Job posting and renewal fees are generally non-refundable</li>
             <li style={liStyle}>Refund requests may be considered within 7 days of purchase on a case-by-case basis</li>
-            <li style={liStyle}>To request a refund, email <a href={`mailto:${brand.email.support}`} style={{ color: '#0D9488', textDecoration: 'none' }}>{brand.email.support}</a> with your order details and the reason for the request</li>
+            <li style={liStyle}>To request a refund, email <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a> with your order details and the reason for the request</li>
             <li style={liStyle}>We reserve the right to grant or deny refund requests at our sole discretion</li>
             <li style={liStyle}>If we remove a posting for violation of these Terms, no refund will be issued</li>
             <li style={liStyle}>Free postings have no associated payment and are therefore not refundable</li>
@@ -163,7 +163,7 @@ export default function TermsPage() {
             <li style={liStyle}>Honor candidate requests to delete or stop processing their information</li>
             <li style={liStyle}>Maintain reasonable security practices to protect candidate data from unauthorized disclosure</li>
           </ul>
-          <p style={pStyle}>Candidates agree that, when they make their profile visible and indicate openness to opportunities, their profile may be discoverable by employers using the Service. Candidates may at any time make their profile non-visible or close their account. See our <Link href="/privacy" style={{ color: '#0D9488', textDecoration: 'none' }}>Privacy Policy</Link> for full details on how candidate data is collected, used, shared, and protected.</p>
+          <p style={pStyle}>Candidates agree that, when they make their profile visible and indicate openness to opportunities, their profile may be discoverable by employers using the Service. Candidates may at any time make their profile non-visible or close their account. See our <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'none' }}>Privacy Policy</Link> for full details on how candidate data is collected, used, shared, and protected.</p>
 
           <h2 style={h2Style}>10. Intellectual Property</h2>
           <p style={pStyle}>All content provided by {ENTITY} on {brand.name} — including text, graphics, logos, icons, images, audio clips, data compilations, software, design, and the &quot;{brand.name}&quot; brand — is the property of {ENTITY} or its licensors and is protected by United States and international copyright, trademark, and other intellectual property laws.</p>
@@ -198,7 +198,7 @@ export default function TermsPage() {
           </ul>
 
           <h2 style={h2Style}>14. Termination</h2>
-          <p style={pStyle}>You may terminate your account at any time by following the account-deletion flow in your dashboard or by emailing <a href={`mailto:${brand.email.support}`} style={{ color: '#0D9488', textDecoration: 'none' }}>{brand.email.support}</a>. Account deletion is subject to a 30-day grace period during which the account may be restored, after which it is permanently purged.</p>
+          <p style={pStyle}>You may terminate your account at any time by following the account-deletion flow in your dashboard or by emailing <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a>. Account deletion is subject to a 30-day grace period during which the account may be restored, after which it is permanently purged.</p>
           <p style={pStyle}>We may suspend or terminate your access to the Service, or any portion of it, at any time, with or without notice, for any reason — including violation of these Terms, suspected fraud, or any other conduct we determine is harmful to the Service or other users.</p>
           <p style={pStyle}>Upon termination, your right to use the Service immediately ceases. Provisions that by their nature should survive termination — including intellectual property, disclaimers, limitation of liability, indemnification, and dispute resolution — shall survive.</p>
 
@@ -213,22 +213,22 @@ export default function TermsPage() {
           <p style={pStyle}>Your continued use of the Service after changes become effective constitutes your acceptance of the updated Terms. If you do not agree to the updated Terms, you must stop using the Service.</p>
 
           <h2 style={h2Style}>17. Miscellaneous</h2>
-          <p style={pStyle}><strong>Entire agreement.</strong> These Terms, together with our <Link href="/privacy" style={{ color: '#0D9488', textDecoration: 'none' }}>Privacy Policy</Link> and any other policies referenced here, constitute the entire agreement between you and {ENTITY} concerning the Service and supersede all prior agreements.</p>
+          <p style={pStyle}><strong>Entire agreement.</strong> These Terms, together with our <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'none' }}>Privacy Policy</Link> and any other policies referenced here, constitute the entire agreement between you and {ENTITY} concerning the Service and supersede all prior agreements.</p>
           <p style={pStyle}><strong>Severability.</strong> If any provision of these Terms is held to be invalid or unenforceable, the remaining provisions will remain in full force and effect.</p>
           <p style={pStyle}><strong>No waiver.</strong> Our failure to enforce any right or provision of these Terms is not a waiver of that right or provision.</p>
           <p style={pStyle}><strong>Assignment.</strong> You may not assign or transfer these Terms or your account without our prior written consent. We may assign these Terms freely, including to an affiliate or in connection with a merger, acquisition, or sale of assets.</p>
           <p style={pStyle}><strong>Force majeure.</strong> We are not liable for any failure or delay in performance caused by events beyond our reasonable control, including acts of God, natural disasters, war, terrorism, civil unrest, governmental action, labor disputes, or failures of the internet or third-party services.</p>
-          <p style={pStyle}><strong>Notices.</strong> Notices to {ENTITY} must be sent to <a href={`mailto:${brand.email.support}`} style={{ color: '#0D9488', textDecoration: 'none' }}>{brand.email.support}</a> or by mail to {brand.legal.addressLine}, {brand.legal.addressCity}, {brand.legal.addressRegion} {brand.legal.addressPostalCode}. Notices to you may be sent by email to the address associated with your account or by posting on the Service.</p>
+          <p style={pStyle}><strong>Notices.</strong> Notices to {ENTITY} must be sent to <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a> or by mail to {brand.legal.addressLine}, {brand.legal.addressCity}, {brand.legal.addressRegion} {brand.legal.addressPostalCode}. Notices to you may be sent by email to the address associated with your account or by posting on the Service.</p>
 
           <h2 style={h2Style}>18. Contact</h2>
           <p style={pStyle}>If you have questions about these Terms, please contact us:</p>
           <ul style={{ ...ulStyle, listStyleType: 'none', paddingLeft: 0 }}>
             <li style={liStyle}><strong>Operator:</strong> {ENTITY}</li>
             <li style={liStyle}><strong>Mailing address:</strong> {brand.legal.address}</li>
-            <li style={liStyle}><strong>Email:</strong> <a href={`mailto:${brand.email.support}`} style={{ color: '#0D9488', textDecoration: 'none' }}>{brand.email.support}</a></li>
-            <li style={liStyle}><strong>Website:</strong> <Link href="/" style={{ color: '#0D9488', textDecoration: 'none' }}>{brand.domain}</Link></li>
+            <li style={liStyle}><strong>Email:</strong> <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a></li>
+            <li style={liStyle}><strong>Website:</strong> <Link href="/" style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.domain}</Link></li>
           </ul>
-          <p style={pStyle}>For general questions, see our <Link href="/faq" style={{ color: '#0D9488', textDecoration: 'none' }}>FAQ page</Link> or our <Link href="/contact" style={{ color: '#0D9488', textDecoration: 'none' }}>Contact page</Link>.</p>
+          <p style={pStyle}>For general questions, see our <Link href="/faq" style={{ color: '#BE185D', textDecoration: 'none' }}>FAQ page</Link> or our <Link href="/contact" style={{ color: '#BE185D', textDecoration: 'none' }}>Contact page</Link>.</p>
         </div>
 
         {/* Footer Nav */}
@@ -239,7 +239,7 @@ export default function TermsPage() {
             { label: 'About Us', href: '/about' },
             { label: 'Contact', href: '/contact' },
           ].map(link => (
-            <Link key={link.href} href={link.href} style={{ fontSize: '13px', color: '#0D9488', textDecoration: 'none' }}>{link.label}</Link>
+            <Link key={link.href} href={link.href} style={{ fontSize: '13px', color: '#BE185D', textDecoration: 'none' }}>{link.label}</Link>
           ))}
         </footer>
       </article>

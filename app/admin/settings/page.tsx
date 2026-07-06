@@ -66,7 +66,7 @@ export default function AdminSettingsPage() {
             {/* ─── Data Sources ─── */}
             <div style={{ ...card, marginBottom: 24 }}>
                 <h2 style={{ ...heading, fontSize: 18, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Database size={20} style={{ color: '#0D9488' }} /> Data Sources
+                    <Database size={20} style={{ color: '#BE185D' }} /> Data Sources
                 </h2>
                 <ConfigRow
                     icon={<Globe size={18} style={{ color: '#3B82F6' }} />}
@@ -167,7 +167,7 @@ export default function AdminSettingsPage() {
                     <Settings size={20} style={{ color: '#EF4444' }} /> Authentication & Security
                 </h2>
                 <ConfigRow
-                    icon={<Settings size={18} style={{ color: '#0D9488' }} />}
+                    icon={<Settings size={18} style={{ color: '#BE185D' }} />}
                     label="Auth Provider"
                     description="Supabase authentication with email + social login"
                 >

@@ -254,14 +254,14 @@ export default async function StateSalaryPage({ params }: PageProps) {
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '8px',
-                            backgroundColor: 'rgba(45,212,191,0.1)',
-                            border: '1px solid rgba(45,212,191,0.2)',
+                            backgroundColor: 'rgba(244,114,182,0.1)',
+                            border: '1px solid rgba(244,114,182,0.2)',
                             borderRadius: '999px',
                             padding: '6px 16px',
                             marginBottom: '20px',
                             fontSize: '13px',
                             fontWeight: 600,
-                            color: '#2DD4BF',
+                            color: '#F472B6',
                         }}
                     >
                         <MapPin size={14} /> {stateCode} Salary Data · Updated Daily
@@ -310,7 +310,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                             label: 'Average Salary',
                             value: formatSalary(salaryData.avgSalary),
                             sub: `${Math.abs(diffPct)}% ${aboveBelow} national avg`,
-                            color: '#2DD4BF',
+                            color: '#F472B6',
                         },
                         {
                             icon: TrendingUp,
@@ -377,7 +377,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                                 gap: '8px',
                             }}
                         >
-                            <Stethoscope size={20} style={{ color: '#2DD4BF' }} />
+                            <Stethoscope size={20} style={{ color: '#F472B6' }} />
                             Salary by Practice Setting
                         </h2>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -408,7 +408,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                                                     height: '100%',
                                                     width: `${pct}%`,
                                                     borderRadius: '4px',
-                                                    background: 'linear-gradient(90deg, #2DD4BF, #0D9488)',
+                                                    background: 'linear-gradient(90deg, #F472B6, #BE185D)',
                                                     transition: 'width 0.5s',
                                                 }}
                                             />
@@ -576,7 +576,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                             transition: 'border-color 0.3s',
                         }}
                     >
-                        <Briefcase size={22} style={{ color: '#2DD4BF', flexShrink: 0 }} />
+                        <Briefcase size={22} style={{ color: '#F472B6', flexShrink: 0 }} />
                         <div>
                             <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>
                                 Browse All {stateCode} {brand.niche.short} Jobs →
@@ -687,9 +687,9 @@ export default async function StateSalaryPage({ params }: PageProps) {
                                 fontWeight: 700,
                                 fontSize: '15px',
                                 color: '#fff',
-                                background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                                background: 'linear-gradient(135deg, #F472B6, #BE185D)',
                                 textDecoration: 'none',
-                                boxShadow: '0 4px 16px rgba(45,212,191,0.25)',
+                                boxShadow: '0 4px 16px rgba(244,114,182,0.25)',
                             }}
                         >
                             Browse {stateCode} Jobs <ArrowRight size={16} />

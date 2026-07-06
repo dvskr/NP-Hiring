@@ -67,7 +67,7 @@ const clayCard: React.CSSProperties = {
         '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)',
 };
 
-const linkStyle: React.CSSProperties = { color: '#0D9488', textDecoration: 'underline' };
+const linkStyle: React.CSSProperties = { color: '#BE185D', textDecoration: 'underline' };
 
 export default function SecurityPage() {
     return (

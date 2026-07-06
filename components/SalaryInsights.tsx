@@ -40,7 +40,7 @@ export default function SalaryInsights({
             style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}
         >
             <div className="flex items-center gap-2 mb-4">
-                <DollarSign className="w-5 h-5" style={{ color: '#2DD4BF' }} />
+                <DollarSign className="w-5 h-5" style={{ color: '#F472B6' }} />
                 <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
                     Salary Insights{stateName ? ` for ${stateName}` : ''}
                 </h2>
@@ -120,7 +120,7 @@ export default function SalaryInsights({
                 <Link
                     href="/salary-guide"
                     className="text-sm font-medium hover:underline"
-                    style={{ color: '#2DD4BF' }}
+                    style={{ color: '#F472B6' }}
                 >
                     View complete 2026 {brand.niche.short} Salary Guide →
                 </Link>

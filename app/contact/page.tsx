@@ -103,11 +103,11 @@ export default function ContactPage() {
             <section style={{ padding: '80px 16px 64px', maxWidth: '1000px', margin: '0 auto' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: '32px', alignItems: 'center' }} className="contact-hero-grid">
                     <div>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: '#E6F4F1', color: '#0D9488', borderRadius: '20px', fontSize: '13px', fontWeight: 700, marginBottom: '24px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: '#E6F4F1', color: '#BE185D', borderRadius: '20px', fontSize: '13px', fontWeight: 700, marginBottom: '24px' }}>
                             <Mail size={14} /> Contact Us
                         </div>
                         <h1 style={{ fontSize: 'clamp(2.5rem, 6vw, 3.5rem)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', marginBottom: '16px', lineHeight: 1.1, letterSpacing: '-0.02em' }}>
-                            We&apos;d love to <span style={{ color: '#0D9488' }}>hear from you</span>
+                            We&apos;d love to <span style={{ color: '#BE185D' }}>hear from you</span>
                         </h1>
                         <p style={{ fontSize: '20px', color: '#6B7F8A', lineHeight: 1.6, margin: 0, maxWidth: '500px' }}>
                             Whether you represent a clinic seeking your next top-tier {brand.niche.short}, or you&apos;re a candidate looking for the perfect match, our team is standing by.
@@ -140,12 +140,12 @@ export default function ContactPage() {
                             <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', marginBottom: '18px' }}>Contact Info</h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                                    <div style={{ ...clayIconWrap('linear-gradient(145deg, #0D9488, #10B981)'), width: '36px', height: '36px', borderRadius: '10px' }}>
+                                    <div style={{ ...clayIconWrap('linear-gradient(145deg, #BE185D, #9D174D)'), width: '36px', height: '36px', borderRadius: '10px' }}>
                                         <Mail size={16} color="#fff" />
                                     </div>
                                     <div>
                                         <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A2E35', margin: '0 0 2px' }}>Email</p>
-                                        <a href={`mailto:${brand.email.support}`} style={{ fontSize: '13px', color: '#0D9488', textDecoration: 'none' }}>{brand.email.support}</a>
+                                        <a href={`mailto:${brand.email.support}`} style={{ fontSize: '13px', color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a>
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -163,7 +163,7 @@ export default function ContactPage() {
                                     </div>
                                     <div>
                                         <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A2E35', margin: '0 0 2px' }}>Quick Answers</p>
-                                        <Link href="/faq" style={{ fontSize: '13px', color: '#0D9488', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>Visit FAQ <ArrowRight size={12} /></Link>
+                                        <Link href="/faq" style={{ fontSize: '13px', color: '#BE185D', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>Visit FAQ <ArrowRight size={12} /></Link>
                                     </div>
                                 </div>
                             </div>
@@ -179,7 +179,7 @@ export default function ContactPage() {
                                     { label: 'Privacy Policy', href: '/privacy' },
                                 ].map(link => (
                                     <Link key={link.href} href={link.href} style={{
-                                        fontSize: '13px', color: '#0D9488', textDecoration: 'none',
+                                        fontSize: '13px', color: '#BE185D', textDecoration: 'none',
                                         padding: '8px 12px', borderRadius: '10px', background: '#F5F6F8',
                                         boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.03)',
                                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',

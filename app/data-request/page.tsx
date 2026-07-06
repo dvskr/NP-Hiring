@@ -138,9 +138,9 @@ export default function DataRequestPage() {
                 </p>
                 <p style={pStyle}>
                     For account self-service, you can also{' '}
-                    <Link href="/settings" style={{ color: '#0D9488', textDecoration: 'underline' }}>edit your profile</Link>
-                    , <Link href="/settings" style={{ color: '#0D9488', textDecoration: 'underline' }}>export your data</Link>, or
-                    {' '}<Link href="/settings" style={{ color: '#0D9488', textDecoration: 'underline' }}>delete your account</Link>{' '}
+                    <Link href="/settings" style={{ color: '#BE185D', textDecoration: 'underline' }}>edit your profile</Link>
+                    , <Link href="/settings" style={{ color: '#BE185D', textDecoration: 'underline' }}>export your data</Link>, or
+                    {' '}<Link href="/settings" style={{ color: '#BE185D', textDecoration: 'underline' }}>delete your account</Link>{' '}
                     directly. This form is for everything else.
                 </p>
 
@@ -167,7 +167,7 @@ export default function DataRequestPage() {
                             style={{
                                 display: 'inline-flex', alignItems: 'center', gap: '8px',
                                 padding: '12px 22px', borderRadius: '14px',
-                                background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                                background: 'linear-gradient(135deg, #F472B6, #BE185D)',
                                 color: '#fff', fontSize: '14px', fontWeight: 700, textDecoration: 'none',
                             }}
                         >
@@ -175,7 +175,7 @@ export default function DataRequestPage() {
                         </Link>
                         <p style={{ ...helpStyle, marginTop: '16px' }}>
                             Don&apos;t have an account? You can still file a request by emailing{' '}
-                            <a href={`mailto:${brand.email.support}?subject=Privacy%20Data%20Request`} style={{ color: '#0D9488', textDecoration: 'underline' }}>{brand.email.support}</a>{' '}
+                            <a href={`mailto:${brand.email.support}?subject=Privacy%20Data%20Request`} style={{ color: '#BE185D', textDecoration: 'underline' }}>{brand.email.support}</a>{' '}
                             — we&apos;ll verify your identity another way.
                         </p>
                     </div>
@@ -243,7 +243,7 @@ export default function DataRequestPage() {
                             </select>
                             <p style={helpStyle}>
                                 {/* Inline glossary so users don't have to hunt through the policy. */}
-                                Not sure which fits? <Link href="/privacy#11" style={{ color: '#0D9488', textDecoration: 'underline' }}>See descriptions in the Privacy Policy</Link>.
+                                Not sure which fits? <Link href="/privacy#11" style={{ color: '#BE185D', textDecoration: 'underline' }}>See descriptions in the Privacy Policy</Link>.
                             </p>
                         </div>
 
@@ -277,12 +277,12 @@ export default function DataRequestPage() {
                             style={{
                                 padding: '14px 24px',
                                 borderRadius: '14px',
-                                background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                                background: 'linear-gradient(135deg, #F472B6, #BE185D)',
                                 color: '#fff',
                                 fontSize: '15px',
                                 fontWeight: 700,
                                 border: '1px solid rgba(255,255,255,0.3)',
-                                boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 1px 1px 2px rgba(255,255,255,0.25)',
+                                boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.25)',
                                 cursor: submitting ? 'not-allowed' : 'pointer',
                                 opacity: submitting ? 0.7 : 1,
                                 alignSelf: 'flex-start',
@@ -294,7 +294,7 @@ export default function DataRequestPage() {
                         <p style={{ ...helpStyle, marginTop: '4px' }}>
                             By submitting you confirm the information is accurate and consent to us processing
                             it to respond to your request. Read our{' '}
-                            <Link href="/privacy" style={{ color: '#0D9488', textDecoration: 'underline' }}>Privacy Policy</Link>.
+                            <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'underline' }}>Privacy Policy</Link>.
                         </p>
                     </form>
                 )}

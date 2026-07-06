@@ -18,7 +18,7 @@ export default function CategoryFAQAccordion({ faqs, categoryLabel }: CategoryFA
     return (
         <div style={{ background: '#FDFBF7' }}>
             <section style={{ maxWidth: '1000px', margin: '0 auto', padding: '56px 20px' }}>
-                <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+                <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
                     Common Questions
                 </p>
                 <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
@@ -57,14 +57,14 @@ export default function CategoryFAQAccordion({ faqs, categoryLabel }: CategoryFA
                                 <span style={{ fontSize: '15px', fontWeight: 600, color: '#1A2E35', paddingRight: '16px', lineHeight: 1.4 }}>{faq.question}</span>
                                 <span style={{
                                     width: '28px', height: '28px', borderRadius: '8px',
-                                    background: openIndex === index ? '#0D9488' : '#F0FDFA',
+                                    background: openIndex === index ? '#BE185D' : '#FDF2F8',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     flexShrink: 0, transition: 'background 0.2s ease',
                                 }}>
                                     {openIndex === index ? (
                                         <ChevronUp size={16} style={{ color: '#fff' }} />
                                     ) : (
-                                        <ChevronDown size={16} style={{ color: '#0D9488' }} />
+                                        <ChevronDown size={16} style={{ color: '#BE185D' }} />
                                     )}
                                 </span>
                             </button>

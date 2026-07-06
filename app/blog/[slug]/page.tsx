@@ -655,25 +655,25 @@ export default async function BlogPostPage({ params }: Props) {
                                     Ready to start your career? Browse {brand.niche.short} positions:
                                 </p>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
-                                    <Link href={`/jobs/state/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#F0FDFA', border: '1px solid rgba(13,148,136,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>
+                                    <Link href={`/jobs/state/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
                                         All Jobs in {stateSlug.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ')} →
                                     </Link>
                                     {validBlogStateSettings.has('remote') && (
-                                        <Link href={`/jobs/remote/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#F0FDFA', border: '1px solid rgba(13,148,136,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>
+                                        <Link href={`/jobs/remote/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
                                             Remote →
                                         </Link>
                                     )}
                                     {validBlogStateSettings.has('telehealth') && (
-                                        <Link href={`/jobs/telehealth/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#F0FDFA', border: '1px solid rgba(13,148,136,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>
+                                        <Link href={`/jobs/telehealth/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
                                             Telehealth →
                                         </Link>
                                     )}
                                     {validBlogStateSettings.has('outpatient') && (
-                                        <Link href={`/jobs/outpatient/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#F0FDFA', border: '1px solid rgba(13,148,136,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>
+                                        <Link href={`/jobs/outpatient/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
                                             Outpatient →
                                         </Link>
                                     )}
-                                    <Link href={`/salary-guide/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#F0FDFA', border: '1px solid rgba(13,148,136,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>
+                                    <Link href={`/salary-guide/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
                                         Salary Guide →
                                     </Link>
                                 </div>
@@ -701,11 +701,11 @@ export default async function BlogPostPage({ params }: Props) {
                                 Looking for your next role?
                             </p>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
-                                <Link href="/jobs" className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#0D9488', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#fff' }}>
+                                <Link href="/jobs" className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#BE185D', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#fff' }}>
                                     Browse All {brand.niche.short} Jobs →
                                 </Link>
                                 {matched.map(l => (
-                                    <Link key={l.href} href={l.href} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#F0FDFA', border: '1px solid rgba(13,148,136,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>
+                                    <Link key={l.href} href={l.href} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
                                         {l.label} →
                                     </Link>
                                 ))}

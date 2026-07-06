@@ -41,7 +41,7 @@ function tierBadgeHtml(tier: DigestJob['tier']): string {
         return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;background:#A7F3D0;color:#065F46;font-size:11px;font-weight:700;">⚡ Easy Apply</span>`;
     }
     if (tier === 'direct_apply') {
-        return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;background:#CCFBF1;color:#0F766E;font-size:11px;font-weight:700;">↗ Direct Apply</span>`;
+        return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;background:#FCE7F3;color:#9D174D;font-size:11px;font-weight:700;">↗ Direct Apply</span>`;
     }
     return '';
 }
@@ -69,7 +69,7 @@ function renderJobRow(job: DigestJob, baseUrl: string): string {
           ${locationLine ? `<div style="margin-top:4px;font-size:12px;color:#8A9BA6;">${locationLine}</div>` : ''}
           ${salaryLine}
           <div style="margin-top:10px;">
-            <a href="${url}" style="display:inline-block;padding:8px 18px;border-radius:10px;background:#0D9488;color:#FFFFFF;text-decoration:none;font-size:13px;font-weight:600;">View role →</a>
+            <a href="${url}" style="display:inline-block;padding:8px 18px;border-radius:10px;background:#BE185D;color:#FFFFFF;text-decoration:none;font-size:13px;font-weight:600;">View role →</a>
           </div>
         </td>
       </tr>
@@ -93,7 +93,7 @@ function renderDigestHtml(args: {
     <td align="center">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;background:#FFFFFF;border-radius:20px;padding:32px;border:1px solid rgba(0,0,0,0.06);">
         <tr><td>
-          <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#0D9488;">PMHNP Hiring · Weekly Digest</p>
+          <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#BE185D;">PMHNP Hiring · Weekly Digest</p>
           <h1 style="margin:0 0 4px;font-family:Georgia,serif;font-size:26px;font-weight:800;color:#1A2E35;">${args.jobs.length} new role${args.jobs.length === 1 ? '' : 's'} match your profile</h1>
           <p style="margin:0 0 20px;font-size:14px;color:#6B7F8A;">${greeting} We picked these from your latest recommendations — Easy Apply jobs first.</p>
 
@@ -104,9 +104,9 @@ function renderDigestHtml(args: {
           <div style="margin-top:24px;padding-top:18px;border-top:1px solid #E5E7EB;font-size:12px;color:#8A9BA6;line-height:1.5;">
             You're getting this because you opted into email recommendations.
             <br>
-            <a href="${args.settingsUrl}" style="color:#0D9488;text-decoration:underline;">Manage email preferences</a>
+            <a href="${args.settingsUrl}" style="color:#BE185D;text-decoration:underline;">Manage email preferences</a>
             &nbsp;·&nbsp;
-            <a href="${args.unsubscribeUrl}" style="color:#0D9488;text-decoration:underline;">Unsubscribe</a>
+            <a href="${args.unsubscribeUrl}" style="color:#BE185D;text-decoration:underline;">Unsubscribe</a>
           </div>
         </td></tr>
       </table>

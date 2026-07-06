@@ -86,7 +86,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_COLOR: Record<string, { bg: string; text: string }> = {
   not_contacted: { bg: 'rgba(148,163,184,0.15)', text: '#64748B' },
-  wave1_sent: { bg: 'rgba(45,212,191,0.15)', text: '#0D9488' },
+  wave1_sent: { bg: 'rgba(244,114,182,0.15)', text: '#BE185D' },
   wave2_sent: { bg: 'rgba(168,85,247,0.15)', text: '#7C3AED' },
   replied: { bg: 'rgba(59,130,246,0.15)', text: '#2563EB' },
   booked: { bg: 'rgba(245,158,11,0.18)', text: '#B45309' },
@@ -241,7 +241,7 @@ export default function PdCampaignClient({ leads, funnel, total }: Props) {
                 borderColor:
                   (stat.key === 'total' && statusFilter === 'all') ||
                   statusFilter === stat.key
-                    ? '#0D9488'
+                    ? '#BE185D'
                     : 'rgba(0,0,0,0.06)',
                 borderWidth:
                   (stat.key === 'total' && statusFilter === 'all') ||
@@ -454,8 +454,8 @@ export default function PdCampaignClient({ leads, funnel, total }: Props) {
                               gap: '3px',
                               padding: '2px 7px',
                               borderRadius: '999px',
-                              background: 'rgba(13,148,136,0.12)',
-                              color: '#0F766E',
+                              background: 'rgba(190,24,93,0.12)',
+                              color: '#9D174D',
                               fontSize: '11px',
                               fontWeight: 700,
                             }}

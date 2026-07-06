@@ -18,7 +18,7 @@ const PEBBLE_SHAPES = [
     '50% 50% 60% 40% / 55% 45% 52% 48%',
 ];
 
-const PEBBLE_COLORS = ['#6ee7b7', '#5eead4', '#67e8f9', '#a5b4fc', '#c4b5fd'];
+const PEBBLE_COLORS = ['#6ee7b7', '#F9A8D4', '#67e8f9', '#a5b4fc', '#c4b5fd'];
 
 const socialLinks = [
     { icon: XLogo, href: brand.social.x, label: 'X' },
@@ -71,7 +71,7 @@ export default function FloatingSocial() {
                 );
             })}
             {/* Vertical line */}
-            <div className="w-px h-20 bg-teal-300/40" />
+            <div className="w-px h-20 bg-pink-300/40" />
         </div>
     );
 }

@@ -71,9 +71,9 @@ export default function UsageWidget() {
     // Single-tier model — gradient palette keyed for current 'pro' value with
     // legacy fallbacks so older cached payloads still render correctly.
     const tierGradients: Record<string, { gradient: string; accent: string; glow: string }> = {
-        pro: { gradient: 'linear-gradient(145deg, #0D9488, #10B981)', accent: '#0D9488', glow: 'rgba(13,148,136,0.15)' },
+        pro: { gradient: 'linear-gradient(145deg, #BE185D, #9D174D)', accent: '#BE185D', glow: 'rgba(190,24,93,0.15)' },
         starter: { gradient: 'linear-gradient(145deg, #94A3B8, #64748B)', accent: '#94A3B8', glow: 'rgba(148,163,184,0.15)' },
-        growth: { gradient: 'linear-gradient(145deg, #0D9488, #10B981)', accent: '#0D9488', glow: 'rgba(13,148,136,0.15)' },
+        growth: { gradient: 'linear-gradient(145deg, #BE185D, #9D174D)', accent: '#BE185D', glow: 'rgba(190,24,93,0.15)' },
         premium: { gradient: 'linear-gradient(145deg, #8B5CF6, #A855F7)', accent: '#8B5CF6', glow: 'rgba(139,92,246,0.15)' },
     };
 
@@ -113,9 +113,9 @@ export default function UsageWidget() {
                 used={usage.candidateUnlocks.used}
                 limit={usage.candidateUnlocks.limit}
                 unlimited={usage.candidateUnlocks.unlimited}
-                accent="#0D9488"
-                gradient="linear-gradient(90deg, #0D9488, #10B981)"
-                glow="rgba(13,148,136,0.12)"
+                accent="#BE185D"
+                gradient="linear-gradient(90deg, #BE185D, #9D174D)"
+                glow="rgba(190,24,93,0.12)"
             />
 
             {/* ─── InMails ─── */}
@@ -144,8 +144,8 @@ export default function UsageWidget() {
                 <div style={{
                     width: '32px', height: '32px', borderRadius: '10px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'linear-gradient(145deg, #0D9488, #10B981)',
-                    boxShadow: '3px 3px 8px rgba(13,148,136,0.15), inset 1px 1px 2px rgba(255,255,255,0.2)',
+                    background: 'linear-gradient(145deg, #BE185D, #9D174D)',
+                    boxShadow: '3px 3px 8px rgba(190,24,93,0.15), inset 1px 1px 2px rgba(255,255,255,0.2)',
                     flexShrink: 0,
                 }}>
                     <TrendingUp size={14} color="#fff" />
@@ -153,7 +153,7 @@ export default function UsageWidget() {
                 <div style={{ minWidth: 0, flex: 1 }}>
                     <p style={{
                         fontSize: '13px', fontWeight: 700, margin: 0,
-                        color: '#0D9488',
+                        color: '#BE185D',
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     }}>Post Another</p>
                     <p style={{
@@ -214,7 +214,7 @@ function CompactCard({
                 }}>{value}</p>
                 {sub && (
                     <p style={{
-                        fontSize: '10px', color: '#0D9488', margin: '1px 0 0', fontWeight: 600,
+                        fontSize: '10px', color: '#BE185D', margin: '1px 0 0', fontWeight: 600,
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     }}>
                         {sub}

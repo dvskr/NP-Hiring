@@ -121,7 +121,7 @@ export async function generateJobCardPng(
                                     style: {
                                         fontSize: '22px',
                                         fontWeight: 700,
-                                        color: '#64ffda',
+                                        color: '#F9A8D4',
                                     },
                                     children: SITE_WATERMARK,
                                 },
@@ -154,7 +154,7 @@ export async function generateJobCardPng(
                                             type: 'div',
                                             props: {
                                                 style: {
-                                                    background: '#64ffda',
+                                                    background: '#F9A8D4',
                                                     color: '#0f2027',
                                                     borderRadius: '12px',
                                                     padding: '8px 24px',
@@ -197,7 +197,7 @@ export async function generateJobCardPng(
                                             props: {
                                                 style: {
                                                     background: 'rgba(100,255,218,0.15)',
-                                                    color: '#64ffda',
+                                                    color: '#F9A8D4',
                                                     borderRadius: '6px',
                                                     padding: '2px 10px',
                                                     fontSize: '20px',
@@ -227,7 +227,7 @@ export async function generateJobCardPng(
                                             props: {
                                                 style: {
                                                     background: 'rgba(100,255,218,0.15)',
-                                                    color: '#64ffda',
+                                                    color: '#F9A8D4',
                                                     borderRadius: '6px',
                                                     padding: '2px 10px',
                                                     fontSize: '18px',
@@ -248,7 +248,7 @@ export async function generateJobCardPng(
                                     style: {
                                         fontSize: '40px',
                                         fontWeight: 700,
-                                        color: '#64ffda',
+                                        color: '#F9A8D4',
                                         marginTop: '8px',
                                     },
                                     children: salaryLabel,
@@ -266,7 +266,7 @@ export async function generateJobCardPng(
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
-                            background: '#64ffda',
+                            background: '#F9A8D4',
                             color: '#0f2027',
                             borderRadius: '16px',
                             padding: '20px 40px',
@@ -348,7 +348,7 @@ export async function generateFBSummaryPng(
                                 width: '32px',
                                 height: '32px',
                                 borderRadius: '50%',
-                                background: '#64ffda',
+                                background: '#F9A8D4',
                                 color: '#0f2027',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -407,7 +407,7 @@ export async function generateFBSummaryPng(
                             style: {
                                 fontSize: '16px',
                                 fontWeight: 700,
-                                color: '#64ffda',
+                                color: '#F9A8D4',
                                 flexShrink: 0,
                                 textAlign: 'right' as const,
                             },
@@ -483,7 +483,7 @@ export async function generateFBSummaryPng(
                                     style: {
                                         fontSize: '20px',
                                         fontWeight: 700,
-                                        color: '#64ffda',
+                                        color: '#F9A8D4',
                                     },
                                     children: SITE_WATERMARK,
                                 },
@@ -530,7 +530,7 @@ export async function generateFBSummaryPng(
                                 type: 'div',
                                 props: {
                                     style: {
-                                        background: '#64ffda',
+                                        background: '#F9A8D4',
                                         color: '#0f2027',
                                         borderRadius: '12px',
                                         padding: '10px 40px',

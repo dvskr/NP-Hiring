@@ -68,7 +68,7 @@ export default function MobileFilterDrawer({ isOpen, onClose }: MobileFilterDraw
                 <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4">
                     <button
                         onClick={onClose}
-                        className="w-full py-3 px-4 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-colors"
+                        className="w-full py-3 px-4 bg-pink-700 text-white font-semibold rounded-lg hover:bg-pink-800 transition-colors"
                     >
                         Apply Filters
                     </button>

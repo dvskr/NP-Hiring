@@ -102,7 +102,7 @@ export default function UnfinishedPostBanner() {
         marginBottom: 16,
         borderRadius: 16,
         background: 'linear-gradient(180deg, #ECFDF5 0%, #FFFFFF 100%)',
-        border: '1px solid rgba(13,148,136,0.18)',
+        border: '1px solid rgba(190,24,93,0.18)',
         boxShadow: '4px 4px 12px rgba(0,0,0,0.04), inset 1px 1px 2px rgba(255,255,255,0.7)',
         flexWrap: 'wrap',
       }}
@@ -113,7 +113,7 @@ export default function UnfinishedPostBanner() {
           style={{
             width: 36, height: 36, borderRadius: 10,
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            background: '#A7F3D0', color: '#0F766E', flexShrink: 0,
+            background: '#A7F3D0', color: '#9D174D', flexShrink: 0,
           }}
         >
           <FileEdit size={18} />
@@ -148,8 +148,8 @@ export default function UnfinishedPostBanner() {
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#FFFFFF',
-            background: 'linear-gradient(145deg, #0D9488, #10B981)',
-            boxShadow: '3px 3px 8px rgba(13,148,136,0.2)',
+            background: 'linear-gradient(145deg, #BE185D, #9D174D)',
+            boxShadow: '3px 3px 8px rgba(190,24,93,0.2)',
             textDecoration: 'none',
           }}
         >

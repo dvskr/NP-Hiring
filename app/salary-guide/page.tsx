@@ -136,7 +136,7 @@ const experienceData = [
 ];
 
 const settingData = [
-  { setting: 'Private Practice (Owner)', range: '$180,000 - $300,000+', notes: 'Highest earning potential, requires business skills', color: '#0D9488' },
+  { setting: 'Private Practice (Owner)', range: '$180,000 - $300,000+', notes: 'Highest earning potential, requires business skills', color: '#BE185D' },
   { setting: 'Travel / Locum Tenens', range: '$150,000 - $250,000', notes: 'Includes housing, travel, higher hourly rates', color: '#8B5CF6' },
   { setting: 'Telehealth / Remote', range: '$130,000 - $180,000', notes: 'Growing rapidly, flexible schedules', color: '#3B82F6' },
   { setting: 'Outpatient Clinic', range: '$120,000 - $160,000', notes: 'Most common setting, steady patient load', color: '#F59E0B' },
@@ -233,7 +233,7 @@ export default async function SalaryGuidePage() {
         <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '80px 20px 0' }}>
           {/* Title */}
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
               {currentYear} Salary Data
             </p>
             <h1 className="font-lora" style={{
@@ -292,10 +292,10 @@ export default async function SalaryGuidePage() {
 
               {/* PDF download card */}
               <div className="emp-bento-card" style={{
-                ...clayCard, padding: '20px', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
-                border: '1.5px solid rgba(13,148,136,0.12)',
+                ...clayCard, padding: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
+                border: '1.5px solid rgba(190,24,93,0.12)',
               }}>
-                <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#134E4A', margin: '0 0 10px' }}>📄 Download Free PDF Guide</h3>
+                <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#831843', margin: '0 0 10px' }}>📄 Download Free PDF Guide</h3>
                 <SalaryGuideForm />
                 <p style={{ fontSize: '10px', color: '#94A3B8', marginTop: '8px', marginBottom: 0 }}>
                   Sources: BLS, ZipRecruiter, Indeed, PayScale, Glassdoor, CompHealth
@@ -306,7 +306,7 @@ export default async function SalaryGuidePage() {
             {/* Quick Answer (full-width 12 cols) */}
             <div className="quick-answer-box emp-bento-card" style={{
               ...clayCard, gridColumn: 'span 12', padding: '28px 32px',
-              border: '2px solid rgba(13,148,136,0.10)',
+              border: '2px solid rgba(190,24,93,0.10)',
             }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
                 <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`} alt="Salary" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px', flexShrink: 0 }} />
@@ -325,8 +325,8 @@ export default async function SalaryGuidePage() {
                 paddingTop: '18px', borderTop: '1px solid rgba(0,0,0,0.06)',
               }} className="sal-quick-stats">
                 {[
-                  { value: '$126,000+', label: 'National Average', color: '#0D9488' },
-                  { value: '$165,000+', label: 'Top 10% Earn', color: '#0D9488' },
+                  { value: '$126,000+', label: 'National Average', color: '#BE185D' },
+                  { value: '$165,000+', label: 'Top 10% Earn', color: '#BE185D' },
                   { value: '45%', label: 'Job Growth by 2032', color: '#F59E0B' },
                   { value: '10,000+', label: 'Jobs Analyzed', color: '#F59E0B' },
                 ].map(s => (
@@ -348,7 +348,7 @@ export default async function SalaryGuidePage() {
       {stateSalaries.length > 0 && (
         <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-            <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
               Salary by Location
             </p>
             <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
@@ -361,9 +361,9 @@ export default async function SalaryGuidePage() {
             {/* Note */}
             <div style={{
               ...clayCard, maxWidth: '680px', margin: '0 auto 28px', padding: '14px 20px',
-              background: '#F0FDFA', border: '1px solid #99F6E4',
+              background: '#FDF2F8', border: '1px solid #FBCFE8',
             }}>
-              <p style={{ fontSize: '12px', color: '#134E4A', margin: 0, lineHeight: 1.5 }}>
+              <p style={{ fontSize: '12px', color: '#831843', margin: 0, lineHeight: 1.5 }}>
                 <strong>Note:</strong> Real-time salary data from active {brand.niche.short} job postings.
                 For comprehensive state-by-state data including cost-of-living adjustments, download our full PDF guide above.
               </p>
@@ -373,7 +373,7 @@ export default async function SalaryGuidePage() {
             <div className="emp-compare-table" style={{ ...clayCard, padding: '0', overflow: 'hidden' }}>
               <table role="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
                 <thead>
-                  <tr style={{ background: 'linear-gradient(135deg, rgba(13,148,136,0.08), rgba(13,148,136,0.02))' }}>
+                  <tr style={{ background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(190,24,93,0.02))' }}>
                     <th style={{ width: '35%', padding: '14px 20px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>State</th>
                     <th style={{ width: '20%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Avg. Salary</th>
                     <th className="sal-range-col" style={{ width: '25%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Range</th>
@@ -409,7 +409,7 @@ export default async function SalaryGuidePage() {
                         {state.jobCount}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                        <Link href={`/jobs/state/${state.slug}`} style={{ fontSize: '12px', color: '#0D9488', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                        <Link href={`/jobs/state/${state.slug}`} style={{ fontSize: '12px', color: '#BE185D', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
                           Jobs <ArrowUpRight size={12} />
                         </Link>
                       </td>
@@ -427,7 +427,7 @@ export default async function SalaryGuidePage() {
           ═══════════════════════════════════════════════════════════════ */}
       <div style={{ background: 'linear-gradient(180deg, #FFF5EE 0%, #FDE8D8 50%, #FFF5EE 100%)', padding: '80px 20px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Salary Breakdown
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '36px' }}>
@@ -455,7 +455,7 @@ export default async function SalaryGuidePage() {
                     {experienceData.map((item, i) => (
                       <tr key={i} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
                         <td style={{ padding: '12px 28px', fontWeight: 500, color: '#1A2E35', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{item.exp}</td>
-                        <td style={{ padding: '12px 24px', textAlign: 'right', fontWeight: 700, color: '#0D9488', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{item.range}</td>
+                        <td style={{ padding: '12px 24px', textAlign: 'right', fontWeight: 700, color: '#BE185D', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{item.range}</td>
                         <td className="sal-roles-col" style={{ padding: '12px 24px', color: '#64748B', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '12px' }}>{item.roles}</td>
                       </tr>
                     ))}
@@ -498,7 +498,7 @@ export default async function SalaryGuidePage() {
                   {specialtyData.map((item, i) => (
                     <tr key={i} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
                       <td style={{ padding: '10px 28px', fontWeight: 500, color: '#1A2E35', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{item.specialty}</td>
-                      <td style={{ padding: '10px 20px', textAlign: 'right', fontWeight: 700, color: '#0D9488', borderBottom: '1px solid rgba(0,0,0,0.04)', whiteSpace: 'nowrap' }}>{item.premium}</td>
+                      <td style={{ padding: '10px 20px', textAlign: 'right', fontWeight: 700, color: '#BE185D', borderBottom: '1px solid rgba(0,0,0,0.04)', whiteSpace: 'nowrap' }}>{item.premium}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -514,11 +514,11 @@ export default async function SalaryGuidePage() {
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Full Practice Authority</h3>
               </div>
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 16px' }}>
-                <strong>34 states + DC</strong> have FPA. {brand.niche.short}s in FPA states earn <strong style={{ color: '#0D9488' }}>12-15% more</strong> on average.
+                <strong>34 states + DC</strong> have FPA. {brand.niche.short}s in FPA states earn <strong style={{ color: '#BE185D' }}>12-15% more</strong> on average.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div style={{ padding: '14px 16px', borderRadius: '14px', background: '#F0FDFA', border: '1px solid #99F6E4' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#0D9488', margin: '0 0 8px' }}>✓ Full Practice Authority</h4>
+                <div style={{ padding: '14px 16px', borderRadius: '14px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#BE185D', margin: '0 0 8px' }}>✓ Full Practice Authority</h4>
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '11.5px', color: '#5A4A42' }}>
                     <li style={{ marginBottom: '3px' }}>• +12-15% salary premium</li>
                     <li style={{ marginBottom: '3px' }}>• Can own practice independently</li>
@@ -545,7 +545,7 @@ export default async function SalaryGuidePage() {
           ═══════════════════════════════════════════════════════════════ */}
       <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Market Intelligence
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '36px' }}>
@@ -555,11 +555,11 @@ export default async function SalaryGuidePage() {
           <div className="emp-compare-table" style={{ ...clayCard, padding: '0', overflowX: 'auto', marginBottom: '20px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed', minWidth: '480px' }}>
               <thead>
-                <tr style={{ background: 'linear-gradient(135deg, rgba(13,148,136,0.08), rgba(13,148,136,0.02))' }}>
+                <tr style={{ background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(190,24,93,0.02))' }}>
                   <th style={{ padding: '14px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Metric</th>
                   <th style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>2024</th>
                   <th style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>2025</th>
-                  <th style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '11px', textTransform: 'uppercase' }}>2026</th>
+                  <th style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 800, color: '#BE185D', borderBottom: '2px solid rgba(190,24,93,0.2)', fontSize: '11px', textTransform: 'uppercase' }}>2026</th>
                 </tr>
               </thead>
               <tbody>
@@ -573,7 +573,7 @@ export default async function SalaryGuidePage() {
                     <td style={{ padding: '12px 24px', fontWeight: 500, color: '#1A2E35', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{row.metric}</td>
                     <td style={{ padding: '12px 20px', textAlign: 'center', color: '#94A3B8', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{row.v24}</td>
                     <td style={{ padding: '12px 20px', textAlign: 'center', color: '#94A3B8', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{row.v25}</td>
-                    <td style={{ padding: '12px 20px', textAlign: 'center', fontWeight: 700, color: '#0D9488', borderBottom: '1px solid rgba(0,0,0,0.04)', background: 'rgba(13,148,136,0.03)' }}>{row.v26}</td>
+                    <td style={{ padding: '12px 20px', textAlign: 'center', fontWeight: 700, color: '#BE185D', borderBottom: '1px solid rgba(0,0,0,0.04)', background: 'rgba(190,24,93,0.03)' }}>{row.v26}</td>
                   </tr>
                 ))}
               </tbody>
@@ -581,8 +581,8 @@ export default async function SalaryGuidePage() {
           </div>
 
           {/* Why Demand is High */}
-          <div style={{ ...clayCard, padding: '22px 28px', background: '#F0FDFA', border: '1px solid #99F6E4' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#134E4A', margin: '0 0 10px' }}>Why Demand is High</h3>
+          <div style={{ ...clayCard, padding: '22px 28px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#831843', margin: '0 0 10px' }}>Why Demand is High</h3>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: '13px', color: '#5A4A42' }}>
               <li>• <strong>123 million</strong> Americans in shortage areas</li>
               <li>• <strong>6,203</strong> additional providers needed</li>
@@ -597,7 +597,7 @@ export default async function SalaryGuidePage() {
           ═══════════════════════════════════════════════════════════════ */}
       <div style={{ background: 'linear-gradient(180deg, #FFF5EE 0%, #FDE8D8 50%, #FFF5EE 100%)', padding: '80px 20px' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Maximize Your Pay
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '36px' }}>
@@ -621,7 +621,7 @@ export default async function SalaryGuidePage() {
           ═══════════════════════════════════════════════════════════════ */}
       <section style={{ padding: '80px 20px', background: '#fff' }}>
         <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Common Questions
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '32px' }}>
@@ -673,7 +673,7 @@ export default async function SalaryGuidePage() {
             <div style={{ padding: '36px 32px' }}>
               <h2 className="font-lora" style={{ fontSize: '22px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>
                 Find Your Next High-Paying{' '}
-                <span style={{ color: '#0D9488' }}>{brand.niche.short} Job</span>
+                <span style={{ color: '#BE185D' }}>{brand.niche.short} Job</span>
               </h2>
               <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px', maxWidth: '380px' }}>
                 Browse positions with competitive salaries. Filter by location, salary, and work type.
@@ -681,9 +681,9 @@ export default async function SalaryGuidePage() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 <Link href="/jobs" className="emp-cta-primary" style={{
                   padding: '12px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px',
-                  background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
+                  background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                   textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px',
-                  boxShadow: '4px 4px 12px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                  boxShadow: '4px 4px 12px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
                 }}>
                   Browse All Jobs <ArrowRight size={15} />
                 </Link>
@@ -704,7 +704,7 @@ export default async function SalaryGuidePage() {
                 ))}
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)' }}>
               <Image
                 src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/cta-illustration.webp`}
                 alt={`Find high-paying ${brand.niche.short} jobs`}
@@ -732,7 +732,7 @@ export default async function SalaryGuidePage() {
         }
         .emp-cta-primary:hover {
           transform: translateY(-3px);
-          box-shadow: 0 10px 32px rgba(13,148,136,0.35), inset 1px 1px 2px rgba(255,255,255,0.2) !important;
+          box-shadow: 0 10px 32px rgba(190,24,93,0.35), inset 1px 1px 2px rgba(255,255,255,0.2) !important;
           filter: brightness(1.05);
         }
         .emp-cta-secondary {
@@ -741,7 +741,7 @@ export default async function SalaryGuidePage() {
         .emp-cta-secondary:hover {
           transform: translateY(-2px);
           box-shadow: 0 6px 20px rgba(0,0,0,0.08) !important;
-          border-color: rgba(13,148,136,0.3) !important;
+          border-color: rgba(190,24,93,0.3) !important;
         }
         .emp-bento-card {
           transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -754,7 +754,7 @@ export default async function SalaryGuidePage() {
           transition: background 0.2s ease;
         }
         .emp-compare-table tbody tr:hover {
-          background: rgba(13,148,136,0.04) !important;
+          background: rgba(190,24,93,0.04) !important;
         }
         .sal-stat-pill {
           transition: transform 0.2s ease, box-shadow 0.2s ease;

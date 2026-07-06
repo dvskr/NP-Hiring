@@ -95,7 +95,7 @@ export default async function ForJobSeekersPage() {
           ═══════════════════════════════════════════════════════════════ */}
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
         <section style={{ maxWidth: '1000px', margin: '0 auto', padding: '80px 20px 56px' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             100% Free · No Hidden Fees
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
@@ -121,7 +121,7 @@ export default async function ForJobSeekersPage() {
                   Every job gets a 0–100 match score based on your license, specialty, experience, location, and salary preferences.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
                 <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/bento-match.webp`} alt="AI match scoring" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
@@ -130,7 +130,7 @@ export default async function ForJobSeekersPage() {
               ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden',
               display: 'flex', flexDirection: 'column',
             }}>
-              <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/bento-salary.webp`} alt="Salary transparency" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
               </div>
               <div style={{ padding: '24px 22px', flex: 1 }}>
@@ -187,20 +187,20 @@ export default async function ForJobSeekersPage() {
             <div className="seeker-bento-free emp-bento-card" style={{
               ...clayCard, gridColumn: 'span 4',
               padding: '28px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
-              background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
-              border: '2px solid rgba(13,148,136,0.15)',
+              background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
+              border: '2px solid rgba(190,24,93,0.15)',
             }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-free.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '14px' }} />
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#134E4A', margin: '0 0 6px' }}>Free Forever</h3>
-              <p style={{ fontSize: '13px', color: '#0D9488', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Free Forever</h3>
+              <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
                 No subscriptions. No premium tiers.<br />
                 Every feature is free for job seekers.
               </p>
               <Link href="/jobs" className="seeker-cta-primary" style={{
                 padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                background: '#0D9488', color: '#fff', textDecoration: 'none',
+                background: '#BE185D', color: '#fff', textDecoration: 'none',
                 display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content',
-                boxShadow: '3px 3px 8px rgba(13,148,136,0.15)',
+                boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
               }}>
                 Start Searching <ArrowRight size={14} />
               </Link>
@@ -240,7 +240,7 @@ export default async function ForJobSeekersPage() {
                 <div style={{ padding: '20px 18px' }}>
                   <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{t.title}</h3>
                   <p style={{ fontSize: '12px', color: '#7A6A62', margin: '0 0 10px', lineHeight: 1.5 }}>{t.desc}</p>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#0D9488' }}>Explore →</span>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#BE185D' }}>Explore →</span>
                 </div>
               </Link>
             ))}
@@ -253,7 +253,7 @@ export default async function ForJobSeekersPage() {
           ═══════════════════════════════════════════════════════════════ */}
       <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Why Switch
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
@@ -268,9 +268,9 @@ export default async function ForJobSeekersPage() {
             <div className="seeker-compare-table" style={{ ...clayCard, padding: '0', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
                 <thead>
-                  <tr style={{ background: 'linear-gradient(135deg, rgba(13,148,136,0.08), rgba(13,148,136,0.02))' }}>
+                  <tr style={{ background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(190,24,93,0.02))' }}>
                     <th style={{ width: '40%', padding: '16px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Feature</th>
-                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '12px' }}>{brand.name}</th>
+                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#BE185D', borderBottom: '2px solid rgba(190,24,93,0.2)', fontSize: '12px' }}>{brand.name}</th>
                     <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>Indeed</th>
                     <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>LinkedIn</th>
                   </tr>
@@ -278,7 +278,7 @@ export default async function ForJobSeekersPage() {
                 <tbody>
                   {comparisonRows.map((row, i) => {
                     const renderCell = (val: true | false | 'partial', isUs: boolean) => {
-                      if (val === true) return <Check size={16} style={{ color: isUs ? '#0D9488' : '#94A3B8', display: 'block', margin: '0 auto' }} />;
+                      if (val === true) return <Check size={16} style={{ color: isUs ? '#BE185D' : '#94A3B8', display: 'block', margin: '0 auto' }} />;
                       if (val === 'partial') return <span style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 600 }}>Partial</span>;
                       return <X size={16} style={{ color: '#D1D5DB', display: 'block', margin: '0 auto' }} />;
                     };
@@ -288,7 +288,7 @@ export default async function ForJobSeekersPage() {
                           <span style={{ color: '#1A2E35', fontWeight: 500 }}>{row.feature}</span>
                           {row.note && <span style={{ display: 'block', fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>{row.note}</span>}
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)', background: 'rgba(13,148,136,0.03)' }}>
+                        <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)', background: 'rgba(190,24,93,0.03)' }}>
                           {renderCell(row.us, true)}
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
@@ -310,7 +310,7 @@ export default async function ForJobSeekersPage() {
               display: 'flex', flexDirection: 'column',
             }}>
               <div style={{
-                background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
+                background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
                 padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <Image
@@ -323,7 +323,7 @@ export default async function ForJobSeekersPage() {
               <div style={{ padding: '28px 24px' }}>
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>
                   Ready to Find Your{' '}
-                  <span style={{ color: '#0D9488' }}>Dream Role</span>?
+                  <span style={{ color: '#BE185D' }}>Dream Role</span>?
                 </h3>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px' }}>
                   100% free. No sign-up required to browse. Create a profile to apply and get matched.
@@ -331,9 +331,9 @@ export default async function ForJobSeekersPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <Link href="/jobs" className="seeker-cta-primary" style={{
                     padding: '12px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px',
-                    background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
+                    background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                     textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    boxShadow: '4px 4px 12px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                    boxShadow: '4px 4px 12px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
                   }}>
                     Browse Jobs <ArrowRight size={15} />
                   </Link>
@@ -374,7 +374,7 @@ export default async function ForJobSeekersPage() {
                 desc: `State-by-state salary data, experience-based ranges, and negotiation strategies. See what ${brand.niche.short}s actually earn.`,
                 href: '/salary-guide',
                 icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-salary.webp`,
-                gradient: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
+                gradient: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
                 cta: 'View Salary Data',
               },
               {
@@ -412,7 +412,7 @@ export default async function ForJobSeekersPage() {
                 <div style={{ padding: '20px 22px' }}>
                   <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{r.title}</h3>
                   <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: '0 0 10px', lineHeight: 1.55 }}>{r.desc}</p>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#0D9488', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                     {r.cta} <ArrowRight size={12} />
                   </span>
                 </div>
@@ -429,7 +429,7 @@ export default async function ForJobSeekersPage() {
         }
         .seeker-cta-primary:hover {
           transform: translateY(-3px);
-          box-shadow: 0 10px 32px rgba(13,148,136,0.35), inset 1px 1px 2px rgba(255,255,255,0.2) !important;
+          box-shadow: 0 10px 32px rgba(190,24,93,0.35), inset 1px 1px 2px rgba(255,255,255,0.2) !important;
           filter: brightness(1.05);
         }
         .seeker-cta-secondary {
@@ -438,7 +438,7 @@ export default async function ForJobSeekersPage() {
         .seeker-cta-secondary:hover {
           transform: translateY(-2px);
           box-shadow: 0 6px 20px rgba(0,0,0,0.08) !important;
-          border-color: rgba(13,148,136,0.3) !important;
+          border-color: rgba(190,24,93,0.3) !important;
         }
         .seeker-stat-pill {
           transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -451,7 +451,7 @@ export default async function ForJobSeekersPage() {
           transition: background 0.2s ease;
         }
         .seeker-compare-table tbody tr:hover {
-          background: rgba(13,148,136,0.04) !important;
+          background: rgba(190,24,93,0.04) !important;
         }
 
         @media (max-width: 768px) {

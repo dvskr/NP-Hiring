@@ -223,7 +223,7 @@ export default function EducationSection({ showMsg }: Props) {
                     <div aria-hidden="true" style={{
                         width: '18px', height: '18px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         border: form.isHighestDegree ? `1.5px solid ${clayPalette.accentLight}` : `1.5px solid ${clayPalette.border}`,
-                        background: form.isHighestDegree ? 'rgba(45,212,191,0.12)' : clayPalette.inputFill,
+                        background: form.isHighestDegree ? 'rgba(244,114,182,0.12)' : clayPalette.inputFill,
                     }}>
                         {form.isHighestDegree && <Check size={12} style={{ color: clayPalette.accentLight }} />}
                     </div>
@@ -299,7 +299,7 @@ export default function EducationSection({ showMsg }: Props) {
 
                     {!showForm && (
                         <button onClick={() => { setForm({ ...emptyForm }); setEditingId(null); setShowForm(true) }}
-                            style={{ ...btnOutline, borderStyle: 'dashed', width: '100%', justifyContent: 'center', padding: '12px', color: clayPalette.accentLight, borderColor: 'rgba(45,212,191,0.4)' }}>
+                            style={{ ...btnOutline, borderStyle: 'dashed', width: '100%', justifyContent: 'center', padding: '12px', color: clayPalette.accentLight, borderColor: 'rgba(244,114,182,0.4)' }}>
                             <Plus size={16} /> Add Education
                         </button>
                     )}

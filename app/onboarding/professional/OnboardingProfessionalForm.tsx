@@ -268,9 +268,9 @@ export default function OnboardingProfessionalForm({ initial }: { initial: Initi
                                 padding: '13px 24px', borderRadius: '12px', border: 'none',
                                 fontWeight: 700, fontSize: '14px', cursor: saving || !minimallyComplete ? 'not-allowed' : 'pointer',
                                 color: '#fff',
-                                background: 'linear-gradient(145deg, #0D9488, #0F766E)',
+                                background: 'linear-gradient(145deg, #BE185D, #9D174D)',
                                 opacity: saving || !minimallyComplete ? 0.55 : 1,
-                                boxShadow: '0 4px 14px rgba(13,148,136,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+                                boxShadow: '0 4px 14px rgba(190,24,93,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
                             }}
                         >
                             {saving ? <Loader2 size={16} className="animate-spin" /> : <>Save and continue <ArrowRight size={16} /></>}

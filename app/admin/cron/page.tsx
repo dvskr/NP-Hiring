@@ -107,7 +107,7 @@ export default function CronHealthDashboard() {
     if (loading) {
         return (
             <div style={{ maxWidth: '1000px', margin: '0 auto', paddingTop: '80px', paddingBottom: '32px', paddingLeft: '16px', paddingRight: '16px', textAlign: 'center' }}>
-                <Activity className="animate-pulse" size={48} style={{ color: '#0D9488', margin: '0 auto' }} />
+                <Activity className="animate-pulse" size={48} style={{ color: '#BE185D', margin: '0 auto' }} />
                 <p style={{ marginTop: '16px', color: '#6B7F8A' }}>Loading cron configuration...</p>
             </div>
         );

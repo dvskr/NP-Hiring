@@ -121,9 +121,9 @@ function SuccessContent() {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
     padding: '14px 28px', borderRadius: '14px',
     fontSize: '15px', fontWeight: 700, color: '#fff',
-    background: 'linear-gradient(145deg, #0D9488, #10B981)',
+    background: 'linear-gradient(145deg, #BE185D, #9D174D)',
     border: '1px solid rgba(255,255,255,0.3)',
-    boxShadow: '4px 4px 12px rgba(13,148,136,0.25), -2px -2px 6px rgba(255,255,255,0.3), inset 1px 1px 2px rgba(255,255,255,0.15)',
+    boxShadow: '4px 4px 12px rgba(190,24,93,0.25), -2px -2px 6px rgba(255,255,255,0.3), inset 1px 1px 2px rgba(255,255,255,0.15)',
     textDecoration: 'none', cursor: 'pointer', transition: 'all 0.2s ease',
     minWidth: '170px',
   };
@@ -131,9 +131,9 @@ function SuccessContent() {
   const clayBtnSecondary: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
     padding: '14px 28px', borderRadius: '14px',
-    fontSize: '15px', fontWeight: 700, color: '#0D9488',
+    fontSize: '15px', fontWeight: 700, color: '#BE185D',
     background: '#FFFFFF',
-    border: '1px solid rgba(13,148,136,0.25)',
+    border: '1px solid rgba(190,24,93,0.25)',
     boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)',
     textDecoration: 'none', cursor: 'pointer', transition: 'all 0.2s ease',
     minWidth: '170px',
@@ -161,7 +161,7 @@ function SuccessContent() {
       <div style={pageWrap}>
         <div style={{ maxWidth: '640px', margin: '0 auto', paddingTop: '32px' }}>
           <div style={{ ...clayCard, textAlign: 'center' }}>
-            <Loader2 style={{ width: '44px', height: '44px', margin: '0 auto 16px', color: '#0D9488', animation: 'spin 0.9s linear infinite' }} />
+            <Loader2 style={{ width: '44px', height: '44px', margin: '0 auto 16px', color: '#BE185D', animation: 'spin 0.9s linear infinite' }} />
             <p style={{ fontSize: '16px', color: '#1A2E35', fontWeight: 600, margin: '0 0 4px' }}>Verifying your payment…</p>
             <p style={{ fontSize: '13px', color: '#8A9BA6', margin: 0 }}>This usually takes just a few seconds.</p>
           </div>
@@ -236,17 +236,17 @@ function SuccessContent() {
 
           {/* "What happens next" — claymorphic teal panel */}
           <div style={{
-            background: '#F0FDFA',
-            border: '1px solid rgba(13,148,136,0.18)',
+            background: '#FDF2F8',
+            border: '1px solid rgba(190,24,93,0.18)',
             borderRadius: '18px',
             padding: '20px 24px',
             marginBottom: '28px',
-            boxShadow: 'inset 2px 2px 5px rgba(13,148,136,0.06), inset -1px -1px 3px rgba(255,255,255,0.5)',
+            boxShadow: 'inset 2px 2px 5px rgba(190,24,93,0.06), inset -1px -1px 3px rgba(255,255,255,0.5)',
             textAlign: 'left',
           }}>
             <h2 style={{
               fontSize: '13px', fontWeight: 700,
-              color: '#0F766E', textTransform: 'uppercase', letterSpacing: '0.06em',
+              color: '#9D174D', textTransform: 'uppercase', letterSpacing: '0.06em',
               margin: '0 0 12px', textAlign: 'center',
             }}>What happens next?</h2>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -256,7 +256,7 @@ function SuccessContent() {
                 'Candidates can start applying immediately',
                 'You can manage everything from your dashboard',
               ].map((item) => (
-                <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '14px', color: '#115E59', lineHeight: 1.5 }}>
+                <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '14px', color: '#831843', lineHeight: 1.5 }}>
                   <span style={{
                     flexShrink: 0,
                     width: '20px', height: '20px', borderRadius: '50%',
@@ -314,7 +314,7 @@ function LoadingFallback() {
         boxShadow: '8px 8px 20px rgba(0,0,0,0.06), -4px -4px 12px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.6)',
         padding: '40px 32px', textAlign: 'center',
       }}>
-        <Loader2 style={{ width: '44px', height: '44px', margin: '0 auto 16px', color: '#0D9488', animation: 'spin 0.9s linear infinite' }} />
+        <Loader2 style={{ width: '44px', height: '44px', margin: '0 auto 16px', color: '#BE185D', animation: 'spin 0.9s linear infinite' }} />
         <p style={{ fontSize: '16px', color: '#1A2E35', fontWeight: 600, margin: 0 }}>Loading…</p>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

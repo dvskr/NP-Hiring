@@ -266,7 +266,7 @@ export default async function DmarcAdminPage() {
             marginBottom: '24px',
           }}
         >
-          <ShieldCheck size={32} color="#0D9488" style={{ marginBottom: '12px' }} />
+          <ShieldCheck size={32} color="#BE185D" style={{ marginBottom: '12px' }} />
           <div style={{ fontWeight: 700, fontSize: '17px', color: '#1A2E35' }}>
             No reports yet
           </div>
@@ -295,7 +295,7 @@ export default async function DmarcAdminPage() {
               marginTop: '16px',
               padding: '8px 16px',
               borderRadius: '10px',
-              background: '#0D9488',
+              background: '#BE185D',
               color: '#FFFFFF',
               fontSize: '13px',
               fontWeight: 700,

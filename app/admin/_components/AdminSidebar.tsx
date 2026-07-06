@@ -101,11 +101,11 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
                 width: '36px',
                 height: '36px',
                 borderRadius: '12px',
-                background: 'linear-gradient(145deg, #0D9488, #0F766E)',
+                background: 'linear-gradient(145deg, #BE185D, #9D174D)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '3px 3px 8px rgba(13,148,136,0.2), inset 1px 1px 3px rgba(255,255,255,0.2)',
+                boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 1px 1px 3px rgba(255,255,255,0.2)',
               }}
             >
               <span style={{ color: '#fff', fontWeight: 800, fontSize: '14px' }}>A</span>
@@ -140,15 +140,15 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
                   fontSize: '14px',
                   fontWeight: active ? 600 : 450,
                   transition: 'all 0.2s',
-                  backgroundColor: active ? '#E6FAF8' : 'transparent',
-                  color: active ? '#0D9488' : '#6B7F8A',
+                  backgroundColor: active ? '#FDF2F8' : 'transparent',
+                  color: active ? '#BE185D' : '#6B7F8A',
                   boxShadow: active
-                    ? '4px 4px 10px rgba(13,148,136,0.08), -2px -2px 6px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.6)'
+                    ? '4px 4px 10px rgba(190,24,93,0.08), -2px -2px 6px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.6)'
                     : 'none',
-                  border: active ? '1px solid rgba(13,148,136,0.12)' : '1px solid transparent',
+                  border: active ? '1px solid rgba(190,24,93,0.12)' : '1px solid transparent',
                 }}
               >
-                <Icon size={19} style={{ color: active ? '#0D9488' : '#94A3B8', flexShrink: 0 }} />
+                <Icon size={19} style={{ color: active ? '#BE185D' : '#94A3B8', flexShrink: 0 }} />
                 <span>{item.name}</span>
               </Link>
             );
@@ -183,7 +183,7 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
               boxShadow: '3px 3px 8px rgba(0,0,0,0.04), -2px -2px 6px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.6)',
             }}
           >
-            <Home size={18} style={{ color: '#0D9488' }} />
+            <Home size={18} style={{ color: '#BE185D' }} />
             Back to Site
           </Link>
         </div>

@@ -113,7 +113,7 @@ export default function ScreeningQuestionsBuilder() {
             Add questions to pre-screen candidates before they apply
           </p>
         </div>
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: 'rgba(45,212,191,0.12)', color: '#2DD4BF' }}>
+        <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: 'rgba(244,114,182,0.12)', color: '#F472B6' }}>
           {questions.length}/5
         </span>
       </div>
@@ -137,7 +137,7 @@ export default function ScreeningQuestionsBuilder() {
                     onClick={() => toggleRequired(q.id)}
                     className="text-xs px-1.5 py-0.5 rounded cursor-pointer transition-colors"
                     style={q.required
-                      ? { background: 'rgba(13,148,136,0.12)', color: '#0d9488' }
+                      ? { background: 'rgba(190,24,93,0.12)', color: '#BE185D' }
                       : { background: 'rgba(107,114,128,0.1)', color: 'var(--text-tertiary)' }
                     }
                   >
@@ -177,8 +177,8 @@ export default function ScreeningQuestionsBuilder() {
           <button
             type="button"
             onClick={() => setShowPresets(!showPresets)}
-            className="flex items-center gap-2 text-sm font-medium transition-colors hover:text-teal-600 mb-3"
-            style={{ color: '#0d9488' }}
+            className="flex items-center gap-2 text-sm font-medium transition-colors hover:text-pink-700 mb-3"
+            style={{ color: '#BE185D' }}
           >
             <Lightbulb size={14} />
             {showPresets ? 'Hide suggested questions' : 'Choose from suggested questions'}
@@ -191,10 +191,10 @@ export default function ScreeningQuestionsBuilder() {
                   key={i}
                   type="button"
                   onClick={() => addPreset(preset)}
-                  className="w-full text-left flex items-center gap-2 p-2.5 rounded-lg text-sm transition-all hover:bg-teal-50"
+                  className="w-full text-left flex items-center gap-2 p-2.5 rounded-lg text-sm transition-all hover:bg-pink-50"
                   style={{ border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
                 >
-                  <Plus size={14} className="flex-shrink-0" style={{ color: '#0d9488' }} />
+                  <Plus size={14} className="flex-shrink-0" style={{ color: '#BE185D' }} />
                   {preset.text}
                   <span className="ml-auto text-xs flex-shrink-0" style={{ color: 'var(--text-tertiary)' }}>
                     {preset.type === 'boolean' ? 'Yes/No' : preset.type === 'number' ? 'Number' : 'Text'}
@@ -231,7 +231,7 @@ export default function ScreeningQuestionsBuilder() {
               onClick={addCustom}
               disabled={!customText.trim()}
               className="px-3 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
-              style={{ background: '#0d9488' }}
+              style={{ background: '#BE185D' }}
             >
               <Plus size={14} />
             </button>

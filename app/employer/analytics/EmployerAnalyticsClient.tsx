@@ -90,7 +90,7 @@ export default function EmployerAnalyticsClient() {
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
         <h1 style={{ fontFamily: 'var(--font-lora), Georgia, serif', fontSize: 24, fontWeight: 700, color: '#1A2E35', margin: 0 }}>
-          <BarChart3 size={22} style={{ display: 'inline', marginRight: 8, color: '#0D9488' }} />
+          <BarChart3 size={22} style={{ display: 'inline', marginRight: 8, color: '#BE185D' }} />
           Job Analytics
         </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -113,7 +113,7 @@ export default function EmployerAnalyticsClient() {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '7px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-              background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
+              background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
               border: 'none', cursor: data?.jobs?.length ? 'pointer' : 'not-allowed',
               opacity: data?.jobs?.length ? 1 : 0.5,
             }}
@@ -148,7 +148,7 @@ export default function EmployerAnalyticsClient() {
             </div>
             <div style={statTile}>
               <span style={{ fontSize: 12, color: '#8A9BA6', fontWeight: 600 }}>CTR</span>
-              <span style={{ fontSize: 28, fontWeight: 700, color: '#0F766E' }}>{data.summary.ctr}%</span>
+              <span style={{ fontSize: 28, fontWeight: 700, color: '#9D174D' }}>{data.summary.ctr}%</span>
             </div>
           </div>
 
@@ -170,8 +170,8 @@ export default function EmployerAnalyticsClient() {
                       onClick={() => setSortKey(k)}
                       style={{
                         padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                        background: sortKey === k ? '#CCFBF1' : '#F5F6F8',
-                        color: sortKey === k ? '#0F766E' : '#475569',
+                        background: sortKey === k ? '#FCE7F3' : '#F5F6F8',
+                        color: sortKey === k ? '#9D174D' : '#475569',
                         border: 'none', cursor: 'pointer',
                       }}
                     >
@@ -198,9 +198,9 @@ export default function EmployerAnalyticsClient() {
                         <td style={{ padding: '10px 12px', fontWeight: 600, color: '#1A2E35' }}>{j.title}</td>
                         <td style={{ padding: '10px 12px', textAlign: 'right' }}>{j.views.toLocaleString()}</td>
                         <td style={{ padding: '10px 12px', textAlign: 'right' }}>{j.clicks.toLocaleString()}</td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: '#0F766E' }}>{j.ctr}%</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: '#9D174D' }}>{j.ctr}%</td>
                         <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                          <a href={`/jobs/${j.id}`} style={{ color: '#0D9488', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
+                          <a href={`/jobs/${j.id}`} style={{ color: '#BE185D', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
                             View <ExternalLink size={12} />
                           </a>
                         </td>

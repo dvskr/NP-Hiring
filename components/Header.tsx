@@ -242,7 +242,7 @@ export default function Header() {
                 }}
               >
                 {WORDMARK.primary}{' '}
-                <span style={{ fontStyle: 'italic', color: '#0D9488', fontWeight: 600 }}>{WORDMARK.accent}</span>
+                <span style={{ fontStyle: 'italic', color: '#BE185D', fontWeight: 600 }}>{WORDMARK.accent}</span>
               </span>
             </Link>
           </div>
@@ -265,13 +265,13 @@ export default function Header() {
                     borderRadius: '12px',
                     fontSize: '13.5px',
                     fontWeight: active ? 600 : 500,
-                    color: active ? '#0D9488' : '#5A4A42',
-                    backgroundColor: active ? 'rgba(13,148,136,0.10)' : 'transparent',
+                    color: active ? '#BE185D' : '#5A4A42',
+                    backgroundColor: active ? 'rgba(190,24,93,0.10)' : 'transparent',
                     border: active
-                      ? '1px solid rgba(13,148,136,0.15)'
+                      ? '1px solid rgba(190,24,93,0.15)'
                       : '1px solid transparent',
                     boxShadow: active
-                      ? 'inset 1px 1px 3px rgba(13,148,136,0.06), 2px 2px 6px rgba(13,148,136,0.06)'
+                      ? 'inset 1px 1px 3px rgba(190,24,93,0.06), 2px 2px 6px rgba(190,24,93,0.06)'
                       : 'none',
                     textDecoration: 'none',
                     transition: 'all 0.2s ease',
@@ -354,8 +354,8 @@ export default function Header() {
                         padding: '14px 16px',
                         fontSize: '16px',
                         fontWeight: active ? 600 : 500,
-                        color: active ? '#0D9488' : '#5A4A42',
-                        backgroundColor: active ? 'rgba(13,148,136,0.08)' : 'transparent',
+                        color: active ? '#BE185D' : '#5A4A42',
+                        backgroundColor: active ? 'rgba(190,24,93,0.08)' : 'transparent',
                         borderRadius: '14px',
                         marginBottom: '2px',
                         display: 'flex',
@@ -389,8 +389,8 @@ export default function Header() {
                             padding: '12px 16px',
                             fontSize: '15px',
                             fontWeight: active ? 600 : 400,
-                            color: active ? '#0D9488' : '#7A6A62',
-                            backgroundColor: active ? 'rgba(13,148,136,0.06)' : 'transparent',
+                            color: active ? '#BE185D' : '#7A6A62',
+                            backgroundColor: active ? 'rgba(190,24,93,0.06)' : 'transparent',
                             borderRadius: '12px',
                             marginBottom: '1px',
                             display: 'flex',
@@ -450,20 +450,20 @@ function PostJobCTA({ mobile = false }: { mobile?: boolean }) {
         fontSize: mobile ? '13px' : '13.5px',
         fontWeight: 700,
         color: '#FFFFFF',
-        background: 'linear-gradient(135deg, #0D9488, #0F766E)',
+        background: 'linear-gradient(135deg, #BE185D, #9D174D)',
         border: '1px solid rgba(255,255,255,0.25)',
-        boxShadow: '0 2px 8px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.2)',
+        boxShadow: '0 2px 8px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.2)',
         textDecoration: 'none',
         whiteSpace: 'nowrap',
         transition: 'transform 0.15s ease, box-shadow 0.15s ease',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-1px)';
-        e.currentTarget.style.boxShadow = '0 4px 14px rgba(13,148,136,0.35), inset 0 1px 0 rgba(255,255,255,0.25)';
+        e.currentTarget.style.boxShadow = '0 4px 14px rgba(190,24,93,0.35), inset 0 1px 0 rgba(255,255,255,0.25)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 2px 8px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.2)';
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.2)';
       }}
       aria-label="Post a new job"
     >

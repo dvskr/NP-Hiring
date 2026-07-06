@@ -136,7 +136,7 @@ export default function ResetPasswordPage() {
     <Suspense fallback={
       <AuthLayout>
         <div style={{ textAlign: 'center', padding: '32px 0' }}>
-          <Loader2 className="w-10 h-10 animate-spin" style={{ color: '#0D9488', margin: '0 auto 12px' }} />
+          <Loader2 className="w-10 h-10 animate-spin" style={{ color: '#BE185D', margin: '0 auto 12px' }} />
           <p style={{ fontSize: '14px', color: '#94A3B0' }}>Loading...</p>
         </div>
       </AuthLayout>

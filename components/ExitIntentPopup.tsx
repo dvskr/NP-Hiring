@@ -100,7 +100,7 @@ export default function ExitIntentPopup() {
                 style={{
                     backgroundColor: 'var(--bg-primary)',
                     border: '1px solid var(--border-color)',
-                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25), 0 0 40px rgba(45,212,191,0.1)',
+                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25), 0 0 40px rgba(244,114,182,0.1)',
                 }}
             >
                 {/* Close button */}
@@ -118,10 +118,10 @@ export default function ExitIntentPopup() {
                     <div
                         className="w-14 h-14 rounded-2xl flex items-center justify-center"
                         style={{
-                            background: 'linear-gradient(135deg, rgba(45,212,191,0.15), rgba(232,108,44,0.1))',
+                            background: 'linear-gradient(135deg, rgba(244,114,182,0.15), rgba(232,108,44,0.1))',
                         }}
                     >
-                        <Bell size={24} style={{ color: '#2DD4BF' }} />
+                        <Bell size={24} style={{ color: '#F472B6' }} />
                     </div>
                 </div>
 
@@ -164,7 +164,7 @@ export default function ExitIntentPopup() {
                                 type="checkbox"
                                 checked={newsletterOptIn}
                                 onChange={(e) => setNewsletterOptIn(e.target.checked)}
-                                className="w-4 h-4 rounded cursor-pointer accent-[#2DD4BF]"
+                                className="w-4 h-4 rounded cursor-pointer accent-[#F472B6]"
                             />
                             <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                                 Also send me the monthly {brand.niche.short} newsletter
@@ -175,7 +175,7 @@ export default function ExitIntentPopup() {
                             disabled={status === 'loading'}
                             className="w-full px-4 py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
                             style={{
-                                background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                                background: 'linear-gradient(135deg, #F472B6, #BE185D)',
                             }}
                         >
                             {status === 'loading' ? 'Subscribing...' : (

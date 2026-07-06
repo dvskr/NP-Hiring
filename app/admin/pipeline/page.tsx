@@ -55,7 +55,7 @@ const BUCKET_COLOR: Record<string, string> = {
     duplicate: '#8B5CF6',
     dead: '#EF4444',
     other: '#94A3B8',
-    added: '#0D9488',
+    added: '#BE185D',
 };
 
 function fmt(n: number | null | undefined): string {
@@ -171,7 +171,7 @@ export default function PipelineFlowPage() {
                         disabled={loading}
                         style={{
                             padding: '8px 14px',
-                            background: '#0D9488',
+                            background: '#BE185D',
                             color: 'white',
                             border: 'none',
                             borderRadius: '10px',
@@ -300,7 +300,7 @@ export default function PipelineFlowPage() {
                                 <td style={{ padding: '8px 14px', color: '#6B7F8A' }}>{fmtDur(r.durationMs)}</td>
                                 <td style={{ padding: '8px 14px' }}>
                                     {r.success ? (
-                                        <span style={{ color: '#0D9488', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <span style={{ color: '#BE185D', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <CheckCircle2 size={14} /> ok
                                         </span>
                                     ) : (

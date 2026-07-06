@@ -84,7 +84,7 @@ export default function OpenEndedResponsesSection({ showMsg }: Props) {
                                     <label style={{ fontSize: '13px', fontWeight: 600, color: clayPalette.textPrimary, flex: 1 }}>{q.questionText}</label>
 
                                     {r.isAIGenerated && (
-                                        <span style={{ padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 600, background: 'rgba(45,212,191,0.12)', color: clayPalette.accentLight }}>AI Generated</span>
+                                        <span style={{ padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 600, background: 'rgba(244,114,182,0.12)', color: clayPalette.accentLight }}>AI Generated</span>
                                     )}
                                 </div>
                                 <textarea value={r.response} onChange={(e) => { if (e.target.value.length <= 2000) setResp(q.questionKey, e.target.value) }}

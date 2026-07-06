@@ -190,13 +190,13 @@ export default async function SeoHealthPage() {
 
             {/* External link bar */}
             <div style={{ ...card, padding: '14px 20px', display: 'flex', gap: '24px', flexWrap: 'wrap', fontSize: '13px' }}>
-                <a href="https://search.google.com/search-console" target="_blank" rel="noreferrer" style={{ color: '#0D9488', textDecoration: 'none', fontWeight: 600 }}>
+                <a href="https://search.google.com/search-console" target="_blank" rel="noreferrer" style={{ color: '#BE185D', textDecoration: 'none', fontWeight: 600 }}>
                     ↗ Google Search Console
                 </a>
-                <a href="https://search.google.com/search-console/removals" target="_blank" rel="noreferrer" style={{ color: '#0D9488', textDecoration: 'none', fontWeight: 600 }}>
+                <a href="https://search.google.com/search-console/removals" target="_blank" rel="noreferrer" style={{ color: '#BE185D', textDecoration: 'none', fontWeight: 600 }}>
                     ↗ GSC Removals UI
                 </a>
-                <Link href="/admin/cron" style={{ color: '#0D9488', textDecoration: 'none', fontWeight: 600 }}>
+                <Link href="/admin/cron" style={{ color: '#BE185D', textDecoration: 'none', fontWeight: 600 }}>
                     ↗ Cron Triggers
                 </Link>
             </div>

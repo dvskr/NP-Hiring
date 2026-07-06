@@ -130,7 +130,7 @@ const sectionHeading: React.CSSProperties = {
 const viewAllLink: React.CSSProperties = {
     fontSize: '13px',
     fontWeight: 600,
-    color: '#0D9488',
+    color: '#BE185D',
     textDecoration: 'none',
     display: 'inline-flex',
     alignItems: 'center',
@@ -160,11 +160,11 @@ function CompactJobCard({ job, extra }: { job: DashboardJob; extra?: React.React
             {/* icon */}
             <div style={{
                 width: '40px', height: '40px', borderRadius: '12px',
-                background: 'rgba(13,148,136,0.10)',
+                background: 'rgba(190,24,93,0.10)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
             }}>
-                <Briefcase size={18} style={{ color: '#0D9488' }} />
+                <Briefcase size={18} style={{ color: '#BE185D' }} />
             </div>
 
             {/* text */}
@@ -257,7 +257,7 @@ function FeedbackRatingCard() {
                 <h3 style={{
                     fontSize: '15px', fontWeight: 700,
                     fontFamily: 'var(--font-lora), Georgia, serif',
-                    color: '#0D9488', margin: '0 0 4px',
+                    color: '#BE185D', margin: '0 0 4px',
                 }}>Thank You!</h3>
                 <p style={{ fontSize: '13px', color: '#6B7F8A', margin: 0 }}>
                     Your feedback helps us build a better experience for all {brand.niche.short}s.
@@ -330,10 +330,10 @@ function FeedbackRatingCard() {
                         style={{
                             alignSelf: 'flex-start',
                             fontSize: '12px', fontWeight: 600, color: '#fff',
-                            background: 'linear-gradient(145deg, #0D9488, #10B981)',
+                            background: 'linear-gradient(145deg, #BE185D, #9D174D)',
                             padding: '8px 18px', borderRadius: '10px', border: 'none',
                             cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px',
-                            boxShadow: '3px 3px 8px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                            boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
                         }}
                     >
                         {loading ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
@@ -437,7 +437,7 @@ function TestimonialCard({ firstName }: { firstName: string | null }) {
                     type="checkbox"
                     checked={consent}
                     onChange={(e) => setConsent(e.target.checked)}
-                    style={{ marginTop: '2px', accentColor: '#0D9488' }}
+                    style={{ marginTop: '2px', accentColor: '#BE185D' }}
                 />
                 I consent to my review being featured publicly on the website
             </label>
@@ -460,9 +460,9 @@ function TestimonialCard({ firstName }: { firstName: string | null }) {
                                 padding: '3px 10px', borderRadius: '8px', border: 'none',
                                 cursor: 'pointer',
                                 background: displayAs === opt.key ? '#D5F5F1' : '#EDF5F0',
-                                color: displayAs === opt.key ? '#0D9488' : '#6B7F8A',
+                                color: displayAs === opt.key ? '#BE185D' : '#6B7F8A',
                                 boxShadow: displayAs === opt.key
-                                    ? '2px 2px 5px rgba(13,148,136,0.1), inset 1px 1px 2px rgba(255,255,255,0.5)'
+                                    ? '2px 2px 5px rgba(190,24,93,0.1), inset 1px 1px 2px rgba(255,255,255,0.5)'
                                     : 'none',
                             }}
                         >
@@ -546,7 +546,7 @@ export default function DashboardContent() {
                 maxWidth: '960px', margin: '0 auto', padding: '80px 20px',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
             }}>
-                <Loader2 size={36} style={{ color: '#0D9488', animation: 'spin 1s linear infinite' }} />
+                <Loader2 size={36} style={{ color: '#BE185D', animation: 'spin 1s linear infinite' }} />
                 <p style={{ color: '#6B7F8A', fontSize: '14px' }}>Loading your dashboard…</p>
                 <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
             </div>
@@ -564,10 +564,10 @@ export default function DashboardContent() {
                     onClick={() => { setLoading(true); setError(null); setHasFetched(false) }}
                     style={{
                         padding: '12px 28px', borderRadius: '14px',
-                        background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                        background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                         color: '#fff', fontWeight: 600, fontSize: '14px',
                         border: 'none', cursor: 'pointer',
-                        boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 0 1px 1px rgba(255,255,255,0.2)',
+                        boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 1px rgba(255,255,255,0.2)',
                     }}
                 >
                     Try Again
@@ -600,7 +600,7 @@ export default function DashboardContent() {
 
     const statCards = [
         { label: 'jobs saved', value: stats.savedJobs, icon: Bookmark, color: '#818CF8', href: '/saved', illustration: '/illustrations/clay-stat-saved.png' },
-        { label: 'applications sent', value: stats.applied, icon: Send, color: '#0D9488', href: null, illustration: '/illustrations/clay-stat-applied.png' },
+        { label: 'applications sent', value: stats.applied, icon: Send, color: '#BE185D', href: null, illustration: '/illustrations/clay-stat-applied.png' },
         { label: 'profile views', value: stats.profileViews, icon: Eye, color: '#F59E0B', href: null, illustration: '/illustrations/clay-stat-views.png' },
         { label: 'active alert', value: stats.activeAlerts, icon: Bell, color: '#E879A8', href: '/job-alerts/manage', illustration: '/illustrations/clay-stat-alerts.png' },
     ]
@@ -733,7 +733,7 @@ export default function DashboardContent() {
                                     border: '1px solid #D5E8E0',
                                     boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.6)',
                                 }}>
-                                    {item.label} <span style={{ color: '#0D9488', fontWeight: 600 }}>+{item.weight}%</span>
+                                    {item.label} <span style={{ color: '#BE185D', fontWeight: 600 }}>+{item.weight}%</span>
                                 </span>
                             ))}
                             {completeness.missingItems.length > 4 && (
@@ -757,7 +757,7 @@ export default function DashboardContent() {
                                 marginTop: '12px',
                                 padding: '10px 14px',
                                 borderRadius: '12px',
-                                background: 'linear-gradient(135deg, rgba(139,92,246,0.10), rgba(45,212,191,0.10))',
+                                background: 'linear-gradient(135deg, rgba(139,92,246,0.10), rgba(244,114,182,0.10))',
                                 border: '1px solid rgba(139,92,246,0.22)',
                                 textDecoration: 'none',
                                 transition: 'transform 0.15s ease, box-shadow 0.15s ease',
@@ -786,12 +786,12 @@ export default function DashboardContent() {
                     {/* CTA Button */}
                     <Link href="/settings" className="clay-cta-btn" style={{
                         padding: '12px 24px', borderRadius: '14px',
-                        background: 'linear-gradient(135deg, #0D9488, #0F766E)',
+                        background: 'linear-gradient(135deg, #BE185D, #9D174D)',
                         color: '#fff',
                         fontSize: '14px', fontWeight: 700,
                         textDecoration: 'none',
                         border: '1px solid rgba(255,255,255,0.25)',
-                        boxShadow: '4px 4px 12px rgba(13,148,136,0.28), -2px -2px 6px rgba(255,255,255,0.3), inset 1px 1px 2px rgba(255,255,255,0.2)',
+                        boxShadow: '4px 4px 12px rgba(190,24,93,0.28), -2px -2px 6px rgba(255,255,255,0.3), inset 1px 1px 2px rgba(255,255,255,0.2)',
                         whiteSpace: 'nowrap', flexShrink: 0,
                     }}>
                         Complete Profile
@@ -821,7 +821,7 @@ export default function DashboardContent() {
                             textDecoration: 'none', transition: 'all 0.2s',
                             whiteSpace: 'nowrap',
                         }}>
-                            <ActionIcon size={15} style={{ color: '#0D9488' }} />
+                            <ActionIcon size={15} style={{ color: '#BE185D' }} />
                             {action.label}
                         </Link>
                     )
@@ -883,7 +883,7 @@ export default function DashboardContent() {
                 <div className="clay-section-card" style={cardBase}>
                     <div style={sectionHeading}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Clock size={16} style={{ color: '#0D9488' }} /> Recent Applications
+                            <Clock size={16} style={{ color: '#BE185D' }} /> Recent Applications
                         </span>
                     </div>
 
@@ -908,7 +908,7 @@ export default function DashboardContent() {
                             {applications.map((app) => {
                                 // Derive status from time since application
                                 const daysSince = Math.floor((Date.now() - new Date(app.appliedAt).getTime()) / (1000 * 60 * 60 * 24))
-                                const status = daysSince <= 1 ? { label: 'Submitted', color: '#0D9488', bg: '#B2F5EA' }
+                                const status = daysSince <= 1 ? { label: 'Submitted', color: '#BE185D', bg: '#FBCFE8' }
                                     : daysSince <= 5 ? { label: 'Under Review', color: '#D97706', bg: '#FEF3C7' }
                                     : { label: 'In Progress', color: '#818CF8', bg: '#EDE9FE' }
                                 return (
@@ -1028,16 +1028,16 @@ export default function DashboardContent() {
                     ...cardBase,
                     display: 'flex', alignItems: 'center', gap: '14px',
                     marginTop: '20px',
-                    background: 'linear-gradient(145deg, #F0FDFA, #E6FAF8)',
-                    border: '1px solid rgba(13,148,136,0.15)',
+                    background: 'linear-gradient(145deg, #FDF2F8, #FDF2F8)',
+                    border: '1px solid rgba(190,24,93,0.15)',
                     textDecoration: 'none',
                     cursor: 'pointer',
                 }}>
                     <div style={{
                         width: '44px', height: '44px', borderRadius: '14px',
-                        background: 'linear-gradient(145deg, #0D9488, #10B981)',
+                        background: 'linear-gradient(145deg, #BE185D, #9D174D)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '3px 3px 8px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.2)',
+                        boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.2)',
                         flexShrink: 0,
                     }}>
                         <Bell size={20} style={{ color: '#fff' }} />
@@ -1050,7 +1050,7 @@ export default function DashboardContent() {
                             From employers interested in your profile
                         </p>
                     </div>
-                    <ArrowRight size={18} style={{ color: '#0D9488', flexShrink: 0 }} />
+                    <ArrowRight size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                 </Link>
             )}
 
@@ -1103,19 +1103,19 @@ export default function DashboardContent() {
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                             <Link href="/contact" className="jc-view-btn" style={{
                                 fontSize: '12px', fontWeight: 600, color: '#fff',
-                                background: 'linear-gradient(145deg, #0D9488, #10B981)',
+                                background: 'linear-gradient(145deg, #BE185D, #9D174D)',
                                 padding: '7px 14px', borderRadius: '10px',
                                 textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                boxShadow: '3px 3px 8px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                                boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
                             }}>
                                 <MessageSquare size={12} /> Contact
                             </Link>
                             <Link href="/faq" className="jc-view-btn" style={{
-                                fontSize: '12px', fontWeight: 600, color: '#0D9488',
-                                background: '#E6FAF8',
+                                fontSize: '12px', fontWeight: 600, color: '#BE185D',
+                                background: '#FDF2F8',
                                 padding: '7px 14px', borderRadius: '10px',
                                 textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                border: '1px solid rgba(13,148,136,0.15)',
+                                border: '1px solid rgba(190,24,93,0.15)',
                             }}>
                                 <HelpCircle size={12} /> FAQs
                             </Link>
@@ -1132,9 +1132,9 @@ export default function DashboardContent() {
                     <div style={{ padding: '16px 18px' }}>
                         <h3 style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 6px' }}>Job Market Pulse</h3>
                         <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 8px', lineHeight: 1.5 }}>
-                            {DASHBOARD_MARKET_PULSE.lead}<span style={{ color: '#0D9488', fontWeight: 600 }}>{DASHBOARD_MARKET_PULSE.metric}</span>{DASHBOARD_MARKET_PULSE.tail}
+                            {DASHBOARD_MARKET_PULSE.lead}<span style={{ color: '#BE185D', fontWeight: 600 }}>{DASHBOARD_MARKET_PULSE.metric}</span>{DASHBOARD_MARKET_PULSE.tail}
                         </p>
-                        <Link href="/salary-guide" className="jc-view-btn" style={{ fontSize: '12px', fontWeight: 600, color: '#0D9488', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Link href="/salary-guide" className="jc-view-btn" style={{ fontSize: '12px', fontWeight: 600, color: '#BE185D', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             Salary Guide <ArrowRight size={11} />
                         </Link>
                     </div>
@@ -1151,7 +1151,7 @@ export default function DashboardContent() {
                         <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 8px', lineHeight: 1.5 }}>
                             50-state licensure guides, interview prep, career growth.
                         </p>
-                        <Link href="/resources" className="jc-view-btn" style={{ fontSize: '12px', fontWeight: 600, color: '#0D9488', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Link href="/resources" className="jc-view-btn" style={{ fontSize: '12px', fontWeight: 600, color: '#BE185D', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             Explore <ArrowRight size={11} />
                         </Link>
                     </div>
@@ -1167,9 +1167,9 @@ export default function DashboardContent() {
                 /* Quick action pills */
                 .clay-action-pill:hover {
                     transform: translateY(-2px) !important;
-                    box-shadow: 4px 4px 12px rgba(13,148,136,0.12), -2px -2px 6px rgba(255,255,255,0.8), inset 0 1px 0 rgba(255,255,255,0.5) !important;
-                    color: #0D9488 !important;
-                    border-color: rgba(13,148,136,0.2) !important;
+                    box-shadow: 4px 4px 12px rgba(190,24,93,0.12), -2px -2px 6px rgba(255,255,255,0.8), inset 0 1px 0 rgba(255,255,255,0.5) !important;
+                    color: #BE185D !important;
+                    border-color: rgba(190,24,93,0.2) !important;
                 }
                 .clay-action-pill:active {
                     transform: translateY(0) scale(0.97) !important;
@@ -1184,7 +1184,7 @@ export default function DashboardContent() {
                 }
                 .jc-apply-btn:hover {
                     transform: translateY(-2px) !important;
-                    box-shadow: 6px 6px 16px rgba(13,148,136,0.30), -3px -3px 8px rgba(255,255,255,0.4), inset 1px 1px 2px rgba(255,255,255,0.2) !important;
+                    box-shadow: 6px 6px 16px rgba(190,24,93,0.30), -3px -3px 8px rgba(255,255,255,0.4), inset 1px 1px 2px rgba(255,255,255,0.2) !important;
                 }
                 .jc-apply-btn:active {
                     transform: translateY(0) scale(0.95) !important;
@@ -1217,7 +1217,7 @@ export default function DashboardContent() {
                 }
 
                 /* View All / See All links */
-                a[style*="color: rgb(13, 148, 136)"][style*="text-decoration: none"]:hover {
+                a[style*="color: rgb(190,24,93)"][style*="text-decoration: none"]:hover {
                     opacity: 0.8;
                 }
 

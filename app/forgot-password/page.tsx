@@ -78,7 +78,7 @@ export default function ForgotPasswordPage() {
             <p style={{ fontSize: '14px', color: '#6B7F8A', margin: 0 }}>
               We&apos;ve sent a password reset link to <strong>{email}</strong>
             </p>
-            <Link href="/login" style={{ fontSize: '14px', fontWeight: 600, color: '#0D9488', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
+            <Link href="/login" style={{ fontSize: '14px', fontWeight: 600, color: '#BE185D', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
               <ArrowLeft className="w-4 h-4" /> Back to login
             </Link>
           </div>

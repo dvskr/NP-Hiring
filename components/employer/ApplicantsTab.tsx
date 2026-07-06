@@ -251,7 +251,7 @@ export default function ApplicantsTab() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0' }}>
                 <div style={{
                     width: '32px', height: '32px', borderRadius: '50%',
-                    border: '3px solid #E5E7EB', borderTopColor: '#0D9488',
+                    border: '3px solid #E5E7EB', borderTopColor: '#BE185D',
                     animation: 'spin 0.8s linear infinite',
                 }} />
             </div>
@@ -326,9 +326,9 @@ export default function ApplicantsTab() {
                     <div style={{
                         ...cardBase, padding: '12px 16px', marginBottom: '16px',
                         display: 'flex', alignItems: 'center', gap: '12px',
-                        background: '#F0FDFA', border: '1px solid #99F6E4',
+                        background: '#FDF2F8', border: '1px solid #FBCFE8',
                     }}>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>{selectedIds.size} selected</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>{selectedIds.size} selected</span>
                         <select
                             onChange={(e) => { if (e.target.value) handleBulkStatusChange(e.target.value); e.target.value = ''; }}
                             disabled={bulkUpdating}
@@ -396,7 +396,7 @@ export default function ApplicantsTab() {
                                     style={{
                                         ...cardBase,
                                         padding: '20px',
-                                        border: selectedIds.has(app.id) ? '1.5px solid #0D9488' : '1px solid rgba(0,0,0,0.06)',
+                                        border: selectedIds.has(app.id) ? '1.5px solid #BE185D' : '1px solid rgba(0,0,0,0.06)',
                                     }}
                                 >
                                     {/* Row 1: Candidate info + Actions */}
@@ -406,7 +406,7 @@ export default function ApplicantsTab() {
                                             {/* Select Checkbox */}
                                             <button
                                                 onClick={() => toggleSelect(app.id)}
-                                                style={{ flexShrink: 0, marginTop: '4px', color: selectedIds.has(app.id) ? '#0D9488' : '#B0BEC5', background: 'none', border: 'none', cursor: 'pointer' }}
+                                                style={{ flexShrink: 0, marginTop: '4px', color: selectedIds.has(app.id) ? '#BE185D' : '#B0BEC5', background: 'none', border: 'none', cursor: 'pointer' }}
                                             >
                                                 {selectedIds.has(app.id) ? <CheckSquare size={16} /> : <Square size={16} />}
                                             </button>
@@ -418,9 +418,9 @@ export default function ApplicantsTab() {
                                                     fontSize: '14px', fontWeight: 700, color: '#fff',
                                                     background: app.candidate.avatarUrl
                                                         ? `url(${app.candidate.avatarUrl}) center/cover`
-                                                        : 'linear-gradient(145deg, #0D9488, #10B981)',
+                                                        : 'linear-gradient(145deg, #BE185D, #9D174D)',
                                                     border: '1px solid rgba(255,255,255,0.3)',
-                                                    boxShadow: '3px 3px 8px rgba(13,148,136,0.15), -1px -1px 4px rgba(255,255,255,0.5), inset 1px 1px 2px rgba(255,255,255,0.2)',
+                                                    boxShadow: '3px 3px 8px rgba(190,24,93,0.15), -1px -1px 4px rgba(255,255,255,0.5), inset 1px 1px 2px rgba(255,255,255,0.2)',
                                                 }}
                                             >
                                                 {!app.candidate.avatarUrl && app.candidate.initials}
@@ -493,9 +493,9 @@ export default function ApplicantsTab() {
                                                         <button
                                                             onClick={() => handleSaveNotes(app.id)}
                                                             style={{
-                                                                ...clayBtn, background: 'linear-gradient(145deg, #0D9488, #10B981)',
+                                                                ...clayBtn, background: 'linear-gradient(145deg, #BE185D, #9D174D)',
                                                                 color: '#fff', border: 'none',
-                                                                boxShadow: '3px 3px 8px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                                                                boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
                                                             }}
                                                         >
                                                             Save
@@ -530,7 +530,7 @@ export default function ApplicantsTab() {
                                                     title={`Message ${app.candidate.name}`}
                                                     className="app-msg-btn"
                                                     style={{
-                                                        ...clayBtn, padding: '8px', background: '#F0FDFA', color: '#0D9488',
+                                                        ...clayBtn, padding: '8px', background: '#FDF2F8', color: '#BE185D',
                                                     }}
                                                 >
                                                     <Mail size={16} />
@@ -570,7 +570,7 @@ export default function ApplicantsTab() {
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="app-action-btn"
-                                                    style={{ ...clayBtn, background: '#F0FDFA', color: '#0D9488', border: '1px solid #CCFBF1' }}
+                                                    style={{ ...clayBtn, background: '#FDF2F8', color: '#BE185D', border: '1px solid #FCE7F3' }}
                                                 >
                                                     <Download size={12} /> View Resume
                                                 </a>
@@ -691,7 +691,7 @@ export default function ApplicantsTab() {
                                             <button
                                                 onClick={() => setExpandedProfile(expandedProfile === app.id ? null : app.id)}
                                                 className="app-expand-btn"
-                                                style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#0D9488', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                                style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: '#BE185D', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                                             >
                                                 <ChevronDown size={12} style={{ transition: 'transform 0.2s', transform: expandedProfile === app.id ? 'rotate(180deg)' : 'none' }} />
                                                 {expandedProfile === app.id ? 'Hide' : 'View'} Profile Details
@@ -784,8 +784,8 @@ export default function ApplicantsTab() {
                     box-shadow: 8px 8px 20px rgba(0,0,0,0.08), -4px -4px 12px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02) !important;
                     transform: translateY(-1px);
                 }
-                .app-name-link:hover { color: #0D9488 !important; }
-                .app-notes-btn:hover { color: #0D9488 !important; }
+                .app-name-link:hover { color: #BE185D !important; }
+                .app-notes-btn:hover { color: #BE185D !important; }
                 .app-pipeline-pill:hover { transform: translateY(-1px); }
                 .app-action-btn:hover {
                     transform: translateY(-1px);

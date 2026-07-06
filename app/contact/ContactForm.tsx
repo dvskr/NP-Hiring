@@ -73,7 +73,7 @@ export default function ContactForm() {
             <h2 style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', marginBottom: '24px' }}>Send Us a Message</h2>
 
             {submitStatus === 'success' && (
-                <div style={{ ...clayCard, padding: '16px 20px', marginBottom: '20px', background: '#F0FDFA', border: '1px solid #99F6E4', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ ...clayCard, padding: '16px 20px', marginBottom: '20px', background: '#FDF2F8', border: '1px solid #FBCFE8', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <CheckCircle size={18} color="#059669" />
                     <div>
                         <p style={{ fontSize: '14px', fontWeight: 600, color: '#059669', margin: 0 }}>Message sent!</p>
@@ -125,9 +125,9 @@ export default function ContactForm() {
                 <button type="submit" disabled={isSubmitting} style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                     padding: '14px 24px', borderRadius: '14px', fontWeight: 700, fontSize: '15px',
-                    background: isSubmitting ? 'rgba(13,148,136,0.3)' : 'linear-gradient(145deg, #0D9488, #10B981)',
+                    background: isSubmitting ? 'rgba(190,24,93,0.3)' : 'linear-gradient(145deg, #BE185D, #9D174D)',
                     color: '#fff', border: 'none', cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                    boxShadow: '6px 6px 16px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                    boxShadow: '6px 6px 16px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
                     transition: 'all 0.2s ease', width: '100%',
                 }}>
                     {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}

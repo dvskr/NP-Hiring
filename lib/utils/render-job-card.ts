@@ -13,7 +13,7 @@
  */
 import { V2, SANS, SERIF } from '@/lib/email-templates-v2';
 
-const COLORS = ['#4DB6AC', '#E8937A', '#7C8CF5', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4', '#10B981', '#F97316', '#6366F1'];
+const COLORS = ['#DB2777', '#E8937A', '#7C8CF5', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4', '#10B981', '#F97316', '#6366F1'];
 
 export interface JobCardData {
   title: string;
@@ -44,12 +44,12 @@ function chip(text: string, bg: string, fg: string, border: string): string {
 
 function applyButtonHtml(url: string, label: string): string {
   return `<!--[if mso]>
-  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:42px;v-text-anchor:middle;width:140px;" arcsize="40%" stroke="f" fillcolor="#0D9488">
+  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:42px;v-text-anchor:middle;width:140px;" arcsize="40%" stroke="f" fillcolor="#BE185D">
     <w:anchorlock/>
     <center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">${label}</center>
   </v:roundrect>
   <![endif]-->
-  <!--[if !mso]><!-- --><a href="${url}" style="display:inline-block;box-sizing:border-box;padding:11px 26px;border-radius:18px;font-family:${SANS};font-size:14px;font-weight:700;color:#fff;-webkit-text-fill-color:#fff;background:#0d9488;background-image:linear-gradient(135deg,#2DD4BF,#0D9488);text-decoration:none;border:1px solid rgba(255,255,255,0.3);box-shadow:0 4px 12px rgba(13,148,136,0.30);mso-hide:all;">${label}</a><!--<![endif]-->`;
+  <!--[if !mso]><!-- --><a href="${url}" style="display:inline-block;box-sizing:border-box;padding:11px 26px;border-radius:18px;font-family:${SANS};font-size:14px;font-weight:700;color:#fff;-webkit-text-fill-color:#fff;background:#BE185D;background-image:linear-gradient(135deg,#F472B6,#BE185D);text-decoration:none;border:1px solid rgba(255,255,255,0.3);box-shadow:0 4px 12px rgba(190,24,93,0.30);mso-hide:all;">${label}</a><!--<![endif]-->`;
 }
 
 export function renderJobCardHtml(job: JobCardData, index: number, isLast: boolean): string {
@@ -85,7 +85,7 @@ export function renderJobCardHtml(job: JobCardData, index: number, isLast: boole
             </td>
           </tr></table>
           ${(job.salaryText || job.isFeatured || job.location) ? `<div style="margin-top:12px;">
-            ${job.salaryText ? `<span style="display:inline-block;padding:6px 14px;border-radius:8px;font-family:${SANS};font-size:14px;font-weight:700;background:#E6FAF8;color:#0d9488;margin-right:6px;vertical-align:middle;">${escapeHtml(job.salaryText)}</span>` : ''}
+            ${job.salaryText ? `<span style="display:inline-block;padding:6px 14px;border-radius:8px;font-family:${SANS};font-size:14px;font-weight:700;background:#FDF2F8;color:#BE185D;margin-right:6px;vertical-align:middle;">${escapeHtml(job.salaryText)}</span>` : ''}
             ${job.location ? `<span style="display:inline-block;padding:6px 12px;border-radius:8px;font-family:${SANS};font-size:13px;font-weight:600;background:#F3F6F4;color:#4A5568;border:1px solid #E0E5E1;margin-right:6px;vertical-align:middle;">${escapeHtml(job.location)}</span>` : ''}
             ${job.isFeatured ? `<span style="display:inline-block;padding:6px 12px;border-radius:8px;font-family:${SANS};font-size:12px;font-weight:700;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;letter-spacing:0.3px;text-transform:uppercase;vertical-align:middle;">★ Featured</span>` : ''}
           </div>` : ''}

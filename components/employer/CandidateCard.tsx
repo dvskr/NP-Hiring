@@ -164,9 +164,9 @@ export default function CandidateCard({
                 position: 'relative',
                 ...(isSelected
                     ? {
-                          outline: '2px solid #0D9488',
+                          outline: '2px solid #BE185D',
                           outlineOffset: '-1px',
-                          boxShadow: '0 0 0 4px rgba(13,148,136,0.12), 6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
+                          boxShadow: '0 0 0 4px rgba(190,24,93,0.12), 6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
                       }
                     : {}),
             }}
@@ -186,10 +186,10 @@ export default function CandidateCard({
                         position: 'absolute', top: '14px', left: '14px',
                         width: '24px', height: '24px', borderRadius: '8px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: isSelected ? 'linear-gradient(145deg, #10B981, #0D9488)' : '#FFFFFF',
-                        border: `1.5px solid ${isSelected ? '#0D9488' : 'rgba(0,0,0,0.18)'}`,
+                        background: isSelected ? 'linear-gradient(145deg, #9D174D, #BE185D)' : '#FFFFFF',
+                        border: `1.5px solid ${isSelected ? '#BE185D' : 'rgba(0,0,0,0.18)'}`,
                         boxShadow: isSelected
-                            ? '2px 2px 6px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.2)'
+                            ? '2px 2px 6px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.2)'
                             : '2px 2px 6px rgba(0,0,0,0.04), -1px -1px 4px rgba(255,255,255,0.7)',
                         cursor: 'pointer', transition: 'all 0.15s',
                         color: isSelected ? '#FFFFFF' : 'transparent',
@@ -228,7 +228,7 @@ export default function CandidateCard({
                         width: '44px', height: '44px', borderRadius: '14px',
                         background: avatarUrl
                             ? `url(${avatarUrl}) center/cover`
-                            : 'linear-gradient(145deg, #10B981, #0D9488)',
+                            : 'linear-gradient(145deg, #9D174D, #BE185D)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         flexShrink: 0, color: '#fff', fontWeight: 700, fontSize: '15px',
                         boxShadow: '3px 3px 8px rgba(0,0,0,0.06), -2px -2px 6px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.3)',
@@ -247,13 +247,13 @@ export default function CandidateCard({
                         </h3>
                         {expLabel && (
                             <span style={{
-                                ...recessedPill, background: '#CCFBF1', color: '#0D9488',
-                                border: '1px solid #99F6E4', fontSize: '10px',
+                                ...recessedPill, background: '#FCE7F3', color: '#BE185D',
+                                border: '1px solid #FBCFE8', fontSize: '10px',
                             }}>
                                 {expLabel}
                             </span>
                         )}
-                        {hasResume && <FileText size={13} style={{ color: '#0D9488' }} />}
+                        {hasResume && <FileText size={13} style={{ color: '#BE185D' }} />}
                         {isViewed && (
                             <span style={{
                                 ...recessedPill, background: '#D1FAE5', color: '#059669',
@@ -361,8 +361,8 @@ export default function CandidateCard({
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                     {safeCerts.map(cert => (
                         <span key={cert} style={{
-                            ...recessedPill, background: '#CCFBF1', color: '#0D9488',
-                            border: '1px solid #99F6E4',
+                            ...recessedPill, background: '#FCE7F3', color: '#BE185D',
+                            border: '1px solid #FBCFE8',
                         }}>
                             {cert}
                         </span>
@@ -424,8 +424,8 @@ export default function CandidateCard({
                                     display: 'flex', alignItems: 'center', gap: '5px',
                                     fontSize: '12px', fontWeight: 600, color: '#fff',
                                     textDecoration: 'none', padding: '7px 14px', borderRadius: '12px',
-                                    background: 'linear-gradient(145deg, #10B981, #0D9488)',
-                                    boxShadow: '3px 3px 8px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                                    background: 'linear-gradient(145deg, #9D174D, #BE185D)',
+                                    boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
                                     transition: 'all 0.2s', whiteSpace: 'nowrap',
                                 }}
                             >
@@ -460,10 +460,10 @@ export default function CandidateCard({
                                     fontSize: '12px', fontWeight: 600, color: '#fff',
                                     textDecoration: 'none', padding: '7px 14px', borderRadius: '12px',
                                     background: isViewed
-                                        ? 'linear-gradient(145deg, #10B981, #0D9488)'
+                                        ? 'linear-gradient(145deg, #9D174D, #BE185D)'
                                         : 'linear-gradient(145deg, #8B5CF6, #7C3AED)',
                                     boxShadow: isViewed
-                                        ? '3px 3px 8px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)'
+                                        ? '3px 3px 8px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)'
                                         : '3px 3px 8px rgba(124,58,237,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
                                     transition: 'all 0.2s', whiteSpace: 'nowrap',
                                 }}

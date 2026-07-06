@@ -1139,7 +1139,7 @@ model CandidateTag {
   id         String   @id @default(cuid())
   employerId String   @map("employer_id")
   name       String
-  color      String   @default("#0D9488")
+  color      String   @default("#BE185D")
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@unique([employerId, name])

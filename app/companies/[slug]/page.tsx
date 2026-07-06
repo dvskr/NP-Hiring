@@ -175,7 +175,7 @@ export default async function CompanyPage({ params }: Props) {
                                 style={{
                                     background: company.logoUrl
                                         ? `url(${company.logoUrl}) center/cover no-repeat`
-                                        : 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                                        : 'linear-gradient(135deg, #F472B6, #BE185D)',
                                     color: '#fff',
                                 }}
                             >
@@ -204,7 +204,7 @@ export default async function CompanyPage({ params }: Props) {
                                             href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex items-center gap-1 hover:text-teal-600 transition-colors"
+                                            className="flex items-center gap-1 hover:text-pink-700 transition-colors"
                                         >
                                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
@@ -256,7 +256,7 @@ export default async function CompanyPage({ params }: Props) {
                             </p>
                             <Link
                                 href="/jobs"
-                                className="inline-block bg-teal-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-teal-700 transition-colors"
+                                className="inline-block bg-pink-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-pink-800 transition-colors"
                             >
                                 Browse All Jobs
                             </Link>
@@ -270,18 +270,18 @@ export default async function CompanyPage({ params }: Props) {
                                     className="block rounded-lg p-5 transition-all hover:shadow-md group"
                                     style={{
                                         backgroundColor: 'var(--bg-secondary)',
-                                        border: job.isFeatured ? '1.5px solid rgba(45,212,191,0.4)' : '1px solid var(--border-color)',
+                                        border: job.isFeatured ? '1.5px solid rgba(244,114,182,0.4)' : '1px solid var(--border-color)',
                                         textDecoration: 'none',
                                     }}
                                 >
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1.5">
-                                                <h3 className="font-semibold text-base group-hover:text-teal-600 transition-colors" style={{ color: 'var(--text-primary)' }}>
+                                                <h3 className="font-semibold text-base group-hover:text-pink-700 transition-colors" style={{ color: 'var(--text-primary)' }}>
                                                     {job.title}
                                                 </h3>
                                                 {job.isFeatured && (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-900">
                                                         Featured
                                                     </span>
                                                 )}
@@ -289,7 +289,7 @@ export default async function CompanyPage({ params }: Props) {
                                             <div className="flex flex-wrap items-center gap-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
                                                 <span>{job.location}</span>
                                                 {job.jobType && <span>· {job.jobType}</span>}
-                                                {job.isRemote && <span className="text-teal-600 font-medium">Remote</span>}
+                                                {job.isRemote && <span className="text-pink-700 font-medium">Remote</span>}
                                                 {job.displaySalary && <span>· {job.displaySalary}</span>}
                                             </div>
                                         </div>
@@ -306,7 +306,7 @@ export default async function CompanyPage({ params }: Props) {
                     <div className="mt-8 text-center">
                         <Link
                             href="/jobs"
-                            className="text-teal-600 hover:text-teal-800 font-medium text-sm hover:underline"
+                            className="text-pink-700 hover:text-pink-900 font-medium text-sm hover:underline"
                         >
                             ← Browse All {brand.niche.short} Jobs
                         </Link>

@@ -146,7 +146,7 @@ export default function BulkUnlockToolbar({
     <>
     <div style={barStyle}>
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-        <Lock size={16} style={{ color: '#0D9488' }} />
+        <Lock size={16} style={{ color: '#BE185D' }} />
         <span style={{ fontWeight: 700, color: '#1A2E35' }}>
           {selected.size} selected
         </span>
@@ -186,7 +186,7 @@ export default function BulkUnlockToolbar({
         onClick={() => setConfirmingUnlock(true)}
         style={{
           ...pillBtn,
-          background: selected.size === 0 || submitting ? '#E5E7EB' : 'linear-gradient(145deg, #0D9488, #10B981)',
+          background: selected.size === 0 || submitting ? '#E5E7EB' : 'linear-gradient(145deg, #BE185D, #9D174D)',
           color: selected.size === 0 || submitting ? '#6B7280' : '#fff',
           cursor: selected.size === 0 || submitting ? 'not-allowed' : 'pointer',
         }}
@@ -198,7 +198,7 @@ export default function BulkUnlockToolbar({
       {remainingCredits !== null && remainingCredits === 0 && (
         <span style={{ fontSize: '12px', color: '#B45309' }}>
           0 credits left —{' '}
-          <a href="/pricing" style={{ color: '#0D9488', textDecoration: 'underline' }}>
+          <a href="/pricing" style={{ color: '#BE185D', textDecoration: 'underline' }}>
             buy more
           </a>
         </span>
@@ -207,7 +207,7 @@ export default function BulkUnlockToolbar({
       {error && <span style={{ fontSize: '12px', color: '#EF4444' }}>{error}</span>}
 
       {lastResult && (
-        <span style={{ fontSize: '12px', color: '#0F766E' }}>
+        <span style={{ fontSize: '12px', color: '#9D174D' }}>
           ✓ {lastResult.unlocked.length} unlocked
           {lastResult.failed.length > 0 ? `, ${lastResult.failed.length} failed` : ''}
         </span>

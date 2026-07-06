@@ -69,7 +69,7 @@ export const WHY_US_FEATURES: readonly WhyUsFeature[] = [
     },
     {
         num: '02',
-        color: '#2dd4bf',
+        color: '#F472B6',
         title: 'Updated Daily',
         desc: 'We ingest directly from employer ATS feeds — Greenhouse, Lever, Workday, and more — refreshed every 24 hours.',
         stat: '8',
@@ -253,7 +253,7 @@ export const DASHBOARD_PROFILE_NUDGE_CLAIM =
 /**
  * "Job Market Pulse" sidebar card body. Rendered as
  * {lead}<highlighted metric>{tail} — the component styles `metric` in
- * teal.
+ * the berry accent color.
  *
  * NP HIRING: the donor kept a fabricated '18% this quarter' growth stat.
  * Replaced with a structurally true statement about this board's own

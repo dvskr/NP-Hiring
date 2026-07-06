@@ -206,8 +206,8 @@ export default function AuthConfirmPage() {
             style={{
               width: '40px',
               height: '40px',
-              border: '3px solid rgba(45,212,191,0.2)',
-              borderTopColor: '#2DD4BF',
+              border: '3px solid rgba(244,114,182,0.2)',
+              borderTopColor: '#F472B6',
               borderRadius: '50%',
               animation: 'spin 0.8s linear infinite',
               margin: '0 auto 20px',

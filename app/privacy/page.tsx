@@ -94,7 +94,7 @@ export default function PrivacyPage() {
           <h2 style={h2Style}>3. Information Sharing and Disclosure</h2>
           <p style={{ ...pStyle, fontWeight: 700, color: '#1A2E35' }}>We do not sell, trade, or rent your personal information to third parties.</p>
           <h3 style={h3Style}>Service Providers (sub-processors)</h3>
-          <p style={pStyle}>We use the following sub-processors to operate the service. Each receives only the data necessary for its specific function and is bound by a Data Processing Agreement. The complete current list with processing locations and DPA links is maintained at our <Link href="/sub-processors" style={{ color: '#0D9488', textDecoration: 'underline' }}>sub-processors page</Link>.</p>
+          <p style={pStyle}>We use the following sub-processors to operate the service. Each receives only the data necessary for its specific function and is bound by a Data Processing Agreement. The complete current list with processing locations and DPA links is maintained at our <Link href="/sub-processors" style={{ color: '#BE185D', textDecoration: 'underline' }}>sub-processors page</Link>.</p>
           <ul style={ulStyle}>
             <li style={liStyle}><strong>Vercel:</strong> Application hosting and performance telemetry (Speed Insights — only after analytics consent).</li>
             <li style={liStyle}><strong>Supabase:</strong> Database, authentication, and file storage (resumes, profile assets).</li>
@@ -161,10 +161,10 @@ export default function PrivacyPage() {
           <ul style={{ ...ulStyle, listStyleType: 'none', paddingLeft: 0 }}>
             <li style={liStyle}><strong>Data controller:</strong> {brand.legal.entityName}</li>
             <li style={liStyle}><strong>Mailing address:</strong> {brand.legal.address}</li>
-            <li style={liStyle}><strong>Email:</strong> <a href={`mailto:${brand.email.privacy}`} style={{ color: '#0D9488', textDecoration: 'none' }}>{brand.email.privacy}</a> (privacy-specific) or <a href={`mailto:${brand.email.support}`} style={{ color: '#0D9488', textDecoration: 'none' }}>{brand.email.support}</a></li>
+            <li style={liStyle}><strong>Email:</strong> <a href={`mailto:${brand.email.privacy}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.privacy}</a> (privacy-specific) or <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a></li>
             <li style={liStyle}><strong>Subject line:</strong> &quot;Privacy Inquiry&quot;</li>
           </ul>
-          <p style={pStyle}>For general questions, visit our <Link href="/faq" style={{ color: '#0D9488', textDecoration: 'none' }}>FAQ page</Link> or <Link href="/contact" style={{ color: '#0D9488', textDecoration: 'none' }}>Contact page</Link>.</p>
+          <p style={pStyle}>For general questions, visit our <Link href="/faq" style={{ color: '#BE185D', textDecoration: 'none' }}>FAQ page</Link> or <Link href="/contact" style={{ color: '#BE185D', textDecoration: 'none' }}>Contact page</Link>.</p>
 
           <h2 style={h2Style}>11. Data Retention</h2>
           <p style={pStyle}>We keep personal data only as long as necessary for the purpose for which it was collected, plus any retention required by law:</p>
@@ -179,7 +179,7 @@ export default function PrivacyPage() {
 
           <h2 style={h2Style}>12. Automated Decision-Making and AI</h2>
           <p style={pStyle}>We use a candidate-matching algorithm (an AI model) to suggest jobs that may be a good fit and to surface relevant applicants to employers. The output is a non-binding score; a human (the employer) makes the final hiring decision.</p>
-          <p style={pStyle}>Under GDPR Article 22 you have the right to obtain human review of any decision that is based solely on automated processing. Because our matching is decision-support, not decision-making, this rarely applies — but if you believe the algorithm has produced an unfair outcome, contact <a href={`mailto:${brand.email.privacy}`} style={{ color: '#0D9488', textDecoration: 'underline' }}>{brand.email.privacy}</a> and we will review.</p>
+          <p style={pStyle}>Under GDPR Article 22 you have the right to obtain human review of any decision that is based solely on automated processing. Because our matching is decision-support, not decision-making, this rarely applies — but if you believe the algorithm has produced an unfair outcome, contact <a href={`mailto:${brand.email.privacy}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>{brand.email.privacy}</a> and we will review.</p>
 
           <h2 style={h2Style}>13. Sensitive Information</h2>
           <p style={pStyle}>Some fields in your profile are sensitive under GDPR Article 9 or treated as &quot;sensitive personal information&quot; under CPRA. We collect them only when you choose to provide them and only for the specific purpose described:</p>
@@ -202,18 +202,18 @@ export default function PrivacyPage() {
           <p style={pStyle}>
             We do not sell personal information for money. Loading analytics or advertising scripts may meet the
             broader CPRA definition of &quot;sharing&quot;. To opt out, click{' '}
-            <Link href="/do-not-sell" style={{ color: '#0D9488', textDecoration: 'underline', fontWeight: 600 }}>Do Not Sell or Share My Personal Information</Link>{' '}
+            <Link href="/do-not-sell" style={{ color: '#BE185D', textDecoration: 'underline', fontWeight: 600 }}>Do Not Sell or Share My Personal Information</Link>{' '}
             or send a Global Privacy Control signal from your browser — we honor both.
           </p>
-          <p style={pStyle}>To exercise any other CCPA right, file a request through our <Link href="/data-request" style={{ color: '#0D9488', textDecoration: 'underline' }}>Data Request form</Link> or email <a href={`mailto:${brand.email.privacy}`} style={{ color: '#0D9488', textDecoration: 'underline' }}>{brand.email.privacy}</a> with &quot;CCPA Request&quot; in the subject. We respond within 45 days.</p>
+          <p style={pStyle}>To exercise any other CCPA right, file a request through our <Link href="/data-request" style={{ color: '#BE185D', textDecoration: 'underline' }}>Data Request form</Link> or email <a href={`mailto:${brand.email.privacy}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>{brand.email.privacy}</a> with &quot;CCPA Request&quot; in the subject. We respond within 45 days.</p>
 
           <h2 style={h2Style}>15. European Privacy Rights (GDPR / UK GDPR)</h2>
           <ul style={ulStyle}>
             <li style={liStyle}>Access, rectification, erasure, restriction, data portability, and objection.</li>
             <li style={liStyle}>Withdrawal of consent at any time without affecting the lawfulness of processing carried out before withdrawal.</li>
-            <li style={liStyle}>The right to lodge a complaint with your supervisory authority — for the EU, find yours at <a href="https://edpb.europa.eu/about-edpb/about-edpb/members_en" target="_blank" rel="noopener noreferrer" style={{ color: '#0D9488', textDecoration: 'underline' }}>edpb.europa.eu</a>; for the UK, the Information Commissioner&apos;s Office at <a href="https://ico.org.uk" target="_blank" rel="noopener noreferrer" style={{ color: '#0D9488', textDecoration: 'underline' }}>ico.org.uk</a>.</li>
+            <li style={liStyle}>The right to lodge a complaint with your supervisory authority — for the EU, find yours at <a href="https://edpb.europa.eu/about-edpb/about-edpb/members_en" target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'underline' }}>edpb.europa.eu</a>; for the UK, the Information Commissioner&apos;s Office at <a href="https://ico.org.uk" target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'underline' }}>ico.org.uk</a>.</li>
           </ul>
-          <p style={pStyle}>File requests through our <Link href="/data-request" style={{ color: '#0D9488', textDecoration: 'underline' }}>Data Request form</Link>. We respond within 30 days.</p>
+          <p style={pStyle}>File requests through our <Link href="/data-request" style={{ color: '#BE185D', textDecoration: 'underline' }}>Data Request form</Link>. We respond within 30 days.</p>
 
           <h2 style={h2Style}>16. Cross-Border Transfers</h2>
           <p style={pStyle}>Most of our sub-processors are based in the United States. Where personal data of EEA, UK, or Swiss residents is transferred outside its country of origin, the transfer relies on Standard Contractual Clauses (SCCs) included in each sub-processor&apos;s DPA, supplemented by encryption in transit and at rest.</p>
@@ -227,7 +227,7 @@ export default function PrivacyPage() {
             { label: 'About Us', href: '/about' },
             { label: 'Contact', href: '/contact' },
           ].map(link => (
-            <Link key={link.href} href={link.href} style={{ fontSize: '13px', color: '#0D9488', textDecoration: 'none' }}>{link.label}</Link>
+            <Link key={link.href} href={link.href} style={{ fontSize: '13px', color: '#BE185D', textDecoration: 'none' }}>{link.label}</Link>
           ))}
         </footer>
       </article>

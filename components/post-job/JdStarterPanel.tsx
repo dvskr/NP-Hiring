@@ -191,7 +191,7 @@ const sx = {
   pathIcon: {
     width: 36, height: 36, borderRadius: 10,
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    background: '#ECFDF5', color: '#0D9488',
+    background: '#ECFDF5', color: '#BE185D',
   } satisfies React.CSSProperties,
   pathLabel: {
     fontSize: '14px', fontWeight: 700, margin: 0,
@@ -208,7 +208,7 @@ const sx = {
     marginBottom: '12px',
     borderRadius: '12px',
     background: 'linear-gradient(180deg, #ECFDF5 0%, #F0FDF4 100%)',
-    border: '1px solid rgba(13,148,136,0.18)',
+    border: '1px solid rgba(190,24,93,0.18)',
     boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.6)',
   } satisfies React.CSSProperties,
   pill: {
@@ -221,7 +221,7 @@ const sx = {
     fontWeight: 600,
     border: '1px solid rgba(0,0,0,0.06)',
     background: '#FFFFFF',
-    color: '#0F766E',
+    color: '#9D174D',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
   } satisfies React.CSSProperties,
@@ -286,18 +286,18 @@ const sx = {
     transition: 'all 0.15s ease',
   } satisfies React.CSSProperties,
   toggleBtnActive: {
-    background: 'linear-gradient(145deg, #0D9488, #10B981)',
+    background: 'linear-gradient(145deg, #BE185D, #9D174D)',
     color: '#FFFFFF',
-    border: '1px solid rgba(13,148,136,0.4)',
+    border: '1px solid rgba(190,24,93,0.4)',
     boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.2)',
   } satisfies React.CSSProperties,
   primaryBtn: {
     display: 'inline-flex', alignItems: 'center', gap: '8px',
     padding: '10px 20px', borderRadius: '12px', fontSize: '14px',
     fontWeight: 700, color: '#FFFFFF', cursor: 'pointer',
-    background: 'linear-gradient(145deg, #0D9488, #10B981)',
-    border: '1px solid rgba(13,148,136,0.4)',
-    boxShadow: '3px 3px 10px rgba(13,148,136,0.25), inset 1px 1px 2px rgba(255,255,255,0.2)',
+    background: 'linear-gradient(145deg, #BE185D, #9D174D)',
+    border: '1px solid rgba(190,24,93,0.4)',
+    boxShadow: '3px 3px 10px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.2)',
     transition: 'all 0.15s ease',
   } satisfies React.CSSProperties,
   secondaryBtn: {
@@ -773,7 +773,7 @@ function EmptyStateHero({
     <div style={sx.hero}>
       <div style={{ ...sx.heroHeader, justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Wand2 size={18} style={{ color: '#0D9488' }} />
+          <Wand2 size={18} style={{ color: '#BE185D' }} />
           <div>
             <h3 style={sx.heroTitle}>How would you like to start your job description?</h3>
             <p style={sx.heroSub}>AI is the recommended path. You can switch any time.</p>
@@ -807,7 +807,7 @@ function EmptyStateHero({
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             background: 'transparent', border: 'none', cursor: 'pointer',
-            color: '#0D9488', fontSize: 12, fontWeight: 600,
+            color: '#BE185D', fontSize: 12, fontWeight: 600,
             textDecoration: 'underline', padding: '4px 8px',
           }}
         >
@@ -838,7 +838,7 @@ function PathCard({
         ...sx.pathCard,
         ...(highlight
           ? {
-              borderColor: 'rgba(13,148,136,0.35)',
+              borderColor: 'rgba(190,24,93,0.35)',
               background: 'linear-gradient(180deg, #ECFDF5 0%, #FFFFFF 70%)',
             }
           : {}),
@@ -883,7 +883,7 @@ function PostGenToolbar({
       {/* Status line: AI-specific when the current draft was AI-generated,
           generic char count when it was templated / typed. Either way the
           rest of the toolbar surfaces the same template + library actions. */}
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#0F766E' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#9D174D' }}>
         {hasAi ? (
           <>
             <Sparkles size={14} />
@@ -1000,9 +1000,9 @@ function TemplatePicker({
   };
   const filterBtnActive: React.CSSProperties = {
     ...filterBtn,
-    background: 'linear-gradient(145deg, #0D9488, #10B981)',
+    background: 'linear-gradient(145deg, #BE185D, #9D174D)',
     color: '#FFFFFF',
-    border: '1px solid rgba(13,148,136,0.4)',
+    border: '1px solid rgba(190,24,93,0.4)',
   };
 
   return (
@@ -1078,8 +1078,8 @@ function TemplatePicker({
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '6px 12px', borderRadius: 10, fontSize: 12, fontWeight: 600,
-                  border: '1px solid rgba(13,148,136,0.3)',
-                  background: !canSaveCurrent || customCount >= customCap ? '#F1F5F9' : 'linear-gradient(145deg, #0D9488, #10B981)',
+                  border: '1px solid rgba(190,24,93,0.3)',
+                  background: !canSaveCurrent || customCount >= customCap ? '#F1F5F9' : 'linear-gradient(145deg, #BE185D, #9D174D)',
                   color: !canSaveCurrent || customCount >= customCap ? '#94A3B8' : '#FFFFFF',
                   cursor: !canSaveCurrent || customCount >= customCap ? 'not-allowed' : 'pointer',
                 }}
@@ -1179,7 +1179,7 @@ function CustomTemplateCard({
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.15s',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#0D9488'; e.currentTarget.style.background = '#ECFDF5'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#BE185D'; e.currentTarget.style.background = '#ECFDF5'; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = '#94A3B8'; e.currentTarget.style.background = '#F5F6F8'; }}
         >
           <Pencil size={12} />
@@ -1293,8 +1293,8 @@ function UsageBadge({
   const exhausted = remaining === 0;
   const nearing = !exhausted && remaining <= 1;
   const trackColor = exhausted ? '#FECACA' : nearing ? '#FDE68A' : '#A7F3D0';
-  const fillColor = exhausted ? '#DC2626' : nearing ? '#D97706' : '#0D9488';
-  const textColor = exhausted ? '#991B1B' : nearing ? '#92400E' : '#0F766E';
+  const fillColor = exhausted ? '#DC2626' : nearing ? '#D97706' : '#BE185D';
+  const textColor = exhausted ? '#991B1B' : nearing ? '#92400E' : '#9D174D';
   const fillPct = cap > 0 ? Math.min(100, (used / cap) * 100) : 0;
 
   const isCompact = emphasis === 'compact';
@@ -1486,7 +1486,7 @@ function AiDialog({
                 <label style={sx.fieldLabel}>
                   Facts summary <span style={{ color: '#EF4444' }}>*</span>
                 </label>
-                <span style={{ fontSize: 11, color: factsSummary.length >= FACTS_SUMMARY_MIN ? '#0F766E' : '#94A3B8', fontWeight: 600 }}>
+                <span style={{ fontSize: 11, color: factsSummary.length >= FACTS_SUMMARY_MIN ? '#9D174D' : '#94A3B8', fontWeight: 600 }}>
                   {factsSummary.length} chars {factsSummary.length < FACTS_SUMMARY_MIN ? `(${FACTS_SUMMARY_MIN - factsSummary.length} more for AI grounding)` : '· ready'}
                 </span>
               </div>

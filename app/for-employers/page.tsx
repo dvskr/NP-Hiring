@@ -83,7 +83,7 @@ export default async function ForEmployersPage() {
                 color: '#1A2E35', margin: '0 0 20px',
               }}>
                 The #1 Job Board Built<br />
-                <span style={{ color: '#0D9488' }}>Exclusively</span>{' '}
+                <span style={{ color: '#BE185D' }}>Exclusively</span>{' '}
                 for {brand.niche.short}s
               </h1>
 
@@ -98,7 +98,7 @@ export default async function ForEmployersPage() {
               <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
                 <Link href="/post-job" className="clay-btn emp-cta-primary" style={{
                   padding: '16px 36px', borderRadius: '16px', fontWeight: 700, fontSize: '15px',
-                  background: '#0D9488', color: '#fff',
+                  background: '#BE185D', color: '#fff',
                   textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '10px',
                 }}>
                   Post a Job — First Post Free <ArrowRight size={17} />
@@ -203,7 +203,7 @@ export default async function ForEmployersPage() {
                   Double the industry standard. Your job stays visible for 2 full months — no daily budget, no bidding.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
                 <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/bento-60day.webp`} alt="60-day job listing calendar" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
@@ -269,20 +269,20 @@ export default async function ForEmployersPage() {
             <div className="bento-pricing emp-bento-card" style={{
               ...clayCard, gridColumn: 'span 4',
               padding: '28px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
-              background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
-              border: '2px solid rgba(13,148,136,0.15)',
+              background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
+              border: '2px solid rgba(190,24,93,0.15)',
             }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '14px' }} />
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#134E4A', margin: '0 0 6px' }}>Simple Pricing</h3>
-              <p style={{ fontSize: '13px', color: '#0D9488', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Simple Pricing</h3>
+              <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
                 First post free. Then ${config.postingPrice}/post.<br />
                 Renewals just ${config.renewalPrice}. No hidden fees.
               </p>
               <Link href="/post-job" className="emp-cta-primary" style={{
                 padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                background: '#0D9488', color: '#fff', textDecoration: 'none',
+                background: '#BE185D', color: '#fff', textDecoration: 'none',
                 display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content',
-                boxShadow: '3px 3px 8px rgba(13,148,136,0.15)',
+                boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
               }}>
                 Post a Job <ArrowRight size={14} />
               </Link>
@@ -297,7 +297,7 @@ export default async function ForEmployersPage() {
           ═══════════════════════════════════════════════════════════════ */}
       <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Why Switch
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
@@ -314,9 +314,9 @@ export default async function ForEmployersPage() {
             <div className="emp-compare-table" style={{ ...clayCard, padding: '0', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
                 <thead>
-                  <tr style={{ background: 'linear-gradient(135deg, rgba(13,148,136,0.08), rgba(13,148,136,0.02))' }}>
+                  <tr style={{ background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(190,24,93,0.02))' }}>
                     <th style={{ width: '40%', padding: '16px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Feature</th>
-                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '12px' }}>{brand.name}</th>
+                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#BE185D', borderBottom: '2px solid rgba(190,24,93,0.2)', fontSize: '12px' }}>{brand.name}</th>
                     <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>Indeed</th>
                     <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>LinkedIn</th>
                   </tr>
@@ -324,7 +324,7 @@ export default async function ForEmployersPage() {
                 <tbody>
                   {comparisonRows.map((row, i) => {
                     const renderCell = (val: true | false | 'partial', isUs: boolean) => {
-                      if (val === true) return <Check size={16} style={{ color: isUs ? '#0D9488' : '#94A3B8', display: 'block', margin: '0 auto' }} />;
+                      if (val === true) return <Check size={16} style={{ color: isUs ? '#BE185D' : '#94A3B8', display: 'block', margin: '0 auto' }} />;
                       if (val === 'partial') return <span style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 600 }}>Partial</span>;
                       return <X size={16} style={{ color: '#D1D5DB', display: 'block', margin: '0 auto' }} />;
                     };
@@ -334,7 +334,7 @@ export default async function ForEmployersPage() {
                           <span style={{ color: '#1A2E35', fontWeight: 500 }}>{row.feature}</span>
                           {row.note && <span style={{ display: 'block', fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>{row.note}</span>}
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)', background: 'rgba(13,148,136,0.03)' }}>
+                        <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)', background: 'rgba(190,24,93,0.03)' }}>
                           {renderCell(row.us, true)}
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
@@ -357,7 +357,7 @@ export default async function ForEmployersPage() {
             }}>
               {/* Image */}
               <div style={{
-                background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
+                background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
                 padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <Image
@@ -375,7 +375,7 @@ export default async function ForEmployersPage() {
                   color: '#1A2E35', margin: '0 0 10px',
                 }}>
                   Ready to Hire Your{' '}
-                  <span style={{ color: '#0D9488' }}>Next {brand.niche.short}</span>?
+                  <span style={{ color: '#BE185D' }}>Next {brand.niche.short}</span>?
                 </h3>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px' }}>
                   First post free — all features included. Then just ${config.postingPrice}/post.
@@ -383,9 +383,9 @@ export default async function ForEmployersPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <Link href="/post-job" className="emp-cta-primary" style={{
                     padding: '12px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px',
-                    background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
+                    background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                     textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    boxShadow: '4px 4px 12px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                    boxShadow: '4px 4px 12px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
                   }}>
                     Post a Job — First Post Free <ArrowRight size={15} />
                   </Link>
@@ -414,7 +414,7 @@ export default async function ForEmployersPage() {
         }
         .emp-cta-primary:hover {
           transform: translateY(-3px);
-          box-shadow: 0 10px 32px rgba(13,148,136,0.35), inset 1px 1px 2px rgba(255,255,255,0.2) !important;
+          box-shadow: 0 10px 32px rgba(190,24,93,0.35), inset 1px 1px 2px rgba(255,255,255,0.2) !important;
           filter: brightness(1.05);
         }
         .emp-cta-secondary {
@@ -423,7 +423,7 @@ export default async function ForEmployersPage() {
         .emp-cta-secondary:hover {
           transform: translateY(-2px);
           box-shadow: 0 6px 20px rgba(0,0,0,0.08) !important;
-          border-color: rgba(13,148,136,0.3) !important;
+          border-color: rgba(190,24,93,0.3) !important;
         }
         .emp-bento-card {
           transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -436,7 +436,7 @@ export default async function ForEmployersPage() {
           transition: background 0.2s ease;
         }
         .emp-compare-table tbody tr:hover {
-          background: rgba(13,148,136,0.04) !important;
+          background: rgba(190,24,93,0.04) !important;
         }
         .emp-stat-pill {
           transition: transform 0.2s ease, box-shadow 0.2s ease;

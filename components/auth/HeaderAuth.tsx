@@ -49,10 +49,10 @@ const clayPrimaryPill: React.CSSProperties = {
   borderRadius: '14px',
   fontSize: '15px',
   fontWeight: 600,
-  backgroundColor: '#0D9488',
+  backgroundColor: '#BE185D',
   color: '#FFFFFF',
   border: '1px solid rgba(255,255,255,0.3)',
-  boxShadow: '5px 5px 14px rgba(13,148,136,0.25), -3px -3px 8px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.06)',
+  boxShadow: '5px 5px 14px rgba(190,24,93,0.25), -3px -3px 8px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.06)',
   textDecoration: 'none',
   transition: 'all 0.2s ease',
   cursor: 'pointer',
@@ -60,11 +60,11 @@ const clayPrimaryPill: React.CSSProperties = {
 
 const handleHoverIn = (e: React.MouseEvent<HTMLElement>) => {
   e.currentTarget.style.transform = 'translateY(-2px)';
-  const isTeal = e.currentTarget.style.backgroundColor === 'rgb(13, 148, 136)';
+  const isTeal = e.currentTarget.style.backgroundColor === 'rgb(190,24,93)';
   if (!isTeal) {
-    e.currentTarget.style.backgroundColor = '#E6FAF8';
-    e.currentTarget.style.color = '#0D9488';
-    e.currentTarget.style.boxShadow = '5px 5px 14px rgba(13,148,136,0.12), -3px -3px 8px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03)';
+    e.currentTarget.style.backgroundColor = '#FDF2F8';
+    e.currentTarget.style.color = '#BE185D';
+    e.currentTarget.style.boxShadow = '5px 5px 14px rgba(190,24,93,0.12), -3px -3px 8px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03)';
   }
 }
 const handleHoverOut = (e: React.MouseEvent<HTMLElement>) => {

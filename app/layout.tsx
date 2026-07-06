@@ -275,7 +275,7 @@ export default async function RootLayout({
             top: '0',
             zIndex: 100000,
             padding: '12px 18px',
-            background: '#0D9488',
+            background: '#BE185D',
             color: '#FFFFFF',
             fontWeight: 600,
             textDecoration: 'none',

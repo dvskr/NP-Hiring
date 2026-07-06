@@ -24,7 +24,7 @@ export async function POST(req: Request) {
                 let html = para.trim();
                 html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
                 html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-                html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color: #2DD4BF; text-decoration: none;">$1</a>');
+                html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color: #F472B6; text-decoration: none;">$1</a>');
                 html = html.replace(/\n/g, '<br>');
                 return `<p style="margin: 0 0 16px;">${html}</p>`;
             })

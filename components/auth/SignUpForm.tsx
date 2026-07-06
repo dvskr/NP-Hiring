@@ -29,7 +29,7 @@ const ctaStyle = (role: Role, loading: boolean): React.CSSProperties => ({
   border: 'none',
   background: role === 'employer'
     ? 'linear-gradient(145deg, #B45309, #92400E)'
-    : 'linear-gradient(145deg, #0D9488, #0F766E)',
+    : 'linear-gradient(145deg, #BE185D, #9D174D)',
   color: '#fff',
   fontWeight: 700,
   fontSize: '15px',
@@ -41,7 +41,7 @@ const ctaStyle = (role: Role, loading: boolean): React.CSSProperties => ({
   opacity: loading ? 0.6 : 1,
   boxShadow: role === 'employer'
     ? '0 4px 14px rgba(180,83,9,0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
-    : '0 4px 14px rgba(13,148,136,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+    : '0 4px 14px rgba(190,24,93,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
   transition: 'all 0.2s',
 });
 
@@ -193,7 +193,7 @@ export default function SignUpForm() {
     setError(null);
   };
 
-  const accent = role === 'employer' ? '#B45309' : '#0D9488';
+  const accent = role === 'employer' ? '#B45309' : '#BE185D';
 
   // ─── SUCCESS STATE ───
   if (success) {
@@ -275,7 +275,7 @@ export default function SignUpForm() {
             borderRadius: '11px', border: 'none', cursor: 'pointer',
             transition: 'all 0.2s ease',
             background: role === 'seeker' ? '#FFFFFF' : 'transparent',
-            color: role === 'seeker' ? '#0D9488' : '#94A3B0',
+            color: role === 'seeker' ? '#BE185D' : '#94A3B0',
             boxShadow: role === 'seeker' ? '0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)' : 'none',
           }}
         >
@@ -418,19 +418,19 @@ export default function SignUpForm() {
             <div style={optInCardStyle}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                 <input type="checkbox" checked={wantJobHighlights} onChange={(e) => setWantJobHighlights(e.target.checked)}
-                  style={{ accentColor: '#0D9488', width: '15px', height: '15px', flexShrink: 0 }} />
-                <Bell className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#0D9488' }} />
+                  style={{ accentColor: '#BE185D', width: '15px', height: '15px', flexShrink: 0 }} />
+                <Bell className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#BE185D' }} />
                 <span style={{ fontWeight: 600, fontSize: '13px', color: '#1A2E35' }}>Email me job highlights</span>
                 {wantJobHighlights && (
                   <span style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                       <input type="radio" name="freq" value="daily" checked={highlightsFrequency === 'daily'}
-                        onChange={() => setHighlightsFrequency('daily')} style={{ accentColor: '#0D9488' }} />
+                        onChange={() => setHighlightsFrequency('daily')} style={{ accentColor: '#BE185D' }} />
                       <span style={{ fontSize: '12px', color: '#4B5E68' }}>Daily</span>
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                       <input type="radio" name="freq" value="weekly" checked={highlightsFrequency === 'weekly'}
-                        onChange={() => setHighlightsFrequency('weekly')} style={{ accentColor: '#0D9488' }} />
+                        onChange={() => setHighlightsFrequency('weekly')} style={{ accentColor: '#BE185D' }} />
                       <span style={{ fontSize: '12px', color: '#4B5E68' }}>Weekly</span>
                     </label>
                   </span>
@@ -438,7 +438,7 @@ export default function SignUpForm() {
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #D1E7DD' }}>
                 <input type="checkbox" checked={newsletterOptIn} onChange={(e) => setNewsletterOptIn(e.target.checked)}
-                  style={{ accentColor: '#0D9488', width: '15px', height: '15px', flexShrink: 0 }} />
+                  style={{ accentColor: '#BE185D', width: '15px', height: '15px', flexShrink: 0 }} />
                 <span style={{ fontSize: '13px', color: '#4B5E68' }}>
                   Send me career tips, salary insights &amp; market updates
                 </span>

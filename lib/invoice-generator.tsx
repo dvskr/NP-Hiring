@@ -10,7 +10,7 @@ const styles = StyleSheet.create({
   },
   topBar: {
     height: 6,
-    backgroundColor: '#14B8A6',
+    backgroundColor: '#DB2777',
     marginHorizontal: -40,
     marginTop: -40,
     marginBottom: 30,

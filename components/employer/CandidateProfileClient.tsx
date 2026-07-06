@@ -190,7 +190,7 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
         return (
             <div style={{ background: '#F5F0EB', padding: '80px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
-                    <Loader2 size={32} className="animate-spin" style={{ color: '#0D9488', margin: '0 auto 12px', display: 'block' }} />
+                    <Loader2 size={32} className="animate-spin" style={{ color: '#BE185D', margin: '0 auto 12px', display: 'block' }} />
                     <p style={{ color: '#8A9BA6', fontSize: '14px' }}>Loading candidate profile…</p>
                 </div>
             </div>
@@ -209,7 +209,7 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
             <div style={{ background: '#F5F0EB', padding: '80px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ ...cardBase, padding: '48px 32px', textAlign: 'center', maxWidth: '460px' }}>
                     {isNoPosting ? (
-                        <Briefcase size={36} style={{ color: '#0D9488', margin: '0 auto 12px', display: 'block' }} />
+                        <Briefcase size={36} style={{ color: '#BE185D', margin: '0 auto 12px', display: 'block' }} />
                     ) : (
                         <Shield size={36} style={{ color: '#B0C4BC', margin: '0 auto 12px', display: 'block' }} />
                     )}
@@ -228,8 +228,8 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                                 padding: '10px 18px', borderRadius: '12px',
                                 fontSize: '13px', fontWeight: 600, color: '#fff',
-                                background: 'linear-gradient(145deg, #10B981, #0D9488)',
-                                boxShadow: '3px 3px 8px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.2)',
+                                background: 'linear-gradient(145deg, #9D174D, #BE185D)',
+                                boxShadow: '3px 3px 8px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.2)',
                                 textDecoration: 'none', marginBottom: '14px',
                             }}
                         >
@@ -240,7 +240,7 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                         <Link
                             href={backHref}
                             onClick={handleBackToTalentPool}
-                            style={{ color: '#0D9488', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}
+                            style={{ color: '#BE185D', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}
                         >
                             ← Back to Talent Pool
                         </Link>
@@ -286,7 +286,7 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                         width: '72px', height: '72px', borderRadius: '20px',
                         background: candidate.avatarUrl
                             ? `url(${candidate.avatarUrl}) center/cover`
-                            : 'linear-gradient(145deg, #10B981, #0D9488)',
+                            : 'linear-gradient(145deg, #9D174D, #BE185D)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: '#fff', fontWeight: 800, fontSize: '24px', flexShrink: 0,
                         boxShadow: '4px 4px 12px rgba(0,0,0,0.08), -3px -3px 8px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.3)',
@@ -310,7 +310,7 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                         )}
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
                             {expLabel && (
-                                <span style={{ ...recessedPill, background: '#CCFBF1', color: '#0D9488', border: '1px solid #99F6E4' }}>
+                                <span style={{ ...recessedPill, background: '#FCE7F3', color: '#BE185D', border: '1px solid #FBCFE8' }}>
                                     {expLabel}
                                 </span>
                             )}
@@ -331,8 +331,8 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                 <button onClick={() => setShowCompose(true)} className="cp-action-btn" style={{
                                     ...clayBtn,
-                                    background: 'linear-gradient(145deg, #10B981, #0D9488)', color: '#fff', border: 'none',
-                                    boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+                                    background: 'linear-gradient(145deg, #9D174D, #BE185D)', color: '#fff', border: 'none',
+                                    boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
                                 }}>
                                     <Mail size={15} /> Contact Candidate
                                 </button>
@@ -387,7 +387,7 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                                     <p style={{ fontSize: '12px', color: '#8A9BA6', marginBottom: '6px', fontWeight: 500 }}>Certifications</p>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                                         {safeCerts.map(c => (
-                                            <span key={c} style={{ ...recessedPill, background: '#CCFBF1', color: '#0D9488', border: '1px solid #99F6E4' }}>
+                                            <span key={c} style={{ ...recessedPill, background: '#FCE7F3', color: '#BE185D', border: '1px solid #FBCFE8' }}>
                                                 {c}
                                             </span>
                                         ))}
@@ -437,7 +437,7 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                                     <p style={{ fontSize: '11px', color: '#B0C4BC', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '3px' }}>
                                         <DollarSign size={10} /> Desired Salary
                                     </p>
-                                    <p style={{ fontSize: '14px', fontWeight: 700, color: '#0D9488', margin: 0 }}>{candidate.salaryRange}</p>
+                                    <p style={{ fontSize: '14px', fontWeight: 700, color: '#BE185D', margin: 0 }}>{candidate.salaryRange}</p>
                                 </div>
                             )}
                             {candidate.availableDate && (
@@ -462,8 +462,8 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                         {!showContact ? (
                             <button onClick={() => setShowContact(true)} className="cp-action-btn" style={{
                                 ...clayBtn,
-                                background: 'linear-gradient(145deg, #10B981, #0D9488)', color: '#fff', border: 'none',
-                                boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+                                background: 'linear-gradient(145deg, #9D174D, #BE185D)', color: '#fff', border: 'none',
+                                boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
                             }}>
                                 <Mail size={15} /> Contact Candidate
                             </button>
@@ -471,10 +471,10 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                             <div style={{
                                 display: 'flex', alignItems: 'center', gap: '8px',
                                 padding: '10px 16px', borderRadius: '12px',
-                                background: '#CCFBF1', border: '1px solid #99F6E4',
+                                background: '#FCE7F3', border: '1px solid #FBCFE8',
                             }}>
-                                <Mail size={15} style={{ color: '#0D9488' }} />
-                                <a href={`mailto:${candidate.contactEmail}`} style={{ color: '#0D9488', fontWeight: 600, fontSize: '14px' }}>
+                                <Mail size={15} style={{ color: '#BE185D' }} />
+                                <a href={`mailto:${candidate.contactEmail}`} style={{ color: '#BE185D', fontWeight: 600, fontSize: '14px' }}>
                                     {candidate.contactEmail}
                                 </a>
                             </div>
@@ -524,7 +524,7 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                         </p>
                         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '18px' }}>
                             {[
-                                { icon: <Mail size={13} />, label: 'Direct email', color: '#0D9488' },
+                                { icon: <Mail size={13} />, label: 'Direct email', color: '#BE185D' },
                                 { icon: <FileText size={13} />, label: 'Resume download', color: '#2563EB' },
                                 { icon: <Linkedin size={13} />, label: 'LinkedIn profile', color: '#0A66C2' },
                             ].map(f => (
@@ -535,9 +535,9 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                         </div>
                         <a href="/post-job" className="cp-action-btn" style={{
                             ...clayBtn,
-                            background: 'linear-gradient(145deg, #10B981, #0D9488)', color: '#fff', border: 'none',
+                            background: 'linear-gradient(145deg, #9D174D, #BE185D)', color: '#fff', border: 'none',
                             padding: '12px 24px', fontSize: '14px',
-                            boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+                            boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
                         }}>
                             Post a Featured Job to Unlock →
                         </a>
@@ -569,7 +569,7 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                     box-shadow: 5px 5px 14px rgba(0,0,0,0.09), -3px -3px 8px rgba(255,255,255,0.9) !important;
                 }
                 .cp-back-link:hover {
-                    color: #0D9488 !important;
+                    color: #BE185D !important;
                 }
             `}</style>
         </div>

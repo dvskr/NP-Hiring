@@ -35,7 +35,7 @@ function markdownToEmailHtml(md: string): string {
             // Italic
             html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
             // Links [text](url)
-            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color: #2DD4BF; text-decoration: none;">$1</a>');
+            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color: #F472B6; text-decoration: none;">$1</a>');
             // Line breaks
             html = html.replace(/\n/g, '<br>');
             return `<p style="margin: 0 0 16px;">${html}</p>`;

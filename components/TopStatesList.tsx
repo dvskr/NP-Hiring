@@ -48,7 +48,7 @@ export default function TopStatesList({ states }: TopStatesProps) {
                     variants={stagger}
                     className="mb-8"
                 >
-                    <m.p variants={fadeUp} className="text-sm font-medium text-teal-600 uppercase tracking-[0.15em] mb-2">
+                    <m.p variants={fadeUp} className="text-sm font-medium text-pink-700 uppercase tracking-[0.15em] mb-2">
                         Browse by state
                     </m.p>
                     <m.h2 variants={fadeUp} className="font-lora text-3xl lg:text-4xl font-bold text-gray-900">
@@ -101,7 +101,7 @@ export default function TopStatesList({ states }: TopStatesProps) {
                                         loading="lazy"
                                     />
                                 </div>
-                                <p className="text-sm font-semibold text-gray-800 group-hover:text-teal-700 transition-colors text-center">
+                                <p className="text-sm font-semibold text-gray-800 group-hover:text-pink-800 transition-colors text-center">
                                     {state.name}
                                 </p>
                                 <p className="text-xs text-gray-400 text-center">{state.count} openings</p>
@@ -122,7 +122,7 @@ export default function TopStatesList({ states }: TopStatesProps) {
                         href="/jobs"
                         className="inline-flex items-center gap-2 px-8 py-3 text-sm font-semibold text-slate-700/80 no-underline"
                         style={{
-                            background: 'linear-gradient(145deg, #5eead4cc, #5eead488)',
+                            background: 'linear-gradient(145deg, #F9A8D4cc, #F9A8D488)',
                             borderRadius: '54% 46% 62% 38% / 49% 55% 45% 51%',
                             boxShadow:
                                 'inset 4px 4px 8px rgba(255,255,255,0.45), inset -3px -3px 6px rgba(0,0,0,0.06), 0 6px 16px rgba(0,0,0,0.1)',

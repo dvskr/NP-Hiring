@@ -562,7 +562,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
         .gone-card:hover { transform: translateY(-4px) !important; box-shadow: 8px 8px 24px rgba(0,0,0,0.1), -4px -4px 12px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
         .gone-card:active { transform: translateY(-1px) !important; }
         .gone-cta { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .gone-cta:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 20px rgba(13,148,136,0.3) !important; }
+        .gone-cta:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 20px rgba(190,24,93,0.3) !important; }
       `}} />
 
       <div style={{ maxWidth: '700px', margin: '0 auto', padding: '60px 20px 80px' }}>
@@ -626,8 +626,8 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
               display: 'inline-flex', alignItems: 'center', gap: '8px',
               padding: '12px 28px', borderRadius: '14px', fontSize: '15px', fontWeight: 700,
               color: '#fff', textDecoration: 'none',
-              background: 'linear-gradient(135deg, #0D9488, #0F766E)',
-              boxShadow: '4px 4px 12px rgba(13,148,136,0.2), -2px -2px 6px rgba(255,255,255,0.3), inset 1px 1px 2px rgba(255,255,255,0.2)',
+              background: 'linear-gradient(135deg, #BE185D, #9D174D)',
+              boxShadow: '4px 4px 12px rgba(190,24,93,0.2), -2px -2px 6px rgba(255,255,255,0.3), inset 1px 1px 2px rgba(255,255,255,0.2)',
             }}>
             <img src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp`} alt="" width={22} height={22} loading="lazy" decoding="async" style={{ objectFit: 'contain' }} />2026 {brand.niche.short} Salary Guide →</a>
         </div>
@@ -878,7 +878,7 @@ export default async function JobPage({ params }: JobPageProps) {
                       avatar on the left, two-line text to the right. */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
                     {companyInfo ? (
-                      <Link href={`/companies/${companyInfo.normalizedName}`} className="text-lg sm:text-xl font-semibold hover:text-teal-500 transition-colors" style={{ color: 'var(--text-secondary)' }}>
+                      <Link href={`/companies/${companyInfo.normalizedName}`} className="text-lg sm:text-xl font-semibold hover:text-pink-600 transition-colors" style={{ color: 'var(--text-secondary)' }}>
                         {job.employer}
                       </Link>
                     ) : (

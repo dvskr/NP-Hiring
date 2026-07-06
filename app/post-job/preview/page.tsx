@@ -190,7 +190,7 @@ export default function PreviewPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
         <div style={{
           width: '36px', height: '36px', borderRadius: '50%',
-          border: '3px solid #E5E7EB', borderTopColor: '#0D9488',
+          border: '3px solid #E5E7EB', borderTopColor: '#BE185D',
           animation: 'spin 0.8s linear infinite',
         }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -366,7 +366,7 @@ export default function PreviewPage() {
                   <span style={{ fontSize: '20px', fontWeight: 600, color: '#5A6B73' }}>{formData.companyName}</span>
                   <span style={{ color: '#B0BEC5', fontSize: '18px', lineHeight: 1 }}>·</span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '14px', color: '#5A6B73' }}>
-                    <MapPin size={14} style={{ color: '#0D9488', flexShrink: 0 }} />
+                    <MapPin size={14} style={{ color: '#BE185D', flexShrink: 0 }} />
                     {formData.location}
                   </span>
                 </div>
@@ -379,7 +379,7 @@ export default function PreviewPage() {
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: '5px',
                   padding: '4px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 700,
-                  background: '#CCFBF1', color: '#0F766E',
+                  background: '#FCE7F3', color: '#9D174D',
                 }}>
                   <CheckCircle size={13} /> Verified Employer
                 </span>
@@ -468,16 +468,16 @@ export default function PreviewPage() {
                   <div style={{
                     ...clayBtn,
                     width: '100%', justifyContent: 'center',
-                    background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
-                    boxShadow: '4px 4px 10px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                    background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
+                    boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
                   }}>Apply Now</div>
                   <div style={{
                     marginTop: '12px', padding: '10px 14px', borderRadius: '12px',
-                    background: '#F0FDFA', border: '1px solid #99F6E4',
+                    background: '#FDF2F8', border: '1px solid #FBCFE8',
                     display: 'flex', alignItems: 'flex-start', gap: '8px',
                   }}>
-                    <span style={{ color: '#0D9488', fontSize: '14px' }}>✅</span>
-                    <p style={{ fontSize: '12px', color: '#115E59', margin: 0, lineHeight: 1.5 }}>
+                    <span style={{ color: '#BE185D', fontSize: '14px' }}>✅</span>
+                    <p style={{ fontSize: '12px', color: '#831843', margin: 0, lineHeight: 1.5 }}>
                       Candidates apply directly on this platform. Applications appear in your dashboard.
                     </p>
                   </div>
@@ -487,8 +487,8 @@ export default function PreviewPage() {
                   <a href={formData.applyUrl} target="_blank" rel="noopener noreferrer" style={{
                     ...clayBtn,
                     width: '100%', justifyContent: 'center',
-                    background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
-                    boxShadow: '4px 4px 10px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                    background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
+                    boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
                     textDecoration: 'none',
                   }}>
                     Apply Now <ExternalLink size={16} />
@@ -501,13 +501,13 @@ export default function PreviewPage() {
         </div>
 
         {/* Section 3: Features Summary */}
-        <div style={{ ...cardBase, padding: '20px', marginBottom: '24px', background: '#F0FDFA', border: '1px solid #99F6E4' }}>
+        <div style={{ ...cardBase, padding: '20px', marginBottom: '24px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
               width: '40px', height: '40px', borderRadius: '12px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'linear-gradient(145deg, #0D9488, #10B981)',
-              boxShadow: '3px 3px 8px rgba(13,148,136,0.2)',
+              background: 'linear-gradient(145deg, #BE185D, #9D174D)',
+              boxShadow: '3px 3px 8px rgba(190,24,93,0.2)',
             }}>
               <Check size={18} color="#fff" />
             </div>
@@ -515,7 +515,7 @@ export default function PreviewPage() {
               <p style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>{packageHeadline}</p>
               <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '2px 0 0' }}>{packageDetails}</p>
               {willBeFree && typeof quotaStatus?.remaining === 'number' && (
-                <p style={{ fontSize: '11px', color: '#0D9488', margin: '4px 0 0', fontWeight: 600 }}>
+                <p style={{ fontSize: '11px', color: '#BE185D', margin: '4px 0 0', fontWeight: 600 }}>
                   {quotaStatus.remaining} of {quotaStatus.limit} free posts remaining for your domain
                 </p>
               )}
@@ -544,8 +544,8 @@ export default function PreviewPage() {
           </button>
           <button onClick={handleContinue} disabled={isLoading} className="preview-btn-primary" style={{
             ...clayBtn, flex: 1, justifyContent: 'center',
-            background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
-            boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
+            background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
+            boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
             opacity: isLoading ? 0.6 : 1,
           }}>
             {isLoading ? (
@@ -559,7 +559,7 @@ export default function PreviewPage() {
 
       <style>{`
         .preview-btn:hover { transform: translateY(-1px); }
-        .preview-btn-primary:hover { transform: translateY(-1px); box-shadow: 6px 6px 16px rgba(13,148,136,0.3), inset 1px 1px 2px rgba(255,255,255,0.15) !important; }
+        .preview-btn-primary:hover { transform: translateY(-1px); box-shadow: 6px 6px 16px rgba(190,24,93,0.3), inset 1px 1px 2px rgba(255,255,255,0.15) !important; }
       `}</style>
     </div>
   );

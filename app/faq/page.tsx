@@ -311,7 +311,7 @@ export default function FAQPage() {
         {/* Still Have Questions Section */}
         <section>
           <Card padding="lg" variant="bordered" className="text-center">
-            <Mail className="w-12 h-12 text-teal-600 mx-auto mb-4" />
+            <Mail className="w-12 h-12 text-pink-700 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
               Still Have Questions?
             </h2>

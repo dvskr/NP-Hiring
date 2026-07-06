@@ -181,12 +181,12 @@ export default function ShareButtons({ url, title, company }: ShareButtonsProps)
       <button
         onClick={handleCopyLink}
         style={copied
-          ? { ...clayPebble('#059669', '#B2F5EA'),
-              boxShadow: '2px 2px 6px rgba(13,148,136,0.15), inset 3px 3px 5px rgba(0,0,0,0.06), inset -1px -1px 3px rgba(255,255,255,0.4)' }
+          ? { ...clayPebble('#059669', '#FBCFE8'),
+              boxShadow: '2px 2px 6px rgba(190,24,93,0.15), inset 3px 3px 5px rgba(0,0,0,0.06), inset -1px -1px 3px rgba(255,255,255,0.4)' }
           : clayPebble('#6B7280', '#EDF2EE')
         }
         onMouseEnter={handleHover}
-        onMouseLeave={e => handleLeave(e, copied ? '#B2F5EA' : '#EDF2EE', copied ? '#059669' : '#6B7280')}
+        onMouseLeave={e => handleLeave(e, copied ? '#FBCFE8' : '#EDF2EE', copied ? '#059669' : '#6B7280')}
         aria-label={copied ? 'Copied!' : 'Copy link'}
       >
         {copied ? <CheckIcon /> : <CopyIcon />}

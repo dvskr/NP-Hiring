@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 
 const CLAY_COLORS = [
-    '#6ee7b7', '#5eead4', '#67e8f9', '#a5b4fc', '#c4b5fd',
-    '#f0abfc', '#fda4af', '#fcd34d', '#86efac', '#99f6e4',
+    '#6ee7b7', '#F9A8D4', '#67e8f9', '#a5b4fc', '#c4b5fd',
+    '#f0abfc', '#fda4af', '#fcd34d', '#86efac', '#FBCFE8',
     '#a5f3fc', '#c7d2fe', '#ddd6fe', '#f5d0fe', '#fbcfe8',
     '#fde68a', '#bef264',
 ];
@@ -111,7 +111,7 @@ export default function ClayDoughStrip({ employers }: ClayDoughStripProps) {
                                 <span
                                     className="text-xs"
                                     style={{
-                                        color: isHovered ? 'rgba(13,148,136,0.9)' : 'rgba(51,65,85,0.45)',
+                                        color: isHovered ? 'rgba(190,24,93,0.9)' : 'rgba(51,65,85,0.45)',
                                         fontWeight: isHovered ? 700 : 500,
                                         transition: 'color 0.2s ease, font-weight 0.2s ease',
                                     }}

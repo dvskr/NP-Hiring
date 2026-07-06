@@ -14,7 +14,7 @@
 //   - Lora serif for headings (36px) and body (19px)
 //   - Inter sans-serif for buttons, labels, and muted text
 //   - Security/info cards: #F3F2EF bg with #EDF2F7 border, 12px radius
-//   - CTA button: #4DB6AC, 14px/40px padding, 8px radius, 16px font
+//   - CTA button: #DB2777, 14px/40px padding, 8px radius, 16px font
 
 import { brand } from '@/config/brand';
 import { EMAIL_DEFAULT_PREHEADER, EMAIL_HEADER_TAGLINE } from '@/config/niche/copy';
@@ -49,8 +49,8 @@ export const V2 = {
   textFaded: '#A0AEC0',      // gray-400 — very light accents
 
   // Brand
-  teal: '#0D9488',           // teal-600 — link color
-  tealButton: '#4DB6AC',     // teal-400 — button bg
+  teal: '#BE185D',           // pink-700 — link color
+  tealButton: '#DB2777',     // pink-600 — button bg
   emerald: '#059669',        // emerald-600 — success accent
   amber: '#D97706',          // amber-600 — warning accent
   amberDark: '#92400E',      // amber-900 — warning text
@@ -172,7 +172,7 @@ export function headerBlockV2(title: string, subtitle: string = ''): string {
         <td valign="middle" style="padding-right:6px;"><img src="${logoUrl}" alt="${brand.name} logo" width="48" height="55" style="display:block;width:48px;height:55px;border:0;background-color:${V2.bgPeach};color:${V2.textPrimary};font-family:${SERIF};font-size:13px;font-weight:700;text-align:center;line-height:55px;" /></td>
         <td valign="middle">
           <p class="brand-text" style="margin:0;font-family:${SERIF};font-size:26px;font-weight:700;color:#1F2937;-webkit-text-fill-color:#1F2937;mso-line-height-rule:exactly;letter-spacing:-0.02em;line-height:1;text-align:center;">${brand.name}</p>
-          <p class="tagline-text" style="margin:4px 0 0;font-family:${SANS};font-size:10px;font-weight:700;color:#0d9488;-webkit-text-fill-color:#0d9488;mso-line-height-rule:exactly;letter-spacing:0.08em;text-transform:uppercase;line-height:1;text-align:center;">${EMAIL_HEADER_TAGLINE}</p>
+          <p class="tagline-text" style="margin:4px 0 0;font-family:${SANS};font-size:10px;font-weight:700;color:#BE185D;-webkit-text-fill-color:#BE185D;mso-line-height-rule:exactly;letter-spacing:0.08em;text-transform:uppercase;line-height:1;text-align:center;">${EMAIL_HEADER_TAGLINE}</p>
         </td>
       </tr>
     </table>
@@ -261,7 +261,7 @@ export function primaryButtonV2(text: string, url: string): string {
     <center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">${text}</center>
   </v:roundrect>
   <![endif]-->
-  <!--[if !mso]><!-- --><a href="${url}" class="btn-full" style="display:inline-block;box-sizing:border-box;background-color:${V2.tealButton};background-image:linear-gradient(135deg,#2DD4BF,#0D9488);color:#FFFFFF;-webkit-text-fill-color:#FFFFFF;text-decoration:none;padding:14px 32px;border-radius:8px;font-family:${SANS};font-weight:600;font-size:16px;text-align:center;mso-hide:all;">${text}</a><!--<![endif]-->`;
+  <!--[if !mso]><!-- --><a href="${url}" class="btn-full" style="display:inline-block;box-sizing:border-box;background-color:${V2.tealButton};background-image:linear-gradient(135deg,#F472B6,#BE185D);color:#FFFFFF;-webkit-text-fill-color:#FFFFFF;text-decoration:none;padding:14px 32px;border-radius:8px;font-family:${SANS};font-weight:600;font-size:16px;text-align:center;mso-hide:all;">${text}</a><!--<![endif]-->`;
 }
 
 export function secondaryButtonV2(text: string, url: string): string {

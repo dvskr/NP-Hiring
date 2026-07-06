@@ -73,9 +73,9 @@ export default function ChipSelector({
                                 fontWeight: 500,
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
-                                border: isSelected ? '1.5px solid #2DD4BF' : '1.5px solid var(--border-color)',
-                                background: isSelected ? 'rgba(45,212,191,0.12)' : 'var(--bg-primary)',
-                                color: isSelected ? '#2DD4BF' : 'var(--text-secondary)',
+                                border: isSelected ? '1.5px solid #F472B6' : '1.5px solid var(--border-color)',
+                                background: isSelected ? 'rgba(244,114,182,0.12)' : 'var(--bg-primary)',
+                                color: isSelected ? '#F472B6' : 'var(--text-secondary)',
                             }}
                         >
                             {item}
@@ -100,9 +100,9 @@ export default function ChipSelector({
                                     borderRadius: '16px',
                                     fontSize: '13px',
                                     fontWeight: 500,
-                                    background: 'rgba(45,212,191,0.12)',
-                                    color: '#2DD4BF',
-                                    border: '1px solid rgba(45,212,191,0.3)',
+                                    background: 'rgba(244,114,182,0.12)',
+                                    color: '#F472B6',
+                                    border: '1px solid rgba(244,114,182,0.3)',
                                 }}
                             >
                                 {item}
@@ -112,7 +112,7 @@ export default function ChipSelector({
                                     style={{
                                         background: 'none',
                                         border: 'none',
-                                        color: '#2DD4BF',
+                                        color: '#F472B6',
                                         cursor: 'pointer',
                                         padding: '0',
                                         display: 'flex',
@@ -155,8 +155,8 @@ export default function ChipSelector({
                             padding: '8px 14px',
                             borderRadius: '10px',
                             border: '1.5px solid var(--border-color)',
-                            background: customInput.trim() ? 'rgba(45,212,191,0.1)' : 'var(--bg-primary)',
-                            color: customInput.trim() ? '#2DD4BF' : 'var(--text-muted)',
+                            background: customInput.trim() ? 'rgba(244,114,182,0.1)' : 'var(--bg-primary)',
+                            color: customInput.trim() ? '#F472B6' : 'var(--text-muted)',
                             cursor: customInput.trim() ? 'pointer' : 'default',
                             fontSize: '13px',
                             fontWeight: 500,

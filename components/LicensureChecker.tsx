@@ -124,10 +124,10 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
   const stateSlug = selectedState.toLowerCase().replace(/\s+/g, '-');
 
   return (
-    <div style={{ ...clayCard, padding: '0', overflow: 'hidden', border: '2px solid rgba(13,148,136,0.12)' }}>
+    <div style={{ ...clayCard, padding: '0', overflow: 'hidden', border: '2px solid rgba(190,24,93,0.12)' }}>
       {/* ─── Header ─── */}
       <div style={{
-        background: 'linear-gradient(145deg, #0D9488, #059669)',
+        background: 'linear-gradient(145deg, #BE185D, #9D174D)',
         padding: '24px 32px',
         display: 'flex', alignItems: 'center', gap: '16px',
         position: 'relative', overflow: 'hidden',
@@ -165,7 +165,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
             onChange={e => setSelectedState(e.target.value)}
             style={{
               width: '100%', padding: '14px 44px 14px 16px', borderRadius: '14px',
-              border: '2px solid rgba(13,148,136,0.15)', background: '#FAFAFA',
+              border: '2px solid rgba(190,24,93,0.15)', background: '#FAFAFA',
               fontSize: '15px', fontWeight: 600, color: '#1A2E35',
               appearance: 'none', cursor: 'pointer', outline: 'none',
               boxShadow: 'inset 2px 2px 4px rgba(0,0,0,0.03)',
@@ -238,7 +238,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
                 }}>
                   <Image src={req.img} alt={`Step ${req.step}`} width={28} height={28} style={{ width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0, marginTop: '2px' }} />
                   <div>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#0D9488' }}>STEP {req.step}</span>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#BE185D' }}>STEP {req.step}</span>
                     <p style={{ fontSize: '13px', color: '#1A2E35', margin: '2px 0 0', fontWeight: 500 }}>{req.text}</p>
                   </div>
                 </div>
@@ -251,16 +251,16 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
             {/* Estimated Timeline */}
             <div style={{
               padding: '20px', borderRadius: '16px',
-              background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
-              border: '1.5px solid rgba(13,148,136,0.12)',
+              background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
+              border: '1.5px solid rgba(190,24,93,0.12)',
               display: 'flex', alignItems: 'center', gap: '16px',
             }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp`} alt="Timeline" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
               <div>
-                <p style={{ fontSize: '11px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 2px' }}>
+                <p style={{ fontSize: '11px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 2px' }}>
                   Estimated Timeline
                 </p>
-                <div style={{ fontSize: '28px', fontWeight: 800, color: '#134E4A', lineHeight: 1 }}>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: '#831843', lineHeight: 1 }}>
                   {result.timeline}
                 </div>
                 <p style={{ fontSize: '11px', color: '#5A4A42', margin: '4px 0 0' }}>
@@ -291,8 +291,8 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
                 </p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div style={{ padding: '10px 14px', borderRadius: '10px', background: '#F0FDFA' }}>
-                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#0D9488' }}>{fmt(result.salary.jobCount)}</div>
+                  <div style={{ padding: '10px 14px', borderRadius: '10px', background: '#FDF2F8' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#BE185D' }}>{fmt(result.salary.jobCount)}</div>
                     <div style={{ fontSize: '10px', color: '#64748B' }}>Active Jobs</div>
                   </div>
                   <div style={{ padding: '10px 14px', borderRadius: '10px', background: '#EEF2FF' }}>
@@ -335,9 +335,9 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
                 <Link href={`/blog/${result.guide.slug}`} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                   padding: '14px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px',
-                  background: 'linear-gradient(145deg, #0D9488, #059669)', color: '#fff',
+                  background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                   textDecoration: 'none',
-                  boxShadow: '0 4px 16px rgba(13,148,136,0.3)',
+                  boxShadow: '0 4px 16px rgba(190,24,93,0.3)',
                   transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                 }} className="lic-cta-primary">
                   Read Full {selectedState} Guide <ArrowSvg size={16} />
@@ -346,11 +346,11 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
               <Link href={`/jobs/state/${selectedState.toLowerCase().replace(/\s+/g, '-')}`} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                 padding: '12px 24px', borderRadius: '12px', fontWeight: 600, fontSize: '13px',
-                background: 'transparent', color: '#0D9488',
-                border: '1.5px solid rgba(13,148,136,0.2)', textDecoration: 'none',
+                background: 'transparent', color: '#BE185D',
+                border: '1.5px solid rgba(190,24,93,0.2)', textDecoration: 'none',
                 transition: 'border-color 0.2s ease, transform 0.2s ease',
               }} className="lic-cta-secondary">
-                Browse {selectedState} Jobs <ArrowSvg size={14} color="#0D9488" />
+                Browse {selectedState} Jobs <ArrowSvg size={14} color="#BE185D" />
               </Link>
             </div>
           </div>
@@ -371,16 +371,16 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
 
       <style>{`
         .lic-select:focus {
-          border-color: rgba(13,148,136,0.5) !important;
-          box-shadow: 0 0 0 4px rgba(13,148,136,0.08), inset 2px 2px 4px rgba(0,0,0,0.03) !important;
+          border-color: rgba(190,24,93,0.5) !important;
+          box-shadow: 0 0 0 4px rgba(190,24,93,0.08), inset 2px 2px 4px rgba(0,0,0,0.03) !important;
         }
         .lic-cta-primary:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(13,148,136,0.4) !important;
+          box-shadow: 0 8px 24px rgba(190,24,93,0.4) !important;
         }
         .lic-cta-secondary:hover {
           transform: translateY(-2px);
-          border-color: rgba(13,148,136,0.4) !important;
+          border-color: rgba(190,24,93,0.4) !important;
         }
         @media (max-width: 768px) {
           .lic-results-body {

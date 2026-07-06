@@ -254,7 +254,7 @@ export default function InPlatformApplyForm({
                             </div>
                         </div>
                     )}
-                    <button onClick={onClose} className="mt-6 w-full py-3 rounded-xl font-bold text-white text-sm" style={{ background: 'linear-gradient(135deg, #0d9488, #0f766e)' }}>Done</button>
+                    <button onClick={onClose} className="mt-6 w-full py-3 rounded-xl font-bold text-white text-sm" style={{ background: 'linear-gradient(135deg, #BE185D, #9D174D)' }}>Done</button>
                 </div>
             </div>,
             document.body
@@ -277,7 +277,7 @@ export default function InPlatformApplyForm({
             <div
                 className="flex items-center justify-between px-6 py-4"
                 style={{
-                    background: 'linear-gradient(135deg, rgba(13,148,136,0.08), rgba(15,118,110,0.04))',
+                    background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(157,23,77,0.04))',
                     borderBottom: '1px solid var(--border-color)',
                 }}
             >
@@ -317,7 +317,7 @@ export default function InPlatformApplyForm({
                         <div
                             className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
                             style={{
-                                background: 'linear-gradient(135deg, #0d9488, #0f766e)',
+                                background: 'linear-gradient(135deg, #BE185D, #9D174D)',
                                 color: 'white',
                             }}
                         >
@@ -347,11 +347,11 @@ export default function InPlatformApplyForm({
                         <div
                             className="flex items-center gap-3 p-3 rounded-xl mb-2"
                             style={{
-                                backgroundColor: 'rgba(13,148,136,0.06)',
-                                border: '1px solid rgba(13,148,136,0.2)',
+                                backgroundColor: 'rgba(190,24,93,0.06)',
+                                border: '1px solid rgba(190,24,93,0.2)',
                             }}
                         >
-                            <FileText size={18} style={{ color: '#0d9488' }} />
+                            <FileText size={18} style={{ color: '#BE185D' }} />
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                                     Using your profile resume
@@ -360,13 +360,13 @@ export default function InPlatformApplyForm({
                                     Your saved resume will be shared with the employer
                                 </p>
                             </div>
-                            <CheckCircle size={16} style={{ color: '#0d9488' }} />
+                            <CheckCircle size={16} style={{ color: '#BE185D' }} />
                         </div>
                     )}
 
                     {/* Upload new resume */}
                     <label
-                        className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all hover:border-teal-400"
+                        className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all hover:border-pink-400"
                         style={{
                             backgroundColor: 'var(--bg-tertiary)',
                             border: '1px dashed var(--border-color)',
@@ -383,9 +383,9 @@ export default function InPlatformApplyForm({
                                 PDF or Word, up to 5MB
                             </p>
                         </div>
-                        {uploadingResume && <Loader2 size={16} className="animate-spin" style={{ color: '#0d9488' }} />}
+                        {uploadingResume && <Loader2 size={16} className="animate-spin" style={{ color: '#BE185D' }} />}
                         {!useProfileResume && resumeUrl && !uploadingResume && (
-                            <CheckCircle size={16} style={{ color: '#0d9488' }} />
+                            <CheckCircle size={16} style={{ color: '#BE185D' }} />
                         )}
                         <input
                             type="file"
@@ -419,9 +419,9 @@ export default function InPlatformApplyForm({
                                                     onClick={() => setScreeningAnswers(prev => ({ ...prev, [q.id]: opt.toLowerCase() }))}
                                                     className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
                                                     style={{
-                                                        backgroundColor: screeningAnswers[q.id] === opt.toLowerCase() ? '#0d9488' : 'var(--bg-tertiary)',
+                                                        backgroundColor: screeningAnswers[q.id] === opt.toLowerCase() ? '#BE185D' : 'var(--bg-tertiary)',
                                                         color: screeningAnswers[q.id] === opt.toLowerCase() ? '#fff' : 'var(--text-secondary)',
-                                                        border: `1px solid ${screeningAnswers[q.id] === opt.toLowerCase() ? '#0d9488' : 'var(--border-color)'}`,
+                                                        border: `1px solid ${screeningAnswers[q.id] === opt.toLowerCase() ? '#BE185D' : 'var(--border-color)'}`,
                                                     }}
                                                 >
                                                     {opt}
@@ -477,7 +477,7 @@ export default function InPlatformApplyForm({
                                 onClick={() => setCoverLetterMode('write')}
                                 className="px-3 py-1 text-xs font-medium transition-colors"
                                 style={{
-                                    backgroundColor: coverLetterMode === 'write' ? '#0d9488' : 'transparent',
+                                    backgroundColor: coverLetterMode === 'write' ? '#BE185D' : 'transparent',
                                     color: coverLetterMode === 'write' ? '#fff' : 'var(--text-secondary)',
                                 }}
                             >
@@ -488,7 +488,7 @@ export default function InPlatformApplyForm({
                                 onClick={() => setCoverLetterMode('upload')}
                                 className="px-3 py-1 text-xs font-medium transition-colors"
                                 style={{
-                                    backgroundColor: coverLetterMode === 'upload' ? '#0d9488' : 'transparent',
+                                    backgroundColor: coverLetterMode === 'upload' ? '#BE185D' : 'transparent',
                                     color: coverLetterMode === 'upload' ? '#fff' : 'var(--text-secondary)',
                                     borderLeft: '1px solid var(--border-color)',
                                 }}
@@ -513,8 +513,8 @@ export default function InPlatformApplyForm({
                                     color: 'var(--text-primary)',
                                 }}
                                 onFocus={(e) => {
-                                    e.target.style.borderColor = '#0d9488';
-                                    e.target.style.boxShadow = '0 0 0 3px rgba(13,148,136,0.1)';
+                                    e.target.style.borderColor = '#BE185D';
+                                    e.target.style.boxShadow = '0 0 0 3px rgba(190,24,93,0.1)';
                                 }}
                                 onBlur={(e) => {
                                     e.target.style.borderColor = 'var(--border-color)';
@@ -533,9 +533,9 @@ export default function InPlatformApplyForm({
                             <div className="flex items-center gap-3 flex-1">
                                 <div
                                     className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                                    style={{ backgroundColor: 'rgba(13,148,136,0.08)' }}
+                                    style={{ backgroundColor: 'rgba(190,24,93,0.08)' }}
                                 >
-                                    <FileText size={16} style={{ color: '#0d9488' }} />
+                                    <FileText size={16} style={{ color: '#BE185D' }} />
                                 </div>
                                 <div>
                                     <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
@@ -546,8 +546,8 @@ export default function InPlatformApplyForm({
                                     </p>
                                 </div>
                             </div>
-                            {uploadingCoverLetter && <Loader2 size={16} className="animate-spin" style={{ color: '#0d9488' }} />}
-                            {coverLetterUrl && !uploadingCoverLetter && <CheckCircle size={16} style={{ color: '#0d9488' }} />}
+                            {uploadingCoverLetter && <Loader2 size={16} className="animate-spin" style={{ color: '#BE185D' }} />}
+                            {coverLetterUrl && !uploadingCoverLetter && <CheckCircle size={16} style={{ color: '#BE185D' }} />}
                             <input
                                 type="file"
                                 accept=".pdf"
@@ -580,10 +580,10 @@ export default function InPlatformApplyForm({
                         type="checkbox"
                         checked={consentGiven}
                         onChange={(e) => setConsentGiven(e.target.checked)}
-                        className="mt-1 w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                        className="mt-1 w-4 h-4 rounded border-gray-300 text-pink-700 focus:ring-pink-600"
                     />
                     <span className="text-xs leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
-                        <ShieldCheck size={12} className="inline mr-1" style={{ color: '#0d9488' }} />
+                        <ShieldCheck size={12} className="inline mr-1" style={{ color: '#BE185D' }} />
                         I consent to sharing my profile, resume, and cover letter with this employer.
                         You may withdraw your application at any time.
                     </span>
@@ -595,18 +595,18 @@ export default function InPlatformApplyForm({
                     disabled={submitting || uploadingResume || !consentGiven}
                     className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
-                        background: 'linear-gradient(135deg, #0d9488, #0f766e)',
-                        boxShadow: '0 4px 14px rgba(13,148,136,0.35)',
+                        background: 'linear-gradient(135deg, #BE185D, #9D174D)',
+                        boxShadow: '0 4px 14px rgba(190,24,93,0.35)',
                     }}
                     onMouseEnter={(e) => {
                         if (!submitting) {
                             e.currentTarget.style.transform = 'translateY(-1px)';
-                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(13,148,136,0.45)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(190,24,93,0.45)';
                         }
                     }}
                     onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 14px rgba(13,148,136,0.35)';
+                        e.currentTarget.style.boxShadow = '0 4px 14px rgba(190,24,93,0.35)';
                     }}
                 >
                     {submitting ? (

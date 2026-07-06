@@ -294,7 +294,7 @@ function ManageAlertsContent() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
               <div style={{
                 width: '46px', height: '46px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '14px', background: '#DCFCE7', color: '#0D9488', flexShrink: 0,
+                borderRadius: '14px', background: '#DCFCE7', color: '#BE185D', flexShrink: 0,
                 border: '1px solid rgba(255,255,255,0.5)',
                 boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 3px rgba(255,255,255,0.6)',
               }}>
@@ -319,10 +319,10 @@ function ManageAlertsContent() {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                 padding: '9px 16px', borderRadius: '12px',
-                background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                 color: '#fff', fontSize: '13px', fontWeight: 600,
                 border: 'none', cursor: 'pointer',
-                boxShadow: '4px 4px 10px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
                 transition: 'all 0.2s',
               }}
             >
@@ -399,11 +399,11 @@ function ManageAlertsContent() {
                           flex: 1, padding: '9px', borderRadius: '10px',
                           fontSize: '12px', fontWeight: 600, cursor: 'pointer',
                           transition: 'all 0.15s',
-                          background: newFrequency === f ? '#0D9488' : '#EDF5F0',
+                          background: newFrequency === f ? '#BE185D' : '#EDF5F0',
                           color: newFrequency === f ? '#fff' : '#6B7F8A',
                           border: `1px solid ${newFrequency === f ? 'rgba(255,255,255,0.3)' : '#D5E8E0'}`,
                           boxShadow: newFrequency === f
-                            ? '3px 3px 8px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)'
+                            ? '3px 3px 8px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)'
                             : 'inset 2px 2px 5px rgba(0,60,50,0.05)',
                         }}
                       >
@@ -422,12 +422,12 @@ function ManageAlertsContent() {
                 style={{
                   marginTop: '14px', width: '100%', padding: '10px',
                   borderRadius: '12px', border: 'none',
-                  background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                  background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                   color: '#fff', fontSize: '13px', fontWeight: 700,
                   cursor: creating ? 'not-allowed' : 'pointer',
                   opacity: creating ? 0.6 : 1,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  boxShadow: '4px 4px 10px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                  boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
                   transition: 'all 0.2s',
                 }}
               >
@@ -496,10 +496,10 @@ function ManageAlertsContent() {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                 padding: '10px 20px', borderRadius: '12px',
-                background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                 color: '#fff', fontSize: '13px', fontWeight: 600,
                 border: 'none', cursor: 'pointer',
-                boxShadow: '4px 4px 10px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
               }}
             >
               <Plus size={14} /> Create First Alert
@@ -578,11 +578,11 @@ function ManageAlertsContent() {
                           style={{
                             padding: '5px 12px', borderRadius: '8px',
                             fontSize: '11px', fontWeight: 600, cursor: 'pointer',
-                            background: alert.frequency === f ? '#0D9488' : '#EDF5F0',
+                            background: alert.frequency === f ? '#BE185D' : '#EDF5F0',
                             color: alert.frequency === f ? '#fff' : '#8A9BA6',
                             border: `1px solid ${alert.frequency === f ? 'rgba(255,255,255,0.3)' : '#D5E8E0'}`,
                             boxShadow: alert.frequency === f
-                              ? '2px 2px 6px rgba(13,148,136,0.15)'
+                              ? '2px 2px 6px rgba(190,24,93,0.15)'
                               : 'inset 1px 1px 3px rgba(0,60,50,0.04)',
                             transition: 'all 0.15s',
                           }}
@@ -673,7 +673,7 @@ function ManageAlertsContent() {
           <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#6B7F8A', textDecoration: 'none' }}>
             <ArrowLeft size={14} /> Dashboard
           </Link>
-          <Link href="/jobs" style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textDecoration: 'none' }}>
+          <Link href="/jobs" style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textDecoration: 'none' }}>
             Browse Jobs
           </Link>
         </div>
@@ -691,7 +691,7 @@ function ManageAlertsContent() {
         }
         .clay-create-btn:hover {
           transform: translateY(-2px);
-          box-shadow: 6px 6px 14px rgba(13,148,136,0.25), -3px -3px 8px rgba(255,255,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+          box-shadow: 6px 6px 14px rgba(190,24,93,0.25), -3px -3px 8px rgba(255,255,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2) !important;
         }
         @keyframes shimmer {
           0% { background-position: -200% 0; }
@@ -710,7 +710,7 @@ function ManageAlertsContent() {
 function LoadingFallback() {
   return (
     <div style={{ minHeight: '100vh', background: '#F0F5F2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Loader2 size={24} className="animate-spin" style={{ color: '#0D9488' }} />
+      <Loader2 size={24} className="animate-spin" style={{ color: '#BE185D' }} />
     </div>
   );
 }

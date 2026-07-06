@@ -84,7 +84,7 @@ export default async function EmployerApplicantsPage() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: '#0D9488',
+                            color: '#BE185D',
                             flexShrink: 0,
                         }}
                     >

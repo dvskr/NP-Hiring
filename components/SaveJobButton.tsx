@@ -45,11 +45,11 @@ export default function SaveJobButton({ jobId }: SaveJobButtonProps) {
         padding: '10px 18px',
         borderRadius: '16px',
         fontSize: '14px', fontWeight: 600,
-        backgroundColor: isSaved ? '#B2F5EA' : '#EDF2EE',
-        color: isSaved ? '#0F766E' : '#374151',
+        backgroundColor: isSaved ? '#FBCFE8' : '#EDF2EE',
+        color: isSaved ? '#9D174D' : '#374151',
         border: '1px solid rgba(255,255,255,0.5)',
         boxShadow: isSaved
-          ? '5px 5px 12px rgba(13,148,136,0.18), -3px -3px 8px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.5), inset -1px -1px 2px rgba(0,0,0,0.04)'
+          ? '5px 5px 12px rgba(190,24,93,0.18), -3px -3px 8px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.5), inset -1px -1px 2px rgba(0,0,0,0.04)'
           : '5px 5px 12px rgba(0,0,0,0.08), -3px -3px 8px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.03)',
         cursor: 'pointer', transition: 'all 0.2s',
       }}
@@ -60,7 +60,7 @@ export default function SaveJobButton({ jobId }: SaveJobButtonProps) {
       onMouseLeave={e => {
         e.currentTarget.style.transform = 'translateY(0)';
         e.currentTarget.style.boxShadow = isSaved
-          ? '5px 5px 12px rgba(13,148,136,0.18), -3px -3px 8px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.5), inset -1px -1px 2px rgba(0,0,0,0.04)'
+          ? '5px 5px 12px rgba(190,24,93,0.18), -3px -3px 8px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.5), inset -1px -1px 2px rgba(0,0,0,0.04)'
           : '5px 5px 12px rgba(0,0,0,0.08), -3px -3px 8px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.03)';
       }}
     >
@@ -68,11 +68,11 @@ export default function SaveJobButton({ jobId }: SaveJobButtonProps) {
       <span style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         width: 28, height: 28, borderRadius: 10,
-        backgroundColor: isSaved ? '#CCFBF1' : '#DDE8DF',
+        backgroundColor: isSaved ? '#FCE7F3' : '#DDE8DF',
         boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.04), 2px 2px 4px rgba(0,0,0,0.06)',
         border: '1px solid rgba(255,255,255,0.6)',
       }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill={isSaved ? '#0F766E' : 'none'} stroke={isSaved ? '#0F766E' : 'currentColor'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill={isSaved ? '#9D174D' : 'none'} stroke={isSaved ? '#9D174D' : 'currentColor'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
         </svg>
       </span>

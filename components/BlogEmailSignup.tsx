@@ -10,7 +10,7 @@ export default function BlogEmailSignup({ source }: { source: string }) {
 
 
     if (status === 'done') {
-        return <p style={{ fontSize: '14px', color: '#2DD4BF', fontWeight: 700 }}>✓ You&apos;re subscribed!</p>;
+        return <p style={{ fontSize: '14px', color: '#F472B6', fontWeight: 700 }}>✓ You&apos;re subscribed!</p>;
     }
 
     return (
@@ -51,7 +51,7 @@ export default function BlogEmailSignup({ source }: { source: string }) {
                 style={{
                     padding: '10px 20px', borderRadius: '8px',
                     border: 'none', fontWeight: 700, fontSize: '13px',
-                    background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                    background: 'linear-gradient(135deg, #F472B6, #BE185D)',
                     color: '#fff', cursor: 'pointer',
                     opacity: status === 'loading' ? 0.7 : 1,
                 }}

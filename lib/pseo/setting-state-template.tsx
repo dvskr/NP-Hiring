@@ -352,7 +352,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
 
       {/* Hero */}
       <CategoryHero
-        bgColor={assets?.bgColor || '#0D9488'}
+        bgColor={assets?.bgColor || '#BE185D'}
         heroImage={assets?.heroImage || `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
         heroAlt={`${config.label} ${brand.niche.short} jobs in ${stateName}`}
         badgeText={`${stats.totalJobs} live roles Â· updated today`}
@@ -381,7 +381,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 <h2 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>
                   {config.label} Positions in {stateName} ({stats.totalJobs})
                 </h2>
-                <Link href={`/jobs/${config.slug}`} style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textDecoration: 'none' }}>
+                <Link href={`/jobs/${config.slug}`} style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textDecoration: 'none' }}>
                   View All Jobs â†’
                 </Link>
               </div>
@@ -399,7 +399,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     <div className="flex flex-wrap justify-center gap-2 mb-6">
                       {neighbors.slice(0, 4).map((neighbor) => (
                         <Link key={neighbor} href={`/jobs/${config.slug}/${stateToSlug(neighbor)}`}
-                          className="px-3 py-1.5 text-sm rounded-lg" style={{ backgroundColor: '#F0FDFA', color: '#0D9488', fontWeight: 600 }}>
+                          className="px-3 py-1.5 text-sm rounded-lg" style={{ backgroundColor: '#FDF2F8', color: '#BE185D', fontWeight: 600 }}>
                           {neighbor}
                         </Link>
                       ))}
@@ -440,20 +440,20 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
             {/* Sidebar */}
             <div className="lg:col-span-1">
               {/* Alert CTA */}
-              <div style={{ ...clayCard, padding: '0', overflow: 'hidden', marginBottom: '20px', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', border: '2px solid rgba(13,148,136,0.15)' }}>
+              <div style={{ ...clayCard, padding: '0', overflow: 'hidden', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
                 <div style={{ padding: '24px' }}>
-                  <Bell size={28} style={{ color: '#0D9488', marginBottom: '12px' }} />
-                  <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#134E4A', margin: '0 0 8px' }}>
+                  <Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} />
+                  <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 8px' }}>
                     {config.label} Alerts
                   </h3>
-                  <p style={{ fontSize: '13px', color: '#0D9488', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
+                  <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
                     New {config.label.toLowerCase()} {brand.niche.short} positions in {stateName} â€” delivered daily.
                   </p>
                   <Link href="/job-alerts" style={{
                     display: 'block', width: '100%', textAlign: 'center',
                     padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                    background: '#0D9488', color: '#fff', textDecoration: 'none',
-                    boxShadow: '3px 3px 8px rgba(13,148,136,0.15)',
+                    background: '#BE185D', color: '#fff', textDecoration: 'none',
+                    boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
                   }}>
                     Create Alert
                   </Link>
@@ -464,14 +464,14 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
               {stats.topEmployers.length > 0 && (
                 <div style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                    <Building2 size={20} style={{ color: '#0D9488' }} />
+                    <Building2 size={20} style={{ color: '#BE185D' }} />
                     <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Top Employers</h3>
                   </div>
                   <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                     {stats.topEmployers.map((emp: ProcessedEmployer, i: number) => (
                       <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < stats.topEmployers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
                         <span style={{ fontSize: '13px', color: '#5A4A42' }}>{emp.name}</span>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>{emp.count}</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>{emp.count}</span>
                       </li>
                     ))}
                   </ul>
@@ -481,13 +481,13 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
               {/* Tips */}
               <div style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <Lightbulb size={20} style={{ color: '#0D9488' }} />
+                  <Lightbulb size={20} style={{ color: '#BE185D' }} />
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>{config.label} Tips</h3>
                 </div>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                   {config.tips.map((tip, i) => (
                     <li key={i} style={{ display: 'flex', gap: '8px', padding: '6px 0', borderBottom: i < config.tips.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none', fontSize: '13px', color: '#5A4A42', lineHeight: 1.5 }}>
-                      <span style={{ color: '#0D9488', fontWeight: 700 }}>â€¢</span>
+                      <span style={{ color: '#BE185D', fontWeight: 700 }}>â€¢</span>
                       <span>{tip}</span>
                     </li>
                   ))}
@@ -536,7 +536,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     {config.heroSubtitle}. {config.tips[0] || ''}
                   </p>
                 </div>
-                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
                   <Image src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
                 </div>
               </div>
@@ -568,7 +568,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
               {assets.bentoImages[2] && (
                 <div style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
                   <div style={{ padding: '32px 28px' }}>
-                    <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
+                    <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                     <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growth & Outlook</h3>
                     <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                       {config.label} {brand.niche.short} demand in {stateName} continues to grow with {stats.totalJobs} active positions.
@@ -580,17 +580,17 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 </div>
               )}
 
-              <div style={{ ...clayCard, gridColumn: 'span 4', padding: '28px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', border: '2px solid rgba(13,148,136,0.15)' }}>
-                <Bell size={32} style={{ color: '#0D9488', marginBottom: '14px' }} />
-                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#134E4A', margin: '0 0 6px' }}>{config.label} Alerts</h3>
-                <p style={{ fontSize: '13px', color: '#0D9488', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
+              <div style={{ ...clayCard, gridColumn: 'span 4', padding: '28px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
+                <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />
+                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>{config.label} Alerts</h3>
+                <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
                   New {config.label.toLowerCase()} listings in {stateName} â€” delivered daily.
                 </p>
                 <Link href="/job-alerts" style={{
                   padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                  background: '#0D9488', color: '#fff', textDecoration: 'none',
+                  background: '#BE185D', color: '#fff', textDecoration: 'none',
                   display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content',
-                  boxShadow: '3px 3px 8px rgba(13,148,136,0.15)',
+                  boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
                 }}>
                   Create Alert <ArrowRight size={14} />
                 </Link>
@@ -710,7 +710,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     <Link key={neighbor} href={`/jobs/${config.slug}/${stateToSlug(neighbor)}`}
                       className="pseo-pill"
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 16px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#1A2E35', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '3px 3px 8px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                      {neighbor} <ArrowRight size={12} style={{ color: '#0D9488' }} />
+                      {neighbor} <ArrowRight size={12} style={{ color: '#BE185D' }} />
                     </Link>
                   ))}
                 </div>
@@ -727,12 +727,12 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                   <Link key={setting.slug} href={`/jobs/${setting.slug}/${stateSlug}`}
                     className="pseo-pill"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 16px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#1A2E35', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '3px 3px 8px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                    {setting.label} <ArrowRight size={12} style={{ color: '#0D9488' }} />
+                    {setting.label} <ArrowRight size={12} style={{ color: '#BE185D' }} />
                   </Link>
                 ))}
                 <Link href={`/jobs/state/${stateSlug}`}
                   className="pseo-pill"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 16px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 700, color: '#0D9488', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', border: '1px solid rgba(13,148,136,0.15)', boxShadow: '3px 3px 8px rgba(13,148,136,0.1), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 16px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 700, color: '#BE185D', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '1px solid rgba(190,24,93,0.15)', boxShadow: '3px 3px 8px rgba(190,24,93,0.1), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
                   All {stateName} Jobs <ArrowRight size={12} />
                 </Link>
               </div>
@@ -747,7 +747,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 <Link href={`/salary-guide/${stateSlug}`}
                   className="pseo-resource"
                   style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', textDecoration: 'none', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                  <DollarSign size={18} style={{ color: '#0D9488', flexShrink: 0 }} />
+                  <DollarSign size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>{stateName} Salary Guide</div>
                     <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Comp data by setting</div>
@@ -756,7 +756,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 <Link href={`/jobs/state/${stateSlug}`}
                   className="pseo-resource"
                   style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', textDecoration: 'none', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                  <MapPin size={18} style={{ color: '#0D9488', flexShrink: 0 }} />
+                  <MapPin size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>All {stateName} Jobs</div>
                     <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Browse all positions</div>
@@ -765,7 +765,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 <Link href={`/jobs/${config.slug}`}
                   className="pseo-resource"
                   style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', textDecoration: 'none', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                  <Users size={18} style={{ color: '#0D9488', flexShrink: 0 }} />
+                  <Users size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>All {config.label} Jobs</div>
                     <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Nationwide listings</div>

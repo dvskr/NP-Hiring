@@ -477,7 +477,7 @@ export default function CandidateSearchClient() {
                         display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px',
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                            <Briefcase size={14} style={{ color: '#0D9488' }} />
+                            <Briefcase size={14} style={{ color: '#BE185D' }} />
                             <span style={{ fontSize: '12px', fontWeight: 600, color: '#6B7F8A' }}>Using credits from</span>
                         </div>
                         {/* Custom dropdown — native <select> options CAN'T
@@ -686,14 +686,14 @@ export default function CandidateSearchClient() {
                                     className="tp-filter-btn"
                                     style={{
                                         ...clayBtn,
-                                        background: showFilters ? '#CCFBF1' : '#F7FBF8',
-                                        color: showFilters ? '#0D9488' : '#2A4A5A',
-                                        border: showFilters ? '1px solid #99F6E4' : '1px solid rgba(255,255,255,0.5)',
+                                        background: showFilters ? '#FCE7F3' : '#F7FBF8',
+                                        color: showFilters ? '#BE185D' : '#2A4A5A',
+                                        border: showFilters ? '1px solid #FBCFE8' : '1px solid rgba(255,255,255,0.5)',
                                     }}
                                 >
                                     <Filter size={14} /> Filters
                                     {activeFilterCount > 0 && (
-                                        <span style={{ background: '#0D9488', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '1px 7px', borderRadius: '10px' }}>
+                                        <span style={{ background: '#BE185D', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '1px 7px', borderRadius: '10px' }}>
                                             {activeFilterCount}
                                         </span>
                                     )}
@@ -750,15 +750,15 @@ export default function CandidateSearchClient() {
                                         className="tp-filter-btn"
                                         style={{
                                             ...clayBtn, flexShrink: 0, padding: '10px 14px',
-                                            background: showFilters ? '#CCFBF1' : '#F7FBF8',
-                                            color: showFilters ? '#0D9488' : '#2A4A5A',
-                                            border: showFilters ? '1px solid #99F6E4' : '1px solid rgba(255,255,255,0.5)',
+                                            background: showFilters ? '#FCE7F3' : '#F7FBF8',
+                                            color: showFilters ? '#BE185D' : '#2A4A5A',
+                                            border: showFilters ? '1px solid #FBCFE8' : '1px solid rgba(255,255,255,0.5)',
                                         }}
                                     >
                                         <Filter size={14} />
                                         <span className="tp-filter-label">Filters</span>
                                         {activeFilterCount > 0 && (
-                                            <span style={{ background: '#0D9488', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '1px 7px', borderRadius: '10px' }}>
+                                            <span style={{ background: '#BE185D', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '1px 7px', borderRadius: '10px' }}>
                                                 {activeFilterCount}
                                             </span>
                                         )}
@@ -905,11 +905,11 @@ export default function CandidateSearchClient() {
                                                 fontSize: '11px', padding: '4px 8px', borderRadius: '8px',
                                                 minWidth: '36px', textAlign: 'center' as const,
                                                 fontWeight: selected ? 600 : 400, cursor: 'pointer',
-                                                background: selected ? '#CCFBF1' : '#EDF5F0',
-                                                color: selected ? '#0D9488' : '#6B7F8A',
-                                                border: `1px solid ${selected ? '#99F6E4' : '#D5E8E0'}`,
+                                                background: selected ? '#FCE7F3' : '#EDF5F0',
+                                                color: selected ? '#BE185D' : '#6B7F8A',
+                                                border: `1px solid ${selected ? '#FBCFE8' : '#D5E8E0'}`,
                                                 boxShadow: selected
-                                                    ? '2px 2px 6px rgba(13,148,136,0.1)'
+                                                    ? '2px 2px 6px rgba(190,24,93,0.1)'
                                                     : 'inset 1px 1px 3px rgba(0,60,50,0.04)',
                                                 transition: 'all 0.15s',
                                             }}
@@ -926,7 +926,7 @@ export default function CandidateSearchClient() {
                 {/* ═══ Results ═══ */}
                 {loading ? (
                     <div style={{ ...cardBase, padding: '60px 24px', textAlign: 'center' }}>
-                        <Loader2 size={28} className="animate-spin" style={{ color: '#0D9488', margin: '0 auto 12px', display: 'block' }} />
+                        <Loader2 size={28} className="animate-spin" style={{ color: '#BE185D', margin: '0 auto 12px', display: 'block' }} />
                         <p style={{ color: '#8A9BA6', fontSize: '14px', margin: 0 }}>Searching candidates…</p>
                     </div>
                 ) : candidates.length === 0 ? (
@@ -1079,7 +1079,7 @@ export default function CandidateSearchClient() {
                                 if (lockedVisibleIds.length === 0) return null;
                                 return (
                                     <div style={{ ...cardRecessed, padding: '10px 14px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: '#6B7F8A' }}>
-                                        <Lock size={13} style={{ color: '#0D9488' }} />
+                                        <Lock size={13} style={{ color: '#BE185D' }} />
                                         <span><strong style={{ color: '#1A2E35' }}>{lockedVisibleIds.length}</strong> locked on this page</span>
                                         {Number.isFinite(creditsRemaining) && (
                                             <span style={{ color: '#8A9BA6' }}>·</span>
@@ -1096,8 +1096,8 @@ export default function CandidateSearchClient() {
                                                 fontSize: '12px', fontWeight: 600, padding: '6px 12px',
                                                 borderRadius: '10px',
                                                 background: selectableCap === 0 ? '#F3F4F6' : 'linear-gradient(145deg, #FFFFFF, #F5F6F8)',
-                                                color: selectableCap === 0 ? '#B0BEC5' : '#0D9488',
-                                                border: '1px solid rgba(13,148,136,0.18)',
+                                                color: selectableCap === 0 ? '#B0BEC5' : '#BE185D',
+                                                border: '1px solid rgba(190,24,93,0.18)',
                                                 boxShadow: '2px 2px 6px rgba(0,0,0,0.04), -1px -1px 4px rgba(255,255,255,0.7)',
                                                 cursor: selectableCap === 0 ? 'not-allowed' : 'pointer',
                                             }}
@@ -1111,7 +1111,7 @@ export default function CandidateSearchClient() {
                             return (
                                 <div style={{ ...cardBase, padding: '12px 16px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
                                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#1A2E35' }}>
-                                        <Check size={16} style={{ color: '#0D9488' }} />
+                                        <Check size={16} style={{ color: '#BE185D' }} />
                                         {selectedIds.size} selected
                                     </span>
                                     <span style={{ color: '#8A9BA6', fontSize: '12px' }}>
@@ -1154,9 +1154,9 @@ export default function CandidateSearchClient() {
                                         style={{
                                             fontSize: '13px', fontWeight: 700, padding: '8px 16px',
                                             borderRadius: '12px',
-                                            background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                                            background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                                             color: '#FFFFFF', border: 'none',
-                                            boxShadow: '3px 3px 8px rgba(13,148,136,0.25)',
+                                            boxShadow: '3px 3px 8px rgba(190,24,93,0.25)',
                                             cursor: bulkSubmitting ? 'wait' : 'pointer',
                                             opacity: bulkSubmitting ? 0.7 : 1,
                                             display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -1422,7 +1422,7 @@ function PostingDropdown({ postings, selectedId, onSelect }: PostingDropdownProp
                                         width: '100%', textAlign: 'left',
                                         padding: '10px 12px',
                                         borderRadius: '10px',
-                                        background: isSelected ? '#CCFBF1' : 'transparent',
+                                        background: isSelected ? '#FCE7F3' : 'transparent',
                                         border: 'none',
                                         cursor: 'pointer',
                                         display: 'flex',
@@ -1441,7 +1441,7 @@ function PostingDropdown({ postings, selectedId, onSelect }: PostingDropdownProp
                                         size={14}
                                         style={{
                                             marginTop: '3px', flexShrink: 0,
-                                            color: isSelected ? '#0D9488' : 'transparent',
+                                            color: isSelected ? '#BE185D' : 'transparent',
                                         }}
                                     />
                                     <span style={{ flex: 1, minWidth: 0 }}>

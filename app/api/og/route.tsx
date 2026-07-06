@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
             right: 0,
             bottom: 0,
             left: 0,
-            backgroundImage: 'radial-gradient(rgba(16, 185, 129, 0.15) 2px, transparent 2px)',
+            backgroundImage: 'radial-gradient(rgba(219, 39, 119, 0.15) 2px, transparent 2px)',
             backgroundSize: '40px 40px',
             display: 'flex',
             opacity: 0.4,
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
             bottom: 16,
             left: 16,
             borderRadius: 24,
-            border: '1px solid rgba(16, 185, 129, 0.3)',
+            border: '1px solid rgba(219, 39, 119, 0.3)',
             display: 'flex',
           }}
         />
@@ -112,14 +112,14 @@ export async function GET(request: NextRequest) {
                   {logoSrc ? (
                     <img src={logoSrc} alt="PMHNP Hiring" width={200} height={70} style={{ objectFit: 'contain' }} />
                   ) : (
-                    <div style={{ display: 'flex', fontSize: 28, fontWeight: 800, color: '#2DD4BF' }}>PMHNP Hiring</div>
+                    <div style={{ display: 'flex', fontSize: 28, fontWeight: 800, color: '#F472B6' }}>PMHNP Hiring</div>
                   )}
                 </div>
                 <div style={{
                   display: 'flex',
                   fontSize: 18,
                   fontWeight: 700,
-                  color: '#2DD4BF',
+                  color: '#F472B6',
                   letterSpacing: '0.1em',
                 }}>
                   {domain}
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
                       display: 'flex',
                       fontSize: 42,
                       fontWeight: 900,
-                      color: '#2DD4BF',
+                      color: '#F472B6',
                     }}>
                       {stat.number}
                     </div>
@@ -198,14 +198,14 @@ export async function GET(request: NextRequest) {
                   {logoSrc ? (
                     <img src={logoSrc} alt="PMHNP Hiring" width={200} height={70} style={{ objectFit: 'contain' }} />
                   ) : (
-                    <div style={{ display: 'flex', fontSize: 28, fontWeight: 800, color: '#2DD4BF' }}>PMHNP Hiring</div>
+                    <div style={{ display: 'flex', fontSize: 28, fontWeight: 800, color: '#F472B6' }}>PMHNP Hiring</div>
                   )}
                 </div>
                 <div style={{
                   display: 'flex',
                   fontSize: 18,
                   fontWeight: 700,
-                  color: '#2DD4BF',
+                  color: '#F472B6',
                   letterSpacing: '0.1em',
                 }}>
                   {domain}
@@ -250,12 +250,12 @@ export async function GET(request: NextRequest) {
                 <div style={{
                   display: 'flex',
                   padding: '8px 20px',
-                  backgroundColor: 'rgba(45, 212, 191, 0.15)',
-                  border: '1px solid rgba(45, 212, 191, 0.3)',
+                  backgroundColor: 'rgba(244,114,182, 0.15)',
+                  border: '1px solid rgba(244,114,182, 0.3)',
                   borderRadius: 8,
                   fontSize: 18,
                   fontWeight: 700,
-                  color: '#2DD4BF',
+                  color: '#F472B6',
                 }}>
                   {brand.domain}
                 </div>
@@ -279,7 +279,7 @@ export async function GET(request: NextRequest) {
                   {logoSrc ? (
                     <img src={logoSrc} alt="PMHNP Hiring" width={200} height={80} style={{ objectFit: 'contain' }} />
                   ) : (
-                    <div style={{ display: 'flex', fontSize: 28, fontWeight: 800, color: '#2DD4BF' }}>PMHNP Hiring</div>
+                    <div style={{ display: 'flex', fontSize: 28, fontWeight: 800, color: '#F472B6' }}>PMHNP Hiring</div>
                   )}
                 </div>
 
@@ -325,9 +325,9 @@ export async function GET(request: NextRequest) {
                       display: 'flex',
                       fontSize: 26,
                       fontWeight: 700,
-                      color: '#2DD4BF',
+                      color: '#F472B6',
                       letterSpacing: '0.025em',
-                      borderBottom: '4px solid #2DD4BF',
+                      borderBottom: '4px solid #F472B6',
                       paddingBottom: 4,
                     }}
                   >
@@ -350,35 +350,35 @@ export async function GET(request: NextRequest) {
                     label: 'TYPE',
                     value: jobType,
                     icon: (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F472B6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
                     ),
                   },
                   {
                     label: 'EMPLOYER',
                     value: company,
                     icon: (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /><path d="M10 6h4" /><path d="M10 10h4" /><path d="M10 14h4" /><path d="M10 18h4" /></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F472B6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /><path d="M10 6h4" /><path d="M10 10h4" /><path d="M10 14h4" /><path d="M10 18h4" /></svg>
                     ),
                   },
                   ...(salary && salary !== '0' && salary !== 'Hidden' && salary !== 'Competitive Pay' ? [{
                     label: 'SALARY',
                     value: salary,
                     icon: (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="2" y2="22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F472B6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="2" y2="22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
                     ),
                   }] : []),
                   ...(location && location !== 'Remote / On-site' ? [{
                     label: 'LOCATION',
                     value: location,
                     icon: (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F472B6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
                     ),
                   }] : []),
                   ...(experience ? [{
                     label: 'EXPERIENCE',
                     value: experience,
                     icon: (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5Z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F472B6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5Z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>
                     ),
                   }] : []),
                 ].map((stat, i, arr) => (

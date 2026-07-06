@@ -144,7 +144,7 @@ export default function MessageEmployerModal({
                     }}
                 >
                     <div style={{ textAlign: 'center' }}>
-                        <MessageSquare size={40} style={{ color: '#2DD4BF', margin: '0 auto 16px' }} />
+                        <MessageSquare size={40} style={{ color: '#F472B6', margin: '0 auto 16px' }} />
                         <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>
                             Log in to message {employerName}
                         </h3>
@@ -155,7 +155,7 @@ export default function MessageEmployerModal({
                             onClick={() => router.push(`/login?redirect=/jobs/${encodeURIComponent(jobId)}`)}
                             style={{
                                 width: '100%', padding: '12px', borderRadius: '10px',
-                                border: 'none', backgroundColor: '#2DD4BF', color: 'white',
+                                border: 'none', backgroundColor: '#F472B6', color: 'white',
                                 fontSize: '15px', fontWeight: 600, cursor: 'pointer',
                             }}
                         >
@@ -203,7 +203,7 @@ export default function MessageEmployerModal({
                 <div style={{
                     padding: '20px 24px', borderBottom: '1px solid var(--border-color)',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: 'linear-gradient(135deg, rgba(45,212,191,0.08), rgba(59,130,246,0.05))',
+                    background: 'linear-gradient(135deg, rgba(244,114,182,0.08), rgba(59,130,246,0.05))',
                 }}>
                     <div>
                         <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
@@ -240,7 +240,7 @@ export default function MessageEmployerModal({
                                 onClick={() => router.push('/messages')}
                                 style={{
                                     padding: '10px 24px', borderRadius: '10px',
-                                    border: 'none', backgroundColor: '#2DD4BF', color: 'white',
+                                    border: 'none', backgroundColor: '#F472B6', color: 'white',
                                     fontSize: '14px', fontWeight: 600, cursor: 'pointer',
                                     display: 'inline-flex', alignItems: 'center', gap: '8px',
                                 }}
@@ -265,7 +265,7 @@ export default function MessageEmployerModal({
                                 onClick={() => router.push('/messages')}
                                 style={{
                                     padding: '10px 24px', borderRadius: '10px',
-                                    border: 'none', backgroundColor: '#2DD4BF', color: 'white',
+                                    border: 'none', backgroundColor: '#F472B6', color: 'white',
                                     fontSize: '14px', fontWeight: 600, cursor: 'pointer',
                                     display: 'inline-flex', alignItems: 'center', gap: '8px',
                                 }}
@@ -290,7 +290,7 @@ export default function MessageEmployerModal({
                                 onClick={() => router.push('/messages')}
                                 style={{
                                     padding: '10px 24px', borderRadius: '10px',
-                                    border: 'none', backgroundColor: '#2DD4BF', color: 'white',
+                                    border: 'none', backgroundColor: '#F472B6', color: 'white',
                                     fontSize: '14px', fontWeight: 600, cursor: 'pointer',
                                     display: 'inline-flex', alignItems: 'center', gap: '8px',
                                 }}
@@ -354,7 +354,7 @@ export default function MessageEmployerModal({
                                         fontSize: '16px', fontFamily: 'inherit', outline: 'none',
                                         transition: 'border-color 0.2s',
                                     }}
-                                    onFocus={e => e.target.style.borderColor = '#2DD4BF'}
+                                    onFocus={e => e.target.style.borderColor = '#F472B6'}
                                     onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
                                 />
                             </div>
@@ -383,7 +383,7 @@ export default function MessageEmployerModal({
                                         resize: 'vertical', minHeight: '100px',
                                         transition: 'border-color 0.2s',
                                     }}
-                                    onFocus={e => e.target.style.borderColor = '#2DD4BF'}
+                                    onFocus={e => e.target.style.borderColor = '#F472B6'}
                                     onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
                                     onKeyDown={e => {
                                         if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -422,8 +422,8 @@ export default function MessageEmployerModal({
                                     width: '100%', padding: '12px',
                                     borderRadius: '10px', border: 'none',
                                     background: sending || !body.trim() || !subject.trim()
-                                        ? 'rgba(45,212,191,0.3)'
-                                        : 'linear-gradient(135deg, #2DD4BF, #3B82F6)',
+                                        ? 'rgba(244,114,182,0.3)'
+                                        : 'linear-gradient(135deg, #F472B6, #3B82F6)',
                                     color: 'white', fontSize: '15px', fontWeight: 600,
                                     cursor: sending || !body.trim() || !subject.trim() ? 'not-allowed' : 'pointer',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',

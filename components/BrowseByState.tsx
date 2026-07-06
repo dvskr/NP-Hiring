@@ -55,7 +55,7 @@ export default function BrowseByState({ states }: BrowseByStateProps) {
                                 transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                             }}
                         >
-                            <MapPin size={16} style={{ color: '#2dd4bf', flexShrink: 0 }} />
+                            <MapPin size={16} style={{ color: '#F472B6', flexShrink: 0 }} />
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{
                                     fontSize: '14px', fontWeight: 600,
@@ -81,7 +81,7 @@ export default function BrowseByState({ states }: BrowseByStateProps) {
                         href="/jobs"
                         style={{
                             display: 'inline-flex', alignItems: 'center', gap: '6px',
-                            fontSize: '14px', fontWeight: 600, color: '#2dd4bf',
+                            fontSize: '14px', fontWeight: 600, color: '#F472B6',
                             textDecoration: 'none',
                         }}
                     >
@@ -94,7 +94,7 @@ export default function BrowseByState({ states }: BrowseByStateProps) {
             <style>{`
                 .bbs-card:hover {
                     transform: translateY(-2px);
-                    border-color: #2dd4bf !important;
+                    border-color: #F472B6 !important;
                     box-shadow: 0 4px 16px rgba(0,0,0,0.08);
                 }
             `}</style>

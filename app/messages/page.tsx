@@ -109,8 +109,8 @@ function Avatar({ user, size = 40 }: { user: OtherUser; size?: number }) {
                 width: size, height: size, borderRadius: '50%', flexShrink: 0,
                 backgroundColor: '#D5F5F1',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: size * 0.4, fontWeight: 700, color: '#0D9488',
-                border: '2px solid rgba(13,148,136,0.15)',
+                fontSize: size * 0.4, fontWeight: 700, color: '#BE185D',
+                border: '2px solid rgba(190,24,93,0.15)',
                 boxShadow: '3px 3px 8px rgba(0,0,0,0.06), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.7)',
             }}
         >
@@ -431,7 +431,7 @@ export default function MessagesPage() {
 
             {loading ? (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '64px 0' }}>
-                    <Loader2 size={32} className="animate-spin" style={{ color: '#2DD4BF' }} />
+                    <Loader2 size={32} className="animate-spin" style={{ color: '#F472B6' }} />
                 </div>
             ) : conversations.length === 0 ? (
                 <div style={{
@@ -475,12 +475,12 @@ export default function MessagesPage() {
                                         width: '100%', textAlign: 'left',
                                         padding: '14px 16px',
                                         backgroundColor: activeConvId === conv.id
-                                            ? 'rgba(45,212,191,0.08)'
+                                            ? 'rgba(244,114,182,0.08)'
                                             : 'transparent',
                                         cursor: 'pointer',
                                         transition: 'background-color 0.15s',
                                         borderBottom: '1px solid var(--border-color)',
-                                        borderLeft: activeConvId === conv.id ? '3px solid #2DD4BF' : '3px solid transparent',
+                                        borderLeft: activeConvId === conv.id ? '3px solid #F472B6' : '3px solid transparent',
                                     }}
                                 >
                                     <Avatar user={conv.otherUser} size={48} />
@@ -556,7 +556,7 @@ export default function MessagesPage() {
                                                 {conv.unreadCount > 0 && (
                                                     <span style={{
                                                         width: '8px', height: '8px', borderRadius: '50%',
-                                                        backgroundColor: '#2DD4BF', flexShrink: 0,
+                                                        backgroundColor: '#F472B6', flexShrink: 0,
                                                     }} />
                                                 )}
                                             </div>
@@ -617,7 +617,7 @@ export default function MessagesPage() {
                             </div>
                         ) : threadLoading ? (
                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                                <Loader2 size={28} className="animate-spin" style={{ color: '#2DD4BF' }} />
+                                <Loader2 size={28} className="animate-spin" style={{ color: '#F472B6' }} />
                             </div>
                         ) : convDetail ? (
                             <>
@@ -659,10 +659,10 @@ export default function MessagesPage() {
                                         <Link
                                             href={`/jobs/${convDetail.jobSlug}`}
                                             style={{
-                                                fontSize: '12px', color: '#2DD4BF',
+                                                fontSize: '12px', color: '#F472B6',
                                                 textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px',
                                                 padding: '6px 12px', borderRadius: '8px',
-                                                border: '1px solid rgba(45,212,191,0.3)',
+                                                border: '1px solid rgba(244,114,182,0.3)',
                                             }}
                                         >
                                             <Briefcase size={12} /> View Job
@@ -749,7 +749,7 @@ export default function MessagesPage() {
                                                         ? '#D5F5F1'
                                                         : '#EDF2EE',
                                                     border: msg.isFromMe
-                                                        ? '1px solid rgba(13,148,136,0.12)'
+                                                        ? '1px solid rgba(190,24,93,0.12)'
                                                         : '1px solid rgba(213,232,224,0.5)',
                                                     boxShadow: '3px 3px 8px rgba(0,0,0,0.04), -2px -2px 6px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.5)',
                                                 }}>
@@ -763,7 +763,7 @@ export default function MessagesPage() {
                                                                     fontSize: '14px', lineHeight: 1.6,
                                                                     color: 'var(--text-primary)',
                                                                     backgroundColor: 'var(--bg-primary)',
-                                                                    border: '1px solid #2DD4BF',
+                                                                    border: '1px solid #F472B6',
                                                                     borderRadius: '8px',
                                                                     padding: '8px',
                                                                     resize: 'vertical',
@@ -798,7 +798,7 @@ export default function MessagesPage() {
                                                                     onClick={() => handleEditMessage(msg.id)}
                                                                     disabled={saving || editText.trim().length === 0}
                                                                     style={{
-                                                                        background: '#2DD4BF', border: 'none',
+                                                                        background: '#F472B6', border: 'none',
                                                                         borderRadius: '6px', padding: '4px 10px',
                                                                         fontSize: '12px', cursor: saving ? 'not-allowed' : 'pointer',
                                                                         color: 'white', fontWeight: 600,
@@ -835,7 +835,7 @@ export default function MessagesPage() {
                                                             </span>
                                                         )}
                                                         {msg.isFromMe && msg.readAt && (
-                                                            <span style={{ fontSize: '10px', color: '#2DD4BF' }}>✓ Read</span>
+                                                            <span style={{ fontSize: '10px', color: '#F472B6' }}>✓ Read</span>
                                                         )}
                                                     </div>
                                                     {msg.attachmentUrl && (
@@ -847,7 +847,7 @@ export default function MessagesPage() {
                                                                 display: 'flex', alignItems: 'center', gap: '6px',
                                                                 marginTop: '8px', padding: '8px 12px',
                                                                 borderRadius: '8px',
-                                                                backgroundColor: msg.isFromMe ? 'rgba(45,212,191,0.08)' : 'var(--bg-secondary, rgba(0,0,0,0.02))',
+                                                                backgroundColor: msg.isFromMe ? 'rgba(244,114,182,0.08)' : 'var(--bg-secondary, rgba(0,0,0,0.02))',
                                                                 border: '1px solid var(--border-color)',
                                                                 textDecoration: 'none',
                                                                 fontSize: '13px',
@@ -954,11 +954,11 @@ export default function MessagesPage() {
                                             display: 'flex', alignItems: 'center', gap: '8px',
                                             padding: '6px 12px', marginBottom: '8px',
                                             borderRadius: '8px',
-                                            backgroundColor: 'rgba(45,212,191,0.08)',
-                                            border: '1px solid rgba(45,212,191,0.2)',
+                                            backgroundColor: 'rgba(244,114,182,0.08)',
+                                            border: '1px solid rgba(244,114,182,0.2)',
                                             fontSize: '13px', color: 'var(--text-secondary)',
                                         }}>
-                                            <FileText size={14} style={{ color: '#2DD4BF', flexShrink: 0 }} />
+                                            <FileText size={14} style={{ color: '#F472B6', flexShrink: 0 }} />
                                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                                                 {pendingAttachment.name}
                                             </span>
@@ -993,7 +993,7 @@ export default function MessagesPage() {
                                                 borderRadius: '50%',
                                                 border: 'none',
                                                 backgroundColor: 'transparent',
-                                                color: uploading ? '#2DD4BF' : 'var(--text-tertiary)',
+                                                color: uploading ? '#F472B6' : 'var(--text-tertiary)',
                                                 cursor: uploading ? 'wait' : 'pointer',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 transition: 'color 0.15s',
@@ -1035,14 +1035,14 @@ export default function MessagesPage() {
                                                 width: '44px', height: '44px',
                                                 borderRadius: '50%',
                                                 border: '1px solid rgba(255,255,255,0.3)',
-                                                backgroundColor: (replyText.trim() || pendingAttachment) ? '#0D9488' : '#E8F0EB',
+                                                backgroundColor: (replyText.trim() || pendingAttachment) ? '#BE185D' : '#E8F0EB',
                                                 color: (replyText.trim() || pendingAttachment) ? '#fff' : '#8A9BA6',
                                                 cursor: (replyText.trim() || pendingAttachment) ? 'pointer' : 'not-allowed',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 transition: 'all 0.2s',
                                                 flexShrink: 0,
                                                 boxShadow: (replyText.trim() || pendingAttachment)
-                                                    ? '4px 4px 10px rgba(13,148,136,0.20), -2px -2px 6px rgba(255,255,255,0.3), inset 1px 1px 2px rgba(255,255,255,0.2)'
+                                                    ? '4px 4px 10px rgba(190,24,93,0.20), -2px -2px 6px rgba(255,255,255,0.3), inset 1px 1px 2px rgba(255,255,255,0.2)'
                                                     : '3px 3px 8px rgba(0,0,0,0.04), -2px -2px 6px rgba(255,255,255,0.7)',
                                             }}
                                         >

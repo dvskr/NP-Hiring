@@ -183,7 +183,7 @@ export default function CheckoutPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
         </div>
       </div>
     );
@@ -268,19 +268,19 @@ export default function CheckoutPage() {
         </div>
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-700">
           <li className="flex items-center gap-2">
-            <span className="text-teal-500">✓</span> Top search placement
+            <span className="text-pink-600">✓</span> Top search placement
           </li>
           <li className="flex items-center gap-2">
-            <span className="text-teal-500">✓</span> {config.limits.candidateUnlocksPerPosting} candidate unlocks
+            <span className="text-pink-600">✓</span> {config.limits.candidateUnlocksPerPosting} candidate unlocks
           </li>
           <li className="flex items-center gap-2">
-            <span className="text-teal-500">✓</span> {config.limits.inmailsPerPosting} InMail credits
+            <span className="text-pink-600">✓</span> {config.limits.inmailsPerPosting} InMail credits
           </li>
           <li className="flex items-center gap-2">
-            <span className="text-teal-500">✓</span> Applicant analytics
+            <span className="text-pink-600">✓</span> Applicant analytics
           </li>
           <li className="flex items-center gap-2">
-            <span className="text-teal-500">✓</span> Email candidate alerts
+            <span className="text-pink-600">✓</span> Email candidate alerts
           </li>
         </ul>
       </div>
@@ -296,7 +296,7 @@ export default function CheckoutPage() {
       <button
         onClick={handlePayment}
         disabled={loading}
-        className="w-full bg-teal-500 text-white py-3 rounded-lg font-semibold hover:bg-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full bg-pink-600 text-white py-3 rounded-lg font-semibold hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {loading ? (
           <>
@@ -313,7 +313,7 @@ export default function CheckoutPage() {
           non-refundable" support tickets and chargeback risk. */}
       <p className="text-center text-xs text-gray-500 mt-3">
         By clicking Pay, you agree to our{' '}
-        <Link href="/terms" className="text-teal-600 hover:text-teal-700 underline">
+        <Link href="/terms" className="text-pink-700 hover:text-pink-800 underline">
           Terms of Service
         </Link>
         .
@@ -323,7 +323,7 @@ export default function CheckoutPage() {
       <div className="text-center mt-4">
         <Link
           href="/post-job"
-          className="text-gray-600 hover:text-teal-500 transition-colors text-sm"
+          className="text-gray-600 hover:text-pink-600 transition-colors text-sm"
         >
           ← Back to edit job posting
         </Link>

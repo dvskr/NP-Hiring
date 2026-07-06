@@ -102,12 +102,12 @@ export default function DoNotSellPage() {
                             gap: '8px',
                             padding: '14px 28px',
                             borderRadius: '14px',
-                            background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                            background: 'linear-gradient(135deg, #F472B6, #BE185D)',
                             color: '#fff',
                             fontSize: '15px',
                             fontWeight: 700,
                             border: '1px solid rgba(255,255,255,0.3)',
-                            boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 1px 1px 2px rgba(255,255,255,0.25)',
+                            boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.25)',
                             cursor: 'pointer',
                         }}
                     >
@@ -129,7 +129,7 @@ export default function DoNotSellPage() {
                     <p style={pStyle}>
                         Your browser is not currently sending Global Privacy Control. Most major browsers (Firefox,
                         Brave, DuckDuckGo) have it built in; for Chrome and Safari you can install the
-                        <a href="https://privacybadger.org" target="_blank" rel="noopener noreferrer" style={{ color: '#0D9488', textDecoration: 'underline', marginLeft: '4px' }}>
+                        <a href="https://privacybadger.org" target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'underline', marginLeft: '4px' }}>
                             Privacy Badger
                         </a>{' '}
                         extension which sends GPC automatically.
@@ -139,11 +139,11 @@ export default function DoNotSellPage() {
                 <h2 style={h2Style}>Other rights</h2>
                 <p style={pStyle}>
                     For requests to access, delete, correct, or limit the use of your sensitive personal
-                    information, use our <Link href="/data-request" style={{ color: '#0D9488', textDecoration: 'underline' }}>Data Request form</Link> or
-                    email <a href={`mailto:${brand.email.privacy}`} style={{ color: '#0D9488', textDecoration: 'underline' }}>{brand.email.privacy}</a>.
+                    information, use our <Link href="/data-request" style={{ color: '#BE185D', textDecoration: 'underline' }}>Data Request form</Link> or
+                    email <a href={`mailto:${brand.email.privacy}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>{brand.email.privacy}</a>.
                 </p>
                 <p style={pStyle}>
-                    Read the full <Link href="/privacy" style={{ color: '#0D9488', textDecoration: 'underline' }}>Privacy Policy</Link>.
+                    Read the full <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'underline' }}>Privacy Policy</Link>.
                 </p>
             </article>
         </div>

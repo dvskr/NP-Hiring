@@ -78,9 +78,9 @@ export default function AuthLayout({ children, illustration, testimonial }: Auth
           marginTop: '20px', lineHeight: 1.6, textAlign: 'center',
         }}>
           By continuing, you agree to our{' '}
-          <Link href="/terms" style={{ color: '#0D9488', textDecoration: 'underline' }}>Terms</Link>
+          <Link href="/terms" style={{ color: '#BE185D', textDecoration: 'underline' }}>Terms</Link>
           {' '}and{' '}
-          <Link href="/privacy" style={{ color: '#0D9488', textDecoration: 'underline' }}>Privacy Policy</Link>
+          <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'underline' }}>Privacy Policy</Link>
         </p>
       </div>
 
@@ -126,7 +126,7 @@ export default function AuthLayout({ children, illustration, testimonial }: Auth
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{
                 width: '34px', height: '34px', borderRadius: '10px',
-                background: 'linear-gradient(145deg, #0D9488, #10B981)',
+                background: 'linear-gradient(145deg, #BE185D, #9D174D)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '13px', fontWeight: 700, color: '#fff', flexShrink: 0,
               }}>

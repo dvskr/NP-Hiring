@@ -525,7 +525,7 @@ export function autoLinkStates(html: string): string {
                 if (replaced) return match;
                 replaced = true;
                 linked.add(stateName);
-                return `<a href="/jobs/state/${slug}" class="text-teal-600 hover:underline">${match}</a>`;
+                return `<a href="/jobs/state/${slug}" class="text-pink-700 hover:underline">${match}</a>`;
             });
         }
     }

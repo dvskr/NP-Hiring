@@ -172,7 +172,7 @@ export default function AdminDashboard() {
           <div
             style={{
               width: 48, height: 48, border: '3px solid #E2E8F0',
-              borderTop: '3px solid #0D9488', borderRadius: '50%',
+              borderTop: '3px solid #BE185D', borderRadius: '50%',
               margin: '0 auto', animation: 'spin 0.8s linear infinite',
             }}
           />
@@ -216,10 +216,10 @@ export default function AdminDashboard() {
         </div>
         <button onClick={fetchAnalytics} style={{
           padding: '10px 22px', borderRadius: '20px', cursor: 'pointer',
-          background: 'linear-gradient(145deg, #0D9488, #0F766E)',
+          background: 'linear-gradient(145deg, #BE185D, #9D174D)',
           color: '#fff', border: '1px solid rgba(255,255,255,0.2)',
           fontWeight: 700, fontSize: '13px',
-          boxShadow: '4px 4px 12px rgba(13,148,136,0.25), -2px -2px 6px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.15)',
+          boxShadow: '4px 4px 12px rgba(190,24,93,0.25), -2px -2px 6px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.15)',
           transition: 'transform 0.15s',
         }}>Refresh</button>
       </div>
@@ -227,7 +227,7 @@ export default function AdminDashboard() {
       {/* ─── Engagement Funnel ─── */}
       <div style={{ ...card, marginBottom: '24px' }}>
         <h2 style={{ ...heading, fontSize: '18px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Activity size={20} style={{ color: '#0D9488' }} />
+          <Activity size={20} style={{ color: '#BE185D' }} />
           Engagement Funnel (30 days)
         </h2>
         <div className="flex flex-col sm:flex-row items-center" style={{ gap: '16px', justifyContent: 'space-around' }}>
@@ -240,7 +240,7 @@ export default function AdminDashboard() {
       {/* ─── Hero Stat Cards ─── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3" style={{ marginBottom: '24px' }}>
         {[
-          { icon: <Briefcase size={16} />, label: 'Active Jobs', value: s.activeJobs, color: '#0D9488' },
+          { icon: <Briefcase size={16} />, label: 'Active Jobs', value: s.activeJobs, color: '#BE185D' },
           { icon: <Users size={16} />, label: 'Total Users', value: s.totalUsers, color: '#3B82F6', note: `+${s.newUsers7d} this week` },
           { icon: <Mail size={16} />, label: 'Newsletter', value: s.newsletterOptIns, color: '#F59E0B', note: `${s.totalSubscribers} leads` },
           { icon: <Bell size={16} />, label: 'Active Alerts', value: s.activeAlerts, color: '#22C55E', note: `${s.dailyAlerts}d / ${s.weeklyAlerts}w` },
@@ -312,7 +312,7 @@ export default function AdminDashboard() {
           <h2 style={{ ...heading, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <TrendingUp size={20} style={{ color: '#22C55E' }} /> Top Performing Jobs
           </h2>
-          <Link href="/admin/analytics" style={{ fontSize: '13px', color: '#0D9488', textDecoration: 'none', fontWeight: 600 }}>
+          <Link href="/admin/analytics" style={{ fontSize: '13px', color: '#BE185D', textDecoration: 'none', fontWeight: 600 }}>
             View All <ArrowRight size={14} style={{ display: 'inline', verticalAlign: 'middle' }} />
           </Link>
         </div>
@@ -456,7 +456,7 @@ export default function AdminDashboard() {
       {/* ─── Quick Actions ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { icon: <Briefcase size={18} style={{ color: '#0D9488' }} />, title: 'Jobs', desc: 'Manage job postings & CRUD', href: '/admin/jobs', color: '#0D9488' },
+          { icon: <Briefcase size={18} style={{ color: '#BE185D' }} />, title: 'Jobs', desc: 'Manage job postings & CRUD', href: '/admin/jobs', color: '#BE185D' },
           { icon: <BarChart3 size={18} style={{ color: '#3B82F6' }} />, title: 'Analytics', desc: 'Deep-dive engagement data', href: '/admin/analytics', color: '#3B82F6' },
           { icon: <Users size={18} style={{ color: '#A855F7' }} />, title: 'Users', desc: 'Manage users & subscribers', href: '/admin/users', color: '#A855F7' },
           { icon: <Mail size={18} style={{ color: '#EC4899' }} />, title: 'Email Broadcasts', desc: 'Send personalized emails', href: '/admin/email', color: '#EC4899' },

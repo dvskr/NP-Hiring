@@ -116,7 +116,7 @@ export default function ScreeningAnswersSection({ showMsg }: Props) {
                                                                 <button key={String(v)} type="button" onClick={() => setAnswer(q.questionKey, { answerBool: v })} style={{
                                                                     padding: '6px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s',
                                                                     border: a.answerBool === v ? `1.5px solid ${clayPalette.accentLight}` : `1.5px solid ${clayPalette.border}`,
-                                                                    background: a.answerBool === v ? 'rgba(45,212,191,0.12)' : clayPalette.inputFill,
+                                                                    background: a.answerBool === v ? 'rgba(244,114,182,0.12)' : clayPalette.inputFill,
                                                                     color: a.answerBool === v ? clayPalette.accentLight : clayPalette.textSecondary,
                                                                 }}>{v ? 'Yes' : 'No'}</button>
                                                             ))}

@@ -148,9 +148,9 @@ export default function ComposeMessageModal({
                     {initialJobTitle && (
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{
-                                backgroundColor: 'rgba(45,212,191,0.1)',
-                                color: '#2DD4BF',
-                                border: '1px solid rgba(45,212,191,0.2)',
+                                backgroundColor: 'rgba(244,114,182,0.1)',
+                                color: '#F472B6',
+                                border: '1px solid rgba(244,114,182,0.2)',
                             }}>
                                 Re: {initialJobTitle}
                             </span>
@@ -258,7 +258,7 @@ export default function ComposeMessageModal({
                         className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{
                             background: canSend
-                                ? 'linear-gradient(135deg, #14B8A6, #0D9488)'
+                                ? 'linear-gradient(135deg, #DB2777, #BE185D)'
                                 : 'var(--bg-tertiary)',
                         }}
                     >

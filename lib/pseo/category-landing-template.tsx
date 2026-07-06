@@ -283,7 +283,7 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
             {/* HERO */}
             <div style={{ background: 'linear-gradient(180deg, #FFF5EE 0%, #FDE8D8 55%, #FDFBF7 100%)' }}>
                 <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '72px 24px 48px', textAlign: 'center' }}>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '10px' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '10px' }}>
                         {stats.totalJobs > 0 ? `${stats.totalJobs} live roles · updated daily` : 'Nurse Practitioner Careers'}
                     </p>
                     <h1 className="font-lora" style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, lineHeight: 1.15, color: '#1A2E35', marginBottom: '16px' }}>
@@ -293,10 +293,10 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                         {copy?.blurb ?? `Browse ${label.toLowerCase()} nurse practitioner positions from employers nationwide.`}
                     </p>
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                        <Link href={`/jobs?category=${slug}`} className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#0D9488', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(13,148,136,0.2)' }}>
+                        <Link href={`/jobs?category=${slug}`} className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>
                             Browse {label} Jobs <ArrowRight size={16} />
                         </Link>
-                        <Link href="/job-alerts" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', color: '#0D9488', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', border: '1px solid rgba(13,148,136,0.25)' }}>
+                        <Link href="/job-alerts" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', color: '#BE185D', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', border: '1px solid rgba(190,24,93,0.25)' }}>
                             <Bell size={16} /> Set Alert
                         </Link>
                     </div>
@@ -319,35 +319,35 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                                 <p style={{ color: '#5A4A42', fontSize: '15px', margin: '0 0 16px' }}>
                                     No {label.toLowerCase()} positions right now — new roles are added daily.
                                 </p>
-                                <Link href="/jobs" style={{ fontWeight: 700, fontSize: '14px', color: '#0D9488', textDecoration: 'none' }}>
+                                <Link href="/jobs" style={{ fontWeight: 700, fontSize: '14px', color: '#BE185D', textDecoration: 'none' }}>
                                     Browse all nurse practitioner jobs →
                                 </Link>
                             </div>
                         )}
                         {jobs.length > 0 && (
                             <div style={{ textAlign: 'center', marginTop: '32px' }}>
-                                <Link href={`/jobs?category=${slug}`} className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#0D9488', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(13,148,136,0.2)' }}>
+                                <Link href={`/jobs?category=${slug}`} className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>
                                     Browse All {label} Jobs <ArrowRight size={16} />
                                 </Link>
                             </div>
                         )}
                     </div>
                     <div className="lg:col-span-1">
-                        <div style={{ ...clayCard, padding: '24px', marginBottom: '20px', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', border: '2px solid rgba(13,148,136,0.15)' }}>
-                            <Bell size={28} style={{ color: '#0D9488', marginBottom: '12px' }} />
-                            <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#134E4A', margin: '0 0 8px' }}>{label} Alerts</h3>
-                            <p style={{ fontSize: '13px', color: '#0D9488', marginBottom: '16px' }}>New {label.toLowerCase()} roles delivered daily.</p>
-                            <Link href="/job-alerts" style={{ display: 'block', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#0D9488', color: '#fff', textDecoration: 'none' }}>Create Alert</Link>
+                        <div style={{ ...clayCard, padding: '24px', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
+                            <Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} />
+                            <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 8px' }}>{label} Alerts</h3>
+                            <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px' }}>New {label.toLowerCase()} roles delivered daily.</p>
+                            <Link href="/job-alerts" style={{ display: 'block', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none' }}>Create Alert</Link>
                         </div>
                         {stats.topEmployers.length > 0 && (
                             <div style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
-                                <Building2 size={20} style={{ color: '#0D9488', marginBottom: '8px' }} />
+                                <Building2 size={20} style={{ color: '#BE185D', marginBottom: '8px' }} />
                                 <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: '0 0 12px' }}>Top Employers</h3>
                                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                                     {stats.topEmployers.map((employer: ProcessedEmployer, index: number) => (
                                         <li key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: index < stats.topEmployers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
                                             <span style={{ fontSize: '13px', color: '#5A4A42', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{employer.name}</span>
-                                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#0D9488', marginLeft: '8px' }}>{employer.count}</span>
+                                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', marginLeft: '8px' }}>{employer.count}</span>
                                         </li>
                                     ))}
                                 </ul>
@@ -370,7 +370,7 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
 
             {/* RELATED CATEGORIES — same taxonomy axis */}
             {axisSiblings(slug).length > 0 && (
-                <div style={{ background: 'linear-gradient(180deg, #F0FDFA 0%, #E6FAF5 50%, #F0FDFA 100%)' }}>
+                <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #FDF2F8 50%, #FDF2F8 100%)' }}>
                     <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
                         <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Keep Exploring</p>
                         <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Related Categories</h2>
@@ -391,7 +391,7 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
 
             <style>{`
                 .cat-cta-primary { transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease; }
-                .cat-cta-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(13,148,136,0.35) !important; filter: brightness(1.05); }
+                .cat-cta-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(190,24,93,0.35) !important; filter: brightness(1.05); }
                 .cat-bento-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
                 .cat-bento-card:hover { transform: translateY(-4px); box-shadow: 8px 8px 24px rgba(0,0,0,0.1), -4px -4px 12px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
                 @media (max-width: 768px) { .cat-explore-grid { grid-template-columns: repeat(2, 1fr) !important; } }

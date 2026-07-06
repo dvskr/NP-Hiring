@@ -223,10 +223,10 @@ export default function EmployerSettingsClient() {
     // Clay-style toggle (matches the employer dashboard's existing toggles)
     const clayToggle = (isActive: boolean): React.CSSProperties => ({
         position: 'relative', width: '44px', height: '24px', borderRadius: '12px',
-        background: isActive ? 'linear-gradient(145deg, #10B981, #0D9488)' : '#E5E7EB',
+        background: isActive ? 'linear-gradient(145deg, #9D174D, #BE185D)' : '#E5E7EB',
         border: 'none', cursor: 'pointer', flexShrink: 0,
         boxShadow: isActive
-            ? 'inset 1px 1px 3px rgba(0,0,0,0.1), 0 0 8px rgba(13,148,136,0.2)'
+            ? 'inset 1px 1px 3px rgba(0,0,0,0.1), 0 0 8px rgba(190,24,93,0.2)'
             : 'inset 1px 1px 3px rgba(0,0,0,0.08)',
         transition: 'background 0.2s ease',
     });
@@ -358,7 +358,7 @@ export default function EmployerSettingsClient() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
                     <div style={{
                         width: '36px', height: '36px', borderRadius: '50%',
-                        border: '3px solid #E5E7EB', borderTopColor: '#0D9488',
+                        border: '3px solid #E5E7EB', borderTopColor: '#BE185D',
                         animation: 'spin 0.8s linear infinite',
                     }} />
                     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -382,7 +382,7 @@ export default function EmployerSettingsClient() {
                         onClick={() => window.location.reload()}
                         style={{
                             ...clayBtn,
-                            background: 'linear-gradient(135deg, #0D9488, #0F766E)',
+                            background: 'linear-gradient(135deg, #BE185D, #9D174D)',
                             color: '#fff',
                             border: '1px solid rgba(255,255,255,0.25)',
                         }}
@@ -395,7 +395,7 @@ export default function EmployerSettingsClient() {
     }
 
     const sections = [
-        { key: 'company' as const, label: 'Company Profile', icon: <Building2 size={18} />, color: '#0D9488', bg: '#CCFBF1', desc: 'Brand & info' },
+        { key: 'company' as const, label: 'Company Profile', icon: <Building2 size={18} />, color: '#BE185D', bg: '#FCE7F3', desc: 'Brand & info' },
         { key: 'billing' as const, label: 'Billing & Plans', icon: <CreditCard size={18} />, color: '#7C3AED', bg: '#EDE9FE', desc: 'Invoices & receipts' },
         { key: 'alerts' as const, label: 'Candidate Alerts', icon: <BellRing size={18} />, color: '#F59E0B', bg: '#FEF3C7', desc: 'Match notifications' },
         { key: 'notifications' as const, label: 'Notifications', icon: <Bell size={18} />, color: '#EC4899', bg: '#FCE7F3', desc: 'Newsletter & app alerts' },
@@ -415,8 +415,8 @@ export default function EmployerSettingsClient() {
                 <div style={{
                     position: 'fixed', top: '80px', right: '20px', zIndex: 100,
                     ...clayCard, padding: '14px 20px', marginBottom: 0,
-                    background: message.type === 'success' ? '#F0FDFA' : '#FEF2F2',
-                    border: `1px solid ${message.type === 'success' ? '#99F6E4' : '#FECACA'}`,
+                    background: message.type === 'success' ? '#FDF2F8' : '#FEF2F2',
+                    border: `1px solid ${message.type === 'success' ? '#FBCFE8' : '#FECACA'}`,
                     display: 'flex', alignItems: 'center', gap: '10px',
                     color: message.type === 'success' ? '#059669' : '#DC2626',
                     fontSize: '14px', fontWeight: 600,
@@ -467,9 +467,9 @@ export default function EmployerSettingsClient() {
                         className="clay-save-btn"
                         style={{
                             ...clayBtn,
-                            background: saving ? 'rgba(13,148,136,0.3)' : 'linear-gradient(145deg, #0D9488, #10B981)',
+                            background: saving ? 'rgba(190,24,93,0.3)' : 'linear-gradient(145deg, #BE185D, #9D174D)',
                             color: '#fff',
-                            boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                            boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
                             cursor: saving ? 'not-allowed' : 'pointer',
                             opacity: saving ? 0.6 : 1,
                         }}
@@ -636,8 +636,8 @@ export default function EmployerSettingsClient() {
                                         const tier = p.tier ?? '';
                                         const isFeatured = tier.includes('Featured');
                                         const planLabel = p.isFree ? 'Free trial' : (tier || 'Standard');
-                                        const planBg = p.isFree ? '#F0FDFA' : (isFeatured ? '#FFF8E1' : '#F0FDFA');
-                                        const planColor = p.isFree ? '#0D9488' : (isFeatured ? '#F59E0B' : '#0D9488');
+                                        const planBg = p.isFree ? '#FDF2F8' : (isFeatured ? '#FFF8E1' : '#FDF2F8');
+                                        const planColor = p.isFree ? '#BE185D' : (isFeatured ? '#F59E0B' : '#BE185D');
                                         const statusLabel = p.isActive ? 'Active' : 'Expired';
                                         const downloadUrl = `/api/employer/invoice?jobId=${p.jobId}${latestCharge?.id ? `&chargeId=${latestCharge.id}` : ''}`;
                                         const receiptUrl = `/api/employer/receipt?jobId=${p.jobId}${latestCharge?.id ? `&chargeId=${latestCharge.id}` : ''}`;
@@ -679,10 +679,10 @@ export default function EmployerSettingsClient() {
                                                                 download={`invoice-${p.jobTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`}
                                                                 style={{
                                                                     display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                                                    fontSize: '12px', fontWeight: 600, color: '#0D9488',
+                                                                    fontSize: '12px', fontWeight: 600, color: '#BE185D',
                                                                     padding: '6px 12px', borderRadius: '8px',
-                                                                    background: '#F0FDFA', textDecoration: 'none',
-                                                                    border: '1px solid rgba(13,148,136,0.18)',
+                                                                    background: '#FDF2F8', textDecoration: 'none',
+                                                                    border: '1px solid rgba(190,24,93,0.18)',
                                                                     whiteSpace: 'nowrap',
                                                                 }}
                                                             >
@@ -694,10 +694,10 @@ export default function EmployerSettingsClient() {
                                                                 rel="noopener noreferrer"
                                                                 style={{
                                                                     display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                                                    fontSize: '12px', fontWeight: 600, color: '#0D9488',
+                                                                    fontSize: '12px', fontWeight: 600, color: '#BE185D',
                                                                     padding: '6px 12px', borderRadius: '8px',
-                                                                    background: '#F0FDFA', textDecoration: 'none',
-                                                                    border: '1px solid rgba(13,148,136,0.18)',
+                                                                    background: '#FDF2F8', textDecoration: 'none',
+                                                                    border: '1px solid rgba(190,24,93,0.18)',
                                                                     whiteSpace: 'nowrap',
                                                                 }}
                                                             >
@@ -727,7 +727,7 @@ export default function EmployerSettingsClient() {
                         </h3>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <label style={{ fontSize: '13px', color: '#8A9BA6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <input type="checkbox" checked={alertPrefs.isActive} onChange={(e) => setAlertPrefs(prev => ({ ...prev, isActive: e.target.checked }))} style={{ accentColor: '#0D9488', width: '16px', height: '16px' }} />
+                                <input type="checkbox" checked={alertPrefs.isActive} onChange={(e) => setAlertPrefs(prev => ({ ...prev, isActive: e.target.checked }))} style={{ accentColor: '#BE185D', width: '16px', height: '16px' }} />
                                 Enabled
                             </label>
                             <button
@@ -735,9 +735,9 @@ export default function EmployerSettingsClient() {
                                 disabled={savingAlerts}
                                 style={{
                                     ...clayBtn, padding: '8px 16px', fontSize: '13px',
-                                    background: savingAlerts ? 'rgba(13,148,136,0.3)' : 'linear-gradient(145deg, #0D9488, #10B981)',
+                                    background: savingAlerts ? 'rgba(190,24,93,0.3)' : 'linear-gradient(145deg, #BE185D, #9D174D)',
                                     color: '#fff',
-                                    boxShadow: '3px 3px 8px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                                    boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
                                     cursor: savingAlerts ? 'not-allowed' : 'pointer',
                                 }}
                             >
@@ -779,7 +779,7 @@ export default function EmployerSettingsClient() {
                                         ...prev,
                                         states: selected ? prev.states.filter(x => x !== st) : [...prev.states, st],
                                     }))} style={{
-                                        ...clayPill(selected, '#0D9488'),
+                                        ...clayPill(selected, '#BE185D'),
                                         padding: '4px 8px', fontSize: '11px', minWidth: '36px',
                                         textAlign: 'center' as const,
                                     }}>{st}</button>
@@ -834,7 +834,7 @@ export default function EmployerSettingsClient() {
                                     <div style={{
                                         width: '36px', height: '36px', borderRadius: '12px',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        background: '#CCFBF1', color: '#0D9488',
+                                        background: '#FCE7F3', color: '#BE185D',
                                         border: '1px solid rgba(255,255,255,0.5)',
                                         boxShadow: '3px 3px 8px rgba(0,0,0,0.04), inset 1px 1px 2px rgba(255,255,255,0.5)',
                                         flexShrink: 0,
@@ -950,7 +950,7 @@ export default function EmployerSettingsClient() {
                     .settings-sidebar { width: 100% !important; margin-bottom: 20px; }
                     .settings-main { flex: none; width: 100% !important; }
                 }
-                .clay-save-btn:hover { transform: translateY(-1px); box-shadow: 6px 6px 16px rgba(13,148,136,0.3), inset 1px 1px 2px rgba(255,255,255,0.15) !important; }
+                .clay-save-btn:hover { transform: translateY(-1px); box-shadow: 6px 6px 16px rgba(190,24,93,0.3), inset 1px 1px 2px rgba(255,255,255,0.15) !important; }
                 .clay-reset-btn:hover { transform: translateY(-1px); }
             `}</style>
         </div>

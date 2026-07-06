@@ -70,10 +70,10 @@ export default function NewsletterPreference({ email }: NewsletterPreferenceProp
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div style={{
                     width: '38px', height: '38px', borderRadius: '10px',
-                    background: 'rgba(13,148,136,0.10)',
+                    background: 'rgba(190,24,93,0.10)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                    <Send size={18} style={{ color: '#0D9488' }} />
+                    <Send size={18} style={{ color: '#BE185D' }} />
                 </div>
                 <div>
                     <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -95,14 +95,14 @@ export default function NewsletterPreference({ email }: NewsletterPreferenceProp
                     position: 'relative',
                     width: '48px', height: '26px',
                     borderRadius: '13px',
-                    background: optIn ? '#0D9488' : '#E0EDE6',
+                    background: optIn ? '#BE185D' : '#E0EDE6',
                     border: '1px solid',
-                    borderColor: optIn ? '#0D9488' : '#C5DDD5',
+                    borderColor: optIn ? '#BE185D' : '#C5DDD5',
                     cursor: (!loaded || saving) ? 'not-allowed' : 'pointer',
                     opacity: loaded ? 1 : 0.55,
                     transition: 'all 0.25s ease',
                     boxShadow: optIn
-                        ? '0 2px 6px rgba(13,148,136,0.3)'
+                        ? '0 2px 6px rgba(190,24,93,0.3)'
                         : 'inset 2px 2px 4px rgba(0, 40, 30, 0.06), inset -1px -1px 3px rgba(255, 255, 255, 0.7)',
                     flexShrink: 0,
                 }}

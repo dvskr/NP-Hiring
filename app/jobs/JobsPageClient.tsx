@@ -406,22 +406,22 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                     display: 'inline-flex', alignItems: 'center', gap: '8px',
                     padding: '10px 20px', borderRadius: '16px',
                     fontSize: '13px', fontWeight: 600,
-                    color: '#0F766E',
-                    backgroundColor: '#B2F5EA',
+                    color: '#9D174D',
+                    backgroundColor: '#FBCFE8',
                     border: '1px solid rgba(255,255,255,0.5)',
                     cursor: 'pointer', transition: 'all 0.2s',
-                    boxShadow: '5px 5px 12px rgba(13,148,136,0.12), -3px -3px 8px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.03)',
+                    boxShadow: '5px 5px 12px rgba(190,24,93,0.12), -3px -3px 8px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.03)',
                   }}
                 >
                   {/* Bell icon pebble */}
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     width: 26, height: 26, borderRadius: 9,
-                    backgroundColor: '#CCFBF1',
+                    backgroundColor: '#FCE7F3',
                     boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.04), 2px 2px 4px rgba(0,0,0,0.06)',
                     border: '1px solid rgba(255,255,255,0.6)',
                   }}>
-                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="#0D9488">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="#BE185D">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
                     </svg>
                   </span>
@@ -439,7 +439,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                 {/*
                   AI Search bar — exact clone of the homepage hero search bar
                   (components/HomepageHero.tsx). Same wrapper class, same
-                  borderRadius/shadow/backdrop, same `#0D9488` CTA. Single
+                  borderRadius/shadow/backdrop, same `#BE185D` CTA. Single
                   input variant (no location field) and CTA changed to
                   "AI Search" with a Sparkles icon. Submit calls
                   /api/jobs/search/semantic inline and replaces the rendered
@@ -485,7 +485,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                       className="hero-search-btn"
                       disabled={aiQuery.trim().length < 2 || aiLoading}
                       style={{
-                        background: '#0D9488',
+                        background: '#BE185D',
                         color: 'white',
                         padding: '0 24px',
                         fontSize: '14px',
@@ -500,8 +500,8 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                         transition: 'all 0.2s ease',
                         boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.08)',
                       }}
-                      onMouseEnter={(e) => { if (aiQuery.trim().length >= 2 && !aiLoading) { e.currentTarget.style.background = '#0f766e'; e.currentTarget.style.transform = 'scale(1.02)'; } }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = '#0D9488'; e.currentTarget.style.transform = 'scale(1)'; }}
+                      onMouseEnter={(e) => { if (aiQuery.trim().length >= 2 && !aiLoading) { e.currentTarget.style.background = '#9D174D'; e.currentTarget.style.transform = 'scale(1.02)'; } }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = '#BE185D'; e.currentTarget.style.transform = 'scale(1)'; }}
                     >
                       <Sparkles size={14} aria-hidden="true" />
                       {/* Hide the text on phones so the input gets full width;
@@ -557,7 +557,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                       style={{
                         padding: '6px', borderRadius: '8px',
                         background: viewMode === 'grid' ? '#F7FBF8' : 'transparent',
-                        color: viewMode === 'grid' ? '#0D9488' : 'var(--text-tertiary)',
+                        color: viewMode === 'grid' ? '#BE185D' : 'var(--text-tertiary)',
                         border: 'none', cursor: 'pointer', display: 'flex',
                         transition: 'all 0.2s',
                         boxShadow: viewMode === 'grid' ? '2px 2px 4px rgba(0,0,0,0.05), -1px -1px 2px rgba(255,255,255,0.6)' : 'none',
@@ -573,7 +573,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                       style={{
                         padding: '6px', borderRadius: '8px',
                         background: viewMode === 'list' ? '#F7FBF8' : 'transparent',
-                        color: viewMode === 'list' ? '#0D9488' : 'var(--text-tertiary)',
+                        color: viewMode === 'list' ? '#BE185D' : 'var(--text-tertiary)',
                         border: 'none', cursor: 'pointer', display: 'flex',
                         transition: 'all 0.2s',
                         boxShadow: viewMode === 'list' ? '2px 2px 4px rgba(0,0,0,0.05), -1px -1px 2px rgba(255,255,255,0.6)' : 'none',
@@ -599,7 +599,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                 background: '#FFFFFF',
                 borderRadius: '20px',
                 border: '1px solid rgba(255,255,255,0.5)',
-                borderLeft: `3px solid ${aiError ? '#EF4444' : '#0D9488'}`,
+                borderLeft: `3px solid ${aiError ? '#EF4444' : '#BE185D'}`,
                 boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
               }}>
@@ -609,12 +609,12 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     width: 28, height: 28, borderRadius: 10,
-                    backgroundColor: aiError ? '#FEE2E2' : '#CCFBF1',
+                    backgroundColor: aiError ? '#FEE2E2' : '#FCE7F3',
                     boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.04), 2px 2px 4px rgba(0,0,0,0.06)',
                     border: '1px solid rgba(255,255,255,0.6)',
                     flexShrink: 0,
                   }}>
-                    <Sparkles size={14} style={{ color: aiError ? '#EF4444' : '#0D9488' }} />
+                    <Sparkles size={14} style={{ color: aiError ? '#EF4444' : '#BE185D' }} />
                   </span>
                   <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-primary)' }}>
                     {aiLoading && <>Searching for <strong>&ldquo;{aiSubmittedQuery}&rdquo;</strong>…</>}
@@ -916,29 +916,29 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
 
       <style>{`
         .jp-mobile-filter-btn:hover {
-          border-color: rgba(45,212,191,0.4) !important;
-          color: #2DD4BF !important;
+          border-color: rgba(244,114,182,0.4) !important;
+          color: #F472B6 !important;
         }
         .jp-alert-btn:hover {
-          background-color: rgba(45,212,191,0.14) !important;
-          border-color: rgba(45,212,191,0.3) !important;
+          background-color: rgba(244,114,182,0.14) !important;
+          border-color: rgba(244,114,182,0.3) !important;
         }
         .jp-sort-select {
           color: var(--text-primary) !important;
           background-color: var(--bg-secondary) !important;
         }
         .jp-sort-select:focus {
-          border-color: #2DD4BF !important;
+          border-color: #F472B6 !important;
         }
         .jp-sort-select option {
           background: var(--bg-secondary);
           color: var(--text-primary);
         }
         .jp-view-btn:hover {
-          color: #2DD4BF !important;
+          color: #F472B6 !important;
         }
         .jp-page-btn:hover:not(:disabled) {
-          border-color: rgba(45,212,191,0.4) !important;
+          border-color: rgba(244,114,182,0.4) !important;
         }
         @media (max-width: 600px) {
           .jobs-hero-grid { grid-template-columns: 1fr !important; text-align: center; }

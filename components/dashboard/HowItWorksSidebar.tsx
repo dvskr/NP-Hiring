@@ -80,8 +80,8 @@ export default function HowItWorksSidebar(): React.JSX.Element {
 
                 <Row
                     icon={<ShieldCheck size={14} strokeWidth={2.5} />}
-                    iconBg="#CCFBF1"
-                    iconColor="#0F766E"
+                    iconBg="#FCE7F3"
+                    iconColor="#9D174D"
                     title="↗ Direct Apply"
                     body="Goes straight to the employer's careers site — no aggregator middlemen. Either employer-posted or a vetted partner link."
                 />
@@ -98,7 +98,7 @@ export default function HowItWorksSidebar(): React.JSX.Element {
             <hr style={{ margin: '16px 0 12px', border: 0, borderTop: '1px solid rgba(0,0,0,0.06)' }} />
 
             <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                <span style={pebble('#0D9488', '#CCFBF1')} aria-hidden="true">
+                <span style={pebble('#BE185D', '#FCE7F3')} aria-hidden="true">
                     <ExternalLink size={14} strokeWidth={2.5} />
                 </span>
                 <p style={{ margin: 0, fontSize: '12px', color: '#6B7F8A', lineHeight: 1.5 }}>

@@ -34,7 +34,7 @@ const clayInput: React.CSSProperties = {
 };
 
 const TAG_COLORS = [
-    '#0D9488', '#7C3AED', '#D97706', '#DC2626', '#2563EB', '#059669', '#DB2777', '#6366F1',
+    '#BE185D', '#7C3AED', '#D97706', '#DC2626', '#2563EB', '#059669', '#DB2777', '#6366F1',
 ];
 
 interface SavedCandidateEntry {
@@ -243,7 +243,7 @@ export default function SavedCandidatesTab() {
     if (loading) {
         return (
             <div style={{ ...cardBase, padding: '60px 24px', textAlign: 'center' }}>
-                <Loader2 size={28} className="animate-spin" style={{ color: '#0D9488', margin: '0 auto 12px', display: 'block' }} />
+                <Loader2 size={28} className="animate-spin" style={{ color: '#BE185D', margin: '0 auto 12px', display: 'block' }} />
                 <p style={{ color: '#8A9BA6', fontSize: '14px', margin: 0 }}>Loading saved candidates…</p>
             </div>
         );
@@ -281,7 +281,7 @@ export default function SavedCandidatesTab() {
                     {/* Posting filter */}
                     {postingOptions.length > 0 && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Briefcase size={12} style={{ color: '#0D9488' }} />
+                            <Briefcase size={12} style={{ color: '#BE185D' }} />
                             <select value={filterPosting} onChange={e => setFilterPosting(e.target.value)} style={clayInput as React.CSSProperties}>
                                 <option value="all">All Postings</option>
                                 {postingOptions.map(([id, title]) => (
@@ -418,8 +418,8 @@ export default function SavedCandidatesTab() {
                                         onClick={() => setEditingTagsFor(editingTagsFor === entry.id ? null : entry.id)}
                                         style={{
                                             ...clayBtn, padding: '2px 6px', fontSize: '10px',
-                                            background: editingTagsFor === entry.id ? '#CCFBF1' : '#F7FBF8',
-                                            color: editingTagsFor === entry.id ? '#0D9488' : '#B0C4BC',
+                                            background: editingTagsFor === entry.id ? '#FCE7F3' : '#F7FBF8',
+                                            color: editingTagsFor === entry.id ? '#BE185D' : '#B0C4BC',
                                         }}
                                     >
                                         <Tag size={9} /> {(entry.tags || []).length > 0 ? '✎' : '+ Tag'}
@@ -503,7 +503,7 @@ export default function SavedCandidatesTab() {
                                         {entry.postingTitle && (
                                             <span style={{
                                                 padding: '2px 6px', borderRadius: '5px', fontSize: '9px', fontWeight: 600,
-                                                background: '#CCFBF1', color: '#0D9488', border: '1px solid #99F6E4',
+                                                background: '#FCE7F3', color: '#BE185D', border: '1px solid #FBCFE8',
                                                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px',
                                             }}>
                                                 📋 {entry.postingTitle}

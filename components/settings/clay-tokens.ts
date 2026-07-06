@@ -29,7 +29,7 @@ export const clayPalette = {
      *  field/card so edges read in light backgrounds. */
     border: 'rgba(213, 232, 224, 0.6)',
     borderStrong: 'rgba(213, 232, 224, 0.9)',
-    borderHover: 'rgba(45, 212, 191, 0.5)',
+    borderHover: 'rgba(244,114,182, 0.5)',
 
     /** Deep mint-tinted ink for headings and primary text. */
     textPrimary: '#1A2E35',
@@ -39,8 +39,8 @@ export const clayPalette = {
     textMuted: '#6B7F8A',
 
     /** Brand accents. */
-    accent: '#0D9488',          // teal — primary CTA
-    accentLight: '#2DD4BF',     // bright teal — highlights, active state
+    accent: '#BE185D',          // teal — primary CTA
+    accentLight: '#F472B6',     // bright teal — highlights, active state
     danger: '#B91C1C',
     dangerLight: '#EF4444',
     warning: '#F59E0B',
@@ -151,7 +151,7 @@ export const clayBtnPrimary: CSSProperties = {
     alignItems: 'center',
     gap: '8px',
     boxShadow:
-        '4px 4px 10px rgba(13,148,136,0.20),' +
+        '4px 4px 10px rgba(190,24,93,0.20),' +
         ' -2px -2px 6px rgba(255,255,255,0.3),' +
         ' inset 2px 2px 4px rgba(255,255,255,0.2)',
     transition: 'all 0.2s ease',

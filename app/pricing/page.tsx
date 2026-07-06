@@ -32,7 +32,7 @@ const clayIconWrap = (gradient: string): React.CSSProperties => ({
     width: '28px', height: '28px', borderRadius: '8px',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     background: gradient,
-    boxShadow: '2px 2px 5px rgba(13,148,136,0.12)',
+    boxShadow: '2px 2px 5px rgba(190,24,93,0.12)',
     flexShrink: 0,
 });
 
@@ -79,7 +79,7 @@ export default function PricingPage() {
             }}>
                 <section style={{ padding: '80px 16px 48px', textAlign: 'center' }}>
                     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                        <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
+                        <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
                             Simple Pricing
                         </p>
                         <h1 className="font-lora" style={{
@@ -106,36 +106,36 @@ export default function PricingPage() {
                         {/* ═══ ROW 0: PRICING HERO (full-width 12 cols) ═══ */}
                         <div className="bento-pricing-hero emp-bento-card" style={{
                             ...clayCard, gridColumn: 'span 12', padding: '0', overflow: 'hidden',
-                            border: '2px solid rgba(13,148,136,0.15)',
+                            border: '2px solid rgba(190,24,93,0.15)',
                             position: 'relative',
                         }}>
                             {/* "One Simple Plan" badge */}
                             <div style={{
                                 position: 'absolute', top: '-1px', left: '50%', transform: 'translateX(-50%)',
-                                background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
+                                background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                                 fontSize: '11px', fontWeight: 700, padding: '6px 24px', borderRadius: '0 0 12px 12px',
                                 textTransform: 'uppercase', letterSpacing: '0.06em',
-                                boxShadow: '0 4px 12px rgba(13,148,136,0.2)',
+                                boxShadow: '0 4px 12px rgba(190,24,93,0.2)',
                             }}>One Simple Plan</div>
 
                             <div className="pricing-hero-inner" style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '0' }}>
                                 {/* Left — Price block */}
                                 <div style={{
-                                    background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
+                                    background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
                                     padding: '44px 36px 36px', display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                                    borderRight: '1px solid rgba(13,148,136,0.1)',
+                                    borderRight: '1px solid rgba(190,24,93,0.1)',
                                 }}>
                                     <div style={{ marginBottom: '16px' }}>
                                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                                            <span style={{ fontSize: '56px', fontWeight: 800, color: '#134E4A', lineHeight: 1 }}>${config.postingPrice}</span>
-                                            <span style={{ fontSize: '16px', color: '#0D9488', fontWeight: 500 }}>/post</span>
+                                            <span style={{ fontSize: '56px', fontWeight: 800, color: '#831843', lineHeight: 1 }}>${config.postingPrice}</span>
+                                            <span style={{ fontSize: '16px', color: '#BE185D', fontWeight: 500 }}>/post</span>
                                         </div>
-                                        <p style={{ fontSize: '14px', color: '#0D9488', fontWeight: 700, marginTop: '6px' }}>First post FREE — no card required</p>
+                                        <p style={{ fontSize: '14px', color: '#BE185D', fontWeight: 700, marginTop: '6px' }}>First post FREE — no card required</p>
                                     </div>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: 'rgba(255,255,255,0.7)', borderRadius: '10px', border: '1px solid rgba(13,148,136,0.1)', marginBottom: '20px' }}>
-                                        <RefreshCw size={14} style={{ color: '#0D9488', flexShrink: 0 }} />
-                                        <p style={{ fontSize: '12px', color: '#134E4A', margin: 0, lineHeight: 1.4 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: 'rgba(255,255,255,0.7)', borderRadius: '10px', border: '1px solid rgba(190,24,93,0.1)', marginBottom: '20px' }}>
+                                        <RefreshCw size={14} style={{ color: '#BE185D', flexShrink: 0 }} />
+                                        <p style={{ fontSize: '12px', color: '#831843', margin: 0, lineHeight: 1.4 }}>
                                             <strong>Renewals: ${config.renewalPrice}</strong> (10% off) — another {config.durationDays} days
                                         </p>
                                     </div>
@@ -143,9 +143,9 @@ export default function PricingPage() {
                                     <Link href="/post-job" className="emp-cta-primary" style={{
                                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                                         padding: '14px 28px', borderRadius: '14px', fontWeight: 700, fontSize: '15px',
-                                        background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
+                                        background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                                         textDecoration: 'none',
-                                        boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                                        boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
                                     }}>
                                         Start Posting — First Post Free <ArrowRight size={16} />
                                     </Link>
@@ -167,7 +167,7 @@ export default function PricingPage() {
                                             'Up to 5 screening questions',
                                         ].map(feat => (
                                             <li key={feat} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', color: '#1A2E35' }}>
-                                                <Check size={15} style={{ color: '#0D9488', flexShrink: 0 }} /> {feat}
+                                                <Check size={15} style={{ color: '#BE185D', flexShrink: 0 }} /> {feat}
                                             </li>
                                         ))}
                                     </ul>
@@ -187,7 +187,7 @@ export default function PricingPage() {
                                     Double the industry standard. Your job stays visible for 2 full months — no daily budget, no bidding.
                                 </p>
                             </div>
-                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
+                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
                                 <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/bento-60day.webp`} alt="60-day job listing calendar" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
                             </div>
                         </div>
@@ -259,7 +259,7 @@ export default function PricingPage() {
                 ═══════════════════════════════════════════════════════════════ */}
             <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
                 <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
                         Why Switch
                     </p>
                     <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
@@ -276,9 +276,9 @@ export default function PricingPage() {
                         <div className="emp-compare-table" style={{ ...clayCard, padding: '0', overflow: 'hidden' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
                                 <thead>
-                                    <tr style={{ background: 'linear-gradient(135deg, rgba(13,148,136,0.08), rgba(13,148,136,0.02))' }}>
+                                    <tr style={{ background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(190,24,93,0.02))' }}>
                                         <th style={{ width: '40%', padding: '16px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Feature</th>
-                                        <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#0D9488', borderBottom: '2px solid rgba(13,148,136,0.2)', fontSize: '12px' }}>{brand.name}</th>
+                                        <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#BE185D', borderBottom: '2px solid rgba(190,24,93,0.2)', fontSize: '12px' }}>{brand.name}</th>
                                         <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>Indeed</th>
                                         <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>LinkedIn</th>
                                     </tr>
@@ -286,7 +286,7 @@ export default function PricingPage() {
                                 <tbody>
                                     {comparisonRows.map((row, i) => {
                                         const renderCell = (val: true | false | 'partial', isUs: boolean) => {
-                                            if (val === true) return <Check size={16} style={{ color: isUs ? '#0D9488' : '#94A3B8', display: 'block', margin: '0 auto' }} />;
+                                            if (val === true) return <Check size={16} style={{ color: isUs ? '#BE185D' : '#94A3B8', display: 'block', margin: '0 auto' }} />;
                                             if (val === 'partial') return <span style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 600 }}>Partial</span>;
                                             return <X size={16} style={{ color: '#D1D5DB', display: 'block', margin: '0 auto' }} />;
                                         };
@@ -296,7 +296,7 @@ export default function PricingPage() {
                                                     <span style={{ color: '#1A2E35', fontWeight: 500 }}>{row.feature}</span>
                                                     {row.note && <span style={{ display: 'block', fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>{row.note}</span>}
                                                 </td>
-                                                <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)', background: 'rgba(13,148,136,0.03)' }}>
+                                                <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)', background: 'rgba(190,24,93,0.03)' }}>
                                                     {renderCell(row.us, true)}
                                                 </td>
                                                 <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
@@ -318,7 +318,7 @@ export default function PricingPage() {
                             display: 'flex', flexDirection: 'column',
                         }}>
                             <div style={{
-                                background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
+                                background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
                                 padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
                                 <Image
@@ -334,7 +334,7 @@ export default function PricingPage() {
                                     color: '#1A2E35', margin: '0 0 10px',
                                 }}>
                                     Ready to Hire Your{' '}
-                                    <span style={{ color: '#0D9488' }}>Next {brand.niche.short}</span>?
+                                    <span style={{ color: '#BE185D' }}>Next {brand.niche.short}</span>?
                                 </h3>
                                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px' }}>
                                     First post free — all features included. Then just ${config.postingPrice}/post.
@@ -342,9 +342,9 @@ export default function PricingPage() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     <Link href="/post-job" className="emp-cta-primary" style={{
                                         padding: '12px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px',
-                                        background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
+                                        background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                                         textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                                        boxShadow: '4px 4px 12px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                                        boxShadow: '4px 4px 12px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
                                     }}>
                                         Post a Job — First Post Free <ArrowRight size={15} />
                                     </Link>
@@ -370,7 +370,7 @@ export default function PricingPage() {
                 ═══════════════════════════════════════════════════════════════ */}
             <section style={{ padding: '80px 16px', background: '#FFF' }}>
                 <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
                         Common Questions
                     </p>
                     <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '32px' }}>Frequently Asked Questions</h2>
@@ -382,7 +382,7 @@ export default function PricingPage() {
                                     display: 'flex', alignItems: 'center', gap: '12px',
                                     fontSize: '15px', fontWeight: 600, color: '#1A2E35', listStyle: 'none',
                                 }}>
-                                    <div style={{ ...clayIconWrap('linear-gradient(145deg, #0D9488, #10B981)') }}>
+                                    <div style={{ ...clayIconWrap('linear-gradient(145deg, #BE185D, #9D174D)') }}>
                                         <HelpCircle size={14} color="#fff" />
                                     </div>
                                     {q}
@@ -401,7 +401,7 @@ export default function PricingPage() {
                 }
                 .emp-cta-primary:hover {
                     transform: translateY(-3px);
-                    box-shadow: 0 10px 32px rgba(13,148,136,0.35), inset 1px 1px 2px rgba(255,255,255,0.2) !important;
+                    box-shadow: 0 10px 32px rgba(190,24,93,0.35), inset 1px 1px 2px rgba(255,255,255,0.2) !important;
                     filter: brightness(1.05);
                 }
                 .emp-cta-secondary {
@@ -410,7 +410,7 @@ export default function PricingPage() {
                 .emp-cta-secondary:hover {
                     transform: translateY(-2px);
                     box-shadow: 0 6px 20px rgba(0,0,0,0.08) !important;
-                    border-color: rgba(13,148,136,0.3) !important;
+                    border-color: rgba(190,24,93,0.3) !important;
                 }
                 .emp-bento-card {
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -423,7 +423,7 @@ export default function PricingPage() {
                     transition: background 0.2s ease;
                 }
                 .emp-compare-table tbody tr:hover {
-                    background: rgba(13,148,136,0.04) !important;
+                    background: rgba(190,24,93,0.04) !important;
                 }
 
                 @media (max-width: 768px) {

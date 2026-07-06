@@ -171,16 +171,16 @@ export default function AdminUsersPage() {
 
     const tabStyle = (active: boolean): React.CSSProperties => ({
         padding: '10px 20px', fontSize: '14px', fontWeight: active ? 600 : 400,
-        color: active ? '#0D9488' : '#6B7F8A',
-        backgroundColor: active ? 'rgba(45,212,191,0.1)' : 'transparent',
-        border: 'none', borderBottom: active ? '2px solid #0D9488' : '2px solid transparent',
+        color: active ? '#BE185D' : '#6B7F8A',
+        backgroundColor: active ? 'rgba(244,114,182,0.1)' : 'transparent',
+        border: 'none', borderBottom: active ? '2px solid #BE185D' : '2px solid transparent',
         cursor: 'pointer', transition: 'all 0.2s',
     });
 
     if (loading) {
         return (
             <div style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 16px', textAlign: 'center' }}>
-                <div style={{ width: 48, height: 48, border: '3px solid #E8ECF0', borderTop: '3px solid #0D9488', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.8s linear infinite' }} />
+                <div style={{ width: 48, height: 48, border: '3px solid #E8ECF0', borderTop: '3px solid #BE185D', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.8s linear infinite' }} />
                 <p style={{ ...sub, marginTop: 16 }}>Loading users…</p>
             </div>
         );
@@ -207,7 +207,7 @@ export default function AdminUsersPage() {
             {summary && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4" style={{ marginBottom: 24 }}>
                     {[
-                        { icon: <Users size={18} />, label: 'Total Users', value: summary.totalUsers, color: '#0D9488' },
+                        { icon: <Users size={18} />, label: 'Total Users', value: summary.totalUsers, color: '#BE185D' },
                         { icon: <Briefcase size={18} />, label: 'Job Seekers', value: summary.jobSeekers, color: '#3B82F6' },
                         { icon: <UserCheck size={18} />, label: 'Employers', value: summary.employers, color: '#A855F7' },
                         { icon: <Mail size={18} />, label: 'Subscribers', value: summary.activeSubscribers, color: '#22C55E' },
@@ -384,7 +384,7 @@ export default function AdminUsersPage() {
                                 {filteredEmps.map(lead => (
                                     <tr key={lead.id}>
                                         <td style={{ ...td, fontWeight: 600, color: '#1A2E35' }}>
-                                            {lead.website ? <a href={lead.website} target="_blank" rel="noopener noreferrer" style={{ color: '#0D9488', textDecoration: 'none' }}>{lead.companyName}</a> : lead.companyName}
+                                            {lead.website ? <a href={lead.website} target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'none' }}>{lead.companyName}</a> : lead.companyName}
                                         </td>
                                         <td style={td}>{lead.contactName || '—'}</td>
                                         <td style={td}>{lead.contactEmail || '—'}</td>

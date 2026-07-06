@@ -363,7 +363,7 @@ export default function CertificationsSection({ showMsg }: Props) {
                                 justifyContent: 'center',
                                 padding: '12px',
                                 color: clayPalette.accentLight,
-                                borderColor: 'rgba(45,212,191,0.4)',
+                                borderColor: 'rgba(244,114,182,0.4)',
                             }}
                         >
                             <Plus size={16} /> Add Certification

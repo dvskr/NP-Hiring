@@ -94,7 +94,7 @@ export default async function CompaniesIndexPage() {
         {/* Hero */}
         <section
           style={{
-            background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
+            background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
             padding: '64px 24px 48px',
             textAlign: 'center',
           }}
@@ -103,7 +103,7 @@ export default async function CompaniesIndexPage() {
             style={{
               fontSize: '13px',
               fontWeight: 600,
-              color: '#0D9488',
+              color: '#BE185D',
               textTransform: 'uppercase',
               letterSpacing: '0.15em',
               marginBottom: '8px',
@@ -212,7 +212,7 @@ export default async function CompaniesIndexPage() {
                         color: '#fff',
                         background: company.logoUrl
                           ? `url(${company.logoUrl}) center/cover no-repeat`
-                          : 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                          : 'linear-gradient(135deg, #F472B6, #BE185D)',
                         boxShadow:
                           'inset 2px 2px 4px rgba(255,255,255,0.3), inset -1px -1px 3px rgba(0,0,0,0.08)',
                       }}
@@ -255,7 +255,7 @@ export default async function CompaniesIndexPage() {
                         style={{
                           fontSize: '13px',
                           fontWeight: 600,
-                          color: '#0D9488',
+                          color: '#BE185D',
                         }}
                       >
                         {activeJobs} open {activeJobs === 1 ? 'position' : 'positions'}
@@ -276,12 +276,12 @@ export default async function CompaniesIndexPage() {
                 borderRadius: '16px',
                 fontWeight: 700,
                 fontSize: '15px',
-                background: 'linear-gradient(145deg, #0D9488, #0F766E)',
+                background: 'linear-gradient(145deg, #BE185D, #9D174D)',
                 color: '#fff',
                 textDecoration: 'none',
                 display: 'inline-block',
                 boxShadow:
-                  '4px 4px 12px rgba(13,148,136,0.25), -2px -2px 6px rgba(255,255,255,0.3)',
+                  '4px 4px 12px rgba(190,24,93,0.25), -2px -2px 6px rgba(255,255,255,0.3)',
               }}
             >
               Browse All {brand.niche.short} Jobs

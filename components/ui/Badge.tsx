@@ -51,9 +51,9 @@ const Badge: React.FC<BadgeProps> = ({
     salary: {
       fontWeight: 700,
       fontSize: size === 'sm' ? '13px' : '14px',
-      backgroundColor: '#B2F5EA',
-      color: '#0F766E',
-      boxShadow: clayShadow('rgba(13,148,136,0.12)'),
+      backgroundColor: '#FBCFE8',
+      color: '#9D174D',
+      boxShadow: clayShadow('rgba(190,24,93,0.12)'),
     },
     primary: {
       fontWeight: 600,

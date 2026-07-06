@@ -140,10 +140,10 @@ const clayPill: React.CSSProperties = {
 
 const clayPillActive: React.CSSProperties = {
   ...clayPill,
-  background: 'linear-gradient(145deg, #0D9488, #10B981)',
+  background: 'linear-gradient(145deg, #BE185D, #9D174D)',
   color: '#fff',
   border: '1px solid rgba(255,255,255,0.3)',
-  boxShadow: '3px 3px 8px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+  boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
 };
 
 const fieldLabel: React.CSSProperties = {
@@ -195,14 +195,14 @@ function EditStepProgressBar({ currentStep, onStepClick, completedSteps }: {
                 display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '8px 12px', borderRadius: '12px',
                 background: isActive
-                  ? 'linear-gradient(145deg, #0D9488, #10B981)'
+                  ? 'linear-gradient(145deg, #BE185D, #9D174D)'
                   : isCompleted ? '#D1FAE5' : '#F5F6F8',
                 color: isActive ? '#fff' : isCompleted ? '#059669' : '#8A9BA6',
                 border: 'none',
                 cursor: isClickable ? 'pointer' : 'default',
                 fontSize: '12px', fontWeight: 600,
                 boxShadow: isActive
-                  ? '3px 3px 8px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)'
+                  ? '3px 3px 8px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)'
                   : 'inset 1px 1px 2px rgba(0,0,0,0.03)',
                 transition: 'all 0.25s ease',
                 whiteSpace: 'nowrap',
@@ -514,7 +514,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
         <div className="max-w-3xl mx-auto px-4 py-8">
           <div className="flex items-center justify-center py-12">
             <div className="flex items-center gap-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
               <p className="text-gray-600">Loading job details...</p>
             </div>
           </div>
@@ -549,11 +549,11 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
       {updateSuccess && (
         <div style={{
           ...cardBase, padding: '14px 18px', marginBottom: '20px',
-          background: '#F0FDFA', border: '1px solid rgba(13,148,136,0.18)',
+          background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.18)',
           display: 'flex', alignItems: 'center', gap: '10px',
         }}>
-          <CheckCircle size={18} style={{ color: '#0D9488' }} />
-          <p style={{ fontSize: '13px', color: '#115E59', fontWeight: 600, margin: 0 }}>Job updated successfully!</p>
+          <CheckCircle size={18} style={{ color: '#BE185D' }} />
+          <p style={{ fontSize: '13px', color: '#831843', fontWeight: 600, margin: 0 }}>Job updated successfully!</p>
         </div>
       )}
 
@@ -608,9 +608,9 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                   disabled={renewingTier !== null}
                   style={{
                     ...clayBtn,
-                    background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
+                    background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                     border: 'none',
-                    boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+                    boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
                     opacity: renewingTier ? 0.6 : 1,
                   }}
                 >
@@ -879,15 +879,15 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                   {/* External */}
                   <label style={{
                     ...cardBase, padding: '14px 16px', cursor: 'pointer',
-                    border: !applyOnPlatform ? '2px solid #0D9488' : '1px solid rgba(0,0,0,0.06)',
-                    background: !applyOnPlatform ? '#F0FDFA' : '#fff',
+                    border: !applyOnPlatform ? '2px solid #BE185D' : '1px solid rgba(0,0,0,0.06)',
+                    background: !applyOnPlatform ? '#FDF2F8' : '#fff',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                       <input
                         type="radio"
                         checked={!applyOnPlatform}
                         onChange={() => { setValue('applyOnPlatform', false); setIsApplyOnPlatform(false); }}
-                        style={{ marginTop: '3px', accentColor: '#0D9488', width: '16px', height: '16px' }}
+                        style={{ marginTop: '3px', accentColor: '#BE185D', width: '16px', height: '16px' }}
                       />
                       <div>
                         <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>External Application URL</span>
@@ -899,22 +899,22 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                   {/* Platform */}
                   <label style={{
                     ...cardBase, padding: '14px 16px', cursor: 'pointer',
-                    border: applyOnPlatform ? '2px solid #0D9488' : '1px solid rgba(0,0,0,0.06)',
-                    background: applyOnPlatform ? '#F0FDFA' : '#fff',
+                    border: applyOnPlatform ? '2px solid #BE185D' : '1px solid rgba(0,0,0,0.06)',
+                    background: applyOnPlatform ? '#FDF2F8' : '#fff',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                       <input
                         type="radio"
                         checked={applyOnPlatform === true}
                         onChange={() => { setValue('applyOnPlatform', true); setValue('applyUrl', ''); setIsApplyOnPlatform(true); }}
-                        style={{ marginTop: '3px', accentColor: '#0D9488', width: '16px', height: '16px' }}
+                        style={{ marginTop: '3px', accentColor: '#BE185D', width: '16px', height: '16px' }}
                       />
                       <div>
                         <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on {brand.name}</span>
                         <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly — applications arrive in your dashboard</p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
                           {['Resume', 'Cover letter', 'Email alerts'].map(f => (
-                            <span key={f} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '8px', background: '#CCFBF1', color: '#0D9488', fontWeight: 500 }}>✓ {f}</span>
+                            <span key={f} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '8px', background: '#FCE7F3', color: '#BE185D', fontWeight: 500 }}>✓ {f}</span>
                           ))}
                         </div>
                       </div>
@@ -1042,9 +1042,9 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 onClick={handleNext}
                 style={{
                   ...clayBtn,
-                  background: 'linear-gradient(145deg, #10B981, #0D9488)', color: '#fff',
+                  background: 'linear-gradient(145deg, #9D174D, #BE185D)', color: '#fff',
                   border: 'none', padding: '12px 24px',
-                  boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+                  boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
                 }}
               >
                 Continue <ChevronRight size={16} />
@@ -1055,9 +1055,9 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 disabled={isSubmitting}
                 style={{
                   ...clayBtn,
-                  background: 'linear-gradient(145deg, #10B981, #0D9488)', color: '#fff',
+                  background: 'linear-gradient(145deg, #9D174D, #BE185D)', color: '#fff',
                   border: 'none', padding: '12px 28px',
-                  boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+                  boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
                   opacity: isSubmitting ? 0.6 : 1,
                   cursor: isSubmitting ? 'not-allowed' : 'pointer',
                 }}
@@ -1153,9 +1153,9 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <a href="/post-job" style={{
                 ...clayBtn, justifyContent: 'center',
-                background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
+                background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                 border: 'none', padding: '12px 16px', fontWeight: 700,
-                boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+                boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
               }}>
                 Post a New Job — ${config.postingPrice}
               </a>
@@ -1195,14 +1195,14 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
               style={{
                 ...cardBase, padding: '16px 18px', textAlign: 'left', cursor: 'pointer',
                 width: '100%', marginBottom: '14px',
-                border: '1px solid rgba(13,148,136,0.25)',
-                background: 'linear-gradient(145deg, #F0FDFA, #FFFFFF)',
+                border: '1px solid rgba(190,24,93,0.25)',
+                background: 'linear-gradient(145deg, #FDF2F8, #FFFFFF)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#0D9488' }}>Renew Listing</span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#BE185D' }}>Renew Listing</span>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '22px', fontWeight: 800, color: '#0D9488', fontFamily: 'var(--font-lora), Georgia, serif' }}>${config.renewalPrice}</span>
+                  <span style={{ fontSize: '22px', fontWeight: 800, color: '#BE185D', fontFamily: 'var(--font-lora), Georgia, serif' }}>${config.renewalPrice}</span>
                   <p style={{ fontSize: '11px', color: '#6B7F8A', margin: '0', fontWeight: 600 }}>Save {Math.round((1 - config.renewalPrice / config.postingPrice) * 100)}%</p>
                 </div>
               </div>

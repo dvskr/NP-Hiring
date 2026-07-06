@@ -79,7 +79,7 @@ body::-webkit-scrollbar {
    so they keep a visible bar. */
 *:not(html):not(body):not(.scrollbar-hide) {
   scrollbar-width: thin;
-  scrollbar-color: rgba(13, 148, 136, 0.45) transparent;
+  scrollbar-color: rgba(190,24,93, 0.45) transparent;
 }
 
 *:not(html):not(body)::-webkit-scrollbar {
@@ -92,14 +92,14 @@ body::-webkit-scrollbar {
 }
 
 *:not(html):not(body)::-webkit-scrollbar-thumb {
-  background-color: rgba(13, 148, 136, 0.40);
+  background-color: rgba(190,24,93, 0.40);
   border-radius: 8px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
 *:not(html):not(body)::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(13, 148, 136, 0.70);
+  background-color: rgba(190,24,93, 0.70);
 }
 
 *:not(html):not(body)::-webkit-scrollbar-corner {
@@ -148,12 +148,12 @@ html.dark select:-webkit-autofill {
   --font-geist-mono: 'Lora', serif;
 
   /* ══════ COLOR SYSTEM ══════ */
-  /* Primary — Deep Teal (matches all inline styles) */
-  --color-primary: #0D9488;
-  --color-primary-dark: #0F766E;
-  --color-primary-light: #4DB6AC;
-  --color-primary-hover: #0F766E;
-  --salary-color: #0D9488;
+  /* Primary — Deep Berry (matches all inline styles) */
+  --color-primary: #BE185D;
+  --color-primary-dark: #9D174D;
+  --color-primary-light: #DB2777;
+  --color-primary-hover: #9D174D;
+  --salary-color: #BE185D;
 
   /* Accent — Soft Coral for diorama warmth */
   --color-accent: #F8BBD0;
@@ -218,8 +218,8 @@ html.dark select:-webkit-autofill {
   --input-placeholder: #A0AEC0;
 
   /* ══════ SELECTION ══════ */
-  --selection-bg: #D5F3ED;
-  --selection-text: #285550;
+  --selection-bg: #FCE7F3;
+  --selection-text: #500724;
 
   /* ══════ TRANSITIONS ══════ */
   --transition-fast: 150ms ease;
@@ -247,16 +247,16 @@ html.dark select:-webkit-autofill {
      CSS-first config (no @config directive). Components reference these
      utilities — focus:ring-primary-100, bg-primary-50, animate-fade-in-up —
      but they generated no CSS, so the styles silently did nothing. */
-  --color-primary-50: #EEFBF9;
-  --color-primary-100: #D5F3ED;
-  --color-primary-200: #AEE5DB;
-  --color-primary-300: #81D3C5;
-  --color-primary-400: #5FBEAF;
-  --color-primary-500: #4DB6AC;
-  --color-primary-600: #3D9E94;
-  --color-primary-700: #348078;
-  --color-primary-800: #2E6761;
-  --color-primary-900: #285550;
+  --color-primary-50: #FDF2F8;
+  --color-primary-100: #FCE7F3;
+  --color-primary-200: #FBCFE8;
+  --color-primary-300: #F9A8D4;
+  --color-primary-400: #F472B6;
+  --color-primary-500: #DB2777;
+  --color-primary-600: #BE185D;
+  --color-primary-700: #9D174D;
+  --color-primary-800: #831843;
+  --color-primary-900: #500724;
 
   --animate-fade-in: fadeIn 0.3s ease-out;
   --animate-fade-in-up: fadeInUp 0.4s ease-out;
@@ -314,10 +314,10 @@ input[type="checkbox"].clay-check {
 }
 input[type="checkbox"].li-checkbox:checked,
 input[type="checkbox"].clay-check:checked {
-  background: #0D9488 !important;
+  background: #BE185D !important;
   border-color: rgba(0,0,0,0.1) !important;
   box-shadow:
-    2px 2px 4px rgba(13,148,136,0.25),
+    2px 2px 4px rgba(190,24,93,0.25),
     -1px -1px 3px rgba(255,255,255,0.5),
     inset 2px 2px 4px rgba(0,0,0,0.15),
     inset -1px -1px 2px rgba(255,255,255,0.2) !important;
@@ -386,11 +386,11 @@ input[type="checkbox"].clay-check:checked::after {
 /* ══════ GLOBAL CLAY HOVER EFFECTS ══════ */
 .jp-alert-btn:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 7px 7px 16px rgba(13,148,136,0.18), -4px -4px 10px rgba(255,255,255,0.9), inset 2px 2px 5px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03) !important;
+  box-shadow: 7px 7px 16px rgba(190,24,93,0.18), -4px -4px 10px rgba(255,255,255,0.9), inset 2px 2px 5px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03) !important;
 }
 .jp-alert-btn:active {
   transform: translateY(1px) !important;
-  box-shadow: 2px 2px 5px rgba(13,148,136,0.10), inset 3px 3px 6px rgba(0,0,0,0.06), inset -2px -2px 4px rgba(255,255,255,0.3) !important;
+  box-shadow: 2px 2px 5px rgba(190,24,93,0.10), inset 3px 3px 6px rgba(0,0,0,0.06), inset -2px -2px 4px rgba(255,255,255,0.3) !important;
 }
 .jp-mobile-filter-btn:hover {
   transform: translateY(-2px) !important;
@@ -405,11 +405,11 @@ input[type="checkbox"].clay-check:checked::after {
 }
 .apply-btn:hover {
   transform: translateY(-3px) !important;
-  box-shadow: 8px 8px 20px rgba(13,148,136,0.35), -4px -4px 12px rgba(255,255,255,0.25), inset 2px 2px 5px rgba(255,255,255,0.3), inset -1px -1px 2px rgba(0,0,0,0.08) !important;
+  box-shadow: 8px 8px 20px rgba(190,24,93,0.35), -4px -4px 12px rgba(255,255,255,0.25), inset 2px 2px 5px rgba(255,255,255,0.3), inset -1px -1px 2px rgba(0,0,0,0.08) !important;
 }
 .apply-btn:active {
   transform: translateY(1px) !important;
-  box-shadow: 2px 2px 6px rgba(13,148,136,0.2), inset 3px 3px 6px rgba(0,0,0,0.12), inset -2px -2px 4px rgba(255,255,255,0.15) !important;
+  box-shadow: 2px 2px 6px rgba(190,24,93,0.2), inset 3px 3px 6px rgba(0,0,0,0.12), inset -2px -2px 4px rgba(255,255,255,0.15) !important;
 }
 
 /* Apply antialiasing to all text elements */
@@ -474,13 +474,13 @@ input[type="checkbox"].clay-check:checked::after {
   text-decoration: none;
 }
 .btn-primary {
-  background: #0D9488;
+  background: #BE185D;
   color: #FFFFFF;
-  box-shadow: 3px 3px 8px rgba(13,148,136,0.2), -1px -1px 4px rgba(255,255,255,0.1), inset 1px 1px 2px rgba(255,255,255,0.15);
+  box-shadow: 3px 3px 8px rgba(190,24,93,0.2), -1px -1px 4px rgba(255,255,255,0.1), inset 1px 1px 2px rgba(255,255,255,0.15);
 }
 .btn-primary:hover {
-  background: #0F766E;
-  box-shadow: 4px 4px 12px rgba(13,148,136,0.25), -2px -2px 6px rgba(255,255,255,0.15), inset 1px 1px 3px rgba(255,255,255,0.2);
+  background: #9D174D;
+  box-shadow: 4px 4px 12px rgba(190,24,93,0.25), -2px -2px 6px rgba(255,255,255,0.15), inset 1px 1px 3px rgba(255,255,255,0.2);
   transform: translateY(-1px);
 }
 .btn-secondary {
@@ -489,7 +489,7 @@ input[type="checkbox"].clay-check:checked::after {
   box-shadow: 3px 3px 6px rgba(0,0,0,0.04), -1px -1px 4px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.6);
 }
 .btn-secondary:hover {
-  color: #0D9488;
+  color: #BE185D;
   box-shadow: 4px 4px 8px rgba(0,0,0,0.06), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.5);
   transform: translateY(-1px);
 }
@@ -524,7 +524,7 @@ input[type="checkbox"].clay-check:checked::after {
    hero/filter search inputs. */
 *:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--bg-primary, #fff), 0 0 0 4px var(--color-primary, #0D9488);
+  box-shadow: 0 0 0 2px var(--bg-primary, #fff), 0 0 0 4px var(--color-primary, #BE185D);
 }
 /* Hero search inputs: strip inherited styles but keep text-align: left.
    NOTE: `:focus` and `:focus-visible` selectors removed from this rule
@@ -549,7 +549,7 @@ input[type="checkbox"].clay-check:checked::after {
    the rounded clay search-bar without breaking layout. */
 .hero-search-input:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(190,24,93, 0.45) !important;
   border-radius: 6px !important;
 }
 
@@ -920,7 +920,7 @@ footer {
 }
 .prose a {
   color: var(--color-primary);
-  text-decoration-color: rgba(13, 148, 136, 0.3);
+  text-decoration-color: rgba(190,24,93, 0.3);
   text-underline-offset: 3px;
   transition: text-decoration-color var(--transition-fast);
 }
@@ -968,8 +968,8 @@ select {
 input:focus:not(.hero-search-input),
 textarea:focus,
 select:focus {
-  border-color: #0D9488;
-  box-shadow: inset 1px 1px 2px rgba(255,255,255,0.6), 0 0 0 3px rgba(13, 148, 136, 0.1);
+  border-color: #BE185D;
+  box-shadow: inset 1px 1px 2px rgba(255,255,255,0.6), 0 0 0 3px rgba(190,24,93, 0.1);
   outline: none;
 }
 input:not(.hero-search-input)::placeholder,
@@ -1023,7 +1023,7 @@ textarea::placeholder {
   }
 }
 
-/* ══════ CARD HOVER — Lift + teal border accent ══════ */
+/* ══════ CARD HOVER — Lift + berry border accent ══════ */
 .card-hover {
   background: #F7FBF8;
   border: 1px solid rgba(0,0,0,0.06);
@@ -1050,18 +1050,18 @@ textarea::placeholder {
   transition: all 0.2s ease;
   border: 1px solid rgba(0,0,0,0.08);
   text-decoration: none;
-  background: #0D9488;
+  background: #BE185D;
   color: #FFFFFF;
-  box-shadow: 4px 4px 10px rgba(13,148,136,0.25), -2px -2px 6px rgba(255,255,255,0.15), inset 1px 1px 2px rgba(255,255,255,0.2);
+  box-shadow: 4px 4px 10px rgba(190,24,93,0.25), -2px -2px 6px rgba(255,255,255,0.15), inset 1px 1px 2px rgba(255,255,255,0.2);
 }
 .btn-primary-lg:hover {
-  background: #0F766E;
-  box-shadow: 6px 6px 14px rgba(13,148,136,0.3), -3px -3px 8px rgba(255,255,255,0.2), inset 1px 1px 3px rgba(255,255,255,0.25);
+  background: #9D174D;
+  box-shadow: 6px 6px 14px rgba(190,24,93,0.3), -3px -3px 8px rgba(255,255,255,0.2), inset 1px 1px 3px rgba(255,255,255,0.25);
   transform: translateY(-2px);
 }
 .btn-primary-lg:active {
   transform: translateY(0);
-  box-shadow: 2px 2px 6px rgba(13,148,136,0.2), inset 2px 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 2px 2px 6px rgba(190,24,93,0.2), inset 2px 2px 4px rgba(0,0,0,0.1);
 }
 
 .btn-ghost-lg {
@@ -1082,7 +1082,7 @@ textarea::placeholder {
   box-shadow: 3px 3px 6px rgba(0,0,0,0.04), -1px -1px 4px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.6);
 }
 .btn-ghost-lg:hover {
-  color: #0D9488;
+  color: #BE185D;
   box-shadow: 4px 4px 8px rgba(0,0,0,0.06), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.5);
   transform: translateY(-1px);
 }
@@ -1102,8 +1102,8 @@ textarea::placeholder {
   box-shadow: 1px 1px 3px rgba(0,0,0,0.03), inset 1px 1px 2px rgba(255,255,255,0.5);
 }
 .badge-teal {
-  background: #CCFBF1;
-  color: #0F766E;
+  background: #FCE7F3;
+  color: #9D174D;
 }
 .badge-peach {
   background: #FFEDD5;
@@ -1206,7 +1206,7 @@ textarea::placeholder {
 .input-float-group textarea:focus,
 .input-float-group select:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+  box-shadow: 0 0 0 3px rgba(190,24,93, 0.12);
 }
 .input-float-group label {
   position: absolute;
@@ -1254,7 +1254,7 @@ textarea::placeholder {
 
 /* ══════ GRADIENT OVERLAYS ══════ */
 .gradient-teal {
-  background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%);
+  background: linear-gradient(135deg, #BE185D 0%, #9D174D 100%);
 }
 .gradient-warm {
   background: linear-gradient(135deg, #FDFBF7 0%, #F5D5C4 50%, #FDFBF7 100%);
@@ -1302,12 +1302,12 @@ textarea::placeholder {
 .auth-clay input[type="email"]:focus,
 .auth-clay input[type="password"]:focus,
 .auth-clay input[type="tel"]:focus {
-  border-color: #0D9488 !important;
+  border-color: #BE185D !important;
   background: #E8F5F0 !important;
   box-shadow:
     inset 3px 3px 6px rgba(0, 40, 30, 0.08),
     inset -2px -2px 4px rgba(255, 255, 255, 0.85),
-    0 0 0 4px rgba(13, 148, 136, 0.12) !important;
+    0 0 0 4px rgba(190,24,93, 0.12) !important;
   outline: none !important;
 }
 
@@ -1321,10 +1321,10 @@ textarea::placeholder {
 
 /* ── Primary buttons: raised puffy clay ── */
 .auth-clay button[type="submit"] {
-  background: linear-gradient(145deg, #10B981, #0D9488) !important;
+  background: linear-gradient(145deg, #9D174D, #BE185D) !important;
   border-radius: 14px !important;
   box-shadow:
-    6px 6px 16px rgba(13, 148, 136, 0.3),
+    6px 6px 16px rgba(190,24,93, 0.3),
     -3px -3px 8px rgba(255, 255, 255, 0.15),
     inset 0 2px 2px rgba(255, 255, 255, 0.25),
     inset 0 -1px 1px rgba(0, 0, 0, 0.1) !important;
@@ -1337,7 +1337,7 @@ textarea::placeholder {
 
 .auth-clay button[type="submit"]:hover:not(:disabled) {
   box-shadow:
-    4px 4px 12px rgba(13, 148, 136, 0.35),
+    4px 4px 12px rgba(190,24,93, 0.35),
     -2px -2px 6px rgba(255, 255, 255, 0.1),
     inset 0 2px 2px rgba(255, 255, 255, 0.25),
     inset 0 -1px 1px rgba(0, 0, 0, 0.1) !important;
@@ -1392,7 +1392,7 @@ textarea::placeholder {
 
 /* ── Checkboxes ── */
 .auth-clay input[type="checkbox"] {
-  accent-color: #0D9488 !important;
+  accent-color: #BE185D !important;
   width: 18px !important;
   height: 18px !important;
   border-radius: 5px !important;
@@ -1435,13 +1435,13 @@ textarea::placeholder {
 
 /* ── Links within auth ── */
 .auth-clay a {
-  color: #0D9488;
+  color: #BE185D;
   font-weight: 600;
   transition: color 0.15s ease;
 }
 
 .auth-clay a:hover {
-  color: #0F766E;
+  color: #9D174D;
 }
 
 /* ═════════════════════════════════════════════════════
@@ -1454,10 +1454,10 @@ textarea::placeholder {
 }
 .clay-action-pill:hover {
   transform: translateY(-2px) !important;
-  background: #E6FAF8 !important;
-  color: #0D9488 !important;
+  background: #FDF2F8 !important;
+  color: #BE185D !important;
   box-shadow:
-    5px 5px 14px rgba(13, 148, 136, 0.12),
+    5px 5px 14px rgba(190,24,93, 0.12),
     -3px -3px 8px rgba(255, 255, 255, 0.8),
     inset 2px 2px 4px rgba(255, 255, 255, 0.7),
     inset -1px -1px 2px rgba(0, 0, 0, 0.03) !important;
@@ -1496,19 +1496,19 @@ textarea::placeholder {
 }
 .pseo-cta-primary:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 4px 4px 12px rgba(13, 148, 136, 0.3), -2px -2px 6px rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 4px 4px 12px rgba(190,24,93, 0.3), -2px -2px 6px rgba(255, 255, 255, 0.2) !important;
 }
 
 /* ══════ FOCUS-VISIBLE FOR INLINE-STYLED ICON BUTTONS ══════
    Many icon buttons across the app set inline `outline: none` for the
    pressed look. That removes the keyboard focus ring entirely, so we
-   restore a visible 2px teal ring on `:focus-visible` (keyboard / switch
+   restore a visible 2px berry ring on `:focus-visible` (keyboard / switch
    navigation) without re-introducing the click outline that designers
    typically dislike. WCAG 2.4.7 + 2.4.11. */
 .jc-icon-btn:focus-visible,
 .icon-btn:focus-visible,
 [data-icon-btn]:focus-visible {
-  outline: 2px solid var(--color-primary, #0D9488);
+  outline: 2px solid var(--color-primary, #BE185D);
   outline-offset: 2px;
 }
 

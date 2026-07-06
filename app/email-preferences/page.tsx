@@ -174,7 +174,7 @@ function EmailPreferencesContent() {
     return (
       <div className="min-h-[60vh] flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading your preferences...</p>
         </div>
       </div>
@@ -194,7 +194,7 @@ function EmailPreferencesContent() {
           <div className="space-y-3">
             <Link
               href="/#subscribe"
-              className="block w-full bg-teal-500 text-white py-3 rounded-lg font-semibold hover:bg-teal-600 transition-colors"
+              className="block w-full bg-pink-600 text-white py-3 rounded-lg font-semibold hover:bg-pink-700 transition-colors"
             >
               Sign Up for Alerts
             </Link>
@@ -216,7 +216,7 @@ function EmailPreferencesContent() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <Mail className="w-12 h-12 text-teal-500 mx-auto mb-4" />
+          <Mail className="w-12 h-12 text-pink-600 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900">Email Preferences</h1>
           <p className="text-gray-500 text-sm mt-2">{preferences?.email}</p>
         </div>
@@ -256,7 +256,7 @@ function EmailPreferencesContent() {
                   disabled={updating}
                   className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${preferences?.isSubscribed
                       ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      : 'bg-teal-500 text-white hover:bg-teal-600'
+                      : 'bg-pink-600 text-white hover:bg-pink-700'
                     }`}
                 >
                   {preferences?.isSubscribed ? 'Unsubscribe' : 'Subscribe'}
@@ -283,7 +283,7 @@ function EmailPreferencesContent() {
                   disabled={updating}
                   className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${preferences?.newsletterOptIn
                       ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      : 'bg-teal-500 text-white hover:bg-teal-600'
+                      : 'bg-pink-600 text-white hover:bg-pink-700'
                     }`}
                 >
                   {preferences?.newsletterOptIn ? 'Unsubscribe' : 'Subscribe'}
@@ -310,7 +310,7 @@ function EmailPreferencesContent() {
                   disabled={updating}
                   className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${(preferences?.preferences?.profileNudge ?? true)
                       ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      : 'bg-teal-500 text-white hover:bg-teal-600'
+                      : 'bg-pink-600 text-white hover:bg-pink-700'
                     }`}
                 >
                   {(preferences?.preferences?.profileNudge ?? true) ? 'Unsubscribe' : 'Subscribe'}
@@ -337,7 +337,7 @@ function EmailPreferencesContent() {
                   disabled={updating}
                   className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${(preferences?.preferences?.savedJobReminder ?? true)
                       ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      : 'bg-teal-500 text-white hover:bg-teal-600'
+                      : 'bg-pink-600 text-white hover:bg-pink-700'
                     }`}
                 >
                   {(preferences?.preferences?.savedJobReminder ?? true) ? 'Unsubscribe' : 'Subscribe'}
@@ -362,7 +362,7 @@ function EmailPreferencesContent() {
         <div className="text-center mt-6">
           <Link
             href="/jobs"
-            className="text-teal-500 hover:text-teal-600 text-sm transition-colors"
+            className="text-pink-600 hover:text-pink-700 text-sm transition-colors"
           >
             Browse Jobs →
           </Link>
@@ -376,7 +376,7 @@ function LoadingFallback() {
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-500 mx-auto mb-4"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-600 mx-auto mb-4"></div>
         <p className="text-gray-600">Loading your preferences...</p>
       </div>
     </div>

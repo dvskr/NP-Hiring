@@ -159,7 +159,7 @@ export default function WorkExperienceSection({ showMsg }: Props) {
                 <button key={String(v)} type="button" onClick={() => onChange(v)} style={{
                     padding: '6px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s',
                     border: current === v ? `1.5px solid ${clayPalette.accentLight}` : `1.5px solid ${clayPalette.border}`,
-                    background: current === v ? 'rgba(45,212,191,0.12)' : clayPalette.inputFill,
+                    background: current === v ? 'rgba(244,114,182,0.12)' : clayPalette.inputFill,
                     color: current === v ? clayPalette.accentLight : clayPalette.textSecondary,
                 }}>{labels[i]}</button>
             ))}
@@ -244,7 +244,7 @@ export default function WorkExperienceSection({ showMsg }: Props) {
                     <div aria-hidden="true" style={{
                         width: '18px', height: '18px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         border: form.isCurrent ? `1.5px solid ${clayPalette.accentLight}` : `1.5px solid ${clayPalette.border}`,
-                        background: form.isCurrent ? 'rgba(45,212,191,0.12)' : clayPalette.inputFill,
+                        background: form.isCurrent ? 'rgba(244,114,182,0.12)' : clayPalette.inputFill,
                     }}>
                         {form.isCurrent && <Check size={12} style={{ color: clayPalette.accentLight }} />}
                     </div>
@@ -302,7 +302,7 @@ export default function WorkExperienceSection({ showMsg }: Props) {
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                                     <span style={{ fontWeight: 700, fontSize: '14px', color: clayPalette.textPrimary }}>{w.jobTitle}</span>
-                                                    {w.isCurrent && <span style={{ padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 600, background: 'rgba(45,212,191,0.12)', color: clayPalette.accentLight }}>Current</span>}
+                                                    {w.isCurrent && <span style={{ padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 600, background: 'rgba(244,114,182,0.12)', color: clayPalette.accentLight }}>Current</span>}
                                                 </div>
                                                 <div style={{ fontSize: '13px', color: clayPalette.textSecondary, marginTop: '2px' }}>
                                                     {w.employerName}{w.practiceSetting && <> · {w.practiceSetting}</>} · {fmtDate(w.startDate)} — {w.isCurrent ? 'Present' : fmtDate(w.endDate)}
@@ -348,7 +348,7 @@ export default function WorkExperienceSection({ showMsg }: Props) {
 
                     {!showForm && (
                         <button onClick={() => { setForm({ ...emptyForm }); setEditingId(null); setShowForm(true) }}
-                            style={{ ...btnOutline, borderStyle: 'dashed', width: '100%', justifyContent: 'center', padding: '12px', color: clayPalette.accentLight, borderColor: 'rgba(45,212,191,0.4)' }}>
+                            style={{ ...btnOutline, borderStyle: 'dashed', width: '100%', justifyContent: 'center', padding: '12px', color: clayPalette.accentLight, borderColor: 'rgba(244,114,182,0.4)' }}>
                             <Plus size={16} /> Add Work Experience
                         </button>
                     )}

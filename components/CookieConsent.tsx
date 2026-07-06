@@ -168,11 +168,11 @@ export default function CookieConsent({ initialConsent }: Props) {
                 {/* ─── Top row: message + collapsed actions ─── */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div className="flex items-center gap-3 text-sm" style={{ color: '#5A4A42' }}>
-                        <Shield size={18} style={{ color: '#0D9488', flexShrink: 0 }} />
+                        <Shield size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                         <p id="cookie-consent-description">
                             We use cookies for analytics and to improve your experience.
                             By continuing, you agree to our{' '}
-                            <a href="/privacy" className="underline" style={{ color: '#0D9488', fontWeight: 600 }}>
+                            <a href="/privacy" className="underline" style={{ color: '#BE185D', fontWeight: 600 }}>
                                 Privacy Policy
                             </a>.
                         </p>
@@ -206,7 +206,7 @@ export default function CookieConsent({ initialConsent }: Props) {
                         <button
                             onClick={acceptAll}
                             className="px-5 py-2 rounded-lg text-sm font-semibold text-white transition-all cursor-pointer"
-                            style={{ background: 'linear-gradient(135deg, #2DD4BF, #0D9488)' }}
+                            style={{ background: 'linear-gradient(135deg, #F472B6, #BE185D)' }}
                         >
                             Accept All
                         </button>
@@ -254,7 +254,7 @@ export default function CookieConsent({ initialConsent }: Props) {
                             <button
                                 onClick={savePreferences}
                                 className="px-5 py-2 rounded-lg text-sm font-semibold text-white transition-all cursor-pointer"
-                                style={{ background: 'linear-gradient(135deg, #2DD4BF, #0D9488)' }}
+                                style={{ background: 'linear-gradient(135deg, #F472B6, #BE185D)' }}
                             >
                                 Save Preferences
                             </button>
@@ -316,7 +316,7 @@ function ConsentToggle({ id, checked, disabled = false, onChange }: ConsentToggl
                 height: 20,
                 borderRadius: 999,
                 border: '1px solid rgba(90,74,66,0.20)',
-                backgroundColor: checked ? '#0D9488' : '#EDE7E0',
+                backgroundColor: checked ? '#BE185D' : '#EDE7E0',
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 opacity: disabled ? 0.6 : 1,
                 position: 'relative',

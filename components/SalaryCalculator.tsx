@@ -86,10 +86,10 @@ export default function SalaryCalculator({ stateSalaries, nationalAvg }: Props) 
   }, [selectedState, experience, setting, specialty, stateSalaries, nationalAvg]);
 
   return (
-    <div style={{ ...clayCard, padding: '0', overflow: 'hidden', border: '2px solid rgba(13,148,136,0.12)' }}>
+    <div style={{ ...clayCard, padding: '0', overflow: 'hidden', border: '2px solid rgba(190,24,93,0.12)' }}>
       {/* Header */}
       <div style={{
-        background: 'linear-gradient(145deg, #0D9488, #10B981)',
+        background: 'linear-gradient(145deg, #BE185D, #9D174D)',
         padding: '20px 28px',
         display: 'flex', alignItems: 'center', gap: '12px',
       }}>
@@ -180,15 +180,15 @@ export default function SalaryCalculator({ stateSalaries, nationalAvg }: Props) 
         </div>
 
         {/* RIGHT: Results */}
-        <div style={{ padding: '28px 28px', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ padding: '28px 28px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           {/* Main number */}
-          <p style={{ fontSize: '11px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 4px' }}>
+          <p style={{ fontSize: '11px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 4px' }}>
             Estimated Annual Salary
           </p>
-          <div style={{ fontSize: '42px', fontWeight: 800, color: '#134E4A', lineHeight: 1, marginBottom: '4px' }}>
+          <div style={{ fontSize: '42px', fontWeight: 800, color: '#831843', lineHeight: 1, marginBottom: '4px' }}>
             {formatSalary(result.estimated)}
           </div>
-          <p style={{ fontSize: '13px', color: '#0D9488', margin: '0 0 20px', fontWeight: 500 }}>
+          <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 20px', fontWeight: 500 }}>
             Range: {formatSalary(result.low)} – {formatSalary(result.high)}
           </p>
 
@@ -196,12 +196,12 @@ export default function SalaryCalculator({ stateSalaries, nationalAvg }: Props) 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px' }}>
               <span style={{ color: '#5A4A42' }}>Base ({result.stateName})</span>
-              <span style={{ fontWeight: 700, color: '#134E4A' }}>{formatSalary(result.baseSalary)}</span>
+              <span style={{ fontWeight: 700, color: '#831843' }}>{formatSalary(result.baseSalary)}</span>
             </div>
             {result.expImpact !== 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px' }}>
                 <span style={{ color: '#5A4A42' }}>Experience</span>
-                <span style={{ fontWeight: 700, color: result.expImpact > 0 ? '#0D9488' : '#EF4444' }}>
+                <span style={{ fontWeight: 700, color: result.expImpact > 0 ? '#BE185D' : '#EF4444' }}>
                   {result.expImpact > 0 ? '+' : ''}{formatSalary(result.expImpact)}
                 </span>
               </div>
@@ -209,7 +209,7 @@ export default function SalaryCalculator({ stateSalaries, nationalAvg }: Props) 
             {result.setImpact !== 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px' }}>
                 <span style={{ color: '#5A4A42' }}>Setting</span>
-                <span style={{ fontWeight: 700, color: result.setImpact > 0 ? '#0D9488' : '#EF4444' }}>
+                <span style={{ fontWeight: 700, color: result.setImpact > 0 ? '#BE185D' : '#EF4444' }}>
                   {result.setImpact > 0 ? '+' : ''}{formatSalary(result.setImpact)}
                 </span>
               </div>
@@ -217,7 +217,7 @@ export default function SalaryCalculator({ stateSalaries, nationalAvg }: Props) 
             {result.specImpact !== 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px' }}>
                 <span style={{ color: '#5A4A42' }}>Specialty</span>
-                <span style={{ fontWeight: 700, color: result.specImpact > 0 ? '#0D9488' : '#EF4444' }}>
+                <span style={{ fontWeight: 700, color: result.specImpact > 0 ? '#BE185D' : '#EF4444' }}>
                   {result.specImpact > 0 ? '+' : ''}{formatSalary(result.specImpact)}
                 </span>
               </div>
@@ -226,11 +226,11 @@ export default function SalaryCalculator({ stateSalaries, nationalAvg }: Props) 
 
           {/* Hourly */}
           <div style={{
-            marginTop: '16px', paddingTop: '14px', borderTop: '1px solid rgba(13,148,136,0.15)',
+            marginTop: '16px', paddingTop: '14px', borderTop: '1px solid rgba(190,24,93,0.15)',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           }}>
             <span style={{ fontSize: '12px', color: '#5A4A42' }}>Hourly equivalent</span>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: '#134E4A' }}>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: '#831843' }}>
               ~{formatSalary(Math.round(result.estimated / 2080))}/hr
             </span>
           </div>
@@ -243,8 +243,8 @@ export default function SalaryCalculator({ stateSalaries, nationalAvg }: Props) 
 
       <style>{`
         .sal-calc-body select:focus {
-          border-color: rgba(13,148,136,0.4) !important;
-          box-shadow: 0 0 0 3px rgba(13,148,136,0.08), inset 2px 2px 4px rgba(0,0,0,0.03) !important;
+          border-color: rgba(190,24,93,0.4) !important;
+          box-shadow: 0 0 0 3px rgba(190,24,93,0.08), inset 2px 2px 4px rgba(0,0,0,0.03) !important;
         }
         @media (max-width: 768px) {
           .sal-calc-body {

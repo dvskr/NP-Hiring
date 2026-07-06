@@ -223,7 +223,7 @@ function renderJobCard(job: RenderedJob, program: string | undefined): string {
   const loc = shortLocationOf(job)
   const mode = displayModeOf(job)
   const featuredBorder = job.isFeatured
-    ? '2px solid #0D9488'
+    ? '2px solid #BE185D'
     : '1px solid rgba(255,255,255,0.5)'
 
   const logo = job.companyLogoUrl
@@ -268,7 +268,7 @@ function renderJobCard(job: RenderedJob, program: string | undefined): string {
       <div class="pd-pills">
         ${salaryBadge}
         <span class="pd-pill pd-pill--outline">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#BE185D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
           ${escape(loc)}
         </span>
         ${job.jobType ? `<span class="pd-pill pd-pill--outline">${escape(job.jobType)}</span>` : ''}
@@ -342,9 +342,9 @@ function renderHtml(args: {
     --pd-card: #F7FBF8;
     --pd-peach: #F0BFB5;
     --pd-peach-soft: #FBE8D8;
-    --pd-teal: #0D9488;
-    --pd-teal-dark: #0F766E;
-    --pd-mint: #B2F5EA;
+    --pd-teal: #BE185D;
+    --pd-teal-dark: #9D174D;
+    --pd-mint: #FBCFE8;
     --pd-outline-bg: #EDF2EE;
     --pd-outline-text: #374151;
     --pd-featured-bg: #FDE68A;
@@ -455,7 +455,7 @@ function renderHtml(args: {
   }
 
   /* "See all in <state>" — clay CTA button (matches site primary
-     button color #0D9488 with the same neumorphic shadow as buttons
+     button color #BE185D with the same neumorphic shadow as buttons
      on /for-employers). */
   .pd-cta {
     display: inline-flex;
@@ -471,7 +471,7 @@ function renderHtml(args: {
     white-space: nowrap;
     border: 1px solid rgba(255,255,255,0.3);
     box-shadow:
-      5px 5px 12px rgba(13,148,136,0.22),
+      5px 5px 12px rgba(190,24,93,0.22),
       -2px -2px 6px rgba(255,255,255,0.4),
       inset 2px 2px 4px rgba(255,255,255,0.2),
       inset -1px -1px 2px rgba(0,0,0,0.06);
@@ -480,7 +480,7 @@ function renderHtml(args: {
   .pd-cta:hover {
     transform: translateY(-1px);
     box-shadow:
-      7px 7px 16px rgba(13,148,136,0.28),
+      7px 7px 16px rgba(190,24,93,0.28),
       -3px -3px 8px rgba(255,255,255,0.5),
       inset 2px 2px 4px rgba(255,255,255,0.25),
       inset -1px -1px 2px rgba(0,0,0,0.06);
@@ -488,7 +488,7 @@ function renderHtml(args: {
   .pd-cta:active {
     transform: translateY(1px);
     box-shadow:
-      2px 2px 5px rgba(13,148,136,0.18),
+      2px 2px 5px rgba(190,24,93,0.18),
       inset 3px 3px 6px rgba(0,0,0,0.12),
       inset -2px -2px 4px rgba(255,255,255,0.15);
   }
@@ -662,12 +662,12 @@ function renderHtml(args: {
       inset -1px -1px 2px rgba(0,0,0,0.03);
   }
   .pd-btn--easy {
-    background: linear-gradient(135deg, #2DD4BF, #0D9488);
+    background: linear-gradient(135deg, #F472B6, #BE185D);
     color: #FFF;
     font-weight: 700;
     border: 1px solid rgba(255,255,255,0.3);
     box-shadow:
-      4px 4px 10px rgba(13,148,136,0.25),
+      4px 4px 10px rgba(190,24,93,0.25),
       -2px -2px 6px rgba(255,255,255,0.3),
       inset 2px 2px 4px rgba(255,255,255,0.25),
       inset -1px -1px 2px rgba(0,0,0,0.08);
@@ -815,7 +815,7 @@ function renderErrorHtml(args: { reason: string }): string {
     margin-left: -6px;
   }
   .pd-brand-mark-accent {
-    font-style: italic; color: #0D9488; font-weight: 600;
+    font-style: italic; color: #BE185D; font-weight: 600;
   }
   .pd-error-card {
     background: #FFFFFF;
@@ -865,13 +865,13 @@ function renderErrorHtml(args: { reason: string }): string {
     gap: 8px;
     padding: 11px 22px;
     border-radius: 14px;
-    background: #0D9488;
+    background: #BE185D;
     color: #FFFFFF;
     font-size: 13.5px;
     font-weight: 700;
     border: 1px solid rgba(255,255,255,0.3);
     box-shadow:
-      5px 5px 12px rgba(13,148,136,0.22),
+      5px 5px 12px rgba(190,24,93,0.22),
       inset 2px 2px 4px rgba(255,255,255,0.2);
   }
   .pd-footer {
@@ -886,7 +886,7 @@ function renderErrorHtml(args: { reason: string }): string {
     color: #1A2E35;
     font-weight: 700;
   }
-  .pd-footer a:hover { color: #0D9488; }
+  .pd-footer a:hover { color: #BE185D; }
 </style>
 </head>
 <body>

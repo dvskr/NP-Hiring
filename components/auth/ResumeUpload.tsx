@@ -349,7 +349,7 @@ export default function ResumeUpload({
     <div style={{ marginTop: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Uploading…</span>
-        <span style={{ fontSize: '12px', fontWeight: 600, color: '#2DD4BF' }}>{progress}%</span>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: '#F472B6' }}>{progress}%</span>
       </div>
       <div style={{
         width: '100%', height: '6px', borderRadius: '3px',
@@ -357,7 +357,7 @@ export default function ResumeUpload({
       }}>
         <div style={{
           width: `${progress}%`, height: '100%', borderRadius: '3px',
-          background: 'linear-gradient(90deg, #2DD4BF, #14B8A6)',
+          background: 'linear-gradient(90deg, #F472B6, #DB2777)',
           transition: 'width 0.3s ease',
         }} />
       </div>
@@ -393,25 +393,25 @@ export default function ResumeUpload({
           onDragLeave={onDragLeave}
           onDrop={onDrop}
           style={{
-            border: `2px dashed ${dragging ? '#2DD4BF' : 'var(--border-color)'}`,
+            border: `2px dashed ${dragging ? '#F472B6' : 'var(--border-color)'}`,
             borderRadius: '14px',
             padding: '36px 24px',
             textAlign: 'center',
             cursor: uploading ? 'default' : 'pointer',
             transition: 'all 0.25s ease',
-            background: dragging ? 'rgba(45,212,191,0.06)' : 'var(--bg-primary)',
+            background: dragging ? 'rgba(244,114,182,0.06)' : 'var(--bg-primary)',
           }}
         >
           {uploading ? (
-            <Loader2 size={40} style={{ color: '#2DD4BF', margin: '0 auto' }} className="animate-spin" />
+            <Loader2 size={40} style={{ color: '#F472B6', margin: '0 auto' }} className="animate-spin" />
           ) : (
             <>
               <div style={{
                 width: '56px', height: '56px', borderRadius: '50%',
-                background: 'rgba(45,212,191,0.12)', margin: '0 auto 14px',
+                background: 'rgba(244,114,182,0.12)', margin: '0 auto 14px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <FileText size={26} style={{ color: '#2DD4BF' }} />
+                <FileText size={26} style={{ color: '#F472B6' }} />
               </div>
               <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
                 Upload Your Resume
@@ -433,7 +433,7 @@ export default function ResumeUpload({
             'Let employers discover your profile',
           ].map((text) => (
             <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-              <CheckCircle size={15} style={{ color: '#2DD4BF', flexShrink: 0 }} />
+              <CheckCircle size={15} style={{ color: '#F472B6', flexShrink: 0 }} />
               {text}
             </div>
           ))}
@@ -474,11 +474,11 @@ export default function ResumeUpload({
         {/* icon */}
         <div style={{
           width: '48px', height: '48px', borderRadius: '12px',
-          background: 'rgba(45,212,191,0.10)',
+          background: 'rgba(244,114,182,0.10)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
         }}>
-          <FileText size={24} style={{ color: '#2DD4BF' }} />
+          <FileText size={24} style={{ color: '#F472B6' }} />
         </div>
 
         {/* name + details */}
@@ -542,7 +542,7 @@ export default function ResumeUpload({
             flex: '1 1 0', minWidth: '120px',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
             padding: '10px 18px', borderRadius: '10px',
-            background: 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
+            background: 'linear-gradient(135deg, #F472B6, #DB2777)',
             color: '#FFFFFF', fontSize: '13px', fontWeight: 600,
             border: 'none', cursor: 'pointer', transition: 'opacity 0.2s',
             opacity: viewing ? 0.6 : 1,

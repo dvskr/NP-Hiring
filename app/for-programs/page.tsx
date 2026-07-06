@@ -135,7 +135,7 @@ export default async function ForProgramsPage() {
               >
                 Help Your {brand.niche.short} Students<br />
                 Land Their{' '}
-                <span style={{ color: '#0D9488' }}>First Role</span>
+                <span style={{ color: '#BE185D' }}>First Role</span>
               </h1>
 
               <p
@@ -170,7 +170,7 @@ export default async function ForProgramsPage() {
                     borderRadius: '16px',
                     fontWeight: 700,
                     fontSize: '15px',
-                    background: '#0D9488',
+                    background: '#BE185D',
                     color: '#fff',
                     textDecoration: 'none',
                     display: 'inline-flex',
@@ -251,7 +251,7 @@ export default async function ForProgramsPage() {
                       fontWeight: 700,
                       letterSpacing: '0.12em',
                       textTransform: 'uppercase',
-                      color: '#0D9488',
+                      color: '#BE185D',
                       marginBottom: '10px',
                     }}
                   >
@@ -297,7 +297,7 @@ export default async function ForProgramsPage() {
                     padding: '18px 18px 16px',
                     transform: 'rotate(4deg)',
                     background:
-                      'linear-gradient(145deg, #F0FDFA 0%, #FFFFFF 70%)',
+                      'linear-gradient(145deg, #FDF2F8 0%, #FFFFFF 70%)',
                   }}
                 >
                   <div
@@ -309,7 +309,7 @@ export default async function ForProgramsPage() {
                       fontWeight: 700,
                       letterSpacing: '0.1em',
                       textTransform: 'uppercase',
-                      color: '#0D9488',
+                      color: '#BE185D',
                       marginBottom: '8px',
                     }}
                   >
@@ -539,7 +539,7 @@ export default async function ForProgramsPage() {
                     width: '52px',
                     height: '52px',
                     borderRadius: '14px',
-                    background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
+                    background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -548,7 +548,7 @@ export default async function ForProgramsPage() {
                       '3px 3px 8px rgba(0,0,0,0.05), inset 1px 1px 2px rgba(255,255,255,0.6)',
                   }}
                 >
-                  <Building2 size={22} color="#0D9488" strokeWidth={2.25} />
+                  <Building2 size={22} color="#BE185D" strokeWidth={2.25} />
                 </div>
                 <h3
                   className="font-lora"
@@ -576,7 +576,7 @@ export default async function ForProgramsPage() {
                 <a
                   href="#demo"
                   style={{
-                    color: '#0D9488',
+                    color: '#BE185D',
                     fontSize: '13px',
                     fontWeight: 700,
                     textDecoration: 'none',
@@ -591,7 +591,7 @@ export default async function ForProgramsPage() {
               <div
                 style={{
                   height: '100%',
-                  background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
+                  background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
                   padding: '24px 20px',
                   display: 'flex',
                   alignItems: 'center',
@@ -611,7 +611,7 @@ export default async function ForProgramsPage() {
                     style={{
                       fontSize: '11px',
                       fontWeight: 700,
-                      color: '#0D9488',
+                      color: '#BE185D',
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
                       marginBottom: '8px',
@@ -684,7 +684,7 @@ export default async function ForProgramsPage() {
                     Q2 Placement Report
                   </div>
                   {[
-                    { l: 'Outpatient', v: '42%', bg: '#0D9488' },
+                    { l: 'Outpatient', v: '42%', bg: '#BE185D' },
                     { l: 'Telehealth', v: '28%', bg: '#34D399' },
                     { l: 'Inpatient', v: '18%', bg: '#F97316' },
                     { l: 'Other', v: '12%', bg: '#94A3B8' },
@@ -799,8 +799,8 @@ export default async function ForProgramsPage() {
                 alignItems: 'center',
                 gap: '24px',
                 flexWrap: 'wrap',
-                background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
-                border: '2px solid rgba(13,148,136,0.15)',
+                background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
+                border: '2px solid rgba(190,24,93,0.15)',
               }}
             >
               <div
@@ -814,12 +814,12 @@ export default async function ForProgramsPage() {
                   justifyContent: 'center',
                   flexShrink: 0,
                   boxShadow:
-                    '3px 3px 8px rgba(13,148,136,0.15), inset 1px 1px 2px rgba(255,255,255,0.6)',
+                    '3px 3px 8px rgba(190,24,93,0.15), inset 1px 1px 2px rgba(255,255,255,0.6)',
                 }}
               >
                 <GraduationCap
                   size={26}
-                  color="#0D9488"
+                  color="#BE185D"
                   strokeWidth={2.25}
                 />
               </div>
@@ -829,7 +829,7 @@ export default async function ForProgramsPage() {
                   style={{
                     fontSize: '20px',
                     fontWeight: 800,
-                    color: '#134E4A',
+                    color: '#831843',
                     margin: '0 0 6px',
                   }}
                 >
@@ -838,7 +838,7 @@ export default async function ForProgramsPage() {
                 <p
                   style={{
                     fontSize: '14px',
-                    color: '#0D9488',
+                    color: '#BE185D',
                     margin: 0,
                     lineHeight: 1.55,
                     fontWeight: 500,
@@ -869,7 +869,7 @@ export default async function ForProgramsPage() {
             style={{
               fontSize: '13px',
               fontWeight: 600,
-              color: '#0D9488',
+              color: '#BE185D',
               textTransform: 'uppercase',
               letterSpacing: '0.15em',
               textAlign: 'center',
@@ -922,7 +922,7 @@ export default async function ForProgramsPage() {
             style={{
               fontSize: '13px',
               fontWeight: 600,
-              color: '#0D9488',
+              color: '#BE185D',
               textTransform: 'uppercase',
               letterSpacing: '0.15em',
               textAlign: 'center',
@@ -976,8 +976,8 @@ export default async function ForProgramsPage() {
               },
               {
                 icon: Globe,
-                accent: '#0D9488',
-                bg: '#F0FDFA',
+                accent: '#BE185D',
+                bg: '#FDF2F8',
                 title: 'Drupal / Cascade CMS',
                 body: 'Edit the page → insert an "Embed code" or HTML block → switch to source/HTML view → paste.',
                 note: 'Used by most state schools and large university systems.',
@@ -1059,8 +1059,8 @@ export default async function ForProgramsPage() {
               ...clayCard,
               marginTop: '24px',
               padding: '20px 28px',
-              background: 'linear-gradient(135deg, #F0FDFA, #FFFFFF)',
-              border: '1px solid rgba(13,148,136,0.15)',
+              background: 'linear-gradient(135deg, #FDF2F8, #FFFFFF)',
+              border: '1px solid rgba(190,24,93,0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -1101,13 +1101,13 @@ export default async function ForProgramsPage() {
                 padding: '11px 20px',
                 borderRadius: '14px',
                 background: '#FFFFFF',
-                color: '#0D9488',
+                color: '#BE185D',
                 textDecoration: 'none',
                 fontWeight: 700,
                 fontSize: '13.5px',
-                border: '1px solid rgba(13,148,136,0.25)',
+                border: '1px solid rgba(190,24,93,0.25)',
                 boxShadow:
-                  '3px 3px 8px rgba(13,148,136,0.1), -2px -2px 6px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.6)',
+                  '3px 3px 8px rgba(190,24,93,0.1), -2px -2px 6px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.6)',
                 whiteSpace: 'nowrap',
               }}
             >
@@ -1171,8 +1171,8 @@ export default async function ForProgramsPage() {
                 step: '01',
                 title: 'Send us an email',
                 body: 'Tell us your university name and state. Two-line reply, no forms.',
-                accent: '#0D9488',
-                bg: '#F0FDFA',
+                accent: '#BE185D',
+                bg: '#FDF2F8',
               },
               {
                 step: '02',
@@ -1253,7 +1253,7 @@ export default async function ForProgramsPage() {
             style={{
               fontSize: '13px',
               fontWeight: 600,
-              color: '#0D9488',
+              color: '#BE185D',
               textTransform: 'uppercase',
               letterSpacing: '0.15em',
               textAlign: 'center',
@@ -1354,7 +1354,7 @@ export default async function ForProgramsPage() {
             }}
           >
             Let's Help Your Students<br />
-            <span style={{ color: '#0D9488' }}>Get Hired</span>
+            <span style={{ color: '#BE185D' }}>Get Hired</span>
           </h2>
           <p
             style={{
@@ -1376,7 +1376,7 @@ export default async function ForProgramsPage() {
               borderRadius: '16px',
               fontWeight: 700,
               fontSize: '15px',
-              background: '#0D9488',
+              background: '#BE185D',
               color: '#fff',
               textDecoration: 'none',
               display: 'inline-flex',
@@ -1397,7 +1397,7 @@ export default async function ForProgramsPage() {
             <Link
               href="/"
               style={{
-                color: '#0D9488',
+                color: '#BE185D',
                 textDecoration: 'underline',
                 fontWeight: 600,
               }}

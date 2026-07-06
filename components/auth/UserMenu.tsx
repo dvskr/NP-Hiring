@@ -98,7 +98,7 @@ export default function UserMenu({ user, profileCompleteness = 100, isMobile = f
         ) : (
           <div style={{
             width: '32px', height: '32px', borderRadius: '50%',
-            background: 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
+            background: 'linear-gradient(135deg, #F472B6, #DB2777)',
             color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '13px', fontWeight: 600,
           }}>
@@ -188,7 +188,7 @@ export default function UserMenu({ user, profileCompleteness = 100, isMobile = f
                 display: 'inline-block', marginTop: '6px',
                 padding: '2px 10px', borderRadius: '12px',
                 fontSize: '11px', fontWeight: 600,
-                background: 'rgba(45,212,191,0.12)', color: '#2DD4BF',
+                background: 'rgba(244,114,182,0.12)', color: '#F472B6',
                 textTransform: 'capitalize',
               }}>
                 {user.role.replace('_', ' ')}
@@ -275,7 +275,7 @@ export default function UserMenu({ user, profileCompleteness = 100, isMobile = f
       )}
 
       <style>{`
-        .um-trigger:hover { background: rgba(13,148,136,0.06) !important; }
+        .um-trigger:hover { background: rgba(190,24,93,0.06) !important; }
         .um-menu-item:hover { background: #EDF5F0 !important; }
       `}</style>
     </div>

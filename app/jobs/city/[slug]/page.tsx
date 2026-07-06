@@ -512,7 +512,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                             <h2 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>
                                 {cityName} Positions ({stats.totalJobs})
                             </h2>
-                            <Link href={`/jobs/state/${stateSlug}`} style={{ fontSize: '14px', fontWeight: 600, color: '#0D9488', textDecoration: 'none' }}>
+                            <Link href={`/jobs/state/${stateSlug}`} style={{ fontSize: '14px', fontWeight: 600, color: '#BE185D', textDecoration: 'none' }}>
                                 All {stateName} Jobs →
                             </Link>
                         </div>
@@ -521,7 +521,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                 <MapPin className="h-12 w-12 mx-auto mb-4" style={{ color: '#A09080' }} />
                                 <h3 className="text-lg font-semibold mb-2" style={{ color: '#1A2E35' }}>No positions at this time</h3>
                                 <p className="mb-6" style={{ color: '#5A4A42' }}>New {cityName} {brand.niche.short} openings are added daily.</p>
-                                <Link href="/jobs" style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px', background: '#0D9488', color: '#fff', textDecoration: 'none', display: 'inline-block' }}>Browse All Jobs</Link>
+                                <Link href="/jobs" style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-block' }}>Browse All Jobs</Link>
                             </div>
                         ) : (
                             <>
@@ -536,9 +536,9 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                     <div style={{ textAlign: 'center', marginTop: '32px' }}>
                                         <Link href={`/jobs?location=${encodeURIComponent(cityName)}`} className="city-card" style={{
                                             padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px',
-                                            background: '#0D9488', color: '#fff', textDecoration: 'none',
+                                            background: '#BE185D', color: '#fff', textDecoration: 'none',
                                             display: 'inline-flex', alignItems: 'center', gap: '8px',
-                                            boxShadow: '4px 4px 12px rgba(13,148,136,0.2)',
+                                            boxShadow: '4px 4px 12px rgba(190,24,93,0.2)',
                                         }}>
                                             View All {stats.totalJobs} Jobs in {cityName} <ArrowRight size={16} />
                                         </Link>
@@ -551,25 +551,25 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                     {/* Sidebar */}
                     <div className="lg:col-span-1" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         {/* Job Alert CTA */}
-                        <div style={{ background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', borderRadius: '18px', padding: '24px', border: '2px solid rgba(13,148,136,0.15)', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8)' }}>
-                            <Bell size={28} style={{ color: '#0D9488', marginBottom: '12px' }} />
-                            <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#134E4A', margin: '0 0 8px' }}>Get {cityName} Alerts</h3>
-                            <p style={{ fontSize: '13px', color: '#0D9488', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>New listings delivered to your inbox daily.</p>
-                            <Link href={`/job-alerts?location=${encodeURIComponent(cityName + ', ' + stateCode)}`} style={{ display: 'block', width: '100%', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#0D9488', color: '#fff', textDecoration: 'none' }}>Create Alert</Link>
+                        <div style={{ background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', borderRadius: '18px', padding: '24px', border: '2px solid rgba(190,24,93,0.15)', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8)' }}>
+                            <Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} />
+                            <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 8px' }}>Get {cityName} Alerts</h3>
+                            <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>New listings delivered to your inbox daily.</p>
+                            <Link href={`/job-alerts?location=${encodeURIComponent(cityName + ', ' + stateCode)}`} style={{ display: 'block', width: '100%', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none' }}>Create Alert</Link>
                         </div>
 
                         {/* Top Employers */}
                         {stats.topEmployers.length > 0 && (
                             <div style={{ background: '#FFF', borderRadius: '18px', padding: '24px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                                    <Building2 size={20} style={{ color: '#0D9488' }} />
+                                    <Building2 size={20} style={{ color: '#BE185D' }} />
                                     <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Top Employers</h3>
                                 </div>
                                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                                     {stats.topEmployers.map((employer: ProcessedEmployer, i: number) => (
                                         <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < stats.topEmployers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
                                             <span style={{ fontSize: '13px', color: '#5A4A42', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{employer.name}</span>
-                                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#0D9488', marginLeft: '8px' }}>{employer.count} {employer.count === 1 ? 'job' : 'jobs'}</span>
+                                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', marginLeft: '8px' }}>{employer.count} {employer.count === 1 ? 'job' : 'jobs'}</span>
                                         </li>
                                     ))}
                                 </ul>
@@ -593,7 +593,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                                     {relatedCities.map(city => (
                                         <li key={city.slug} style={{ padding: '6px 0' }}>
-                                            <Link href={`/jobs/city/${city.slug}`} style={{ fontSize: '13px', color: '#0D9488', textDecoration: 'none', fontWeight: 500, display: 'flex', justifyContent: 'space-between' }}>
+                                            <Link href={`/jobs/city/${city.slug}`} style={{ fontSize: '13px', color: '#BE185D', textDecoration: 'none', fontWeight: 500, display: 'flex', justifyContent: 'space-between' }}>
                                                 <span>{city.name}</span>
                                                 <span style={{ color: '#7A6A62', fontWeight: 700 }}>{city.count}</span>
                                             </Link>
@@ -614,7 +614,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                     { href: '/salary-guide', label: '📊 2026 Salary Guide' },
                                 ].map(link => (
                                     <li key={link.href} style={{ padding: '6px 0' }}>
-                                        <Link href={link.href} style={{ fontSize: '13px', color: '#0D9488', textDecoration: 'none', fontWeight: 500 }}>{link.label}</Link>
+                                        <Link href={link.href} style={{ fontSize: '13px', color: '#BE185D', textDecoration: 'none', fontWeight: 500 }}>{link.label}</Link>
                                     </li>
                                 ))}
                             </ul>
@@ -624,7 +624,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
             </div>
 
             {/* ═══ BENTO GRID — Why Choose This City ═══ */}
-            <div style={{ background: 'linear-gradient(180deg, #F0FDFA 0%, #E6FAF5 50%, #F0FDFA 100%)' }}>
+            <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #FDF2F8 50%, #FDF2F8 100%)' }}>
                 <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
                     <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
                         Why This Market
@@ -644,7 +644,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                     {cityName}, {stateName} has {stats.totalJobs} active {brand.niche.short} positions across {stats.uniqueEmployerCount}+ employers, with roles in outpatient, inpatient, and telehealth settings.
                                 </p>
                             </div>
-                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
+                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
                                 <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_practice.webp`} alt={`${cityName} ${brand.niche.short} market`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
                             </div>
                         </div>
@@ -677,7 +677,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                         {/* ROW 3: Salary (8) + Alert CTA (4) */}
                         <div className="city-bento-hero-3" style={{ gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
                             <div style={{ padding: '32px 28px' }}>
-                                <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
+                                <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Outlook</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                                     {cityName} {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K'} annually. {salaryRange ? `Range: ${salaryRange}/yr.` : 'Competitive compensation with benefits.'}
@@ -691,19 +691,19 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                         <div className="city-bento-cta" style={{
                             gridColumn: 'span 4', padding: '28px 22px',
                             display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                            background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', border: '2px solid rgba(13,148,136,0.15)',
+                            background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)',
                             borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)',
                         }}>
-                            <Bell size={28} style={{ color: '#0D9488', marginBottom: '14px' }} />
-                            <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#134E4A', margin: '0 0 6px' }}>Job Alerts</h3>
-                            <p style={{ fontSize: '13px', color: '#0D9488', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
+                            <Bell size={28} style={{ color: '#BE185D', marginBottom: '14px' }} />
+                            <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Job Alerts</h3>
+                            <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
                                 New {cityName} listings delivered to your inbox — be first to apply.
                             </p>
                             <Link href={`/job-alerts?location=${encodeURIComponent(cityName + ', ' + stateCode)}`} style={{
                                 padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                                background: '#0D9488', color: '#fff', textDecoration: 'none',
+                                background: '#BE185D', color: '#fff', textDecoration: 'none',
                                 display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content',
-                                boxShadow: '3px 3px 8px rgba(13,148,136,0.15)',
+                                boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
                             }}>
                                 Create Alert <ArrowRight size={14} />
                             </Link>
@@ -713,9 +713,9 @@ export default async function CityJobsPage({ params }: CityPageProps) {
             </div>
 
             {/* ═══ GETTING STARTED ═══ */}
-            <div style={{ background: 'linear-gradient(180deg, #F0FDFA 0%, #E6FFFA 50%, #F0FDFA 100%)' }}>
+            <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #E6FFFA 50%, #FDF2F8 100%)' }}>
                 <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
                         Before You Apply
                     </p>
                     <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
@@ -728,8 +728,8 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                             { step: '03', title: 'Explore Settings', text: `Popular settings in ${cityName} include outpatient clinics, hospitals, telehealth, and community health centers.` },
                             { step: '04', title: 'Apply', text: `Browse ${stats.totalJobs}+ positions in ${cityName} and set up job alerts to be the first to apply.` },
                         ].map(r => (
-                            <div key={r.step} style={{ background: '#FFF', borderRadius: '18px', padding: '28px 24px', borderTop: '3px solid #0D9488', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                                <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>{r.step}</span>
+                            <div key={r.step} style={{ background: '#FFF', borderRadius: '18px', padding: '28px 24px', borderTop: '3px solid #BE185D', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
+                                <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>{r.step}</span>
                                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>{r.title}</h3>
                                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>{r.text}</p>
                             </div>
@@ -769,7 +769,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
             {/* ═══ INTERNAL LINKING MESH ═══ */}
             <div style={{ background: '#FDFBF7' }}>
                 <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
                         Nearby Markets
                     </p>
                     <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>{brand.niche.short} Jobs Near {cityName}
@@ -792,7 +792,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                             <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35', display: 'block' }}>{city.name}</span>
                                             <span style={{ fontSize: '12px', color: '#7A6A62' }}>{city.count} jobs</span>
                                         </div>
-                                        <ArrowRight size={14} style={{ color: '#0D9488' }} />
+                                        <ArrowRight size={14} style={{ color: '#BE185D' }} />
                                     </Link>
                                 ))}
                             </div>

@@ -7,7 +7,7 @@ const V2 = {
   bgBody:'#F3F2EF', bgCard:'#FFF8EE', bgPeach:'#F0C4A4',
   textHeading:'#2D3748', textPrimary:'#1F2937', textBody:'#4A5568',
   textLabel:'#5A4A3A', textMuted:'#718096',
-  tealButton:'#4DB6AC', teal:'#0d9488',
+  tealButton:'#DB2777', teal:'#BE185D',
 };
 
 // ── headerBlockV2 (production-identical — stacked: logo top, text below) ──
@@ -73,7 +73,7 @@ function emailShellV2(content, footerContent, preheader) {
     }
     /* Outlook dark mode — explicit overrides */
     [data-ogsc] .brand-text { color: #1F2937 !important; }
-    [data-ogsc] .tagline-text { color: #0d9488 !important; }
+    [data-ogsc] .tagline-text { color: #BE185D !important; }
     [data-ogsc] h1 { color: #2D3748 !important; }
     [data-ogsc] .body-text, [data-ogsc] p { color: #4A5568 !important; }
     [data-ogsc] .footer-text, [data-ogsc] .footer-text a { color: #A0AEC0 !important; }

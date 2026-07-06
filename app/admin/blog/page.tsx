@@ -168,7 +168,7 @@ export default function AdminBlogPage() {
                 </div>
                 <button onClick={openNew} style={{
                     padding: '10px 20px', borderRadius: '10px', cursor: 'pointer',
-                    backgroundColor: '#0D9488', color: '#0F172A', border: 'none',
+                    backgroundColor: '#BE185D', color: '#0F172A', border: 'none',
                     fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: 6,
                 }}>
                     <Plus size={16} /> New Post
@@ -200,7 +200,7 @@ export default function AdminBlogPage() {
             <div style={card}>
                 {loading ? (
                     <div style={{ padding: 60, textAlign: 'center' }}>
-                        <div style={{ width: 40, height: 40, border: '3px solid #E8ECF0', borderTop: '3px solid #0D9488', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.8s linear infinite' }} />
+                        <div style={{ width: 40, height: 40, border: '3px solid #E8ECF0', borderTop: '3px solid #BE185D', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.8s linear infinite' }} />
                     </div>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
@@ -245,7 +245,7 @@ export default function AdminBlogPage() {
                                                     <Pencil size={14} />
                                                 </button>
                                                 <a href={`/blog/${post.slug}`} target="_blank" rel="noopener noreferrer" title="Preview"
-                                                    style={{ padding: 4, color: '#0D9488' }}>
+                                                    style={{ padding: 4, color: '#BE185D' }}>
                                                     <Eye size={14} />
                                                 </a>
                                                 <button onClick={() => deletePost(post.id)} title="Delete"
@@ -344,7 +344,7 @@ export default function AdminBlogPage() {
                                 Cancel
                             </button>
                             <button onClick={savePost} disabled={saving}
-                                style={{ padding: '10px 24px', borderRadius: '10px', cursor: 'pointer', backgroundColor: '#0D9488', color: '#0F172A', border: 'none', fontWeight: 700, fontSize: '13px', opacity: saving ? 0.5 : 1 }}>
+                                style={{ padding: '10px 24px', borderRadius: '10px', cursor: 'pointer', backgroundColor: '#BE185D', color: '#0F172A', border: 'none', fontWeight: 700, fontSize: '13px', opacity: saving ? 0.5 : 1 }}>
                                 {saving ? 'Saving…' : (editingPost ? 'Update Post' : 'Create Post')}
                             </button>
                         </div>

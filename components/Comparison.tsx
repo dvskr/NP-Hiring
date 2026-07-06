@@ -55,7 +55,7 @@ export default function Comparison() {
                                     borderBottom: '1px solid var(--border-color)',
                                     borderLeft: '1px solid var(--border-color)',
                                     ...(p.highlighted ? {
-                                        background: 'linear-gradient(180deg, rgba(13,148,136,0.08), transparent)',
+                                        background: 'linear-gradient(180deg, rgba(190,24,93,0.08), transparent)',
                                         borderTop: '3px solid var(--color-primary)',
                                     } : {}),
                                 }}
@@ -96,7 +96,7 @@ export default function Comparison() {
                                             borderLeft: '1px solid var(--border-color)',
                                             borderBottom: rowIdx < COMPARISON_FEATURE_LABELS.length - 1 ? '1px solid var(--border-color)' : 'none',
                                             ...(p.highlighted ? {
-                                                backgroundColor: 'rgba(13,148,136,0.03)',
+                                                backgroundColor: 'rgba(190,24,93,0.03)',
                                             } : {}),
                                         }}
                                     >
@@ -130,7 +130,7 @@ export default function Comparison() {
                                 padding: '20px',
                                 borderRadius: '12px',
                                 border: p.highlighted ? '2px solid var(--color-primary)' : '1px solid var(--border-color)',
-                                backgroundColor: p.highlighted ? 'rgba(13,148,136,0.04)' : 'var(--bg-secondary)',
+                                backgroundColor: p.highlighted ? 'rgba(190,24,93,0.04)' : 'var(--bg-secondary)',
                             }}
                         >
                             <div style={{

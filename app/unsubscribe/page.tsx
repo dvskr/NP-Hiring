@@ -92,7 +92,7 @@ function UnsubscribeContent() {
                 {loading && (
                     <div className="text-center">
                         <div className="flex justify-center mb-4">
-                            <Loader2 className="w-16 h-16 text-teal-600 animate-spin" />
+                            <Loader2 className="w-16 h-16 text-pink-700 animate-spin" />
                         </div>
                         <h2 className="text-xl font-semibold text-gray-900 mb-2">
                             Processing your request...
@@ -115,7 +115,7 @@ function UnsubscribeContent() {
                         </p>
 
                         <Link href="/">
-                            <button className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg">
+                            <button className="w-full bg-pink-700 hover:bg-pink-800 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg">
                                 Return to Homepage
                             </button>
                         </Link>
@@ -139,7 +139,7 @@ function UnsubscribeContent() {
                         </p>
 
                         <Link href="/">
-                            <button className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors mb-4 shadow-md hover:shadow-lg">
+                            <button className="w-full bg-pink-700 hover:bg-pink-800 text-white font-semibold py-3 px-6 rounded-lg transition-colors mb-4 shadow-md hover:shadow-lg">
                                 Return to Homepage
                             </button>
                         </Link>
@@ -147,7 +147,7 @@ function UnsubscribeContent() {
                         <button
                             onClick={handleResubscribe}
                             disabled={resubscribing}
-                            className="text-sm text-teal-600 hover:text-teal-700 hover:underline disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 mx-auto"
+                            className="text-sm text-pink-700 hover:text-pink-800 hover:underline disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 mx-auto"
                         >
                             {resubscribing ? (
                                 <>
@@ -179,14 +179,14 @@ function UnsubscribeContent() {
                         </p>
 
                         <Link href="/">
-                            <button className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors mb-4 shadow-md hover:shadow-lg">
+                            <button className="w-full bg-pink-700 hover:bg-pink-800 text-white font-semibold py-3 px-6 rounded-lg transition-colors mb-4 shadow-md hover:shadow-lg">
                                 Return to Homepage
                             </button>
                         </Link>
 
                         <a
                             href={`mailto:${brand.email.support}`}
-                            className="text-sm text-teal-600 hover:text-teal-700 hover:underline"
+                            className="text-sm text-pink-700 hover:text-pink-800 hover:underline"
                         >
                             Contact support
                         </a>
@@ -202,7 +202,7 @@ export default function UnsubscribePage() {
         <Suspense fallback={
             <div className="min-h-screen bg-white flex items-center justify-center">
                 <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
-                    <Loader2 className="w-16 h-16 text-teal-600 animate-spin mx-auto mb-4" />
+                    <Loader2 className="w-16 h-16 text-pink-700 animate-spin mx-auto mb-4" />
                     <p className="text-gray-600">Loading...</p>
                 </div>
             </div>

@@ -71,7 +71,7 @@ export default function SettingsTabs({ activeTab, onTabChange, isJobSeeker }: Pr
                         width: '32px', border: 'none', cursor: 'pointer',
                         background: 'linear-gradient(90deg, #F0F5F1 40%, transparent)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#0D9488',
+                        color: '#BE185D',
                     }}
                 >
                     <ChevronLeft size={16} />
@@ -87,7 +87,7 @@ export default function SettingsTabs({ activeTab, onTabChange, isJobSeeker }: Pr
                         width: '32px', border: 'none', cursor: 'pointer',
                         background: 'linear-gradient(270deg, #F0F5F1 40%, transparent)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#0D9488',
+                        color: '#BE185D',
                     }}
                 >
                     <ChevronRight size={16} />
@@ -119,7 +119,7 @@ export default function SettingsTabs({ activeTab, onTabChange, isJobSeeker }: Pr
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '6px',
                                 padding: '8px 14px', fontSize: '13px', fontWeight: isActive ? 700 : 500,
-                                color: isActive ? '#0D9488' : '#6B7F8A',
+                                color: isActive ? '#BE185D' : '#6B7F8A',
                                 background: isActive ? '#D5F5F1' : 'transparent',
                                 border: 'none', cursor: 'pointer',
                                 borderRadius: '10px',

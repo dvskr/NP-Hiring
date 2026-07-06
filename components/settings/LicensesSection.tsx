@@ -160,7 +160,7 @@ export default function LicensesSection({ showMsg }: Props) {
     }
 
     const statusColor = (s: string) => {
-        if (s === 'active') return { bg: 'rgba(45,212,191,0.12)', text: '#2DD4BF' }
+        if (s === 'active') return { bg: 'rgba(244,114,182,0.12)', text: '#F472B6' }
         if (s === 'inactive') return { bg: 'rgba(156,163,175,0.15)', text: '#9CA3AF' }
         return { bg: 'rgba(251,146,60,0.12)', text: '#FB923C' }
     }
@@ -350,7 +350,7 @@ export default function LicensesSection({ showMsg }: Props) {
                                 justifyContent: 'center',
                                 padding: '12px',
                                 color: clayPalette.accentLight,
-                                borderColor: 'rgba(45,212,191,0.4)',
+                                borderColor: 'rgba(244,114,182,0.4)',
                             }}
                         >
                             <Plus size={16} /> Add License

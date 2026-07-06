@@ -185,7 +185,7 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
             {serverApplied.status && serverApplied.status !== 'applied' && (
               <span
                 className="text-xs px-2 py-0.5 rounded-full font-medium capitalize"
-                style={{ backgroundColor: 'rgba(13,148,136,0.1)', color: '#0d9488' }}
+                style={{ backgroundColor: 'rgba(190,24,93,0.1)', color: '#BE185D' }}
               >
                 {serverApplied.status}
               </span>
@@ -193,7 +193,7 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
           </div>
           <p className="text-xs ml-7" style={{ color: 'var(--text-secondary)' }}>
             Applied on {serverApplied.appliedAt ? formatAppliedDate(new Date(serverApplied.appliedAt)) : 'recently'}.{' '}
-            <Link href="/my-applications" className="underline font-medium" style={{ color: '#0d9488' }}>
+            <Link href="/my-applications" className="underline font-medium" style={{ color: '#BE185D' }}>
               View your applications →
             </Link>
           </p>
@@ -215,7 +215,7 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
         <div className="w-full">
           {/* Title */}
           <div className="flex items-center gap-2 mb-3">
-            <LogIn size={18} style={{ color: '#0d9488' }} />
+            <LogIn size={18} style={{ color: '#BE185D' }} />
             <h3
               className="text-base font-bold"
               style={{ color: 'var(--text-primary)' }}
@@ -254,10 +254,10 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
               onClick={handleSignUp}
               className="w-full py-3 rounded-xl font-bold text-white transition-all text-sm"
               style={{
-                background: '#0d9488',
+                background: '#BE185D',
                 borderRadius: '16px',
                 border: '1px solid rgba(255,255,255,0.3)',
-                boxShadow: '6px 6px 16px rgba(13,148,136,0.30), -3px -3px 10px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08)',
+                boxShadow: '6px 6px 16px rgba(190,24,93,0.30), -3px -3px 10px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08)',
               }}
             >
               Create Free Account
@@ -293,8 +293,8 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
         <div
           className="w-full rounded-2xl p-4"
           style={{
-            backgroundColor: 'rgba(13,148,136,0.06)',
-            border: '1px solid rgba(13,148,136,0.18)',
+            backgroundColor: 'rgba(190,24,93,0.06)',
+            border: '1px solid rgba(190,24,93,0.18)',
           }}
         >
           <p
@@ -316,9 +316,9 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
               className="apply-btn flex-1 inline-flex items-center justify-center gap-2 text-white px-4 py-2.5 font-semibold text-sm touch-manipulation"
               style={{
                 borderRadius: '14px',
-                background: '#0d9488',
+                background: '#BE185D',
                 border: '1px solid rgba(255,255,255,0.3)',
-                boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 1px 1px 2px rgba(255,255,255,0.2)',
+                boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.2)',
               }}
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
@@ -358,9 +358,9 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
               style={{
                 minHeight: '52px',
                 borderRadius: '18px',
-                background: '#0d9488',
+                background: '#BE185D',
                 border: '1px solid rgba(255,255,255,0.3)',
-                boxShadow: '6px 6px 16px rgba(13,148,136,0.30), -3px -3px 10px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08)',
+                boxShadow: '6px 6px 16px rgba(190,24,93,0.30), -3px -3px 10px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08)',
               }}
             >
               {applyOnPlatform && <Zap size={18} fill="currentColor" />}
@@ -411,11 +411,11 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
       <style>{`
         .apply-btn:hover {
           transform: translateY(-3px);
-          box-shadow: 8px 8px 20px rgba(13,148,136,0.35), -4px -4px 12px rgba(255,255,255,0.25), inset 2px 2px 5px rgba(255,255,255,0.3), inset -1px -1px 2px rgba(0,0,0,0.08) !important;
+          box-shadow: 8px 8px 20px rgba(190,24,93,0.35), -4px -4px 12px rgba(255,255,255,0.25), inset 2px 2px 5px rgba(255,255,255,0.3), inset -1px -1px 2px rgba(0,0,0,0.08) !important;
         }
         .apply-btn:active {
           transform: translateY(1px);
-          box-shadow: 2px 2px 6px rgba(13,148,136,0.2), inset 3px 3px 6px rgba(0,0,0,0.12), inset -2px -2px 4px rgba(255,255,255,0.15) !important;
+          box-shadow: 2px 2px 6px rgba(190,24,93,0.2), inset 3px 3px 6px rgba(0,0,0,0.12), inset -2px -2px 4px rgba(255,255,255,0.15) !important;
         }
       `}
       </style>

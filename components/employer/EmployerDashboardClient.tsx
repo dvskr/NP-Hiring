@@ -313,21 +313,21 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                     {showSignupBanner && isTokenAccess && (
                         <div style={{
                             ...cardBase, padding: '14px 20px', marginBottom: '20px',
-                            background: '#CCFBF1', border: '1px solid #99F6E4',
+                            background: '#FCE7F3', border: '1px solid #FBCFE8',
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
                             flexWrap: 'wrap',
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <Shield size={18} style={{ color: '#0D9488' }} />
-                                <p style={{ fontSize: '13px', color: '#134E4A', margin: 0 }}>
+                                <Shield size={18} style={{ color: '#BE185D' }} />
+                                <p style={{ fontSize: '13px', color: '#831843', margin: 0 }}>
                                     Create an account for easier access to your dashboard in the future.
                                 </p>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <Link href="/signup?role=employer" style={{
-                                    ...clayBtn, background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                                    ...clayBtn, background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                                     color: '#fff', border: 'none',
-                                    boxShadow: '3px 3px 8px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                                    boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
                                 }}>Sign Up</Link>
                                 <button onClick={() => setShowSignupBanner(false)} style={{
                                     ...clayBtn, background: 'rgba(255,255,255,0.5)',
@@ -342,7 +342,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                             <div style={{
                                 width: '48px', height: '48px', borderRadius: '16px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: '#CCFBF1', color: '#0D9488', flexShrink: 0,
+                                background: '#FCE7F3', color: '#BE185D', flexShrink: 0,
                                 border: '1px solid rgba(255,255,255,0.5)',
                                 boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 3px rgba(255,255,255,0.6)',
                             }}>
@@ -360,9 +360,9 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                             </div>
                         </div>
                         <Link href="/post-job" style={{
-                            ...clayBtn, background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                            ...clayBtn, background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                             color: '#fff', border: 'none', padding: '10px 20px',
-                            boxShadow: '4px 4px 12px rgba(13,148,136,0.25), -2px -2px 8px rgba(255,255,255,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
+                            boxShadow: '4px 4px 12px rgba(190,24,93,0.25), -2px -2px 8px rgba(255,255,255,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
                         }}>
                             <Plus size={16} /> Post a New Job
                         </Link>
@@ -386,7 +386,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '20px' }}>
                     {[
                         { label: 'Live Jobs', value: liveCount, icon: <Rocket size={16} />, color: '#059669', bg: '#D1FAE5' },
-                        { label: 'Total Views', value: totalViews, icon: <Eye size={16} />, color: '#0D9488', bg: '#CCFBF1' },
+                        { label: 'Total Views', value: totalViews, icon: <Eye size={16} />, color: '#BE185D', bg: '#FCE7F3' },
                         { label: 'Apply Clicks', value: totalClicks, icon: <MousePointerClick size={16} />, color: '#7C3AED', bg: '#EDE9FE' },
                         { label: 'Applicants', value: totalApplicants, icon: <User size={16} />, color: '#E879A8', bg: '#FCE7F3' },
                     ].map(s => (
@@ -424,8 +424,8 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                 <div style={{
                                     width: '38px', height: '38px', borderRadius: '12px',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    background: 'linear-gradient(145deg, #10B981, #0D9488)', color: '#fff',
-                                    boxShadow: '3px 3px 8px rgba(13,148,136,0.15)',
+                                    background: 'linear-gradient(145deg, #9D174D, #BE185D)', color: '#fff',
+                                    boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
                                 }}>
                                     <Users size={18} />
                                 </div>
@@ -434,7 +434,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                     <p style={{ fontSize: '11px', color: '#8A9BA6', margin: 0 }}>Search qualified {brand.niche.short} candidates</p>
                                 </div>
                             </div>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>Browse →</span>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>Browse →</span>
                         </Link>
 
                         {/* Messages */}
@@ -531,7 +531,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                 <div style={{
                                     width: '64px', height: '64px', borderRadius: '20px', margin: '0 auto 16px',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    background: '#CCFBF1', color: '#0D9488',
+                                    background: '#FCE7F3', color: '#BE185D',
                                     border: '1px solid rgba(255,255,255,0.5)',
                                     boxShadow: '5px 5px 12px rgba(0,0,0,0.06), -3px -3px 8px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.7)',
                                 }}>
@@ -563,7 +563,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                 <span style={{
                                                     width: '26px', height: '26px', borderRadius: '50%',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    background: s.active ? '#0D9488' : '#B0C4BC',
+                                                    background: s.active ? '#BE185D' : '#B0C4BC',
                                                     color: '#fff', fontSize: '12px', fontWeight: 700, flexShrink: 0,
                                                 }}>{s.step}</span>
                                                 <div>
@@ -579,9 +579,9 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                 </div>
 
                                 <Link href="/post-job" style={{
-                                    ...clayBtn, background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                                    ...clayBtn, background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                                     color: '#fff', border: 'none', padding: '12px 24px', fontSize: '14px',
-                                    boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+                                    boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
                                 }}>
                                     <Rocket size={16} /> Post Your First Job
                                 </Link>
@@ -675,10 +675,10 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                                     {getStatusBadge(job)}
                                                     {job.isFeatured && (
-                                                        <span style={{ ...clayPill, background: '#CCFBF1', color: '#0D9488' }}>★ Featured</span>
+                                                        <span style={{ ...clayPill, background: '#FCE7F3', color: '#BE185D' }}>★ Featured</span>
                                                     )}
                                                     {(job.paymentStatus === 'free' || job.paymentStatus === 'free_renewed' || job.paymentStatus === 'free_upgraded') && (
-                                                        <span style={{ ...clayPill, background: '#F0FDFA', color: '#0D9488', border: '1px solid rgba(13,148,136,0.18)' }}>Free trial</span>
+                                                        <span style={{ ...clayPill, background: '#FDF2F8', color: '#BE185D', border: '1px solid rgba(190,24,93,0.18)' }}>Free trial</span>
                                                     )}
                                                     {job.archivedAt && (
                                                         <span style={{ ...clayPill, background: '#EDE9FE', color: '#7C3AED' }}>Archived</span>
@@ -724,7 +724,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                         href={`/api/employer/invoice?jobId=${job.id}${dashboardToken ? `&token=${dashboardToken}` : ''}`}
                                                         download={`invoice-${(job.title || 'job').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`}
                                                         style={{
-                                                            color: '#0D9488', textDecoration: 'none', fontWeight: 600,
+                                                            color: '#BE185D', textDecoration: 'none', fontWeight: 600,
                                                             display: 'inline-flex', alignItems: 'center', gap: '4px',
                                                         }}
                                                     >
@@ -735,7 +735,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         style={{
-                                                            color: '#0D9488', textDecoration: 'none', fontWeight: 600,
+                                                            color: '#BE185D', textDecoration: 'none', fontWeight: 600,
                                                             display: 'inline-flex', alignItems: 'center', gap: '4px',
                                                         }}
                                                     >
@@ -793,9 +793,9 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                     className="emp-action-btn"
                                                     style={{
                                                         ...clayBtn,
-                                                        background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                                                        background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                                                         color: '#fff', border: 'none',
-                                                        boxShadow: '3px 3px 8px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                                                        boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
                                                         opacity: renewingJobId === job.id ? 0.6 : 1,
                                                     }}
                                                 >
@@ -914,10 +914,10 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                     </div>
                                 ) : (
                                     <div style={{
-                                        background: '#F0FDFA', border: '1px solid rgba(13,148,136,0.18)',
+                                        background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.18)',
                                         borderRadius: '12px', padding: '12px 14px', marginBottom: '20px',
                                     }}>
-                                        <p style={{ fontSize: '12px', color: '#115E59', margin: 0, lineHeight: 1.5 }}>
+                                        <p style={{ fontSize: '12px', color: '#831843', margin: 0, lineHeight: 1.5 }}>
                                             Your remaining {config.durationDays}-day window keeps counting down even while archived. Restoring later won&apos;t reset the expiry.
                                         </p>
                                     </div>
@@ -1004,10 +1004,10 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                 style={{
                                                     display: 'flex', alignItems: 'flex-start', gap: '10px',
                                                     padding: '12px 14px', borderRadius: '12px',
-                                                    background: selected ? '#F0FDFA' : '#FFFFFF',
-                                                    border: `1px solid ${selected ? '#0D9488' : 'rgba(0,0,0,0.08)'}`,
+                                                    background: selected ? '#FDF2F8' : '#FFFFFF',
+                                                    border: `1px solid ${selected ? '#BE185D' : 'rgba(0,0,0,0.08)'}`,
                                                     boxShadow: selected
-                                                        ? 'inset 2px 2px 4px rgba(13,148,136,0.06), 0 0 0 3px rgba(13,148,136,0.1)'
+                                                        ? 'inset 2px 2px 4px rgba(190,24,93,0.06), 0 0 0 3px rgba(190,24,93,0.1)'
                                                         : '2px 2px 6px rgba(0,0,0,0.04), inset 1px 1px 2px rgba(255,255,255,0.6)',
                                                     cursor: 'pointer', textAlign: 'left',
                                                     transition: 'all 0.15s',
@@ -1016,8 +1016,8 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                 <span style={{
                                                     flexShrink: 0, marginTop: '2px',
                                                     width: '16px', height: '16px', borderRadius: '50%',
-                                                    border: `2px solid ${selected ? '#0D9488' : '#CBD5E0'}`,
-                                                    background: selected ? '#0D9488' : 'transparent',
+                                                    border: `2px solid ${selected ? '#BE185D' : '#CBD5E0'}`,
+                                                    background: selected ? '#BE185D' : 'transparent',
                                                     boxShadow: selected ? 'inset 0 0 0 3px #fff' : 'none',
                                                 }} />
                                                 <div>
@@ -1113,7 +1113,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 <Link href="/post-job" style={{
                                     ...clayBtn, width: '100%', justifyContent: 'center',
-                                    background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
+                                    background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                                     textDecoration: 'none', padding: '12px 16px', fontWeight: 700, fontSize: '14px',
                                 }}>
                                     Post a New Job — ${config.postingPrice}
@@ -1154,14 +1154,14 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                     ...cardBase, padding: '14px 16px', cursor: 'pointer',
                                     display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
                                     textAlign: 'left', transition: 'all 0.2s',
-                                    background: '#CCFBF1', border: '2px solid #0D9488',
+                                    background: '#FCE7F3', border: '2px solid #BE185D',
                                 }}>
                                     <div>
-                                        <p style={{ fontSize: '14px', fontWeight: 700, color: '#134E4A', margin: '0 0 4px' }}>Renew Listing</p>
-                                        <p style={{ fontSize: '11px', color: '#0D9488', margin: 0, lineHeight: 1.5 }}>✓ Adds {config.durationDays} days to your expiration · Featured · {config.limits.candidateUnlocksPerPosting} unlocks · {config.limits.inmailsPerPosting} InMails</p>
+                                        <p style={{ fontSize: '14px', fontWeight: 700, color: '#831843', margin: '0 0 4px' }}>Renew Listing</p>
+                                        <p style={{ fontSize: '11px', color: '#BE185D', margin: 0, lineHeight: 1.5 }}>✓ Adds {config.durationDays} days to your expiration · Featured · {config.limits.candidateUnlocksPerPosting} unlocks · {config.limits.inmailsPerPosting} InMails</p>
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
-                                        <span style={{ fontSize: '20px', fontWeight: 800, color: '#134E4A' }}>${config.renewalPrice}</span>
+                                        <span style={{ fontSize: '20px', fontWeight: 800, color: '#831843' }}>${config.renewalPrice}</span>
                                         <p style={{ fontSize: '10px', color: '#6B7F8A', margin: 0 }}>Save 10%</p>
                                     </div>
                                 </button>
@@ -1203,9 +1203,9 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                         flexShrink: 0,
                                         width: '20px', height: '20px', borderRadius: '50%',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        background: 'linear-gradient(145deg, #0D9488, #10B981)',
+                                        background: 'linear-gradient(145deg, #BE185D, #9D174D)',
                                         color: '#fff', fontSize: '11px', fontWeight: 700,
-                                        boxShadow: '2px 2px 5px rgba(13,148,136,0.18), inset 0 1px 0 rgba(255,255,255,0.2)',
+                                        boxShadow: '2px 2px 5px rgba(190,24,93,0.18), inset 0 1px 0 rgba(255,255,255,0.2)',
                                         marginTop: '1px',
                                     }}>{i + 1}</span>
                                     <span style={{ fontSize: '12px', color: '#6B7F8A', lineHeight: 1.55 }}>{tip}</span>
@@ -1225,11 +1225,11 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                             Browse qualified {brand.niche.short} candidates. Save, tag, and manage your pipeline.
                         </p>
                         <Link href="/employer/candidates" className="emp-cta-card" style={{
-                            fontSize: '12px', fontWeight: 600, color: '#0D9488',
-                            background: '#CCFBF1',
+                            fontSize: '12px', fontWeight: 600, color: '#BE185D',
+                            background: '#FCE7F3',
                             padding: '7px 14px', borderRadius: '10px',
                             textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px',
-                            border: '1px solid #99F6E4',
+                            border: '1px solid #FBCFE8',
                             boxShadow: '3px 3px 8px rgba(0,0,0,0.04), inset 1px 1px 2px rgba(255,255,255,0.6)',
                         }}>
                             <Users size={13} /> Browse Candidates
@@ -1263,19 +1263,19 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                             <Link href="/contact" className="emp-cta-card" style={{
                                 fontSize: '12px', fontWeight: 600, color: '#fff',
-                                background: 'linear-gradient(145deg, #0D9488, #10B981)',
+                                background: 'linear-gradient(145deg, #BE185D, #9D174D)',
                                 padding: '7px 14px', borderRadius: '10px',
                                 textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                boxShadow: '3px 3px 8px rgba(13,148,136,0.15), inset 0 1px 0 rgba(255,255,255,0.15)',
+                                boxShadow: '3px 3px 8px rgba(190,24,93,0.15), inset 0 1px 0 rgba(255,255,255,0.15)',
                             }}>
                                 <MessageSquare size={12} /> Contact
                             </Link>
                             <Link href="/faq" className="emp-cta-card" style={{
-                                fontSize: '12px', fontWeight: 600, color: '#0D9488',
-                                background: '#F0FDFA',
+                                fontSize: '12px', fontWeight: 600, color: '#BE185D',
+                                background: '#FDF2F8',
                                 padding: '7px 14px', borderRadius: '10px',
                                 textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                border: '1px solid rgba(13,148,136,0.15)',
+                                border: '1px solid rgba(190,24,93,0.15)',
                             }}>
                                 <HelpCircle size={12} /> FAQs
                             </Link>
@@ -1309,7 +1309,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                     hyphens: auto;
                 }
                 .emp-job-title:hover {
-                    color: #0D9488 !important;
+                    color: #BE185D !important;
                 }
                 /* The default min-width: auto on flex/grid children means
                    the card's intrinsic minimum width equals the longest
@@ -1396,7 +1396,7 @@ function EmployerFeedbackCard() {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                 <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎉</div>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#0D9488', margin: '0 0 4px' }}>Thank You!</h3>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#BE185D', margin: '0 0 4px' }}>Thank You!</h3>
                 <p style={{ fontSize: '13px', color: '#6B7F8A', margin: 0 }}>Your feedback helps us improve the platform for all employers.</p>
             </div>
         );
@@ -1464,10 +1464,10 @@ function EmployerFeedbackCard() {
                         style={{
                             alignSelf: 'flex-start',
                             fontSize: '12px', fontWeight: 600, color: '#fff',
-                            background: 'linear-gradient(145deg, #0D9488, #10B981)',
+                            background: 'linear-gradient(145deg, #BE185D, #9D174D)',
                             padding: '8px 18px', borderRadius: '12px', border: 'none',
                             cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px',
-                            boxShadow: '3px 3px 8px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+                            boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
                         }}
                     >
                         {loading ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
@@ -1586,7 +1586,7 @@ function EmployerTestimonialCard({ employerName }: { employerName: string }) {
                     type="checkbox"
                     checked={consent}
                     onChange={(e) => { setConsent(e.target.checked); if (error) setError(null); }}
-                    style={{ marginTop: '2px', accentColor: '#0D9488' }}
+                    style={{ marginTop: '2px', accentColor: '#BE185D' }}
                 />
                 <span>
                     I consent to my review being featured publicly
@@ -1608,10 +1608,10 @@ function EmployerTestimonialCard({ employerName }: { employerName: string }) {
                                 fontSize: '11px', fontWeight: displayAs === opt.key ? 600 : 400,
                                 padding: '3px 10px', borderRadius: '8px', border: 'none',
                                 cursor: 'pointer',
-                                background: displayAs === opt.key ? '#CCFBF1' : '#F5F6F8',
-                                color: displayAs === opt.key ? '#0D9488' : '#6B7F8A',
+                                background: displayAs === opt.key ? '#FCE7F3' : '#F5F6F8',
+                                color: displayAs === opt.key ? '#BE185D' : '#6B7F8A',
                                 boxShadow: displayAs === opt.key
-                                    ? '2px 2px 5px rgba(13,148,136,0.1), inset 1px 1px 2px rgba(255,255,255,0.5)'
+                                    ? '2px 2px 5px rgba(190,24,93,0.1), inset 1px 1px 2px rgba(255,255,255,0.5)'
                                     : 'none',
                             }}
                         >

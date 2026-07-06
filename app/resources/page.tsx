@@ -45,12 +45,12 @@ const clayCard: React.CSSProperties = {
 /* ─── Category config ─── */
 const CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   career_opportunities: { label: 'Career', color: '#6366F1', bg: '#EEF2FF', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp` },
-  salary_negotiation: { label: 'Salary', color: '#0D9488', bg: '#F0FDFA', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp` },
+  salary_negotiation: { label: 'Salary', color: '#BE185D', bg: '#FDF2F8', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp` },
   job_seeker_attraction: { label: 'Job Search', color: '#3B82F6', bg: '#EFF6FF', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/blog/icon-job-search.webp` },
   career_myths: { label: 'Education', color: '#A855F7', bg: '#FAF5FF', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/blog/icon-education.webp` },
   community_lifestyle: { label: 'Lifestyle', color: '#F59E0B', bg: '#FFFBEB', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-people.webp` },
   employer_facing: { label: 'Employers', color: '#EF4444', bg: '#FEF2F2', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/blog/icon-employers.webp` },
-  product_lead_gen: { label: 'Product', color: '#0D9488', bg: '#F0FDFA', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/blog/icon-product.webp` },
+  product_lead_gen: { label: 'Product', color: '#BE185D', bg: '#FDF2F8', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/blog/icon-product.webp` },
   industry_awareness: { label: 'Industry', color: '#8B5CF6', bg: '#F5F3FF', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/blog/icon-industry.webp` },
 };
 
@@ -62,7 +62,7 @@ const featuredGuides = [
     desc: 'Interactive salary tool with state, experience, and setting selectors. Complete 2026 data.',
     img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`,
     badge: 'Interactive Tool',
-    badgeColor: '#0D9488',
+    badgeColor: '#BE185D',
   },
   {
     href: '/resources/fpa-guide',
@@ -177,7 +177,7 @@ export default async function ResourcesPage() {
           ═══════════════════════════════════════════════════════════════ */}
       <div style={{ background: 'linear-gradient(180deg, #FFF5EE 0%, #FDE8D8 40%, #FFF5EE 100%)' }}>
         <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '80px 20px 0', textAlign: 'center' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
             Free Career Resources
           </p>
           <h1 className="font-lora" style={{
@@ -227,7 +227,7 @@ export default async function ResourcesPage() {
                   </div>
                   <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>{g.title}</h2>
                   <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.55, margin: 0, flex: 1 }}>{g.desc}</p>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                     Read Guide <ArrowRight size={14} />
                   </span>
                 </Link>
@@ -259,7 +259,7 @@ export default async function ResourcesPage() {
           ═══════════════════════════════════════════════════════════════ */}
       <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)', padding: '80px 20px', marginTop: '24px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Interactive Tool
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '12px' }}>
@@ -339,7 +339,7 @@ export default async function ResourcesPage() {
           ═══════════════════════════════════════════════════════════════ */}
       <div style={{ background: 'linear-gradient(180deg, #FFF5EE 0%, #FDE8D8 50%, #FFF5EE 100%)', padding: '80px 20px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Expert Articles
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
@@ -374,7 +374,7 @@ export default async function ResourcesPage() {
                           {post.metaDescription.length > 120 ? post.metaDescription.slice(0, 120) + '…' : post.metaDescription}
                         </p>
                       )}
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#0D9488', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                         Read more <ArrowRight size={12} />
                       </span>
                     </Link>
@@ -383,7 +383,7 @@ export default async function ResourcesPage() {
                 {posts.length > 6 && (
                   <div style={{ textAlign: 'center', marginTop: '16px' }}>
                     <Link href="/blog" style={{
-                      fontSize: '13px', fontWeight: 600, color: '#0D9488',
+                      fontSize: '13px', fontWeight: 600, color: '#BE185D',
                       textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px',
                     }}>
                       View all {cfg.label} articles <ArrowRight size={14} />
@@ -401,7 +401,7 @@ export default async function ResourcesPage() {
           ═══════════════════════════════════════════════════════════════ */}
       <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Free Tools
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '32px' }}>
@@ -412,15 +412,15 @@ export default async function ResourcesPage() {
             {/* Salary Calculator */}
             <Link href="/salary-guide" className="emp-bento-card" style={{
               ...clayCard, padding: '28px 24px', textDecoration: 'none',
-              background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)',
-              border: '2px solid rgba(13,148,136,0.12)',
+              background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
+              border: '2px solid rgba(190,24,93,0.12)',
             }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`} alt="Salary Calculator" width={48} height={48} style={{ width: '48px', height: '48px', borderRadius: '14px', marginBottom: '12px' }} />
-              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#134E4A', margin: '0 0 6px' }}>Salary Calculator</h3>
+              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#831843', margin: '0 0 6px' }}>Salary Calculator</h3>
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.5, margin: '0 0 14px' }}>
                 Get a personalized salary estimate based on your state, experience, setting, and specialty.
               </p>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                 Use Calculator <ArrowRight size={14} />
               </span>
             </Link>
@@ -445,9 +445,9 @@ export default async function ResourcesPage() {
         <div style={{ maxWidth: '700px', margin: '0 auto' }}>
           <div className="emp-bento-card" style={{
             ...clayCard, padding: '0', overflow: 'hidden', textAlign: 'center',
-            border: '2px solid rgba(13,148,136,0.10)',
+            border: '2px solid rgba(190,24,93,0.10)',
           }}>
-            <div style={{ background: 'linear-gradient(145deg, #0D9488, #10B981)', padding: '40px 32px', color: '#fff' }}>
+            <div style={{ background: 'linear-gradient(145deg, #BE185D, #9D174D)', padding: '40px 32px', color: '#fff' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/clay-icon-match.webp`} alt="Jobs" width={56} height={56} style={{ width: '56px', height: '56px', margin: '0 auto 16px', borderRadius: '16px' }} />
               <h2 className="font-lora" style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px' }}>Ready to Find Your Next {brand.niche.short} Role?</h2>
               <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.8)', margin: '0 0 24px' }}>
@@ -456,7 +456,7 @@ export default async function ResourcesPage() {
               <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
                 <Link href="/jobs" className="emp-cta-primary" style={{
                   padding: '14px 32px', borderRadius: '12px', fontWeight: 700, fontSize: '14px',
-                  background: '#fff', color: '#0D9488', textDecoration: 'none',
+                  background: '#fff', color: '#BE185D', textDecoration: 'none',
                   display: 'inline-flex', alignItems: 'center', gap: '6px',
                   boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
                 }}>Browse Jobs <ArrowRight size={16} /></Link>
@@ -507,7 +507,7 @@ export default async function ResourcesPage() {
           box-shadow: inset 4px 4px 10px rgba(255,255,255,0.3), inset -3px -3px 8px rgba(0,0,0,0.08), 0 14px 32px rgba(0,0,0,0.16) !important;
         }
         .res-diorama-card:hover .res-diorama-name {
-          color: #0D9488 !important;
+          color: #BE185D !important;
         }
         @media (max-width: 768px) {
           .res-feat-grid { grid-template-columns: 1fr !important; }

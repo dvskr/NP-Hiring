@@ -138,9 +138,9 @@ const sx = {
     fontWeight: 700,
     color: '#FFFFFF',
     cursor: 'pointer',
-    background: 'linear-gradient(145deg, #0D9488, #10B981)',
-    border: '1px solid rgba(13,148,136,0.4)',
-    boxShadow: '3px 3px 10px rgba(13,148,136,0.25), inset 1px 1px 2px rgba(255,255,255,0.2)',
+    background: 'linear-gradient(145deg, #BE185D, #9D174D)',
+    border: '1px solid rgba(190,24,93,0.4)',
+    boxShadow: '3px 3px 10px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.2)',
     transition: 'all 0.15s ease',
   } satisfies React.CSSProperties,
   confirmDanger: {

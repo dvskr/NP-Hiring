@@ -56,7 +56,7 @@ function TipPill({ icon, text }: { icon: string; text: string }) {
       <span style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         width: 26, height: 26, borderRadius: 8, flexShrink: 0,
-        backgroundColor: '#E6FAF8',
+        backgroundColor: '#FDF2F8',
         boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.04), 2px 2px 4px rgba(0,0,0,0.05)',
         border: '1px solid rgba(255,255,255,0.6)',
         fontSize: '12px',
@@ -147,15 +147,15 @@ export function CareerPulseCard() {
           marginTop: '14px',
           padding: '9px 16px', borderRadius: '14px',
           fontSize: '13px', fontWeight: 600,
-          color: '#0F766E',
-          backgroundColor: '#E6FAF8',
+          color: '#9D174D',
+          backgroundColor: '#FDF2F8',
           border: '1px solid rgba(255,255,255,0.5)',
           boxShadow: clayPebbleShadow,
           textDecoration: 'none',
           transition: 'all 0.2s ease',
         }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.backgroundColor = '#CCFBF1'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.backgroundColor = '#E6FAF8'; }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.backgroundColor = '#FCE7F3'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.backgroundColor = '#FDF2F8'; }}
         >
           Explore Salary Guide →
         </Link>

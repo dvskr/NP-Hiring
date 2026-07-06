@@ -98,7 +98,7 @@ export default function CompensationGuidePage() {
       />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-teal-600 to-blue-600 text-white py-12 md:py-16">
+      <section className="bg-gradient-to-r from-pink-700 to-blue-600 text-white py-12 md:py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/10 mb-6">
@@ -122,9 +122,9 @@ export default function CompensationGuidePage() {
 
           {/* Quick Summary */}
           <div className="mb-8 md:mb-12 grid md:grid-cols-2 gap-6">
-            <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid #0d9488' }}>
+            <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid #BE185D' }}>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center"><DollarSign className="h-4 w-4 text-teal-700" /></div>
+                <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center"><DollarSign className="h-4 w-4 text-pink-800" /></div>
                 <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>1099 / Independent Contractor</h2>
               </div>
               <ul className="space-y-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
@@ -282,12 +282,12 @@ export default function CompensationGuidePage() {
                 <div>
                   <h3 className="font-semibold mb-3" style={{ color: 'var(--color-primary)' }}>Choose 1099 If You:</h3>
                   <ul className="space-y-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                    <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-teal-500 flex-shrink-0 mt-0.5" /><span>Have 2+ years of clinical experience</span></li>
-                    <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-teal-500 flex-shrink-0 mt-0.5" /><span>Want maximum income potential</span></li>
-                    <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-teal-500 flex-shrink-0 mt-0.5" /><span>Value schedule flexibility and autonomy</span></li>
-                    <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-teal-500 flex-shrink-0 mt-0.5" /><span>Are comfortable managing business finances</span></li>
-                    <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-teal-500 flex-shrink-0 mt-0.5" /><span>Have a spouse with health insurance</span></li>
-                    <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-teal-500 flex-shrink-0 mt-0.5" /><span>Are planning to open a private practice</span></li>
+                    <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-pink-600 flex-shrink-0 mt-0.5" /><span>Have 2+ years of clinical experience</span></li>
+                    <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-pink-600 flex-shrink-0 mt-0.5" /><span>Want maximum income potential</span></li>
+                    <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-pink-600 flex-shrink-0 mt-0.5" /><span>Value schedule flexibility and autonomy</span></li>
+                    <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-pink-600 flex-shrink-0 mt-0.5" /><span>Are comfortable managing business finances</span></li>
+                    <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-pink-600 flex-shrink-0 mt-0.5" /><span>Have a spouse with health insurance</span></li>
+                    <li className="flex gap-2"><TrendingUp className="h-4 w-4 text-pink-600 flex-shrink-0 mt-0.5" /><span>Are planning to open a private practice</span></li>
                   </ul>
                 </div>
                 <div>

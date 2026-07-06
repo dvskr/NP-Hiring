@@ -173,7 +173,7 @@ export default function ReportJobButton({ jobId, jobTitle }: ReportJobButtonProp
                                         display: 'inline-flex', alignItems: 'center', gap: '6px',
                                         padding: '8px 20px', borderRadius: '10px', fontWeight: 600,
                                         fontSize: '13px', color: '#fff', textDecoration: 'none',
-                                        background: 'linear-gradient(135deg, #0D9488, #0F766E)',
+                                        background: 'linear-gradient(135deg, #BE185D, #9D174D)',
                                     }}
                                 >
                                     <LogIn size={14} />

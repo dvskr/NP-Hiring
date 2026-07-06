@@ -1266,7 +1266,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
 
       {/* ═══ D2: HERO — CategoryHero with category's watercolor ═══ */}
       <CategoryHero
-        bgColor={assets?.bgColor || '#0D9488'}
+        bgColor={assets?.bgColor || '#BE185D'}
         heroImage={assets?.heroImage || `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
         heroAlt={`${config.label} ${brand.niche.short} working in ${city!.name}, ${city!.stateCode}`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
@@ -1298,7 +1298,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                 </h2>
                 <Link
                   href={`/jobs/${config.slug}`}
-                  style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textDecoration: 'none' }}
+                  style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textDecoration: 'none' }}
                 >
                   View All Jobs →
                 </Link>
@@ -1367,20 +1367,20 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             {/* Sidebar */}
             <div className="lg:col-span-1">
               {/* Job Alert CTA */}
-              <div className="pseo-bento-card" style={{ ...clayCard, padding: '0', overflow: 'hidden', marginBottom: '20px', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', border: '2px solid rgba(13,148,136,0.15)' }}>
+              <div className="pseo-bento-card" style={{ ...clayCard, padding: '0', overflow: 'hidden', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
                 <div style={{ padding: '24px' }}>
-                  <Bell size={28} style={{ color: '#0D9488', marginBottom: '12px' }} />
-                  <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#134E4A', margin: '0 0 8px' }}>
+                  <Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} />
+                  <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 8px' }}>
                     {config.label} Alerts
                   </h3>
-                  <p style={{ fontSize: '13px', color: '#0D9488', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
+                  <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
                     New {config.label.toLowerCase()} {brand.niche.short} positions in {city!.name} — delivered daily.
                   </p>
                   <Link href="/job-alerts" className="pseo-cta-primary" style={{
                     display: 'block', width: '100%', textAlign: 'center',
                     padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                    background: '#0D9488', color: '#fff', textDecoration: 'none',
-                    boxShadow: '3px 3px 8px rgba(13,148,136,0.15)',
+                    background: '#BE185D', color: '#fff', textDecoration: 'none',
+                    boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
                   }}>
                     Create Alert
                   </Link>
@@ -1390,13 +1390,13 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
               {/* Tips */}
               <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <Lightbulb size={20} style={{ color: '#0D9488' }} />
+                  <Lightbulb size={20} style={{ color: '#BE185D' }} />
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>{config.label} Tips</h3>
                 </div>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                   {config.tips.map((tip, i) => (
                     <li key={i} style={{ display: 'flex', gap: '8px', padding: '6px 0', borderBottom: i < config.tips.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none', fontSize: '13px', color: '#5A4A42', lineHeight: 1.5 }}>
-                      <span style={{ color: '#0D9488', fontWeight: 700 }}>•</span>
+                      <span style={{ color: '#BE185D', fontWeight: 700 }}>•</span>
                       <span>{tip}</span>
                     </li>
                   ))}
@@ -1442,7 +1442,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                       {config.heroSubtitle}. {config.tips[0] || ''}
                     </p>
                   </div>
-                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
+                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
                     <Image src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} width={280} height={200} sizes="(max-width: 768px) 90vw, 280px" style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
                   </div>
                 </div>
@@ -1478,7 +1478,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                 {assets.bentoImages[2] && (
                   <div className="pseo-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
                     <div style={{ padding: '32px 28px' }}>
-                      <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
+                      <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                       <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary & Compensation</h3>
                       <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                         {config.label} {brand.niche.short}s in {city!.name} earn {stats.rawAvgSalary > 0 ? `$${stats.rawAvgSalary}k` : config.salaryRange} annually.
@@ -1490,17 +1490,17 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                   </div>
                 )}
 
-                <div className="pseo-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', border: '2px solid rgba(13,148,136,0.15)' }}>
-                  <Bell size={32} style={{ color: '#0D9488', marginBottom: '14px' }} />
-                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#134E4A', margin: '0 0 6px' }}>{config.label} Alerts</h3>
-                  <p style={{ fontSize: '13px', color: '#0D9488', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
+                <div className="pseo-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
+                  <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />
+                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>{config.label} Alerts</h3>
+                  <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
                     New {config.label.toLowerCase()} listings in {city!.name} — delivered daily.
                   </p>
                   <Link href="/job-alerts" className="pseo-cta-primary" style={{
                     padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                    background: '#0D9488', color: '#fff', textDecoration: 'none',
+                    background: '#BE185D', color: '#fff', textDecoration: 'none',
                     display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content',
-                    boxShadow: '3px 3px 8px rgba(13,148,136,0.15)',
+                    boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
                   }}>
                     Create Alert <ArrowRight size={14} />
                   </Link>
@@ -1522,7 +1522,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             {/* Community Profile */}
             <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px' }}>
               <h2 className="font-lora" style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <MapPin size={18} style={{ color: '#0D9488' }} /> {city!.name}
+                <MapPin size={18} style={{ color: '#BE185D' }} /> {city!.name}
               </h2>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
@@ -1556,7 +1556,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             {/* Market Insights */}
             <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px' }}>
               <h2 className="font-lora" style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <TrendingUp size={18} style={{ color: '#0D9488' }} /> Market
+                <TrendingUp size={18} style={{ color: '#BE185D' }} /> Market
               </h2>
               <div style={{ marginBottom: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
@@ -1579,7 +1579,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
               {practiceAuthority && (
                 <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                    <Shield size={14} style={{ color: '#0D9488' }} />
+                    <Shield size={14} style={{ color: '#BE185D' }} />
                     <span style={{ fontSize: '12px', fontWeight: 700, color: '#1A2E35' }}>{practiceAuthority.authority}</span>
                   </div>
                   {/* Rendered only once the license-guide blog series is
@@ -1588,7 +1588,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                       Flip LICENSE_GUIDE_SERIES_PUBLISHED in
                       config/niche/content-map.ts when all 51 posts ship. */}
                   {LICENSE_GUIDE_SERIES_PUBLISHED && (
-                    <Link href={`/blog/${licenseGuideSlug(stateToSlug(city!.state))}`} style={{ fontSize: '11px', color: '#0D9488', textDecoration: 'none' }}>
+                    <Link href={`/blog/${licenseGuideSlug(stateToSlug(city!.state))}`} style={{ fontSize: '11px', color: '#BE185D', textDecoration: 'none' }}>
                       {city!.state} Licensure Guide →
                     </Link>
                   )}
@@ -1599,12 +1599,12 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             {/* Healthcare Systems */}
             <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px' }}>
               <h2 className="font-lora" style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <Building2 size={18} style={{ color: '#0D9488' }} /> Healthcare
+                <Building2 size={18} style={{ color: '#BE185D' }} /> Healthcare
               </h2>
               {city!.healthcareSystems.length > 0 ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {city!.healthcareSystems.map((system, i) => (
-                    <span key={i} style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '8px', background: 'rgba(13,148,136,0.08)', color: '#1A2E35', fontWeight: 500 }}>
+                    <span key={i} style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '8px', background: 'rgba(190,24,93,0.08)', color: '#1A2E35', fontWeight: 500 }}>
                       {system}
                     </span>
                   ))}
@@ -1667,21 +1667,21 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
           {/* Resource Links */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginTop: '32px' }}>
             <Link href={`/salary-guide/${stateToSlug(city!.state)}`} className="pseo-bento-card" style={{ ...clayCard, padding: '20px', textDecoration: 'none' }}>
-              <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#0D9488', marginBottom: '4px' }}>
+              <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', marginBottom: '4px' }}>
                 <DollarSign size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> {city!.state} Salary Guide
               </h3>
               <p style={{ fontSize: '12px', color: '#5A4A42', margin: 0 }}>Salary data by setting and experience.</p>
             </Link>
             {showStateLink && (
               <Link href={`/jobs/${config.slug}/${stateToSlug(city!.state)}`} className="pseo-bento-card" style={{ ...clayCard, padding: '20px', textDecoration: 'none' }}>
-                <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#0D9488', marginBottom: '4px' }}>
+                <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', marginBottom: '4px' }}>
                   <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> {config.label} Jobs in {city!.state}
                 </h3>
                 <p style={{ fontSize: '12px', color: '#5A4A42', margin: 0 }}>Browse all {config.label.toLowerCase()} positions statewide.</p>
               </Link>
             )}
             <Link href={`/jobs/${config.slug}`} className="pseo-bento-card" style={{ ...clayCard, padding: '20px', textDecoration: 'none' }}>
-              <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#0D9488', marginBottom: '4px' }}>
+              <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', marginBottom: '4px' }}>
                 <Building2 size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> All {config.label} Jobs
               </h3>
               <p style={{ fontSize: '12px', color: '#5A4A42', margin: 0 }}>Nationwide {config.label.toLowerCase()} positions.</p>
@@ -1787,7 +1787,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
       {/* FAQ Accordion — Warm bg section matching CategoryFAQ */}
       <div style={{ background: '#FDFBF7' }}>
         <section style={{ maxWidth: '1000px', margin: '0 auto', padding: '56px 20px' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Common Questions
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
@@ -1848,7 +1848,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
       {/* D11: Responsive + Hover CSS */}
       <style>{`
         .pseo-cta-primary { transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease; }
-        .pseo-cta-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(13,148,136,0.35) !important; filter: brightness(1.05); }
+        .pseo-cta-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(190,24,93,0.35) !important; filter: brightness(1.05); }
         .pseo-bento-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
         .pseo-bento-card:hover { transform: translateY(-4px); box-shadow: 8px 8px 24px rgba(0,0,0,0.1), -4px -4px 12px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
         .pseo-faq-item summary { list-style: none; }
@@ -1856,7 +1856,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
         .pseo-faq-item summary::after {
           content: '';
           width: 28px; height: 28px; border-radius: 8px;
-          background: #F0FDFA;
+          background: #FDF2F8;
           display: inline-flex; align-items: center; justify-content: center;
           flex-shrink: 0;
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230D9488' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
@@ -1864,7 +1864,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
           transition: background 0.2s ease, transform 0.2s ease;
         }
         .pseo-faq-item[open] summary::after {
-          background-color: #0D9488;
+          background-color: #BE185D;
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='18 15 12 9 6 15'%3E%3C/polyline%3E%3C/svg%3E");
           transform: none;
         }

@@ -96,7 +96,7 @@ function RenewalSuccessContent() {
           <p className="text-gray-600 mb-6">{error || 'Something went wrong'}</p>
           <Link
             href="/"
-            className="inline-block bg-teal-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-teal-700 transition"
+            className="inline-block bg-pink-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-pink-800 transition"
           >
             Go Home
           </Link>
@@ -108,7 +108,7 @@ function RenewalSuccessContent() {
   const daysExtended = 60;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 via-white to-teal-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-green-50 via-white to-pink-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-12 max-w-2xl w-full text-center">
         {/* Success Icon */}
         <div className="mb-6">
@@ -146,13 +146,13 @@ function RenewalSuccessContent() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             href={`/employer/dashboard/${renewalData.dashboardToken}`}
-            className="bg-teal-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-teal-700 transition shadow-md hover:shadow-lg"
+            className="bg-pink-700 text-white px-8 py-3 rounded-lg font-semibold hover:bg-pink-800 transition shadow-md hover:shadow-lg"
           >
             Go to Dashboard
           </Link>
           <Link
             href={`/jobs/${renewalData.jobSlug}`}
-            className="bg-white text-teal-600 border-2 border-teal-600 px-8 py-3 rounded-lg font-semibold hover:bg-teal-50 transition"
+            className="bg-white text-pink-700 border-2 border-pink-700 px-8 py-3 rounded-lg font-semibold hover:bg-pink-50 transition"
           >
             View Your Job
           </Link>
@@ -167,7 +167,7 @@ function RenewalSuccessContent() {
             Need help?{' '}
             <a
               href={`mailto:${brand.email.support}`}
-              className="text-teal-600 hover:underline"
+              className="text-pink-700 hover:underline"
             >
               Contact support
             </a>

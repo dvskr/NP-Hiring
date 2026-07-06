@@ -326,8 +326,8 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
                 style={{
                   padding: '8px 16px', borderRadius: '14px',
                   fontSize: '13px', fontWeight: 600,
-                  color: saved ? '#0F766E' : '#374151',
-                  backgroundColor: saved ? '#B2F5EA' : '#EDF2EE',
+                  color: saved ? '#9D174D' : '#374151',
+                  backgroundColor: saved ? '#FBCFE8' : '#EDF2EE',
                   border: '1px solid rgba(255,255,255,0.5)',
                   boxShadow: '4px 4px 10px rgba(0,0,0,0.06), -2px -2px 6px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03)',
                   cursor: 'pointer', transition: 'all 0.2s',
@@ -358,10 +358,10 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
                   style={{
                     padding: '8px 16px', borderRadius: '14px',
                     fontSize: '13px', fontWeight: 700, color: '#fff',
-                    background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                    background: 'linear-gradient(135deg, #F472B6, #BE185D)',
                     whiteSpace: 'nowrap',
                     border: '1px solid rgba(255,255,255,0.3)',
-                    boxShadow: '4px 4px 10px rgba(13,148,136,0.25), -2px -2px 6px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08)',
+                    boxShadow: '4px 4px 10px rgba(190,24,93,0.25), -2px -2px 6px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08)',
                     cursor: 'pointer', transition: 'all 0.2s ease',
                     display: 'inline-flex', alignItems: 'center', gap: '5px',
                   }}
@@ -383,9 +383,9 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
                   } : {
                     padding: '8px 16px', borderRadius: '14px',
                     fontSize: '13px', fontWeight: 600, color: '#fff',
-                    backgroundColor: '#0d9488', whiteSpace: 'nowrap',
+                    backgroundColor: '#BE185D', whiteSpace: 'nowrap',
                     border: '1px solid rgba(255,255,255,0.3)',
-                    boxShadow: '4px 4px 10px rgba(13,148,136,0.20), -2px -2px 6px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.06)',
+                    boxShadow: '4px 4px 10px rgba(190,24,93,0.20), -2px -2px 6px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.06)',
                     cursor: 'pointer', transition: 'all 0.2s ease',
                   }}
                 >
@@ -414,9 +414,9 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
             box-shadow: 6px 6px 14px rgba(0,0,0,0.08), -3px -3px 8px rgba(255,255,255,0.9), inset 2px 2px 5px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03) !important;
           }
           .jc-apply-btn:hover {
-            background-color: #0F766E !important;
+            background-color: #9D174D !important;
             transform: translateY(-2px);
-            box-shadow: 6px 6px 16px rgba(13,148,136,0.30), -3px -3px 8px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08) !important;
+            box-shadow: 6px 6px 16px rgba(190,24,93,0.30), -3px -3px 8px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08) !important;
           }
           .jc-apply-btn:active {
             transform: translateY(1px);
@@ -654,11 +654,11 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
                 onClick={handleEasyApplyClick}
                 style={{
                   fontSize: '13px', fontWeight: 700, color: '#fff',
-                  background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                  background: 'linear-gradient(135deg, #F472B6, #BE185D)',
                   padding: '7px 16px', borderRadius: '14px',
                   display: 'inline-flex', alignItems: 'center', gap: '5px',
                   border: '1px solid rgba(255,255,255,0.3)',
-                  boxShadow: '4px 4px 10px rgba(13,148,136,0.25), -2px -2px 6px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08)',
+                  boxShadow: '4px 4px 10px rgba(190,24,93,0.25), -2px -2px 6px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08)',
                   cursor: 'pointer', transition: 'all 0.2s ease',
                 }}
               >
@@ -679,11 +679,11 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
                   cursor: 'pointer', transition: 'all 0.2s ease',
                 } : {
                   fontSize: '13px', fontWeight: 700, color: '#fff',
-                  backgroundColor: '#0d9488',
+                  backgroundColor: '#BE185D',
                   padding: '7px 16px', borderRadius: '14px',
                   display: 'inline-flex', alignItems: 'center', gap: '4px',
                   border: '1px solid rgba(255,255,255,0.3)',
-                  boxShadow: '4px 4px 10px rgba(13,148,136,0.20), -2px -2px 6px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.06)',
+                  boxShadow: '4px 4px 10px rgba(190,24,93,0.20), -2px -2px 6px rgba(255,255,255,0.2), inset 2px 2px 4px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.06)',
                   cursor: 'pointer', transition: 'all 0.2s ease',
                 }}
               >
@@ -724,14 +724,14 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
           box-shadow: 6px 6px 14px rgba(0,0,0,0.08), -3px -3px 8px rgba(255,255,255,0.9), inset 2px 2px 5px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03) !important;
         }
         .jc-apply-btn:hover {
-          background-color: #0F766E !important;
+          background-color: #9D174D !important;
           transform: translateY(-2px);
-          box-shadow: 6px 6px 16px rgba(13,148,136,0.30), -3px -3px 8px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08) !important;
+          box-shadow: 6px 6px 16px rgba(190,24,93,0.30), -3px -3px 8px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.25), inset -1px -1px 2px rgba(0,0,0,0.08) !important;
         }
         .jc-easy-apply-btn:hover {
-          background: linear-gradient(135deg, #14B8A6, #0F766E) !important;
+          background: linear-gradient(135deg, #DB2777, #9D174D) !important;
           transform: translateY(-2px);
-          box-shadow: 6px 6px 16px rgba(13,148,136,0.35), -3px -3px 8px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.3), inset -1px -1px 2px rgba(0,0,0,0.08) !important;
+          box-shadow: 6px 6px 16px rgba(190,24,93,0.35), -3px -3px 8px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.3), inset -1px -1px 2px rgba(0,0,0,0.08) !important;
         }
         .jc-easy-apply-btn:active {
           transform: translateY(1px);

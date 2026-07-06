@@ -210,7 +210,7 @@ export default async function LocationsPage() {
       />
       {/* ═══ HERO ═══ */}
       <CategoryHero
-        bgColor="#0D9488"
+        bgColor="#BE185D"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp`}
         heroAlt={`${brand.niche.short} Jobs by Location`}
         badgeText="Nationwide"
@@ -284,7 +284,7 @@ export default async function LocationsPage() {
                         boxShadow: 'inset 2px 2px 6px rgba(0,0,0,0.03), inset -1px -1px 3px rgba(255,255,255,0.5)',
                         textAlign: 'center',
                       }}>
-                        <div style={{ fontSize: '28px', fontWeight: 800, color: '#0D9488', lineHeight: 1.1 }}>
+                        <div style={{ fontSize: '28px', fontWeight: 800, color: '#BE185D', lineHeight: 1.1 }}>
                           {stats.remoteCount}
                         </div>
                         <div style={{ fontSize: '11px', fontWeight: 600, color: '#7A6A62', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
@@ -298,8 +298,8 @@ export default async function LocationsPage() {
                         style={{
                           padding: '10px 24px', borderRadius: '14px',
                           fontSize: '14px', fontWeight: 700, color: '#fff',
-                          background: 'linear-gradient(135deg, #0D9488, #0F766E)',
-                          boxShadow: '4px 4px 12px rgba(13,148,136,0.2), -2px -2px 6px rgba(255,255,255,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
+                          background: 'linear-gradient(135deg, #BE185D, #9D174D)',
+                          boxShadow: '4px 4px 12px rgba(190,24,93,0.2), -2px -2px 6px rgba(255,255,255,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
                           display: 'inline-flex', alignItems: 'center', gap: '6px',
                           whiteSpace: 'nowrap',
                         }}
@@ -349,7 +349,7 @@ export default async function LocationsPage() {
                     <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 4px' }}>{cat.label}</h3>
                     <p style={{ fontSize: '12px', color: '#7A6A62', margin: '0 0 12px', lineHeight: 1.4 }}>{cat.sub}</p>
                     <div style={{
-                      marginTop: 'auto', fontSize: '12px', fontWeight: 700, color: '#0D9488',
+                      marginTop: 'auto', fontSize: '12px', fontWeight: 700, color: '#BE185D',
                       display: 'flex', alignItems: 'center', gap: '4px',
                     }}>
                       View Jobs <span className="group-hover:translate-x-1 transition-transform">→</span>
@@ -388,7 +388,7 @@ export default async function LocationsPage() {
                   background: #F9F7F1;
                 }
                 .state-card:hover .state-name {
-                  color: #0D9488 !important;
+                  color: #BE185D !important;
                 }
               `}} />
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
@@ -421,7 +421,7 @@ export default async function LocationsPage() {
                         padding: '5px 12px', borderRadius: '12px',
                         background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(8px)',
                         boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
-                        fontSize: '13px', fontWeight: 800, color: '#0D9488', lineHeight: 1,
+                        fontSize: '13px', fontWeight: 800, color: '#BE185D', lineHeight: 1,
                         display: 'flex', alignItems: 'baseline', gap: '3px',
                       }}>
                         {state.count} <span style={{ fontSize: '10px', fontWeight: 600, color: '#7A6A62' }}>jobs</span>
@@ -435,7 +435,7 @@ export default async function LocationsPage() {
                       <span className="state-name" style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35', transition: 'color 0.2s' }}>
                         {state.name}
                       </span>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#0D9488', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', display: 'flex', alignItems: 'center', gap: '3px' }}>
                         View →
                       </span>
                     </div>
@@ -495,7 +495,7 @@ export default async function LocationsPage() {
                 </p>
                 <Link
                   href="/jobs"
-                  className="inline-block px-6 py-3 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition-colors shadow-sm hover:shadow-md"
+                  className="inline-block px-6 py-3 bg-pink-700 text-white rounded-lg font-medium hover:bg-pink-800 transition-colors shadow-sm hover:shadow-md"
                 >
                   Search All Jobs
                 </Link>

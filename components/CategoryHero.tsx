@@ -76,8 +76,8 @@ export default function CategoryHero({
   const ink       = '#1f1a17';
   const inkSoft   = '#3d342d';
   const rule      = 'rgba(31,26,23,.16)';
-  const teal      = '#0D9488';
-  const tealDeep  = '#0f766e';
+  const teal      = '#BE185D';
+  const tealDeep  = '#9D174D';
 
   return (
     <section className="cath5" style={{ background: '#faf6ef', padding: '48px 56px 0', position: 'relative', overflow: 'hidden' }}>
@@ -144,9 +144,9 @@ export default function CategoryHero({
           <div className="cath5-ctas">
             <Link href={ctaHref} className="cat-cta-primary" style={{
               padding: '14px 32px', borderRadius: '999px', fontWeight: 700, fontSize: '14px',
-              background: '#0D9488', color: '#fff', textDecoration: 'none',
+              background: '#BE185D', color: '#fff', textDecoration: 'none',
               display: 'inline-flex', alignItems: 'center', gap: '8px',
-              boxShadow: '4px 4px 12px rgba(13,148,136,0.2)',
+              boxShadow: '4px 4px 12px rgba(190,24,93,0.2)',
             }}>
               {ctaLabel} <ArrowRight size={16} />
             </Link>
@@ -356,14 +356,14 @@ export default function CategoryHero({
         }
         .cat-cta-primary:first-child:hover {
           transform: translateY(-3px) scale(1.02);
-          box-shadow: 0 10px 32px rgba(13,148,136,0.35) !important;
+          box-shadow: 0 10px 32px rgba(190,24,93,0.35) !important;
           filter: brightness(1.08);
         }
         .cat-cta-primary:nth-child(2):hover {
           transform: translateY(-3px);
           box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
           background: rgba(255,255,255,0.95) !important;
-          border-color: rgba(13,148,136,0.3) !important;
+          border-color: rgba(190,24,93,0.3) !important;
         }
 
         /* ── Responsive ── */

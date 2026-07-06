@@ -102,7 +102,7 @@ export default function FPAGuidePage() {
       />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-teal-600 to-teal-700 text-white py-12 md:py-16">
+      <section className="bg-gradient-to-r from-pink-700 to-pink-800 text-white py-12 md:py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/10 mb-6">
@@ -111,24 +111,24 @@ export default function FPAGuidePage() {
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
               {brand.niche.short} Full Practice Authority Guide 2026
             </h1>
-            <p className="text-sm text-teal-200 text-center mt-2 mb-4">
+            <p className="text-sm text-pink-200 text-center mt-2 mb-4">
               Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </p>
-            <p className="text-lg md:text-xl text-teal-100 mb-6">
+            <p className="text-lg md:text-xl text-pink-100 mb-6">
               State-by-state practice authority classifications for {brand.niche.descriptor}s
             </p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-8 mt-8">
               <div className="text-center">
                 <div className="text-3xl font-bold">{fullStates.length}</div>
-                <div className="text-sm text-teal-100">Full Practice Authority</div>
+                <div className="text-sm text-pink-100">Full Practice Authority</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold">{reducedStates.length}</div>
-                <div className="text-sm text-teal-100">Reduced Practice</div>
+                <div className="text-sm text-pink-100">Reduced Practice</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold">{restrictedStates.length}</div>
-                <div className="text-sm text-teal-100">Restricted Practice</div>
+                <div className="text-sm text-pink-100">Restricted Practice</div>
               </div>
             </div>
           </div>
@@ -299,8 +299,8 @@ export default function FPAGuidePage() {
               Browse thousands of {brand.niche.descriptor} positions updated daily.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/jobs" className="inline-block bg-teal-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-teal-700 transition-colors">Browse All Jobs</Link>
-              <Link href="/salary-guide" className="inline-block bg-white px-8 py-3 rounded-lg font-medium border border-teal-200 hover:bg-teal-50 transition-colors" style={{ color: 'var(--color-primary)' }}>View Salary Guide</Link>
+              <Link href="/jobs" className="inline-block bg-pink-700 text-white px-8 py-3 rounded-lg font-medium hover:bg-pink-800 transition-colors">Browse All Jobs</Link>
+              <Link href="/salary-guide" className="inline-block bg-white px-8 py-3 rounded-lg font-medium border border-pink-200 hover:bg-pink-50 transition-colors" style={{ color: 'var(--color-primary)' }}>View Salary Guide</Link>
             </div>
           </div>
         </div>

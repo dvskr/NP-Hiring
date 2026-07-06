@@ -91,7 +91,7 @@ function outcomeColor(outcome: string): string {
         outcome === 'skipped_partial_fetch' ||
         outcome === 'skipped_low_baseline'
     ) {
-        return '#0D9488';
+        return '#BE185D';
     }
     if (
         outcome.startsWith('http_4') ||
@@ -181,7 +181,7 @@ export default function JobHealthDashboard() {
     if (loading) {
         return (
             <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '60px 16px', textAlign: 'center' }}>
-                <HeartPulse className="animate-pulse" size={48} style={{ color: '#0D9488' }} />
+                <HeartPulse className="animate-pulse" size={48} style={{ color: '#BE185D' }} />
                 <p style={{ marginTop: '16px', color: '#6B7F8A' }}>Loading job-health metrics…</p>
             </div>
         );
@@ -233,12 +233,12 @@ export default function JobHealthDashboard() {
             {/* Metric tiles */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '28px' }}>
                 <MetricTile
-                    icon={<Database size={20} />} accent="#0D9488"
+                    icon={<Database size={20} />} accent="#BE185D"
                     label="Published" value={c.published}
                     hint={`${fmtNumber(c.total)} total in catalog`}
                 />
                 <MetricTile
-                    icon={<ShieldAlert size={20} />} accent={deadRatePct > 5 ? '#DC2626' : '#0D9488'}
+                    icon={<ShieldAlert size={20} />} accent={deadRatePct > 5 ? '#DC2626' : '#BE185D'}
                     label="Dead-suspected (live)"
                     value={c.deadSuspectedPublished}
                     hint={`${deadRatePct.toFixed(1)}% of published — 3+ presence misses`}
@@ -263,7 +263,7 @@ export default function JobHealthDashboard() {
                 {/* By source */}
                 <div style={clayCard}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                        <Layers size={18} style={{ color: '#0D9488' }} />
+                        <Layers size={18} style={{ color: '#BE185D' }} />
                         <h2 style={sectionTitle}>By source</h2>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -283,8 +283,8 @@ export default function JobHealthDashboard() {
                                     <div style={{
                                         display: 'flex', alignItems: 'center', gap: '6px',
                                         padding: '4px 10px', borderRadius: '10px',
-                                        backgroundColor: danger ? '#FEE2E2' : '#E6FAF8',
-                                        color: danger ? '#991B1B' : '#0D9488',
+                                        backgroundColor: danger ? '#FEE2E2' : '#FDF2F8',
+                                        color: danger ? '#991B1B' : '#BE185D',
                                         fontSize: '12px', fontWeight: 600,
                                     }}>
                                         {danger && <AlertTriangle size={12} />}
@@ -299,7 +299,7 @@ export default function JobHealthDashboard() {
                 {/* Vote outcomes 7d */}
                 <div style={clayCard}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                        <Activity size={18} style={{ color: '#0D9488' }} />
+                        <Activity size={18} style={{ color: '#BE185D' }} />
                         <h2 style={sectionTitle}>Outcome distribution (7d)</h2>
                     </div>
                     {data.outcomes.length === 0 ? (
@@ -331,7 +331,7 @@ export default function JobHealthDashboard() {
                 {/* Soft-404 patterns */}
                 <div style={clayCard}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                        <Search size={18} style={{ color: '#0D9488' }} />
+                        <Search size={18} style={{ color: '#BE185D' }} />
                         <h2 style={sectionTitle}>Soft-404 pattern hits (7d)</h2>
                     </div>
                     {data.softPatternHits.length === 0 ? (
@@ -351,7 +351,7 @@ export default function JobHealthDashboard() {
                 {/* Source-presence buckets */}
                 <div style={clayCard}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                        <Radio size={18} style={{ color: '#0D9488' }} />
+                        <Radio size={18} style={{ color: '#BE185D' }} />
                         <h2 style={sectionTitle}>Source-presence (live jobs)</h2>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -362,7 +362,7 @@ export default function JobHealthDashboard() {
                                     <span style={{ fontSize: '12px', color: '#1A2E35', fontWeight: 600 }}>{b.bucket}</span>
                                     <span style={{
                                         fontSize: '12px',
-                                        color: isDanger ? '#DC2626' : '#0D9488',
+                                        color: isDanger ? '#DC2626' : '#BE185D',
                                         fontWeight: 600,
                                     }}>
                                         {fmtNumber(b.count)}
@@ -380,7 +380,7 @@ export default function JobHealthDashboard() {
                 {/* Check throughput */}
                 <div style={clayCard}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                        <Activity size={18} style={{ color: '#0D9488' }} />
+                        <Activity size={18} style={{ color: '#BE185D' }} />
                         <h2 style={sectionTitle}>Check throughput (7d)</h2>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -389,7 +389,7 @@ export default function JobHealthDashboard() {
                         ) : data.checkThroughput.map((c) => (
                             <div key={c.checkType} style={{ ...clayInset, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <code style={{ fontSize: '12px', color: '#1A2E35' }}>{c.checkType}</code>
-                                <span style={{ fontSize: '12px', color: '#0D9488', fontWeight: 600 }}>{fmtNumber(c.count)}</span>
+                                <span style={{ fontSize: '12px', color: '#BE185D', fontWeight: 600 }}>{fmtNumber(c.count)}</span>
                             </div>
                         ))}
                     </div>
@@ -447,7 +447,7 @@ export default function JobHealthDashboard() {
                     href="/admin/cron"
                     style={{
                         display: 'inline-flex', alignItems: 'center', gap: '6px',
-                        fontSize: '13px', color: '#0D9488', fontWeight: 600,
+                        fontSize: '13px', color: '#BE185D', fontWeight: 600,
                         textDecoration: 'none',
                     }}
                 >

@@ -235,7 +235,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
               <Link
                 href={`/jobs?location=${encodeURIComponent(metro.city)}`}
                 className="text-sm font-medium hover:opacity-80 transition-opacity"
-                style={{ color: '#0D9488' }}
+                style={{ color: '#BE185D' }}
               >
                 View All Jobs →
               </Link>
@@ -252,7 +252,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
                 <Link
                   href="/jobs"
                   className="metro-cta"
-                  style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px', background: '#0D9488', color: '#fff', textDecoration: 'none', display: 'inline-block' }}
+                  style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-block' }}
                 >
                   Browse All Jobs
                 </Link>
@@ -269,9 +269,9 @@ export default async function MetroLandingPage({ params }: PageProps) {
                 <div style={{ textAlign: 'center', marginTop: '32px' }}>
                   <Link href={`/jobs?location=${encodeURIComponent(metro.city)}`} className="metro-cta" style={{
                     padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px',
-                    background: '#0D9488', color: '#fff', textDecoration: 'none',
+                    background: '#BE185D', color: '#fff', textDecoration: 'none',
                     display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    boxShadow: '4px 4px 12px rgba(13,148,136,0.2)',
+                    boxShadow: '4px 4px 12px rgba(190,24,93,0.2)',
                   }}>
                     View All {stats.totalJobs} Jobs in {metro.city} <ArrowRight size={16} />
                   </Link>
@@ -283,17 +283,17 @@ export default async function MetroLandingPage({ params }: PageProps) {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             {/* Job Alert CTA */}
-            <div className="metro-card" style={{ ...clayCard, padding: '24px', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', border: '2px solid rgba(13,148,136,0.15)', marginBottom: '20px' }}>
-              <Bell size={28} style={{ color: '#0D9488', marginBottom: '12px' }} />
-              <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#134E4A', margin: '0 0 8px' }}>
+            <div className="metro-card" style={{ ...clayCard, padding: '24px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)', marginBottom: '20px' }}>
+              <Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} />
+              <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 8px' }}>
                 Get {metro.city} Job Alerts
               </h3>
-              <p style={{ fontSize: '13px', color: '#0D9488', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
+              <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
                 New {metro.city} listings delivered to your inbox daily.
               </p>
               <Link
                 href={`/job-alerts?location=${encodeURIComponent(metro.city)}`}
-                className="metro-cta" style={{ display: 'block', width: '100%', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#0D9488', color: '#fff', textDecoration: 'none', boxShadow: '3px 3px 8px rgba(13,148,136,0.15)' }}
+                className="metro-cta" style={{ display: 'block', width: '100%', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none', boxShadow: '3px 3px 8px rgba(190,24,93,0.15)' }}
               >
                 Create Alert
               </Link>
@@ -303,14 +303,14 @@ export default async function MetroLandingPage({ params }: PageProps) {
             {stats.topEmployers.length > 0 && (
               <div className="metro-card" style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <Building2 size={20} style={{ color: '#0D9488' }} />
+                  <Building2 size={20} style={{ color: '#BE185D' }} />
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Top Employers</h3>
                 </div>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                   {stats.topEmployers.map((employer, i) => (
                     <li key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < stats.topEmployers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
                       <span style={{ fontSize: '13px', color: '#5A4A42', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{employer.name}</span>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#0D9488', marginLeft: '8px', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', marginLeft: '8px', whiteSpace: 'nowrap' }}>
                         {employer.count} {employer.count === 1 ? 'job' : 'jobs'}
                       </span>
                     </li>
@@ -343,7 +343,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
                   { href: '/jobs/telehealth', icon: '💻', label: 'Telehealth Positions' },
                 ].map(link => (
                   <li key={link.href} style={{ padding: '6px 0' }}>
-                    <Link href={link.href} style={{ fontSize: '13px', color: '#0D9488', textDecoration: 'none', fontWeight: 500 }}>
+                    <Link href={link.href} style={{ fontSize: '13px', color: '#BE185D', textDecoration: 'none', fontWeight: 500 }}>
                       {link.icon} {link.label}
                     </Link>
                   </li>
@@ -355,7 +355,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
       </div>
 
       {/* ═══ BENTO GRID — Why Choose This Metro ═══ */}
-      <div style={{ background: 'linear-gradient(180deg, #F0FDFA 0%, #E6FAF5 50%, #F0FDFA 100%)' }}>
+      <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #FDF2F8 50%, #FDF2F8 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Why This Market
@@ -375,7 +375,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
                   {metro.licensureNote.slice(0, 150)}...
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', padding: '16px' }}>
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
                 <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_practice.webp`} alt={`${metro.state} practice authority`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
@@ -408,7 +408,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
             {/* ROW 3: Salary (8) + Alert CTA (4) */}
             <div className="metro-bento-hero-3 metro-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
               <div style={{ padding: '32px 28px' }}>
-                <TrendingUp size={28} style={{ color: '#0D9488', marginBottom: '16px' }} />
+                <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Outlook</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                   {metro.city} {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K'} annually — {metro.costOfLivingNote.split('.')[0].toLowerCase()}.
@@ -422,18 +422,18 @@ export default async function MetroLandingPage({ params }: PageProps) {
             <div className="metro-bento-cta metro-card" style={{
               ...clayCard, gridColumn: 'span 4', padding: '28px 22px',
               display: 'flex', flexDirection: 'column', justifyContent: 'center',
-              background: 'linear-gradient(145deg, #F0FDFA, #CCFBF1)', border: '2px solid rgba(13,148,136,0.15)',
+              background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)',
             }}>
-              <Bell size={28} style={{ color: '#0D9488', marginBottom: '14px' }} />
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#134E4A', margin: '0 0 6px' }}>Job Alerts</h3>
-              <p style={{ fontSize: '13px', color: '#0D9488', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
+              <Bell size={28} style={{ color: '#BE185D', marginBottom: '14px' }} />
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Job Alerts</h3>
+              <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
                 New {metro.city} listings delivered to your inbox — be first to apply.
               </p>
               <Link href={`/job-alerts?location=${encodeURIComponent(metro.city)}`} className="metro-cta" style={{
                 padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                background: '#0D9488', color: '#fff', textDecoration: 'none',
+                background: '#BE185D', color: '#fff', textDecoration: 'none',
                 display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content',
-                boxShadow: '3px 3px 8px rgba(13,148,136,0.15)',
+                boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
               }}>
                 Create Alert <ArrowRight size={14} />
               </Link>
@@ -443,9 +443,9 @@ export default async function MetroLandingPage({ params }: PageProps) {
       </div>
 
       {/* ═══ GETTING STARTED ═══ */}
-      <div style={{ background: 'linear-gradient(180deg, #F0FDFA 0%, #E6FFFA 50%, #F0FDFA 100%)' }}>
+      <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #E6FFFA 50%, #FDF2F8 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Before You Apply
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
@@ -458,8 +458,8 @@ export default async function MetroLandingPage({ params }: PageProps) {
               { step: '03', title: 'Top Settings', text: `Popular settings include ${metro.topSettings.slice(0, 3).join(', ')}. Explore all options.` },
               { step: '04', title: 'Apply', text: `Browse ${stats.totalJobs}+ positions in ${metro.city} and set up job alerts to be first to apply.` },
             ].map(r => (
-              <div key={r.step} className="metro-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #0D9488' }}>
-                <span style={{ fontSize: '28px', fontWeight: 800, color: '#CCFBF1', display: 'block', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>{r.step}</span>
+              <div key={r.step} className="metro-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
+                <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>{r.step}</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>{r.title}</h3>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>{r.text}</p>
               </div>
@@ -502,7 +502,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
       {/* ═══ Hover + Responsive CSS ═══ */}
       <style>{`
         .metro-cta { transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease; }
-        .metro-cta:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(13,148,136,0.35) !important; filter: brightness(1.05); }
+        .metro-cta:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(190,24,93,0.35) !important; filter: brightness(1.05); }
         .metro-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
         .metro-card:hover { transform: translateY(-4px); box-shadow: 8px 8px 24px rgba(0,0,0,0.1), -4px -4px 12px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
         @media (max-width: 768px) {

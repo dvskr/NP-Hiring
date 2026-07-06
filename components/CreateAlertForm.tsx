@@ -133,7 +133,7 @@ export default function CreateAlertForm({ initialFilters = {}, onSuccess }: Crea
           placeholder="you@example.com"
           className={`w-full rounded-lg border px-3.5 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${errors.email
               ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-              : 'border-slate-300 focus:border-teal-500 focus:ring-teal-500'
+              : 'border-slate-300 focus:border-pink-600 focus:ring-pink-600'
             }`}
           {...register('email', {
             required: 'Email is required',
@@ -155,7 +155,7 @@ export default function CreateAlertForm({ initialFilters = {}, onSuccess }: Crea
         </label>
         <select
           id="frequency"
-          className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:border-teal-500 focus:ring-teal-500"
+          className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:border-pink-600 focus:ring-pink-600"
           {...register('frequency')}
         >
           <option value="daily">Daily digest</option>
@@ -174,7 +174,7 @@ export default function CreateAlertForm({ initialFilters = {}, onSuccess }: Crea
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full rounded-lg bg-pink-700 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-pink-800 focus:outline-none focus:ring-2 focus:ring-pink-600 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {isLoading ? (
           <>

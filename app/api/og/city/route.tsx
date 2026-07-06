@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
             right: 0,
             height: '6px',
             display: 'flex',
-            background: 'linear-gradient(90deg, #5EBCB0, #0D9488, #DB7558)',
+            background: 'linear-gradient(90deg, #F472B6, #BE185D, #DB7558)',
           }}
         />
 
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
           position: 'absolute', top: -60, right: -60,
           width: 280, height: 280, borderRadius: '50%',
           display: 'flex',
-          background: 'linear-gradient(145deg, rgba(94,188,176,0.12), rgba(94,188,176,0.04))',
+          background: 'linear-gradient(145deg, rgba(244,114,182,0.12), rgba(244,114,182,0.04))',
           boxShadow: 'inset 4px 4px 12px rgba(255,255,255,0.6), inset -4px -4px 12px rgba(0,0,0,0.03)',
         }} />
         <div style={{
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
             {logoSrc ? (
               <img src={logoSrc} alt={brand.name} width={180} height={60} style={{ objectFit: 'contain' }} />
             ) : (
-              <div style={{ display: 'flex', fontSize: 26, fontWeight: 800, color: '#0D9488' }}>
+              <div style={{ display: 'flex', fontSize: 26, fontWeight: 800, color: '#BE185D' }}>
                 {brand.name}
               </div>
             )}
@@ -123,11 +123,11 @@ export async function GET(request: NextRequest) {
               boxShadow: '4px 4px 12px rgba(0,0,0,0.06), -2px -2px 8px rgba(255,255,255,0.8), inset 1px 1px 3px rgba(255,255,255,0.6)',
               fontSize: 16,
               fontWeight: 800,
-              color: '#0D9488',
+              color: '#BE185D',
               letterSpacing: '0.06em',
               textTransform: 'uppercase' as const,
             }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#BE185D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <rect width="20" height="14" x="2" y="7" rx="2" ry="2" />
                 <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
               </svg>
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
                 display: 'flex',
                 fontSize: displayCity.length > 20 ? 44 : 52,
                 fontWeight: 800,
-                color: '#0D9488',
+                color: '#BE185D',
                 lineHeight: 1.1,
                 letterSpacing: '-0.02em',
               }}>
@@ -200,7 +200,7 @@ export async function GET(request: NextRequest) {
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 44, height: 44, borderRadius: 14,
-                background: 'linear-gradient(145deg, #5EBCB0, #0D9488)',
+                background: 'linear-gradient(145deg, #F472B6, #BE185D)',
                 color: '#fff',
               }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -252,12 +252,12 @@ export async function GET(request: NextRequest) {
               marginLeft: 'auto',
               padding: '14px 24px',
               borderRadius: '14px',
-              background: 'linear-gradient(145deg, #0D9488, #0F766E)',
+              background: 'linear-gradient(145deg, #BE185D, #9D174D)',
               color: '#fff',
               fontSize: 17,
               fontWeight: 800,
               letterSpacing: '0.05em',
-              boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+              boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
             }}>
               {brand.domain}
             </div>

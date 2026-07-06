@@ -23,7 +23,7 @@ const ctaStyle = (role: Role, loading: boolean): React.CSSProperties => ({
   border: 'none',
   background: role === 'employer'
     ? 'linear-gradient(145deg, #B45309, #92400E)'
-    : 'linear-gradient(145deg, #0D9488, #0F766E)',
+    : 'linear-gradient(145deg, #BE185D, #9D174D)',
   color: '#fff',
   fontWeight: 700,
   fontSize: '15px',
@@ -35,7 +35,7 @@ const ctaStyle = (role: Role, loading: boolean): React.CSSProperties => ({
   opacity: loading ? 0.6 : 1,
   boxShadow: role === 'employer'
     ? '0 4px 14px rgba(180,83,9,0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
-    : '0 4px 14px rgba(13,148,136,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+    : '0 4px 14px rgba(190,24,93,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
   transition: 'all 0.2s',
 });
 
@@ -138,7 +138,7 @@ export default function LoginContent() {
     setIsUnconfirmed(false);
   };
 
-  const accent = role === 'employer' ? '#B45309' : '#0D9488';
+  const accent = role === 'employer' ? '#B45309' : '#BE185D';
 
   return (
     <>
@@ -174,7 +174,7 @@ export default function LoginContent() {
             borderRadius: '11px', border: 'none', cursor: 'pointer',
             transition: 'all 0.2s ease',
             background: role === 'seeker' ? '#FFFFFF' : 'transparent',
-            color: role === 'seeker' ? '#0D9488' : '#94A3B0',
+            color: role === 'seeker' ? '#BE185D' : '#94A3B0',
             boxShadow: role === 'seeker' ? '0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)' : 'none',
           }}
         >

@@ -1250,7 +1250,7 @@ html:has(.ed-page) body {
   margin-top: 32px;
   padding: 24px 20px;
   background: linear-gradient(135deg, #EDF2EE, #E6F0E8);
-  border: 1px solid rgba(13, 148, 136, 0.15);
+  border: 1px solid rgba(190,24,93, 0.15);
   border-radius: 8px;
   box-shadow:
     4px 4px 12px rgba(0, 0, 0, 0.04),
@@ -1258,7 +1258,7 @@ html:has(.ed-page) body {
     inset 1px 1px 3px rgba(255, 255, 255, 0.6);
 }
 .ed-sidebar-newsletter .ed-newsletter-kicker {
-  color: #0D9488;
+  color: #BE185D;
   margin-bottom: 8px;
 }
 .ed-sidebar-newsletter-title {
@@ -1272,7 +1272,7 @@ html:has(.ed-page) body {
 }
 .ed-sidebar-newsletter-title em {
   font-style: italic;
-  color: #0D9488;
+  color: #BE185D;
 }
 .ed-sidebar-newsletter-desc {
   font-size: 12px;
@@ -1764,9 +1764,9 @@ html:has(.ed-page) body {
   z-index: 5;
 }
 .ed-video-play-btn:hover {
-  background: rgba(13, 148, 136, 0.85);
+  background: rgba(190,24,93, 0.85);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.3);
+  box-shadow: 0 4px 16px rgba(190,24,93, 0.3);
 }
 .ed-video-play-btn:active {
   transform: translateY(0);

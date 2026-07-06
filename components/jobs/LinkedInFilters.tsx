@@ -42,8 +42,8 @@ function CheckboxFilter({ label, count, checked, onChange, disabled }: CheckboxF
       </div>
       <span style={{
         fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '12px',
-        backgroundColor: count === 0 ? '#F3F4F6' : '#CCFBF1',
-        color: count === 0 ? '#9CA3AF' : '#0F766E',
+        backgroundColor: count === 0 ? '#F3F4F6' : '#FCE7F3',
+        color: count === 0 ? '#9CA3AF' : '#9D174D',
         boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.7), 1px 1px 2px rgba(0,0,0,0.03)',
       }}>
         {(count || 0).toLocaleString()}
@@ -367,8 +367,8 @@ export default function LinkedInFilters() {
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: '4px',
                     padding: '3px 10px', borderRadius: '20px',
-                    backgroundColor: '#CCFBF1',
-                    color: '#0F766E', fontSize: '11px', fontWeight: 600,
+                    backgroundColor: '#FCE7F3',
+                    color: '#9D174D', fontSize: '11px', fontWeight: 600,
                     boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.6), 1px 1px 3px rgba(0,0,0,0.04)',
                   }}
                 >
@@ -652,7 +652,7 @@ export default function LinkedInFilters() {
         }
         .li-filter-input:focus {
           border-color: var(--color-primary) !important;
-          box-shadow: 0 0 0 2px rgba(45,212,191,0.15);
+          box-shadow: 0 0 0 2px rgba(244,114,182,0.15);
         }
         .li-checkbox:checked {
           accent-color: var(--color-primary);

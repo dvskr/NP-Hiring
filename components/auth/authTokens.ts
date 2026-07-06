@@ -99,7 +99,7 @@ export const ctaButtonStyle = (loading: boolean): React.CSSProperties => ({
   padding: '13px 24px',
   borderRadius: '14px',
   border: 'none',
-  background: 'linear-gradient(145deg, #0D9488, #0F766E)',
+  background: 'linear-gradient(145deg, #BE185D, #9D174D)',
   color: '#fff',
   fontWeight: 700,
   fontSize: '15px',
@@ -109,7 +109,7 @@ export const ctaButtonStyle = (loading: boolean): React.CSSProperties => ({
   gap: '8px',
   cursor: loading ? 'not-allowed' : 'pointer',
   opacity: loading ? 0.6 : 1,
-  boxShadow: '0 4px 14px rgba(13,148,136,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+  boxShadow: '0 4px 14px rgba(190,24,93,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
   transition: 'all 0.15s',
 });
 
@@ -136,7 +136,7 @@ export const toggleActiveStyle: React.CSSProperties = {
   cursor: 'pointer',
   transition: 'all 0.2s',
   background: '#FFFFFF',
-  color: '#0D9488',
+  color: '#BE185D',
   boxShadow: '0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
 };
 
@@ -204,7 +204,7 @@ export const googleBtnStyle: React.CSSProperties = {
 /* ─── Link text ─── */
 export const linkStyle: React.CSSProperties = {
   fontWeight: 600,
-  color: '#0D9488',
+  color: '#BE185D',
   textDecoration: 'none',
 };
 

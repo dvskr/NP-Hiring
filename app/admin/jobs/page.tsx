@@ -290,9 +290,9 @@ export default function AdminJobsPage() {
         <div style={{
           display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px',
           padding: '12px 18px', borderRadius: '10px',
-          backgroundColor: 'rgba(45, 212, 191, 0.08)', border: '1px solid rgba(45, 212, 191, 0.2)',
+          backgroundColor: 'rgba(244,114,182, 0.08)', border: '1px solid rgba(244,114,182, 0.2)',
         }}>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488' }}>{selected.size} selected</span>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>{selected.size} selected</span>
           {[
             { label: 'Publish', action: 'publish', color: '#22C55E' },
             { label: 'Unpublish', action: 'unpublish', color: '#F59E0B' },
@@ -315,7 +315,7 @@ export default function AdminJobsPage() {
       <div style={s.card}>
         {loading && jobs.length === 0 ? (
           <div style={{ padding: '60px', textAlign: 'center' }}>
-            <div style={{ width: 40, height: 40, border: '3px solid #E8ECF0', borderTop: '3px solid #0D9488', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{ width: 40, height: 40, border: '3px solid #E8ECF0', borderTop: '3px solid #BE185D', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.8s linear infinite' }} />
             <p style={{ ...s.sub, marginTop: '12px' }}>Loading jobs…</p>
           </div>
         ) : (
@@ -340,7 +340,7 @@ export default function AdminJobsPage() {
               </thead>
               <tbody>
                 {jobs.map(job => (
-                  <tr key={job.id} style={{ backgroundColor: selected.has(job.id) ? 'rgba(45,212,191,0.04)' : undefined }}>
+                  <tr key={job.id} style={{ backgroundColor: selected.has(job.id) ? 'rgba(244,114,182,0.04)' : undefined }}>
                     <td style={s.td}>
                       <input type="checkbox" checked={selected.has(job.id)} onChange={() => toggleSelect(job.id)} style={{ cursor: 'pointer' }} />
                     </td>
@@ -465,7 +465,7 @@ export default function AdminJobsPage() {
                 Cancel
               </button>
               <button onClick={saveEdit} disabled={editLoading}
-                style={{ padding: '10px 24px', borderRadius: '10px', cursor: 'pointer', backgroundColor: '#0D9488', color: '#0F172A', border: 'none', fontWeight: 700, fontSize: '13px', opacity: editLoading ? 0.5 : 1 }}>
+                style={{ padding: '10px 24px', borderRadius: '10px', cursor: 'pointer', backgroundColor: '#BE185D', color: '#0F172A', border: 'none', fontWeight: 700, fontSize: '13px', opacity: editLoading ? 0.5 : 1 }}>
                 {editLoading ? 'Saving…' : 'Save Changes'}
               </button>
             </div>

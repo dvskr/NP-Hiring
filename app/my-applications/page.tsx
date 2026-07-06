@@ -181,10 +181,10 @@ export default function MyApplicationsPage() {
                         <Link href="/login?redirectTo=/my-applications" style={{
                             display: 'inline-flex', alignItems: 'center', gap: '8px',
                             padding: '10px 20px', borderRadius: '12px',
-                            background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                            background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                             color: '#fff', fontSize: '13px', fontWeight: 600,
                             textDecoration: 'none',
-                            boxShadow: '4px 4px 10px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                            boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
                         }}>
                             Sign In
                             <ArrowRight size={14} />
@@ -210,10 +210,10 @@ export default function MyApplicationsPage() {
                         <Link href="/jobs" style={{
                             display: 'inline-flex', alignItems: 'center', gap: '8px',
                             padding: '10px 20px', borderRadius: '12px',
-                            background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                            background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                             color: '#fff', fontSize: '13px', fontWeight: 600,
                             textDecoration: 'none',
-                            boxShadow: '4px 4px 10px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                            boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
                         }}>
                             Browse Jobs
                             <ArrowRight size={14} />
@@ -322,7 +322,7 @@ export default function MyApplicationsPage() {
                                             <p style={{ fontSize: '13px', color: '#6B7F8A', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 {app.job.employer}
                                                 <span style={{ color: '#B0C4BC' }}>·</span>
-                                                <MapPin size={12} style={{ color: '#0D9488' }} />
+                                                <MapPin size={12} style={{ color: '#BE185D' }} />
                                                 {app.job.location}
                                             </p>
 
@@ -399,7 +399,7 @@ export default function MyApplicationsPage() {
                                                             width: '28px', height: '28px',
                                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                             borderRadius: '8px', border: '1px solid #D5E8E0',
-                                                            background: '#EDF5F0', color: '#0D9488',
+                                                            background: '#EDF5F0', color: '#BE185D',
                                                             boxShadow: '2px 2px 6px rgba(0,0,0,0.04), -1px -1px 4px rgba(255,255,255,0.7)',
                                                             transition: 'all 0.15s',
                                                             textDecoration: 'none',
@@ -440,7 +440,7 @@ export default function MyApplicationsPage() {
                     transform: translateY(-1px);
                 }
                 .app-title:hover {
-                    color: #0D9488 !important;
+                    color: #BE185D !important;
                 }
                 .app-action-btn:hover {
                     transform: translateY(-2px);

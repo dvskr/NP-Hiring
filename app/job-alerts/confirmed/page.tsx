@@ -50,13 +50,13 @@ export default async function JobAlertConfirmedPage({
                         display: 'inline-flex',
                         padding: '14px 28px',
                         borderRadius: '14px',
-                        background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                        background: 'linear-gradient(135deg, #F472B6, #BE185D)',
                         color: '#fff',
                         fontSize: '15px',
                         fontWeight: 700,
                         textDecoration: 'none',
                         border: '1px solid rgba(255,255,255,0.3)',
-                        boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 1px 1px 2px rgba(255,255,255,0.25)',
+                        boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.25)',
                     }}
                 >
                     Browse {brand.niche.short} jobs

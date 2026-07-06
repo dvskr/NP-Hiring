@@ -107,7 +107,7 @@ export default function AnalyticsTab() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-700"></div>
             </div>
         );
     }
@@ -195,7 +195,7 @@ export default function AnalyticsTab() {
                             className="flex-1 rounded-t transition-all hover:opacity-80 group relative"
                             style={{
                                 height: `${Math.max((count / maxClicks) * 100, 2)}%`,
-                                backgroundColor: count > 0 ? '#14B8A6' : 'var(--bg-tertiary)',
+                                backgroundColor: count > 0 ? '#DB2777' : 'var(--bg-tertiary)',
                                 minWidth: '3px',
                             }}
                             title={`${chartLabels[i]}: ${count} clicks`}

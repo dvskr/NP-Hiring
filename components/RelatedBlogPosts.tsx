@@ -57,7 +57,7 @@ export default function RelatedBlogPosts({
                         boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.04), 2px 2px 4px rgba(0,0,0,0.05)',
                         border: '1px solid rgba(255,255,255,0.6)',
                     }}>
-                        <BookOpen style={{ width: '16px', height: '16px', color: '#0D9488' }} />
+                        <BookOpen style={{ width: '16px', height: '16px', color: '#BE185D' }} />
                     </div>
                     <h2 style={{
                         fontSize: '14px', fontWeight: 700,
@@ -90,7 +90,7 @@ export default function RelatedBlogPosts({
                                 width: '30px', height: '30px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 borderRadius: '9px',
-                                backgroundColor: '#E6FAF8',
+                                backgroundColor: '#FDF2F8',
                                 boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.04), 2px 2px 4px rgba(0,0,0,0.05)',
                                 border: '1px solid rgba(255,255,255,0.6)',
                             }}>
@@ -126,8 +126,8 @@ export default function RelatedBlogPosts({
                             marginTop: '14px',
                             padding: '9px 16px', borderRadius: '14px',
                             fontSize: '13px', fontWeight: 600,
-                            color: '#0F766E',
-                            backgroundColor: '#E6FAF8',
+                            color: '#9D174D',
+                            backgroundColor: '#FDF2F8',
                             border: '1px solid rgba(255,255,255,0.5)',
                             boxShadow: clayPebbleShadow,
                             textDecoration: 'none',
@@ -142,12 +142,12 @@ export default function RelatedBlogPosts({
             <style>{`
                 .rbp-card:hover {
                     transform: translateY(-2px) !important;
-                    background-color: #E6FAF8 !important;
-                    box-shadow: 6px 6px 14px rgba(13,148,136,0.12), -3px -3px 8px rgba(255,255,255,0.9), inset 2px 2px 5px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03) !important;
+                    background-color: #FDF2F8 !important;
+                    box-shadow: 6px 6px 14px rgba(190,24,93,0.12), -3px -3px 8px rgba(255,255,255,0.9), inset 2px 2px 5px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03) !important;
                 }
                 .rbp-cta:hover {
                     transform: translateY(-1px) !important;
-                    background-color: #CCFBF1 !important;
+                    background-color: #FCE7F3 !important;
                 }
             `}</style>
         </section>

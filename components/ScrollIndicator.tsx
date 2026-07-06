@@ -175,7 +175,7 @@ export default function ScrollIndicator() {
                 background: isHovered
                     ? 'rgba(213, 232, 224, 0.85)'
                     : 'rgba(213, 232, 224, 0.55)',
-                border: '1px solid rgba(13, 148, 136, 0.12)',
+                border: '1px solid rgba(190,24,93, 0.12)',
                 cursor: 'pointer',
                 zIndex: 200,
                 transition: 'background 0.15s ease',
@@ -193,10 +193,10 @@ export default function ScrollIndicator() {
                     height: thumbHeight,
                     borderRadius: (TRACK_WIDTH - 2) / 2,
                     background: isHovered
-                        ? 'linear-gradient(180deg, rgba(13, 148, 136, 0.95), rgba(15, 118, 110, 1))'
-                        : 'linear-gradient(180deg, rgba(13, 148, 136, 0.75), rgba(15, 118, 110, 0.85))',
+                        ? 'linear-gradient(180deg, rgba(190,24,93, 0.95), rgba(157,23,77, 1))'
+                        : 'linear-gradient(180deg, rgba(190,24,93, 0.75), rgba(157,23,77, 0.85))',
                     boxShadow:
-                        '0 1px 3px rgba(13, 148, 136, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
+                        '0 1px 3px rgba(190,24,93, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
                     cursor: 'grab',
                     transition:
                         draggingRef.current

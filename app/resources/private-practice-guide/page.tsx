@@ -187,7 +187,7 @@ export default function PrivatePracticeGuidePage() {
       />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white py-12 md:py-16">
+      <section className="bg-gradient-to-r from-pink-700 to-emerald-600 text-white py-12 md:py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/10 mb-6">
@@ -196,24 +196,24 @@ export default function PrivatePracticeGuidePage() {
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
               How to Start an {brand.niche.short} Private Practice
             </h1>
-            <p className="text-sm text-teal-200 text-center mt-2 mb-4">
+            <p className="text-sm text-pink-200 text-center mt-2 mb-4">
               Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} | Step-by-step startup guide
             </p>
-            <p className="text-lg md:text-xl text-teal-100 mb-6">
+            <p className="text-lg md:text-xl text-pink-100 mb-6">
               From LLC formation to full caseload — everything you need to launch your {brand.niche.short} practice
             </p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-8 mt-8">
               <div className="text-center">
                 <div className="text-3xl font-bold">$200-300K+</div>
-                <div className="text-sm text-teal-100">Annual Revenue Potential</div>
+                <div className="text-sm text-pink-100">Annual Revenue Potential</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold">6-12 mo</div>
-                <div className="text-sm text-teal-100">Time to Full Caseload</div>
+                <div className="text-sm text-pink-100">Time to Full Caseload</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold">$5-20K</div>
-                <div className="text-sm text-teal-100">Lean Startup Cost</div>
+                <div className="text-sm text-pink-100">Lean Startup Cost</div>
               </div>
             </div>
           </div>
@@ -228,7 +228,7 @@ export default function PrivatePracticeGuidePage() {
             {steps.map((step) => (
               <div key={step.number} className="rounded-xl p-6 md:p-8" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-lg">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-pink-700 text-white flex items-center justify-center font-bold text-lg">
                     {step.number}
                   </div>
                   <div className="flex-1">

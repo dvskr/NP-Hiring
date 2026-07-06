@@ -48,7 +48,7 @@ export default function ResourceDownloadGate({ resourceUrl, resourceTitle }: Res
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white transition-colors"
-                style={{ background: 'linear-gradient(135deg, #2DD4BF, #14B8A6)' }}
+                style={{ background: 'linear-gradient(135deg, #F472B6, #DB2777)' }}
             >
                 <Download size={18} />
                 Download {resourceTitle}
@@ -60,12 +60,12 @@ export default function ResourceDownloadGate({ resourceUrl, resourceTitle }: Res
         <div
             className="rounded-xl p-6 max-w-md"
             style={{
-                background: 'linear-gradient(135deg, rgba(45,212,191,0.08), rgba(20,184,166,0.04))',
-                border: '1px solid rgba(45,212,191,0.2)',
+                background: 'linear-gradient(135deg, rgba(244,114,182,0.08), rgba(219,39,119,0.04))',
+                border: '1px solid rgba(244,114,182,0.2)',
             }}
         >
             <div className="flex items-center gap-2 mb-3">
-                <Mail size={20} style={{ color: '#14B8A6' }} />
+                <Mail size={20} style={{ color: '#DB2777' }} />
                 <h4 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Get free access</h4>
             </div>
             <p className="text-sm text-gray-600 mb-4">
@@ -78,13 +78,13 @@ export default function ResourceDownloadGate({ resourceUrl, resourceTitle }: Res
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
-                    className="flex-1 px-3 py-2.5 rounded-lg text-sm border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                    className="flex-1 px-3 py-2.5 rounded-lg text-sm border border-gray-300 focus:ring-2 focus:ring-pink-600 focus:border-pink-600 outline-none"
                 />
                 <button
                     type="submit"
                     disabled={status === 'loading'}
                     className="px-4 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50 flex items-center gap-1"
-                    style={{ background: 'linear-gradient(135deg, #2DD4BF, #14B8A6)' }}
+                    style={{ background: 'linear-gradient(135deg, #F472B6, #DB2777)' }}
                 >
                     {status === 'loading' ? (
                         <Loader2 size={16} className="animate-spin" />

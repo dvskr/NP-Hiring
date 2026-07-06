@@ -345,7 +345,7 @@ function ParsedSections({ parsed }: { parsed: ParsedResume }) {
     const profRows = buildProfessionalRows(parsed);
     if (profRows.length > 0) {
         sections.push(
-            <Section key="prof" icon={<BadgeCheck size={16} />} iconColor="#2DD4BF" title="Professional">
+            <Section key="prof" icon={<BadgeCheck size={16} />} iconColor="#F472B6" title="Professional">
                 <FieldGrid rows={profRows} />
             </Section>,
         );

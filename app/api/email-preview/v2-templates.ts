@@ -45,12 +45,12 @@ function secondary(text: string): string {
 // gradient + padding + border-radius), gradient anchor for everyone else.
 function applyButton(url: string, label: string): string {
   return `<!--[if mso]>
-  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:42px;v-text-anchor:middle;width:140px;" arcsize="40%" stroke="f" fillcolor="#0D9488">
+  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:42px;v-text-anchor:middle;width:140px;" arcsize="40%" stroke="f" fillcolor="#BE185D">
     <w:anchorlock/>
     <center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">${label}</center>
   </v:roundrect>
   <![endif]-->
-  <!--[if !mso]><!-- --><a href="${url}" style="display:inline-block;box-sizing:border-box;padding:11px 26px;border-radius:18px;font-family:${SANS};font-size:14px;font-weight:700;color:#fff;-webkit-text-fill-color:#fff;background:#0d9488;background-image:linear-gradient(135deg,#2DD4BF,#0D9488);text-decoration:none;border:1px solid rgba(255,255,255,0.3);box-shadow:0 4px 12px rgba(13,148,136,0.30);mso-hide:all;">${label}</a><!--<![endif]-->`;
+  <!--[if !mso]><!-- --><a href="${url}" style="display:inline-block;box-sizing:border-box;padding:11px 26px;border-radius:18px;font-family:${SANS};font-size:14px;font-weight:700;color:#fff;-webkit-text-fill-color:#fff;background:#BE185D;background-image:linear-gradient(135deg,#F472B6,#BE185D);text-decoration:none;border:1px solid rgba(255,255,255,0.3);box-shadow:0 4px 12px rgba(190,24,93,0.30);mso-hide:all;">${label}</a><!--<![endif]-->`;
 }
 
 function simple(iconFile: string, heading: string, body: string, cta: string, ctaUrl: string, preheader: string, extra?: string): string {
@@ -150,7 +150,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
     desc: 'Sent when new jobs match alert criteria',
     fn: () => {
       const jobs = [
-        { t: 'Remote PMHNP \u2014 Telehealth', o: 'MindPath Health', l: 'Remote', s: '$145k\u2013$175k', type: 'Full-time', mode: 'Remote', fresh: '2 hours ago', color: '#4DB6AC', featured: true, applyType: 'easy' },
+        { t: 'Remote PMHNP \u2014 Telehealth', o: 'MindPath Health', l: 'Remote', s: '$145k\u2013$175k', type: 'Full-time', mode: 'Remote', fresh: '2 hours ago', color: '#DB2777', featured: true, applyType: 'easy' },
         { t: 'Psychiatric NP \u2014 Outpatient Clinic', o: 'Valley Behavioral', l: 'Austin, TX', s: '$135k\u2013$160k', type: 'Full-time', mode: 'On-site', fresh: '5 hours ago', color: '#E8937A', featured: false, applyType: 'direct' },
         { t: 'PMHNP \u2014 Pediatric and Adolescent', o: "Children's Mercy Hospital", l: 'Kansas City, MO', s: '$150k\u2013$185k', type: 'Full-time', mode: 'Hybrid', fresh: '8 hours ago', color: '#7C8CF5', featured: false, applyType: 'external' },
       ];
@@ -179,7 +179,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
               </tr></table>
               <!-- Salary + Featured badges under title -->
               <div style="margin-top:12px;">
-                <span style="display:inline-block;padding:6px 14px;border-radius:8px;font-family:${SANS};font-size:14px;font-weight:700;background:#E6FAF8;color:#0d9488;letter-spacing:-0.3px;margin-right:6px;">${j.s}</span>
+                <span style="display:inline-block;padding:6px 14px;border-radius:8px;font-family:${SANS};font-size:14px;font-weight:700;background:#FDF2F8;color:#BE185D;letter-spacing:-0.3px;margin-right:6px;">${j.s}</span>
                 ${j.featured ? `<span style="display:inline-block;padding:6px 12px;border-radius:8px;font-family:${SANS};font-size:12px;font-weight:700;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;letter-spacing:0.3px;text-transform:uppercase;">★ Featured</span>` : ''}
               </div>
               <!-- Divider -->
@@ -338,7 +338,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
         <tr><td align="center" style="padding:0 40px;">
           <table role="presentation" cellspacing="0" cellpadding="0"><tr>
             <td style="padding-right:10px;">
-              <a href="mailto:sarah@example.com" style="display:inline-block;padding:10px 24px;border-radius:10px;font-family:${SANS};font-size:14px;font-weight:700;color:#fff;background:${V2.teal};text-decoration:none;box-shadow:0 2px 6px rgba(13,148,136,0.25);">Reply to Sender</a>
+              <a href="mailto:sarah@example.com" style="display:inline-block;padding:10px 24px;border-radius:10px;font-family:${SANS};font-size:14px;font-weight:700;color:#fff;background:${V2.teal};text-decoration:none;box-shadow:0 2px 6px rgba(190,24,93,0.25);">Reply to Sender</a>
             </td>
             <td>
               <a href="${BASE_URL}/admin" style="display:inline-block;padding:10px 24px;border-radius:10px;font-family:${SANS};font-size:14px;font-weight:600;color:#374151;background:#F3F6F4;border:1px solid #E0E5E1;text-decoration:none;">View in Admin</a>
@@ -376,12 +376,12 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
         ${spacerV2(20)}
         <tr><td style="padding:0 40px;">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffff;border:1px solid #E8ECE9;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-            <tr><td style="height:4px;background:#4DB6AC;border-radius:14px 14px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
+            <tr><td style="height:4px;background:#DB2777;border-radius:14px 14px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
             <tr><td style="padding:20px 20px 18px;">
               <!-- Avatar + Title + Employer -->
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
                 <td width="48" valign="top" style="width:48px;padding-right:14px;">
-                  <div style="width:48px;height:48px;border-radius:12px;background:#4DB6AC;color:#fff;font-size:20px;font-weight:700;text-align:center;line-height:48px;letter-spacing:-0.5px;">M</div>
+                  <div style="width:48px;height:48px;border-radius:12px;background:#DB2777;color:#fff;font-size:20px;font-weight:700;text-align:center;line-height:48px;letter-spacing:-0.5px;">M</div>
                 </td>
                 <td valign="top" style="width:auto;">
                   <a href="${BASE_URL}/jobs" style="font-family:${SERIF};font-size:18px;font-weight:700;color:${V2.textHeading};text-decoration:none;line-height:1.3;display:block;">Remote PMHNP &#8212; Telehealth Platform</a>
@@ -390,7 +390,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
               </tr></table>
               <!-- Salary + Featured badges under title -->
               <div style="margin-top:12px;">
-                <span style="display:inline-block;padding:6px 14px;border-radius:8px;font-family:${SANS};font-size:14px;font-weight:700;background:#E6FAF8;color:#0d9488;letter-spacing:-0.3px;margin-right:6px;">$145k&#8211;$175k</span>
+                <span style="display:inline-block;padding:6px 14px;border-radius:8px;font-family:${SANS};font-size:14px;font-weight:700;background:#FDF2F8;color:#BE185D;letter-spacing:-0.3px;margin-right:6px;">$145k&#8211;$175k</span>
                 <span style="display:inline-block;padding:6px 12px;border-radius:8px;font-family:${SANS};font-size:12px;font-weight:700;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;letter-spacing:0.3px;text-transform:uppercase;">&#9733; Featured</span>
               </div>
               <!-- Divider -->
@@ -456,7 +456,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
       <tr><td align="center" style="padding:0 40px;">
         <table role="presentation" cellspacing="0" cellpadding="0"><tr>
           <td style="padding-right:10px;">
-            <a href="${BASE_URL}/employer/messages" style="display:inline-block;padding:10px 24px;border-radius:10px;font-family:${SANS};font-size:14px;font-weight:700;color:#fff;background:${V2.teal};text-decoration:none;box-shadow:0 2px 6px rgba(13,148,136,0.25);">Reply Now</a>
+            <a href="${BASE_URL}/employer/messages" style="display:inline-block;padding:10px 24px;border-radius:10px;font-family:${SANS};font-size:14px;font-weight:700;color:#fff;background:${V2.teal};text-decoration:none;box-shadow:0 2px 6px rgba(190,24,93,0.25);">Reply Now</a>
           </td>
           <td>
             <a href="${BASE_URL}/employer/dashboard" style="display:inline-block;padding:10px 24px;border-radius:10px;font-family:${SANS};font-size:14px;font-weight:600;color:#374151;background:#F3F6F4;border:1px solid #E0E5E1;text-decoration:none;">View Profile</a>
@@ -504,7 +504,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
       <tr><td align="center" style="padding:0 40px;">
         <table role="presentation" cellspacing="0" cellpadding="0"><tr>
           <td style="padding-right:10px;">
-            <a href="${BASE_URL}/messages" style="display:inline-block;padding:10px 24px;border-radius:10px;font-family:${SANS};font-size:14px;font-weight:700;color:#fff;background:${V2.teal};text-decoration:none;box-shadow:0 2px 6px rgba(13,148,136,0.25);">View &amp; Reply</a>
+            <a href="${BASE_URL}/messages" style="display:inline-block;padding:10px 24px;border-radius:10px;font-family:${SANS};font-size:14px;font-weight:700;color:#fff;background:${V2.teal};text-decoration:none;box-shadow:0 2px 6px rgba(190,24,93,0.25);">View &amp; Reply</a>
           </td>
           <td>
             <a href="${BASE_URL}/jobs" style="display:inline-block;padding:10px 24px;border-radius:10px;font-family:${SANS};font-size:14px;font-weight:600;color:#374151;background:#F3F6F4;border:1px solid #E0E5E1;text-decoration:none;">View Listing</a>
@@ -570,11 +570,11 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
         ${spacerV2(20)}
         <tr><td style="padding:0 40px;">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffff;border:1px solid #E8ECE9;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-            <tr><td style="height:4px;background:#4DB6AC;border-radius:14px 14px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
+            <tr><td style="height:4px;background:#DB2777;border-radius:14px 14px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>
             <tr><td style="padding:20px 20px 18px;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
                 <td width="48" valign="top" style="width:48px;padding-right:14px;">
-                  <div style="width:48px;height:48px;border-radius:12px;background:#4DB6AC;color:#fff;font-size:20px;font-weight:700;text-align:center;line-height:48px;letter-spacing:-0.5px;">M</div>
+                  <div style="width:48px;height:48px;border-radius:12px;background:#DB2777;color:#fff;font-size:20px;font-weight:700;text-align:center;line-height:48px;letter-spacing:-0.5px;">M</div>
                 </td>
                 <td valign="top" style="width:auto;">
                   <a href="${BASE_URL}/jobs" style="font-family:${SERIF};font-size:18px;font-weight:700;color:${V2.textHeading};text-decoration:none;line-height:1.3;display:block;">Remote PMHNP &#8212; Telehealth Platform</a>
@@ -582,7 +582,7 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
                 </td>
               </tr></table>
               <div style="margin-top:12px;">
-                <span style="display:inline-block;padding:6px 14px;border-radius:8px;font-family:${SANS};font-size:14px;font-weight:700;background:#E6FAF8;color:#0d9488;letter-spacing:-0.3px;">$145k&#8211;$175k</span>
+                <span style="display:inline-block;padding:6px 14px;border-radius:8px;font-family:${SANS};font-size:14px;font-weight:700;background:#FDF2F8;color:#BE185D;letter-spacing:-0.3px;">$145k&#8211;$175k</span>
               </div>
               <div style="border-top:1px solid #F0F3F1;margin:14px 0;"></div>
               <table role="presentation" cellspacing="0" cellpadding="0"><tr>

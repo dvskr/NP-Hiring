@@ -25,7 +25,7 @@ const CARD = '#FFF8EE';
 const BORDER = '#EDF2F7';
 const TEXT = '#2D3748';
 const MUTED = '#718096';
-const TEAL = '#0D9488';
+const TEAL = '#BE185D';
 
 // ─── GET: Preview templates ──────────────────────────────────────────────────
 
@@ -129,11 +129,11 @@ POST /api/admin/email/test
   // ── Preview mode: render in browser with toolbar ──────────────────────────
   const toolbar = `
     <div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#1a1a2e;color:#e0e0e0;font-family:${SANS};padding:10px 20px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 12px rgba(0,0,0,0.3);">
-      <a href="/api/admin/email/test" style="color:#4DB6AC;text-decoration:none;font-weight:600;font-size:14px;">← All Templates</a>
+      <a href="/api/admin/email/test" style="color:#F472B6;text-decoration:none;font-weight:600;font-size:14px;">← All Templates</a>
       <span style="color:#718096;">|</span>
       <span style="font-size:14px;font-weight:600;">${entry.label}</span>
       <span style="flex:1;"></span>
-      <a href="?template=${template}&raw=1" style="display:inline-block;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;color:#fff;background:#0D9488;text-decoration:none;" target="_blank">📋 Copy Raw HTML</a>
+      <a href="?template=${template}&raw=1" style="display:inline-block;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;color:#fff;background:#BE185D;text-decoration:none;" target="_blank">📋 Copy Raw HTML</a>
       <button onclick="navigator.clipboard.writeText(document.getElementById('email-frame').srcdoc || '')" style="padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;color:#fff;background:#7C8CF5;border:none;cursor:pointer;">📎 Copy to Clipboard</button>
     </div>
     <div style="height:46px;"></div>`;
@@ -153,11 +153,11 @@ POST /api/admin/email/test
     </script>
   </head><body style="margin:0;padding:0;background:#F3F2EF;">
     <div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#1a1a2e;color:#e0e0e0;font-family:${SANS};padding:10px 20px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 12px rgba(0,0,0,0.3);">
-      <a href="/api/admin/email/test" style="color:#4DB6AC;text-decoration:none;font-weight:600;font-size:14px;">← All Templates</a>
+      <a href="/api/admin/email/test" style="color:#F472B6;text-decoration:none;font-weight:600;font-size:14px;">← All Templates</a>
       <span style="color:#718096;">|</span>
       <span style="font-size:14px;font-weight:600;">${entry.label}</span>
       <span style="flex:1;"></span>
-      <a href="?template=${template}&raw=1" style="display:inline-block;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;color:#fff;background:#0D9488;text-decoration:none;" target="_blank">📄 Raw HTML</a>
+      <a href="?template=${template}&raw=1" style="display:inline-block;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;color:#fff;background:#BE185D;text-decoration:none;" target="_blank">📄 Raw HTML</a>
       <button id="copy-btn" onclick="copyRawHtml()" style="padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;color:#fff;background:#7C8CF5;border:none;cursor:pointer;">📎 Copy to Clipboard</button>
     </div>
     <div style="height:46px;"></div>

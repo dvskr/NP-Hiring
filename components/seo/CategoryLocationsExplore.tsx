@@ -119,7 +119,7 @@ export default async function CategoryLocationsExplore({
                     style={{
                         fontSize: '13px',
                         fontWeight: 600,
-                        color: '#0D9488',
+                        color: '#BE185D',
                         textTransform: 'uppercase',
                         letterSpacing: '0.15em',
                         textAlign: 'center',
@@ -190,7 +190,7 @@ export default async function CategoryLocationsExplore({
                                         style={{
                                             fontSize: '12px',
                                             fontWeight: 700,
-                                            color: '#0D9488',
+                                            color: '#BE185D',
                                         }}
                                     >
                                         {link.count}
@@ -253,7 +253,7 @@ export default async function CategoryLocationsExplore({
                                         style={{
                                             fontSize: '12px',
                                             fontWeight: 700,
-                                            color: '#0D9488',
+                                            color: '#BE185D',
                                             flexShrink: 0,
                                         }}
                                     >
@@ -277,8 +277,8 @@ export default async function CategoryLocationsExplore({
                             fontSize: '13px',
                             fontWeight: 700,
                             background: '#fff',
-                            color: '#0D9488',
-                            border: '1px solid rgba(13,148,136,0.2)',
+                            color: '#BE185D',
+                            border: '1px solid rgba(190,24,93,0.2)',
                             textDecoration: 'none',
                         }}
                     >

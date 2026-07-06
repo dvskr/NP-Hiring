@@ -73,7 +73,7 @@ export default function Breadcrumbs({ items }: BreadcrumbsProps) {
 
       <style>{`
         .bc-link:hover {
-          color: #2DD4BF !important;
+          color: #F472B6 !important;
         }
       `}</style>
     </>

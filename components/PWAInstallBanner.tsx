@@ -89,14 +89,14 @@ export default function PWAInstallBanner() {
         <div
             className="fixed top-0 left-0 right-0 z-[9985] animate-slide-down"
             style={{
-                background: 'linear-gradient(135deg, rgba(45,212,191,0.12), rgba(13,148,136,0.08))',
+                background: 'linear-gradient(135deg, rgba(244,114,182,0.12), rgba(190,24,93,0.08))',
                 backdropFilter: 'blur(12px)',
-                borderBottom: '1px solid rgba(45,212,191,0.2)',
+                borderBottom: '1px solid rgba(244,114,182,0.2)',
             }}
         >
             <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <Download size={18} style={{ color: '#2DD4BF' }} />
+                    <Download size={18} style={{ color: '#F472B6' }} />
                     <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                         Add {brand.name} to your home screen for quick access
                     </span>
@@ -106,7 +106,7 @@ export default function PWAInstallBanner() {
                         <button
                             onClick={install}
                             className="px-4 py-1.5 rounded-lg text-xs font-bold text-white cursor-pointer"
-                            style={{ background: 'linear-gradient(135deg, #2DD4BF, #0D9488)' }}
+                            style={{ background: 'linear-gradient(135deg, #F472B6, #BE185D)' }}
                         >
                             Install
                         </button>

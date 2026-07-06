@@ -453,7 +453,7 @@ function SettingsPageInner() {
     return (
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '32px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
-          <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#2DD4BF' }} />
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#F472B6' }} />
         </div>
       </div>
     )
@@ -532,14 +532,14 @@ function SettingsPageInner() {
               style={{
                 padding: '10px 24px',
                 borderRadius: '14px',
-                background: saving ? '#88CCBF' : '#0D9488',
+                background: saving ? '#88CCBF' : '#BE185D',
                 color: '#fff',
                 fontSize: '14px',
                 fontWeight: 700,
                 cursor: saving || clearing ? 'not-allowed' : 'pointer',
                 border: '1px solid rgba(255,255,255,0.3)',
                 display: 'inline-flex', alignItems: 'center', gap: '8px',
-                boxShadow: '4px 4px 10px rgba(13,148,136,0.20), -2px -2px 6px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.2)',
+                boxShadow: '4px 4px 10px rgba(190,24,93,0.20), -2px -2px 6px rgba(255,255,255,0.3), inset 2px 2px 4px rgba(255,255,255,0.2)',
                 transition: 'all 0.2s ease',
                 opacity: saving || clearing ? 0.6 : 1,
               }}
@@ -643,7 +643,7 @@ function SettingsPageInner() {
                 <ToggleRow
                   label="Open to offers"
                   description="Let employers know you're available"
-                  icon={<Briefcase size={16} style={{ color: '#2DD4BF' }} />}
+                  icon={<Briefcase size={16} style={{ color: '#F472B6' }} />}
                   checked={profile.openToOffers}
                   onChange={(v) => updateProfile({ openToOffers: v })}
                 />
@@ -680,7 +680,7 @@ function SettingsPageInner() {
                   padding: '14px 16px',
                   marginBottom: '16px',
                   borderRadius: '14px',
-                  background: 'linear-gradient(135deg, rgba(139,92,246,0.08), rgba(45,212,191,0.08))',
+                  background: 'linear-gradient(135deg, rgba(139,92,246,0.08), rgba(244,114,182,0.08))',
                   border: '1px solid rgba(139,92,246,0.2)',
                 }}
               >
@@ -929,8 +929,8 @@ function SettingsPageInner() {
                       padding: '10px 28px',
                       borderRadius: '10px',
                       background: savingAddress
-                        ? 'rgba(45,212,191,0.3)'
-                        : 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
+                        ? 'rgba(244,114,182,0.3)'
+                        : 'linear-gradient(135deg, #F472B6, #DB2777)',
                       color: '#fff',
                       fontSize: '14px',
                       fontWeight: 600,
@@ -961,7 +961,7 @@ function SettingsPageInner() {
               <div id="section-states" />
               <div id="section-specialties" />
               <h3 style={cardTitle}>
-                <Award size={20} style={{ color: '#2DD4BF' }} />
+                <Award size={20} style={{ color: '#F472B6' }} />
                 Professional Info
               </h3>
 
@@ -1135,9 +1135,9 @@ function SettingsPageInner() {
                             fontWeight: 600,
                             cursor: 'pointer',
                             transition: 'all 0.2s',
-                            border: isSelected ? '1.5px solid #2DD4BF' : '1.5px solid var(--border-color)',
-                            background: isSelected ? 'rgba(45,212,191,0.12)' : 'var(--bg-primary)',
-                            color: isSelected ? '#2DD4BF' : 'var(--text-secondary)',
+                            border: isSelected ? '1.5px solid #F472B6' : '1.5px solid var(--border-color)',
+                            background: isSelected ? 'rgba(244,114,182,0.12)' : 'var(--bg-primary)',
+                            color: isSelected ? '#F472B6' : 'var(--text-secondary)',
                           }}
                         >
                           {opt}
@@ -1218,9 +1218,9 @@ function SettingsPageInner() {
                           style={{
                             padding: '8px 22px', borderRadius: '24px', fontSize: '13px', fontWeight: 600,
                             cursor: 'pointer', transition: 'all 0.2s',
-                            border: isSelected ? '1.5px solid #2DD4BF' : '1.5px solid var(--border-color)',
-                            background: isSelected ? 'rgba(45,212,191,0.12)' : 'var(--bg-primary)',
-                            color: isSelected ? '#2DD4BF' : 'var(--text-secondary)',
+                            border: isSelected ? '1.5px solid #F472B6' : '1.5px solid var(--border-color)',
+                            background: isSelected ? 'rgba(244,114,182,0.12)' : 'var(--bg-primary)',
+                            color: isSelected ? '#F472B6' : 'var(--text-secondary)',
                           }}
                         >
                           {opt.label}
@@ -1244,9 +1244,9 @@ function SettingsPageInner() {
                           style={{
                             padding: '8px 22px', borderRadius: '24px', fontSize: '13px', fontWeight: 600,
                             cursor: 'pointer', transition: 'all 0.2s',
-                            border: isSelected ? '1.5px solid #2DD4BF' : '1.5px solid var(--border-color)',
-                            background: isSelected ? 'rgba(45,212,191,0.12)' : 'var(--bg-primary)',
-                            color: isSelected ? '#2DD4BF' : 'var(--text-secondary)',
+                            border: isSelected ? '1.5px solid #F472B6' : '1.5px solid var(--border-color)',
+                            background: isSelected ? 'rgba(244,114,182,0.12)' : 'var(--bg-primary)',
+                            color: isSelected ? '#F472B6' : 'var(--text-secondary)',
                           }}
                         >
                           {opt.label}
@@ -1275,9 +1275,9 @@ function SettingsPageInner() {
                           style={{
                             padding: '8px 18px', borderRadius: '24px', fontSize: '13px', fontWeight: 600,
                             cursor: 'pointer', transition: 'all 0.2s',
-                            border: isSelected ? '1.5px solid #2DD4BF' : '1.5px solid var(--border-color)',
-                            background: isSelected ? 'rgba(45,212,191,0.12)' : 'var(--bg-primary)',
-                            color: isSelected ? '#2DD4BF' : 'var(--text-secondary)',
+                            border: isSelected ? '1.5px solid #F472B6' : '1.5px solid var(--border-color)',
+                            background: isSelected ? 'rgba(244,114,182,0.12)' : 'var(--bg-primary)',
+                            color: isSelected ? '#F472B6' : 'var(--text-secondary)',
                           }}
                         >
                           {opt.label}
@@ -1325,9 +1325,9 @@ function SettingsPageInner() {
                           style={{
                             padding: '10px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: 500,
                             cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left',
-                            border: isSelected ? '1.5px solid #2DD4BF' : '1.5px solid var(--border-color)',
-                            background: isSelected ? 'rgba(45,212,191,0.12)' : 'var(--bg-primary)',
-                            color: isSelected ? '#2DD4BF' : 'var(--text-secondary)',
+                            border: isSelected ? '1.5px solid #F472B6' : '1.5px solid var(--border-color)',
+                            background: isSelected ? 'rgba(244,114,182,0.12)' : 'var(--bg-primary)',
+                            color: isSelected ? '#F472B6' : 'var(--text-secondary)',
                           }}
                         >
                           {opt.label}
@@ -1355,9 +1355,9 @@ function SettingsPageInner() {
                           style={{
                             padding: '10px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: 500,
                             cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left',
-                            border: isSelected ? '1.5px solid #2DD4BF' : '1.5px solid var(--border-color)',
-                            background: isSelected ? 'rgba(45,212,191,0.12)' : 'var(--bg-primary)',
-                            color: isSelected ? '#2DD4BF' : 'var(--text-secondary)',
+                            border: isSelected ? '1.5px solid #F472B6' : '1.5px solid var(--border-color)',
+                            background: isSelected ? 'rgba(244,114,182,0.12)' : 'var(--bg-primary)',
+                            color: isSelected ? '#F472B6' : 'var(--text-secondary)',
                           }}
                         >
                           {opt.label}
@@ -1400,8 +1400,8 @@ function SettingsPageInner() {
                       padding: '10px 28px',
                       borderRadius: '10px',
                       background: savingEeo
-                        ? 'rgba(45,212,191,0.3)'
-                        : 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
+                        ? 'rgba(244,114,182,0.3)'
+                        : 'linear-gradient(135deg, #F472B6, #DB2777)',
                       color: '#fff',
                       fontSize: '14px',
                       fontWeight: 600,
@@ -1531,8 +1531,8 @@ function SettingsPageInner() {
                       padding: '10px 28px',
                       borderRadius: '10px',
                       background: savingFedReg
-                        ? 'rgba(45,212,191,0.3)'
-                        : 'linear-gradient(135deg, #2DD4BF, #14B8A6)',
+                        ? 'rgba(244,114,182,0.3)'
+                        : 'linear-gradient(135deg, #F472B6, #DB2777)',
                       color: '#fff',
                       fontSize: '14px',
                       fontWeight: 600,
@@ -1600,8 +1600,8 @@ function SettingsPageInner() {
                   fontSize: '12px',
                   fontWeight: 600,
                   textTransform: 'capitalize',
-                  background: profile.role === 'admin' ? 'rgba(168,85,247,0.15)' : profile.role === 'employer' ? 'rgba(16,185,129,0.15)' : 'rgba(45,212,191,0.15)',
-                  color: profile.role === 'admin' ? '#A855F7' : profile.role === 'employer' ? '#10B981' : '#2DD4BF',
+                  background: profile.role === 'admin' ? 'rgba(168,85,247,0.15)' : profile.role === 'employer' ? 'rgba(16,185,129,0.15)' : 'rgba(244,114,182,0.15)',
+                  color: profile.role === 'admin' ? '#A855F7' : profile.role === 'employer' ? '#10B981' : '#F472B6',
                 }}>
                   {profile.role.replace('_', ' ')}
                 </span>
@@ -1927,7 +1927,7 @@ function ToggleRow({
           cursor: 'pointer',
           position: 'relative',
           transition: 'background 0.3s',
-          background: checked ? '#2DD4BF' : 'var(--border-color)',
+          background: checked ? '#F472B6' : 'var(--border-color)',
           flexShrink: 0,
         }}
       >

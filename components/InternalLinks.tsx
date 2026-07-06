@@ -121,7 +121,7 @@ export default function InternalLinks({
                                 borderRadius: '14px',
                                 fontSize: '13px',
                                 fontWeight: 600,
-                                color: '#0D9488',
+                                color: '#BE185D',
                                 backgroundColor: '#F0FAF8',
                                 border: '1px solid rgba(255,255,255,0.5)',
                                 textDecoration: 'none',
@@ -146,8 +146,8 @@ export default function InternalLinks({
             <style>{`
                 .il-btn:hover {
                     transform: translateY(-2px) !important;
-                    background-color: #E6FAF8 !important;
-                    box-shadow: 6px 6px 14px rgba(13,148,136,0.12), -3px -3px 8px rgba(255,255,255,0.9), inset 2px 2px 5px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03) !important;
+                    background-color: #FDF2F8 !important;
+                    box-shadow: 6px 6px 14px rgba(190,24,93,0.12), -3px -3px 8px rgba(255,255,255,0.9), inset 2px 2px 5px rgba(255,255,255,0.7), inset -1px -1px 2px rgba(0,0,0,0.03) !important;
                 }
                 .il-btn:active {
                     transform: translateY(0) !important;

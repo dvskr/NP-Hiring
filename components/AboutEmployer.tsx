@@ -75,7 +75,7 @@ export default function AboutEmployer({
                         />
                     ) : (
                         <div style={iconContainer}>
-                            <Building2 style={{ width: '24px', height: '24px', color: '#0D9488' }} />
+                            <Building2 style={{ width: '24px', height: '24px', color: '#BE185D' }} />
                         </div>
                     )}
                     <div>
@@ -91,7 +91,7 @@ export default function AboutEmployer({
                             <span style={{
                                 display: 'inline-flex', alignItems: 'center', gap: '4px',
                                 padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 600,
-                                backgroundColor: '#CCFBF1', color: '#0F766E',
+                                backgroundColor: '#FCE7F3', color: '#9D174D',
                                 boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), 1px 1px 2px rgba(0,0,0,0.03)',
                                 marginTop: '4px',
                             }}>
@@ -105,7 +105,7 @@ export default function AboutEmployer({
                                 rel="noopener noreferrer"
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '4px',
-                                    fontSize: '12px', color: '#0D9488', marginTop: '4px',
+                                    fontSize: '12px', color: '#BE185D', marginTop: '4px',
                                     textDecoration: 'none',
                                 }}
                             >
@@ -127,7 +127,7 @@ export default function AboutEmployer({
                             href={employerLink}
                             style={{
                                 display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                fontSize: '13px', fontWeight: 600, color: '#0D9488',
+                                fontSize: '13px', fontWeight: 600, color: '#BE185D',
                                 textDecoration: 'none',
                             }}
                         >
@@ -145,7 +145,7 @@ export default function AboutEmployer({
         <section style={clayCard}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '14px' }}>
                 <div style={iconContainer}>
-                    <Building2 style={{ width: '24px', height: '24px', color: '#0D9488' }} />
+                    <Building2 style={{ width: '24px', height: '24px', color: '#BE185D' }} />
                 </div>
                 <div>
                     <h2 style={{
@@ -163,7 +163,7 @@ export default function AboutEmployer({
                             rel="noopener noreferrer"
                             style={{
                                 display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                fontSize: '12px', color: '#0D9488', marginTop: '4px',
+                                fontSize: '12px', color: '#BE185D', marginTop: '4px',
                                 textDecoration: 'none',
                             }}
                         >
@@ -187,7 +187,7 @@ export default function AboutEmployer({
                         href={employerLink}
                         style={{
                             display: 'inline-flex', alignItems: 'center', gap: '6px',
-                            fontSize: '13px', fontWeight: 600, color: '#0D9488',
+                            fontSize: '13px', fontWeight: 600, color: '#BE185D',
                             textDecoration: 'none',
                         }}
                     >

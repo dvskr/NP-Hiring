@@ -173,10 +173,10 @@ const clayPill: React.CSSProperties = {
 
 const clayPillActive: React.CSSProperties = {
   ...clayPill,
-  background: 'linear-gradient(145deg, #0D9488, #10B981)',
+  background: 'linear-gradient(145deg, #BE185D, #9D174D)',
   color: '#fff',
   border: '1px solid rgba(255,255,255,0.3)',
-  boxShadow: '3px 3px 8px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+  boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
 };
 
 const STEPS = [
@@ -192,7 +192,7 @@ function LoadingFallback() {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
       <div style={{
         width: '36px', height: '36px', borderRadius: '50%',
-        border: '3px solid #E5E7EB', borderTopColor: '#0D9488',
+        border: '3px solid #E5E7EB', borderTopColor: '#BE185D',
         animation: 'spin 0.8s linear infinite',
       }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -242,8 +242,8 @@ function SavedIndicator({
 
   const color =
     status === 'error' ? '#B45309' :
-    status === 'saving' ? '#0F766E' :
-    status === 'saved' ? '#0F766E' :
+    status === 'saving' ? '#9D174D' :
+    status === 'saved' ? '#9D174D' :
     '#94A3B8';
 
   const bg =
@@ -311,13 +311,13 @@ function StepProgressBar({ currentStep, onStepClick, completedSteps }: {
                 display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '8px 12px', borderRadius: '12px',
                 background: isActive
-                  ? 'linear-gradient(145deg, #0D9488, #10B981)'
+                  ? 'linear-gradient(145deg, #BE185D, #9D174D)'
                   : isCompleted ? '#D1FAE5' : '#F5F6F8',
                 color: isActive ? '#fff' : isCompleted ? '#059669' : '#8A9BA6',
                 border: 'none', cursor: isClickable ? 'pointer' : 'default',
                 fontSize: '12px', fontWeight: 600,
                 boxShadow: isActive
-                  ? '3px 3px 8px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)'
+                  ? '3px 3px 8px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)'
                   : 'inset 1px 1px 2px rgba(0,0,0,0.03)',
                 transition: 'all 0.25s ease',
                 whiteSpace: 'nowrap',
@@ -800,8 +800,8 @@ function PostJobContent() {
           <div style={{
             width: '56px', height: '56px', borderRadius: '18px', margin: '0 auto 16px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'linear-gradient(145deg, #0D9488, #10B981)',
-            boxShadow: '4px 4px 10px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.2)',
+            background: 'linear-gradient(145deg, #BE185D, #9D174D)',
+            boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.2)',
           }}>
             <Building2 size={24} color="#fff" />
           </div>
@@ -814,8 +814,8 @@ function PostJobContent() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <a href="/signup?role=employer" style={{
               ...clayBtn, justifyContent: 'center',
-              background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
-              boxShadow: '4px 4px 10px rgba(13,148,136,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+              background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
+              boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
             }}>
               Sign Up as Employer
             </a>
@@ -851,7 +851,7 @@ function PostJobContent() {
             You are logged in as <strong>{roleLabel}</strong>. Posting a job requires an Employer account.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <a href="/jobs" style={{ ...clayBtn, justifyContent: 'center', background: '#F0FDFA', color: '#0D9488', border: '1px solid rgba(13,148,136,0.2)' }}>
+            <a href="/jobs" style={{ ...clayBtn, justifyContent: 'center', background: '#FDF2F8', color: '#BE185D', border: '1px solid rgba(190,24,93,0.2)' }}>
               Browse jobs instead
             </a>
             <button
@@ -887,7 +887,7 @@ function PostJobContent() {
     const colors = {
       blue: { bg: '#EFF6FF', border: '#BFDBFE', text: '#1E40AF' },
       amber: { bg: '#FFFBEB', border: '#FDE68A', text: '#92400E' },
-      teal: { bg: '#F0FDFA', border: '#99F6E4', text: '#115E59' },
+      teal: { bg: '#FDF2F8', border: '#FBCFE8', text: '#831843' },
     };
     const c = colors[color as keyof typeof colors] || colors.blue;
     return (
@@ -914,9 +914,9 @@ function PostJobContent() {
         {hydratedFromExisting && !bannerDismissed && (
           <div style={{
             ...cardBase, padding: '12px 16px', marginBottom: '16px',
-            background: '#F0FDFA', border: '1px solid #99F6E4',
+            background: '#FDF2F8', border: '1px solid #FBCFE8',
           }}>
-            <p style={{ fontSize: '13px', fontWeight: 600, color: '#0D9488', margin: 0 }}>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', margin: 0 }}>
               ✓ Resumed your unfinished post — all fields restored. Auto-saving as you go.
             </p>
           </div>
@@ -1102,7 +1102,7 @@ function PostJobContent() {
                       <input
                         type="checkbox"
                         {...register('newGradFriendly')}
-                        style={{ accentColor: '#0D9488', width: '16px', height: '16px' }}
+                        style={{ accentColor: '#BE185D', width: '16px', height: '16px' }}
                       />
                       Also open to exceptional new grads
                     </label>
@@ -1267,7 +1267,7 @@ function PostJobContent() {
                   {/* Competitive checkbox */}
                   <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '4px 0' }}>
                     <input type="checkbox" checked={salaryCompetitive} onChange={(e) => handleCompetitiveChange(e.target.checked)}
-                      style={{ width: '18px', height: '18px', accentColor: '#0D9488', borderRadius: '4px' }}
+                      style={{ width: '18px', height: '18px', accentColor: '#BE185D', borderRadius: '4px' }}
                     />
                     <span style={{ fontSize: '13px', color: '#6B7F8A' }}>Competitive salary (don&apos;t display range)</span>
                   </label>
@@ -1307,12 +1307,12 @@ function PostJobContent() {
                     {/* External */}
                     <label style={{
                       ...cardBase, padding: '14px 16px', cursor: 'pointer',
-                      border: !watch('applyOnPlatform') ? '2px solid #0D9488' : '1px solid rgba(0,0,0,0.06)',
-                      background: !watch('applyOnPlatform') ? '#F0FDFA' : '#fff',
+                      border: !watch('applyOnPlatform') ? '2px solid #BE185D' : '1px solid rgba(0,0,0,0.06)',
+                      background: !watch('applyOnPlatform') ? '#FDF2F8' : '#fff',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                         <input type="radio" checked={!watch('applyOnPlatform')} onChange={() => setValue('applyOnPlatform', false)}
-                          style={{ marginTop: '3px', accentColor: '#0D9488', width: '16px', height: '16px' }}
+                          style={{ marginTop: '3px', accentColor: '#BE185D', width: '16px', height: '16px' }}
                         />
                         <div>
                           <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>External Application URL</span>
@@ -1324,20 +1324,20 @@ function PostJobContent() {
                     {/* Platform */}
                     <label style={{
                       ...cardBase, padding: '14px 16px', cursor: 'pointer',
-                      border: watch('applyOnPlatform') ? '2px solid #0D9488' : '1px solid rgba(0,0,0,0.06)',
-                      background: watch('applyOnPlatform') ? '#F0FDFA' : '#fff',
+                      border: watch('applyOnPlatform') ? '2px solid #BE185D' : '1px solid rgba(0,0,0,0.06)',
+                      background: watch('applyOnPlatform') ? '#FDF2F8' : '#fff',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                         <input type="radio" checked={watch('applyOnPlatform') === true}
                           onChange={() => { setValue('applyOnPlatform', true); setValue('applyUrl', ''); }}
-                          style={{ marginTop: '3px', accentColor: '#0D9488', width: '16px', height: '16px' }}
+                          style={{ marginTop: '3px', accentColor: '#BE185D', width: '16px', height: '16px' }}
                         />
                         <div>
                           <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on {brand.name}</span>
                           <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly — no website needed</p>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
                             {['Resume', 'Cover letter', 'Email alerts'].map(f => (
-                              <span key={f} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '8px', background: '#CCFBF1', color: '#0D9488', fontWeight: 500 }}>✓ {f}</span>
+                              <span key={f} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '8px', background: '#FCE7F3', color: '#BE185D', fontWeight: 500 }}>✓ {f}</span>
                             ))}
                           </div>
                         </div>
@@ -1386,14 +1386,14 @@ function PostJobContent() {
 
               <div style={{
                 ...cardBase, padding: '20px',
-                background: '#F0FDFA', border: '1px solid #99F6E4',
+                background: '#FDF2F8', border: '1px solid #FBCFE8',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
                   <div style={{
                     width: '40px', height: '40px', borderRadius: '12px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'linear-gradient(145deg, #0D9488, #10B981)',
-                    boxShadow: '3px 3px 8px rgba(13,148,136,0.2)',
+                    background: 'linear-gradient(145deg, #BE185D, #9D174D)',
+                    boxShadow: '3px 3px 8px rgba(190,24,93,0.2)',
                   }}>
                     <Check size={18} color="#fff" />
                   </div>
@@ -1406,7 +1406,7 @@ function PostJobContent() {
                   {[`${config.durationDays}-day paid · ${config.freeDurationDays}-day free`, 'Featured badge', 'Top placement', 'Email alerts', `${config.limits.candidateUnlocksPerPosting} candidate unlocks`, `${config.limits.inmailsPerPosting} InMails`, 'Analytics'].map(f => (
                     <span key={f} style={{
                       fontSize: '11px', fontWeight: 500, padding: '4px 10px',
-                      borderRadius: '10px', background: '#CCFBF1', color: '#0D9488',
+                      borderRadius: '10px', background: '#FCE7F3', color: '#BE185D',
                     }}>✓ {f}</span>
                   ))}
                 </div>
@@ -1444,18 +1444,18 @@ function PostJobContent() {
           {currentStep < 5 ? (
             <button type="button" onClick={handleNext} className="wizard-next-btn" style={{
               ...clayBtn,
-              background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
+              background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
               padding: '12px 28px', fontSize: '14px',
-              boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
+              boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
             }}>
               Continue <ChevronRight size={16} />
             </button>
           ) : (
             <button type="submit" form="job-post-form" disabled={isSubmitting} className="wizard-next-btn" style={{
               ...clayBtn,
-              background: 'linear-gradient(145deg, #0D9488, #10B981)', color: '#fff',
+              background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
               padding: '12px 28px', fontSize: '14px',
-              boxShadow: '4px 4px 12px rgba(13,148,136,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
+              boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
               opacity: isSubmitting ? 0.6 : 1,
             }}>
               {isSubmitting ? (
@@ -1471,7 +1471,7 @@ function PostJobContent() {
       {/* Hover Styles */}
       <style>{`
         .wizard-nav-btn:hover { transform: translateY(-1px); }
-        .wizard-next-btn:hover { transform: translateY(-1px); box-shadow: 6px 6px 16px rgba(13,148,136,0.3), inset 1px 1px 2px rgba(255,255,255,0.15) !important; }
+        .wizard-next-btn:hover { transform: translateY(-1px); box-shadow: 6px 6px 16px rgba(190,24,93,0.3), inset 1px 1px 2px rgba(255,255,255,0.15) !important; }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 

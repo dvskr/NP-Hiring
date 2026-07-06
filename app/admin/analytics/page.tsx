@@ -139,16 +139,16 @@ export default function AnalyticsPage() {
 
     const tabStyle = (active: boolean): React.CSSProperties => ({
         padding: '10px 20px', fontSize: '14px', fontWeight: active ? 600 : 400,
-        color: active ? '#0D9488' : '#6B7F8A',
-        backgroundColor: active ? 'rgba(45,212,191,0.1)' : 'transparent',
-        border: 'none', borderBottom: active ? '2px solid #0D9488' : '2px solid transparent',
+        color: active ? '#BE185D' : '#6B7F8A',
+        backgroundColor: active ? 'rgba(244,114,182,0.1)' : 'transparent',
+        border: 'none', borderBottom: active ? '2px solid #BE185D' : '2px solid transparent',
         cursor: 'pointer', transition: 'all 0.2s',
     });
 
     if (loading && !data) {
         return (
             <div style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 16px', textAlign: 'center' }}>
-                <div style={{ width: 48, height: 48, border: '3px solid #E8ECF0', borderTop: '3px solid #0D9488', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.8s linear infinite' }} />
+                <div style={{ width: 48, height: 48, border: '3px solid #E8ECF0', borderTop: '3px solid #BE185D', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.8s linear infinite' }} />
                 <p style={{ ...sub, marginTop: 16 }}>Loading analytics…</p>
             </div>
         );
@@ -169,7 +169,7 @@ export default function AnalyticsPage() {
                     {[7, 30, 90].map(d => (
                         <button key={d} onClick={() => setDays(d)} style={{
                             padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                            backgroundColor: days === d ? '#0D9488' : '#F8FAF9',
+                            backgroundColor: days === d ? '#BE185D' : '#F8FAF9',
                             color: days === d ? '#0F172A' : '#6B7F8A',
                             border: days === d ? 'none' : '1px solid #E8ECF0',
                         }}>{d}d</button>
@@ -198,7 +198,7 @@ export default function AnalyticsPage() {
                     {/* Big Funnel */}
                     <div style={{ ...card, padding: 28, marginBottom: 24 }}>
                         <h2 style={{ ...heading, fontSize: 18, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Activity size={20} style={{ color: '#0D9488' }} /> Engagement Funnel ({days} days)
+                            <Activity size={20} style={{ color: '#BE185D' }} /> Engagement Funnel ({days} days)
                         </h2>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8" style={{ maxWidth: 700, margin: '0 auto' }}>
                             <FunnelStep icon={<Eye size={22} style={{ color: '#3B82F6' }} />} label="Job Views" value={s.totalViews} color="#3B82F6" width="100%" />
@@ -217,7 +217,7 @@ export default function AnalyticsPage() {
                         {/* Platform Health */}
                         <div style={{ ...card, padding: 24 }}>
                             <h3 style={{ ...heading, fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <BarChart3 size={18} style={{ color: '#0D9488' }} /> Platform Health
+                                <BarChart3 size={18} style={{ color: '#BE185D' }} /> Platform Health
                             </h3>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                                 <div style={{ padding: '14px 16px', borderRadius: 10, backgroundColor: '#F8FAF9' }}>
@@ -240,7 +240,7 @@ export default function AnalyticsPage() {
                                             <div key={source} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                                 <span style={{ fontSize: 12, color: '#6B7F8A', width: 90, textTransform: 'capitalize', flexShrink: 0 }}>{source}</span>
                                                 <div style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: '#F8FAF9', overflow: 'hidden' }}>
-                                                    <div style={{ height: '100%', width: `${pct}%`, backgroundColor: '#0D9488', borderRadius: 4 }} />
+                                                    <div style={{ height: '100%', width: `${pct}%`, backgroundColor: '#BE185D', borderRadius: 4 }} />
                                                 </div>
                                                 <span style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', width: 40, textAlign: 'right' }}>{count}</span>
                                             </div>
@@ -465,7 +465,7 @@ export default function AnalyticsPage() {
                                             href={`/jobs/${r.job.slug || r.job.id}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            style={{ fontWeight: 600, color: '#0D9488', fontSize: 13, textDecoration: 'none' }}
+                                            style={{ fontWeight: 600, color: '#BE185D', fontSize: 13, textDecoration: 'none' }}
                                         >
                                             {r.job.title} ↗
                                         </a>

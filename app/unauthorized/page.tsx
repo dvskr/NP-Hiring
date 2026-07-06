@@ -60,8 +60,8 @@ export default function UnauthorizedPage() {
                         display: 'flex', alignItems: 'center', gap: '8px',
                         padding: '12px 24px', borderRadius: '16px',
                         fontSize: '15px', fontWeight: 600, color: '#FFFFFF',
-                        background: 'linear-gradient(135deg, #0D9488, #0F766E)',
-                        boxShadow: '0 4px 12px rgba(13,148,136,0.3), inset 1px 1px 3px rgba(255,255,255,0.3)',
+                        background: 'linear-gradient(135deg, #BE185D, #9D174D)',
+                        boxShadow: '0 4px 12px rgba(190,24,93,0.3), inset 1px 1px 3px rgba(255,255,255,0.3)',
                         textDecoration: 'none', transition: 'all 0.2s ease'
                     }}>
                         <ArrowLeft size={18} />
@@ -85,7 +85,7 @@ export default function UnauthorizedPage() {
             <style>{`
                 .clay-btn-primary:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 6px 16px rgba(13,148,136,0.4), inset 1px 1px 4px rgba(255,255,255,0.4) !important;
+                    box-shadow: 0 6px 16px rgba(190,24,93,0.4), inset 1px 1px 4px rgba(255,255,255,0.4) !important;
                 }
                 .clay-btn-secondary:hover {
                     transform: translateY(-2px);

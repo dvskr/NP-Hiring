@@ -81,7 +81,7 @@ const clayCard: React.CSSProperties = {
 - **Style**: Isometric 3D clay diorama, claymorphic rounded puffy edges
 - **Size**: `280x200` (ROW 1 left, ROW 3) or `200x140` (ROW 1 right)
 - **Background**: Solid edge-to-edge matching the gradient:
-  - ROW 1 left bg: `#CCFBF1` (mint green)
+  - ROW 1 left bg: `#FCE7F3` (mint green)
   - ROW 1 right bg: `#FEF3C7` (warm cream)
   - ROW 3 left bg: `#FFEDD5` (warm peach)
 - **MUST depict**: The EXACT concept of the card title (e.g., "Hospital Settings" = hospital ward, "Career Growth" = stepping stones going up)
@@ -90,7 +90,7 @@ const clayCard: React.CSSProperties = {
 ### Clay Icons (ROW 2)
 - **Style**: Single 3D claymorphic object icon, minimal detail
 - **Size**: Small, centered, 200x200px canvas
-- **Background**: Solid `#CCFBF1` mint green
+- **Background**: Solid `#FCE7F3` mint green
 - **MUST depict**: A single recognizable object matching the card (e.g., "Structured Shifts" = hospital bed, "Crisis Expertise" = alert bell)
 - **Naming**: `icon_{category}_{concept}.png`
 
@@ -124,7 +124,7 @@ Only import Lucide icons actually used (TrendingUp for ROW 3 salary, Building2 f
 
 ```css
 .cat-cta-primary { transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease; }
-.cat-cta-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(13,148,136,0.35) !important; filter: brightness(1.05); }
+.cat-cta-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(190,24,93,0.35) !important; filter: brightness(1.05); }
 .cat-bento-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
 .cat-bento-card:hover { transform: translateY(-4px); box-shadow: 8px 8px 24px rgba(0,0,0,0.1), -4px -4px 12px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
 .cat-stat-pill { transition: transform 0.2s ease, box-shadow 0.2s ease; }

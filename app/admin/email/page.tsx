@@ -32,12 +32,12 @@ const inputStyle: React.CSSProperties = {
 };
 const btnPrimary: React.CSSProperties = {
     padding: '10px 22px', borderRadius: '10px', cursor: 'pointer',
-    backgroundColor: '#0D9488', color: '#0F172A', border: 'none',
+    backgroundColor: '#BE185D', color: '#0F172A', border: 'none',
     fontWeight: 700, fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px',
 };
 const btnSecondary: React.CSSProperties = {
     padding: '10px 22px', borderRadius: '10px', cursor: 'pointer',
-    backgroundColor: 'transparent', color: '#0D9488', border: '1px solid rgba(255,255,255,0.5)',
+    backgroundColor: 'transparent', color: '#BE185D', border: '1px solid rgba(255,255,255,0.5)',
     fontWeight: 600, fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px',
 };
 const btnDanger: React.CSSProperties = {
@@ -252,8 +252,8 @@ export default function AdminEmailPage() {
     const tabStyle = (active: boolean): React.CSSProperties => ({
         padding: '10px 20px', borderRadius: '10px', cursor: 'pointer',
         fontWeight: 600, fontSize: '13px', border: 'none',
-        backgroundColor: active ? 'rgba(45, 212, 191, 0.12)' : 'transparent',
-        color: active ? '#0D9488' : '#94A3B8',
+        backgroundColor: active ? 'rgba(244,114,182, 0.12)' : 'transparent',
+        color: active ? '#BE185D' : '#94A3B8',
         display: 'flex', alignItems: 'center', gap: '6px',
         transition: 'all 0.2s',
     });
@@ -263,7 +263,7 @@ export default function AdminEmailPage() {
             {/* Header */}
             <div style={{ marginBottom: '24px' }}>
                 <h1 style={{ ...heading, fontSize: '28px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Mail size={28} style={{ color: '#0D9488' }} /> Email Broadcasts
+                    <Mail size={28} style={{ color: '#BE185D' }} /> Email Broadcasts
                 </h1>
                 <p style={sub}>Send personalized emails to your users</p>
             </div>
@@ -325,8 +325,8 @@ export default function AdminEmailPage() {
                                     title={`Inserts the recipient's ${mt.label} (e.g. "${mt.example}")`}
                                     style={{
                                         padding: '4px 10px', borderRadius: '6px', cursor: 'pointer',
-                                        backgroundColor: 'rgba(45,212,191,0.08)', color: '#0D9488',
-                                        border: '1px solid rgba(45,212,191,0.2)', fontSize: '12px', fontWeight: 600,
+                                        backgroundColor: 'rgba(244,114,182,0.08)', color: '#BE185D',
+                                        border: '1px solid rgba(244,114,182,0.2)', fontSize: '12px', fontWeight: 600,
                                         fontFamily: 'monospace',
                                     }}
                                 >
@@ -391,7 +391,7 @@ export default function AdminEmailPage() {
                                     </div>
                                 ) : audienceInfo ? (
                                     <>
-                                        <div style={{ fontSize: '22px', fontWeight: 800, color: '#0D9488' }}>
+                                        <div style={{ fontSize: '22px', fontWeight: 800, color: '#BE185D' }}>
                                             {audienceInfo.count.toLocaleString()}
                                         </div>
                                         <div style={muted}>recipients</div>
@@ -474,7 +474,7 @@ export default function AdminEmailPage() {
                         </div>
                         <p style={{ ...sub, lineHeight: '1.6', marginBottom: '8px' }}>
                             You are about to send <strong style={{ color: '#1A2E35' }}>&quot;{subject}&quot;</strong> to{' '}
-                            <strong style={{ color: '#0D9488' }}>{audienceInfo?.count.toLocaleString() || 0}</strong> recipients.
+                            <strong style={{ color: '#BE185D' }}>{audienceInfo?.count.toLocaleString() || 0}</strong> recipients.
                         </p>
                         <p style={{ ...muted, marginBottom: '24px' }}>This action cannot be undone.</p>
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
@@ -554,7 +554,7 @@ export default function AdminEmailPage() {
                 <div>
                     {loadingTemplates ? (
                         <div style={{ textAlign: 'center', padding: '60px' }}>
-                            <Loader2 size={24} style={{ color: '#0D9488', animation: 'spin 1s linear infinite' }} />
+                            <Loader2 size={24} style={{ color: '#BE185D', animation: 'spin 1s linear infinite' }} />
                         </div>
                     ) : templates.length === 0 ? (
                         <div style={{ ...card, padding: '40px', textAlign: 'center' }}>

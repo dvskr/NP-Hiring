@@ -75,7 +75,7 @@ export function autoLinkCategories(html: string): string {
         if (lastOpenHeading > lastCloseHeading) continue;
 
         // Replace this occurrence with an internal link
-        const replacement = `<a href="${href}" class="text-teal-600 hover:underline font-medium" title="Browse ${label}">${match[0]}</a>`;
+        const replacement = `<a href="${href}" class="text-pink-700 hover:underline font-medium" title="Browse ${label}">${match[0]}</a>`;
 
         result =
             result.slice(0, matchIndex) +

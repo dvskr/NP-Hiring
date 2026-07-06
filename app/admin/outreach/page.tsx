@@ -27,7 +27,7 @@ const STATUS_OPTIONS = ['prospect', 'contacted', 'responded', 'converted', 'decl
 
 const STATUS_BADGE_STYLES: Record<string, React.CSSProperties> = {
   prospect: { backgroundColor: 'rgba(148, 163, 184, 0.15)', color: '#94A3B8' },
-  contacted: { backgroundColor: 'rgba(45, 212, 191, 0.15)', color: '#0D9488' },
+  contacted: { backgroundColor: 'rgba(244,114,182, 0.15)', color: '#BE185D' },
   responded: { backgroundColor: 'rgba(168, 85, 247, 0.15)', color: '#A855F7' },
   converted: { backgroundColor: 'rgba(34, 197, 94, 0.15)', color: '#22C55E' },
   declined: { backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#EF4444' },
@@ -54,7 +54,7 @@ const inputStyle: React.CSSProperties = {
 const btnPrimary: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: '8px',
   padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-  backgroundColor: '#0D9488', color: '#0F172A', fontWeight: 700, fontSize: '13px',
+  backgroundColor: '#BE185D', color: '#0F172A', fontWeight: 700, fontSize: '13px',
   transition: 'opacity 0.2s',
 };
 const btnOutline: React.CSSProperties = {
@@ -184,7 +184,7 @@ export default function OutreachPage() {
         <div
           style={{
             width: 48, height: 48, border: '3px solid #E8ECF0',
-            borderTop: '3px solid #0D9488', borderRadius: '50%',
+            borderTop: '3px solid #BE185D', borderRadius: '50%',
             margin: '0 auto', animation: 'spin 0.8s linear infinite',
           }}
         />
@@ -206,7 +206,7 @@ export default function OutreachPage() {
         {[
           { label: 'Total Leads', value: stats.total, color: '#1A2E35' },
           { label: 'Prospects', value: stats.prospects, color: '#94A3B8' },
-          { label: 'Contacted', value: stats.contacted, color: '#0D9488' },
+          { label: 'Contacted', value: stats.contacted, color: '#BE185D' },
           { label: 'Responded', value: stats.responded, color: '#A855F7' },
           { label: 'Converted', value: stats.converted, color: '#22C55E' },
         ].map((s) => (
@@ -310,7 +310,7 @@ export default function OutreachPage() {
                     onClick={() => handleCopyTemplate(template)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '6px',
-                      fontSize: '13px', color: '#0D9488', background: 'none',
+                      fontSize: '13px', color: '#BE185D', background: 'none',
                       border: 'none', cursor: 'pointer',
                     }}
                   >
@@ -346,7 +346,7 @@ export default function OutreachPage() {
                 <button
                   onClick={() => handleAddLead(company)}
                   style={{
-                    fontSize: '13px', color: '#0D9488', background: 'none',
+                    fontSize: '13px', color: '#BE185D', background: 'none',
                     border: 'none', cursor: 'pointer', fontWeight: 600,
                   }}
                 >
@@ -373,8 +373,8 @@ export default function OutreachPage() {
                   style={{
                     padding: '14px 24px', fontSize: '13px', fontWeight: active ? 700 : 500,
                     borderTop: 'none', borderLeft: 'none', borderRight: 'none',
-                    borderBottom: active ? '2px solid #0D9488' : '2px solid transparent',
-                    color: active ? '#0D9488' : '#94A3B8',
+                    borderBottom: active ? '2px solid #BE185D' : '2px solid transparent',
+                    color: active ? '#BE185D' : '#94A3B8',
                     background: 'none', cursor: 'pointer',
                     textTransform: 'capitalize', transition: 'color 0.2s',
                   }}
@@ -448,7 +448,7 @@ export default function OutreachPage() {
                     <button
                       onClick={() => handleCopyTemplate('initial', lead)}
                       style={{
-                        fontSize: '13px', color: '#0D9488', background: 'none',
+                        fontSize: '13px', color: '#BE185D', background: 'none',
                         border: 'none', cursor: 'pointer', fontWeight: 600,
                         padding: '6px 12px',
                       }}

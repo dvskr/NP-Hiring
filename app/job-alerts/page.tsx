@@ -164,7 +164,7 @@ function JobAlertsContent() {
     <div style={{ minHeight: '100vh', background: '#FBEFE4' }}>
       {/* ═══ Hero Section ═══ */}
       <CategoryHero
-        bgColor="#0D9488"
+        bgColor="#BE185D"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_alerts.webp`}
         heroAlt="Job Alerts"
         badgeText="Job Alerts"
@@ -209,7 +209,7 @@ function JobAlertsContent() {
                   <div>
                     <p style={{ fontSize: '13px', fontWeight: 600, color: '#059669', margin: '0 0 4px' }}>{message.text}</p>
                     <p style={{ fontSize: '12px', color: '#6B7F8A', margin: 0 }}>
-                      You can <Link href="/job-alerts/manage" style={{ color: '#0D9488', textDecoration: 'underline' }}>manage your alerts</Link> anytime.
+                      You can <Link href="/job-alerts/manage" style={{ color: '#BE185D', textDecoration: 'underline' }}>manage your alerts</Link> anytime.
                     </p>
                   </div>
                 </div>
@@ -320,11 +320,11 @@ function JobAlertsContent() {
                             padding: '8px 18px', borderRadius: '12px',
                             fontSize: '13px', fontWeight: 600,
                             cursor: 'pointer', transition: 'all 0.2s',
-                            background: frequency === f ? '#0D9488' : '#EDF5F0',
+                            background: frequency === f ? '#BE185D' : '#EDF5F0',
                             color: frequency === f ? '#fff' : '#6B7F8A',
                             border: `1px solid ${frequency === f ? 'rgba(255,255,255,0.3)' : '#D5E8E0'}`,
                             boxShadow: frequency === f
-                              ? '4px 4px 10px rgba(13,148,136,0.2), inset 0 1px 0 rgba(255,255,255,0.15)'
+                              ? '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)'
                               : 'inset 2px 2px 5px rgba(0,60,50,0.06), inset -1px -1px 3px rgba(255,255,255,0.4)',
                           }}
                         >
@@ -354,12 +354,12 @@ function JobAlertsContent() {
                     style={{
                       width: '100%', padding: '12px',
                       borderRadius: '14px', border: 'none',
-                      background: 'linear-gradient(145deg, #10B981, #0D9488)',
+                      background: 'linear-gradient(145deg, #9D174D, #BE185D)',
                       color: '#fff', fontSize: '14px', fontWeight: 700,
                       cursor: isSubmitting ? 'not-allowed' : 'pointer',
                       opacity: isSubmitting ? 0.6 : 1,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                      boxShadow: '4px 4px 12px rgba(13,148,136,0.25), -2px -2px 8px rgba(255,255,255,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
+                      boxShadow: '4px 4px 12px rgba(190,24,93,0.25), -2px -2px 8px rgba(255,255,255,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
                       transition: 'all 0.2s',
                     }}
                   >
@@ -378,7 +378,7 @@ function JobAlertsContent() {
 
                   <p style={{ fontSize: '11px', color: '#B0C4BC', textAlign: 'center', margin: 0 }}>
                     You can unsubscribe anytime from the email or{' '}
-                    <Link href="/job-alerts/manage" style={{ color: '#0D9488', textDecoration: 'underline' }}>
+                    <Link href="/job-alerts/manage" style={{ color: '#BE185D', textDecoration: 'underline' }}>
                       manage your alerts
                     </Link>.
                   </p>
@@ -400,7 +400,7 @@ function JobAlertsContent() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {[
                   { icon: <Zap size={14} />, bg: '#DCFCE7', color: '#059669', title: 'Be First to Apply', desc: 'Get notified as soon as new jobs are posted' },
-                  { icon: <Bell size={14} />, bg: '#CCFBF1', color: '#0D9488', title: 'Personalized Matches', desc: 'Only receive jobs that match your criteria' },
+                  { icon: <Bell size={14} />, bg: '#FCE7F3', color: '#BE185D', title: 'Personalized Matches', desc: 'Only receive jobs that match your criteria' },
                   { icon: <Briefcase size={14} />, bg: '#EDE9FE', color: '#7C3AED', title: 'Save Time', desc: 'No need to check the site daily' },
                 ].map((item) => (
                   <div key={item.title} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
@@ -453,16 +453,16 @@ function JobAlertsContent() {
 
             {/* Stats */}
             <div style={{ ...cardBase, padding: '20px' }}>
-              <p style={{ fontSize: '12px', fontWeight: 700, color: '#0D9488', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <p style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 Trusted by {brand.niche.short}s
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{ ...cardRecessed, padding: '12px', textAlign: 'center' }}>
-                  <p style={{ fontSize: '22px', fontWeight: 800, color: '#0D9488', margin: '0 0 2px' }}>200+</p>
+                  <p style={{ fontSize: '22px', fontWeight: 800, color: '#BE185D', margin: '0 0 2px' }}>200+</p>
                   <p style={{ fontSize: '10px', color: '#8A9BA6', margin: 0 }}>New jobs daily</p>
                 </div>
                 <div style={{ ...cardRecessed, padding: '12px', textAlign: 'center' }}>
-                  <p style={{ fontSize: '22px', fontWeight: 800, color: '#0D9488', margin: '0 0 2px' }}>10,000+</p>
+                  <p style={{ fontSize: '22px', fontWeight: 800, color: '#BE185D', margin: '0 0 2px' }}>10,000+</p>
                   <p style={{ fontSize: '10px', color: '#8A9BA6', margin: 0 }}>Active listings</p>
                 </div>
               </div>
@@ -472,7 +472,7 @@ function JobAlertsContent() {
             <div style={{ textAlign: 'center', padding: '8px 0' }}>
               <p style={{ fontSize: '12px', color: '#8A9BA6' }}>
                 Already have alerts?{' '}
-                <Link href="/job-alerts/manage" style={{ color: '#0D9488', fontWeight: 600, textDecoration: 'underline' }}>
+                <Link href="/job-alerts/manage" style={{ color: '#BE185D', fontWeight: 600, textDecoration: 'underline' }}>
                   Manage them here
                 </Link>
               </p>
@@ -497,7 +497,7 @@ function JobAlertsContent() {
       <style>{`
         .clay-submit-btn:hover:not(:disabled) {
           transform: translateY(-2px);
-          box-shadow: 6px 6px 16px rgba(13,148,136,0.30), -3px -3px 10px rgba(255,255,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+          box-shadow: 6px 6px 16px rgba(190,24,93,0.30), -3px -3px 10px rgba(255,255,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2) !important;
         }
         .clay-submit-btn:active:not(:disabled) {
           transform: translateY(1px);
