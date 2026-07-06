@@ -20,6 +20,23 @@
  *   - scripts/backfill-category-tags.ts (one-shot for existing rows)
  *
  * Pure function. No DB access. Easy to unit-test.
+ *
+ * ── NP HIRING (2026-07) ──────────────────────────────────────────────
+ * Rules migrated from the donor PMHNP tag set (29 slugs) to this board's
+ * 42-slug all-NP taxonomy (lib/pseo/taxonomy-registry.ts). Carried-over
+ * slugs (settings, job types, experience, employer types, populations)
+ * keep their donor-proven rules; the 14 NP specialties + 3 APRN roles
+ * are new, title-anchored rules built from the config/niche/relevance.ts
+ * NP vocabulary. Dropped donor slugs: addiction, substance-abuse,
+ * child-adolescent, behavioral-health, crisis (their roles fold into
+ * psychiatric-mental-health on this board).
+ *
+ * WORD-BOUNDARY CONVENTION (engine note): matching is still substring-
+ * based, but the haystack is padded with one leading + trailing space,
+ * so short credential abbreviations use the space/punctuation-padded
+ * forms from config/niche/relevance.ts (' fnp', '(crna', '/cnm', …).
+ * A bare short token like 'prn' or 'cns' is NEVER safe ('aprn',
+ * "CNS depressants") — always anchor it on at least one side.
  */
 
 export interface ClassifiableJob {
@@ -32,20 +49,33 @@ export interface ClassifiableJob {
     population?: string | null;     // populated for employer-posted jobs
 }
 
-/** All canonical category slugs the classifier can emit. */
+/**
+ * All canonical category slugs the classifier can emit — the 42-slug NP
+ * taxonomy, in axis order (must stay in sync with CATEGORY_AXES in
+ * lib/pseo/taxonomy-registry.ts; tests/pseo/category-tagger.test.ts
+ * enforces set-equality). Order matters twice: returned tags are stored
+ * in this order (stable Postgres text[] diffs), and the second-pass
+ * mutual-exclusion loop walks it top-to-bottom.
+ */
 export const CANONICAL_CATEGORY_SLUGS = [
-    // Settings
+    // Settings / modality
     'remote', 'telehealth', 'inpatient', 'outpatient', 'travel',
+    'urgent-care', 'home-health',
     // Job types
     'full-time', 'part-time', 'contract', 'per-diem', 'locum-tenens', '1099',
-    // Specialties / populations
-    'addiction', 'substance-abuse', 'child-adolescent', 'geriatric',
-    'behavioral-health', 'community-health', 'correctional', 'crisis',
-    'lgbtq', 'veterans',
+    // NP specialties
+    'family-practice', 'adult-gerontology', 'pediatric', 'neonatal',
+    'women-health', 'acute-care', 'emergency', 'psychiatric-mental-health',
+    'oncology', 'cardiology', 'primary-care', 'hospitalist',
+    'dermatology', 'orthopedic',
+    // APRN cohort (CRNA / CNM / CNS)
+    'anesthesia', 'midwifery', 'clinical-nurse-specialist',
     // Experience
     'entry-level', 'new-grad', 'mid-career', 'senior',
-    // Settings (employer types)
-    'hospital', 'private-practice', 'va',
+    // Employer types
+    'hospital', 'private-practice', 'community-health', 'va', 'correctional',
+    // Populations
+    'geriatric', 'veterans', 'lgbtq',
 ] as const;
 
 export type CategoryTag = typeof CANONICAL_CATEGORY_SLUGS[number];
@@ -75,7 +105,7 @@ interface CategoryRule {
 }
 
 const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
-    // ── Settings (mutually exclusive: a job is one of these, not many) ──
+    // ── Settings (mutually exclusive in spirit: a job is one of these) ──
     inpatient: {
         keywords: ['inpatient', 'in-patient', 'acute care', 'acute psych', 'crisis stabilization', 'inpatient unit'],
         matchDescription: false, // title-only — description noise is rampant
@@ -85,6 +115,14 @@ const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
         matchDescription: false,
         excludeIfAlsoTagged: ['inpatient'],
     },
+    'urgent-care': {
+        keywords: ['urgent care', 'walk-in clinic', 'immediate care'],
+        matchDescription: false,
+    },
+    'home-health': {
+        keywords: ['home health', 'home-based', 'house call', 'house-call', 'home visit', 'in-home'],
+        matchDescription: false,
+    },
     'private-practice': {
         keywords: ['private practice', 'group practice', 'solo practice', 'independent practice'],
         matchDescription: false,
@@ -93,7 +131,10 @@ const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
     hospital: {
         keywords: ['hospital', 'medical center', 'health system'],
         matchDescription: false,
-        excludeIfAlsoTagged: ['outpatient', 'private-practice'],
+        // 'hospitalist' contains 'hospital' as a substring — without the
+        // exclusion every hospitalist role would double-tag the hospital
+        // employer page (P9 sibling-duplication lesson).
+        excludeIfAlsoTagged: ['outpatient', 'private-practice', 'hospitalist'],
     },
     'community-health': {
         keywords: ['FQHC', 'federally qualified health center', 'community health center'],
@@ -118,7 +159,7 @@ const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
         matchDescription: false,
     },
     travel: {
-        keywords: ['travel position', 'travel assignment'],
+        keywords: ['travel position', 'travel assignment', 'travel nurse practitioner', 'travel np', 'travel crna'],
         matchDescription: false,
     },
 
@@ -140,7 +181,9 @@ const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
             (j.jobType || '').toLowerCase().includes('contract'),
     },
     'per-diem': {
-        keywords: ['per diem', 'per-diem', 'PRN'],
+        // 'PRN' must stay boundary-anchored: bare 'prn' is a substring of
+        // 'APRN', which appears in virtually every posting on this board.
+        keywords: ['per diem', 'per-diem', ' prn', '(prn', '/prn', '-prn'],
         structural: (j) =>
             (j.jobType || '').toLowerCase().includes('per diem'),
     },
@@ -152,43 +195,115 @@ const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
         matchDescription: true,
     },
 
-    // ── Specialty / population ──
-    addiction: {
-        keywords: ['addiction medicine', 'addiction psychiatr', 'MAT provider', 'suboxone prescriber', 'buprenorphine'],
+    // ── NP specialties (title-anchored — precision over recall) ──
+    'family-practice': {
+        keywords: [
+            'family nurse practitioner', 'family practice', 'family medicine', 'family np',
+            ' fnp', '(fnp', '/fnp', '-fnp',
+        ],
         matchDescription: false,
     },
-    'substance-abuse': {
-        keywords: ['substance abuse', 'substance use', 'SUD', 'dual diagnosis', 'detox'],
-        matchDescription: false,
-        excludeIfAlsoTagged: ['addiction'],
-    },
-    'child-adolescent': {
-        keywords: ['child and adolescent', 'child/adolescent', 'child & adolescent', 'pediatric psych', 'pediatric mental', 'CAPMHNP', 'adolescent psychiatr'],
+    'adult-gerontology': {
+        keywords: [
+            'adult-gerontology', 'adult gerontology', 'gerontological', 'adult nurse practitioner',
+            ' agnp', '(agnp', '/agnp', ' agpcnp', '(agpcnp', ' agacnp', '(agacnp',
+        ],
         matchDescription: false,
     },
-    geriatric: {
-        keywords: ['geriatric', 'geropsych', 'elderly', 'senior living', 'nursing home'],
+    pediatric: {
+        keywords: [
+            'pediatric', 'paediatric', 'peds np',
+            ' pnp', '(pnp', '/pnp', 'cpnp',
+        ],
+        matchDescription: false,
+        // "Pediatric Psychiatric NP" / "Pediatric Mental Health NP" belong
+        // to the psych page (donor child-adolescent lineage); combo
+        // "Neonatal/Pediatric NP" titles belong to the more specific
+        // neonatal page. One winner per sibling pair (P9 lesson).
+        excludeIfAlsoTagged: ['psychiatric-mental-health', 'neonatal'],
+    },
+    neonatal: {
+        keywords: [
+            'neonatal', ' nicu', '(nicu', '/nicu',
+            ' nnp', '(nnp', '/nnp',
+        ],
         matchDescription: false,
     },
-    'behavioral-health': {
-        keywords: ['integrated behavioral health'],
-        matchDescription: false,
-        // Exclude "behavioral-health" from generic mental-health roles —
-        // only tag when explicitly integrated. Otherwise this category
-        // catches every ${brand.niche.short} job and reintroduces the duplication.
-    },
-    crisis: {
-        keywords: ['crisis stabilization', 'emergency psych', 'urgent psych'],
+    'women-health': {
+        keywords: [
+            "women's health", 'womens health', 'women’s health', 'obstetric',
+            'ob/gyn', 'obgyn', 'ob-gyn',
+            ' whnp', '(whnp', '/whnp',
+        ],
         matchDescription: false,
     },
-    lgbtq: {
-        keywords: ['LGBTQ', 'transgender', 'gender-affirming', 'gender affirming', 'gender identity', 'affirming care'],
-        matchDescription: true,
+    'acute-care': {
+        keywords: [
+            // Leading-space anchor keeps ' icu' from matching NICU/PICU.
+            'acute care', 'critical care', 'intensive care', ' icu', '(icu', '/icu',
+            ' acnp', '(acnp', '/acnp',
+        ],
+        matchDescription: false,
     },
-    veterans: {
-        keywords: ['veterans', 'PTSD', 'military mental health'],
-        matchDescription: true,
-        excludeIfAlsoTagged: ['va'], // VA is more specific than generic "veterans"
+    emergency: {
+        keywords: [
+            'emergency', ' er np', ' enp', '(enp', '/enp',
+        ],
+        matchDescription: false,
+        // Psychiatric emergency services / psych-ED roles read as psych
+        // jobs, not ER jobs — keep them off the emergency page.
+        excludeIfAlsoTagged: ['psychiatric-mental-health'],
+    },
+    'psychiatric-mental-health': {
+        keywords: [
+            'pmhnp', 'psychiatric', 'psychiatry', 'psych np', 'psych nurse practitioner',
+            'mental health nurse practitioner', 'mental health np',
+            'behavioral health nurse practitioner', 'behavioral health np',
+        ],
+        matchDescription: false,
+    },
+    oncology: {
+        keywords: ['oncology', 'oncologic', 'hematology'],
+        matchDescription: false,
+    },
+    cardiology: {
+        keywords: ['cardiology', 'cardiovascular', 'cardiac', 'heart failure', 'electrophysiology'],
+        matchDescription: false,
+    },
+    'primary-care': {
+        keywords: ['primary care', 'internal medicine'],
+        matchDescription: false,
+        // "FNP - Primary Care" style titles land on the more specific
+        // family-practice page only.
+        excludeIfAlsoTagged: ['family-practice'],
+    },
+    hospitalist: {
+        keywords: ['hospitalist', 'inpatient medicine'],
+        matchDescription: false,
+    },
+    dermatology: {
+        keywords: ['dermatology', 'dermatologic', ' derm '],
+        matchDescription: false,
+    },
+    orthopedic: {
+        keywords: ['orthopedic', 'orthopaedic', ' ortho '],
+        matchDescription: false,
+    },
+
+    // ── APRN cohort ──
+    anesthesia: {
+        keywords: ['nurse anesthetist', 'anesthesia', 'anesthetist', ' crna', '(crna', '/crna'],
+        matchDescription: false,
+    },
+    midwifery: {
+        keywords: ['midwife', 'midwifery', ' cnm', '(cnm', '/cnm'],
+        matchDescription: false,
+    },
+    'clinical-nurse-specialist': {
+        // Title-only + anchored: bare 'cns' collides with "CNS depressants/
+        // stimulants" vocabulary in psych descriptions (relevance-pack lesson).
+        keywords: ['clinical nurse specialist', ' cns ', ' cns,', ' cns-', '(cns', '/cns'],
+        matchDescription: false,
     },
 
     // ── Experience tier (mutually exclusive) ──
@@ -202,13 +317,33 @@ const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
         excludeIfAlsoTagged: ['new-grad'], // new-grad is the canonical tag; entry-level is its alias
     },
     senior: {
-        keywords: ['senior PMHNP', 'senior NP', 'senior nurse practitioner', 'lead PMHNP', 'clinical lead', 'clinical leader', 'PMHNP supervisor', 'NP supervisor', 'nurse practitioner supervisor', 'medical director', 'clinical director', 'program director', 'chief of mental health', 'clinic director', 'director of psych'],
+        keywords: [
+            'senior nurse practitioner', 'senior np', 'senior aprn',
+            'lead nurse practitioner', 'lead np', 'clinical lead', 'clinical leader',
+            'np supervisor', 'nurse practitioner supervisor', 'aprn supervisor',
+            'medical director', 'clinical director', 'program director', 'clinic director',
+        ],
         matchDescription: false,
     },
     'mid-career': {
         keywords: ['experienced', 'lead clinician'],
         matchDescription: false,
         excludeIfAlsoTagged: ['senior', 'new-grad'], // mid-career is the leftover after senior + new-grad
+    },
+
+    // ── Populations ──
+    geriatric: {
+        keywords: ['geriatric', 'geropsych', 'elderly', 'senior living', 'nursing home'],
+        matchDescription: false,
+    },
+    lgbtq: {
+        keywords: ['LGBTQ', 'transgender', 'gender-affirming', 'gender affirming', 'gender identity', 'affirming care'],
+        matchDescription: true,
+    },
+    veterans: {
+        keywords: ['veterans', 'PTSD', 'military mental health'],
+        matchDescription: true,
+        excludeIfAlsoTagged: ['va'], // VA is more specific than generic "veterans"
     },
 };
 
@@ -247,7 +382,11 @@ export function classifyJobTags(job: ClassifiableJob): CategoryTag[] {
         }
 
         const matchDesc = rule.matchDescription !== false;
-        const haystack = matchDesc ? `${titleLower} ${descLower}` : titleLower;
+        // Space-pad the haystack so space-anchored abbreviation keywords
+        // (' fnp', ' prn', ' cns ') also match at title start/end.
+        const haystack = matchDesc
+            ? ` ${titleLower} ${descLower} `
+            : ` ${titleLower} `;
         for (const kw of rule.keywords) {
             if (matchesKeyword(haystack, kw)) {
                 tagged.add(slug);
@@ -284,6 +423,11 @@ export function classifyJobTags(job: ClassifiableJob): CategoryTag[] {
  * replicable at query time — pre-backfill pages may slightly over-match
  * across taxonomies, but that's strictly better than rendering empty
  * during the gap. Post-backfill, the precomputed tags enforce exclusion.
+ *
+ * Space-anchored keywords (' fnp', '(crna', …) under-match at query time
+ * (Prisma `contains` can't see the classifier's haystack padding) — also
+ * acceptable for the same reason: the fallback arm only exists for
+ * not-yet-backfilled rows.
  */
 function legacyKeywordOr(tag: CategoryTag): Record<string, unknown>[] {
     const rule = RULES[tag];

@@ -172,14 +172,14 @@ function buildKeywordWhere(_legacy: string[], stateName: string, tag: CategoryTa
 // routes are functional; salary ranges are broad national figures pending
 // per-board research.
 //
-// QUERY NOTE: lib/pseo/category-tagger.ts still emits the legacy PMHNP tag
-// set (withTagFallback() is typed to that union), so these buildWhere
-// clauses match the precomputed `categoryTags` column directly. State pages
-// 404 by design (totalJobs === 0) until the classifier is migrated to the
-// NP taxonomy and rows are re-tagged.
+// QUERY NOTE: lib/pseo/category-tagger.ts now emits the 42-slug NP taxonomy
+// (2026-07 classifier migration), so these buildWhere clauses go through the
+// normal withTagFallback() path like every other config: precomputed
+// `categoryTags` containment first, legacy keyword fallback only for rows
+// whose tags haven't been backfilled yet.
 
 interface NpSpecialtyConfigInput {
-  slug: string;
+  slug: CategoryTag;
   label: string;
   fullLabel: string;
   heroSubtitle: string;
@@ -194,7 +194,7 @@ function buildNpSpecialtyConfig(input: NpSpecialtyConfigInput): SettingConfig {
     buildWhere: (stateName: string) => ({
       isPublished: true,
       state: { equals: stateName, mode: 'insensitive' },
-      categoryTags: { has: input.slug },
+      ...withTagFallback(input.slug),
     }),
     benefits: [
       { title: 'Growing Demand', description: `${input.fullLabel} roles are among the fastest-growing advanced practice positions nationwide.`, iconName: 'TrendingUp' },

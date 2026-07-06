@@ -93,21 +93,16 @@ export const OG_HOMEPAGE_SUBHEADLINE =
  * Stats row along the bottom of the homepage OG image
  * (app/api/og/route.tsx).
  *
- * FORK NOTE: these numbers are HARDCODED MARKETING CLAIMS, not live
- * counts. They MUST be honest per board.
- *
- * ⚠️ UPDATE AS INVENTORY GROWS: the values below are HONEST DAY-ONE
- * numbers for this board's launch (335 NP jobs from the initial ATS
- * smoke ingest; 8 active ATS sources — Greenhouse, Lever, Workday,
- * SmartRecruiters, Ashby, BambooHR, JazzHR, Workable). Revisit after
- * every meaningful inventory jump — a stale small number undersells,
- * an inflated one ('10,000+') is a false claim. Ideally make these
- * data-driven from the cached counters in lib/site-stats.ts.
+ * RULE: NO inventory counts here. OG images are CDN-cached for 30 days,
+ * so a hardcoded job count goes stale immediately (this file said '335+'
+ * while the DB held 900+ within days of ingestion starting). Evergreen
+ * claims only (coverage, cadence, price); for live counts, wire
+ * lib/site-stats.ts cached counters into the OG route instead.
  */
 export const OG_HOMEPAGE_STATS = [
-    { number: '335+', label: 'NP Jobs' },
+    { number: '50', label: 'States Covered' },
     { number: '8', label: 'ATS Sources' },
-    { number: '50', label: 'States' },
+    { number: 'Daily', label: 'Job Updates' },
 ] as const;
 
 /**

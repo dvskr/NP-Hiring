@@ -21,7 +21,7 @@ import {
   DollarSign, Users, AlertTriangle, Activity, Heart, Shield, ArrowRight,
 } from 'lucide-react';
 import { cache } from 'react';
-import { withTagFallback } from './category-tagger';
+import { withTagFallback, type CategoryTag } from './category-tagger';
 import { shouldRenderCategoryCity } from './render-gate';
 import { JOB_LISTING_OMIT } from './job-listing-omit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
@@ -532,18 +532,18 @@ function settingToCategory(config: SettingConfig): CategoryConfig {
 // estimates consistent with config/niche/salary.ts (staff NP ~$95-140K
 // bands; CRNA drives the $180K-250K high end).
 //
-// QUERY NOTE: the ingest classifier (lib/pseo/category-tagger.ts) still
-// emits the legacy PMHNP tag set, so these buildWhere clauses gate on the
-// precomputed `categoryTags` column directly. City pages 308-redirect to
-// the parent category (totalJobs === 0) until rows are re-tagged for the
-// NP taxonomy — same as the matching [state] pages.
+// QUERY NOTE: the ingest classifier (lib/pseo/category-tagger.ts) now emits
+// the 42-slug NP taxonomy (2026-07 classifier migration), so these buildWhere
+// clauses go through the normal withTagFallback() path like the legacy
+// configs: precomputed `categoryTags` containment first, legacy keyword
+// fallback only for rows whose tags haven't been backfilled yet.
 //
 // faqCategory is the slug itself: getCategoryFaqs() returns [] for unmapped
 // keys and CategoryFAQ renders nothing (no empty/mismatched FAQPage schema);
 // the city template builds its FAQ block inline from label/salaryRange.
 
 interface NpCategoryConfigInput {
-  slug: string;
+  slug: CategoryTag;
   label: string;
   fullLabel: string;
   heroSubtitle: string;
@@ -559,7 +559,7 @@ function buildNpCategoryConfig(input: NpCategoryConfigInput): CategoryConfig {
       isPublished: true,
       state: { equals: stateName, mode: 'insensitive' },
       ...(cityName && { city: { equals: cityName, mode: 'insensitive' } }),
-      categoryTags: { has: input.slug },
+      ...withTagFallback(input.slug),
     }),
     benefits: [
       { title: 'Growing Demand', description: `${input.fullLabel} roles are among the fastest-growing advanced practice positions nationwide.`, iconName: 'TrendingUp' },
