@@ -218,7 +218,7 @@ export default function Header() {
                   the LCP-relevant header logo. priority=true since this is
                   above the fold on every page. */}
               <Image
-                src="/logo.png?v=5"
+                src="/logo.png"
                 alt={brand.name}
                 width={56}
                 height={56}
