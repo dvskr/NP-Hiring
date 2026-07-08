@@ -276,7 +276,7 @@ export default async function BlogPostPage({ params }: Props) {
             name: brand.name,
             logo: {
                 '@type': 'ImageObject',
-                url: `${brand.baseUrl}/pmhnp_logo.png`,
+                url: `${brand.baseUrl}/logo.png`,
             },
         },
         mainEntityOfPage: {

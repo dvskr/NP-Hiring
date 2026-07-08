@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     // Fixed origin — never the request Host header (attacker-controlled; using
     // it makes this OG route an SSRF proxy). brand.baseUrl is a build-time
     // constant, so the fixed-origin guarantee holds per deployment.
-    const logoRes = await fetch(`${brand.baseUrl}/pmhnp_logo.png`);
+    const logoRes = await fetch(`${brand.baseUrl}/logo.png`);
     if (logoRes.ok) {
       const logoBuf = await logoRes.arrayBuffer();
       logoSrc = `data:image/png;base64,${Buffer.from(logoBuf).toString('base64')}`;

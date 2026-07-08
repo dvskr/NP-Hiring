@@ -142,7 +142,7 @@ describe('OG routes are not SSRF proxies', () => {
       const src = read(f);
       // Fixed, build-time origin (brand.baseUrl) — never the request Host
       // header, which would turn the route into an SSRF proxy.
-      expect(src).toContain('fetch(`${brand.baseUrl}/pmhnp_logo.png`)');
+      expect(src).toContain('fetch(`${brand.baseUrl}/logo.png`)');
       expect(src).not.toMatch(/fetch\(`\$\{protocol\}:\/\/\$\{host\}/);
       expect(src).not.toMatch(/fetch\([^)]*request\.headers/);
     });

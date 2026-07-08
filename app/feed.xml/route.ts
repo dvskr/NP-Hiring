@@ -64,7 +64,7 @@ export async function GET() {
     <lastBuildDate>${pubDate}</lastBuildDate>
     <atom:link href="${BASE_URL}/feed.xml" rel="self" type="application/rss+xml"/>
     <image>
-      <url>${BASE_URL}/pmhnp_logo.png</url>
+      <url>${BASE_URL}/logo.png</url>
       <title>${brand.name}</title>
       <link>${BASE_URL}</link>
     </image>
