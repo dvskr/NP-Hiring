@@ -5,7 +5,7 @@ import { brand } from '@/config/brand';
 // Newsreader is loaded only in app/blog/layout.tsx (scoped to /blog/*) so
 // non-blog pages don't pay the cost of a font that's only used by editorial
 // body typography.
-import { Inter, Lora } from "next/font/google";
+import { Inter, Nunito } from "next/font/google";
 import "./globals.css";
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -39,7 +39,10 @@ const inter = Inter({
   display: 'swap',
 });
 
-const lora = Lora({
+// Clay 2.0 heading face. The CSS variable keeps its legacy `--font-lora`
+// name so every existing var()/`font-lora` reference resolves without a
+// sitewide sweep — the value it delivers is now Nunito.
+const nunito = Nunito({
   variable: "--font-lora",
   subsets: ["latin"],
   display: 'swap',
@@ -256,10 +259,10 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} ${lora.variable} font-sans antialiased`}
+        className={`${inter.variable} ${nunito.variable} font-sans antialiased`}
         suppressHydrationWarning
         style={{
-          backgroundColor: '#F5F0EB',
+          backgroundColor: '#F2F4EF',
           color: '#2D3748',
         }}
       >

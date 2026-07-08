@@ -53,7 +53,7 @@ html {
   overflow-y: scroll;
   overflow-x: hidden;
   max-width: 100vw;
-  background-color: #F5F0EB !important;
+  background-color: #F2F4EF !important;
   /* Firefox — none hides the native bar without disabling scroll. */
   scrollbar-width: none;
   -ms-overflow-style: none; /* IE / legacy Edge */
@@ -62,7 +62,7 @@ html {
 body {
   overflow-x: hidden;
   max-width: 100vw;
-  background-color: #F5F0EB !important;
+  background-color: #F2F4EF !important;
 }
 
 /* Chrome / Safari / Edge — hide the native page scrollbar entirely. */
@@ -144,28 +144,28 @@ html.dark select:-webkit-autofill {
 :root {
   /* ══════ TYPOGRAPHY ══════ */
   --font-geist-sans: 'Inter', system-ui, sans-serif;
-  --font-heading: 'Lora', Georgia, 'Times New Roman', serif;
-  --font-geist-mono: 'Lora', serif;
+  --font-heading: var(--font-lora), 'Inter', system-ui, sans-serif;
+  --font-geist-mono: var(--font-lora), system-ui, sans-serif;
 
   /* ══════ COLOR SYSTEM ══════ */
-  /* Primary — Deep Berry (matches all inline styles) */
+  /* Primary — Deep Berry accent on the Clay 2.0 sage canvas */
   --color-primary: #BE185D;
   --color-primary-dark: #9D174D;
   --color-primary-light: #DB2777;
   --color-primary-hover: #9D174D;
   --salary-color: #BE185D;
 
-  /* Accent — Soft Coral for diorama warmth */
-  --color-accent: #F8BBD0;
-  --color-accent-light: #FCE4EC;
+  /* Accent — Apricot for clay warmth */
+  --color-accent: #FDBA74;
+  --color-accent-light: #FFEDD5;
 
   /* ══════ BACKGROUNDS — Diorama Palette ══════ */
-  --bg-primary: #F5F0EB;
+  --bg-primary: #F2F4EF;
   --bg-secondary: #F3F2EF;
   --bg-secondary-rgb: 243, 242, 239;
   --bg-tertiary: #FFFFFF;
-  --bg-shell: #1c1917; /* header, footer — warm near-black */
-  --bg-panel-alt: #F5F0EB; /* unified with body — no alt panels */
+  --bg-shell: #152420; /* header, footer — warm near-black */
+  --bg-panel-alt: #F2F4EF; /* unified with body — no alt panels */
 
   /* ══════ TEXT — Deep Charcoal ══════ */
   --text-primary: #2D3748;
@@ -205,10 +205,10 @@ html.dark select:-webkit-autofill {
   --radius-pill: 999px;
 
   /* ══════ NAV / HEADER ══════ */
-  --header-bg: #1c1917;
+  --header-bg: #152420;
   --header-text: #E2E8F0;
   --header-text-muted: #94A3B8;
-  --mobile-menu-bg: #1c1917;
+  --mobile-menu-bg: #152420;
   --nav-btn-bg: rgba(255,255,255,0.08);
   --nav-btn-text: #E2E8F0;
   --nav-btn-hover-bg: rgba(255,255,255,0.12);
@@ -241,7 +241,7 @@ html.dark select:-webkit-autofill {
   --color-foreground: var(--text-primary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-lora: var(--font-lora), Georgia, 'Times New Roman', serif;
+  --font-lora: var(--font-lora), system-ui, sans-serif;
 
   /* Revived from the legacy v3 tailwind.config.ts, which is dead under v4's
      CSS-first config (no @config directive). Components reference these
@@ -277,7 +277,7 @@ html.dark select:-webkit-autofill {
 
 /* ===== BASE STYLES ===== */
 html {
-  background: #1c1917;
+  background: #152420;
 }
 body {
   background: var(--bg-primary);
@@ -364,7 +364,7 @@ input[type="checkbox"].clay-check:checked::after {
 
 /* ══════ CLAY CARD UTILITY ══════ */
 .clay-card {
-  background: #F7FBF8;
+  background: #F7FAF6;
   border-radius: 24px;
   border: 1px solid rgba(255,255,255,0.6);
   box-shadow:
@@ -420,8 +420,8 @@ input[type="checkbox"].clay-check:checked::after {
 
 /* ══════ TYPOGRAPHY UTILITIES ══════ */
 .font-heading {
-  font-family: var(--font-lora), Georgia, 'Times New Roman', serif;
-  letter-spacing: -0.02em;
+  font-family: var(--font-lora), system-ui, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 /* ══════ SECTION PANELS — Consistent Rhythm ══════ */
@@ -446,7 +446,7 @@ input[type="checkbox"].clay-check:checked::after {
 
 /* ══════ PRECISION CARD SYSTEM ══════ */
 .card-precision {
-  background: #F7FBF8;
+  background: #F7FAF6;
   border: 1px solid rgba(0,0,0,0.06);
   border-radius: 20px;
   padding: var(--space-5);
@@ -1025,7 +1025,7 @@ textarea::placeholder {
 
 /* ══════ CARD HOVER — Lift + berry border accent ══════ */
 .card-hover {
-  background: #F7FBF8;
+  background: #F7FAF6;
   border: 1px solid rgba(0,0,0,0.06);
   border-radius: 20px;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
@@ -1257,10 +1257,10 @@ textarea::placeholder {
   background: linear-gradient(135deg, #BE185D 0%, #9D174D 100%);
 }
 .gradient-warm {
-  background: linear-gradient(135deg, #FDFBF7 0%, #F5D5C4 50%, #FDFBF7 100%);
+  background: linear-gradient(135deg, #FAFBF6 0%, #D8EDE3 50%, #FAFBF6 100%);
 }
 .gradient-dark {
-  background: linear-gradient(135deg, #1c1917 0%, #292524 100%);
+  background: linear-gradient(135deg, #152420 0%, #1E332D 100%);
 }
 
 /* ══════ AUTH CLAY THEME ══════
@@ -1270,7 +1270,7 @@ textarea::placeholder {
 
 /* ── The wrapper card itself ── */
 .auth-clay {
-  background: #F7FBF8;
+  background: #F7FAF6;
   border-radius: 20px;
   padding: 28px 24px;
   box-shadow:
@@ -1400,7 +1400,7 @@ textarea::placeholder {
 
 /* ── Divider (OR line) ── */
 .auth-clay .relative span {
-  background: #F7FBF8 !important;
+  background: #F7FAF6 !important;
   color: #8A9EA8 !important;
   letter-spacing: 1.5px;
   font-weight: 600;

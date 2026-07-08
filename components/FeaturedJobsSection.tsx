@@ -11,6 +11,7 @@ import {
     sortByJitteredScore,
 } from '@/lib/utils/rotation';
 import { brand } from '@/config/brand';
+import { getSiteStats } from '@/lib/site-stats';
 
 // Revalidate every 60 seconds — fresh data without per-request DB hits
 export const revalidate = 60;
@@ -188,6 +189,10 @@ export default async function FeaturedJobsSection() {
 
     console.log(`[FeaturedJobsSection] Fetched ${jobs.length} jobs`);
 
+    // Cached site-wide job count — powers the sparse/empty "ticket stub"
+    // aggregate copy in FeaturedJobs. Never throws (internal fallback).
+    const { totalJobs } = await getSiteStats();
+
     return (
         <>
             {/* ItemList schema — enables job carousels in Google search */}
@@ -210,7 +215,7 @@ export default async function FeaturedJobsSection() {
                     }}
                 />
             )}
-            <FeaturedJobs jobs={jobs} />
+            <FeaturedJobs jobs={jobs} totalJobs={totalJobs} />
         </>
     );
 }

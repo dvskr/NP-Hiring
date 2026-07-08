@@ -158,7 +158,7 @@ export default function Header() {
         style={{
           padding: '18px 16px',
           pointerEvents: 'none',
-          background: '#F5F0EB',
+          background: '#F2F4EF',
         }}
       >
         <header
@@ -172,11 +172,11 @@ export default function Header() {
             margin: '0 auto',
             height: 64,
             borderRadius: '18px',
-            backgroundColor: '#F5F0EB',
+            backgroundColor: '#F2F4EF',
             border: '1px solid rgba(255,255,255,0.65)',
             boxShadow: scrolled
-              ? '0 8px 32px rgba(90,74,66,0.12), 0 2px 8px rgba(90,74,66,0.06), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.02)'
-              : '0 4px 20px rgba(90,74,66,0.08), 0 1px 4px rgba(90,74,66,0.04), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.02)',
+              ? '0 8px 32px rgba(65,80,74,0.12), 0 2px 8px rgba(65,80,74,0.06), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.02)'
+              : '0 4px 20px rgba(65,80,74,0.08), 0 1px 4px rgba(65,80,74,0.04), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.02)',
             display: 'flex',
             alignItems: 'center',
             paddingLeft: '12px',
@@ -199,10 +199,10 @@ export default function Header() {
               style={{
                 padding: '12px',
                 borderRadius: '10px',
-                color: '#5A4A42',
-                backgroundColor: '#EDE7E0',
+                color: '#41504A',
+                backgroundColor: '#E6EBE3',
                 border: '1px solid rgba(255,255,255,0.5)',
-                boxShadow: '3px 3px 8px rgba(90,74,66,0.08), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.6)',
+                boxShadow: '3px 3px 8px rgba(65,80,74,0.08), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.6)',
                 cursor: 'pointer',
               }}
               aria-label="Toggle menu"
@@ -234,7 +234,7 @@ export default function Header() {
                 style={{
                   fontSize: '20px',
                   fontWeight: 700,
-                  color: '#3D2E24',
+                  color: '#22312B',
                   letterSpacing: '-0.01em',
                   whiteSpace: 'nowrap',
                   lineHeight: 1,
@@ -265,7 +265,7 @@ export default function Header() {
                     borderRadius: '12px',
                     fontSize: '13.5px',
                     fontWeight: active ? 600 : 500,
-                    color: active ? '#BE185D' : '#5A4A42',
+                    color: active ? '#BE185D' : '#41504A',
                     backgroundColor: active ? 'rgba(190,24,93,0.10)' : 'transparent',
                     border: active
                       ? '1px solid rgba(190,24,93,0.15)'
@@ -279,17 +279,17 @@ export default function Header() {
                   }}
                   onMouseEnter={e => {
                     if (!active) {
-                      e.currentTarget.style.backgroundColor = '#EDE7E0';
-                      e.currentTarget.style.color = '#5A4A42';
+                      e.currentTarget.style.backgroundColor = '#E6EBE3';
+                      e.currentTarget.style.color = '#41504A';
                       e.currentTarget.style.border = '1px solid rgba(255,255,255,0.5)';
-                      e.currentTarget.style.boxShadow = '3px 3px 8px rgba(90,74,66,0.10), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 3px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02)';
+                      e.currentTarget.style.boxShadow = '3px 3px 8px rgba(65,80,74,0.10), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 3px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02)';
                       e.currentTarget.style.transform = 'translateY(-1px)';
                     }
                   }}
                   onMouseLeave={e => {
                     if (!active) {
                       e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = '#5A4A42';
+                      e.currentTarget.style.color = '#41504A';
                       e.currentTarget.style.border = '1px solid transparent';
                       e.currentTarget.style.boxShadow = 'none';
                       e.currentTarget.style.transform = 'translateY(0)';
@@ -337,7 +337,7 @@ export default function Header() {
               // visibly underneath the menu, which combined with the scroll
               // lock bug made the menu feel see-through.
               className="absolute inset-0"
-              style={{ backgroundColor: '#F5F0EB' }}
+              style={{ backgroundColor: '#F2F4EF' }}
               onClick={() => setIsMenuOpen(false)}
             />
             <div className="relative px-6 pt-4 pb-8">
@@ -354,7 +354,7 @@ export default function Header() {
                         padding: '14px 16px',
                         fontSize: '16px',
                         fontWeight: active ? 600 : 500,
-                        color: active ? '#BE185D' : '#5A4A42',
+                        color: active ? '#BE185D' : '#41504A',
                         backgroundColor: active ? 'rgba(190,24,93,0.08)' : 'transparent',
                         borderRadius: '14px',
                         marginBottom: '2px',
@@ -374,8 +374,8 @@ export default function Header() {
 
               {/* Extra links for public mobile users */}
               {!userRole && (
-                <div className="mt-3 pt-4" style={{ borderTop: '1px solid rgba(90,74,66,0.08)' }}>
-                  <p className="text-xs font-semibold uppercase tracking-wider mb-3 px-4" style={{ color: '#A89890' }}>More</p>
+                <div className="mt-3 pt-4" style={{ borderTop: '1px solid rgba(65,80,74,0.08)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-3 px-4" style={{ color: '#93A29A' }}>More</p>
                   <nav className="flex flex-col">
                     {mobileExtraLinks.map((link) => {
                       const ExtraIcon = link.icon;
@@ -389,7 +389,7 @@ export default function Header() {
                             padding: '12px 16px',
                             fontSize: '15px',
                             fontWeight: active ? 600 : 400,
-                            color: active ? '#BE185D' : '#7A6A62',
+                            color: active ? '#BE185D' : '#5F6E66',
                             backgroundColor: active ? 'rgba(190,24,93,0.06)' : 'transparent',
                             borderRadius: '12px',
                             marginBottom: '1px',
@@ -413,7 +413,7 @@ export default function Header() {
                   signed IN, this would duplicate the bell + avatar that's
                   already visible in the top header strip behind the menu. */}
               {!userRole && (
-                <div className="mt-6 pt-5 px-4" style={{ borderTop: '1px solid rgba(90,74,66,0.08)' }}>
+                <div className="mt-6 pt-5 px-4" style={{ borderTop: '1px solid rgba(65,80,74,0.08)' }}>
                   <HeaderAuth onNavigate={() => setIsMenuOpen(false)} onRoleChange={(role) => setUserRole(role)} />
                 </div>
               )}

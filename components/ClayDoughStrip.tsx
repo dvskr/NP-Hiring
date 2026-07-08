@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 
 const CLAY_COLORS = [
-    '#6ee7b7', '#F9A8D4', '#67e8f9', '#a5b4fc', '#c4b5fd',
-    '#f0abfc', '#fda4af', '#fcd34d', '#86efac', '#FBCFE8',
-    '#a5f3fc', '#c7d2fe', '#ddd6fe', '#f5d0fe', '#fbcfe8',
+    '#6ee7b7', '#FBCFE8', '#67e8f9', '#a5b4fc', '#c4b5fd',
+    '#f0abfc', '#fda4af', '#fcd34d', '#86efac', '#F9A8D4',
+    '#a5f3fc', '#c7d2fe', '#ddd6fe', '#f5d0fe', '#FBCFE8',
     '#fde68a', '#bef264',
 ];
 
@@ -37,13 +37,15 @@ export default function ClayDoughStrip({ employers }: ClayDoughStripProps) {
     // Double for seamless infinite loop
     const doubled = [...items, ...items];
 
+    // Empty-state doctrine: never render a full-bleed wash with no chips.
+    if (items.length === 0) return null;
 
     return (
         <LazyMotion features={domAnimation}>
         <section
             className="w-full flex flex-col items-center justify-center overflow-hidden relative py-16 lg:py-24"
             style={{
-                background: 'linear-gradient(160deg, #FDFBF7 0%, #F5D5C4 40%, #F0B8A0 100%)',
+                background: 'linear-gradient(160deg, #FAFBF6 0%, #D8EDE3 40%, #BFE0D2 100%)',
             }}
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => { setIsPaused(false); setHoveredIdx(null); }}
@@ -53,13 +55,13 @@ export default function ClayDoughStrip({ employers }: ClayDoughStripProps) {
                 {/* Left fade */}
                 <div style={{
                     position: 'absolute', left: 0, top: 0, bottom: 0, width: '120px', zIndex: 2,
-                    background: 'linear-gradient(to right, #F2C5A8, transparent)',
+                    background: 'linear-gradient(to right, #CDE5D9, transparent)',
                     pointerEvents: 'none',
                 }} />
                 {/* Right fade */}
                 <div style={{
                     position: 'absolute', right: 0, top: 0, bottom: 0, width: '120px', zIndex: 2,
-                    background: 'linear-gradient(to left, #F2C5A8, transparent)',
+                    background: 'linear-gradient(to left, #CDE5D9, transparent)',
                     pointerEvents: 'none',
                 }} />
 

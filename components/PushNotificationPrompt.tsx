@@ -140,7 +140,7 @@ export default function PushNotificationPrompt() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                             <div style={{
                                 width: 32, height: 32, borderRadius: 8,
-                                background: 'rgba(244,114,182,0.12)',
+                                background: 'rgba(45,212,191,0.12)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                             }}>
                                 <Bell size={16} style={{ color: '#F472B6' }} />

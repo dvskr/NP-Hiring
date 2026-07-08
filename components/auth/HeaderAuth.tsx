@@ -60,7 +60,7 @@ const clayPrimaryPill: React.CSSProperties = {
 
 const handleHoverIn = (e: React.MouseEvent<HTMLElement>) => {
   e.currentTarget.style.transform = 'translateY(-2px)';
-  const isTeal = e.currentTarget.style.backgroundColor === 'rgb(190,24,93)';
+  const isTeal = e.currentTarget.style.backgroundColor === 'rgb(15,118,110)';
   if (!isTeal) {
     e.currentTarget.style.backgroundColor = '#FDF2F8';
     e.currentTarget.style.color = '#BE185D';

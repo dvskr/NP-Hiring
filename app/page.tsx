@@ -3,16 +3,16 @@ import { Metadata } from 'next';
 import { getSiteStats } from '@/lib/site-stats';
 import { brand } from '@/config/brand';
 import { STAT_SOURCES } from '@/lib/stats-sources';
+import { prisma } from '@/lib/prisma';
 import EmployerTrustSection from '@/components/EmployerTrustSection';
 import FeaturedJobsSection from '@/components/FeaturedJobsSection';
+import SpecialtyBrowseSection from '@/components/SpecialtyBrowseSection';
 import TopStatesSection from '@/components/TopStatesSection';
-import HomepageHero from '@/components/HomepageHero';
+import HomepageHero, { type HeroJob } from '@/components/HomepageHero';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import HomepageBlogSection from '@/components/HomepageBlogSection';
 import EmployerHowItWorks from '@/components/EmployerHowItWorks';
 import dynamic from 'next/dynamic';
-
-const STORAGE_BASE = brand.assets.storageBase;
 
 // Below-fold interactive components — defer from critical bundle
 const ExitIntentPopup = dynamic(() => import('@/components/ExitIntentPopup'));
@@ -64,16 +64,18 @@ export async function generateMetadata(): Promise<Metadata> {
       description: `Browse ${jobCountDisplay} ${brand.niche.descriptor} jobs. Remote, hybrid, and in-person positions with salary transparency.`,
       images: [
         {
-          url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`,
-          width: 1280,
-          height: 900,
-          alt: `${brand.name} job board homepage showing ${jobCountDisplay} ${brand.niche.descriptor} jobs from ${uniqueEmployerCount}+ companies across 50 states`,
+          // Edge-generated OG card (app/api/og) — no dependency on storage
+          // assets that may not exist on a freshly-forked board.
+          url: `${brand.baseUrl}/api/og`,
+          width: 1200,
+          height: 630,
+          alt: `${brand.name} job board — ${jobCountDisplay} ${brand.niche.descriptor} jobs from ${uniqueEmployerCount}+ companies across 50 states`,
         },
       ],
     },
     twitter: {
       card: 'summary_large_image',
-      images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`],
+      images: [`${brand.baseUrl}/api/og`],
     },
     alternates: {
       canonical: brand.baseUrl,
@@ -82,10 +84,39 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Home() {
-  const totalJobs = await getTotalJobCount();
+  const [totalJobs, employerCount, heroJobsRaw] = await Promise.all([
+    getTotalJobCount(),
+    getUniqueEmployerCount(),
+    // Three freshest roles feed the hero's clay job-ticket stack.
+    prisma.job.findMany({
+      where: { isPublished: true },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+      select: {
+        title: true,
+        employer: true,
+        city: true,
+        state: true,
+        isRemote: true,
+        location: true,
+        displaySalary: true,
+      },
+    }),
+  ]);
   const jobCountDisplay = totalJobs > 1000
     ? `${Math.floor(totalJobs / 100) * 100}+`
     : totalJobs.toLocaleString();
+
+  const recentJobs: HeroJob[] = heroJobsRaw.map((job) => ({
+    title: job.title,
+    employer: job.employer,
+    location: job.isRemote
+      ? 'Remote'
+      : job.city && job.state
+        ? `${job.city}, ${job.state}`
+        : job.location,
+    salary: job.displaySalary,
+  }));
 
   return (
     <>
@@ -222,23 +253,31 @@ export default async function Home() {
           Re-emitting it here produced duplicate WebSite nodes that conflict
           on the same URL. Removed. */}
       {/* Main content */}
-      <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #F5D5C4 15%, #F0C4AF 50%, #FDFBF7 100%)' }}>
+      <div style={{ background: 'linear-gradient(180deg, #FAFBF6 0%, #DBEDE5 18%, #CFE7DC 50%, #FAFBF6 100%)' }}>
         {/* 1. Hero — above the fold */}
-        <HomepageHero jobCountDisplay={jobCountDisplay} />
+        <HomepageHero
+          jobCountDisplay={jobCountDisplay}
+          recentJobs={recentJobs}
+          medianSalaryRange={STAT_SOURCES.averageSalary.range}
+          employerCount={employerCount}
+        />
 
-        {/* 2. Employer Clay Dough Strip */}
+        {/* 2. Employer Clay Dough Strip (collapses when no real employers) */}
         <EmployerTrustSection />
 
+        {/* 3. Browse by specialty & setting — clay bento into category pages */}
+        <SpecialtyBrowseSection />
 
-        {/* ── Remaining sections (being redesigned) ── */}
+        {/* 4. Fresh openings — light clay tickets w/ stub empty state */}
         <FeaturedJobsSection />
 
-        {/* 4. Top States */}
+        {/* 5. Top States */}
         <TopStatesSection />
 
-        {/* 5. Employer How It Works */}
+        {/* 6. How it works — NPs + employers */}
         <EmployerHowItWorks />
 
+        {/* 7. Blog / career-guides empty state */}
         <HomepageBlogSection />
 
         <ExitIntentPopup />

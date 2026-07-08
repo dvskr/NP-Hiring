@@ -2,13 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { MapPin, Clock, ArrowUpRight, Briefcase, DollarSign } from 'lucide-react';
+import { MapPin, Clock, ArrowUpRight, Briefcase, Zap, BellRing } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 import { trackJobListView, buildJobItem } from '@/lib/analytics';
-import { brand } from '@/config/brand';
-
-const STORAGE_BASE = brand.assets.storageBase;
 
 interface FeaturedJob {
     id: string;
@@ -24,6 +21,8 @@ interface FeaturedJob {
 
 interface FeaturedJobsProps {
     jobs: FeaturedJob[];
+    /** Site-wide published-job count — powers the ticket-stub aggregate copy. */
+    totalJobs: number;
 }
 
 function relativeTime(s: string): string {
@@ -40,175 +39,249 @@ const fadeUp = {
     hidden: { opacity: 0, y: 24 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
-const fadeLeft = {
-    hidden: { opacity: 0, x: -20 },
-    visible: { opacity: 1, x: 0, transition: { duration: 0.5 } },
-};
-const fadeRight = {
-    hidden: { opacity: 0, x: 20 },
-    visible: { opacity: 1, x: 0, transition: { duration: 0.5 } },
-};
 const stagger = {
-    visible: { transition: { staggerChildren: 0.12 } },
+    visible: { transition: { staggerChildren: 0.1 } },
 };
 
-const STEPS = [
-    { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/step-profile.webp`, title: 'Build Your Profile', desc: 'Upload your resume once — add license states, credentials, years of experience, and salary range. Re-use it on every application.' },
-    { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/step-match.webp`, title: 'Search & Get Matched', desc: 'Semantic AI search understands phrases like "new grad outpatient telehealth." A weekly digest emails fresh roles matched to your experience level, location, and pay.' },
-    { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/step-connect.webp`, title: 'Apply or Message Directly', desc: 'One-click Easy Apply on employer-posted roles, or message the hiring manager in-app. No recruiters, no portals, no copy-pasting.' },
-    { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/step-practice.webp`, title: 'Start Practicing', desc: 'Save jobs, track applications, and follow up with employers — all in one dashboard. Then accept your offer and start your next clinical role.' },
-];
+const MAX_CARDS = 8;
+const MIN_TICKETS = 3;
+
+/** Deterministic per-employer clay dot — hydration-safe (pure string hash). */
+const DOT_COLORS = ['#BE185D', '#D97706', '#1D4ED8', '#0D9488', '#B45309'] as const;
+function employerDotColor(name: string): string {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = (hash * 31 + name.charCodeAt(i)) % 100003;
+    }
+    return DOT_COLORS[hash % DOT_COLORS.length];
+}
+
+interface StubCard {
+    icon: LucideIcon;
+    headline: string;
+    sub: string;
+    cta: string;
+}
+
+/** Dashed "ticket stub" placeholders shown when fewer than 3 real jobs exist. */
+function buildStubs(totalJobs: number): StubCard[] {
+    // Explicit locale — server and client must format identically (hydration).
+    const liveCount = totalJobs.toLocaleString('en-US');
+    return [
+        {
+            icon: Briefcase,
+            headline: `${liveCount} roles live right now`,
+            sub: 'Every NP specialty, all 50 states — searchable in one place with pay ranges up front.',
+            cta: 'Browse all roles',
+        },
+        {
+            icon: Zap,
+            headline: 'New roles land daily',
+            sub: 'Fresh openings flow in every day from 8 ATS sources and direct employer postings.',
+            cta: 'See the latest',
+        },
+        {
+            icon: BellRing,
+            headline: 'Never miss a match',
+            sub: `${liveCount} live roles and counting — set a free alert and new matches come to you.`,
+            cta: 'Explore jobs',
+        },
+    ];
+}
 
 const css = `
-    .fjs-wrap {
-        background: linear-gradient(175deg, #2A0E1E 0%, #3A1228 35%, #220B18 100%);
+    .fjs2-wrap {
         position: relative;
         overflow: hidden;
+        padding: 76px 0 84px;
     }
-    .fjs-wrap::before {
+    /* Soft clay blobs — CSS-only decoration, no images */
+    .fjs2-wrap::before {
         content: '';
         position: absolute;
-        top: -200px;
-        right: -100px;
-        width: 500px;
-        height: 500px;
+        top: -140px;
+        right: -120px;
+        width: 460px;
+        height: 460px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(220,120,140,0.06) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(191,232,218,0.55) 0%, transparent 70%);
+        filter: blur(60px);
         pointer-events: none;
     }
-    .fjs-wrap::after {
+    .fjs2-wrap::after {
         content: '';
         position: absolute;
-        bottom: -150px;
-        left: -80px;
-        width: 400px;
-        height: 400px;
+        bottom: -160px;
+        left: -100px;
+        width: 420px;
+        height: 420px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(180,100,160,0.05) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(251,224,194,0.5) 0%, transparent 70%);
+        filter: blur(60px);
         pointer-events: none;
+    }
+    .fjs2-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+        position: relative;
+        z-index: 1;
     }
 
-    /* ── Split layout ── */
-    .fjs-split {
+    /* ── Header row ── */
+    .fjs2-head {
         display: flex;
-        max-width: 1360px;
-        margin: 0 auto;
-        gap: 0;
+        align-items: flex-end;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 36px;
     }
-    .fjs-col-left {
-        width: 500px;
-        flex-shrink: 0;
-        padding: 0 48px 80px 56px;
-        position: relative;
+    .fjs2-browse {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 8px 4px;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--color-primary);
+        text-decoration: none;
+        transition: color 0.2s ease;
     }
-    .fjs-col-right {
-        flex: 1;
-        padding: 0 56px 80px 48px;
-        border-left: 1px solid rgba(255,255,255,0.05);
+    .fjs2-browse svg { transition: transform 0.2s ease; }
+    .fjs2-browse:hover { color: var(--color-primary-dark); }
+    .fjs2-browse:hover svg { transform: translate(2px, -2px); }
+
+    /* ── Ticket grid: 3-up / 2-up / 1-up ── */
+    .fjs2-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 22px;
     }
     @media (max-width: 1023px) {
-        .fjs-split { flex-direction: column; }
-        .fjs-col-left { width: 100%; padding: 0 24px 48px; }
-        .fjs-col-right { padding: 0 24px 48px; border-left: none; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 48px; }
+        .fjs2-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
-    @media (max-width: 768px) {
-        .fjs-col-left { padding: 0 20px 36px; }
-        .fjs-col-right { padding: 0 20px 36px; padding-top: 36px; }
-    }
-    @media (max-width: 520px) {
-        .fjs-col-left { padding: 0 16px 28px; }
-        .fjs-col-right { padding: 0 16px 28px; padding-top: 28px; }
+    @media (max-width: 639px) {
+        .fjs2-grid { grid-template-columns: 1fr; }
+        .fjs2-wrap { padding: 52px 0 60px; }
+        .fjs2-inner { padding: 0 16px; }
+        .fjs2-head { margin-bottom: 28px; }
     }
 
-    /* ── Vertical spine ── */
-    .fjs-spine {
-        position: relative;
-        padding-left: 32px;
-    }
-    .fjs-spine::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: linear-gradient(to bottom, rgba(220,120,140,0.4), rgba(180,100,160,0.2), transparent);
-        border-radius: 2px;
-    }
-    .fjs-spine-node {
-        position: relative;
-        padding-bottom: 40px;
-    }
-    .fjs-spine-node:last-child {
-        padding-bottom: 0;
-    }
-    /* Glowing dot on the spine */
-    .fjs-spine-node::before {
-        content: '';
-        position: absolute;
-        left: -37px;
-        top: 8px;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #e8788c, #c05a7a);
-        box-shadow: 0 0 12px rgba(220,120,140,0.5), 0 0 24px rgba(220,120,140,0.2);
-    }
-    /* Pulse ring */
-    .fjs-spine-node::after {
-        content: '';
-        position: absolute;
-        left: -41px;
-        top: 4px;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        border: 1px solid rgba(220,120,140,0.3);
-        animation: fjsPulse 2s ease-in-out infinite;
-    }
-    @keyframes fjsPulse {
-        0%, 100% { transform: scale(1); opacity: 0.5; }
-        50% { transform: scale(1.4); opacity: 0; }
-    }
-
-    /* ── Job row hover ── */
-    .fjs-job {
+    /* ── Clay job ticket (extends global .clay-card) ── */
+    .fjs2-card {
         display: flex;
-        align-items: center;
-        gap: 24px;
-        padding: 24px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
+        flex-direction: column;
+        flex: 1;
+        min-height: 232px;
+        padding: 22px;
         text-decoration: none;
-        transition: all 0.3s;
     }
-    .fjs-job:hover .fjs-num { color: rgba(220,120,140,0.4) !important; }
-    .fjs-job:hover .fjs-jtitle { color: #f4c2cc !important; }
-    .fjs-job:hover .fjs-circle-cta {
-        transform: scale(1.1) !important;
-        box-shadow: 0 4px 20px rgba(200,90,120,0.4) !important;
+    .fjs2-card:hover .fjs2-title { color: var(--color-primary); }
+    .fjs2-card:hover .fjs2-go {
+        transform: scale(1.08);
+        background: var(--color-primary);
+        color: #fff;
     }
-    @media (max-width: 768px) {
-        .fjs-job { gap: 16px; padding: 20px 0; }
-        .fjs-num { font-size: 28px !important; min-width: 36px !important; }
-        .fjs-jtitle { font-size: 18px !important; }
-        .fjs-circle-cta { width: 36px !important; height: 36px !important; }
+
+    /* ── Dashed ticket stub (empty/sparse state) ── */
+    .fjs2-stub {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        flex: 1;
+        min-height: 232px;
+        padding: 22px;
+        border-radius: 20px;
+        border: 1.5px dashed rgba(190,24,93,0.25);
+        background: linear-gradient(165deg, #ECF7F1 0%, #F6FBF8 100%);
+        box-shadow:
+            inset 1px 1px 3px rgba(255,255,255,0.85),
+            4px 4px 14px rgba(190,24,93,0.05);
     }
-    @media (max-width: 520px) {
-        .fjs-num { display: none !important; }
-        .fjs-job { gap: 12px; padding: 16px 0; }
-        .fjs-jtitle { font-size: 16px !important; }
+    .fjs2-stub-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: auto;
+        min-height: 44px;
+        padding: 10px 18px;
+        border-radius: 14px;
+        background: #D9F2EA;
+        color: #9D174D;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        box-shadow: 3px 3px 8px rgba(190,24,93,0.10), -2px -2px 6px rgba(255,255,255,0.9);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    @media (max-width: 768px) {
-        .fjs-header { padding: 48px 20px 36px !important; }
-        .fjs-header h2 { font-size: 28px !important; }
+    .fjs2-stub-cta:hover {
+        transform: translateY(-2px);
+        box-shadow: 5px 5px 12px rgba(190,24,93,0.16), -2px -2px 6px rgba(255,255,255,0.9);
     }
-    @media (max-width: 520px) {
-        .fjs-header { padding: 40px 16px 28px !important; }
-        .fjs-header h2 { font-size: 24px !important; }
+    .fjs2-stub-cta:active {
+        transform: translateY(1px);
+        box-shadow: inset 2px 2px 4px rgba(190,24,93,0.15);
+    }
+
+    /* ── Primary CTA (zero-jobs state) ── */
+    .fjs2-cta-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 13px 30px;
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        color: #fff;
+        text-decoration: none;
+        background: var(--color-primary);
+        border: 1px solid rgba(255,255,255,0.25);
+        border-radius: 16px;
+        box-shadow:
+            6px 6px 16px rgba(190,24,93,0.28),
+            -3px -3px 8px rgba(255,255,255,0.7),
+            inset 2px 2px 4px rgba(255,255,255,0.28),
+            inset -1px -1px 2px rgba(0,0,0,0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .fjs2-cta-btn:hover {
+        transform: translateY(-2px);
+        box-shadow:
+            8px 8px 20px rgba(190,24,93,0.34),
+            -4px -4px 10px rgba(255,255,255,0.7),
+            inset 2px 2px 5px rgba(255,255,255,0.32),
+            inset -1px -1px 2px rgba(0,0,0,0.08);
+    }
+    .fjs2-cta-btn:active {
+        transform: translateY(1px);
+        box-shadow: 2px 2px 6px rgba(190,24,93,0.2), inset 3px 3px 6px rgba(0,0,0,0.15);
+    }
+
+    .fjs2-browse:focus-visible,
+    .fjs2-card:focus-visible,
+    .fjs2-stub-cta:focus-visible,
+    .fjs2-cta-btn:focus-visible {
+        outline: 3px solid rgba(190,24,93,0.45);
+        outline-offset: 3px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .fjs2-card, .fjs2-stub-cta, .fjs2-cta-btn, .fjs2-browse, .fjs2-browse svg, .fjs2-go {
+            transition: none !important;
+        }
+        .fjs2-card:hover, .fjs2-stub-cta:hover, .fjs2-cta-btn:hover,
+        .fjs2-stub-cta:active, .fjs2-cta-btn:active {
+            transform: none !important;
+        }
+        .fjs2-card:hover .fjs2-go { transform: none !important; }
+        .fjs2-browse:hover svg { transform: none !important; }
     }
 `;
 
-export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
+export default function FeaturedJobs({ jobs, totalJobs }: FeaturedJobsProps) {
     // Hydration guard: relativeTime() depends on Date.now(), so the ISR-cached
     // server HTML ("2m ago") differs from the client's recompute, firing React
     // hydration error #418 (same class JobCard already mount-guards). Render an
@@ -224,239 +297,220 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
         );
     }, [jobs]);
 
-    if (jobs.length === 0) return null;
+    const shown = jobs.slice(0, MAX_CARDS);
+    // Sparse/empty doctrine: fewer than 3 real tickets → pad with dashed stubs
+    // carrying real aggregate stats. Zero jobs never renders a void.
+    const stubCount = shown.length < MIN_TICKETS ? MIN_TICKETS - shown.length : 0;
+    const stubs = buildStubs(totalJobs).slice(0, stubCount);
 
     return (
         <LazyMotion features={domAnimation}>
-        <section className="fjs-wrap">
+        <section className="fjs2-wrap" aria-labelledby="fjs2-heading">
             <style>{css}</style>
 
-            {/* ── Header ── */}
-            <m.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: '-60px' }}
-                variants={stagger}
-                style={{ maxWidth: '1360px', margin: '0 auto', padding: '80px 56px 56px', position: 'relative', zIndex: 1 }}
-                className="fjs-header"
-            >
-                <m.p
-                    variants={fadeUp}
-                    style={{ fontSize: '13px', fontWeight: 600, color: '#e8788c', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '12px' }}
-                >
-                    A seamless path to your next role
-                </m.p>
-                <m.h2
-                    variants={fadeUp}
-                    className="font-lora"
-                    style={{ fontSize: '44px', fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.15 }}
-                >
-                    How it works
-                </m.h2>
-            </m.div>
-
-            {/* ── SPLIT: Process Left / Jobs Right ── */}
-            <div className="fjs-split" style={{ position: 'relative', zIndex: 1 }}>
-
-                {/* ═══ LEFT: Vertical process spine ═══ */}
+            <div className="fjs2-inner">
+                {/* ── Header row ── */}
                 <m.div
-                    className="fjs-col-left"
+                    className="fjs2-head"
                     initial="hidden"
                     whileInView="visible"
-                    viewport={{ once: true }}
+                    viewport={{ once: true, margin: '-60px' }}
                     variants={stagger}
                 >
-                    <div className="fjs-spine">
-                        {STEPS.map((step, i) => (
-                            <m.div
-                                key={i}
-                                className="fjs-spine-node"
-                                variants={fadeLeft}
-                            >
-                                {/* Notion-style illustration */}
-                                <div style={{
-                                    width: 180,
-                                    height: 180,
-                                    marginBottom: '16px',
-                                    borderRadius: '20px',
-                                    overflow: 'hidden',
-                                }}>
-                                    <Image
-                                        src={step.img}
-                                        alt={step.title}
-                                        width={180}
-                                        height={180}
-                                        style={{ objectFit: 'cover', borderRadius: '20px' }}
-                                        loading="lazy"
-                                        placeholder="blur"
-                                        blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgZmlsbD0iIzNhMTIyOCIvPjwvc3ZnPg=="
-                                    />
-                                </div>
-
-                                <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#f8e8ec', margin: '0 0 6px' }}>
-                                    {step.title}
-                                </h4>
-                                <p style={{ fontSize: '13px', color: 'rgba(248,232,236,0.4)', margin: 0, lineHeight: 1.55 }}>
-                                    {step.desc}
-                                </p>
-                            </m.div>
-                        ))}
-                    </div>
-
-                    {/* CTA */}
-                    <m.div variants={fadeLeft} style={{ marginTop: '32px', paddingLeft: '32px' }}>
-                        <Link
-                            href="/register"
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                padding: '13px 32px',
-                                fontSize: '13px',
-                                fontWeight: 700,
-                                color: '#fff',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.08em',
-                                background: 'linear-gradient(135deg, #c05a7a, #e8788c)',
-                                borderRadius: '12px',
-                                boxShadow: '0 4px 20px rgba(200,90,120,0.3)',
-                                textDecoration: 'none',
-                                transition: 'transform 0.3s, box-shadow 0.3s',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-3px)';
-                                e.currentTarget.style.boxShadow = '0 8px 32px rgba(200,90,120,0.45)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = '0 4px 20px rgba(200,90,120,0.3)';
-                            }}
+                    <div>
+                        <m.p
+                            variants={fadeUp}
+                            style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.14em', margin: '0 0 10px' }}
                         >
-                            Join Now <ArrowUpRight size={15} />
+                            Fresh openings
+                        </m.p>
+                        <m.h2
+                            id="fjs2-heading"
+                            variants={fadeUp}
+                            className="font-heading"
+                            style={{ fontSize: 'clamp(1.9rem, 3.2vw, 2.6rem)', fontWeight: 800, color: '#152420', margin: 0, lineHeight: 1.12 }}
+                        >
+                            Latest verified roles
+                        </m.h2>
+                    </div>
+                    <m.div variants={fadeUp}>
+                        <Link href="/jobs" className="fjs2-browse">
+                            Browse all roles <ArrowUpRight size={16} aria-hidden />
                         </Link>
                     </m.div>
                 </m.div>
 
-                {/* ═══ RIGHT: Featured jobs ═══ */}
+                {/* ── Ticket grid ── */}
                 <m.div
-                    className="fjs-col-right"
+                    className="fjs2-grid"
                     initial="hidden"
                     whileInView="visible"
-                    viewport={{ once: true }}
+                    viewport={{ once: true, margin: '-60px' }}
                     variants={stagger}
                 >
-                    <m.div variants={fadeRight} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <p style={{ fontSize: '13px', fontWeight: 600, color: '#e8788c', textTransform: 'uppercase', letterSpacing: '0.15em', margin: 0 }}>
-                            Latest openings
-                        </p>
-                        <Link
-                            href="/jobs"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '13px', fontWeight: 600, color: 'rgba(248,232,236,0.5)', textDecoration: 'none' }}
-                        >
-                            View all <ArrowUpRight size={13} />
-                        </Link>
-                    </m.div>
-
-                    {jobs.slice(0, 8).map((job, i) => {
+                    {shown.map((job, i) => {
                         const href = job.slug ? `/jobs/${job.slug}` : `/jobs/${job.id}`;
                         const postedDate = job.originalPostedAt || job.createdAt;
+                        // First two slots are the employer-pinned picks → "Featured";
+                        // the rest of the ≤3-day window reads "New". Index-based, so
+                        // server and client HTML always match (no Date.now() here).
+                        const badge = i < 2 ? 'Featured' : 'New';
 
                         return (
-                            <m.div key={job.id} variants={fadeRight}>
-                                <Link href={href} className="fjs-job">
-                                    {/* Styled number */}
-                                    <span
-                                        className="fjs-num font-lora"
-                                        style={{
-                                            fontSize: '40px',
+                            <m.div key={job.id} variants={fadeUp} style={{ display: 'flex' }}>
+                                <Link href={href} className="clay-card fjs2-card" aria-label={`${job.title} at ${job.employer}, ${job.location}`}>
+                                    {/* Badge + relative time */}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '12px' }}>
+                                        <span style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            padding: '4px 10px',
+                                            borderRadius: '999px',
+                                            background: '#FFE7CC',
+                                            color: '#B45309',
+                                            fontSize: '11px',
                                             fontWeight: 800,
-                                            color: 'rgba(255,255,255,0.06)',
-                                            lineHeight: 1,
-                                            minWidth: '48px',
-                                            flexShrink: 0,
-                                            transition: 'color 0.3s',
-                                        }}
-                                    >
-                                        {String(i + 1).padStart(2, '0')}
-                                    </span>
-
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        {/* Employer row */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(248,232,236,0.55)', letterSpacing: '0.02em' }}>
-                                                {job.employer}
-                                            </span>
-                                            <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-                                            {job.jobType && (
-                                                <>
-                                                    <span style={{ fontSize: '13px', color: 'rgba(248,232,236,0.45)' }}>
-                                                        {job.jobType}
-                                                    </span>
-                                                    <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-                                                </>
-                                            )}
-                                            {/* "New" recency badge removed — relativeTime below already conveys freshness. */}
-                                            <span style={{ fontSize: '12px', color: 'rgba(248,232,236,0.35)' }}>
-                                                {mounted ? relativeTime(postedDate) : ''}
-                                            </span>
-                                        </div>
-
-                                        {/* Big title */}
-                                        <h3
-                                            className="fjs-jtitle font-lora"
-                                            style={{
-                                                fontSize: '22px',
-                                                fontWeight: 700,
-                                                color: '#f8e8ec',
-                                                lineHeight: 1.3,
-                                                margin: '0 0 8px',
-                                                transition: 'color 0.3s',
-                                            }}
-                                        >
-                                            {job.title}
-                                        </h3>
-
-                                        {/* Details row */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '14px', color: 'rgba(248,232,236,0.5)' }}>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                                <MapPin size={13} style={{ color: '#e8788c' }} />
-                                                {job.location}
-                                            </span>
-                                            {job.displaySalary && (
-                                                <span style={{ fontWeight: 700, color: '#6ee7b7', fontSize: '14px' }}>
-                                                    {job.displaySalary}
-                                                </span>
-                                            )}
-                                        </div>
+                                            letterSpacing: '0.06em',
+                                            textTransform: 'uppercase',
+                                            boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.8), 1px 1px 3px rgba(180,83,9,0.12)',
+                                        }}>
+                                            {badge}
+                                        </span>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'rgba(21,36,32,0.5)' }}>
+                                            <Clock size={12} aria-hidden />
+                                            {mounted ? relativeTime(postedDate) : ''}
+                                        </span>
                                     </div>
 
-                                    {/* Circle CTA */}
-                                    <div
-                                        className="fjs-circle-cta"
-                                        style={{
-                                            width: 44,
-                                            height: 44,
+                                    {/* Employer + clay dot */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                                        <span aria-hidden style={{
+                                            width: 8,
+                                            height: 8,
                                             borderRadius: '50%',
-                                            background: 'linear-gradient(135deg, #c05a7a, #e8788c)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
+                                            background: employerDotColor(job.employer),
                                             flexShrink: 0,
-                                            alignSelf: 'center',
-                                            transition: 'transform 0.3s, box-shadow 0.3s',
-                                            boxShadow: '0 2px 12px rgba(200,90,120,0.2)',
+                                            boxShadow: 'inset 0.5px 0.5px 1px rgba(255,255,255,0.6)',
+                                        }} />
+                                        <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(21,36,32,0.65)', letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {job.employer}
+                                        </span>
+                                    </div>
+
+                                    {/* Title */}
+                                    <h3
+                                        className="fjs2-title font-heading"
+                                        style={{
+                                            fontSize: '18px',
+                                            fontWeight: 800,
+                                            color: '#1B2E28',
+                                            lineHeight: 1.35,
+                                            margin: '10px 0 8px',
+                                            transition: 'color 0.2s ease',
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 2,
+                                            WebkitBoxOrient: 'vertical' as const,
+                                            overflow: 'hidden',
                                         }}
                                     >
-                                        <ArrowUpRight size={18} style={{ color: '#fff' }} />
+                                        {job.title}
+                                    </h3>
+
+                                    {/* Location + type */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'rgba(21,36,32,0.55)', minWidth: 0 }}>
+                                        <MapPin size={13} style={{ color: 'var(--color-primary)', flexShrink: 0 }} aria-hidden />
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {job.location}
+                                            {job.jobType ? ` · ${job.jobType}` : ''}
+                                        </span>
+                                    </div>
+
+                                    {/* Salary + go affordance */}
+                                    <div style={{ marginTop: 'auto', paddingTop: '14px', borderTop: '1px solid rgba(190,24,93,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                                        {job.displaySalary ? (
+                                            <span className="font-heading" style={{ fontSize: '17px', fontWeight: 800, color: 'var(--color-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                {job.displaySalary}
+                                            </span>
+                                        ) : (
+                                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(21,36,32,0.45)' }}>
+                                                View details
+                                            </span>
+                                        )}
+                                        <span
+                                            className="fjs2-go"
+                                            aria-hidden
+                                            style={{
+                                                width: 36,
+                                                height: 36,
+                                                borderRadius: '50%',
+                                                background: '#D9F2EA',
+                                                color: 'var(--color-primary)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0,
+                                                transition: 'transform 0.2s ease, background 0.2s ease, color 0.2s ease',
+                                                boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.9), 2px 2px 6px rgba(190,24,93,0.12)',
+                                            }}
+                                        >
+                                            <ArrowUpRight size={17} />
+                                        </span>
                                     </div>
                                 </Link>
                             </m.div>
                         );
                     })}
+
+                    {/* Dashed ticket stubs — sparse/empty state */}
+                    {stubs.map((stub, i) => {
+                        const StubIcon = stub.icon;
+                        return (
+                            <m.div key={`stub-${i}`} variants={fadeUp} style={{ display: 'flex' }}>
+                                <div className="fjs2-stub">
+                                    <div style={{
+                                        width: 44,
+                                        height: 44,
+                                        borderRadius: '50%',
+                                        background: '#D9F2EA',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        marginBottom: '14px',
+                                        boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.9), 2px 2px 6px rgba(190,24,93,0.12)',
+                                    }}>
+                                        <StubIcon size={20} style={{ color: 'var(--color-primary)' }} aria-hidden />
+                                    </div>
+                                    <p className="font-heading" style={{ fontSize: '17px', fontWeight: 800, color: '#1B2E28', lineHeight: 1.3, margin: '0 0 6px' }}>
+                                        {stub.headline}
+                                    </p>
+                                    <p style={{ fontSize: '13.5px', color: 'rgba(21,36,32,0.6)', lineHeight: 1.55, margin: '0 0 18px' }}>
+                                        {stub.sub}
+                                    </p>
+                                    <Link href="/jobs" className="fjs2-stub-cta">
+                                        {stub.cta} <ArrowUpRight size={14} aria-hidden />
+                                    </Link>
+                                </div>
+                            </m.div>
+                        );
+                    })}
                 </m.div>
+
+                {/* Zero-jobs primary CTA — the section never renders a void */}
+                {shown.length === 0 && (
+                    <m.div
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        variants={fadeUp}
+                        style={{ display: 'flex', justifyContent: 'center', marginTop: '36px' }}
+                    >
+                        <Link href="/jobs" className="fjs2-cta-btn">
+                            Browse all roles <ArrowUpRight size={16} aria-hidden />
+                        </Link>
+                    </m.div>
+                )}
             </div>
         </section>
-
         </LazyMotion>
     );
 }

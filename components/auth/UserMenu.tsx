@@ -188,7 +188,7 @@ export default function UserMenu({ user, profileCompleteness = 100, isMobile = f
                 display: 'inline-block', marginTop: '6px',
                 padding: '2px 10px', borderRadius: '12px',
                 fontSize: '11px', fontWeight: 600,
-                background: 'rgba(244,114,182,0.12)', color: '#F472B6',
+                background: 'rgba(45,212,191,0.12)', color: '#F472B6',
                 textTransform: 'capitalize',
               }}>
                 {user.role.replace('_', ' ')}

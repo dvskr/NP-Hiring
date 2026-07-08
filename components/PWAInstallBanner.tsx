@@ -89,9 +89,9 @@ export default function PWAInstallBanner() {
         <div
             className="fixed top-0 left-0 right-0 z-[9985] animate-slide-down"
             style={{
-                background: 'linear-gradient(135deg, rgba(244,114,182,0.12), rgba(190,24,93,0.08))',
+                background: 'linear-gradient(135deg, rgba(45,212,191,0.12), rgba(190,24,93,0.08))',
                 backdropFilter: 'blur(12px)',
-                borderBottom: '1px solid rgba(244,114,182,0.2)',
+                borderBottom: '1px solid rgba(45,212,191,0.2)',
             }}
         >
             <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
