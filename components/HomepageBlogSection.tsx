@@ -1,225 +1,246 @@
-'use client';
-
 import Link from 'next/link';
-import { LazyMotion, domAnimation, m } from 'framer-motion';
 
-import { HOMEPAGE_FEATURED_POSTS } from '@/config/niche/content-map';
+import { HOMEPAGE_FEATURED_POSTS, type FeaturedBlogPost } from '@/config/niche/content-map';
 
-/*
- * Exact Wellfound "From the blog" CSS — source: DevTools inspection
+/* ── "Reading tape" (user-approved R4 mock, 2026-07-10) ──
+ * A slow horizontal conveyor of post cards on the cream + grid stage —
+ * the same motion language as the employer sticker tape, so the page
+ * rhymes. CSS-only marquee (no framer-motion, no client JS): pauses on
+ * hover, static under prefers-reduced-motion.
  *
- * Row: padding 40px → 64px on hover, bg → #fff4f6, border-radius 12px, transition 0.3s
- * Col1 (category): 150px, ml 24px, mr 64px
- * Col2 (title): flex 1, max-w 550px, mr 80px
- * Col3 (desc): flex 1, mr 100px
- * Title: Graphik 30px/39px, weight 600, ls -0.4px, color #000
- * Category: Graphik 16px/18px, weight 600, color #000
- * Description: Graphik 14px/19.6px, weight 400, color #000
- * Arrow tab: 64×32px, half-circle, absolute right:-16px, top:50px, rotate(-90deg), bg #ec2e3a
+ * EMPTY-BLOG FALLBACK: HOMEPAGE_FEATURED_POSTS is empty until NP posts
+ * are authored (see config/niche/content-map.ts). Instead of vanishing,
+ * the tape carries the three live resource guides so the section always
+ * has real, non-404 content.
  */
 
-const stagger = {
-    visible: { transition: { staggerChildren: 0.12 } },
-};
-const rowAnim = {
-    hidden: { opacity: 0, y: 24 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] as const },
-    },
-};
+const RESOURCE_GUIDES: FeaturedBlogPost[] = [
+    { category: 'Salary Guide', title: 'NP Salary Guide — every state, real numbers', description: 'Median pay, ranges, and the states that pay NPs the most.', href: '/salary-guide' },
+    { category: 'Licensure', title: 'Full Practice Authority, state by state', description: 'Where NPs practice independently — and where the rules are changing.', href: '/resources/fpa-guide' },
+    { category: 'Contracts', title: '1099 vs W-2 for NPs', description: 'Taxes, benefits, and the real take-home math for contract work.', href: '/resources/1099-vs-w2' },
+];
 
-// Featured post data lives in config/niche/content-map.ts (per-niche
-// content pack); this component only owns the layout and motion.
-const FEATURED_POSTS = HOMEPAGE_FEATURED_POSTS;
+/* Clay chip fills alternate; bar widths are a decorative accent only. */
+const CHIP_FILLS = ['#D5F5F1', '#FBCFE8', '#FDE3C8', '#B9EBD6'];
+const BAR_WIDTHS = ['38%', '64%', '22%', '50%'];
+
+/* Static CSS only — NO template interpolations in style blocks (styled-jsx
+   dynamic styles deadlock Turbopack; see project memory). */
+const css = `
+    .rtape-wrap {
+        position: relative;
+        overflow: hidden;
+        background-color: #F5F0EB;
+        background-image:
+            linear-gradient(rgba(122,28,43,0.07) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(122,28,43,0.07) 1px, transparent 1px);
+        background-size: 44px 44px;
+        padding: 72px 0 76px;
+    }
+    .rtape-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 16px;
+        flex-wrap: wrap;
+        max-width: 1360px;
+        margin: 0 auto 30px;
+        padding: 0 48px;
+        position: relative;
+        z-index: 2;
+    }
+    .rtape-eyeb {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #BE185D;
+        margin: 0 0 6px;
+    }
+    .rtape-h2 {
+        font-weight: 700;
+        font-size: clamp(26px, 3vw, 36px);
+        margin: 0;
+        color: #7A1C2B;
+        text-transform: uppercase;
+        letter-spacing: -0.01em;
+        line-height: 1.1;
+    }
+    .rtape-more {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 24px;
+        font-size: 13px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #fff;
+        background: #BE185D;
+        border: 2px solid #7A1C2B;
+        box-shadow: 4px 4px 0 #7A1C2B;
+        text-decoration: none;
+        transition: transform 0.15s ease, background 0.2s ease;
+    }
+    .rtape-more:hover { transform: translateY(-2px); background: #9D174D; }
+    .rtape-more:focus-visible { outline: 3px solid #BE185D; outline-offset: 2px; }
+
+    .rtape-row {
+        position: relative;
+        overflow: hidden;
+        padding: 8px 0 14px;
+    }
+    /* Edge fades into the cream stage */
+    .rtape-row::before,
+    .rtape-row::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 90px;
+        z-index: 3;
+        pointer-events: none;
+    }
+    .rtape-row::before { left: 0; background: linear-gradient(to right, #F5F0EB, transparent); }
+    .rtape-row::after { right: 0; background: linear-gradient(to left, #F5F0EB, transparent); }
+
+    @keyframes rtape-slide {
+        to { transform: translateX(-50%); }
+    }
+    .rtape-tape {
+        display: flex;
+        gap: 22px;
+        width: max-content;
+        padding: 0 48px;
+        animation: rtape-slide 42s linear infinite;
+    }
+    .rtape-row:hover .rtape-tape { animation-play-state: paused; }
+
+    .rtape-card {
+        width: 300px;
+        flex: none;
+        display: block;
+        background: #fff;
+        border: 2px solid #7A1C2B;
+        box-shadow: 5px 5px 0 #7A1C2B;
+        padding: 20px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform 0.15s ease;
+    }
+    .rtape-card:hover { transform: translateY(-4px); }
+    .rtape-card:focus-visible { outline: 3px solid #BE185D; outline-offset: 2px; }
+    .rtape-chip {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.5);
+        box-shadow: 3px 3px 8px rgba(190,24,93,0.10), -2px -2px 5px rgba(255,255,255,0.8), inset 2px 2px 3px rgba(255,255,255,0.7);
+        font-size: 10.5px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #7A1C2B;
+        margin-bottom: 12px;
+    }
+    .rtape-title {
+        font-weight: 700;
+        font-size: 18px;
+        line-height: 1.3;
+        color: #2b1a1e;
+        margin: 0 0 8px;
+    }
+    .rtape-desc {
+        font-size: 12.5px;
+        color: #7a6d70;
+        line-height: 1.5;
+        margin: 0 0 14px;
+    }
+    .rtape-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .rtape-track {
+        flex: 1;
+        height: 4px;
+        background: rgba(122,28,43,0.12);
+        border-radius: 2px;
+        position: relative;
+        overflow: hidden;
+    }
+    .rtape-fill {
+        position: absolute;
+        top: 0; left: 0; bottom: 0;
+        background: #BE185D;
+        border-radius: 2px;
+    }
+    .rtape-read {
+        font-size: 11px;
+        font-weight: 800;
+        color: #9b8291;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .rtape-tape { animation: none; }
+    }
+    @media (max-width: 768px) {
+        .rtape-wrap { padding: 52px 0 56px; }
+        .rtape-head { padding: 0 24px; margin-bottom: 22px; }
+        .rtape-tape { padding: 0 24px; }
+        .rtape-card { width: 260px; }
+    }
+`;
 
 export default function HomepageBlogSection() {
-    // No authored posts yet (fresh board) — skip the whole section rather
-    // than render an empty "From the blog" header or dead links. The
-    // section reappears automatically once HOMEPAGE_FEATURED_POSTS in
-    // config/niche/content-map.ts is populated with published posts.
-    if (FEATURED_POSTS.length === 0) return null;
+    const hasPosts = HOMEPAGE_FEATURED_POSTS.length > 0;
+    const items = hasPosts ? HOMEPAGE_FEATURED_POSTS : RESOURCE_GUIDES;
+
+    /* The -50% marquee needs two identical halves, and each half must be
+       wider than the viewport or the loop shows a gap. With few posts,
+       repeat the set inside each half. */
+    const repeatsPerHalf = Math.max(1, Math.ceil(6 / items.length));
+    const half = Array.from({ length: repeatsPerHalf }, () => items).flat();
+    const tape = [...half, ...half];
 
     return (
-        <section className="wf-section" style={{ background: '#fff', paddingTop: '88px', paddingBottom: '72px' }}>
+        <section className="rtape-wrap" aria-label="Career guides from the blog">
+            <style>{css}</style>
 
-            {/* ═══ Header ═══ */}
-            <div className="wf-header" style={{
-                padding: '0 48px',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                marginBottom: '40px',
-            }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#000', margin: 0 }}>
-                    From the blog
-                </h2>
-                <Link href="/blog" className="wf-more-btn">
-                    More posts
+            <div className="rtape-head">
+                <div>
+                    <p className="rtape-eyeb">Career guides</p>
+                    <h2 className="rtape-h2 font-heading">From the blog</h2>
+                </div>
+                <Link href={hasPosts ? '/blog' : '/resources'} className="rtape-more">
+                    {hasPosts ? 'More posts →' : 'All resources →'}
                 </Link>
             </div>
 
-            {/* ═══ Blog rows ═══ */}
-            <LazyMotion features={domAnimation}>
-            <m.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: '-50px' }}
-                variants={stagger}
-            >
-                {FEATURED_POSTS.map((post, i) => (
-                    <m.div key={i} variants={rowAnim}>
-                        <Link href={post.href} className="wf-link">
-                            <div className="wf-row">
-                                {/* Col1: Category — 150px, ml 24px, mr 64px */}
-                                <div className="wf-col1">
-                                    <span className="wf-category">{post.category}</span>
-                                </div>
-                                {/* Col2: Title — flex 1, max-w 550px, mr 80px */}
-                                <div className="wf-col2">
-                                    <h3 className="wf-title font-heading">{post.title}</h3>
-                                </div>
-                                {/* Col3: Description — flex 1, mr 100px */}
-                                <div className="wf-col3">
-                                    <p className="wf-desc">{post.description}</p>
-                                </div>
-                                {/* Arrow circle */}
-                                <div className="wf-arrow-tab">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                                    </svg>
-                                </div>
-                            </div>
+            <div className="rtape-row">
+                <div className="rtape-tape">
+                    {tape.map((post, i) => (
+                        <Link key={`${post.href}-${i}`} href={post.href} className="rtape-card"
+                            /* duplicate copies are decorative for the loop —
+                               hide them from the accessibility tree */
+                            aria-hidden={i >= items.length ? true : undefined}
+                            tabIndex={i >= items.length ? -1 : undefined}
+                        >
+                            <span className="rtape-chip" style={{ background: CHIP_FILLS[i % CHIP_FILLS.length] }}>
+                                {post.category}
+                            </span>
+                            <h3 className="rtape-title font-heading">{post.title}</h3>
+                            <p className="rtape-desc">{post.description}</p>
+                            <span className="rtape-bar" aria-hidden="true">
+                                <span className="rtape-track"><span className="rtape-fill" style={{ width: BAR_WIDTHS[i % BAR_WIDTHS.length] }} /></span>
+                                <span className="rtape-read">Read →</span>
+                            </span>
                         </Link>
-                    </m.div>
-                ))}
-            </m.div>
-            </LazyMotion>
-
-            {/* ═══ Branded CSS ═══ */}
-            <style jsx global>{`
-                .wf-link {
-                    text-decoration: none;
-                    display: block;
-                    color: inherit;
-                }
-                .wf-row {
-                    padding: 40px 48px;
-                    transition: all 0.3s ease;
-                    display: flex;
-                    position: relative;
-                    align-items: center;
-                    border-top: 1px solid #e8e2db;
-                }
-                .wf-link:hover .wf-row {
-                    background-color: #faf5f0;
-                    border-radius: 16px;
-                    padding-top: 56px;
-                    padding-bottom: 56px;
-                    border-top-color: transparent;
-                }
-                .wf-link:hover .wf-title {
-                    color: #ec2e3a;
-                }
-                .wf-link:hover .wf-arrow-tab {
-                    transform: translateX(4px) scale(1.08);
-                    background-color: #c81e2b;
-                }
-                .wf-col1 {
-                    width: 140px;
-                    flex-shrink: 0;
-                    margin-left: 24px;
-                    margin-right: 48px;
-                }
-                .wf-col2 {
-                    flex: 1 1 0%;
-                    max-width: 520px;
-                    margin-right: 64px;
-                }
-                .wf-col3 {
-                    flex: 1 1 0%;
-                    margin-right: 80px;
-                }
-                .wf-category {
-                    font-size: 12px;
-                    font-weight: 600;
-                    line-height: 1;
-                    letter-spacing: 0.04em;
-                    text-transform: uppercase;
-                    color: #ec2e3a;
-                    background: rgba(236,46,58,0.07);
-                    padding: 6px 14px;
-                    border-radius: 100px;
-                    display: inline-block;
-                }
-                .wf-title {
-                    font-size: 26px;
-                    font-weight: 700;
-                    line-height: 34px;
-                    letter-spacing: -0.3px;
-                    color: #1c1917;
-                    margin: 0 0 12px 0;
-                    transition: color 0.3s ease;
-                }
-                .wf-desc {
-                    font-size: 14px;
-                    font-weight: 400;
-                    line-height: 21px;
-                    color: #78716c;
-                    margin: 0;
-                }
-                .wf-arrow-tab {
-                    background-color: #ec2e3a;
-                    color: white;
-                    border-radius: 50%;
-                    justify-content: center;
-                    align-items: center;
-                    width: 44px;
-                    height: 44px;
-                    display: flex;
-                    flex-shrink: 0;
-                    margin-left: auto;
-                    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-                                background-color 0.3s ease;
-                }
-                .wf-more-btn {
-                    padding: 8px 20px;
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: #1c1917;
-                    text-decoration: none;
-                    border: 1.5px solid #d6d3d1;
-                    border-radius: 100px;
-                    background: transparent;
-                    transition: all 0.2s ease;
-                }
-                .wf-more-btn:hover {
-                    background: #ec2e3a;
-                    color: #fff;
-                    border-color: #ec2e3a;
-                }
-                @media (max-width: 991px) {
-                    .wf-title { font-size: 22px; line-height: 30px; }
-                    .wf-col1 { margin-right: 24px; }
-                    .wf-col2 { margin-right: 32px; }
-                    .wf-col3 { margin-right: 32px; }
-                }
-                @media (max-width: 768px) {
-                    .wf-section { padding-top: 48px !important; padding-bottom: 40px !important; }
-                    .wf-header { padding: 0 20px !important; }
-                    .wf-row { flex-wrap: wrap; padding: 24px 20px; }
-                    .wf-col1 { width: 100%; margin: 0 0 10px 0; }
-                    .wf-col2 { width: 100%; max-width: none; margin: 0 0 8px 0; }
-                    .wf-col3 { display: none; }
-                    .wf-arrow-tab { display: none; }
-                    .wf-link:hover .wf-row { padding-top: 32px; padding-bottom: 32px; }
-                }
-                @media (max-width: 479px) {
-                    .wf-title { font-size: 18px; line-height: 24px; }
-                    .wf-row { padding: 20px 16px; }
-                    .wf-header { padding: 0 16px !important; }
-                    .wf-arrow-tab { display: none; }
-                }
-            `}</style>
+                    ))}
+                </div>
+            </div>
         </section>
     );
 }
