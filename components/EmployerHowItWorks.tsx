@@ -14,24 +14,23 @@ const stagger = {
     visible: { transition: { staggerChildren: 0.15 } },
 };
 
-// Local Google-style vector line illustrations
+// Local Google-style vector line illustrations. The -v5 derivatives are
+// median-denoised (the generator baked mosquito noise around the outlines),
+// margin-trimmed, Lanczos-downscaled 512px WebPs with NO sharpening (it
+// re-amplifies the ringing), backgrounds pixel-rewritten to EXACTLY
+// #A8D8F0 (the section band) — seamless, no tiles, halos, or seams.
 const STEPS = [
-    { img: '/images/how-it-works/step-employer-post.webp', title: 'Post Your Listing', desc: `Start from an ${brand.niche.short} template or generate the full description with AI. Set required experience and your post is live in 5 minutes — first one free.` },
-    { img: '/images/how-it-works/step-employer-reach.webp', title: `Reach Every ${brand.niche.short}`, desc: 'Your listing surfaces in semantic search, the weekly digest, and new-grad-friendly filters — plus its own indexed SEO page on Google.' },
-    { img: '/images/how-it-works/step-employer-browse.webp', title: 'Browse & Unlock in Bulk', desc: 'Search the talent pool with experience filters, then unlock multiple profiles in one click using your remaining credits.' },
-    { img: '/images/how-it-works/step-employer-track.webp', title: 'Track & Hire', desc: 'Per-job views, apply clicks, and CTR in the analytics dashboard. Export CSV to your ATS or hiring spreadsheet anytime.' },
+    { img: '/images/how-it-works/step-employer-post-v5.webp', title: 'Post Your Listing', desc: `Start from an ${brand.niche.short} template or generate the full description with AI. Set required experience and your post is live in 5 minutes — first one free.` },
+    { img: '/images/how-it-works/step-employer-reach-v5.webp', title: `Reach Every ${brand.niche.short}`, desc: 'Your listing surfaces in semantic search, the weekly digest, and new-grad-friendly filters — plus its own indexed SEO page on Google.' },
+    { img: '/images/how-it-works/step-employer-browse-v5.webp', title: 'Browse & Unlock in Bulk', desc: 'Search the talent pool with experience filters, then unlock multiple profiles in one click using your remaining credits.' },
+    { img: '/images/how-it-works/step-employer-track-v5.webp', title: 'Track & Hire', desc: 'Per-job views, apply clicks, and CTR in the analytics dashboard. Export CSV to your ATS or hiring spreadsheet anytime.' },
 ];
 
 const css = `
     .ehw-wrap {
-        /* Bookends the hero: same cream + faint oxblood graph-paper field,
-           so the page opens and closes on the brand's poster paper and the
-           rose illustration tiles pop against it. */
-        background-color: #F5F0EB;
-        background-image:
-            linear-gradient(rgba(122,28,43,0.07) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(122,28,43,0.07) 1px, transparent 1px);
-        background-size: 44px 44px;
+        /* Diorama-style band: lighter sky field so the image tiles read as
+           cards — same presentation pattern as the Top States dioramas. */
+        background-color: #D9EBF6;
         position: relative;
         overflow: hidden;
         border-top: 1px solid rgba(0, 0, 0, 0.04);
@@ -80,7 +79,7 @@ const css = `
     /* Horizontal connecting line behind dots */
     .ehw-line {
         position: absolute;
-        top: 198px;
+        top: 302px; /* image box 280 + dot margin 16 + half dot */
         left: 12.5%;
         right: 12.5%;
         height: 2px;
@@ -162,22 +161,37 @@ export default function EmployerHowItWorks() {
                     <div className="ehw-grid">
                         {STEPS.map((step, i) => (
                             <m.div key={i} variants={fadeUp} className="ehw-step">
-                                {/* Google Ads style Illustration */}
-                                <div style={{
-                                    width: 180,
-                                    height: 180,
-                                    margin: '0 auto',
-                                    borderRadius: '20px',
-                                    overflow: 'hidden',
-                                    border: '1px solid rgba(0, 0, 0, 0.04)',
-                                    backgroundColor: '#F8B4A6'
-                                }}>
+                                {/* Diorama-style tile — identical treatment to the
+                                    Top States cards: rounded, image fills the card,
+                                    drop shadow, hover lift. */}
+                                <div
+                                    style={{
+                                        width: 280,
+                                        height: 280,
+                                        margin: '0 auto',
+                                        borderRadius: '24px',
+                                        overflow: 'hidden',
+                                        backgroundColor: '#A8D4E8',
+                                        boxShadow: '0 6px 20px rgba(0,0,0,0.1)',
+                                        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(-6px) scale(1.03)';
+                                        e.currentTarget.style.boxShadow = '0 14px 32px rgba(0,0,0,0.16)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)';
+                                    }}
+                                >
+                                    {/* unoptimized: denoised v5 WebPs served at native res */}
                                     <Image
                                         src={step.img}
                                         alt={step.title}
-                                        width={180}
-                                        height={180}
-                                        style={{ objectFit: 'contain', borderRadius: '20px' }}
+                                        width={280}
+                                        height={280}
+                                        unoptimized
+                                        style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                                         loading="lazy"
                                     />
                                 </div>
