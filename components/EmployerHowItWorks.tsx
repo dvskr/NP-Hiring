@@ -181,19 +181,10 @@ export default function EmployerHowItWorks() {
                                         overflow: 'hidden',
                                         backgroundColor: '#A8D4E8',
                                         /* hard-edged shadow — zero blur radius, so no
-                                           fuzzy halo bleeds around the artwork */
+                                           fuzzy halo bleeds around the artwork.
+                                           No hover motion by owner request: these are
+                                           static, non-interactive illustrations. */
                                         boxShadow: '6px 6px 0 rgba(21,72,105,0.12)',
-                                        transition: 'transform 0.25s ease, box-shadow 0.25s ease',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        /* lift only — no scale(), scaling resamples the
-                                           image mid-animation and softens it */
-                                        e.currentTarget.style.transform = 'translateY(-6px)';
-                                        e.currentTarget.style.boxShadow = '8px 12px 0 rgba(21,72,105,0.14)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.boxShadow = '6px 6px 0 rgba(21,72,105,0.12)';
                                     }}
                                 >
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
