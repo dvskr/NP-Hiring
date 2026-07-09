@@ -4,10 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowUpRight } from 'lucide-react';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
-import { config } from '@/lib/config';
 import { brand } from '@/config/brand';
-
-const STORAGE_BASE = brand.assets.storageBase;
 
 const fadeUp = {
     hidden: { opacity: 0, y: 24 },
@@ -17,22 +14,21 @@ const stagger = {
     visible: { transition: { staggerChildren: 0.15 } },
 };
 
-// Refreshed 2026-05-13 to reflect the post-redesign feature set:
-// experience picker + AI JD writer in step 1, weekly digest +
-// new-grad-friendly filter in step 2, bulk-unlock in step 3, and
-// the new analytics dashboard in step 4.
+// Local Google-style vector line illustrations
 const STEPS = [
-    { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/step-employer-post.webp`, title: 'Post Your Listing', desc: `Start from an ${brand.niche.short} template or generate the full description with AI. Set required experience and your post is live in 5 minutes — first one free.` },
-    { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/step-employer-reach.webp`, title: `Reach Every ${brand.niche.short}`, desc: 'Your listing surfaces in semantic search, the weekly digest, and new-grad-friendly filters — plus its own indexed SEO page on Google.' },
-    { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/step-employer-browse.webp`, title: 'Browse & Unlock in Bulk', desc: 'Search the talent pool with experience filters, then unlock multiple profiles in one click using your remaining credits.' },
-    { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/step-employer-track.webp`, title: 'Track & Hire', desc: 'Per-job views, apply clicks, and CTR in the analytics dashboard. Export CSV to your ATS or hiring spreadsheet anytime.' },
+    { img: '/images/how-it-works/step-employer-post.webp', title: 'Post Your Listing', desc: `Start from an ${brand.niche.short} template or generate the full description with AI. Set required experience and your post is live in 5 minutes — first one free.` },
+    { img: '/images/how-it-works/step-employer-reach.webp', title: `Reach Every ${brand.niche.short}`, desc: 'Your listing surfaces in semantic search, the weekly digest, and new-grad-friendly filters — plus its own indexed SEO page on Google.' },
+    { img: '/images/how-it-works/step-employer-browse.webp', title: 'Browse & Unlock in Bulk', desc: 'Search the talent pool with experience filters, then unlock multiple profiles in one click using your remaining credits.' },
+    { img: '/images/how-it-works/step-employer-track.webp', title: 'Track & Hire', desc: 'Per-job views, apply clicks, and CTR in the analytics dashboard. Export CSV to your ATS or hiring spreadsheet anytime.' },
 ];
 
 const css = `
     .ehw-wrap {
-        background: linear-gradient(175deg, #2A0E1E 0%, #3A1228 35%, #220B18 100%);
+        background: #FDFBF7;
         position: relative;
         overflow: hidden;
+        border-top: 1px solid rgba(0, 0, 0, 0.04);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
     }
     .ehw-wrap::before {
         content: '';
@@ -42,7 +38,7 @@ const css = `
         width: 500px;
         height: 500px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(220,120,140,0.06) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(190,24,93,0.02) 0%, transparent 70%);
         pointer-events: none;
     }
     .ehw-wrap::after {
@@ -53,7 +49,7 @@ const css = `
         width: 400px;
         height: 400px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(180,100,160,0.05) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(190,24,93,0.02) 0%, transparent 70%);
         pointer-events: none;
     }
 
@@ -81,7 +77,7 @@ const css = `
         left: 12.5%;
         right: 12.5%;
         height: 2px;
-        background: linear-gradient(90deg, transparent, rgba(220,120,140,0.35), rgba(220,120,140,0.35), transparent);
+        background: linear-gradient(90deg, transparent, rgba(0,0,0,0.06), rgba(0,0,0,0.06), transparent);
         z-index: 0;
     }
     @media (max-width: 900px) {
@@ -93,8 +89,8 @@ const css = `
         width: 14px;
         height: 14px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #e8788c, #c05a7a);
-        box-shadow: 0 0 12px rgba(220,120,140,0.5), 0 0 24px rgba(220,120,140,0.2);
+        background: linear-gradient(135deg, #BE185D, #9D174D);
+        box-shadow: 0 0 12px rgba(190,24,93,0.25);
         margin: 16px auto;
         position: relative;
         z-index: 1;
@@ -107,7 +103,7 @@ const css = `
         width: 22px;
         height: 22px;
         border-radius: 50%;
-        border: 1px solid rgba(220,120,140,0.3);
+        border: 1px solid rgba(190,24,93,0.15);
         animation: ehwPulse 2s ease-in-out infinite;
     }
     @keyframes ehwPulse {
@@ -141,14 +137,14 @@ export default function EmployerHowItWorks() {
                 {/* Header */}
                 <m.p
                     variants={fadeUp}
-                    style={{ fontSize: '13px', fontWeight: 600, color: '#e8788c', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '12px' }}
+                    style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '12px' }}
                 >
                     Built for hiring managers
                 </m.p>
                 <m.h2
                     variants={fadeUp}
                     className="font-lora"
-                    style={{ fontSize: '44px', fontWeight: 700, color: '#fff', margin: '0 0 64px', lineHeight: 1.15 }}
+                    style={{ fontSize: '44px', fontWeight: 700, color: '#111827', margin: '0 0 64px', lineHeight: 1.15 }}
                 >
                     How employers hire
                 </m.h2>
@@ -159,23 +155,23 @@ export default function EmployerHowItWorks() {
                     <div className="ehw-grid">
                         {STEPS.map((step, i) => (
                             <m.div key={i} variants={fadeUp} className="ehw-step">
-                                {/* Clay illustration */}
+                                {/* Google Ads style Illustration */}
                                 <div style={{
                                     width: 180,
                                     height: 180,
                                     margin: '0 auto',
                                     borderRadius: '20px',
                                     overflow: 'hidden',
+                                    border: '1px solid rgba(0, 0, 0, 0.04)',
+                                    backgroundColor: '#ffffff'
                                 }}>
                                     <Image
                                         src={step.img}
                                         alt={step.title}
                                         width={180}
                                         height={180}
-                                        style={{ objectFit: 'cover', borderRadius: '20px' }}
+                                        style={{ objectFit: 'contain', borderRadius: '20px' }}
                                         loading="lazy"
-                                        placeholder="blur"
-                                        blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgZmlsbD0iIzNhMTIyOCIvPjwvc3ZnPg=="
                                     />
                                 </div>
 
@@ -183,12 +179,12 @@ export default function EmployerHowItWorks() {
                                 <div className="ehw-dot" />
 
                                 {/* Title */}
-                                <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#f8e8ec', margin: '0 0 8px' }}>
+                                <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#1F2937', margin: '0 0 8px' }}>
                                     {step.title}
                                 </h4>
 
                                 {/* Description */}
-                                <p style={{ fontSize: '13px', color: 'rgba(248,232,236,0.4)', margin: 0, lineHeight: 1.55, maxWidth: '240px', marginLeft: 'auto', marginRight: 'auto' }}>
+                                <p style={{ fontSize: '13px', color: '#4B5563', margin: 0, lineHeight: 1.55, maxWidth: '240px', marginLeft: 'auto', marginRight: 'auto' }}>
                                     {step.desc}
                                 </p>
                             </m.div>
