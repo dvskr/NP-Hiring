@@ -13,6 +13,16 @@ const stagger = {
     visible: { transition: { staggerChildren: 0.15 } },
 };
 
+/* Bold thick-outline WebP set (commit 80c4759) served from an exact-DPR
+   size ladder: at 280px CSS the browser needs 280×DPR physical pixels and
+   finds an EXACT file for every standard Windows scaling (100%→280 …
+   250%→700) — painted 1:1, zero resampling, which keeps line art crisp.
+   DO NOT rewire these to the hand-authored .svg recreations (d869d87):
+   they lost too much fidelity and were explicitly rejected by the owner. */
+const STEP_SIZES = [280, 350, 420, 490, 560, 630, 700, 840];
+const stepSrcSet = (base: string) =>
+    STEP_SIZES.map((s) => `/images/how-it-works/${base}-${s}.webp ${s}w`).join(', ');
+
 const STEPS = [
     { base: 'step-employer-post', title: 'Post Your Listing', desc: `Start from an ${brand.niche.short} template or generate the full description with AI. Set required experience and your post is live in 5 minutes — first one free.` },
     { base: 'step-employer-reach', title: `Reach Every ${brand.niche.short}`, desc: 'Your listing surfaces in semantic search, the weekly digest, and new-grad-friendly filters — plus its own indexed SEO page on Google.' },
@@ -188,12 +198,15 @@ export default function EmployerHowItWorks() {
                                 >
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
-                                        src={`/images/how-it-works/${step.base}.svg`}
+                                        src={`/images/how-it-works/${step.base}-560.webp`}
+                                        srcSet={stepSrcSet(step.base)}
+                                        sizes="280px"
                                         alt={step.title}
                                         width={280}
                                         height={280}
-                                        style={{ objectFit: 'contain', width: '100%', height: '100%', display: 'block' }}
+                                        style={{ objectFit: 'cover', width: '100%', height: '100%', display: 'block' }}
                                         loading="lazy"
+                                        decoding="async"
                                     />
                                 </div>
 
