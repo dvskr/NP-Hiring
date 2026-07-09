@@ -163,7 +163,7 @@ export default function EmployerHowItWorks() {
                                     borderRadius: '20px',
                                     overflow: 'hidden',
                                     border: '1px solid rgba(0, 0, 0, 0.04)',
-                                    backgroundColor: '#ffffff'
+                                    backgroundColor: '#F8B4A6'
                                 }}>
                                     <Image
                                         src={step.img}
