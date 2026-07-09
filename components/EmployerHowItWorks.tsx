@@ -24,7 +24,14 @@ const STEPS = [
 
 const css = `
     .ehw-wrap {
-        background: #FDFBF7;
+        /* Bookends the hero: same cream + faint oxblood graph-paper field,
+           so the page opens and closes on the brand's poster paper and the
+           rose illustration tiles pop against it. */
+        background-color: #F5F0EB;
+        background-image:
+            linear-gradient(rgba(122,28,43,0.07) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(122,28,43,0.07) 1px, transparent 1px);
+        background-size: 44px 44px;
         position: relative;
         overflow: hidden;
         border-top: 1px solid rgba(0, 0, 0, 0.04);

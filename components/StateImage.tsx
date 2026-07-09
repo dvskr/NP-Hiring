@@ -2,27 +2,24 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
-import { brand } from '@/config/brand';
-
-const STORAGE_BASE = brand.assets.storageBase;
 
 /**
- * Renders a state hero image from the Supabase `images/states/{slug}.webp`
- * bucket, falling back to a generic homepage hero if the per-state asset
- * is missing.
+ * Renders a state diorama from the local `public/images/states/{slug}.png`
+ * set (50 states, organic rounded bases on the #F8B4A6 rose background —
+ * generated 2026-07, no Supabase/CDN dependency).
  *
- * Why: not every state slug in the codebase has a corresponding webp uploaded
- * to Supabase (notably `district-of-columbia.webp` was 404 at audit time).
- * Without a fallback, those tiles render as broken-image icons + cause CLS.
+ * Fallback: slugs without a local asset (notably `district-of-columbia`,
+ * which is in the sitemap/licensure lists but has no diorama) degrade to a
+ * plain rose tile instead of a broken-image icon or a wrong state's art.
  *
  * Used in: app/jobs/locations/page.tsx, app/resources/page.tsx,
  * components/TopStatesList.tsx, components/LicensureChecker.tsx.
  */
 
-const STATE_IMAGE_BASE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/states`;
-// Verified 200 at audit time — used as the universal fallback so a single
-// missing per-state asset doesn't cascade into a broken-image hit.
-const FALLBACK_URL = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`;
+const STATE_IMAGE_BASE = '/images/states';
+/* Mid-tone measured from the shipped artwork's corners (the generator did
+   not hit the requested #F8B4A6; actual backgrounds range #D38E8A–#EBB2A9). */
+const TILE_FALLBACK_BG = '#DC9E97';
 
 type FillProps = {
     fill: true;
@@ -47,11 +44,19 @@ type StateImageProps = (FillProps | FixedProps) & {
 
 export default function StateImage(props: StateImageProps) {
     const { slug, alt, className, style, sizes, loading, priority } = props;
-    const [src, setSrc] = useState(`${STATE_IMAGE_BASE}/${slug}.webp`);
+    const [errored, setErrored] = useState(false);
 
-    const handleError = () => {
-        if (src !== FALLBACK_URL) setSrc(FALLBACK_URL);
-    };
+    if (errored) {
+        // Plain rose tile — same hue as the diorama backgrounds, so a
+        // missing asset reads as an intentional solid card, not a hole.
+        if (props.fill) {
+            return <div aria-hidden="true" className={className} style={{ position: 'absolute', inset: 0, background: TILE_FALLBACK_BG, ...style }} />;
+        }
+        return <div aria-hidden="true" className={className} style={{ width: props.width, height: props.height, background: TILE_FALLBACK_BG, ...style }} />;
+    }
+
+    const src = `${STATE_IMAGE_BASE}/${slug}.png`;
+    const handleError = () => setErrored(true);
 
     if (props.fill) {
         return (

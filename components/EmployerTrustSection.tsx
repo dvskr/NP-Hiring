@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { getSiteStats } from '@/lib/site-stats';
 import ClayDoughStrip from '@/components/ClayDoughStrip';
 import { findCanonicalName, normalizeCompanyName } from '@/lib/company-normalizer';
 // FALLBACK_EMPLOYERS pads the strip with fabricated chips whenever the DB
@@ -73,5 +74,11 @@ export default async function EmployerTrustSection() {
     // skip the strip entirely instead of rendering an empty marquee band.
     if (employers.length === 0) return null;
 
-    return <ClayDoughStrip employers={employers} />;
+    // Live total for the strip's eyebrow line — cached snapshot, no COUNT.
+    const { totalJobs } = await getSiteStats();
+    const jobCountDisplay = totalJobs > 1000
+        ? `${Math.floor(totalJobs / 100) * 100}+`
+        : totalJobs.toLocaleString();
+
+    return <ClayDoughStrip employers={employers} jobCountDisplay={jobCountDisplay} />;
 }

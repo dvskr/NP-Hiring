@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { MapPin, Clock, ArrowUpRight, Briefcase, DollarSign } from 'lucide-react';
+import { MapPin, ArrowUpRight } from 'lucide-react';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 import { trackJobListView, buildJobItem } from '@/lib/analytics';
-import { brand } from '@/config/brand';
 
-const STORAGE_BASE = brand.assets.storageBase;
+/* ── "How it works + Latest openings", F1 split poster (user-approved
+   mock, 2026-07-09). Cream stage with soft blurred clay blobs + a faint
+   scatter of medical "+" marks instead of the grid — CSS only, no storage
+   images. Steps keep their original copy; jobs keep the live engine. ── */
 
 interface FeaturedJob {
     id: string;
@@ -52,40 +53,45 @@ const stagger = {
     visible: { transition: { staggerChildren: 0.12 } },
 };
 
+/* Step copy carried over verbatim from the previous design. */
 const STEPS = [
-    { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/step-profile.webp`, title: 'Build Your Profile', desc: 'Upload your resume once — add license states, credentials, years of experience, and salary range. Re-use it on every application.' },
-    { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/step-match.webp`, title: 'Search & Get Matched', desc: 'Semantic AI search understands phrases like "new grad outpatient telehealth." A weekly digest emails fresh roles matched to your experience level, location, and pay.' },
-    { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/step-connect.webp`, title: 'Apply or Message Directly', desc: 'One-click Easy Apply on employer-posted roles, or message the hiring manager in-app. No recruiters, no portals, no copy-pasting.' },
-    { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/step-practice.webp`, title: 'Start Practicing', desc: 'Save jobs, track applications, and follow up with employers — all in one dashboard. Then accept your offer and start your next clinical role.' },
+    { title: 'Build Your Profile', desc: 'Upload your resume once — add license states, credentials, years of experience, and salary range. Re-use it on every application.' },
+    { title: 'Search & Get Matched', desc: 'Semantic AI search understands phrases like "new grad outpatient telehealth." A weekly digest emails fresh roles matched to your experience level, location, and pay.' },
+    { title: 'Apply or Message Directly', desc: 'One-click Easy Apply on employer-posted roles, or message the hiring manager in-app. No recruiters, no portals, no copy-pasting.' },
+    { title: 'Start Practicing', desc: 'Save jobs, track applications, and follow up with employers — all in one dashboard. Then accept your offer and start your next clinical role.' },
 ];
 
+/* Faint background "+" marks (healthcare cross motif) — position/size/tilt.
+   They sit at 7–10% opacity under everything; decorative only. */
+const PLUS_MARKS = [
+    { top: '6%', left: '3%', size: 30, rotate: 12 },
+    { top: '18%', left: '46%', size: 22, rotate: -8 },
+    { top: '9%', left: '78%', size: 36, rotate: 6 },
+    { top: '38%', left: '92%', size: 24, rotate: -14 },
+    { top: '52%', left: '40%', size: 30, rotate: 10 },
+    { top: '64%', left: '2%', size: 22, rotate: -6 },
+    { top: '78%', left: '70%', size: 34, rotate: 14 },
+    { top: '88%', left: '30%', size: 24, rotate: -10 },
+    { top: '30%', left: '20%', size: 20, rotate: 4 },
+];
+
+/* Static CSS only — NO template interpolations in style blocks (styled-jsx
+   dynamic styles deadlock Turbopack's route compile; see project memory). */
 const css = `
     .fjs-wrap {
-        background: linear-gradient(175deg, #2A0E1E 0%, #3A1228 35%, #220B18 100%);
+        /* solid soft-green panel — separates this band from the cream
+           hero/strip above without any gradient or blob atmosphere */
+        background: #E9F5EE;
         position: relative;
         overflow: hidden;
     }
-    .fjs-wrap::before {
-        content: '';
+    .fjs-plus {
         position: absolute;
-        top: -200px;
-        right: -100px;
-        width: 500px;
-        height: 500px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(220,120,140,0.06) 0%, transparent 70%);
         pointer-events: none;
-    }
-    .fjs-wrap::after {
-        content: '';
-        position: absolute;
-        bottom: -150px;
-        left: -80px;
-        width: 400px;
-        height: 400px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(180,100,160,0.05) 0%, transparent 70%);
-        pointer-events: none;
+        color: rgba(122, 28, 43, 0.09);
+        font-weight: 800;
+        line-height: 1;
+        user-select: none;
     }
 
     /* ── Split layout ── */
@@ -93,118 +99,187 @@ const css = `
         display: flex;
         max-width: 1360px;
         margin: 0 auto;
-        gap: 0;
+        gap: 44px;
+        padding-top: 72px;
+    }
+    /* The how-it-works tree lives on its own warm panel — a flat poster
+       card on the green band (split-bg treatment). */
+    .fjs-steps-panel {
+        background: #FBF2E6;
+        border: 2px solid #7A1C2B;
+        box-shadow: 6px 6px 0 #7A1C2B;
+        padding: 26px 26px 30px;
+    }
+    .fjs-steps-panel .fjs-eyebrow {
+        font-size: 11px;
+        font-weight: 800;
+        color: #BE185D;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        margin: 0 0 8px;
+    }
+    .fjs-steps-panel .fjs-h2 {
+        font-size: 30px;
+        font-weight: 700;
+        color: #7A1C2B;
+        margin: 0 0 24px;
+        line-height: 1.1;
+        text-transform: uppercase;
     }
     .fjs-col-left {
-        width: 500px;
+        width: 460px;
         flex-shrink: 0;
-        padding: 0 48px 80px 56px;
+        padding: 0 0 80px 56px;
         position: relative;
     }
     .fjs-col-right {
         flex: 1;
-        padding: 0 56px 80px 48px;
-        border-left: 1px solid rgba(255,255,255,0.05);
+        min-width: 0;
+        padding: 0 56px 80px 0;
     }
     @media (max-width: 1023px) {
-        .fjs-split { flex-direction: column; }
+        .fjs-split { flex-direction: column; gap: 0; }
         .fjs-col-left { width: 100%; padding: 0 24px 48px; }
-        .fjs-col-right { padding: 0 24px 48px; border-left: none; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 48px; }
-    }
-    @media (max-width: 768px) {
-        .fjs-col-left { padding: 0 20px 36px; }
-        .fjs-col-right { padding: 0 20px 36px; padding-top: 36px; }
+        .fjs-col-right { padding: 0 24px 48px; }
     }
     @media (max-width: 520px) {
-        .fjs-col-left { padding: 0 16px 28px; }
-        .fjs-col-right { padding: 0 16px 28px; padding-top: 28px; }
+        .fjs-col-left { padding: 0 16px 32px; }
+        .fjs-col-right { padding: 0 16px 32px; }
     }
 
-    /* ── Vertical spine ── */
+    /* ── Steps: stamped numbers on a dashed spine ── */
     .fjs-spine {
         position: relative;
-        padding-left: 32px;
+        padding-left: 0;
     }
     .fjs-spine::before {
         content: '';
         position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: linear-gradient(to bottom, rgba(220,120,140,0.4), rgba(180,100,160,0.2), transparent);
-        border-radius: 2px;
+        left: 17px;
+        top: 12px;
+        bottom: 12px;
+        width: 0;
+        border-left: 2px dashed rgba(122, 28, 43, 0.30);
     }
-    .fjs-spine-node {
+    .fjs-step {
         position: relative;
-        padding-bottom: 40px;
+        display: flex;
+        gap: 16px;
+        padding-bottom: 30px;
     }
-    .fjs-spine-node:last-child {
-        padding-bottom: 0;
+    .fjs-step:last-child { padding-bottom: 0; }
+    .fjs-stnum {
+        position: relative;
+        z-index: 1;
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+        border: 2px solid #7A1C2B;
+        box-shadow: 3px 3px 0 #7A1C2B;
+        background: #BE185D;
+        color: #fff;
+        transform: rotate(2deg);
     }
-    /* Glowing dot on the spine */
-    .fjs-spine-node::before {
-        content: '';
-        position: absolute;
-        left: -37px;
-        top: 8px;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #e8788c, #c05a7a);
-        box-shadow: 0 0 12px rgba(220,120,140,0.5), 0 0 24px rgba(220,120,140,0.2);
+    .fjs-step:nth-child(odd) .fjs-stnum {
+        background: #B9EBD6;
+        color: #7A1C2B;
+        transform: rotate(-2deg);
     }
-    /* Pulse ring */
-    .fjs-spine-node::after {
-        content: '';
-        position: absolute;
-        left: -41px;
-        top: 4px;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        border: 1px solid rgba(220,120,140,0.3);
-        animation: fjsPulse 2s ease-in-out infinite;
+    .fjs-sttl {
+        font-size: 14px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: #7A1C2B;
+        margin: 0 0 4px;
     }
-    @keyframes fjsPulse {
-        0%, 100% { transform: scale(1); opacity: 0.5; }
-        50% { transform: scale(1.4); opacity: 0; }
+    .fjs-stxt {
+        font-size: 13px;
+        color: #6b5a5e;
+        margin: 0;
+        line-height: 1.55;
     }
 
-    /* ── Job row hover ── */
+    /* ── CTA ── */
+    .fjs-join {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 30px;
+        padding: 13px 30px;
+        font-size: 13px;
+        font-weight: 800;
+        color: #fff;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        background: #BE185D;
+        border: 2px solid #7A1C2B;
+        box-shadow: 4px 4px 0 #7A1C2B;
+        text-decoration: none;
+        transition: transform 0.15s ease, background 0.2s ease;
+    }
+    .fjs-join:hover { transform: translateY(-2px); background: #9D174D; }
+
+    /* ── Job cards: flat, hard-shadowed ── */
     .fjs-job {
         display: flex;
         align-items: center;
-        gap: 24px;
-        padding: 24px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
+        gap: 16px;
+        background: #fff;
+        border: 2px solid #7A1C2B;
+        box-shadow: 4px 4px 0 #7A1C2B;
+        padding: 15px 18px;
+        margin-bottom: 14px;
         text-decoration: none;
-        transition: all 0.3s;
+        transition: transform 0.15s ease;
     }
-    .fjs-job:hover .fjs-num { color: rgba(220,120,140,0.4) !important; }
-    .fjs-job:hover .fjs-jtitle { color: #f4c2cc !important; }
-    .fjs-job:hover .fjs-circle-cta {
-        transform: scale(1.1) !important;
-        box-shadow: 0 4px 20px rgba(200,90,120,0.4) !important;
+    .fjs-job:hover { transform: translateY(-2px); }
+    .fjs-job:hover .fjs-go { background: #BE185D; color: #fff; }
+    .fjs-jtitle {
+        font-weight: 700;
+        font-size: 19px;
+        line-height: 1.25;
+        color: #38212B;
+        margin: 3px 0 6px;
     }
-    @media (max-width: 768px) {
-        .fjs-job { gap: 16px; padding: 20px 0; }
-        .fjs-num { font-size: 28px !important; min-width: 36px !important; }
-        .fjs-jtitle { font-size: 18px !important; }
-        .fjs-circle-cta { width: 36px !important; height: 36px !important; }
+    .fjs-jmeta {
+        font-size: 12.5px;
+        color: #8a7f83;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .fjs-jsal {
+        color: #BE185D;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        font-size: 13.5px;
+    }
+    .fjs-go {
+        width: 34px;
+        height: 34px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #7A1C2B;
+        box-shadow: 2px 2px 0 #7A1C2B;
+        background: #B9EBD6;
+        color: #7A1C2B;
+        transition: background 0.15s ease, color 0.15s ease;
     }
     @media (max-width: 520px) {
-        .fjs-num { display: none !important; }
-        .fjs-job { gap: 12px; padding: 16px 0; }
-        .fjs-jtitle { font-size: 16px !important; }
-    }
-    @media (max-width: 768px) {
-        .fjs-header { padding: 48px 20px 36px !important; }
-        .fjs-header h2 { font-size: 28px !important; }
-    }
-    @media (max-width: 520px) {
-        .fjs-header { padding: 40px 16px 28px !important; }
-        .fjs-header h2 { font-size: 24px !important; }
+        .fjs-jtitle { font-size: 16px; }
+        .fjs-job { gap: 12px; padding: 13px 14px; }
+        .fjs-steps-panel { padding: 20px 18px 24px; }
+        .fjs-steps-panel .fjs-h2 { font-size: 24px; }
     }
 `;
 
@@ -231,34 +306,17 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
         <section className="fjs-wrap">
             <style>{css}</style>
 
-            {/* ── Header ── */}
-            <m.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: '-60px' }}
-                variants={stagger}
-                style={{ maxWidth: '1360px', margin: '0 auto', padding: '80px 56px 56px', position: 'relative', zIndex: 1 }}
-                className="fjs-header"
-            >
-                <m.p
-                    variants={fadeUp}
-                    style={{ fontSize: '13px', fontWeight: 600, color: '#e8788c', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '12px' }}
-                >
-                    A seamless path to your next role
-                </m.p>
-                <m.h2
-                    variants={fadeUp}
-                    className="font-lora"
-                    style={{ fontSize: '44px', fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.15 }}
-                >
-                    How it works
-                </m.h2>
-            </m.div>
+            {/* ── Background: faint plus marks on the solid panel ── */}
+            <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                {PLUS_MARKS.map((p, i) => (
+                    <span key={i} className="fjs-plus" style={{ top: p.top, left: p.left, fontSize: p.size, transform: `rotate(${p.rotate}deg)` }}>+</span>
+                ))}
+            </div>
 
-            {/* ── SPLIT: Process Left / Jobs Right ── */}
+            {/* ── SPLIT: Steps panel left / Jobs right ── */}
             <div className="fjs-split" style={{ position: 'relative', zIndex: 1 }}>
 
-                {/* ═══ LEFT: Vertical process spine ═══ */}
+                {/* ═══ LEFT: how-it-works tree on its own warm panel ═══ */}
                 <m.div
                     className="fjs-col-left"
                     initial="hidden"
@@ -266,78 +324,35 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
                     viewport={{ once: true }}
                     variants={stagger}
                 >
-                    <div className="fjs-spine">
-                        {STEPS.map((step, i) => (
-                            <m.div
-                                key={i}
-                                className="fjs-spine-node"
-                                variants={fadeLeft}
-                            >
-                                {/* Notion-style illustration */}
-                                <div style={{
-                                    width: 180,
-                                    height: 180,
-                                    marginBottom: '16px',
-                                    borderRadius: '20px',
-                                    overflow: 'hidden',
-                                }}>
-                                    <Image
-                                        src={step.img}
-                                        alt={step.title}
-                                        width={180}
-                                        height={180}
-                                        style={{ objectFit: 'cover', borderRadius: '20px' }}
-                                        loading="lazy"
-                                        placeholder="blur"
-                                        blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgZmlsbD0iIzNhMTIyOCIvPjwvc3ZnPg=="
-                                    />
-                                </div>
+                    <div className="fjs-steps-panel">
+                        <m.p variants={fadeLeft} className="fjs-eyebrow">
+                            A seamless path to your next role
+                        </m.p>
+                        <m.h2 variants={fadeLeft} className="fjs-h2 font-heading">
+                            How it works
+                        </m.h2>
 
-                                <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#f8e8ec', margin: '0 0 6px' }}>
-                                    {step.title}
-                                </h4>
-                                <p style={{ fontSize: '13px', color: 'rgba(248,232,236,0.4)', margin: 0, lineHeight: 1.55 }}>
-                                    {step.desc}
-                                </p>
-                            </m.div>
-                        ))}
+                        <div className="fjs-spine">
+                            {STEPS.map((step, i) => (
+                                <m.div key={step.title} className="fjs-step" variants={fadeLeft}>
+                                    <span className="fjs-stnum">{String(i + 1).padStart(2, '0')}</span>
+                                    <div>
+                                        <p className="fjs-sttl">{step.title}</p>
+                                        <p className="fjs-stxt">{step.desc}</p>
+                                    </div>
+                                </m.div>
+                            ))}
+                        </div>
+
+                        <m.div variants={fadeLeft}>
+                            <Link href="/register" className="fjs-join">
+                                Join Now <ArrowUpRight size={15} />
+                            </Link>
+                        </m.div>
                     </div>
-
-                    {/* CTA */}
-                    <m.div variants={fadeLeft} style={{ marginTop: '32px', paddingLeft: '32px' }}>
-                        <Link
-                            href="/register"
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                padding: '13px 32px',
-                                fontSize: '13px',
-                                fontWeight: 700,
-                                color: '#fff',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.08em',
-                                background: 'linear-gradient(135deg, #c05a7a, #e8788c)',
-                                borderRadius: '12px',
-                                boxShadow: '0 4px 20px rgba(200,90,120,0.3)',
-                                textDecoration: 'none',
-                                transition: 'transform 0.3s, box-shadow 0.3s',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-3px)';
-                                e.currentTarget.style.boxShadow = '0 8px 32px rgba(200,90,120,0.45)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = '0 4px 20px rgba(200,90,120,0.3)';
-                            }}
-                        >
-                            Join Now <ArrowUpRight size={15} />
-                        </Link>
-                    </m.div>
                 </m.div>
 
-                {/* ═══ RIGHT: Featured jobs ═══ */}
+                {/* ═══ RIGHT: latest openings ═══ */}
                 <m.div
                     className="fjs-col-right"
                     initial="hidden"
@@ -345,110 +360,46 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
                     viewport={{ once: true }}
                     variants={stagger}
                 >
-                    <m.div variants={fadeRight} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <p style={{ fontSize: '13px', fontWeight: 600, color: '#e8788c', textTransform: 'uppercase', letterSpacing: '0.15em', margin: 0 }}>
+                    <m.div variants={fadeRight} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                        <p style={{ fontSize: '12px', fontWeight: 800, color: '#7A1C2B', textTransform: 'uppercase', letterSpacing: '0.15em', margin: 0 }}>
                             Latest openings
                         </p>
                         <Link
                             href="/jobs"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '13px', fontWeight: 600, color: 'rgba(248,232,236,0.5)', textDecoration: 'none' }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '13px', fontWeight: 700, color: '#BE185D', textDecoration: 'none' }}
                         >
                             View all <ArrowUpRight size={13} />
                         </Link>
                     </m.div>
 
-                    {jobs.slice(0, 8).map((job, i) => {
+                    {jobs.slice(0, 8).map((job) => {
                         const href = job.slug ? `/jobs/${job.slug}` : `/jobs/${job.id}`;
                         const postedDate = job.originalPostedAt || job.createdAt;
 
                         return (
                             <m.div key={job.id} variants={fadeRight}>
                                 <Link href={href} className="fjs-job">
-                                    {/* Styled number */}
-                                    <span
-                                        className="fjs-num font-lora"
-                                        style={{
-                                            fontSize: '40px',
-                                            fontWeight: 800,
-                                            color: 'rgba(255,255,255,0.06)',
-                                            lineHeight: 1,
-                                            minWidth: '48px',
-                                            flexShrink: 0,
-                                            transition: 'color 0.3s',
-                                        }}
-                                    >
-                                        {String(i + 1).padStart(2, '0')}
-                                    </span>
-
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        {/* Employer row */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(248,232,236,0.55)', letterSpacing: '0.02em' }}>
-                                                {job.employer}
-                                            </span>
-                                            <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-                                            {job.jobType && (
-                                                <>
-                                                    <span style={{ fontSize: '13px', color: 'rgba(248,232,236,0.45)' }}>
-                                                        {job.jobType}
-                                                    </span>
-                                                    <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-                                                </>
-                                            )}
-                                            {/* "New" recency badge removed — relativeTime below already conveys freshness. */}
-                                            <span style={{ fontSize: '12px', color: 'rgba(248,232,236,0.35)' }}>
-                                                {mounted ? relativeTime(postedDate) : ''}
-                                            </span>
-                                        </div>
-
-                                        {/* Big title */}
-                                        <h3
-                                            className="fjs-jtitle font-lora"
-                                            style={{
-                                                fontSize: '22px',
-                                                fontWeight: 700,
-                                                color: '#f8e8ec',
-                                                lineHeight: 1.3,
-                                                margin: '0 0 8px',
-                                                transition: 'color 0.3s',
-                                            }}
-                                        >
-                                            {job.title}
-                                        </h3>
-
-                                        {/* Details row */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '14px', color: 'rgba(248,232,236,0.5)' }}>
+                                        <p className="fjs-jmeta">
+                                            <span style={{ fontWeight: 700, color: '#6b5a5e' }}>{job.employer}</span>
+                                            {job.jobType && <><span>·</span><span>{job.jobType}</span></>}
+                                            <span>·</span>
+                                            <span>{mounted ? relativeTime(postedDate) : ''}</span>
+                                        </p>
+                                        <h3 className="fjs-jtitle font-heading">{job.title}</h3>
+                                        <p className="fjs-jmeta">
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                                <MapPin size={13} style={{ color: '#e8788c' }} />
+                                                <MapPin size={13} style={{ color: '#BE185D' }} />
                                                 {job.location}
                                             </span>
                                             {job.displaySalary && (
-                                                <span style={{ fontWeight: 700, color: '#6ee7b7', fontSize: '14px' }}>
-                                                    {job.displaySalary}
-                                                </span>
+                                                <span className="fjs-jsal">{job.displaySalary}</span>
                                             )}
-                                        </div>
+                                        </p>
                                     </div>
-
-                                    {/* Circle CTA */}
-                                    <div
-                                        className="fjs-circle-cta"
-                                        style={{
-                                            width: 44,
-                                            height: 44,
-                                            borderRadius: '50%',
-                                            background: 'linear-gradient(135deg, #c05a7a, #e8788c)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            flexShrink: 0,
-                                            alignSelf: 'center',
-                                            transition: 'transform 0.3s, box-shadow 0.3s',
-                                            boxShadow: '0 2px 12px rgba(200,90,120,0.2)',
-                                        }}
-                                    >
-                                        <ArrowUpRight size={18} style={{ color: '#fff' }} />
-                                    </div>
+                                    <span className="fjs-go" aria-hidden="true">
+                                        <ArrowUpRight size={17} />
+                                    </span>
                                 </Link>
                             </m.div>
                         );
@@ -456,7 +407,6 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
                 </m.div>
             </div>
         </section>
-
         </LazyMotion>
     );
 }

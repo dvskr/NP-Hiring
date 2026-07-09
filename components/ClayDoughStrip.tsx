@@ -1,24 +1,27 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import { LazyMotion, domAnimation, m } from 'framer-motion';
 
-const CLAY_COLORS = [
-    '#6ee7b7', '#F9A8D4', '#67e8f9', '#a5b4fc', '#c4b5fd',
-    '#f0abfc', '#fda4af', '#fcd34d', '#86efac', '#FBCFE8',
-    '#a5f3fc', '#c7d2fe', '#ddd6fe', '#f5d0fe', '#fbcfe8',
-    '#fde68a', '#bef264',
-];
+/* ── "No Sugar" sticker tape (user-approved E1 mock, 2026-07-09) ──
+   Flat employer stickers with hard offset shadows on the hero's cream +
+   faint-grid stage. Replaces the peach-gradient clay marquee. Palette and
+   ink match components/HomepageHero.tsx. */
+const OXBLOOD = '#7A1C2B';
+const BERRY = '#BE185D';
+const CREAM = '#F5F0EB';
+
+/* Background rotation for the stickers — hero palette. */
+const STICKER_FILLS = ['#B9EBD6', '#FFFFFF', '#D5F5F1', '#FBCFE8', '#FDE3C8'];
+/* Alternating tilts, sticker-slap style. */
+const STICKER_TILTS = [-1.5, 1, -1, 1.5, -2];
 
 interface ClayDoughStripProps {
     employers: { name: string; count: number }[];
+    /** e.g. "1000+" — rendered in the eyebrow line above the tape. */
+    jobCountDisplay?: string;
 }
 
-export default function ClayDoughStrip({ employers }: ClayDoughStripProps) {
-    const [isPaused, setIsPaused] = useState(false);
-    const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-
+export default function ClayDoughStrip({ employers, jobCountDisplay }: ClayDoughStripProps) {
     // Deduplicate by normalized name
     const seen = new Set<string>();
     const unique = employers.filter((emp) => {
@@ -28,102 +31,122 @@ export default function ClayDoughStrip({ employers }: ClayDoughStripProps) {
         return true;
     });
 
-    const items = unique.map((emp, i) => ({
-        name: emp.name,
-        roles: emp.count,
-        color: CLAY_COLORS[i % CLAY_COLORS.length],
-    }));
+    if (unique.length === 0) return null;
 
-    // Double for seamless infinite loop
-    const doubled = [...items, ...items];
-
+    // Double for seamless infinite loop (tape translates -50%)
+    const doubled = [...unique, ...unique];
 
     return (
-        <LazyMotion features={domAnimation}>
         <section
-            className="w-full flex flex-col items-center justify-center overflow-hidden relative py-16 lg:py-24"
-            style={{
-                background: 'linear-gradient(160deg, #FDFBF7 0%, #F5D5C4 40%, #F0B8A0 100%)',
-            }}
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => { setIsPaused(false); setHoveredIdx(null); }}
+            aria-label="Employers currently hiring"
+            style={{ position: 'relative', overflow: 'hidden', background: CREAM, padding: '44px 0 48px' }}
         >
-            {/* Single flowing row */}
-            <div className="relative w-full overflow-hidden" style={{ height: '72px' }}>
-                {/* Left fade */}
-                <div style={{
-                    position: 'absolute', left: 0, top: 0, bottom: 0, width: '120px', zIndex: 2,
-                    background: 'linear-gradient(to right, #F2C5A8, transparent)',
+            {/* Faint oxblood graph grid — same field as the hero */}
+            <div
+                aria-hidden="true"
+                style={{
+                    position: 'absolute',
+                    inset: 0,
                     pointerEvents: 'none',
-                }} />
-                {/* Right fade */}
-                <div style={{
-                    position: 'absolute', right: 0, top: 0, bottom: 0, width: '120px', zIndex: 2,
-                    background: 'linear-gradient(to left, #F2C5A8, transparent)',
-                    pointerEvents: 'none',
-                }} />
+                    backgroundImage:
+                        'linear-gradient(rgba(122,28,43,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(122,28,43,0.07) 1px, transparent 1px)',
+                    backgroundSize: '44px 44px',
+                }}
+            />
 
-                <m.div
-                    className="absolute flex items-center gap-5 whitespace-nowrap h-full"
-                    animate={isPaused ? { x: 0 } : { x: ['0%', '-50%'] }}
-                    transition={isPaused ? { duration: 0 } : {
-                        duration: 50,
-                        repeat: Infinity,
-                        ease: 'linear',
-                    }}
-                >
-                    {doubled.map((emp, i) => {
-                        const isHovered = hoveredIdx === i;
-                        return (
-                            <Link
-                                key={i}
-                                href={`/jobs?q=${encodeURIComponent(emp.name)}`}
-                                onMouseEnter={() => setHoveredIdx(i)}
-                                onMouseLeave={() => setHoveredIdx(null)}
-                                className="px-7 py-3.5 flex items-center gap-3"
-                                style={{
-                                    background: `linear-gradient(145deg, ${emp.color}${isHovered ? 'ff' : 'cc'}, ${emp.color}${isHovered ? 'dd' : '99'})`,
-                                    borderRadius: '20px',
-                                    boxShadow: isHovered
-                                        ? `inset 3px 3px 6px rgba(255,255,255,0.5), inset -2px -2px 4px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.14)`
-                                        : 'inset 3px 3px 6px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.08)',
-                                    flexShrink: 0,
-                                    cursor: 'pointer',
-                                    transform: isHovered ? 'translateY(-4px) scale(1.05)' : 'translateY(0) scale(1)',
-                                    transition: 'transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease',
-                                    textDecoration: 'none',
-                                }}
-                            >
-                                <div
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-                                    style={{
-                                        color: 'rgba(51,65,85,0.65)',
-                                        background: 'rgba(255,255,255,0.45)',
-                                        boxShadow:
-                                            'inset 1px 1px 3px rgba(255,255,255,0.5), inset -1px -1px 2px rgba(0,0,0,0.04)',
-                                    }}
-                                >
-                                    {emp.name[0]}
-                                </div>
-                                <span className="text-sm font-medium" style={{ color: 'rgba(30,41,59,0.8)' }}>
-                                    {emp.name}
-                                </span>
-                                <span
-                                    className="text-xs"
-                                    style={{
-                                        color: isHovered ? 'rgba(190,24,93,0.9)' : 'rgba(51,65,85,0.45)',
-                                        fontWeight: isHovered ? 700 : 500,
-                                        transition: 'color 0.2s ease, font-weight 0.2s ease',
-                                    }}
-                                >
-                                    {emp.roles} {isHovered ? 'jobs →' : ''}
-                                </span>
-                            </Link>
-                        );
-                    })}
-                </m.div>
+            {/* Eyebrow */}
+            <p
+                style={{
+                    position: 'relative',
+                    textAlign: 'center',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    letterSpacing: '0.2em',
+                    textTransform: 'uppercase',
+                    color: OXBLOOD,
+                    margin: '0 0 22px',
+                    zIndex: 2,
+                }}
+            >
+                {jobCountDisplay ? (
+                    <>
+                        <span style={{ color: BERRY }}>{jobCountDisplay}</span> roles from teams like these
+                    </>
+                ) : (
+                    'Teams hiring NPs right now'
+                )}
+            </p>
+
+            {/* Tape */}
+            <div className="cds-row" style={{ position: 'relative', overflow: 'hidden' }}>
+                {/* Edge fades into the cream stage */}
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '110px', zIndex: 2, background: `linear-gradient(to right, ${CREAM}, transparent)`, pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '110px', zIndex: 2, background: `linear-gradient(to left, ${CREAM}, transparent)`, pointerEvents: 'none' }} />
+
+                <div className="cds-tape" style={{ display: 'flex', gap: '22px', whiteSpace: 'nowrap', width: 'max-content', padding: '6px 0' }}>
+                    {doubled.map((emp, i) => (
+                        <Link
+                            key={`${emp.name}-${i}`}
+                            href={`/jobs?q=${encodeURIComponent(emp.name)}`}
+                            aria-label={`Browse ${emp.count} jobs at ${emp.name}`}
+                            className="cds-tag"
+                            style={{
+                                background: STICKER_FILLS[i % STICKER_FILLS.length],
+                                transform: `rotate(${STICKER_TILTS[i % STICKER_TILTS.length]}deg)`,
+                            }}
+                        >
+                            {emp.name}
+                            <em>{emp.count}</em>
+                        </Link>
+                    ))}
+                </div>
             </div>
+
+            <style jsx global>{`
+                @keyframes cds-slide {
+                    to { transform: translateX(-50%); }
+                }
+                .cds-tape {
+                    animation: cds-slide 40s linear infinite;
+                }
+                .cds-row:hover .cds-tape {
+                    animation-play-state: paused;
+                }
+                .cds-tag {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 9px;
+                    padding: 11px 18px;
+                    flex-shrink: 0;
+                    border: 2px solid #7A1C2B;
+                    box-shadow: 3px 3px 0 #7A1C2B;
+                    font-weight: 800;
+                    font-size: 13px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.04em;
+                    color: #7A1C2B;
+                    text-decoration: none;
+                    cursor: pointer;
+                    transition: transform 0.15s ease;
+                }
+                .cds-tag em {
+                    font-style: normal;
+                    color: #BE185D;
+                    font-size: 12.5px;
+                    font-variant-numeric: tabular-nums;
+                }
+                .cds-tag:hover,
+                .cds-tag:focus-visible {
+                    transform: translateY(-3px) rotate(0deg) !important;
+                }
+                .cds-tag:focus-visible {
+                    outline: 3px solid #BE185D;
+                    outline-offset: 2px;
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .cds-tape { animation: none; }
+                }
+            `}</style>
         </section>
-        </LazyMotion>
     );
 }

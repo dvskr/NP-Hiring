@@ -75,21 +75,20 @@ export default function TopStatesList({ states }: TopStatesProps) {
                                     className="relative overflow-hidden aspect-square mb-2"
                                     style={{
                                         borderRadius: '24px',
-                                        backgroundColor: '#F8B4A6',
-                                        boxShadow:
-                                            'inset 4px 4px 10px rgba(255,255,255,0.3), inset -3px -3px 8px rgba(0,0,0,0.08), 0 6px 20px rgba(0,0,0,0.1)',
+                                        /* measured mid-tone of the artwork's baked-in rose
+                                           (the generator's actual output, not the requested
+                                           #F8B4A6) — shows only during image load */
+                                        backgroundColor: '#DC9E97',
+                                        boxShadow: '0 6px 20px rgba(0,0,0,0.1)',
                                         transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                                        padding: '16px',
                                     }}
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.transform = 'translateY(-6px) scale(1.03)';
-                                        e.currentTarget.style.boxShadow =
-                                            'inset 4px 4px 10px rgba(255,255,255,0.3), inset -3px -3px 8px rgba(0,0,0,0.08), 0 14px 32px rgba(0,0,0,0.16)';
+                                        e.currentTarget.style.boxShadow = '0 14px 32px rgba(0,0,0,0.16)';
                                     }}
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                                        e.currentTarget.style.boxShadow =
-                                            'inset 4px 4px 10px rgba(255,255,255,0.3), inset -3px -3px 8px rgba(0,0,0,0.08), 0 6px 20px rgba(0,0,0,0.1)';
+                                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)';
                                     }}
                                 >
                                     <div className="relative w-full h-full">
@@ -99,7 +98,7 @@ export default function TopStatesList({ states }: TopStatesProps) {
                                             slug={state.slug}
                                             alt={`${state.name} ${brand.niche.short} jobs`}
                                             fill
-                                            className="object-contain"
+                                            className="object-cover"
                                             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
                                         />
                                     </div>
