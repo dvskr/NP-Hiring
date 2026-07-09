@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+  <!-- Background -->
+  <rect width="400" height="400" fill="#A8D4E8"/>
+
+  <!-- Monitor -->
+  <rect x="70" y="140" width="130" height="95" rx="8" fill="#FFFFFF" stroke="#1E3A5F" stroke-width="5"/>
+  <rect x="80" y="150" width="110" height="75" rx="4" fill="#E2E8F0"/>
+  <!-- Monitor Stand -->
+  <path d="M120 235 L115 270 L155 270 L150 235" fill="#94A3B8" stroke="#1E3A5F" stroke-width="4"/>
+  <rect x="100" y="270" width="70" height="8" rx="2" fill="#64748B" stroke="#1E3A5F" stroke-width="4"/>
+
+  <!-- Floating profile cards above/around monitor -->
+  <!-- Card 1 -->
+  <rect x="50" y="45" width="80" height="60" rx="8" fill="#FFFFFF" stroke="#1E3A5F" stroke-width="4"/>
+  <circle cx="75" cy="70" r="10" fill="#93C5FD" stroke="#1E3A5F" stroke-width="2"/>
+  <rect x="92" y="65" width="28" height="5" rx="2" fill="#CBD5E1"/>
+  <rect x="92" y="75" width="20" height="5" rx="2" fill="#CBD5E1"/>
+  <!-- Card 2 -->
+  <rect x="150" y="55" width="80" height="60" rx="8" fill="#FFFFFF" stroke="#1E3A5F" stroke-width="4"/>
+  <circle cx="175" cy="80" r="10" fill="#FDBCB4" stroke="#1E3A5F" stroke-width="2"/>
+  <rect x="192" y="75" width="28" height="5" rx="2" fill="#CBD5E1"/>
+  <rect x="192" y="85" width="20" height="5" rx="2" fill="#CBD5E1"/>
+  <!-- Card 3 -->
+  <rect x="250" y="35" width="80" height="60" rx="8" fill="#FFFFFF" stroke="#1E3A5F" stroke-width="4"/>
+  <circle cx="275" cy="60" r="10" fill="#A7F3D0" stroke="#1E3A5F" stroke-width="2"/>
+  <rect x="292" y="55" width="28" height="5" rx="2" fill="#CBD5E1"/>
+  <rect x="292" y="65" width="20" height="5" rx="2" fill="#CBD5E1"/>
+
+  <!-- Desk Surface -->
+  <line x1="20" y1="278" x2="380" y2="278" stroke="#1E3A5F" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- NP Character (sitting on the right side) -->
+  <!-- Head -->
+  <circle cx="275" cy="160" r="32" fill="#FDBCB4" stroke="#1E3A5F" stroke-width="5"/>
+  <!-- Hair -->
+  <path d="M243 150 Q243 122 275 122 Q307 122 307 150 Q307 140 295 135 Q275 128 255 135 Q243 140 243 150Z" fill="#5B3A29" stroke="#1E3A5F" stroke-width="3"/>
+  <!-- Bun -->
+  <circle cx="303" cy="135" r="12" fill="#5B3A29" stroke="#1E3A5F" stroke-width="3"/>
+  <!-- Eyes -->
+  <circle cx="263" cy="158" r="3" fill="#1E3A5F"/>
+  <circle cx="287" cy="158" r="3" fill="#1E3A5F"/>
+  <!-- Smile -->
+  <path d="M267 172 Q275 180 283 172" stroke="#1E3A5F" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+  <!-- Body / Scrubs -->
+  <path d="M240 192 L245 285 Q245 295 255 295 L305 295 Q315 295 315 285 L310 192 Q305 185 275 185 Q245 185 240 192Z" fill="#60A5FA" stroke="#1E3A5F" stroke-width="5"/>
+  <!-- V-neck -->
+  <path d="M260 192 L275 215 L290 192" stroke="#1E3A5F" stroke-width="3" fill="#FFFFFF"/>
+
+  <!-- Left arm typing/reaching toward screen -->
+  <path d="M240 205 L190 220 L180 235" stroke="#1E3A5F" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <circle cx="180" cy="237" r="8" fill="#FDBCB4" stroke="#1E3A5F" stroke-width="3"/>
+
+  <!-- Right hand holding golden key -->
+  <path d="M310 205 L335 220" stroke="#1E3A5F" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <circle cx="335" cy="222" r="8" fill="#FDBCB4" stroke="#1E3A5F" stroke-width="3"/>
+
+  <!-- Stethoscope -->
+  <path d="M265 195 Q255 220 260 235" stroke="#1E3A5F" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <circle cx="260" cy="238" r="6" fill="#94A3B8" stroke="#1E3A5F" stroke-width="2"/>
+
+  <!-- Golden Key -->
+  <path d="M335 222 L365 192" stroke="#F59E0B" stroke-width="6" stroke-linecap="round"/>
+  <!-- Key teeth -->
+  <path d="M352 205 L358 211 M360 197 L366 203" stroke="#F59E0B" stroke-width="5" stroke-linecap="round"/>
+  <!-- Key handle -->
+  <circle cx="332" cy="225" r="14" fill="none" stroke="#F59E0B" stroke-width="6"/>
+
+  <!-- Chair Backrest -->
+  <path d="M320 230 L345 230 L345 315 L320 315 Z" fill="#475569" stroke="#1E3A5F" stroke-width="4"/>
+</svg>

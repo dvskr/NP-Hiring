@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+  <!-- Background -->
+  <rect width="400" height="400" rx="0" fill="#A8D4E8"/>
+
+  <!-- Board -->
+  <rect x="60" y="50" width="180" height="220" rx="12" fill="#D4A574" stroke="#1E3A5F" stroke-width="5"/>
+  <rect x="70" y="60" width="160" height="200" rx="8" fill="#E8C9A0" stroke="#1E3A5F" stroke-width="3"/>
+
+  <!-- Card with colored blocks -->
+  <rect x="85" y="75" width="130" height="170" rx="8" fill="#FFFFFF" stroke="#1E3A5F" stroke-width="4"/>
+  <!-- Pin -->
+  <circle cx="150" cy="75" r="8" fill="#3B82F6" stroke="#1E3A5F" stroke-width="3"/>
+  <!-- Red block -->
+  <rect x="100" y="100" width="100" height="30" rx="5" fill="#EF4444" stroke="#1E3A5F" stroke-width="3"/>
+  <!-- Yellow block -->
+  <rect x="100" y="145" width="100" height="30" rx="5" fill="#F59E0B" stroke="#1E3A5F" stroke-width="3"/>
+  <!-- Green block -->
+  <rect x="100" y="190" width="100" height="30" rx="5" fill="#22C55E" stroke="#1E3A5F" stroke-width="3"/>
+
+  <!-- NP Character (right side) -->
+  <!-- Head -->
+  <circle cx="310" cy="120" r="32" fill="#FDBCB4" stroke="#1E3A5F" stroke-width="5"/>
+  <!-- Hair -->
+  <path d="M278 110 Q278 82 310 82 Q342 82 342 110 Q342 100 330 95 Q310 88 290 95 Q278 100 278 110Z" fill="#5B3A29" stroke="#1E3A5F" stroke-width="3"/>
+  <!-- Hair bun -->
+  <circle cx="338" cy="95" r="12" fill="#5B3A29" stroke="#1E3A5F" stroke-width="3"/>
+  <!-- Eyes -->
+  <circle cx="298" cy="118" r="3" fill="#1E3A5F"/>
+  <circle cx="322" cy="118" r="3" fill="#1E3A5F"/>
+  <!-- Smile -->
+  <path d="M302 132 Q310 140 318 132" stroke="#1E3A5F" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+  <!-- Body / Scrubs -->
+  <path d="M275 152 L270 260 Q270 270 280 270 L340 270 Q350 270 350 260 L345 152 Q340 145 310 145 Q280 145 275 152Z" fill="#60A5FA" stroke="#1E3A5F" stroke-width="5"/>
+  <!-- V-neck -->
+  <path d="M295 152 L310 175 L325 152" stroke="#1E3A5F" stroke-width="3" fill="#FFFFFF"/>
+  <!-- Scrub top line -->
+  <line x1="310" y1="220" x2="310" y2="270" stroke="#3B82F6" stroke-width="2"/>
+
+  <!-- Left arm (reaching toward board) -->
+  <path d="M275 165 L230 140 L215 110" stroke="#1E3A5F" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <circle cx="215" cy="108" r="10" fill="#FDBCB4" stroke="#1E3A5F" stroke-width="3"/>
+
+  <!-- Right arm -->
+  <path d="M345 170 L360 220 L350 240" stroke="#1E3A5F" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <circle cx="350" cy="242" r="10" fill="#FDBCB4" stroke="#1E3A5F" stroke-width="3"/>
+
+  <!-- Stethoscope -->
+  <path d="M300 155 Q290 180 295 200" stroke="#1E3A5F" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <circle cx="295" cy="203" r="6" fill="#94A3B8" stroke="#1E3A5F" stroke-width="2"/>
+
+  <!-- Legs -->
+  <rect x="282" y="268" width="22" height="70" rx="8" fill="#60A5FA" stroke="#1E3A5F" stroke-width="4"/>
+  <rect x="316" y="268" width="22" height="70" rx="8" fill="#60A5FA" stroke="#1E3A5F" stroke-width="4"/>
+  <!-- Shoes -->
+  <ellipse cx="293" cy="345" rx="18" ry="10" fill="#FFFFFF" stroke="#1E3A5F" stroke-width="4"/>
+  <ellipse cx="327" cy="345" rx="18" ry="10" fill="#FFFFFF" stroke="#1E3A5F" stroke-width="4"/>
+</svg>

@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+  <!-- Background -->
+  <rect width="400" height="400" fill="#A8D4E8"/>
+
+  <!-- Analytics Dashboard / Chart Board (centered background) -->
+  <rect x="150" y="80" width="210" height="180" rx="12" fill="#FFFFFF" stroke="#1E3A5F" stroke-width="5"/>
+  <rect x="162" y="92" width="186" height="156" rx="8" fill="#F8FAFC"/>
+
+  <!-- Bar Chart Columns -->
+  <!-- Orange Bar -->
+  <rect x="180" y="170" width="24" height="60" rx="4" fill="#F97316" stroke="#1E3A5F" stroke-width="3"/>
+  <!-- Green Bar -->
+  <rect x="215" y="140" width="24" height="90" rx="4" fill="#22C55E" stroke="#1E3A5F" stroke-width="3"/>
+  <!-- Red/Pink Bar -->
+  <rect x="250" y="160" width="24" height="70" rx="4" fill="#EC4899" stroke="#1E3A5F" stroke-width="3"/>
+  <!-- Purple Bar -->
+  <rect x="285" y="110" width="24" height="120" rx="4" fill="#A855F7" stroke="#1E3A5F" stroke-width="3"/>
+
+  <!-- Upward Trend Line -->
+  <path d="M175 160 L210 130 L245 145 L285 95 L320 105" stroke="#3B82F6" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <circle cx="210" cy="130" r="5" fill="#3B82F6" stroke="#1E3A5F" stroke-width="2"/>
+  <circle cx="245" cy="145" r="5" fill="#3B82F6" stroke="#1E3A5F" stroke-width="2"/>
+  <circle cx="285" cy="95" r="5" fill="#3B82F6" stroke="#1E3A5F" stroke-width="2"/>
+
+  <!-- NP Character 1 (Left side, female) -->
+  <!-- Head -->
+  <circle cx="95" cy="140" r="28" fill="#FDBCB4" stroke="#1E3A5F" stroke-width="4.5"/>
+  <!-- Hair -->
+  <path d="M67 130 Q67 105 95 105 Q123 105 123 130 Q123 121 113 117 Q95 110 77 117 Q67 121 67 130Z" fill="#5B3A29" stroke="#1E3A5F" stroke-width="3"/>
+  <!-- Hair bun -->
+  <circle cx="120" cy="118" r="10" fill="#5B3A29" stroke="#1E3A5F" stroke-width="3"/>
+  <!-- Eyes -->
+  <circle cx="85" cy="138" r="3" fill="#1E3A5F"/>
+  <circle cx="105" cy="138" r="3" fill="#1E3A5F"/>
+  <!-- Smile -->
+  <path d="M89 150 Q95 156 101 150" stroke="#1E3A5F" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+  <!-- Body / Scrubs -->
+  <path d="M65 168 L60 270 Q60 280 70 280 L120 280 Q130 280 130 270 L125 168 Q120 162 95 162 Q70 162 65 168Z" fill="#60A5FA" stroke="#1E3A5F" stroke-width="4.5"/>
+  <!-- V-neck -->
+  <path d="M80 168 L95 190 L110 168" stroke="#1E3A5F" stroke-width="2.5" fill="#FFFFFF"/>
+  
+  <!-- Hand gesturing to board -->
+  <path d="M125 185 L155 178 L170 185" stroke="#1E3A5F" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <circle cx="170" cy="187" r="7" fill="#FDBCB4" stroke="#1E3A5F" stroke-width="2.5"/>
+
+  <!-- Left hand on hip -->
+  <path d="M65 185 L52 210 L60 230" stroke="#1E3A5F" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <circle cx="60" cy="232" r="7" fill="#FDBCB4" stroke="#1E3A5F" stroke-width="2.5"/>
+
+  <!-- Stethoscope -->
+  <path d="M85 175 Q75 198 80 215" stroke="#1E3A5F" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <circle cx="80" cy="218" r="5" fill="#94A3B8" stroke="#1E3A5F" stroke-width="2"/>
+
+
+  <!-- NP Character 2 (Middle-right, male) -->
+  <!-- Head -->
+  <circle cx="215" cy="220" r="28" fill="#FDBCB4" stroke="#1E3A5F" stroke-width="4.5"/>
+  <!-- Hair -->
+  <path d="M190 205 Q215 195 240 205 Q225 198 215 198 Q205 198 190 205Z" fill="#334155" stroke="#1E3A5F" stroke-width="3"/>
+  <!-- Eyes -->
+  <circle cx="205" cy="218" r="3" fill="#1E3A5F"/>
+  <circle cx="225" cy="218" r="3" fill="#1E3A5F"/>
+  <!-- Smile -->
+  <path d="M209 230 Q215 236 221 230" stroke="#1E3A5F" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+  <!-- Body / Scrubs -->
+  <path d="M185 248 L180 340 Q180 350 190 350 L240 350 Q250 350 250 340 L245 248 Q240 242 215 242 Q190 242 185 248Z" fill="#3B82F6" stroke="#1E3A5F" stroke-width="4.5"/>
+  <!-- V-neck -->
+  <path d="M200 248 L215 270 L230 248" stroke="#1E3A5F" stroke-width="2.5" fill="#FFFFFF"/>
+
+  <!-- Arm holding clipboard -->
+  <path d="M245 265 L260 290 L250 310" stroke="#1E3A5F" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <circle cx="250" cy="312" r="7" fill="#FDBCB4" stroke="#1E3A5F" stroke-width="2.5"/>
+
+  <!-- Clipboard -->
+  <rect x="252" y="275" width="30" height="42" rx="4" fill="#E2E8F0" stroke="#1E3A5F" stroke-width="3"/>
+  <rect x="260" y="270" width="14" height="7" rx="2" fill="#64748B" stroke="#1E3A5F" stroke-width="2.5"/>
+  <line x1="258" y1="287" x2="276" y2="287" stroke="#94A3B8" stroke-width="2"/>
+  <line x1="258" y1="295" x2="272" y2="295" stroke="#94A3B8" stroke-width="2"/>
+
+  <!-- Stethoscope (Character 2) -->
+  <path d="M205 255 Q195 278 200 295" stroke="#1E3A5F" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <circle cx="200" cy="298" r="5" fill="#94A3B8" stroke="#1E3A5F" stroke-width="2"/>
+
+  <!-- Legs for Character 1 -->
+  <rect x="73" y="278" width="18" height="60" rx="6" fill="#60A5FA" stroke="#1E3A5F" stroke-width="4"/>
+  <rect x="101" y="278" width="18" height="60" rx="6" fill="#60A5FA" stroke="#1E3A5F" stroke-width="4"/>
+  <ellipse cx="82" cy="340" rx="14" ry="8" fill="#FFFFFF" stroke="#1E3A5F" stroke-width="4"/>
+  <ellipse cx="110" cy="340" rx="14" ry="8" fill="#FFFFFF" stroke="#1E3A5F" stroke-width="4"/>
+</svg>
