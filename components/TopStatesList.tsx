@@ -75,9 +75,11 @@ export default function TopStatesList({ states }: TopStatesProps) {
                                     className="relative overflow-hidden aspect-square mb-2"
                                     style={{
                                         borderRadius: '24px',
+                                        backgroundColor: '#F8B4A6',
                                         boxShadow:
                                             'inset 4px 4px 10px rgba(255,255,255,0.3), inset -3px -3px 8px rgba(0,0,0,0.08), 0 6px 20px rgba(0,0,0,0.1)',
                                         transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                                        padding: '16px',
                                     }}
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.transform = 'translateY(-6px) scale(1.03)';
@@ -90,16 +92,17 @@ export default function TopStatesList({ states }: TopStatesProps) {
                                             'inset 4px 4px 10px rgba(255,255,255,0.3), inset -3px -3px 8px rgba(0,0,0,0.08), 0 6px 20px rgba(0,0,0,0.1)';
                                     }}
                                 >
-                                    {/* SEO Fix H15: StateImage falls back to a known-good asset
-                                        if the per-state webp is missing in Supabase. */}
-                                    <StateImage
-                                        slug={state.slug}
-                                        alt={`${state.name} ${brand.niche.short} jobs`}
-                                        fill
-                                        className="object-cover"
-                                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
-                                        loading="lazy"
-                                    />
+                                    <div className="relative w-full h-full">
+                                        {/* SEO Fix H15: StateImage falls back to a known-good asset
+                                            if the per-state webp is missing in Supabase. */}
+                                        <StateImage
+                                            slug={state.slug}
+                                            alt={`${state.name} ${brand.niche.short} jobs`}
+                                            fill
+                                            className="object-contain"
+                                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                                        />
+                                    </div>
                                 </div>
                                 <p className="text-sm font-semibold text-gray-800 group-hover:text-pink-800 transition-colors text-center">
                                     {state.name}
