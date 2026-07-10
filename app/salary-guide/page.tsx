@@ -155,12 +155,12 @@ const specialtyData = [
 ];
 
 const factorCards = [
-  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/clay-icon-match.webp`, title: 'Geographic Location', desc: 'States with higher cost of living and greater demand (CA, NY, MA) typically offer 20-40% higher salaries than rural areas.' },
-  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp`, title: 'Experience Level', desc: `Entry-level ${brand.niche.short}s start around $95-115k. With 5+ years experience, salaries can reach $150-180k or more.` },
-  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-briefcase.webp`, title: 'Practice Setting', desc: 'Private practice and telehealth positions often pay more than hospital or community health settings.' },
-  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-people.webp`, title: 'Employment Type', desc: `1099 contractors and travel ${brand.niche.short}s often earn 20-50% more than W2 employees, though without traditional benefits.` },
-  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp`, title: 'Specialization', desc: 'Subspecialties like acute care, emergency, psychiatric-mental health, or dermatology can command premium pay (+10-25%).' },
-  { img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`, title: 'Negotiation', desc: `${brand.niche.short}s who negotiate can often secure 5-15% higher starting salaries plus signing bonuses ($5,000-$30,000).` },
+  { img: '/images/salary-guide/factor-location.webp', title: 'Geographic Location', desc: 'States with higher cost of living and greater demand (CA, NY, MA) typically offer 20-40% higher salaries than rural areas.' },
+  { img: '/images/salary-guide/factor-experience.webp', title: 'Experience Level', desc: `Entry-level ${brand.niche.short}s start around $95-115k. With 5+ years experience, salaries can reach $150-180k or more.` },
+  { img: '/images/salary-guide/factor-setting.webp', title: 'Practice Setting', desc: 'Private practice and telehealth positions often pay more than hospital or community health settings.' },
+  { img: '/images/salary-guide/factor-employment.webp', title: 'Employment Type', desc: `1099 contractors and travel ${brand.niche.short}s often earn 20-50% more than W2 employees, though without traditional benefits.` },
+  { img: '/images/salary-guide/factor-specialty.webp', title: 'Specialization', desc: 'Subspecialties like acute care, emergency, psychiatric-mental health, or dermatology can command premium pay (+10-25%).' },
+  { img: '/images/salary-guide/factor-negotiate.webp', title: 'Negotiation', desc: `${brand.niche.short}s who negotiate can often secure 5-15% higher starting salaries plus signing bonuses ($5,000-$30,000).` },
 ];
 
 const faqData = [
