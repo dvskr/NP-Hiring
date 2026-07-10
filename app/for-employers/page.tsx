@@ -5,10 +5,8 @@ import Image from 'next/image';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import EmployerHowItWorks from '@/components/EmployerHowItWorks';
 import { config } from '@/lib/config';
-import { prisma } from '@/lib/prisma';
 import {
-  Check, ArrowRight, Users,
-  X, Search, Building2,
+  Check, ArrowRight, X,
 } from 'lucide-react';
 
 const STORAGE_BASE = brand.assets.storageBase;
@@ -21,9 +19,11 @@ export const metadata: Metadata = {
   description:
     `Hire ${brand.niche.long}s. First post free — all features included. Reach thousands actively searching for ${brand.niche.short} roles.`,
   openGraph: {
-    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`, width: 1280, height: 900, alt: `${brand.niche.short} employer hiring solutions` }],
+    // Edge-generated OG card — no dependency on storage assets that don't
+    // exist on this board (the old pmhnp-*.webp URL 400s).
+    images: [{ url: `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Hire ${brand.niche.short}s — first post free`)}&type=page`, width: 1200, height: 630, alt: `${brand.niche.short} employer hiring solutions` }],
   },
-  twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`] },
+  twitter: { card: 'summary_large_image', images: [`${brand.baseUrl}/api/og?title=${encodeURIComponent(`Hire ${brand.niche.short}s — first post free`)}&type=page`] },
   alternates: { canonical: `${brand.baseUrl}/for-employers` },
 };
 
@@ -35,19 +35,6 @@ const clayCard: React.CSSProperties = {
 };
 
 
-
-async function getEmployerStats() {
-  try {
-    const [totalJobs, totalSubscribers, totalCompanies] = await Promise.all([
-      prisma.job.count({ where: { isPublished: true } }),
-      prisma.emailLead.count({ where: { isSubscribed: true } }),
-      prisma.job.groupBy({ by: ['employer'], where: { isPublished: true } }).then((r) => r.length),
-    ]);
-    return { totalJobs, totalSubscribers, totalCompanies };
-  } catch {
-    return { totalJobs: 0, totalSubscribers: 0, totalCompanies: 0 };
-  }
-}
 
 const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: true | false | 'partial'; linkedin: true | false | 'partial'; note?: string }[] = [
   { feature: `100% ${brand.niche.medium} Audience`, us: true, indeed: false, linkedin: false },
@@ -63,102 +50,116 @@ const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: t
 ];
 
 export default async function ForEmployersPage() {
-  const stats = await getEmployerStats();
-  const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${n}`;
-
   return (
     <>
       <BreadcrumbSchema items={[{ name: 'Home', url: brand.baseUrl }, { name: 'For Employers', url: `${brand.baseUrl}/for-employers` }]} />
 
       {/* ═══════════════════════════════════════════════════════════════
-          SECTION 1: HERO + STATS
+          SECTION 1: RECEIPT HERO — "one flat price" (user-approved EH4
+          mock, 2026-07-10). Cream + faint grid stage matching the
+          homepage; the old salmon band, its dead Supabase illustration,
+          and the stat pills (which rendered a literal "0+ Job Seekers"
+          on this young board) are gone.
           ═══════════════════════════════════════════════════════════════ */}
-      <section style={{ background: '#F0BFB5', padding: '64px 0 56px' }}>
+      <section
+        style={{
+          backgroundColor: '#F5F0EB',
+          backgroundImage:
+            'linear-gradient(rgba(122,28,43,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(122,28,43,0.07) 1px, transparent 1px)',
+          backgroundSize: '44px 44px',
+          padding: '64px 0 72px',
+        }}
+      >
         <div style={{ maxWidth: '1140px', margin: '0 auto', padding: '0 24px' }}>
-          <div className="emp-hero-grid" style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: '40px', alignItems: 'center' }}>
-            {/* Left — Text Content */}
+          <div className="emp-hero-grid" style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: '48px', alignItems: 'center' }}>
+            {/* Left — statement */}
             <div>
-              <h1 className="font-lora" style={{
-                fontSize: 'clamp(32px, 4.2vw, 48px)', fontWeight: 800, lineHeight: 1.08,
-                color: '#1A2E35', margin: '0 0 20px',
+              <p style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#BE185D', margin: '0 0 16px' }}>
+                For hiring teams
+              </p>
+              <h1 className="font-heading" style={{
+                fontSize: 'clamp(34px, 4.4vw, 54px)', fontWeight: 700, lineHeight: 1.05,
+                textTransform: 'uppercase', color: '#7A1C2B', margin: '0 0 18px', letterSpacing: '-0.01em',
               }}>
-                The #1 Job Board Built<br />
-                <span style={{ color: '#BE185D' }}>Exclusively</span>{' '}
-                for {brand.niche.short}s
+                One flat price.<br />
+                The whole {brand.niche.short} market.
               </h1>
 
               <p style={{
-                fontSize: '16.5px', color: '#3D2E26', lineHeight: 1.75,
-                margin: '0 0 36px', maxWidth: '460px', fontWeight: 400,
+                fontSize: '16px', color: '#5f4a50', lineHeight: 1.7, fontWeight: 600,
+                margin: '0 0 28px', maxWidth: '460px',
               }}>
-                Reach thousands of {brand.niche.descriptor}s actively searching for their next role. Every candidate is a qualified {brand.niche.short} — zero noise, maximum relevance.
+                No bidding wars, no per-click billing, no surprise invoices. Every candidate here is a {brand.niche.descriptor} — post once, reach the whole market.
               </p>
 
-              {/* CTA Buttons */}
+              {/* CTA Buttons — No Sugar */}
               <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <Link href="/post-job" className="clay-btn emp-cta-primary" style={{
-                  padding: '16px 36px', borderRadius: '16px', fontWeight: 700, fontSize: '15px',
-                  background: '#BE185D', color: '#fff',
-                  textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '10px',
+                <Link href="/post-job" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '9px',
+                  padding: '14px 28px', fontSize: '14px', fontWeight: 800,
+                  textTransform: 'uppercase', letterSpacing: '0.05em',
+                  color: '#fff', background: '#BE185D',
+                  border: '2px solid #7A1C2B', boxShadow: '5px 5px 0 #7A1C2B',
+                  textDecoration: 'none', transition: 'transform 0.15s ease',
                 }}>
-                  Post a Job — First Post Free <ArrowRight size={17} />
+                  Post a Job — Free <ArrowRight size={16} />
                 </Link>
-                <Link href="/pricing" className="clay-btn emp-cta-secondary" style={{
-                  padding: '16px 36px', borderRadius: '16px', fontWeight: 600, fontSize: '15px',
-                  background: '#FFFFFF',
-                  color: '#1A2E35', textDecoration: 'none',
-                  display: 'inline-flex', alignItems: 'center', gap: '8px',
-                  border: '1px solid rgba(0,0,0,0.06)',
+                <Link href="/pricing" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '9px',
+                  padding: '14px 28px', fontSize: '14px', fontWeight: 800,
+                  textTransform: 'uppercase', letterSpacing: '0.05em',
+                  color: '#7A1C2B', background: '#fff',
+                  border: '2px solid #7A1C2B', boxShadow: '5px 5px 0 #7A1C2B',
+                  textDecoration: 'none', transition: 'transform 0.15s ease',
                 }}>
                   View Pricing
                 </Link>
               </div>
             </div>
 
-            {/* Right — Illustration */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
-              <Image
-                src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/hero-v4.webp`}
-                alt={`Employer posting job and receiving qualified ${brand.niche.short} candidates`}
-                width={520} height={520}
-                style={{ width: '100%', maxWidth: '520px', height: 'auto' }}
-                priority
-              />
-            </div>
-          </div>
-
-          {/* Stats — Real Data */}
-          <div className="emp-stats-grid" style={{
-            display: 'flex', justifyContent: 'center', gap: '14px', flexWrap: 'wrap',
-            marginTop: '48px',
-          }}>
-            {[
-              { value: fmt(stats.totalJobs), label: 'Active Jobs', icon: Search, bg: '#D4F5E9', iconBg: '#34D399', color: '#065F46' },
-              { value: fmt(stats.totalSubscribers), label: 'Job Seekers', icon: Users, bg: '#FFE0D3', iconBg: '#F97316', color: '#7C2D12' },
-              { value: fmt(stats.totalCompanies), label: 'Hiring Companies', icon: Building2, bg: '#E8DAFE', iconBg: '#A855F7', color: '#4C1D95' },
-            ].map(s => {
-              const SIcon = s.icon;
-              return (
-                <div key={s.label} className="emp-stat-pill" style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '10px',
-                  padding: '10px 20px 10px 10px', borderRadius: '40px',
-                  background: s.bg,
-                  boxShadow: '4px 4px 12px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.6), inset 1px 1px 2px rgba(255,255,255,0.5)',
-                }}>
-                  <div style={{
-                    width: '36px', height: '36px', borderRadius: '50%',
-                    background: s.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '2px 2px 6px rgba(0,0,0,0.1), inset 1px 1px 2px rgba(255,255,255,0.3)',
-                  }}>
-                    <SIcon size={16} color="#fff" />
+            {/* Right — the receipt. Line items mirror the Full Package bento
+                below; numbers come from lib/config so pricing changes stay
+                in one place. */}
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <div className="emp-receipt" style={{
+                width: '100%', maxWidth: '340px', background: '#fff',
+                border: '2px solid #7A1C2B', boxShadow: '7px 7px 0 #7A1C2B',
+                padding: '26px 26px 20px', fontFamily: "Consolas, 'Courier New', monospace",
+                transform: 'rotate(1.2deg)',
+              }}>
+                <p className="font-heading" style={{ textTransform: 'uppercase', textAlign: 'center', fontSize: '16px', fontWeight: 700, color: '#7A1C2B', margin: '0 0 4px', letterSpacing: '0.06em' }}>
+                  {brand.name} · Job Post
+                </p>
+                <p style={{ textAlign: 'center', fontSize: '10.5px', color: '#9b8291', margin: '0 0 14px', letterSpacing: '0.05em' }}>
+                  *** EVERYTHING INCLUDED ***
+                </p>
+                {[
+                  `${config.durationDays}-day listing`,
+                  'Featured badge',
+                  '25 candidate unlocks',
+                  '25 InMails',
+                  'Live analytics',
+                  'Daily alert placement',
+                ].map((item) => (
+                  <div key={item} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', color: '#4a3a40', padding: '7px 0', borderBottom: '1px dashed rgba(122,28,43,0.25)' }}>
+                    <span>{item}</span>
+                    <Check size={14} style={{ color: '#7A1C2B', flexShrink: 0 }} />
                   </div>
-                  <div>
-                    <span style={{ fontSize: '18px', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}+</span>
-                    <span style={{ fontSize: '12px', color: s.color, opacity: 0.7, marginLeft: '6px', fontWeight: 500 }}>{s.label}</span>
-                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 700, color: '#7A1C2B', padding: '12px 0 4px' }}>
+                  <span>TOTAL / POST</span>
+                  <span>${config.postingPrice} flat</span>
                 </div>
-              );
-            })}
+                <div style={{
+                  background: '#B9EBD6', border: '2px solid #7A1C2B', boxShadow: '3px 3px 0 #7A1C2B',
+                  textAlign: 'center', fontWeight: 800, fontSize: '12px', textTransform: 'uppercase',
+                  letterSpacing: '0.08em', color: '#7A1C2B', padding: '9px', marginTop: '14px',
+                  transform: 'rotate(-1.5deg)',
+                }}>
+                  First post: FREE
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
