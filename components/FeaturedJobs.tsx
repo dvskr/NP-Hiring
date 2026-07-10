@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { MapPin, ArrowUpRight } from 'lucide-react';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 import { trackJobListView, buildJobItem } from '@/lib/analytics';
@@ -329,21 +328,34 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
 
                         <div className="fjs-spine">
                             {STEPS.map((step, i) => (
-                                <m.div key={step.title} className="fjs-step" variants={fadeLeft}>
+                                /* Plain div, NOT m.div: transform-animated ancestors
+                                   can leave Chrome holding a stale low-res raster of
+                                   the image (see EmployerHowItWorks + project memory). */
+                                <div key={step.title} className="fjs-step">
                                     <div className="fjs-stimg-wrap">
-                                        <Image
-                                            src={`/images/how-it-works/seeker-step${i + 1}.webp`}
+                                        {/* Exact-DPR ladder at the slot's 80px CSS size
+                                            (scripts/regen-image-ladders.mjs) — 1:1
+                                            physical pixels at every display scaling. */}
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={`/images/how-it-works/seeker-step${i + 1}-v2-160.webp`}
+                                            srcSet={[80, 100, 120, 140, 160, 180, 200, 240]
+                                                .map((w) => `/images/how-it-works/seeker-step${i + 1}-v2-${w}.webp ${w}w`)
+                                                .join(', ')}
+                                            sizes="80px"
                                             alt=""
                                             width={80}
                                             height={80}
-                                            style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                                            style={{ objectFit: 'cover', width: '100%', height: '100%', display: 'block' }}
+                                            loading="lazy"
+                                            decoding="async"
                                         />
                                     </div>
                                     <div>
                                         <p className="fjs-sttl">{step.title}</p>
                                         <p className="fjs-stxt">{step.desc}</p>
                                     </div>
-                                </m.div>
+                                </div>
                             ))}
                         </div>
 
