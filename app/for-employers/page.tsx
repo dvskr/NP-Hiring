@@ -395,9 +395,9 @@ export default async function ForEmployersPage() {
                 padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <Image
-                  src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/cta-illustration.webp`}
+                  src="/images/employers/cta-illustration.webp"
                   alt={`Successful ${brand.niche.short} hiring celebration`}
-                  width={280} height={220}
+                  width={280} height={280}
                   style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px' }}
                 />
               </div>
