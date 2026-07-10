@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { MapPin, ArrowUpRight } from 'lucide-react';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 import { trackJobListView, buildJobItem } from '@/lib/analytics';
@@ -147,7 +148,7 @@ const css = `
         .fjs-col-right { padding: 0 16px 32px; }
     }
 
-    /* ── Steps: stamped numbers on a dashed spine ── */
+    /* ── Steps: images on a dashed spine ── */
     .fjs-spine {
         position: relative;
         padding-left: 0;
@@ -155,40 +156,34 @@ const css = `
     .fjs-spine::before {
         content: '';
         position: absolute;
-        left: 17px;
-        top: 12px;
-        bottom: 12px;
+        left: 39px;
+        top: 24px;
+        bottom: 24px;
         width: 0;
-        border-left: 2px dashed rgba(122, 28, 43, 0.30);
+        border-left: 2px dashed rgba(122, 28, 43, 0.20);
     }
     .fjs-step {
         position: relative;
         display: flex;
-        gap: 16px;
-        padding-bottom: 30px;
+        align-items: center;
+        gap: 20px;
+        padding-bottom: 32px;
     }
     .fjs-step:last-child { padding-bottom: 0; }
-    .fjs-stnum {
+    .fjs-stimg-wrap {
         position: relative;
         z-index: 1;
-        width: 36px;
-        height: 36px;
+        width: 80px;
+        height: 80px;
         flex-shrink: 0;
+        border: 2px solid #7A1C2B;
+        box-shadow: 4px 4px 0 #7A1C2B;
+        border-radius: 16px;
+        overflow: hidden;
+        background: #D4E2D4;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 14px;
-        font-weight: 700;
-        border: 2px solid #7A1C2B;
-        box-shadow: 3px 3px 0 #7A1C2B;
-        background: #BE185D;
-        color: #fff;
-        transform: rotate(2deg);
-    }
-    .fjs-step:nth-child(odd) .fjs-stnum {
-        background: #B9EBD6;
-        color: #7A1C2B;
-        transform: rotate(-2deg);
     }
     .fjs-sttl {
         font-size: 14px;
@@ -335,7 +330,15 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
                         <div className="fjs-spine">
                             {STEPS.map((step, i) => (
                                 <m.div key={step.title} className="fjs-step" variants={fadeLeft}>
-                                    <span className="fjs-stnum">{String(i + 1).padStart(2, '0')}</span>
+                                    <div className="fjs-stimg-wrap">
+                                        <Image
+                                            src={`/images/how-it-works/seeker-step${i + 1}.webp`}
+                                            alt=""
+                                            width={80}
+                                            height={80}
+                                            style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                                        />
+                                    </div>
                                     <div>
                                         <p className="fjs-sttl">{step.title}</p>
                                         <p className="fjs-stxt">{step.desc}</p>

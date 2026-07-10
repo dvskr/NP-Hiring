@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { config } from '@/lib/config';
-import { Check, ArrowRight, X, HelpCircle, RefreshCw } from 'lucide-react';
+import { Check, ArrowRight, X, HelpCircle, RefreshCw, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign } from 'lucide-react';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -26,6 +26,23 @@ const clayCard: React.CSSProperties = {
     background: '#FFFFFF', borderRadius: '20px',
     border: '1px solid rgba(255,255,255,0.5)',
     boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
+};
+
+const iconBg: React.CSSProperties = {
+    width: '48px',
+    height: '48px',
+    borderRadius: '12px',
+    background: '#D4E2D4',
+    color: '#1E3A5F',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '16px',
+};
+
+const iconBgCentered: React.CSSProperties = {
+    ...iconBg,
+    margin: '0 auto 14px',
 };
 
 const clayIconWrap = (gradient: string): React.CSSProperties => ({
@@ -181,14 +198,16 @@ export default function PricingPage() {
                             display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center',
                         }}>
                             <div style={{ padding: '32px 28px' }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp`} alt="" width={56} height={56} style={{ width: '56px', height: '56px', objectFit: 'contain', marginBottom: '16px' }} />
+                                <div style={iconBg}>
+                                    <Calendar size={24} />
+                                </div>
                                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>60-Day Listing</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                                     Double the industry standard. Your job stays visible for 2 full months — no daily budget, no bidding.
                                 </p>
                             </div>
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/bento-60day.webp`} alt="60-day job listing calendar" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                                <Image src="/images/employers/bento-60day.webp" alt="60-day job listing calendar" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
                             </div>
                         </div>
 
@@ -197,10 +216,12 @@ export default function PricingPage() {
                             display: 'flex', flexDirection: 'column',
                         }}>
                             <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/bento-featured.webp`} alt="Featured badge on job listing" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
+                                <Image src="/images/employers/bento-featured.webp" alt="Featured badge on job listing" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
                             </div>
                             <div style={{ padding: '24px 22px', flex: 1 }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-star.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '12px' }} />
+                                <div style={iconBg}>
+                                    <Star size={22} />
+                                </div>
                                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Featured Badge</h3>
                                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
                                     Stand out with a prominent Featured tag on your listing and in search results.
@@ -210,25 +231,33 @@ export default function PricingPage() {
 
                         {/* ═══ ROW 2: 4 compact cards ═══ */}
                         <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-                            <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+                            <div style={iconBgCentered}>
+                                <TrendingUp size={22} />
+                            </div>
                             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Top Search Placement</h3>
                             <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Featured listings rank higher — more visibility, more clicks.</p>
                         </div>
 
                         <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-                            <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+                            <div style={iconBgCentered}>
+                                <Mail size={22} />
+                            </div>
                             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Daily Job Alerts</h3>
                             <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Highlighted in daily email digests to opted-in {brand.niche.short}s.</p>
                         </div>
 
                         <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-                            <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-people.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+                            <div style={iconBgCentered}>
+                                <Users size={22} />
+                            </div>
                             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{config.limits.candidateUnlocksPerPosting} Candidate Unlocks</h3>
                             <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>View full profiles — contact info, resume, LinkedIn.</p>
                         </div>
 
                         <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-                            <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-briefcase.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+                            <div style={iconBgCentered}>
+                                <Briefcase size={22} />
+                            </div>
                             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{config.limits.inmailsPerPosting} InMails</h3>
                             <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Message candidates directly — no guessing emails.</p>
                         </div>
@@ -239,14 +268,16 @@ export default function PricingPage() {
                             display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center',
                         }}>
                             <div style={{ padding: '32px 28px' }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-chart.webp`} alt="" width={56} height={56} style={{ width: '56px', height: '56px', objectFit: 'contain', marginBottom: '16px' }} />
+                                <div style={iconBg}>
+                                    <BarChart3 size={24} />
+                                </div>
                                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Live Analytics</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                                     Track views, clicks, and applications in real time. See exactly where your candidates come from.
                                 </p>
                             </div>
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/bento-analytics.webp`} alt="Analytics dashboard with charts" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                                <Image src="/images/employers/bento-analytics.webp" alt="Analytics dashboard with charts" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
                             </div>
                         </div>
 
