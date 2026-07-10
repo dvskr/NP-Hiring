@@ -179,7 +179,7 @@ export default function EmployerHowItWorks() {
                                         margin: '0 auto',
                                         borderRadius: '24px',
                                         overflow: 'hidden',
-                                        backgroundColor: '#A8D4E8',
+                                        backgroundColor: '#D4E2D4',
                                         /* hard-edged shadow — zero blur radius, so no
                                            fuzzy halo bleeds around the artwork.
                                            No hover motion by owner request: these are
