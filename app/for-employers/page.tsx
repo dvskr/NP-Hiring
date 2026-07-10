@@ -394,11 +394,21 @@ export default async function ForEmployersPage() {
                 background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
                 padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <Image
-                  src="/images/employers/cta-illustration.webp"
+                {/* Exact-DPR ladder (scripts/regen-image-ladders.mjs) so the
+                    browser paints 1:1 physical pixels at every display
+                    scaling — see EmployerHowItWorks for the pattern. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/employers/cta-illustration-v2-520.webp"
+                  srcSet={[260, 325, 390, 455, 520, 585, 650, 780]
+                    .map((w) => `/images/employers/cta-illustration-v2-${w}.webp ${w}w`)
+                    .join(', ')}
+                  sizes="260px"
                   alt={`Successful ${brand.niche.short} hiring celebration`}
-                  width={280} height={280}
-                  style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px' }}
+                  width={260} height={260}
+                  style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px', display: 'block' }}
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
 

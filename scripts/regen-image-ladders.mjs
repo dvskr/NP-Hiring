@@ -41,6 +41,8 @@ const REGISTRY = [
     { src: 'public/images/how-it-works/step-employer-reach.webp', css: 280 },
     { src: 'public/images/how-it-works/step-employer-browse.webp', css: 280 },
     { src: 'public/images/how-it-works/step-employer-track.webp', css: 280 },
+    // /for-employers comparison-section CTA card
+    { src: 'public/images/employers/cta-illustration-v2.webp', css: 260 },
 ];
 
 async function buildLadder(src, css) {
