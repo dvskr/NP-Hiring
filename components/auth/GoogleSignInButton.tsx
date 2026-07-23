@@ -23,7 +23,10 @@ export default function GoogleSignInButton({
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${redirectTo}`,
+        // encodeURIComponent so a target with its own query (e.g.
+        // /jobs/xyz?apply=1 from ApplyButton) survives as ONE `next` value
+        // instead of leaking its params into the callback URL.
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
       },
     })
 

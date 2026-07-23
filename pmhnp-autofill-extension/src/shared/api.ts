@@ -199,6 +199,12 @@ export async function generateCoverLetter(
     });
 
     if (response.status === 429) throw new Error('AI generation limit reached');
+    if (response.status === 403) {
+        // Cover letters are paid-only (server enforces the documented rule) —
+        // surface the server's upgrade message instead of a bare status code.
+        const data = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error || 'Cover letter generation requires a paid plan');
+    }
     if (!response.ok) throw new Error(`Cover letter generation failed: ${response.status}`);
 
     return (await response.json()) as { coverLetter: string; model: string };

@@ -17,6 +17,7 @@ import { Job } from '@/lib/types';
 import { FilterState, DEFAULT_FILTERS } from '@/types/filters';
 import { parseFiltersFromParams } from '@/lib/filters';
 import { useViewMode } from '@/lib/hooks/useViewMode';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { resolveAiSearchMode } from '@/lib/jobs/resolve-search-mode';
 
 interface JobsContentProps {
@@ -46,6 +47,11 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
   const { viewMode, setViewMode } = useViewMode('grid');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const router = useRouter();
+
+  // Alert modal a11y — same useFocusTrap treatment as the apply modal:
+  // focus trap, Escape-to-close, and focus restore to the trigger button.
+  const closeAlertModal = useCallback(() => setIsAlertModalOpen(false), []);
+  const alertTrapRef = useFocusTrap<HTMLDivElement>({ isOpen: isAlertModalOpen, onEscape: closeAlertModal });
 
 
 
@@ -161,9 +167,11 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
       setTotalPages(data.totalPages);
       setCurrentPage(data.page);
 
-      // Scroll to top when results change - use requestAnimationFrame to avoid forced reflow
+      // Scroll to top when results change - use requestAnimationFrame to avoid forced reflow.
+      // Jump instantly (no smooth animation) when the user prefers reduced motion.
       requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
       });
     } catch (err) {
       console.error('[fetchJobs] Error:', err);
@@ -430,8 +438,10 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
               </div>
             )}
 
-            {/* Results Count, Sort, and View Toggle */}
-            {!loading && !error && (
+            {/* Results Count, Sort, and View Toggle — stays mounted during
+                loading so the search bar and sort control don't unmount mid-
+                interaction (focus loss + layout shift on every fetch). */}
+            {!error && (
               <div className="jp-search-row" style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 marginBottom: '20px', flexWrap: 'wrap', gap: '12px',
@@ -520,6 +530,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                     <select
                       value={sortOption}
                       onChange={(e) => handleSortChange(e.target.value)}
+                      aria-label="Sort job results"
                       className="jp-sort-select"
                       style={{
                         appearance: 'none', WebkitAppearance: 'none',
@@ -854,21 +865,26 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
           <div
             className="fixed inset-0"
             style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-            onClick={() => setIsAlertModalOpen(false)}
+            onClick={closeAlertModal}
           />
 
           {/* Modal */}
           <div className="flex min-h-full items-center justify-center p-4">
-            <div style={{
-              position: 'relative', width: '100%', maxWidth: '440px',
-              borderRadius: '18px', padding: '28px',
-              backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid var(--border-color)',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-            }}>
+            <div
+              ref={alertTrapRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="create-alert-title"
+              style={{
+                position: 'relative', width: '100%', maxWidth: '440px',
+                borderRadius: '18px', padding: '28px',
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              }}>
               {/* Close Button */}
               <button
-                onClick={() => setIsAlertModalOpen(false)}
+                onClick={closeAlertModal}
                 style={{
                   position: 'absolute', right: '16px', top: '16px',
                   color: 'var(--text-tertiary)', background: 'none', border: 'none',
@@ -882,7 +898,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
               </button>
 
               {/* Modal Header */}
-              <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '20px' }}>
+              <h2 id="create-alert-title" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '20px' }}>
                 Create Job Alert
               </h2>
 

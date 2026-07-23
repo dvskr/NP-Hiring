@@ -12,7 +12,7 @@
  */
 
 import * as Sentry from '@sentry/nextjs';
-import { logger } from '@/lib/logger';
+import { logger, isSentryCaptured, markSentryCaptured } from '@/lib/logger';
 
 interface ErrorContext {
     tags?: Record<string, string>;
@@ -39,6 +39,12 @@ export function captureException(error: Error | unknown, context?: ErrorContext)
         logger.error('[Sentry] Exception captured', error, context as Record<string, unknown> | undefined);
     }
     if (sentryEnabled) {
+        // logger.error forwards to Sentry itself (F35) and marks the error;
+        // skip re-capture here so an error that was both logged and explicitly
+        // captured produces a single event. Tradeoff: if the logger got to it
+        // first, this call's tags/user context are not attached.
+        if (isSentryCaptured(error)) return;
+        markSentryCaptured(error);
         Sentry.captureException(error, {
             tags: context?.tags,
             extra: context?.extra,

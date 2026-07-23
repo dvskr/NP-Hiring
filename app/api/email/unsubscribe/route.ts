@@ -28,11 +28,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Update isSubscribed and newsletterOptIn to false
-    await prisma.emailLead.update({
-      where: { unsubscribeToken: token },
-      data: { isSubscribed: false, newsletterOptIn: false },
-    });
+    // Honor the opt-out everywhere. Every marketing send-gate checks
+    // isEmailSuppressed() (EmailLead.isSuppressed / UserProfile.emailSuppressed),
+    // NOT isSubscribed — so unsubscribing without setting suppression leaves
+    // broadcasts, candidate alerts, saved-job reminders, and digests still
+    // sending. Set suppression on the lead and mirror it onto the registered
+    // profile (broadcast audiences are built from UserProfile).
+    const now = new Date();
+    await prisma.$transaction([
+      prisma.emailLead.update({
+        where: { unsubscribeToken: token },
+        data: {
+          isSubscribed: false,
+          newsletterOptIn: false,
+          isSuppressed: true,
+          suppressedAt: now,
+          suppressionReason: 'unsubscribe',
+        },
+      }),
+      prisma.userProfile.updateMany({
+        where: { email: emailLead.email },
+        data: { emailSuppressed: true, emailSuppressedAt: now },
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -76,11 +94,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update isSubscribed to true
-    await prisma.emailLead.update({
-      where: { unsubscribeToken: token },
-      data: { isSubscribed: true },
-    });
+    // Re-enable sending. Only lift suppression when it came from an explicit
+    // unsubscribe — never resurrect an address suppressed by a hard bounce or
+    // spam complaint (those keep isSuppressed set with a different reason).
+    const clearSuppression = emailLead.suppressionReason === 'unsubscribe';
+    await prisma.$transaction([
+      prisma.emailLead.update({
+        where: { unsubscribeToken: token },
+        data: {
+          isSubscribed: true,
+          ...(clearSuppression
+            ? { isSuppressed: false, suppressedAt: null, suppressionReason: null }
+            : {}),
+        },
+      }),
+      ...(clearSuppression
+        ? [
+            prisma.userProfile.updateMany({
+              where: { email: emailLead.email },
+              data: { emailSuppressed: false, emailSuppressedAt: null },
+            }),
+          ]
+        : []),
+    ]);
 
     return NextResponse.json({
       success: true,

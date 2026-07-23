@@ -67,8 +67,6 @@ All category pages live under https://nphiring.com/jobs/<slug>.
 
 - Website: https://nphiring.com
 - Email: contact@nphiring.com
-- LinkedIn: https://www.linkedin.com/company/nphiring
-- Facebook: https://www.facebook.com/nphiring
 - Privacy Policy: https://nphiring.com/privacy
 - Terms of Service: https://nphiring.com/terms
 - Operator: Akari Labs LLC

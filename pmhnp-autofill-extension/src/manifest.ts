@@ -2,14 +2,15 @@ import { defineManifest } from '@crxjs/vite-plugin';
 
 export default defineManifest({
     manifest_version: 3,
-    name: 'PMHNP Hiring — Autofill Agent',
+    // Brand values mirror config/brand.ts in the main app — keep in lockstep.
+    name: 'NP Hiring — Autofill Agent',
     description:
-        'Autofill PMHNP job applications in seconds. Built for Psychiatric Mental Health Nurse Practitioners.',
+        'Autofill NP job applications in seconds. Built for Nurse Practitioners and APRNs.',
     version: '1.0.0',
     permissions: ['activeTab', 'storage', 'tabs', 'scripting', 'alarms', 'sidePanel', 'webNavigation'],
     host_permissions: [
-        'https://pmhnphiring.com/*',
-        'https://www.pmhnphiring.com/*',
+        'https://nphiring.com/*',
+        'https://www.nphiring.com/*',
         '<all_urls>',
     ],
     background: {

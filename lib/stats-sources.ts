@@ -6,9 +6,10 @@
 // replaced with NP-wide figures:
 //   - averageSalary: BLS OEWS May 2024, Nurse Practitioners (29-1171),
 //     median annual wage $129,210 (replaces the PMHNP-era $155,000).
-//     NOTE: the UI constants in config/niche/stats.ts were retuned to
-//     ~$126k (an earlier OEWS vintage) — reconcile those to $129,210 /
-//     May 2024 in the next UI-constants pass so the two families agree.
+//     RESOLVED 2026-07-18 (citation-trust sweep B4/B51): the UI constants
+//     in config/niche/stats.ts now DERIVE from this entry (they had been
+//     retuned to an earlier OEWS vintage), so the two families cannot
+//     disagree again. app/salary-guide/page.tsx also reads this entry.
 //   - blsGrowth2032: 45% kept — this is the BLS Employment Projections
 //     NP-specific 2022–2032 figure (44.5%, rounded), which the
 //     CAREER_PULSE_STATS pebble in config/niche/stats.ts mirrors.

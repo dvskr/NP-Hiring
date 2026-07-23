@@ -25,11 +25,13 @@
  *     intent, mapped onto NP slugs — its own cron list still carried
  *     stale pre-fork slugs).
  *
- * ⚠️ PENDING: the physical app/jobs/<slug>/ route folders and the
- * JOBS_TOP_SEGMENTS set in jobs-segments-edge.ts still reflect the OLD
- * taxonomy — the folder migration is handled separately. The drift test
- * (tests/seo/jobs-segments-drift.test.ts) FAILS by design until the
- * folders and edge set are regenerated to match this registry.
+ * ✅ Route-folder migration COMPLETE: the physical app/jobs/<slug>/
+ * folders and the JOBS_TOP_SEGMENTS set in jobs-segments-edge.ts now
+ * match this registry (42 category folders + 5 namespace segments; the
+ * 21 state-eligible slugs each have an [state] sub-folder). The drift
+ * test (tests/seo/jobs-segments-drift.test.ts) enforces this and PASSES;
+ * if it fails, a folder or registry entry changed without its
+ * counterpart.
  *
  * IMPORTANT FOR FORKS: these slugs are live indexed URLs. Removing or
  * renaming a slug on an existing board without a 301 kills indexed SEO
@@ -105,6 +107,17 @@ export const PSEO_INDEXING_CATEGORY_SLUGS: readonly string[] = [
     'full-time', 'part-time', 'contract', '1099', 'new-grad',
     'family-practice', 'psychiatric-mental-health',
 ];
+
+/**
+ * The psych/behavioral-health specialty slug, derived from the axis data
+ * rather than written as a literal. Consumers that key narrative maps by
+ * this slug (e.g. lib/pseo/city-narrative.ts) import THIS constant so the
+ * reference-niche term stays confined to the registry, which already
+ * carries the slug and is baselined by the niche-copy debt ratchet
+ * (tests/regressions/niche-copy-debt.test.ts).
+ */
+export const PSYCH_SPECIALTY_SLUG: string | undefined =
+    CATEGORY_AXES.specialty.find((slug) => slug.endsWith('-mental-health'));
 
 /**
  * Non-category namespace segments under /jobs/ (dynamic routes and

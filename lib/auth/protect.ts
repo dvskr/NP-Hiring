@@ -25,15 +25,20 @@ export interface UserProfile {
 }
 
 /**
- * Require authentication - redirects to /login if not authenticated
+ * Require authentication - redirects to /login if not authenticated.
+ *
+ * B86: pass `returnTo` (the path of the page invoking the guard) so the
+ * login redirect carries `?next=<attempted path>` and the deep link
+ * survives the round-trip. LoginContent already reads ?next= (validated
+ * via safeInternalPath) and pushes it after sign-in.
  */
-export async function requireAuth(): Promise<{ user: AuthUser; profile: UserProfile | null }> {
+export async function requireAuth(returnTo?: string): Promise<{ user: AuthUser; profile: UserProfile | null }> {
   const supabase = await createClient()
 
   const { data: { user }, error } = await supabase.auth.getUser()
 
   if (error || !user) {
-    redirect('/login')
+    redirect(returnTo ? `/login?next=${encodeURIComponent(returnTo)}` : '/login')
   }
 
   // Single source of truth for auto-create. See lib/auth/ensure-profile.ts —
@@ -53,8 +58,8 @@ export async function requireAuth(): Promise<{ user: AuthUser; profile: UserProf
 /**
  * Require specific role(s) - redirects to /unauthorized if role doesn't match
  */
-export async function requireRole(allowedRoles: UserRole[]): Promise<{ user: AuthUser; profile: UserProfile }> {
-  const { user, profile } = await requireAuth()
+export async function requireRole(allowedRoles: UserRole[], returnTo?: string): Promise<{ user: AuthUser; profile: UserProfile }> {
+  const { user, profile } = await requireAuth(returnTo)
 
   if (!profile || !allowedRoles.includes(profile.role as UserRole)) {
     redirect('/unauthorized')
@@ -66,15 +71,15 @@ export async function requireRole(allowedRoles: UserRole[]): Promise<{ user: Aut
 /**
  * Require admin role
  */
-export async function requireAdmin() {
-  return requireRole(['admin'])
+export async function requireAdmin(returnTo?: string) {
+  return requireRole(['admin'], returnTo)
 }
 
 /**
  * Require employer role (or admin)
  */
-export async function requireEmployer() {
-  return requireRole(['employer', 'admin'])
+export async function requireEmployer(returnTo?: string) {
+  return requireRole(['employer', 'admin'], returnTo)
 }
 
 /**

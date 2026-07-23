@@ -18,6 +18,35 @@ const scoringResultSchema = z.object({
     missingItems: z.array(z.unknown()).optional(),
 });
 
+export interface NormalizedScoringResult {
+    /** null = model output was off-spec — persist as UNSCORED, never 0% (audit B95). */
+    score: number | null;
+    matchReasons: string[];
+    missingItems: string[];
+}
+
+/**
+ * Clamp/sanitize the parsed model output before persisting.
+ *
+ * Audit B95: an off-spec response (missing/NaN score) used to collapse to a
+ * literal 0% match score, which employers sorting by "AI Score" read as
+ * "terrible candidate" when the truth is "scoring failed". Off-spec now
+ * normalizes to score=null so the application renders as unscored (the
+ * applicants UI already hides the badge for null).
+ */
+export function normalizeScoringResult(parsed: z.infer<typeof scoringResultSchema>): NormalizedScoringResult {
+    const score = typeof parsed.score === 'number' && Number.isFinite(parsed.score)
+        ? Math.max(0, Math.min(100, Math.round(parsed.score)))
+        : null;
+    const matchReasons = Array.isArray(parsed.matchReasons)
+        ? parsed.matchReasons.filter((r): r is string => typeof r === 'string').slice(0, 6)
+        : [];
+    const missingItems = Array.isArray(parsed.missingItems)
+        ? parsed.missingItems.filter((r): r is string => typeof r === 'string').slice(0, 4)
+        : [];
+    return { score, matchReasons, missingItems };
+}
+
 interface JobApplicationForScoring {
     screeningAnswers: unknown;
     coverLetter: string | null;
@@ -99,13 +128,20 @@ export async function scoreCandidate(
         });
 
         const parsed = result.parsed ?? {};
-        const score = Math.max(0, Math.min(100, Math.round(typeof parsed.score === 'number' ? parsed.score : 0)));
-        const matchReasons = Array.isArray(parsed.matchReasons)
-            ? parsed.matchReasons.filter((r): r is string => typeof r === 'string').slice(0, 6)
-            : [];
-        const missingItems = Array.isArray(parsed.missingItems)
-            ? parsed.missingItems.filter((r): r is string => typeof r === 'string').slice(0, 4)
-            : [];
+        const { score, matchReasons, missingItems } = normalizeScoringResult(parsed);
+
+        if (score === null) {
+            // Off-spec model output (audit B95): persist as UNSCORED rather
+            // than a fake 0% that would sink the candidate in the employer's
+            // AI-Score sort. Leave aiMatchScore null; don't persist reasons
+            // derived from an output we couldn't trust the score of.
+            logger.warn('scoreCandidate: off-spec model output — leaving application unscored', {
+                applicationId,
+                jobId,
+                promptVersion: prompt.version,
+            });
+            return;
+        }
 
         await prisma.jobApplication.update({
             where: { id: applicationId },

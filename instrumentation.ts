@@ -8,9 +8,21 @@
  *      (used by pdf-parse) requires but aren't available in Node.js.
  */
 
-// Forwards App Router server/render errors to Sentry. Re-exported from the SDK;
-// a no-op when Sentry isn't initialized.
-export { captureRequestError as onRequestError } from '@sentry/nextjs';
+// Forwards App Router server/render errors to Sentry. Wraps the SDK's
+// captureRequestError (a no-op when Sentry isn't initialized) to skip errors
+// that logger.error already forwarded (F35) — otherwise a caught, logged, and
+// rethrown error would produce two Sentry events.
+import { captureRequestError } from '@sentry/nextjs';
+import { isSentryCaptured } from '@/lib/logger';
+
+export function onRequestError(
+    ...args: Parameters<typeof captureRequestError>
+): ReturnType<typeof captureRequestError> {
+    if (isSentryCaptured(args[0])) {
+        return;
+    }
+    return captureRequestError(...args);
+}
 
 export async function register() {
     // Load the matching Sentry runtime config. Importing the file runs its
@@ -18,6 +30,36 @@ export async function register() {
     // the edge bundle or vice-versa.
     if (process.env.NEXT_RUNTIME === 'nodejs') {
         await import('./sentry.server.config');
+
+        // B107/B108: validate required secrets at server startup — AFTER
+        // Sentry init so failures can be alerted. Log-and-alert in
+        // production; warn-and-continue in development; never crash startup.
+        try {
+            const { validateEnvironmentAtStartup } = await import('./lib/env');
+            const report = validateEnvironmentAtStartup();
+            const isProd = process.env.NODE_ENV === 'production';
+
+            if (!report.ok) {
+                const detail = report.issues.map((i) => `  - ${i}`).join('\n');
+                if (isProd) {
+                    console.error(`[instrumentation] ❌ Invalid environment variables:\n${detail}`);
+                    const Sentry = await import('@sentry/nextjs');
+                    Sentry.captureException(
+                        new Error(`Invalid environment variables at startup: ${report.issues.join('; ')}`),
+                        { tags: { area: 'env-validation' } },
+                    );
+                } else {
+                    console.warn(`[instrumentation] ⚠️ Invalid environment variables (continuing in dev):\n${detail}`);
+                }
+            }
+
+            for (const warning of report.warnings) {
+                console.error(`[instrumentation] ⚠️ ${warning}`);
+            }
+        } catch (envErr) {
+            // Env validation must never take the server down.
+            console.error('[instrumentation] Environment validation failed to run:', envErr);
+        }
     } else if (process.env.NEXT_RUNTIME === 'edge') {
         await import('./sentry.edge.config');
     }

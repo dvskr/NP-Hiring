@@ -28,10 +28,17 @@ export default function Breadcrumbs({ items }: BreadcrumbsProps) {
 
   return (
     <>
-      {/* Schema markup for SEO */}
+      {/* Schema markup for SEO.
+          B29: labels carry aggregator-sourced job titles on job pages —
+          escape < and > so a literal "</script>" can never terminate this
+          element early (same pattern as components/JobStructuredData.tsx). */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(schemaData)
+            .replace(/</g, '\\u003c')
+            .replace(/>/g, '\\u003e'),
+        }}
       />
 
       {/* Visual breadcrumbs */}

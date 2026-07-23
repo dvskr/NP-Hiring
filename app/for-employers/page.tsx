@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import EmployerHowItWorks from '@/components/EmployerHowItWorks';
+import FeaturedTestimonials from '@/components/FeaturedTestimonials';
 import { config } from '@/lib/config';
 import {
   Check, ArrowRight, X, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign,
@@ -325,6 +326,13 @@ export default async function ForEmployersPage() {
           </div>
         </section>
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          SECTION 3.5: EMPLOYER TESTIMONIALS (admin-approved only — the
+          server component renders nothing until at least one consented
+          submission has been featured via /admin/testimonials)
+          ═══════════════════════════════════════════════════════════════ */}
+      <FeaturedTestimonials />
 
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 4: COMPARISON + CTA (split screen, same section)

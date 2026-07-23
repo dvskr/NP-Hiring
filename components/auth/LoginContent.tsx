@@ -52,6 +52,12 @@ export default function LoginContent() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
+  // F26: return target carried on the login URL (?redirectTo= from
+  // ApplyButton, ?next= from gated pages). Validated to a same-origin path;
+  // `|| undefined` lets GoogleSignInButton keep its default when absent.
+  const redirectTo =
+    safeInternalPath(searchParams.get('redirectTo') || searchParams.get('next'), '') || undefined;
+
   // Init role from URL param
   useEffect(() => {
     const roleParam = searchParams.get('role');
@@ -209,7 +215,7 @@ export default function LoginContent() {
         {/* Google — seeker only */}
         {role === 'seeker' && (
           <>
-            <GoogleSignInButton mode="login" />
+            <GoogleSignInButton mode="login" redirectTo={redirectTo} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '16px 0' }}>
               <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
               <span style={{ fontSize: '11px', fontWeight: 600, color: '#94A3B0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>or</span>
@@ -267,12 +273,11 @@ export default function LoginContent() {
             </div>
           </div>
 
-          {/* Remember / Forgot */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '7px', cursor: 'pointer' }}>
-              <input type="checkbox" style={{ accentColor: accent, width: '15px', height: '15px' }} />
-              <span style={{ fontSize: '13px', color: '#4B5E68' }}>Remember me</span>
-            </label>
+          {/* Forgot password. B67: the old remember-my-session checkbox was
+              decorative — @supabase/ssr manages session cookies itself and
+              offers no cheap per-login persistence toggle — so it was
+              removed rather than shipped as a no-op control. */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
             <Link href="/forgot-password" style={{ fontSize: '13px', fontWeight: 600, color: accent, textDecoration: 'none' }}>
               Forgot password?
             </Link>

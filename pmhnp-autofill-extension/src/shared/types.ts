@@ -340,7 +340,7 @@ export type MessageType =
     | 'EXTRACT_RESUME_SECTIONS'
     | 'FETCH_FILE'
     | 'FLUSH_TELEMETRY'
-    | 'RECORD_AUTOFILL';
+    | 'REFRESH_TOKEN';
 
 export interface ExtensionMessage<T = unknown> {
     type: MessageType;

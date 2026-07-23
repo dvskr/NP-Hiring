@@ -1707,4 +1707,49 @@ textarea::placeholder {
   .sticky-email-bar {
     display: none !important;
   }
-}
+}
+/* ══════ REDUCED MOTION ══════
+   Honor prefers-reduced-motion globally. Previously only .animate-scale-in
+   was gated; every other decorative animation (job-list entrance, skeleton
+   shimmer, scroll reveals, hero gradient) and smooth scrolling ignored the
+   preference. This block lives at the end of the file (and outside any
+   @layer) so it wins the cascade over both the Tailwind-generated animate-*
+   utilities and the earlier unconditional rules.
+   Note: framer-motion animations are JS-driven and cannot be gated from CSS;
+   components using it must check the media query themselves. */
+@media (prefers-reduced-motion: reduce) {
+  /* Smooth scrolling → instant jumps */
+  html,
+  html[data-scroll-behavior="smooth"] {
+    scroll-behavior: auto;
+  }
+
+  /* Entrance / attention animations — skip straight to the resting state.
+     All of these keyframes end at the element's natural styles, so
+     `animation: none` simply shows the content immediately. */
+  .animate-fade-in,
+  .animate-fade-in-up,
+  .animate-fade-in-down,
+  .animate-slide-in-right,
+  .animate-slide-in-left,
+  .animate-scale-in,
+  .animate-bounce-in,
+  .animate-in,
+  .fade-in,
+  .slide-in-from-top-2,
+  .reveal-up,
+  .reveal-fade,
+  .reveal-scale {
+    animation: none;
+  }
+
+  /* Skeleton shimmer — keep the static placeholder gradient, stop the sweep */
+  .animate-shimmer {
+    animation: none;
+  }
+
+  /* Hero gradient text — freeze the gradient in place */
+  .hero-gradient-text {
+    animation: none;
+  }
+}

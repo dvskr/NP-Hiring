@@ -1,5 +1,11 @@
-// Service Worker for Push Notifications — PMHNP Hiring
+// Service Worker for Push Notifications — NP Hiring
 /* eslint-disable no-restricted-globals */
+//
+// NOTE: static public asset — it cannot import config/brand.ts, so the
+// two fallback strings below hardcode the brand/niche and must be kept
+// in sync with config/brand.ts on fork (tracked by the brand-leak and
+// niche-copy ratchets + scripts/fork-preflight.ts). In practice they
+// never fire: the push cron always sends title/body in its payload.
 
 self.addEventListener('push', function (event) {
     if (!event.data) return;
@@ -7,7 +13,7 @@ self.addEventListener('push', function (event) {
     try {
         const data = event.data.json();
         const options = {
-            body: data.body || 'New PMHNP jobs available!',
+            body: data.body || 'New NP jobs available!',
             icon: data.icon || '/icon-192x192.png',
             badge: data.badge || '/favicon-48x48.png',
             data: { url: data.url || '/jobs' },
@@ -19,7 +25,7 @@ self.addEventListener('push', function (event) {
         };
 
         event.waitUntil(
-            self.registration.showNotification(data.title || 'PMHNP Hiring', options)
+            self.registration.showNotification(data.title || 'NP Hiring', options)
         );
     } catch (e) {
         console.error('Push event error:', e);

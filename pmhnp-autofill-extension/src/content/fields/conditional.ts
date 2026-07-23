@@ -28,7 +28,7 @@ export async function handleConditionalField(
 }
 
 /**
- * Common conditional patterns in healthcare/PMHNP applications.
+ * Common conditional patterns in healthcare/NP applications.
  * Maps trigger fields to their expected dependent fields.
  */
 export const CONDITIONAL_PATTERNS: {

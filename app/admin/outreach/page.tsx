@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { brand } from '@/config/brand';
 import { Plus, Mail, Copy, Check } from 'lucide-react';
 import { formatCT } from '@/lib/format-ct';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface EmployerLead {
   id: string;
@@ -66,6 +67,7 @@ const btnOutline: React.CSSProperties = {
 };
 
 export default function OutreachPage() {
+  const { toast } = useToast();
   const [leads, setLeads] = useState<EmployerLead[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +115,7 @@ export default function OutreachPage() {
       ? { companyName, source: 'suggestions' }
       : formData;
 
-    if (!dataToSubmit.companyName) { alert('Company name is required'); return; }
+    if (!dataToSubmit.companyName) { toast('Company name is required', 'error'); return; }
 
     try {
       const res = await fetch('/api/outreach', {
@@ -130,7 +132,7 @@ export default function OutreachPage() {
       }
     } catch (error) {
       console.error('Error adding lead:', error);
-      alert('Failed to add lead');
+      toast('Failed to add lead', 'error');
     }
   };
 
@@ -145,7 +147,7 @@ export default function OutreachPage() {
       if (data.success) await fetchData();
     } catch (error) {
       console.error('Error updating status:', error);
-      alert('Failed to update status');
+      toast('Failed to update status', 'error');
     }
   };
 

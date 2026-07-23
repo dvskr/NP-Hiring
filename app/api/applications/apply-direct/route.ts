@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
@@ -306,11 +306,17 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // 8. Trigger AI candidate scoring in background (fire-and-forget)
+        // 8. Trigger AI candidate scoring in the background (audit B91).
+        // after() keeps the invocation alive until scoring completes — a bare
+        // fire-and-forget promise can be frozen with the function as soon as
+        // the response returns on serverless, silently never computing the
+        // score. Same pattern as the messaging routes' notification emails.
         if (!autoReject) {
-            import('@/lib/candidate-scorer')
-                .then(({ scoreCandidate }) => scoreCandidate(application.id, jobId, user.id))
-                .catch(err => logger.error('AI candidate scoring failed', err));
+            after(
+                import('@/lib/candidate-scorer')
+                    .then(({ scoreCandidate }) => scoreCandidate(application.id, jobId, user.id))
+                    .catch(err => logger.error('AI candidate scoring failed', err))
+            );
         }
 
         return NextResponse.json({

@@ -31,17 +31,13 @@ import { getExperimentArm, trackExperimentEvent } from '@/lib/ai/experiments';
 import { createClient } from '@/lib/supabase/server';
 import { createHash } from 'crypto';
 import { cookies } from 'next/headers';
-
-// Sticky anonymous-tenant id. Used so the same browser stays in the same
-// A/B arm across sessions even before the user signs in. Hashed so the
-// raw cookie value never leaves the server.
-const ANON_COOKIE = 'pmhnp_exp_anon';
-const SEMANTIC_SEARCH_EXPERIMENT = {
-    experiment: 'semantic_search.v1',
-    arms: ['control', 'treatment'] as const,
-    /** 50% rollout — give the experiment enough volume per arm to detect a CTR delta. */
-    rolloutPercent: 50,
-};
+// B80: experiment config + anon-cookie name live in a shared module so the
+// click/apply event recorder (POST /api/jobs/search/semantic/event and the
+// track-apply wiring) can never drift from the assignment logic here.
+import {
+    SEMANTIC_ANON_COOKIE as ANON_COOKIE,
+    SEMANTIC_SEARCH_EXPERIMENT,
+} from '@/lib/ai/semantic-search-experiment';
 
 const querySchema = z.object({
     q: z.string().min(2).max(500),

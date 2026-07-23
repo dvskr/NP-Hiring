@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
+import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
@@ -291,14 +292,18 @@ export async function POST(req: NextRequest) {
             // Send email notification
             const candidateName = [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'A candidate';
             if (employerProfile.email) {
-                sendCandidateInquiryNotification(
-                    employerProfile.email,
-                    employerProfile.firstName,
-                    candidateName,
-                    cleanSubject,
-                    cleanBody,
-                    job.title,
-                ).catch(err => console.error('Candidate inquiry email error:', err));
+                // after() keeps the invocation alive until the send completes
+                // (bare fire-and-forget can be frozen with the function).
+                after(
+                    sendCandidateInquiryNotification(
+                        employerProfile.email,
+                        employerProfile.firstName,
+                        candidateName,
+                        cleanSubject,
+                        cleanBody,
+                        job.title,
+                    ).catch(err => logger.error('Candidate inquiry email error', err))
+                );
             }
 
             return NextResponse.json({
@@ -347,14 +352,18 @@ export async function POST(req: NextRequest) {
         const candidateName = [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'A candidate';
 
         if (employerProfile.email) {
-            sendCandidateInquiryNotification(
-                employerProfile.email,
-                employerProfile.firstName,
-                candidateName,
-                cleanSubject,
-                cleanBody,
-                job.title,
-            ).catch(err => console.error('Candidate inquiry email error:', err));
+            // after() keeps the invocation alive until the send completes
+            // (bare fire-and-forget can be frozen with the function).
+            after(
+                sendCandidateInquiryNotification(
+                    employerProfile.email,
+                    employerProfile.firstName,
+                    candidateName,
+                    cleanSubject,
+                    cleanBody,
+                    job.title,
+                ).catch(err => logger.error('Candidate inquiry email error', err))
+            );
         }
 
         return NextResponse.json({

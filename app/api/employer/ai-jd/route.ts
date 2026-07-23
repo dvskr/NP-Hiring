@@ -44,6 +44,7 @@ import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { complete } from '@/lib/ai/gateway';
 import { AiGatewayError } from '@/lib/ai/types';
+import { isAiFeatureEnabled } from '@/lib/ai/feature-flags';
 import { checkJdGuardrails } from '@/lib/jd-guardrails';
 import { sanitizeText } from '@/lib/sanitize';
 import { AI_DAILY_CAPS, getEmployerAiUsage } from '@/lib/ai-usage';
@@ -161,6 +162,17 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     logger.warn('AI JD auth failed', { error: err });
     return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
+  }
+
+  // Kill switch (audit F31): the 'ai.employer.jd_generator' flag now
+  // actually gates the route (its registry default was flipped to true to
+  // reflect that the generator is live — env/DB overrides are the switch).
+  const flagEnabled = await isAiFeatureEnabled('ai.employer.jd_generator', { type: 'employer', id: userId });
+  if (!flagEnabled) {
+    return NextResponse.json(
+      { error: 'The AI job description generator is temporarily unavailable.', code: 'feature_disabled' },
+      { status: 503 },
+    );
   }
 
   let parsed: ParsedRequest;

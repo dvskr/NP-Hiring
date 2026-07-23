@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { verifyExtensionToken } from '@/lib/verify-extension-token';
 import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { complete } from '@/lib/ai/gateway';
+import { AiGatewayError } from '@/lib/ai/types';
+import { checkAutofillAiQuota, quotaExceededResponse } from '../_lib/quota';
+import { checkAutofillAiFeature, aiGatewayErrorResponse } from '../_lib/guard';
 
 /**
  * POST /api/autofill/extract-resume-sections
@@ -21,8 +25,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // Kill switch (audit F31).
+        const disabled = await checkAutofillAiFeature('ai.candidate.autofill_extract', user.userId);
+        if (disabled) return disabled;
+
         const body = await req.json().catch(() => ({}));
         const { sections = ['education', 'experience'] } = body as { sections?: string[] };
+
+        // Monthly AI-generation quota (audit F29) — checked before any
+        // resume fetch / model work.
+        const quota = await checkAutofillAiQuota(user.userId, 1);
+        if (!quota.allowed) return quotaExceededResponse(quota);
 
         // Fetch candidate profile to get resume URL
         const candidateProfile = await prisma.userProfile.findUnique({
@@ -54,46 +67,42 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Could not extract text from resume', education: [], experience: [] }, { status: 200 });
         }
 
-        // Call OpenAI to extract structured data
-        const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-        if (!OPENAI_API_KEY) {
-            return NextResponse.json({ error: 'AI service not configured' }, { status: 503 });
-        }
-
+        // Extract structured data via the LLM gateway (audit F28/V4) —
+        // registered autofill_resume_extract task (gpt-5-mini primary,
+        // claude-sonnet-4-6 fallback) with timeout + cost tracking, replacing
+        // the raw gpt-4o-mini fetch.
         const prompt = buildExtractionPrompt(resumeText, sections);
 
-        const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-                model: 'gpt-4o-mini',
+        let content = '{}';
+        let modelUsed = 'unknown';
+        try {
+            const response = await complete({
+                task: 'autofill_resume_extract',
+                tenant: { type: 'candidate', id: user.userId },
+                promptId: 'autofill_resume_extract',
+                promptVersion: 'v2',
                 messages: [
                     { role: 'system', content: systemPrompt() },
                     { role: 'user', content: prompt },
                 ],
-                max_completion_tokens: 3000,
-                temperature: 0.1,
-                response_format: { type: 'json_object' },
-            }),
-        });
-
-        if (!aiResponse.ok) {
-            const errorBody = await aiResponse.text();
-            console.error('OpenAI extract-sections error:', aiResponse.status, errorBody);
-            return NextResponse.json({ error: `AI extraction failed (${aiResponse.status})` }, { status: 502 });
+            });
+            content = response.content || '{}';
+            modelUsed = response.model;
+        } catch (err) {
+            if (err instanceof AiGatewayError) {
+                console.error('AI extract-sections gateway error:', err.code);
+                return aiGatewayErrorResponse(err, 'AI extraction');
+            }
+            throw err;
         }
-
-        const aiData = await aiResponse.json();
-        const content = aiData.choices?.[0]?.message?.content || '{}';
 
         let parsed;
         try {
             parsed = JSON.parse(content);
         } catch {
-            console.error('Failed to parse AI extraction response:', content);
+            // NB: do not log the raw content — it is the candidate's parsed
+            // resume (PII).
+            console.error('Failed to parse AI extraction response (invalid JSON)');
             parsed = {};
         }
 
@@ -111,7 +120,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             education: parsed.education || [],
             experience: parsed.experience || [],
-            model: aiData.model || 'gpt-4o-mini',
+            model: modelUsed,
         });
     } catch (error) {
         console.error('Extract resume sections error:', error);

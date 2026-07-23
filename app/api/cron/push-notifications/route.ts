@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
             }
 
             const payload = JSON.stringify({
-                title: `${newJobs.length} New PMHNP Job${newJobs.length > 1 ? 's' : ''}`,
+                title: `${newJobs.length} New ${brand.niche.short} Job${newJobs.length > 1 ? 's' : ''}`,
                 body: newJobs.map(j => `${j.title} at ${j.employer}`).join('\n'),
                 url: '/jobs',
                 icon: '/icon-192x192.png',

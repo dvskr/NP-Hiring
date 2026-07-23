@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
@@ -280,13 +280,19 @@ export async function PATCH(req: NextRequest) {
 
             if (candidateProfile?.email) {
                 const { sendStatusUpdateEmail } = await import('@/lib/email-service');
-                sendStatusUpdateEmail({
-                    candidateEmail: candidateProfile.email,
-                    candidateName: [candidateProfile.firstName, candidateProfile.lastName].filter(Boolean).join(' ') || 'there',
-                    jobTitle: application.job.title,
-                    employerName: application.job.employer,
-                    newStatus: status,
-                }).catch(err => logger.error('Failed to send status update email', err));
+                // after() keeps the serverless invocation alive until the send
+                // completes — a bare fire-and-forget promise can be frozen with
+                // the function as soon as the response is returned, silently
+                // dropping the candidate's status notification.
+                after(
+                    sendStatusUpdateEmail({
+                        candidateEmail: candidateProfile.email,
+                        candidateName: [candidateProfile.firstName, candidateProfile.lastName].filter(Boolean).join(' ') || 'there',
+                        jobTitle: application.job.title,
+                        employerName: application.job.employer,
+                        newStatus: status,
+                    }).catch(err => logger.error('Failed to send status update email', err))
+                );
             }
         } catch (err) {
             logger.error('Failed to send status update email', err);

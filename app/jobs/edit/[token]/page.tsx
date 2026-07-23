@@ -14,6 +14,7 @@ import { AlertTriangle, CheckCircle, RefreshCw, Briefcase, FileText, DollarSign,
 const ReactQuill = lazy(() => import('react-quill-new'));
 import 'react-quill-new/dist/quill.snow.css';
 import ScreeningQuestionsBuilder from '@/components/ScreeningQuestionsBuilder';
+import { useToast } from '@/components/ui/ToastProvider';
 
 const editJobSchema = z.object({
   title: z.string().min(10, 'Job title must be at least 10 characters'),
@@ -235,6 +236,7 @@ function EditStepProgressBar({ currentStep, onStepClick, completedSteps }: {
 
 export default function EditJobPage({ params }: { params: Promise<{ token: string }> }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [token, setToken] = useState<string>('');
   const [job, setJob] = useState<Job | null>(null);
   const [employerJob, setEmployerJob] = useState<EmployerJobData | null>(null);
@@ -502,7 +504,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
       }
     } catch (err) {
       console.error('Renewal checkout error:', err);
-      alert(err instanceof Error ? err.message : 'Failed to start renewal process');
+      toast(err instanceof Error ? err.message : 'Failed to start renewal process', 'error');
       setRenewingTier(null);
     }
   };

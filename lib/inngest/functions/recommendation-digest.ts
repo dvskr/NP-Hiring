@@ -15,6 +15,7 @@
  */
 
 import { inngest } from '@/lib/inngest/client';
+import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { isAiFeatureEnabled } from '@/lib/ai/feature-flags';
@@ -93,7 +94,7 @@ function renderDigestHtml(args: {
     <td align="center">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;background:#FFFFFF;border-radius:20px;padding:32px;border:1px solid rgba(0,0,0,0.06);">
         <tr><td>
-          <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#BE185D;">PMHNP Hiring · Weekly Digest</p>
+          <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#BE185D;">${escapeHtml(brand.name)} · Weekly Digest</p>
           <h1 style="margin:0 0 4px;font-family:Georgia,serif;font-size:26px;font-weight:800;color:#1A2E35;">${args.jobs.length} new role${args.jobs.length === 1 ? '' : 's'} match your profile</h1>
           <p style="margin:0 0 20px;font-size:14px;color:#6B7F8A;">${greeting} We picked these from your latest recommendations — Easy Apply jobs first.</p>
 

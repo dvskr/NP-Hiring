@@ -16,19 +16,28 @@ const STORAGE_BASE = brand.assets.storageBase;
 
 export const revalidate = 86400;
 
-const SALARY_GUIDE_URL = process.env.SALARY_GUIDE_URL || `${STORAGE_BASE}/storage/v1/object/public/resources/PMHNP_Salary_Guide_2026.pdf`;
+// Audit F12: fallback derives from config/brand.ts (single source of truth)
+// instead of the donor board's PMHNP-branded asset, which 404s on this board.
+const SALARY_GUIDE_URL = process.env.SALARY_GUIDE_URL || brand.assets.salaryGuidePdf;
 
+// Audit F12: metadata describes the ACTUAL inventory — 3 in-depth guides
+// (FPA, private practice, 1099 vs W2), the interactive salary tool, and the
+// licensure checker. The previous article-count and state-guide-series
+// claims described content this board does not have (see
+// config/niche/content-map.ts: no authored posts, license-guide series
+// unwritten) — a claim-vs-reality mismatch that answer engines penalize.
 export const metadata: Metadata = {
-  title: `${brand.niche.short} Resources & Career Guides — 85+ Free Articles`,
-  description: `Free ${brand.niche.short} career resources: 50-state licensure guides, salary calculator, negotiation tips, private practice startup, 1099 vs W2 comparison, and 85+ expert articles.`,
+  title: `${brand.niche.short} Career Resources — Salary Tool & Licensure Checker`,
+  description: `Free ${brand.niche.short} career resources: interactive salary calculator, state licensure checker, plus guides to Full Practice Authority, private practice startup, and 1099 vs W2 pay.`,
   keywords: [
     `${brand.niche.short.toLowerCase()} resources`, `${brand.niche.descriptor} career`, `${brand.niche.short.toLowerCase()} salary guide`,
-    `${brand.niche.short.toLowerCase()} licensure by state`, `${brand.niche.short.toLowerCase()} private practice`, `${brand.niche.short.toLowerCase()} career guide`,
-    `${brand.niche.short.toLowerCase()} interview tips`, `${brand.niche.short.toLowerCase()} job search`,
+    `${brand.niche.short.toLowerCase()} licensure checker`, `${brand.niche.short.toLowerCase()} full practice authority`,
+    `${brand.niche.short.toLowerCase()} private practice`, `${brand.niche.short.toLowerCase()} 1099 vs w2`,
+    `${brand.niche.short.toLowerCase()} job search`,
   ],
   openGraph: {
-    title: `${brand.niche.short} Resources & Career Guides — 85+ Free Articles`,
-    description: `Free career resources for ${brand.niche.descriptor}s. Salary data, licensure guides, and expert articles.`,
+    title: `${brand.niche.short} Career Resources — Salary Tool & Licensure Checker`,
+    description: `Free career resources for ${brand.niche.descriptor}s: salary calculator, state licensure checker, and in-depth practice guides.`,
     images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp`, width: 1280, height: 900, alt: `${brand.niche.short} career resources and guides` }],
   },
   twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp`] },
@@ -190,11 +199,12 @@ export default async function ResourcesPage() {
             Everything you need for your {brand.niche.short} career — from licensure requirements to salary negotiation.
           </p>
 
-          {/* Stat Pills */}
+          {/* Stat Pills — count pills render only when the content actually
+              exists (audit F12: no advertised inventory the page can't deliver) */}
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', marginBottom: '48px' }}>
             {[
-              { value: `${blogPosts.length}+`, label: 'Articles', bg: '#D4F5E9', color: '#065F46' },
-              { value: `${sortedStates.length}`, label: 'State Guides', bg: '#E0E7FF', color: '#3730A3' },
+              ...(blogPosts.length > 0 ? [{ value: `${blogPosts.length}`, label: 'Articles', bg: '#D4F5E9', color: '#065F46' }] : []),
+              ...(sortedStates.length > 0 ? [{ value: `${sortedStates.length}`, label: 'State Guides', bg: '#E0E7FF', color: '#3730A3' }] : []),
               { value: '3', label: 'Deep Guides', bg: '#FEF3C7', color: '#92400E' },
               { value: 'Free', label: 'Always', bg: '#FFE0D3', color: '#7C2D12' },
             ].map(s => (
@@ -282,7 +292,11 @@ export default async function ResourcesPage() {
 
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 3B: BROWSE ALL STATE GUIDES (warm peach bg)
+          Audit F12: rendered only when state guides exist — the license-guide
+          series is unwritten (config/niche/content-map.ts), and a "50-State
+          Coverage" header over an empty grid advertises missing content.
           ═══════════════════════════════════════════════════════════════ */}
+      {sortedStates.length > 0 && (
       <section style={{ background: 'linear-gradient(180deg, #FDE8D8 0%, #F5D0B5 40%, #FDE8D8 100%)', padding: '80px 20px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
@@ -333,10 +347,14 @@ export default async function ResourcesPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 4: BLOG ARTICLES BY CATEGORY (cream bg)
+          Audit F12: rendered only when published articles exist — this board
+          launches with an empty blog (config/niche/content-map.ts).
           ═══════════════════════════════════════════════════════════════ */}
+      {articles.length > 0 && (
       <div style={{ background: 'linear-gradient(180deg, #FFF5EE 0%, #FDE8D8 50%, #FFF5EE 100%)', padding: '80px 20px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
@@ -395,6 +413,7 @@ export default async function ResourcesPage() {
           })}
         </div>
       </div>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 5: TOOLS & DOWNLOADS (slate bg)
@@ -451,7 +470,7 @@ export default async function ResourcesPage() {
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/clay-icon-match.webp`} alt="Jobs" width={56} height={56} style={{ width: '56px', height: '56px', margin: '0 auto 16px', borderRadius: '16px' }} />
               <h2 className="font-lora" style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px' }}>Ready to Find Your Next {brand.niche.short} Role?</h2>
               <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.8)', margin: '0 0 24px' }}>
-                Browse thousands of {brand.niche.descriptor} positions updated daily.
+                Browse hundreds of {brand.niche.descriptor} positions updated daily.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
                 <Link href="/jobs" className="emp-cta-primary" style={{

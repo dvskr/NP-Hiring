@@ -1,205 +1,67 @@
 /**
  * Niche stats & marketing-claims pack — every CONCRETE CLAIM (numbers,
- * competitor comparisons, testimonial quotes, fallback employer chips)
- * previously hardcoded inside marketing components. This file is DATA
- * ONLY: layout and logic stay in the components; each export below is
- * rendered verbatim by exactly one component (named per section).
+ * fallback employer chips, dashboard copy) previously hardcoded inside
+ * marketing components. This file is DATA ONLY: layout and logic stay in
+ * the components; each export below is rendered verbatim by exactly one
+ * component (named per section).
  *
  * Relationship to lib/stats-sources.ts: that file holds CITATION-BACKED
- * figures (value + source URL + as-of date) reused across pages. The
- * values here are uncited marketing copy owned by this board.
+ * figures (value + source URL + as-of date). Every salary/growth number
+ * in THIS file now DERIVES from STAT_SOURCES so the two families cannot
+ * disagree — update lib/stats-sources.ts and these constants follow.
  *
- * ── NP HIRING LAUNCH STATUS (2026-07-02) ─────────────────────────────
- * This board launches FRESH. Every claim below was either:
- *   (a) ported from the hand-forked NP donor board where its phase-8
- *       marketing rewrite produced an honest NP value,
- *   (b) re-authored to an HONEST day-one value (335 jobs from the
- *       initial ATS smoke ingest; 8 active ATS sources), or
- *   (c) EMPTIED because no honest source exists (testimonials,
- *       fallback employer chips).
- * Salary figures were retuned to NP reality (~$126k national average,
- * BLS OEWS Nurse Practitioners) — see the per-export notes, and the
- * LAUNCH TODO in lib/stats-sources.ts (still carrying the $155k
- * PMHNP-era cited figure until re-sourced).
+ * ── NP HIRING LAUNCH STATUS (2026-07-02, updated 2026-07-18) ─────────
+ * This board launches FRESH. Claims here were either re-authored to
+ * honest values or EMPTIED because no honest source exists (fallback
+ * employer chips). The unmounted donor marketing sections (WhyUs,
+ * Comparison, Testimonial) and their data packs were DELETED 2026-07-18
+ * (citation-trust sweep B10) — they carried stale day-one inventory
+ * claims ('verified NP listings' counts) and unverified competitor claims. If a
+ * future board wants those sections, re-author them from the donor repo
+ * with values measured at that time.
  *
  * ── FORK WARNING ──────────────────────────────────────────────────────
  * A future fork that ships these values unedited publishes claims about
- * THIS board's inventory. Re-author or empty EVERY export before
- * launching a new board. FALLBACK_EMPLOYERS must stay [] unless you have
- * real listings or permission for every named employer.
+ * THIS board. Re-author or empty EVERY export before launching a new
+ * board. FALLBACK_EMPLOYERS must stay [] unless you have real listings
+ * or permission for every named employer.
  */
 
-/* ══════════════════════════════════════════════════════════════════════
- * components/WhyUs.tsx — "Why NPs Choose Us" feature rows.
- * Currently not mounted on any route (kept as a homepage-style marketing
- * section).
- *
- * NP HIRING: re-authored to honest day-one values. The donor's phase-8
- * pass retitled row 01 to '100% NP Roles' but kept its old '10,000+
- * verified listings' / '3,000+ sources monitored' / '73% show salary'
- * claims — all false on a fresh board, so they were replaced here:
- *   - '335+' = jobs from the initial ATS smoke ingest (update as the
- *     board grows);
- *   - '8'    = active ATS adapters (Greenhouse, Lever, Workday,
- *     SmartRecruiters, Ashby, BambooHR, JazzHR, Workable);
- *   - 'Free' = job seekers pay nothing (structurally true).
- * Re-measure before mounting this section.
- * ══════════════════════════════════════════════════════════════════════ */
-
-export interface WhyUsFeature {
-    /** Two-digit ordinal rendered as the row number. */
-    num: string;
-    /** Accent color for the number gradient, line, and stat. */
-    color: string;
-    title: string;
-    desc: string;
-    /** Big right-aligned stat value. */
-    stat: string;
-    statLabel: string;
-}
-
-export const WHY_US_FEATURES: readonly WhyUsFeature[] = [
-    {
-        num: '01',
-        color: '#E86C2C',
-        title: '100% NP & APRN Roles',
-        desc: 'Every listing is verified for relevance. Nurse practitioner and APRN positions only — no physician assistant roles, no RN staffing noise.',
-        stat: '335+',
-        statLabel: 'verified NP listings',
-    },
-    {
-        num: '02',
-        color: '#F472B6',
-        title: 'Updated Daily',
-        desc: 'We ingest directly from employer ATS feeds — Greenhouse, Lever, Workday, and more — refreshed every 24 hours.',
-        stat: '8',
-        statLabel: 'ATS sources monitored',
-    },
-    {
-        num: '03',
-        color: '#22c55e',
-        title: 'Salary Transparency',
-        desc: 'See compensation upfront. We surface salary data whenever available so you skip the guesswork.',
-        stat: 'Free',
-        statLabel: 'for job seekers',
-    },
-];
+import { STAT_SOURCES } from '@/lib/stats-sources';
 
 /* ══════════════════════════════════════════════════════════════════════
- * components/Comparison.tsx — "How We Compare" feature matrix vs Indeed,
- * LinkedIn, and ZipRecruiter. Currently not mounted on any route.
+ * ── Derived national-average salary (single source of truth) ─────────
  *
- * NP HIRING: ported from the donor's phase-8 rewrite — it renamed the
- * niche row to 'NP-Specific' and the highlighted platform to 'NP Hiring'
- * and kept the competitor cells unchanged.
- *
- * FORK WARNING: the competitor cells are UNVERIFIED claims about NAMED
- * third-party companies ('Indeed', 'LinkedIn', 'ZipRecruiter').
- * Independently substantiate — or delete — every competitor cell before
- * mounting this section.
+ * All UI salary constants below derive from STAT_SOURCES.averageSalary
+ * (BLS OEWS, Nurse Practitioners 29-1171 — median annual wage, May 2024,
+ * $129,210). The prior 126K-era hardcodes (an earlier OEWS vintage) were
+ * reconciled 2026-07-18 (citation-trust sweep B4/B51): the homepage FAQ,
+ * salary guide, job-page widgets, and state FAQs now all quote the same
+ * cited figure. Do NOT re-hardcode a salary anywhere — update
+ * lib/stats-sources.ts instead.
  * ══════════════════════════════════════════════════════════════════════ */
 
-export type ComparisonStatus = 'yes' | 'no' | 'partial';
-
-export interface ComparisonPlatform {
-    name: string;
-    highlighted?: boolean;
-    features: Record<string, ComparisonStatus>;
-}
-
-/** Row labels of the comparison matrix, in render order. */
-export const COMPARISON_FEATURE_LABELS: readonly string[] = [
-    'NP-Specific',
-    'Zero Irrelevant Roles',
-    'Salary Transparency',
-    'Free Job Alerts',
-    'Employer Direct',
-];
-
-export const COMPARISON_PLATFORMS: readonly ComparisonPlatform[] = [
-    {
-        name: 'NP Hiring',
-        highlighted: true,
-        features: {
-            'NP-Specific': 'yes',
-            'Zero Irrelevant Roles': 'yes',
-            'Salary Transparency': 'yes',
-            'Free Job Alerts': 'yes',
-            'Employer Direct': 'yes',
-        },
-    },
-    {
-        name: 'Indeed',
-        features: {
-            'NP-Specific': 'no',
-            'Zero Irrelevant Roles': 'no',
-            'Salary Transparency': 'partial',
-            'Free Job Alerts': 'yes',
-            'Employer Direct': 'no',
-        },
-    },
-    {
-        name: 'LinkedIn',
-        features: {
-            'NP-Specific': 'no',
-            'Zero Irrelevant Roles': 'no',
-            'Salary Transparency': 'no',
-            'Free Job Alerts': 'yes',
-            'Employer Direct': 'partial',
-        },
-    },
-    {
-        name: 'ZipRecruiter',
-        features: {
-            'NP-Specific': 'no',
-            'Zero Irrelevant Roles': 'no',
-            'Salary Transparency': 'partial',
-            'Free Job Alerts': 'yes',
-            'Employer Direct': 'no',
-        },
-    },
-];
-
-/* ══════════════════════════════════════════════════════════════════════
- * components/Testimonial.tsx — "What NPs Are Saying" quote cards.
- * Currently not mounted on any route.
- *
- * NP HIRING: EMPTY by design. The donor still shipped placeholder quotes
- * attributed to invented people — publishing those is publishing FAKE
- * ENDORSEMENTS (an FTC-endorsement-guides violation). This board launches
- * with zero testimonials; the component returns null when this array is
- * empty. Populate ONLY with real, consented testimonials (the dashboard's
- * Share Your Story card collects them).
- * ══════════════════════════════════════════════════════════════════════ */
-
-export interface TestimonialEntry {
-    quote: string;
-    name: string;
-    credential: string;
-    /** Accent color for the card border, quote mark, and avatar. */
-    color: string;
-}
-
-export const TESTIMONIALS: readonly TestimonialEntry[] = [];
+/** National average NP salary in $K, derived from the cited BLS figure. */
+export const NATIONAL_AVG_SALARY_K = Math.round(
+    Number(STAT_SOURCES.averageSalary.value) / 1000
+);
 
 /* ══════════════════════════════════════════════════════════════════════
  * components/jobs/SidebarVisualCards.tsx (CareerPulseCard) — "NP Career
  * Pulse" stat pebbles in the job-detail sidebar
  * (app/jobs/[slug]/page.tsx). This card IS live on every job page.
  *
- * NP HIRING: retuned to NP-wide reality:
- *   - '45%' growth matches the ONLY cited growth figure on this board
- *     (lib/stats-sources.ts blsGrowth2032 — BLS OOH Nurse Practitioners,
- *     2022–2032 projection). Do not let this drift from that file.
- *   - '$126K' average annual salary reflects BLS OEWS Nurse Practitioners
- *     (≈$126k national average). NOTE: lib/stats-sources.ts still carries
- *     the PMHNP-era $155,000 cited figure — re-sourcing that file is a
- *     LAUNCH TODO; until it lands, that file and this pebble deliberately
- *     disagree ($155k cited vs $126K here). Resolve by re-sourcing, not
- *     by copying the stale $155k.
- *   - '335+' active openings is THIS board's honest day-one inventory
- *     (initial ATS smoke ingest). Update as inventory grows — ideally
- *     wire to lib/site-stats.ts cached counters.
+ * NP HIRING:
+ *   - growth derives from STAT_SOURCES.blsGrowth2032 (BLS Employment
+ *     Projections, NP-specific 2022–2032);
+ *   - salary derives from STAT_SOURCES.averageSalary (BLS OEWS May 2024);
+ *   - the former hardcoded 'openings on this board' count pebble was
+ *     replaced with an evergreen cadence claim (citation-trust sweep
+ *     B5). Hardcoded inventory counts go stale immediately — the board
+ *     held 900+ jobs within days of the day-one snapshot (see the RULE in
+ *     config/niche/copy.ts). For live counts, wire lib/site-stats.ts
+ *     cached counters into the component instead of putting a number
+ *     here. Guarded by tests/regressions/aeo-content-inventory-claims.
  * ══════════════════════════════════════════════════════════════════════ */
 
 export interface CareerPulseStat {
@@ -211,9 +73,9 @@ export interface CareerPulseStat {
 }
 
 export const CAREER_PULSE_STATS: readonly CareerPulseStat[] = [
-    { emoji: '📈', value: '45%', label: 'Projected growth 2022-2032', color: '#D5F5F1' },
-    { emoji: '💰', value: '$126K', label: 'Average annual salary', color: '#FDE68A' },
-    { emoji: '🏥', value: '335+', label: 'Openings on this board', color: '#BFDBFE' },
+    { emoji: '📈', value: STAT_SOURCES.blsGrowth2032.formatted, label: 'Projected growth 2022-2032', color: '#D5F5F1' },
+    { emoji: '💰', value: `$${NATIONAL_AVG_SALARY_K}K`, label: 'Median annual salary (BLS)', color: '#FDE68A' },
+    { emoji: '🏥', value: 'Daily', label: 'New jobs from employer ATS feeds', color: '#BFDBFE' },
 ];
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -270,30 +132,16 @@ export const DASHBOARD_MARKET_PULSE = {
  * ── Scattered salary claims ──────────────────────────────────────────
  *
  * Salary figures that were hardcoded inside individual UI components,
- * extracted here. This is a THIRD family of salary numbers on this
- * board, independent of the other two:
+ * extracted here. Two related families exist on this board:
  *   1. config/niche/salary.ts — pipeline validation/clamp/period bands
  *      (out of scope for this pass — do not retune casually; the bands
  *      decide which salaries survive ingestion);
- *   2. lib/stats-sources.ts — CITATION-BACKED figures. ⚠️ LAUNCH TODO:
- *      that file still carries the PMHNP-era $155,000 figure; it must be
- *      re-sourced to the NP-wide BLS OEWS value (~$126k) before the
- *      salary-guide/FAQ surfaces ship.
- * The three families must be retuned TOGETHER — the pipeline bands gate
- * which salaries exist, the cited figures anchor SEO/E-E-A-T copy, and
- * the UI claims below are what users actually see next to real jobs.
- *
- * INTERNAL-CONTRADICTION STATUS (NP retune, 2026-07-02): the UI-family
- * values below were reconciled to a single $126k NP national average:
- *   • SALARY_COMPARISON_NATIONAL_AVG_K = 126
- *   • SALARY_INSIGHTS_DEFAULT_NATIONAL_AVG_K = 126
- *   • STATE_FAQ_NATIONAL_AVG_SALARY_TEXT = '$126,000'
- *   • CAREER_PULSE_STATS '$126K'
- * ONE contradiction remains BY DESIGN: lib/stats-sources.ts still cites
- * $155,000 (stale PMHNP figure) until its launch-TODO re-sourcing lands.
- * A job-detail page therefore stays internally consistent, but any
- * surface quoting stats-sources.ts will disagree until that file is
- * re-sourced. Fix stats-sources.ts; do NOT regress these back to $155k.
+ *   2. lib/stats-sources.ts — CITATION-BACKED figures ($129,210 BLS OEWS
+ *      May 2024 median). The UI constants below DERIVE from that file
+ *      (citation-trust sweep B4/B51, 2026-07-18) so a job-detail page,
+ *      the homepage FAQ, and the salary guide all quote one figure.
+ * The pipeline bands still gate which salaries exist — retune them
+ * alongside any major stats-sources change.
  * ══════════════════════════════════════════════════════════════════════ */
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -312,7 +160,7 @@ export const DASHBOARD_MARKET_PULSE = {
  * count bucket in the filter-counts API or its badge renders 0.
  *
  * NP HIRING: thresholds kept from the donor ($100k/$150k/$200k). With an
- * NP national average around $126k the $100k+ bucket captures the bulk
+ * NP national median around $129k the $100k+ bucket captures the bulk
  * of listings, $150k+ captures the premium tier (CRNA, senior, high-COL),
  * and $200k+ the top slice — still a meaningful spread for this niche.
  * ══════════════════════════════════════════════════════════════════════ */
@@ -339,28 +187,28 @@ export const SALARY_FILTER_BUCKETS: readonly SalaryFilterBucket[] = [
  * ±N% above/below the national average" comparison line, so changing it
  * silently changes every state-vs-national percentage.
  *
- * NP HIRING: retuned from the donor's stale $158k (PMHNP-era) to $126k —
- * BLS OEWS Nurse Practitioners national average. Consistent with
+ * NP HIRING: derives from STAT_SOURCES.averageSalary (BLS OEWS May 2024
+ * median, $129,210 → 129). Consistent by construction with
  * SALARY_INSIGHTS_DEFAULT_NATIONAL_AVG_K, STATE_FAQ_NATIONAL_AVG_SALARY_TEXT,
- * and CAREER_PULSE_STATS. See the contradiction status block above re:
- * lib/stats-sources.ts.
+ * and CAREER_PULSE_STATS.
  * ══════════════════════════════════════════════════════════════════════ */
 
-export const SALARY_COMPARISON_NATIONAL_AVG_K = 126; // ~$126k national average for NPs (BLS OEWS)
+export const SALARY_COMPARISON_NATIONAL_AVG_K = NATIONAL_AVG_SALARY_K;
 
 /* ══════════════════════════════════════════════════════════════════════
  * components/SalaryInsights.tsx — default for the optional
- * `nationalAvgSalary` prop (in $k): the "National average: $126k"
+ * `nationalAvgSalary` prop (in $k): the "National average: $129k"
  * footnote under the state-average card. The component is imported by
  * app/jobs/[slug]/page.tsx but NOT currently rendered on any route, so
  * this default is LATENT — it applies the moment a call site mounts the
  * component without passing the prop.
  *
- * NP HIRING: retuned to $126k, matching SALARY_COMPARISON_NATIONAL_AVG_K
- * (the two defaults aim at the same job-detail surface and must agree).
+ * NP HIRING: derives from the same cited figure as
+ * SALARY_COMPARISON_NATIONAL_AVG_K (the two defaults aim at the same
+ * job-detail surface and must agree).
  * ══════════════════════════════════════════════════════════════════════ */
 
-export const SALARY_INSIGHTS_DEFAULT_NATIONAL_AVG_K = 126;
+export const SALARY_INSIGHTS_DEFAULT_NATIONAL_AVG_K = NATIONAL_AVG_SALARY_K;
 
 /* ══════════════════════════════════════════════════════════════════════
  * components/StateFAQ.tsx — display string templated MID-SENTENCE into
@@ -368,16 +216,14 @@ export const SALARY_INSIGHTS_DEFAULT_NATIONAL_AVG_K = 126;
  * in {state}?" on state pages (app/jobs/state/[state]/page.tsx). The
  * answer string is emitted BOTH as visible accordion copy
  * (StateFAQAccordion) and inside FAQPage JSON-LD, so this must remain
- * the exact display form ('$126,000') — not a number to re-format — for
- * the sentence to reassemble byte-identically.
+ * an exact display form — not a number to re-format — for the sentence
+ * to reassemble byte-identically.
  *
- * NP HIRING: retuned to '$126,000' (BLS OEWS Nurse Practitioners ≈$126k).
- * ⚠️ Disagrees with lib/stats-sources.ts ($155,000 stale cited figure)
- * until that file's launch-TODO re-sourcing lands — see the
- * contradiction status block above.
+ * NP HIRING: derives from STAT_SOURCES.averageSalary.formatted
+ * ('$129,210' — BLS OEWS May 2024 median).
  * ══════════════════════════════════════════════════════════════════════ */
 
-export const STATE_FAQ_NATIONAL_AVG_SALARY_TEXT = '$126,000';
+export const STATE_FAQ_NATIONAL_AVG_SALARY_TEXT = STAT_SOURCES.averageSalary.formatted;
 
 /* ══════════════════════════════════════════════════════════════════════
  * components/SalaryCalculator.tsx — multiplier tables for the "NP Salary

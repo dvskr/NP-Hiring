@@ -9,7 +9,7 @@ import FeaturedJobsSection from '@/components/FeaturedJobsSection';
 import { prisma } from '@/lib/prisma';
 import {
   ArrowRight, Search, Users, Briefcase, MapPin,
-  Check, X, Star,
+  Check, X, Star, Sparkles, DollarSign, Bell, Bookmark, FileText, SlidersHorizontal, BookOpen, Gift, Award,
 } from 'lucide-react';
 
 const STORAGE_BASE = brand.assets.storageBase;
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   // live UI is a credibility hit. Description now describes the platform
   // value without a numeric claim.
   description:
-    `Find your next ${brand.niche.short} opportunity — remote and in-person ${brand.niche.descriptor} jobs with salary transparency, AI matching, and one-click apply. Free for job seekers.`,
+    `Find your next ${brand.niche.long} position. Search thousands of verified roles, compare salaries, get daily alerts, and apply directly — 100% free forever.`,
   openGraph: {
     images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-seeker-career-resources.webp`, width: 1280, height: 900, alt: `${brand.niche.short} job seeker career resources` }],
   },
@@ -36,6 +36,23 @@ const clayCard: React.CSSProperties = {
   background: '#FFFFFF', borderRadius: '20px',
   border: '1px solid rgba(255,255,255,0.5)',
   boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
+};
+
+const iconBg: React.CSSProperties = {
+  width: '48px',
+  height: '48px',
+  borderRadius: '12px',
+  background: '#D4E2D4',
+  color: '#1E3A5F',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: '16px',
+};
+
+const iconBgCentered: React.CSSProperties = {
+  ...iconBg,
+  margin: '0 auto 14px',
 };
 
 async function getStats() {
@@ -115,14 +132,16 @@ export default async function ForJobSeekersPage() {
               display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center',
             }}>
               <div style={{ padding: '32px 28px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-ai-match.webp`} alt="" width={56} height={56} style={{ width: '56px', height: '56px', objectFit: 'contain', marginBottom: '16px' }} />
+                <div style={iconBg}>
+                  <Sparkles size={24} />
+                </div>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>AI Match Scoring</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                   Every job gets a 0–100 match score based on your license, specialty, experience, location, and salary preferences.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/bento-match.webp`} alt="AI match scoring" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src="/images/job-seekers/bento-match.webp" alt="AI match scoring" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
@@ -131,10 +150,12 @@ export default async function ForJobSeekersPage() {
               display: 'flex', flexDirection: 'column',
             }}>
               <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/bento-salary.webp`} alt="Salary transparency" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
+                <Image src="/images/job-seekers/bento-salary.webp" alt="Salary transparency" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
               </div>
               <div style={{ padding: '24px 22px', flex: 1 }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-salary.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '12px' }} />
+                <div style={iconBg}>
+                  <DollarSign size={22} />
+                </div>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Salary Transparency</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
                   See salary ranges on every listing. No guessing, no surprises, no &quot;DOE.&quot;
@@ -144,25 +165,33 @@ export default async function ForJobSeekersPage() {
 
             {/* ROW 2: 4 compact cards (3 cols each) */}
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-alerts.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <div style={iconBgCentered}>
+                <Bell size={22} />
+              </div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Daily Job Alerts</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>New jobs matching your criteria — delivered to your inbox daily.</p>
             </div>
 
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-tracking.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <div style={iconBgCentered}>
+                <SlidersHorizontal size={22} />
+              </div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Application Tracking</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Track every application status from Applied to Hired.</p>
             </div>
 
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-resume.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <div style={iconBgCentered}>
+                <FileText size={22} />
+              </div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>AI Resume Parser</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Upload your resume — AI fills your profile instantly.</p>
             </div>
 
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-save.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <div style={iconBgCentered}>
+                <Bookmark size={22} />
+              </div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Save & Compare</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Bookmark jobs, compare benefits, decide on your terms.</p>
             </div>
@@ -173,14 +202,16 @@ export default async function ForJobSeekersPage() {
               display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center',
             }}>
               <div style={{ padding: '32px 28px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-licensure.webp`} alt="" width={56} height={56} style={{ width: '56px', height: '56px', objectFit: 'contain', marginBottom: '16px' }} />
+                <div style={iconBg}>
+                  <BookOpen size={24} />
+                </div>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>50-State Licensure Guides</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                   Requirements, board links, practice authority, salary data, and step-by-step instructions for every state.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/bento-guides.webp`} alt="50-state licensure guides" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src="/images/job-seekers/bento-guides.webp" alt="50-state licensure guides" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
@@ -190,7 +221,9 @@ export default async function ForJobSeekersPage() {
               background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
               border: '2px solid rgba(190,24,93,0.15)',
             }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-free.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '14px' }} />
+              <div style={{ ...iconBg, background: 'rgba(190,24,93,0.1)', color: '#BE185D' }}>
+                <Gift size={22} />
+              </div>
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Free Forever</h3>
               <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
                 No subscriptions. No premium tiers.<br />
@@ -226,10 +259,10 @@ export default async function ForJobSeekersPage() {
 
           <div className="seeker-types-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
             {[
-              { title: 'Remote / Telehealth', desc: 'See patients from anywhere via telehealth', href: '/jobs?mode=Remote', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/remote-telehealth.webp` },
-              { title: 'In-Person Clinical', desc: 'Hospital, clinic, and outpatient roles', href: '/jobs?mode=In-Person', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/clinical-inperson.webp` },
-              { title: 'Private Practice', desc: 'Start or join a private practice', href: '/resources/private-practice-guide', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/private-practice.webp` },
-              { title: 'Part-Time / PRN', desc: 'Flexible schedules and per diem', href: '/jobs?jobType=Part-Time', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/parttime-prn.webp` },
+              { title: 'Remote / Telehealth', desc: 'See patients from anywhere via telehealth', href: '/jobs?mode=Remote', img: '/images/job-seekers/remote-telehealth.webp' },
+              { title: 'In-Person Clinical', desc: 'Hospital, clinic, and outpatient roles', href: '/jobs?mode=In-Person', img: '/images/job-seekers/clinical-inperson.webp' },
+              { title: 'Private Practice', desc: 'Start or join a private practice', href: '/resources/private-practice-guide', img: '/images/job-seekers/private-practice.webp' },
+              { title: 'Part-Time / PRN', desc: 'Flexible schedules and per diem', href: '/jobs?jobType=Part-Time', img: '/images/job-seekers/parttime-prn.webp' },
             ].map(t => (
               <Link key={t.title} href={t.href} className="emp-bento-card" style={{
                 ...clayCard, padding: '0', overflow: 'hidden', textDecoration: 'none', display: 'block',
@@ -314,7 +347,7 @@ export default async function ForJobSeekersPage() {
                 padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <Image
-                  src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/cta-dream-role.webp`}
+                  src="/images/job-seekers/cta-dream-role.webp"
                   alt={`Start your ${brand.niche.short} job search`}
                   width={280} height={220}
                   style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px' }}
@@ -373,7 +406,8 @@ export default async function ForJobSeekersPage() {
                 title: `2026 ${brand.niche.short} Salary Guide`,
                 desc: `State-by-state salary data, experience-based ranges, and negotiation strategies. See what ${brand.niche.short}s actually earn.`,
                 href: '/salary-guide',
-                icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-salary.webp`,
+                IconComponent: DollarSign,
+                iconColor: '#BE185D',
                 gradient: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
                 cta: 'View Salary Data',
               },
@@ -381,7 +415,8 @@ export default async function ForJobSeekersPage() {
                 title: '50-State Licensure Guides',
                 desc: 'Step-by-step requirements, board links, practice authority status, and processing times for every state.',
                 href: '/resources',
-                icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-licensure.webp`,
+                IconComponent: BookOpen,
+                iconColor: '#EA580C',
                 gradient: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)',
                 cta: 'Check Your State',
               },
@@ -389,7 +424,8 @@ export default async function ForJobSeekersPage() {
                 title: `${brand.niche.short} Career Blog`,
                 desc: `Interview tips, resume advice, CE requirements, and industry trends — written by ${brand.niche.short}s, for ${brand.niche.short}s.`,
                 href: '/blog',
-                icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-blog.webp`,
+                IconComponent: FileText,
+                iconColor: '#4F46E5',
                 gradient: 'linear-gradient(145deg, #EEF2FF, #E0E7FF)',
                 cta: 'Read Articles',
               },
@@ -397,27 +433,37 @@ export default async function ForJobSeekersPage() {
                 title: 'Full Practice Authority Guide',
                 desc: 'Which states let you practice independently? Understand FPA, reduced, and restricted practice levels.',
                 href: '/resources/fpa-guide',
-                icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/job-seekers/icon-fpa.webp`,
+                IconComponent: Award,
+                iconColor: '#D97706',
                 gradient: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)',
                 cta: 'Learn About FPA',
               },
-            ].map(r => (
-              <Link key={r.title} href={r.href} className="emp-bento-card" style={{
-                ...clayCard, padding: '0', overflow: 'hidden', textDecoration: 'none',
-                display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center',
-              }}>
-                <div style={{ background: r.gradient, padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                  <Image src={r.icon} alt="" width={56} height={56} style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
-                </div>
-                <div style={{ padding: '20px 22px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{r.title}</h3>
-                  <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: '0 0 10px', lineHeight: 1.55 }}>{r.desc}</p>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    {r.cta} <ArrowRight size={12} />
-                  </span>
-                </div>
-              </Link>
-            ))}
+            ].map(r => {
+              const IconComp = r.IconComponent;
+              return (
+                <Link key={r.title} href={r.href} className="emp-bento-card" style={{
+                  ...clayCard, padding: '0', overflow: 'hidden', textDecoration: 'none',
+                  display: 'grid', gridTemplateColumns: '100px 1fr', alignItems: 'center',
+                }}>
+                  <div style={{ background: r.gradient, padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                    <div style={{
+                      width: '52px', height: '52px', borderRadius: '14px', background: '#FFFFFF',
+                      color: r.iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.06)',
+                    }}>
+                      <IconComp size={26} />
+                    </div>
+                  </div>
+                  <div style={{ padding: '20px 22px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{r.title}</h3>
+                    <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: '0 0 10px', lineHeight: 1.55 }}>{r.desc}</p>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      {r.cta} <ArrowRight size={12} />
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>

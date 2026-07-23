@@ -173,6 +173,47 @@ export const TASK_REGISTRY: Record<AiTaskId, TaskConfig> = {
         rateLimit: { limit: 20, windowSeconds: 3600 },
     },
 
+    // ── Chrome-extension autofill AI (audit F28/V4) ───────────────────────
+    // These back the /api/autofill/* AI routes. Cache is disabled for all
+    // three — prompts embed candidate profile context (PII-adjacent), and
+    // the gateway cacheKey contract forbids PII in cache keys anyway.
+    autofill_classify: {
+        primary:   { provider: 'openai',    model: 'gpt-5-mini' },
+        fallbacks: [{ provider: 'anthropic', model: 'claude-sonnet-4-6' }],
+        outputMode: 'json',
+        cacheTtlSeconds: 0,
+        temperature: 0.3, // Suppressed for gpt-5 family by the provider; applies to the Anthropic fallback.
+        // Up to 40 fields classified per call, plus gpt-5-mini's hidden
+        // reasoning tokens sharing the completion budget (same lesson as
+        // SCORING_LIKE / talent_search_rerank above).
+        maxOutputTokens: 8_000,
+        timeoutMs: 60_000,
+        rateLimit: { limit: 60, windowSeconds: 3600 },
+    },
+    autofill_answer: {
+        primary:   { provider: 'openai',    model: 'gpt-5-mini' },
+        fallbacks: [{ provider: 'anthropic', model: 'claude-sonnet-4-6' }],
+        outputMode: 'text',
+        cacheTtlSeconds: 0,
+        temperature: 0.7,
+        // Visible answers are ≤ ~300 chars but reasoning shares the budget.
+        maxOutputTokens: 4_000,
+        timeoutMs: 60_000,
+        // Also consumed by generate-bulk (up to 10 calls per request), so
+        // the window is deliberately roomier than a single-answer flow needs.
+        rateLimit: { limit: 60, windowSeconds: 3600 },
+    },
+    autofill_resume_extract: {
+        primary:   { provider: 'openai',    model: 'gpt-5-mini' },
+        fallbacks: [{ provider: 'anthropic', model: 'claude-sonnet-4-6' }],
+        outputMode: 'json',
+        cacheTtlSeconds: 0,
+        temperature: 0.1,
+        maxOutputTokens: 6_000,
+        timeoutMs: 90_000,
+        rateLimit: { limit: 20, windowSeconds: 3600 },
+    },
+
     // ── PHASE 3 — wires up in Sprint 3.x ──────────────────────────────────
     jd_generator: {
         primary:   { provider: 'openai',    model: 'gpt-5.4' },

@@ -18,6 +18,7 @@
 
 import { brand } from '@/config/brand';
 import { EMAIL_DEFAULT_PREHEADER, EMAIL_HEADER_TAGLINE } from '@/config/niche/copy';
+import { logger } from '@/lib/logger';
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl).replace(/\/$/, '');
 const IMG = process.env.EMAIL_ASSETS_URL || `${BASE_URL}/images/email`;
@@ -409,9 +410,43 @@ export function dividerV2(): string {
 // FOOTER HELPERS V2
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * F17 (CAN-SPAM): marketing emails must carry a clear, working in-body
+ * unsubscribe link. This helper previously DISCARDED its token parameter and
+ * rendered only a generic "Manage preferences" link — the only working
+ * opt-out was the hidden List-Unsubscribe header.
+ *
+ * With a real per-recipient token it renders:
+ *   Unsubscribe        → BASE_URL/unsubscribe?token=<token>   (one-click)
+ *   Manage preferences → BASE_URL/email-preferences?token=<token>
+ *
+ * Without a real token ('sample' is the email-preview placeholder, and some
+ * legacy callers pass it) we fail loudly in dev via logger.error and fall
+ * back to the generic manage page in prod — never a dead tokenless
+ * /unsubscribe link.
+ */
 export function unsubscribeFooterV2(unsubscribeToken: string): string {
-  return `<p style="margin:0 0 4px;font-family:${SANS};font-size:12px;color:#A0AEC0;">
+  const hasRealToken = !!unsubscribeToken && unsubscribeToken !== 'sample';
+
+  if (!hasRealToken && process.env.NODE_ENV !== 'production') {
+    logger.error(
+      '[EmailTemplates] unsubscribeFooterV2 called without a real unsubscribe token — ' +
+      'the recipient gets no one-click opt-out link. Thread getOrCreateUnsubToken(email) through the caller.',
+      null,
+      { unsubscribeToken },
+    );
+  }
+
+  if (!hasRealToken) {
+    return `<p style="margin:0 0 4px;font-family:${SANS};font-size:12px;color:#A0AEC0;">
                 <a href="${BASE_URL}/job-alerts/manage" style="color:#A0AEC0;text-decoration:underline;">Manage preferences</a>
+              </p>`;
+  }
+
+  const token = encodeURIComponent(unsubscribeToken);
+  return `<p style="margin:0 0 4px;font-family:${SANS};font-size:12px;color:#A0AEC0;">
+                <a href="${BASE_URL}/unsubscribe?token=${token}" style="color:#A0AEC0;text-decoration:underline;">Unsubscribe</a> &nbsp;&middot;&nbsp;
+                <a href="${BASE_URL}/email-preferences?token=${token}" style="color:#A0AEC0;text-decoration:underline;">Manage preferences</a>
               </p>`;
 }
 

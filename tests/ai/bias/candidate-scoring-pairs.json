@@ -1,6 +1,6 @@
 {
   "_curation_status": "SEED_ONLY — 3 representative pairs. Production target: 50 demographic pairs per docs/ai-implementation-plan.md ticket 0.2.6. Each pair = two candidates with IDENTICAL professional content but a single demographic marker swapped (name, gender pronoun, racially-coded school, etc.). The scoring prompt MUST produce the same score (±2pt) for both arms or it has bias.",
-  "promptVersion": "v1",
+  "promptVersion": "v2",
   "description": "Bias pair set for candidate scoring. Variance >2pt between arms = BIAS REGRESSION → blocks merge.",
   "pairs": [
     {

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { safeInternalPath } from '@/lib/auth/safe-redirect'
 import { Loader2, AlertCircle, CheckCircle, Eye, EyeOff, Bell, ArrowRight, User, Building2, Mail } from 'lucide-react'
 import { trackSignUp } from '@/lib/analytics'
 import GoogleSignInButton from './GoogleSignInButton'
@@ -73,6 +74,12 @@ export default function SignUpForm() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
+  // F26: honor the return target the visitor arrived with (e.g. ApplyButton
+  // sends /signup?redirectTo=/jobs/xyz?apply=1). Validated to a same-origin
+  // path; empty fallback + `|| undefined` means "no redirect requested".
+  const redirectTo =
+    safeInternalPath(searchParams.get('redirectTo') || searchParams.get('next'), '') || undefined;
+
   useEffect(() => {
     const roleParam = searchParams.get('role');
     if (roleParam === 'employer') setRole('employer');
@@ -130,16 +137,31 @@ export default function SignUpForm() {
     try {
       const supabase = createClient();
 
+      // F26: carry the return target through the email-confirmation round
+      // trip — /auth/confirm reads ?next= (validated via safeInternalPath)
+      // instead of hardcoding /dashboard.
+      const emailRedirectTo = redirectTo
+        ? `${window.location.origin}/auth/confirm?next=${encodeURIComponent(redirectTo)}`
+        : `${window.location.origin}/auth/confirm`;
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+          emailRedirectTo,
           data: {
             first_name: firstName,
             last_name: lastName,
             role: role === 'employer' ? 'employer' : 'job_seeker',
             company: role === 'employer' ? company : null,
+            // F27: stash the opt-ins in auth metadata. When email
+            // confirmation is required there is no session yet, so the
+            // profile POST below can't run — ensureProfileFromAuth reads
+            // these back server-side after confirmation and creates the
+            // JobAlert / EmailLead / EmployerLead / Beehiiv sync.
+            want_job_highlights: role === 'seeker' ? wantJobHighlights : false,
+            highlights_frequency: role === 'seeker' ? highlightsFrequency : null,
+            newsletter_opt_in: newsletterOptIn,
           },
         },
       });
@@ -147,20 +169,36 @@ export default function SignUpForm() {
       if (signUpError) { setError(signUpError.message); return; }
 
       if (data.user) {
-        await fetch('/api/auth/profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            supabaseId: data.user.id,
-            email: data.user.email,
-            firstName, lastName,
-            role: role === 'employer' ? 'employer' : 'job_seeker',
-            company: role === 'employer' ? company : null,
-            wantJobHighlights: role === 'seeker' ? wantJobHighlights : false,
-            highlightsFrequency: role === 'seeker' ? highlightsFrequency : undefined,
-            newsletterOptIn,
-          }),
-        });
+        const signedUpUser = data.user;
+        // The profile POST requires an authenticated session cookie — in the
+        // confirm-required flow it used to fire anyway and 401 silently,
+        // dropping every opt-in. Only call it when a session exists
+        // (autoconfirm setups); the metadata stashed above covers the rest.
+        if (data.session) {
+          const postProfile = () => fetch('/api/auth/profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              supabaseId: signedUpUser.id,
+              email: signedUpUser.email,
+              firstName, lastName,
+              role: role === 'employer' ? 'employer' : 'job_seeker',
+              company: role === 'employer' ? company : null,
+              wantJobHighlights: role === 'seeker' ? wantJobHighlights : false,
+              highlightsFrequency: role === 'seeker' ? highlightsFrequency : undefined,
+              newsletterOptIn,
+            }),
+          });
+
+          let profileRes = await postProfile().catch(() => null);
+          if (!profileRes || !profileRes.ok) {
+            // One retry (cookie propagation / transient failure). A persistent
+            // failure is non-fatal: ensureProfileFromAuth rebuilds the profile
+            // AND the opt-ins from the auth metadata stashed above on the
+            // next authenticated request, so nothing is silently lost.
+            profileRes = await postProfile().catch(() => null);
+          }
+        }
 
         fetch('/api/auth/welcome', {
           method: 'POST',
@@ -173,12 +211,16 @@ export default function SignUpForm() {
 
         if (data.session) {
           router.refresh();
-          // Seekers go through the 1-screen professional-info interstitial so
-          // headline/specialties/yearsExperience get filled before they hit the
-          // dashboard. The page itself short-circuits to /dashboard if the
-          // profile is already searchable (returning users in autoconfirm
-          // setups), so it's safe to route everyone through it.
-          router.push(role === 'employer' ? '/employer/dashboard' : '/onboarding/professional');
+          // F26: apply intent (?redirectTo=/jobs/xyz?apply=1) outranks the
+          // onboarding interstitial — send the user straight back to the job.
+          // Otherwise: seekers go through the 1-screen professional-info
+          // interstitial so headline/specialties/yearsExperience get filled
+          // before they hit the dashboard. The page itself short-circuits to
+          // /dashboard if the profile is already searchable (returning users
+          // in autoconfirm setups), so it's safe to route everyone through it.
+          router.push(
+            redirectTo ?? (role === 'employer' ? '/employer/dashboard' : '/onboarding/professional')
+          );
         }
       }
     } catch {
@@ -310,7 +352,7 @@ export default function SignUpForm() {
         {/* Google — seeker only */}
         {role === 'seeker' && (
           <>
-            <GoogleSignInButton mode="signup" />
+            <GoogleSignInButton mode="signup" redirectTo={redirectTo} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '16px 0' }}>
               <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
               <span style={{ fontSize: '11px', fontWeight: 600, color: '#94A3B0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>or</span>

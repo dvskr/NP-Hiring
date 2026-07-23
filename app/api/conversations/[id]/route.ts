@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
+import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmployerMessageNotification, sendCandidateInquiryNotification } from '@/lib/email-service';
 import { sanitizeText } from '@/lib/sanitize';
 import { verifyCsrf } from '@/lib/csrf';
 import { rateLimit } from '@/lib/rate-limit';
-import { mintDocReadUrl, extractRequestContext } from '@/lib/document-storage';
+import { mintDocReadUrl, extractRequestContext, toBareDocPath } from '@/lib/document-storage';
 
 /**
  * GET /api/conversations/[id]
@@ -257,6 +258,25 @@ export async function POST(
             return NextResponse.json({ error: 'Message must be under 2000 characters' }, { status: 400 });
         }
 
+        // A sender may only attach an object they uploaded themselves.
+        // The upload route keys every object under the uploader's supabase
+        // uid (`${user.id}/<ts>_<name>` — see app/api/upload/message-attachment),
+        // so ownership is provable from the path prefix. Without this check a
+        // sender could store an arbitrary storage path and have the thread
+        // view mint a signed URL for someone else's private attachment.
+        let validatedAttachmentPath: string | null = null;
+        if (attachmentUrl) {
+            if (typeof attachmentUrl !== 'string'
+                || (attachmentName != null && typeof attachmentName !== 'string')) {
+                return NextResponse.json({ error: 'Invalid attachment' }, { status: 400 });
+            }
+            const barePath = toBareDocPath(attachmentUrl, 'message_attachment');
+            if (!barePath || barePath.includes('..') || !barePath.startsWith(`${user.id}/`)) {
+                return NextResponse.json({ error: 'Invalid attachment' }, { status: 400 });
+            }
+            validatedAttachmentPath = barePath;
+        }
+
         // Determine recipient
         const recipientProfile = conversation.participantA === profile.id
             ? conversation.userB
@@ -270,8 +290,8 @@ export async function POST(
                 conversationId: id,
                 subject: conversation.subject,
                 body: sanitizeText((messageBody || '').trim(), 2000),
-                ...(attachmentUrl && { attachmentUrl }),
-                ...(attachmentName && { attachmentName }),
+                ...(validatedAttachmentPath && { attachmentUrl: validatedAttachmentPath }),
+                ...(validatedAttachmentPath && attachmentName && { attachmentName: attachmentName.slice(0, 255) }),
                 ...(conversation.jobId && { jobId: conversation.jobId }),
             },
         });
@@ -303,27 +323,35 @@ export async function POST(
             if (existingUnread === 0) {
                 const msgPreview = (messageBody || '').trim() || (attachmentName ? `📎 ${attachmentName}` : '');
 
+                // after() keeps the serverless invocation alive until the send
+                // completes — a bare fire-and-forget promise can be frozen with
+                // the function once the response returns, silently dropping the
+                // new-message notification.
                 if (profile.role === 'job_seeker') {
                     // Candidate → Employer: use candidate inquiry notification
-                    sendCandidateInquiryNotification(
-                        recipientProfile.email,
-                        recipientProfile.firstName,
-                        senderName,
-                        conversation.subject,
-                        msgPreview,
-                        null, // jobTitle not available in conversation context
-                    ).catch(err => console.error('Email notification error:', err));
+                    after(
+                        sendCandidateInquiryNotification(
+                            recipientProfile.email,
+                            recipientProfile.firstName,
+                            senderName,
+                            conversation.subject,
+                            msgPreview,
+                            null, // jobTitle not available in conversation context
+                        ).catch(err => logger.error('Email notification error', err))
+                    );
                 } else {
                     // Employer → Candidate: use employer message notification
-                    sendEmployerMessageNotification(
-                        recipientProfile.email,
-                        recipientProfile.firstName,
-                        senderName,
-                        profile.company,
-                        conversation.subject,
-                        msgPreview,
-                        null,
-                    ).catch(err => console.error('Email notification error:', err));
+                    after(
+                        sendEmployerMessageNotification(
+                            recipientProfile.email,
+                            recipientProfile.firstName,
+                            senderName,
+                            profile.company,
+                            conversation.subject,
+                            msgPreview,
+                            null,
+                        ).catch(err => logger.error('Email notification error', err))
+                    );
                 }
             }
         }

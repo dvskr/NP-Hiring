@@ -15,9 +15,24 @@
  * should return immediately.
  */
 import { NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+
+/**
+ * B101: constant-time bearer comparison. A plain `===` on the header string
+ * short-circuits at the first mismatching character, leaking how many
+ * leading characters of CRON_SECRET matched (timing side-channel). The
+ * byte-length gate leaks only the secret's length, which is standard and
+ * acceptable (same pattern as app/api/blog/route.ts).
+ */
+function isValidCronBearer(authHeader: string | null, cronSecret: string): boolean {
+    if (!authHeader?.startsWith('Bearer ')) return false;
+    const provided = Buffer.from(authHeader.slice('Bearer '.length));
+    const expected = Buffer.from(cronSecret);
+    return provided.length === expected.length && timingSafeEqual(provided, expected);
+}
 
 export async function verifyCronOrAdmin(req: Request): Promise<NextResponse | null> {
     // P5.A fix (2026-06-01): the dev short-circuit was too broad. Vercel
@@ -36,10 +51,10 @@ export async function verifyCronOrAdmin(req: Request): Promise<NextResponse | nu
         return null;
     }
 
-    // Fast path: Vercel cron's bearer token.
+    // Fast path: Vercel cron's bearer token (constant-time compare, B101).
     const authHeader = req.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+    if (cronSecret && isValidCronBearer(authHeader, cronSecret)) {
         return null;
     }
 

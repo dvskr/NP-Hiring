@@ -12,6 +12,7 @@
 
 import OpenAI from 'openai';
 import { salaryConfig } from '@/config/niche/salary';
+import { brand } from '@/config/brand';
 
 export interface LLMExtractResult {
     salary_min?: number;
@@ -32,6 +33,14 @@ export interface LLMExtractResponse {
     inputTokens: number;
     outputTokens: number;
     elapsedMs: number;
+    /**
+     * True when the extraction ATTEMPT failed (API error, timeout, malformed
+     * JSON) as opposed to succeeding with no extractable data (audit B92).
+     * Callers use this to decide whether to stamp lastEnrichedAt: a genuine
+     * "nothing found" is terminal, a failed attempt should stay eligible for
+     * the next run instead of being skipped forever after an outage.
+     */
+    failed: boolean;
 }
 
 const SYSTEM_PROMPT = `You extract structured job posting data. Return JSON with ONLY fields you can CONFIDENTLY find. Never guess or fabricate.
@@ -51,7 +60,7 @@ Fields:
 
 Rules:
 - ONLY include if explicitly stated in text
-- Salary must be ${salaryConfig.enrichment.promptBandText} range for PMHNP roles
+- Salary must be ${salaryConfig.enrichment.promptBandText} range for ${brand.niche.short} roles
 - Return {} if nothing found`;
 
 let _openai: OpenAI | null = null;
@@ -76,7 +85,9 @@ export async function extractWithLLM(
     const start = Date.now();
     const openai = getOpenAI();
     if (!openai) {
-        return { result: null, inputTokens: 0, outputTokens: 0, elapsedMs: 0 };
+        // No API key configured — treated as a failed attempt so callers
+        // don't stamp jobs as "enriched" without any extraction having run.
+        return { result: null, inputTokens: 0, outputTokens: 0, elapsedMs: 0, failed: true };
     }
     const { timeoutMs = 8000 } = options;
     try {
@@ -105,7 +116,7 @@ export async function extractWithLLM(
         const elapsedMs = Date.now() - start;
 
         const content = response.choices[0]?.message?.content;
-        if (!content) return { result: null, inputTokens, outputTokens, elapsedMs };
+        if (!content) return { result: null, inputTokens, outputTokens, elapsedMs, failed: true };
 
         const parsed = JSON.parse(content) as LLMExtractResult;
 
@@ -119,8 +130,10 @@ export async function extractWithLLM(
         }
 
         const result = Object.keys(parsed).length > 0 ? parsed : null;
-        return { result, inputTokens, outputTokens, elapsedMs };
+        return { result, inputTokens, outputTokens, elapsedMs, failed: false };
     } catch {
-        return { result: null, inputTokens: 0, outputTokens: 0, elapsedMs: Date.now() - start };
+        // API error / timeout / malformed JSON — a FAILED attempt, not an
+        // empty result (audit B92). Callers must not stamp lastEnrichedAt.
+        return { result: null, inputTokens: 0, outputTokens: 0, elapsedMs: Date.now() - start, failed: true };
     }
 }

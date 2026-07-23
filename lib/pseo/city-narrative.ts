@@ -18,6 +18,7 @@
  */
 import { CityData } from './city-data/types';
 import { brand } from '@/config/brand';
+import { PSYCH_SPECIALTY_SLUG } from './taxonomy-registry';
 import {
     getStatePracticeAuthority,
     PracticeAuthority,
@@ -172,6 +173,36 @@ const TAXONOMY_LEADS: Record<string, TaxonomyLeadFn> = {
     'senior': (f) => `Senior ${brand.niche.short} roles in ${f.city.name} target providers with 7+ years of experience and typically include clinical leadership, supervisory authority over new graduates, and stipends for protocol development or quality improvement.`,
     'va': (f) => `VA ${brand.niche.short} positions in ${f.city.name} fall on the federal GS-12 to GS-14 pay scale with FEHB health coverage, the Thrift Savings Plan retirement match, and 26 days of paid leave annually. Federal practice authority generally supersedes state restrictions for VA-employed providers.`,
     'veterans': (f) => `Veterans-focused ${brand.niche.short} roles in ${f.city.name} span VA medical centers, community-based outpatient clinics, and Vet Centers. Roles emphasize service-connected conditions such as PTSD and traumatic brain injury alongside general primary care.`,
+    // ── 2026-07 NP taxonomy categories (settings + specialties + APRN roles) ──
+    // Covers the 19 NP_CATEGORY_CONFIGS slugs so every city-eligible taxonomy
+    // gets a distinct lead instead of falling back to the bare city narrative
+    // (which reads near-identical to /jobs/city/{slug} — the thin-content
+    // pattern this file exists to defeat).
+    'urgent-care': (f) => `Urgent care ${brand.niche.short} roles in ${f.city.name} staff walk-in clinics and retail health sites with extended evening and weekend hours. Positions emphasize episodic acute care — suturing, splinting, and radiograph interpretation — on shift-based schedules, often with volume incentives.`,
+    'home-health': (f) => `Home-health ${brand.niche.short} positions serving ${f.city.name} center on house calls, transitional care, and annual wellness visits. Compensation is commonly per-visit or RVU-based, with mileage reimbursement and flexible scheduling as standard components.`,
+    'family-practice': (f) => `Family practice ${brand.niche.short} (FNP) openings in ${f.city.name} cover primary care across the lifespan, typically paying $110K–$150K. FNP remains the most widely held ${brand.niche.short} certification, and ${f.city.state} employers range from group practices to health systems and community clinics.`,
+    'adult-gerontology': (f) => `Adult-gerontology ${brand.niche.short} roles in ${f.city.name} split between primary-care (AGPCNP) and acute-care (AGACNP) tracks. Demand tracks the aging patient base — long-term care, internal medicine, and hospital services all recruit this certification.`,
+    'pediatric': (f) => `Pediatric ${brand.niche.short} openings in ${f.city.name} span primary-care pediatrics, school-based health, and specialty children's services. PNP-PC and PNP-AC certifications map to clinic and hospital settings respectively.`,
+    'neonatal': (f) => `Neonatal ${brand.niche.short} positions in ${f.city.name} concentrate in Level II–IV NICUs and typically expect prior NICU nursing experience before certification. Night and weekend coverage carries meaningful shift differentials.`,
+    'women-health': (f) => `Women's health ${brand.niche.short} (WHNP) roles in ${f.city.name} sit in OB/GYN practices, family-planning clinics, and prenatal programs. Many positions work alongside certified nurse midwives in collaborative women's health teams.`,
+    'acute-care': (f) => `Acute care ${brand.niche.short} positions in ${f.city.name} staff ICUs, step-down units, and rapid-response teams. AGACNP certification is the usual requirement, and scheduling commonly follows hospital 13-hour shift patterns.`,
+    'emergency': (f) => `Emergency ${brand.niche.short} roles in ${f.city.name} place providers in emergency departments and fast-track units, typically paying $115K–$160K. Prior emergency or acute-care experience plus procedural skills are standard expectations.`,
+    'oncology': (f) => `Oncology ${brand.niche.short} openings in ${f.city.name} support infusion centers, hematology-oncology practices, and survivorship programs. The role blends symptom management, treatment monitoring, and care coordination alongside oncologists.`,
+    'cardiology': (f) => `Cardiology ${brand.niche.short} roles in ${f.city.name} span heart-failure clinics, procedural support, and inpatient cardiology services. Device-clinic coverage and anticoagulation management are common practice components.`,
+    'primary-care': (f) => `Primary care ${brand.niche.short} positions in ${f.city.name} anchor internal-medicine and family practices, with panels typically running 15–20 patients per day. Value-based-care incentives increasingly supplement base compensation.`,
+    'hospitalist': (f) => `Hospitalist ${brand.niche.short} roles in ${f.city.name} manage inpatient admissions, rounding, and discharge planning, frequently on 7-on/7-off block schedules. ACNP or AGACNP certification is the common requirement.`,
+    'dermatology': (f) => `Dermatology ${brand.niche.short} openings in ${f.city.name} combine medical dermatology with procedural work such as biopsies and lesion removal. Productivity bonuses on top of base salary are common in this specialty.`,
+    'orthopedic': (f) => `Orthopedic ${brand.niche.short} roles in ${f.city.name} split between clinic, surgical first-assist, and inpatient orthopedic services. First-assist experience or RNFA credentials widen both the opportunity set and pay.`,
+    'anesthesia': (f) => `CRNA positions in ${f.city.name} carry the highest APRN compensation — typically $180K–$250K+ — across hospital ORs, ambulatory surgery centers, and office-based practices. Call structure and supervision model materially affect total pay.`,
+    'midwifery': (f) => `Certified nurse midwife (CNM) roles in ${f.city.name} span hospital labor-and-delivery units, birth centers, and OB/GYN practices. Call frequency and delivery volume drive most compensation differences.`,
+    'clinical-nurse-specialist': (f) => `Clinical nurse specialist (CNS) positions in ${f.city.name} focus on quality improvement, staff education, and specialty consultation within health systems — program-level impact rather than a personal patient panel.`,
+    // Keyed via the registry-derived constant so the specialty slug literal
+    // stays confined to taxonomy-registry.ts (niche-copy debt ratchet).
+    ...(PSYCH_SPECIALTY_SLUG
+        ? {
+            [PSYCH_SPECIALTY_SLUG]: ((f) => `Behavioral-health ${brand.niche.short} roles in ${f.city.name} span outpatient clinics, telehealth platforms, and integrated care settings, typically paying $120K–$170K. ${f.shortage ? `Federal shortage-area designation keeps demand for prescribing behavioral-health clinicians in ${f.city.name} especially strong.` : 'Demand for prescribing behavioral-health clinicians remains strong nationwide.'}`) as TaxonomyLeadFn,
+        }
+        : {}),
 };
 
 export function getTaxonomyLead(taxonomy: string, facts: CityNarrativeFacts): string | null {

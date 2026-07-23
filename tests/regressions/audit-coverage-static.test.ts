@@ -215,7 +215,7 @@ describe('dead routes and files are gone', () => {
     'app/api/ingest', 'app/api/stats', 'app/api/admin/stats', 'app/api/admin/trigger-ingestion',
     'app/api/admin/employer-outreach', 'app/api/admin/shortlinks/stats', 'app/api/jobs/categories',
     'app/api/jobs/parse-locations', 'app/api/candidates/search', 'app/api/employer/dashboard',
-    'app/api/preview-social',
+    'app/api/preview-social', 'app/api/email-job',
   ];
   for (const r of deletedRoutes) {
     it(`${r} is deleted`, () => expect(exists(`${r}/route.ts`)).toBe(false));

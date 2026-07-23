@@ -216,104 +216,14 @@ export async function getAllSourcesPerformance(): Promise<SourcePerformance[]> {
   }
 }
 
-/**
- * Update daily stats for all sources (called by cron)
- */
-export async function updateDailyStats(): Promise<void> {
-  try {
-    console.log('[Analytics] Updating daily stats...');
-
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-
-    // Get all unique sources
-    const sources = await prisma.job.findMany({
-      where: { isPublished: true },
-      select: { sourceProvider: true },
-      distinct: ['sourceProvider'],
-    });
-
-    const uniqueSources = sources
-      .map((s: { sourceProvider: string | null }) => s.sourceProvider)
-      .filter((s): s is string => s !== null);
-
-    for (const source of uniqueSources) {
-      try {
-        // Count active jobs from this source
-        const activeJobs = await prisma.job.count({
-          where: {
-            sourceProvider: source,
-            isPublished: true,
-          },
-        });
-
-        // Get jobs from this source
-        const jobsData = await prisma.job.findMany({
-          where: {
-            sourceProvider: source,
-            isPublished: true,
-          },
-          select: {
-            minSalary: true,
-            descriptionSummary: true,
-            city: true,
-            state: true,
-            viewCount: true,
-            applyClickCount: true,
-          },
-        });
-
-        // Calculate quality score
-        const qualityScores = jobsData.map((job: { minSalary: number | null; descriptionSummary: string | null; city: string | null; state: string | null; viewCount: number; applyClickCount: number }) => {
-          let score = 0.5; // Base score
-          if (job.minSalary) score += 0.2; // Has salary
-          if (job.descriptionSummary && job.descriptionSummary.length > 100) score += 0.1;
-          if (job.city && job.state) score += 0.2;
-          return score;
-        });
-
-        const avgQualityScore = qualityScores.length > 0
-          ? qualityScores.reduce((a: number, b: number) => a + b, 0) / qualityScores.length
-          : 0;
-
-        // Sum views and clicks
-        const totalViews = jobsData.reduce((sum: number, j: { viewCount: number; applyClickCount: number }) => sum + j.viewCount, 0);
-        const totalApplyClicks = jobsData.reduce((sum: number, j: { viewCount: number; applyClickCount: number }) => sum + j.applyClickCount, 0);
-
-        // Update or create today's stats
-        await prisma.sourceStats.upsert({
-          where: {
-            source_date: {
-              source,
-              date: today,
-            },
-          },
-          create: {
-            source,
-            date: today,
-            avgQualityScore,
-            totalViews,
-            totalApplyClicks,
-          },
-          update: {
-            avgQualityScore,
-            totalViews,
-            totalApplyClicks,
-          },
-        });
-
-        console.log(`[Analytics] Updated stats for ${source}: ${activeJobs} jobs, quality ${avgQualityScore.toFixed(2)}`);
-      } catch (error) {
-        console.error(`[Analytics] Error updating stats for ${source}:`, error);
-      }
-    }
-
-    console.log('[Analytics] Daily stats update complete');
-  } catch (error) {
-    console.error('[Analytics] Error in updateDailyStats:', error);
-    throw error;
-  }
-}
+// NOTE (dead-code cleanup, B15): a `updateDailyStats()` aggregation used to
+// live here, described as "called by cron" — no cron ever called it (see
+// config/cron-schedule.ts for the full schedule). Its only trigger was an
+// unconsumed POST /api/analytics/sources action, so the SourceStats
+// `totalViews` / `totalApplyClicks` / per-day quality columns it wrote were
+// never populated in practice. Removed 2026-07-18 along with that POST
+// action. Per-run ingestion stats (recordIngestionStats above) remain the
+// live write path.
 
 /**
  * Get source trends over time for charts
@@ -350,32 +260,4 @@ export async function getSourceTrends(
   }
 }
 
-/**
- * Calculate quality score for a job
- */
-export function calculateJobQualityScore(job: {
-  minSalary?: number | null;
-  descriptionSummary?: string | null;
-  city?: string | null;
-  state?: string | null;
-}): number {
-  let score = 0.5; // Base score
-
-  // Has salary information
-  if (job.minSalary) {
-    score += 0.2;
-  }
-
-  // Has good description
-  if (job.descriptionSummary && job.descriptionSummary.length > 100) {
-    score += 0.1;
-  }
-
-  // Has complete location data
-  if (job.city && job.state) {
-    score += 0.2;
-  }
-
-  return score;
-}
 

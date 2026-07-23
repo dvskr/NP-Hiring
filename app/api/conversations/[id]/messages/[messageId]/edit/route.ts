@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
+import { sanitizeText } from '@/lib/sanitize';
 
 // PATCH /api/conversations/[id]/messages/[messageId]
 export async function PATCH(
@@ -12,6 +13,18 @@ export async function PATCH(
         const { body } = await req.json();
 
         if (!body || typeof body !== 'string' || body.trim().length === 0) {
+            return NextResponse.json({ error: 'Message body is required' }, { status: 400 });
+        }
+
+        // Mirror the send path (POST /api/conversations/[id]): same length
+        // cap + same sanitizer, so an edit can't smuggle in content the
+        // original send would have rejected or stripped.
+        if (body.length > 2000) {
+            return NextResponse.json({ error: 'Message must be under 2000 characters' }, { status: 400 });
+        }
+
+        const sanitizedBody = sanitizeText(body.trim(), 2000);
+        if (!sanitizedBody) {
             return NextResponse.json({ error: 'Message body is required' }, { status: 400 });
         }
 
@@ -64,7 +77,7 @@ export async function PATCH(
         const updated = await prisma.employerMessage.update({
             where: { id: messageId },
             data: {
-                body: body.trim(),
+                body: sanitizedBody,
                 editedAt: new Date(),
             },
             select: {

@@ -15,7 +15,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { CITIES } from '@/lib/pseo/city-data/cities';
+import { getCityBySlug } from '@/lib/pseo/city-data/cities';
 import { pingGoogle, pingBingBatch, pingIndexNow } from '@/lib/search-indexing';
 import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
@@ -34,6 +34,9 @@ const PSEO_INDEXING_CATEGORIES = PSEO_INDEXING_CATEGORY_SLUGS;
 const MIN_JOBS = 3;
 const MIN_POPULATION = 10000;
 const GOOGLE_PSEO_CAP = 100; // Reserve 100 of Google's 200/day quota for pSEO
+// Mirror the cities-sitemap freshness gate: only submit pages whose stats are
+// current enough to still be advertised in the sitemap.
+const PSEO_STALENESS_HOURS = 36;
 
 interface ScoredUrl {
   url: string;
@@ -49,53 +52,42 @@ export async function GET(request: NextRequest) {
 
   try {
     return await withCronTracking('index-pseo', async () => {
-    // 1. Get cities with actual job counts from DB
-    const citiesWithJobs = await prisma.job.groupBy({
-      by: ['city', 'state'],
+    // 1. Get CATEGORY-SPECIFIC job counts from the pre-aggregated stats — the
+    // same source the sitemap and the page's own render gate use. The previous
+    // implementation counted city-wide totals (groupBy city/state, no category
+    // filter), so a city with 10 jobs but 0 in a given category still got
+    // /jobs/{category}/city/{slug} submitted — a URL its own render gate 404s —
+    // burning the 100/day Google quota on guaranteed 404s.
+    const freshnessThreshold = new Date(Date.now() - PSEO_STALENESS_HOURS * 60 * 60 * 1000);
+    const categoryCityRows = await prisma.pseoStats.findMany({
       where: {
-        isPublished: true,
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } },
-        ],
-        city: { not: null },
-        state: { not: null },
+        type: 'category-city',
+        categorySlug: { in: [...PSEO_INDEXING_CATEGORIES] },
+        totalJobs: { gte: MIN_JOBS },
+        updatedAt: { gte: freshnessThreshold },
       },
-      _count: { city: true },
+      select: { categorySlug: true, locationSlug: true, totalJobs: true },
     });
-
-    // Build lookup: "city|state" → job count
-    const cityJobCounts = new Map(
-      citiesWithJobs
-        .filter(r => r.city && r.state)
-        .map(r => [`${r.city!.toLowerCase().trim()}|${r.state!.toLowerCase().trim()}`, r._count.city])
-    );
 
     // 2. Build scored URL list — only pages meeting quality thresholds
     const scoredUrls: ScoredUrl[] = [];
-    
-    for (const category of PSEO_INDEXING_CATEGORIES) {
-      for (const city of CITIES) {
-        if (city.population < MIN_POPULATION) continue;
-        
-        const key = `${city.name.toLowerCase().trim()}|${city.state.toLowerCase().trim()}`;
-        const jobCount = cityJobCounts.get(key) || 0;
-        
-        if (jobCount >= MIN_JOBS) {
-          // Score: job count (0-40) + population tier (0-20) + MH shortage (0-15)
-          let score = Math.min(40, jobCount * 2);
-          if (city.population >= 500000) score += 20;
-          else if (city.population >= 100000) score += 15;
-          else if (city.population >= 50000) score += 10;
-          else score += 5;
-          if (city.mentalHealthShortage) score += 15;
-          
-          scoredUrls.push({
-            url: `${BASE_URL}/jobs/${category}/city/${city.slug}`,
-            score,
-          });
-        }
-      }
+
+    for (const row of categoryCityRows) {
+      const city = getCityBySlug(row.locationSlug);
+      if (!city || city.population < MIN_POPULATION) continue;
+
+      // Score: job count (0-40) + population tier (0-20) + MH shortage (0-15)
+      let score = Math.min(40, row.totalJobs * 2);
+      if (city.population >= 500000) score += 20;
+      else if (city.population >= 100000) score += 15;
+      else if (city.population >= 50000) score += 10;
+      else score += 5;
+      if (city.mentalHealthShortage) score += 15;
+
+      scoredUrls.push({
+        url: `${BASE_URL}/jobs/${row.categorySlug}/city/${row.locationSlug}`,
+        score,
+      });
     }
 
     // Sort by score descending — submit highest-value pages first

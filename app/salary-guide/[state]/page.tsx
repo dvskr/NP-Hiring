@@ -19,6 +19,11 @@ import {
 
 const STORAGE_BASE = brand.assets.storageBase;
 
+// Shared OG/schema image for every state salary page. Single definition
+// so the (donor-named) asset path appears exactly once in this file —
+// the niche-copy ratchet counts occurrences.
+const SALARY_GUIDE_OG_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`;
+
 export const revalidate = 86400; // ISR daily
 
 // ── State mappings ──────────────────────────────────────────────────────────
@@ -172,7 +177,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // The "Average Pay, Jobs & Cost of Living" suffix moved into the description.
     const title = `${brand.niche.short} Salary in ${stateName} (${code}) 2026 — Avg Pay & Jobs`;
     const description = `${brand.niche.short} salary data for ${stateName}: average pay by practice setting, top employers, and open positions. Updated daily.`;
-    const ogImage = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`;
+    const ogImage = SALARY_GUIDE_OG_IMAGE;
 
     return {
         title,
@@ -200,6 +205,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 function formatSalary(n: number) {
     if (n >= 1000) return `$${Math.round(n / 1000)}K`;
     return `$${n.toLocaleString()}`;
+}
+
+/** Escape angle brackets so JSON-LD can't break out of its <script> tag. */
+function sanitizeJson(obj: object): string {
+    return JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 }
 
 // ── Page ────────────────────────────────────────────────────────────────────
@@ -236,6 +246,32 @@ export default async function StateSalaryPage({ params }: PageProps) {
     // Find the licensure blog post slug (prefix lives in config/niche/content-map.ts)
     const licenseSlug = licenseGuideSlug(slug);
 
+    // ── AEO schemas (audit B48) ──────────────────────────────────────────
+    // FAQPage + Article + Speakable, mirroring the pSEO category-city
+    // template. ONE array feeds both the JSON-LD and the visible accordion
+    // below so schema and visible content cannot diverge (invisible FAQ
+    // structured data is spam per Google's policy). Every figure is live
+    // page data — no hardcoded salary claims (the cited national figures
+    // live in lib/stats-sources.ts and render on the salary-guide index).
+    const pageUrl = `${brand.baseUrl}/salary-guide/${stateSlug}`;
+    const topSetting = [...bySetting].sort((a, b) => b.avgSalary - a.avgSalary)[0];
+    const stateFaqs = [
+        {
+            q: `What is the average ${brand.niche.short} salary in ${stateName}?`,
+            a: `The average ${brand.niche.short} salary in ${stateName} is ${formatSalary(salaryData.avgSalary)} per year, based on ${salaryData.jobCount} active job ${salaryData.jobCount === 1 ? 'posting' : 'postings'} with disclosed salary on ${brand.name}. Reported salaries range from ${formatSalary(salaryData.minSalary)} to ${formatSalary(salaryData.maxSalary)}. That is ${Math.abs(diffPct)}% ${aboveBelow} the national average of ${formatSalary(nationalAvg)} across postings on this board.`,
+        },
+        {
+            q: `How many ${brand.niche.short} jobs are open in ${stateName}?`,
+            a: `There ${salaryData.jobCount === 1 ? 'is' : 'are'} currently ${salaryData.jobCount} active ${brand.niche.short} ${salaryData.jobCount === 1 ? 'position' : 'positions'} with disclosed salary in ${stateName} on ${brand.name}. Listings are ingested daily from employer applicant-tracking systems.`,
+        },
+        ...(topSetting
+            ? [{
+                q: `Which practice setting pays ${brand.niche.short}s the most in ${stateName}?`,
+                a: `Among current ${stateName} postings on ${brand.name}, ${topSetting.setting.toLowerCase()} roles report the highest average at ${formatSalary(topSetting.avgSalary)} per year (${topSetting.jobCount} ${topSetting.jobCount === 1 ? 'position' : 'positions'}). Actual pay varies with experience, employer type, and benefits.`,
+            }]
+            : []),
+    ];
+
     return (
         <div style={{ backgroundColor: 'var(--bg-primary)', minHeight: '100vh' }}>
             <BreadcrumbSchema
@@ -244,6 +280,51 @@ export default async function StateSalaryPage({ params }: PageProps) {
                     { name: 'Salary Guide', url: `${brand.baseUrl}/salary-guide` },
                     { name: stateName, url: `${brand.baseUrl}/salary-guide/${stateSlug}` },
                 ]}
+            />
+            {/* FAQPage — same stateFaqs array renders the visible accordion below */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: sanitizeJson({
+                    '@context': 'https://schema.org',
+                    '@type': 'FAQPage',
+                    mainEntity: stateFaqs.map((faq) => ({
+                        '@type': 'Question',
+                        name: faq.q,
+                        acceptedAnswer: { '@type': 'Answer', text: faq.a },
+                    })),
+                }) }}
+            />
+            {/* Article — dates deliberately omitted: this page regenerates
+                daily from live posting data and has no editorial publish
+                date; emitting dateModified=now would fabricate freshness
+                (audit B54 principle). */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: sanitizeJson({
+                    '@context': 'https://schema.org',
+                    '@type': 'Article',
+                    headline: `${brand.niche.short} Salary in ${stateName} (${stateCode}) — Pay by Practice Setting`,
+                    description: `Average ${brand.niche.short} salary in ${stateName} based on ${salaryData.jobCount} active ${salaryData.jobCount === 1 ? 'posting' : 'postings'}: ${formatSalary(salaryData.avgSalary)} per year (range ${formatSalary(salaryData.minSalary)}–${formatSalary(salaryData.maxSalary)}).`,
+                    author: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+                    publisher: { '@type': 'Organization', name: brand.name, logo: { '@type': 'ImageObject', url: `${brand.baseUrl}/logo.png` } },
+                    mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl },
+                    image: SALARY_GUIDE_OG_IMAGE,
+                    url: pageUrl,
+                }) }}
+            />
+            {/* Speakable — marks the salary summary + FAQ answers for voice/AI */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: sanitizeJson({
+                    '@context': 'https://schema.org',
+                    '@type': 'WebPage',
+                    name: `${brand.niche.short} Salary in ${stateName} (${stateCode})`,
+                    speakable: {
+                        '@type': 'SpeakableSpecification',
+                        cssSelector: ['#state-salary-summary', '.faq-answer'],
+                    },
+                    url: pageUrl,
+                }) }}
             />
 
             {/* Hero */}
@@ -280,6 +361,8 @@ export default async function StateSalaryPage({ params }: PageProps) {
                     </h1>
 
                     <p
+                        id="state-salary-summary"
+                        data-speakable="true"
                         style={{
                             fontSize: '16px',
                             color: 'var(--text-secondary)',
@@ -644,6 +727,35 @@ export default async function StateSalaryPage({ params }: PageProps) {
                             </p>
                         </div>
                     </Link>
+                </div>
+
+                {/* FAQ — rendered from the SAME stateFaqs array as the FAQPage
+                    JSON-LD above (B48: schema must match visible content). */}
+                <div style={{ marginTop: '32px' }}>
+                    <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
+                        {brand.niche.short} Salary in {stateName} — FAQ
+                    </h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {stateFaqs.map((faq, i) => (
+                            <details
+                                key={faq.q}
+                                {...(i === 0 ? { open: true } : {})}
+                                style={{
+                                    borderRadius: '14px',
+                                    backgroundColor: 'var(--bg-secondary)',
+                                    border: '1px solid var(--border-color)',
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                <summary style={{ padding: '16px 20px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', listStyle: 'none' }}>
+                                    {faq.q}
+                                </summary>
+                                <p className="faq-answer" style={{ padding: '0 20px 16px', fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+                                    {faq.a}
+                                </p>
+                            </details>
+                        ))}
+                    </div>
                 </div>
             </section>
 

@@ -2,8 +2,8 @@ import Stripe from 'stripe';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { config, PricingTier } from '@/lib/config';
-import { sendRenewalConfirmationEmail } from '@/lib/email-service';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { isFeatureEnabled } from '@/lib/env';
 
 // Lazy Stripe client — see app/api/create-checkout/route.ts for rationale.
 function getStripe(): Stripe | null {
@@ -24,10 +24,19 @@ export async function POST(request: NextRequest) {
     if (rateLimitResult) return rateLimitResult;
 
   try {
+    // F3: master switch first — see app/api/create-checkout/route.ts for the
+    // rationale behind the two distinct machine-readable 503 codes.
+    if (!isFeatureEnabled('paidPosting')) {
+      return NextResponse.json(
+        { error: 'Paid job posting is not available yet', code: 'PAID_POSTING_DISABLED' },
+        { status: 503 }
+      );
+    }
+
     const stripe = getStripe();
     if (!stripe) {
       return NextResponse.json(
-        { error: 'Paid checkout is currently unavailable' },
+        { error: 'Paid checkout is currently unavailable', code: 'STRIPE_NOT_CONFIGURED' },
         { status: 503 }
       );
     }

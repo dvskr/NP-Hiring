@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Filter, Users, Loader2, X, ChevronLeft, ChevronRight, ChevronDown, Briefcase, Lock, Sparkles, Check } from 'lucide-react';
+import { Search, Filter, Users, Loader2, X, ChevronLeft, ChevronRight, ChevronDown, Briefcase, Lock, Sparkles, Check, AlertCircle } from 'lucide-react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import CandidateCard from './CandidateCard';
 import { SPECIALTY_PRESETS } from '@/config/niche/credentials';
 import { brand } from '@/config/brand';
+import { useToast } from '@/components/ui/ToastProvider';
 
 /* ═══════════════════════════════════════════
    CONSTANTS
@@ -93,6 +94,7 @@ export default function CandidateSearchClient() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
+    const { toast } = useToast();
     /** Smart Match is on if `?ai=1` is in the URL, OR after the user clicks the toggle. */
     // ?postingId=X deep-link → auto-fire JD-driven Smart Match against
     // that posting on mount. ?ai=1 (legacy) just opens Smart Match in
@@ -170,6 +172,14 @@ export default function CandidateSearchClient() {
         router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     }, [searchParams, pathname, router]);
     const [loading, setLoading] = useState(true);
+    /**
+     * B64: browse-fetch failures used to be swallowed (`catch { silent }`),
+     * leaving whatever candidates were already in state on screen — stale
+     * results presented as if they matched the new filters. Non-null when
+     * the last browse request failed; renders a dedicated error panel with
+     * a Retry button instead of the (stale) grid.
+     */
+    const [browseError, setBrowseError] = useState<string | null>(null);
     const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
     const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
     // Bulk-unlock selection — file-manager-style multi-select. The
@@ -252,6 +262,7 @@ export default function CandidateSearchClient() {
                     // results until midnight CT.
                 } else if (res.ok) {
                     const data = await res.json();
+                    setBrowseError(null);
                     setCandidates(data.candidates || []);
                     setTotalCount((data.candidates || []).length);
                     setTotalPages(1); // Smart Match returns a single ranked slate; no pagination.
@@ -307,14 +318,21 @@ export default function CandidateSearchClient() {
             const res = await fetch(`/api/employer/candidates?${params}`);
             if (res.ok) {
                 const data = await res.json();
+                setBrowseError(null);
                 setCandidates(data.candidates);
                 setTotalCount(data.totalCount);
                 setTotalPages(data.totalPages);
                 if (data.viewedCandidateIds) {
                     setViewedIds(new Set(data.viewedCandidateIds));
                 }
+            } else {
+                // Non-OK (4xx/5xx) — surface it instead of silently keeping
+                // whatever results were on screen before the failed request.
+                setBrowseError(`Couldn’t load candidates (request failed with status ${res.status}).`);
             }
-        } catch { /* silent */ }
+        } catch {
+            setBrowseError('Couldn’t load candidates — check your connection and try again.');
+        }
         setLoading(false);
     }, [aiMode, jdSearchPostingId, query, experience, selectedSpecialties, selectedStates, workMode, hasResume, page]);
 
@@ -380,25 +398,31 @@ export default function CandidateSearchClient() {
             return next;
         });
         try {
-            if (wasSaved) {
-                await fetch('/api/employer/saved-candidates', {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ candidateId, postingId: selectedPostingId || undefined }),
-                });
-            } else {
-                await fetch('/api/employer/saved-candidates', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ candidateId, postingId: selectedPostingId || undefined }),
-                });
+            const res = await fetch('/api/employer/saved-candidates', {
+                method: wasSaved ? 'DELETE' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ candidateId, postingId: selectedPostingId || undefined }),
+            });
+            if (!res.ok) {
+                // fetch() resolves on 4xx/5xx — the old bare `await fetch`
+                // treated a failed save as success, leaving the heart flipped
+                // while nothing persisted (it silently un-flipped on reload).
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || `Save request failed (${res.status})`);
             }
         } catch {
+            // Revert the optimistic toggle and tell the employer it failed.
             setSavedIds(prev => {
                 const next = new Set(prev);
                 if (wasSaved) next.add(candidateId); else next.delete(candidateId);
                 return next;
             });
+            toast(
+                wasSaved
+                    ? 'Couldn’t remove this saved candidate — please try again.'
+                    : 'Couldn’t save this candidate — please try again.',
+                'error',
+            );
         }
     };
 
@@ -928,6 +952,32 @@ export default function CandidateSearchClient() {
                     <div style={{ ...cardBase, padding: '60px 24px', textAlign: 'center' }}>
                         <Loader2 size={28} className="animate-spin" style={{ color: '#BE185D', margin: '0 auto 12px', display: 'block' }} />
                         <p style={{ color: '#8A9BA6', fontSize: '14px', margin: 0 }}>Searching candidates…</p>
+                    </div>
+                ) : browseError ? (
+                    /* B64: dedicated failure panel — never render stale
+                       results as if they matched the current search. */
+                    <div style={{ ...cardBase, padding: '60px 24px', textAlign: 'center' }}>
+                        <AlertCircle size={36} style={{ color: '#DC2626', marginBottom: '12px', marginInline: 'auto', display: 'block' }} />
+                        <h3 style={{
+                            fontSize: '18px', fontWeight: 700,
+                            fontFamily: 'var(--font-lora), Georgia, serif',
+                            color: '#1A2E35', marginBottom: '6px',
+                        }}>Couldn&apos;t load candidates</h3>
+                        <p style={{ fontSize: '13px', color: '#8A9BA6', marginBottom: '18px' }}>{browseError}</p>
+                        <button
+                            type="button"
+                            onClick={() => { void fetchCandidates(); }}
+                            className="tp-filter-btn"
+                            style={{
+                                ...clayBtn,
+                                background: 'linear-gradient(145deg, #9D174D, #BE185D)',
+                                color: '#fff',
+                                border: '1px solid rgba(190,24,93,0.4)',
+                                boxShadow: '3px 3px 8px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+                            }}
+                        >
+                            Retry
+                        </button>
                     </div>
                 ) : candidates.length === 0 ? (
                     <div style={{ ...cardBase, padding: '60px 24px', textAlign: 'center' }}>

@@ -14,6 +14,7 @@
  * to GoogleBot. This file fixes that.
  */
 import { brand } from '@/config/brand';
+import { PSYCH_SPECIALTY_SLUG } from './taxonomy-registry';
 import {
     getStatePracticeAuthority,
     PracticeAuthority,
@@ -107,6 +108,29 @@ const SETTING_LEADS: Record<string, SettingLeadFn> = {
     'part-time': (c) => `Part-time ${brand.niche.short} roles in ${c.stateName} generally pay $60–$100 per hour and run 16–32 scheduled hours weekly, with prorated benefits at larger health systems and none at smaller practices. The structure is popular for clinicians maintaining a private practice on the side or stepping down from a full caseload.`,
     'new-grad': (c) => `New-grad ${brand.niche.short} positions in ${c.stateName} typically start at $110K–$160K and emphasize structured onboarding — formal preceptorship, gradual caseload ramp over 3–6 months, and protected supervision time. Community health centers and FQHCs broadly qualify for NHSC loan repayment up to $75K for a two-year commitment.`,
     '1099': (c) => `Independent-contractor (1099) ${brand.niche.short} roles in ${c.stateName} pay $75–$150+ per hour without benefits or employer-paid malpractice. Clinicians self-fund quarterly estimated taxes, occurrence-based malpractice, and any LLC or PLLC structure — net take-home depends heavily on those offsets and ${c.stateCode} self-employment tax exposure.`,
+    // ── 2026-07 NP taxonomy state pages (job types + specialties + APRN) ──
+    // Covers the remaining SETTING_CONFIGS keys so every /jobs/{setting}/{state}
+    // page type gets a distinct lead instead of only the shared authority/COL
+    // sentences (the near-duplicate pattern this file exists to defeat).
+    'per-diem': (c) => `Per-diem ${brand.niche.short} shifts across ${c.stateName} pay premium hourly rates in exchange for zero guaranteed hours, and most clinicians credential at two or three facilities to smooth volume. Each site onboards separately, so current licensure and certification paperwork shortens time-to-first-shift.`,
+    'locum-tenens': (c) => isNlcMember(c.stateName)
+        ? `Locum tenens ${brand.niche.short} assignments in ${c.stateName} typically run 4–26 weeks with agency-covered malpractice, travel, and housing. ${c.stateName}'s Nurse Licensure Compact membership lets multistate-licensed clinicians start assignments with minimal licensing lead time.`
+        : `Locum tenens ${brand.niche.short} assignments in ${c.stateName} typically run 4–26 weeks with agency-covered malpractice, travel, and housing. ${c.stateName} is not a Nurse Licensure Compact member, so budget extra lead time for a separate ${c.stateCode} license before your start date.`,
+    'family-practice': (c) => `Family practice ${brand.niche.short} (FNP) roles across ${c.stateName} anchor primary-care access, from urban group practices to rural health clinics. FNP is the most widely recognized ${brand.niche.short} certification among ${c.stateName} employers.`,
+    'adult-gerontology': (c) => `Adult-gerontology ${brand.niche.short} demand in ${c.stateName} tracks the aging patient base: AGPCNPs staff primary-care and long-term-care settings while AGACNPs cover hospital and specialty services.`,
+    'pediatric': (c) => `Pediatric ${brand.niche.short} roles in ${c.stateName} span primary-care pediatrics, children's hospitals, and school-based programs. Acute-care PNP positions cluster around the state's larger children's facilities.`,
+    'women-health': (c) => `Women's health ${brand.niche.short} (WHNP) positions across ${c.stateName} sit in OB/GYN groups, family-planning programs, and prenatal clinics, often working alongside certified nurse midwives.`,
+    'acute-care': (c) => `Acute care ${brand.niche.short} positions across ${c.stateName} concentrate in ICUs, step-down units, and hospitalist services, generally on 13-hour shift patterns with differentials for nights and weekends.`,
+    'emergency': (c) => `Emergency ${brand.niche.short} roles across ${c.stateName} staff emergency departments and fast-track units. Employers typically expect prior emergency or acute-care experience plus procedural competency.`,
+    'anesthesia': (c) => `CRNA positions across ${c.stateName} carry the highest APRN pay bands — typically $180K–$250K+. Compensation varies with call burden and with whether the practice runs a supervision-based or independent CRNA model.`,
+    'midwifery': (c) => `Certified nurse midwife (CNM) roles in ${c.stateName} cover hospital labor-and-delivery services, birth centers, and OB/GYN practices; call frequency and delivery volume drive most compensation differences.`,
+    // Keyed via the registry-derived constant so the specialty slug literal
+    // stays confined to taxonomy-registry.ts (niche-copy debt ratchet).
+    ...(PSYCH_SPECIALTY_SLUG
+        ? {
+            [PSYCH_SPECIALTY_SLUG]: ((c) => `Behavioral-health ${brand.niche.short} roles across ${c.stateName} span outpatient clinics, telehealth platforms, and integrated care settings, typically paying $120K–$170K, with demand elevated by nationwide prescriber shortages.`) as SettingLeadFn,
+        }
+        : {}),
 };
 
 // ─── Composite narrative ────────────────────────────────────────────────────

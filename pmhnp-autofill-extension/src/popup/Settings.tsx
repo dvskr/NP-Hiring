@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { ExtensionSettings } from '@/shared/types';
-import { DEFAULT_SETTINGS, STORAGE_KEYS } from '@/shared/constants';
+import { BOARD_DOMAIN, BOARD_NAME, DEFAULT_SETTINGS, EXTENSION_VERSION, SETTINGS_URL, STORAGE_KEYS, SUPPORT_URL } from '@/shared/constants';
 import { getSettings } from '@/shared/storage';
 
 type SettingsSection = 'general' | 'autofill' | 'ai' | 'about';
@@ -159,25 +159,25 @@ export default function Settings() {
                 {activeSection === 'about' && (
                     <div className="space-y-3">
                         <div className="bg-navy-light rounded-lg p-4 border border-border-color">
-                            <h3 className="font-semibold text-white mb-2">PMHNP Autofill</h3>
-                            <p className="text-xs text-text-secondary">Version 1.0.0</p>
+                            <h3 className="font-semibold text-white mb-2">{BOARD_NAME} Autofill</h3>
+                            <p className="text-xs text-text-secondary">Version {EXTENSION_VERSION}</p>
                             <p className="text-xs text-text-secondary mt-1">
-                                Automatically fill job applications with your PMHNP profile data.
+                                Automatically fill job applications with your {BOARD_NAME} profile data.
                             </p>
                         </div>
                         <a
-                            href="https://pmhnphiring.com/settings"
+                            href={SETTINGS_URL}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="block bg-navy-light rounded-lg p-4 border border-border-color hover:border-teal transition-colors"
                         >
                             <p className="text-sm text-white">Manage Profile</p>
                             <p className="text-xs text-text-secondary mt-0.5">
-                                Update your profile data on pmhnphiring.com
+                                Update your profile data on {BOARD_DOMAIN}
                             </p>
                         </a>
                         <a
-                            href="https://pmhnphiring.com/support"
+                            href={SUPPORT_URL}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="block bg-navy-light rounded-lg p-4 border border-border-color hover:border-teal transition-colors"

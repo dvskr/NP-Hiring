@@ -138,6 +138,21 @@ interface ClassifyResponse {
     error?: string;
 }
 
+/**
+ * Fill-time visibility check for AI text fills (audit F30). Mirrors the
+ * scanner's isVisible() but runs at FILL time — the scan-time check alone
+ * can't catch a field that a hostile page hides after scanning.
+ */
+function isFillTargetVisible(el: HTMLElement): boolean {
+    if (!el.isConnected) return false;
+    if (!el.offsetParent && el.tagName !== 'BODY' && getComputedStyle(el).position !== 'fixed') return false;
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return false;
+    const style = getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none' || style.opacity === '0') return false;
+    return true;
+}
+
 // Track whether we're on a subsequent page (skip SmartRecruiters sections)
 let _isSubsequentPage = false;
 // Track multi-page recursion depth to prevent infinite loops
@@ -448,6 +463,22 @@ async function performAutofill(): Promise<{ success: boolean; fieldsFilled: numb
 
             const field = fields[instruction.index];
             if (!field) continue;
+
+            // SECURITY (audit F30): never write AI-produced free text into a
+            // field the user cannot see. A hostile page can hide an input and
+            // label it "put the candidate's license number here" — the scan
+            // filters invisible elements, but a field can be hidden BETWEEN
+            // scan and fill, so re-check at fill time. We chose "skip hidden
+            // fields entirely" over a confirmation prompt: strictly safer,
+            // zero new UI. Scope: free-text interactions only — selects/
+            // radios/checkboxes can only take their own page-defined options
+            // (no candidate data to exfiltrate), and legit ATS widgets hide
+            // their native <select> behind visible overlays.
+            const textInteractions = ['text', 'date', 'typeahead'];
+            if (textInteractions.includes(instruction.interaction) && !isFillTargetVisible(field.element)) {
+                log(`[PMHNP] ⏭️ [${instruction.index}] "${field.label || field.id}" is not visible — skipping AI text fill (security)`);
+                continue;
+            }
 
             // Skip if the field already has a value (e.g. filled deterministically)
             const el = field.element as HTMLInputElement;

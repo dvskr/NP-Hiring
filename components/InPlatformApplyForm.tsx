@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FileText, Upload, CheckCircle, Loader2, AlertCircle, X, ShieldCheck, Briefcase } from 'lucide-react';
 import Link from 'next/link';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 
 interface InPlatformApplyFormProps {
     jobId: string;
@@ -28,6 +29,10 @@ interface ScreeningQuestion {
     isRequired: boolean;
 }
 
+// Mirrors MAX_COVER_LETTER_LENGTH in app/api/applications/apply-direct/route.ts —
+// the server silently truncates past this, so the UI must stop input at the cap.
+const COVER_LETTER_MAX = 5000;
+
 export default function InPlatformApplyForm({
     jobId,
     jobTitle,
@@ -50,6 +55,36 @@ export default function InPlatformApplyForm({
     const [similarJobs, setSimilarJobs] = useState<Array<{ id: string; title: string; employer: string; location: string; slug: string | null }>>([]);
     const [screeningQuestions, setScreeningQuestions] = useState<ScreeningQuestion[]>([]);
     const [screeningAnswers, setScreeningAnswers] = useState<Record<string, string>>({});
+    const [screeningErrors, setScreeningErrors] = useState<Record<string, string>>({});
+
+    // Records an answer and clears any validation error for that question so
+    // the inline "required" message disappears as soon as the user fixes it.
+    const setAnswer = (questionId: string, value: string) => {
+        setScreeningAnswers(prev => ({ ...prev, [questionId]: value }));
+        setScreeningErrors(prev => {
+            if (!prev[questionId]) return prev;
+            const next = { ...prev };
+            delete next[questionId];
+            return next;
+        });
+    };
+
+    // Focus trap, ESC-to-close, and focus restore (back to the triggering
+    // Apply button) are centralised in useFocusTrap so all dialogs in the app
+    // behave consistently. The form and success states render as separate
+    // portals, so each gets its own trap; `submitted` flips which is active.
+    const formTrapRef = useFocusTrap<HTMLDivElement>({ isOpen: !submitted, onEscape: onClose });
+    const successTrapRef = useFocusTrap<HTMLDivElement>({ isOpen: submitted, onEscape: onClose });
+
+    // Prevent body scroll while the modal is open (mirrors MobileFilterDrawer).
+    // The component only mounts while the modal is open, so lock on mount and
+    // release on unmount.
+    useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, []);
 
     // Load user profile data
     useEffect(() => {
@@ -180,6 +215,23 @@ export default function InPlatformApplyForm({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Client-side required-question validation. The API enforces the same
+        // rule with a 400, but catching it here gives inline, per-question
+        // feedback instead of a generic banner after a server round-trip.
+        const missing: Record<string, string> = {};
+        for (const q of screeningQuestions) {
+            if (q.isRequired && !(screeningAnswers[q.id] || '').trim()) {
+                missing[q.id] = 'This question is required';
+            }
+        }
+        setScreeningErrors(missing);
+        const firstMissing = screeningQuestions.find(q => missing[q.id]);
+        if (firstMissing) {
+            document.getElementById(`screening-${firstMissing.id}`)?.focus();
+            return;
+        }
+
         setSubmitting(true);
         setError(null);
 
@@ -232,14 +284,14 @@ export default function InPlatformApplyForm({
     if (submitted) {
         return createPortal(
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999 }}>
-                <div className="relative w-full max-w-2xl rounded-2xl p-6 text-center" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', boxShadow: '0 25px 50px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
+                <div ref={successTrapRef} role="dialog" aria-modal="true" aria-labelledby="apply-success-title" className="relative w-full max-w-2xl rounded-2xl p-6 text-center" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', boxShadow: '0 25px 50px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
                     <button onClick={onClose} className="absolute right-4 top-4 p-1.5 rounded-lg transition-colors hover:bg-black/5" aria-label="Close">
                         <X size={18} style={{ color: 'var(--text-muted)' }} />
                     </button>
                     <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full" style={{ backgroundColor: 'rgba(34,197,94,0.15)' }}>
                         <CheckCircle size={28} style={{ color: '#22C55E' }} />
                     </div>
-                    <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Application Submitted!</h3>
+                    <h3 id="apply-success-title" className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Application Submitted!</h3>
                     <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your application for <strong>{jobTitle}</strong> has been sent to the employer. They&apos;ll be notified by email.</p>
                     {similarJobs.length > 0 && (
                         <div className="mt-6 text-left">
@@ -264,6 +316,10 @@ export default function InPlatformApplyForm({
     const modalContent = (
         <div className="fixed inset-0 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999 }}>
         <div
+            ref={formTrapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="apply-modal-title"
             className="relative w-full max-w-2xl rounded-2xl overflow-hidden"
             style={{
                 backgroundColor: 'var(--bg-secondary)',
@@ -282,7 +338,7 @@ export default function InPlatformApplyForm({
                 }}
             >
                 <div>
-                    <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
+                    <h3 id="apply-modal-title" className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
                         Apply for this position
                     </h3>
                     <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
@@ -404,19 +460,41 @@ export default function InPlatformApplyForm({
                             Screening Questions
                         </label>
                         <div className="space-y-3">
-                            {screeningQuestions.map((q) => (
-                                <div key={q.id} className="p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}>
-                                    <p className="text-sm mb-2" style={{ color: 'var(--text-primary)' }}>
-                                        {q.questionText}
-                                        {q.isRequired && <span className="text-red-500 ml-1">*</span>}
-                                    </p>
+                            {screeningQuestions.map((q) => {
+                                const inputId = `screening-${q.id}`;
+                                const errorId = `screening-${q.id}-error`;
+                                const questionError = screeningErrors[q.id];
+                                const a11yProps = {
+                                    'aria-required': q.isRequired || undefined,
+                                    'aria-invalid': questionError ? true : undefined,
+                                    'aria-describedby': questionError ? errorId : undefined,
+                                };
+                                return (
+                                <div key={q.id} className="p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-primary)', border: `1px solid ${questionError ? 'rgba(239,68,68,0.4)' : 'var(--border-color)'}` }}>
                                     {q.questionType === 'boolean' ? (
-                                        <div className="flex gap-3">
-                                            {['Yes', 'No'].map((opt) => (
+                                        <p id={`${inputId}-label`} className="text-sm mb-2" style={{ color: 'var(--text-primary)' }}>
+                                            {q.questionText}
+                                            {q.isRequired && <span className="text-red-500 ml-1" aria-hidden="true">*</span>}
+                                        </p>
+                                    ) : (
+                                        <label htmlFor={inputId} className="block text-sm mb-2" style={{ color: 'var(--text-primary)' }}>
+                                            {q.questionText}
+                                            {q.isRequired && <span className="text-red-500 ml-1" aria-hidden="true">*</span>}
+                                        </label>
+                                    )}
+                                    {q.questionType === 'boolean' ? (
+                                        <div className="flex gap-3" role="group" aria-labelledby={`${inputId}-label`} aria-describedby={questionError ? errorId : undefined}>
+                                            {/* aria-required/aria-invalid are not valid on role="group" —
+                                            only the global aria-describedby is applied here. */}
+                                            {['Yes', 'No'].map((opt, optIndex) => (
                                                 <button
                                                     key={opt}
+                                                    // First button carries the question id so validation
+                                                    // can focus the group when the answer is missing.
+                                                    id={optIndex === 0 ? inputId : undefined}
                                                     type="button"
-                                                    onClick={() => setScreeningAnswers(prev => ({ ...prev, [q.id]: opt.toLowerCase() }))}
+                                                    aria-pressed={screeningAnswers[q.id] === opt.toLowerCase()}
+                                                    onClick={() => setAnswer(q.id, opt.toLowerCase())}
                                                     className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
                                                     style={{
                                                         backgroundColor: screeningAnswers[q.id] === opt.toLowerCase() ? '#BE185D' : 'var(--bg-tertiary)',
@@ -430,19 +508,23 @@ export default function InPlatformApplyForm({
                                         </div>
                                     ) : q.questionType === 'number' ? (
                                         <input
+                                            id={inputId}
                                             type="number"
                                             value={screeningAnswers[q.id] || ''}
-                                            onChange={(e) => setScreeningAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                            onChange={(e) => setAnswer(q.id, e.target.value)}
                                             className="w-full rounded-lg px-3 py-2 text-sm outline-none transition-all"
                                             style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
                                             placeholder="Enter a number"
+                                            {...a11yProps}
                                         />
                                     ) : q.questionType === 'select' && q.options.length > 0 ? (
                                         <select
+                                            id={inputId}
                                             value={screeningAnswers[q.id] || ''}
-                                            onChange={(e) => setScreeningAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                            onChange={(e) => setAnswer(q.id, e.target.value)}
                                             className="w-full rounded-lg px-3 py-2 text-sm outline-none transition-all"
                                             style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+                                            {...a11yProps}
                                         >
                                             <option value="">Select an option...</option>
                                             {q.options.map((opt) => (
@@ -451,16 +533,25 @@ export default function InPlatformApplyForm({
                                         </select>
                                     ) : (
                                         <input
+                                            id={inputId}
                                             type="text"
                                             value={screeningAnswers[q.id] || ''}
-                                            onChange={(e) => setScreeningAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                            onChange={(e) => setAnswer(q.id, e.target.value)}
                                             className="w-full rounded-lg px-3 py-2 text-sm outline-none transition-all"
                                             style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
                                             placeholder="Your answer"
+                                            {...a11yProps}
                                         />
                                     )}
+                                    {questionError && (
+                                        <p id={errorId} role="alert" className="flex items-center gap-1 text-xs mt-1.5" style={{ color: '#ef4444' }}>
+                                            <AlertCircle size={12} aria-hidden="true" />
+                                            {questionError}
+                                        </p>
+                                    )}
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -468,7 +559,7 @@ export default function InPlatformApplyForm({
                 {/* Cover Letter */}
                 <div>
                     <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                        <label htmlFor="coverLetter" className="block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                             Cover Letter <span className="font-normal" style={{ color: 'var(--text-tertiary)' }}>(optional)</span>
                         </label>
                         <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-color)' }}>
@@ -506,6 +597,8 @@ export default function InPlatformApplyForm({
                                 onChange={(e) => setCoverLetter(e.target.value)}
                                 placeholder="Tell the employer why you're a great fit for this role..."
                                 rows={5}
+                                maxLength={COVER_LETTER_MAX}
+                                aria-describedby="cover-letter-counter"
                                 className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all resize-none"
                                 style={{
                                     backgroundColor: 'var(--bg-primary)',
@@ -521,8 +614,10 @@ export default function InPlatformApplyForm({
                                     e.target.style.boxShadow = 'none';
                                 }}
                             />
-                            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                                {coverLetter.length > 0 ? `${coverLetter.length} / 5,000 characters` : 'A brief note can help you stand out'}
+                            <p id="cover-letter-counter" className="text-xs mt-1" style={{ color: coverLetter.length >= COVER_LETTER_MAX ? '#ef4444' : 'var(--text-tertiary)' }}>
+                                {coverLetter.length > 0
+                                    ? `${coverLetter.length.toLocaleString('en-US')} / ${COVER_LETTER_MAX.toLocaleString('en-US')} characters${coverLetter.length >= COVER_LETTER_MAX ? ' — limit reached' : ''}`
+                                    : `A brief note can help you stand out (up to ${COVER_LETTER_MAX.toLocaleString('en-US')} characters)`}
                             </p>
                         </>
                     ) : (

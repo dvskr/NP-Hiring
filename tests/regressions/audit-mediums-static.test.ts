@@ -17,14 +17,9 @@ describe('classify-fields no longer logs PII', () => {
   });
 });
 
-describe('email-job sanitizes user input', () => {
-  it('escapes the title and constrains the CTA URL to same-origin', () => {
-    const src = read('app/api/email-job/route.ts');
-    expect(src).toContain('escapeHtml');
-    expect(src).toContain('safeJobUrl');
-    expect(src).not.toMatch(/\$\{jobTitle\}/); // raw interpolation removed
-  });
-});
+// 'email-job sanitizes user input' block removed: the /api/email-job route was
+// deleted outright (orphaned, unauthenticated, abuse surface). Its absence is
+// pinned by the deletedRoutes list in audit-coverage-static.test.ts.
 
 describe('trace scripts read credentials from env', () => {
   for (const f of ['scripts/trace-bulk-unlock.ts', 'scripts/trace-analytics.ts', 'scripts/trace-pagination-nav.ts']) {

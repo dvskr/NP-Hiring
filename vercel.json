@@ -129,104 +129,32 @@
       "schedule": "55 0 * * *"
     },
     {
-      "path": "/api/cron/enrich-jobs",
-      "schedule": "0 6,12,18,22 * * *"
+      "path": "/api/cron/batch/morning",
+      "schedule": "30 8 * * *"
     },
     {
-      "path": "/api/cron/cleanup-expired",
+      "path": "/api/cron/batch/midday",
       "schedule": "10 12,18 * * *"
     },
     {
-      "path": "/api/cron/cleanup-rejected-jobs",
-      "schedule": "45 4 * * *"
+      "path": "/api/cron/batch/daily",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/enrich-jobs",
+      "schedule": "0 6,12,18,22 * * *"
     },
     {
       "path": "/api/cron/aggregate-pseo",
       "schedule": "15 0,6,12,18 * * *"
     },
     {
-      "path": "/api/cron/freshness-decay",
-      "schedule": "20 12,18 * * *"
-    },
-    {
-      "path": "/api/cron/check-dead-links",
-      "schedule": "30 12,18 * * *"
-    },
-    {
-      "path": "/api/cron/engagement-anomaly",
-      "schedule": "0 5 * * *"
-    },
-    {
-      "path": "/api/cron/daily-report",
-      "schedule": "0 13 * * *"
-    },
-    {
-      "path": "/api/cron/index-urls",
-      "schedule": "15 13 * * *"
-    },
-    {
-      "path": "/api/cron/index-pseo",
-      "schedule": "45 13 * * *"
-    },
-    {
-      "path": "/api/cron/deindex-expired",
-      "schedule": "45 12,18 * * *"
-    },
-    {
       "path": "/api/cron/historical-deindex",
       "schedule": "0 1,7,19 * * *"
     },
     {
-      "path": "/api/cron/gsc-health-check",
-      "schedule": "30 9 * * *"
-    },
-    {
-      "path": "/api/cron/embedding-drift-check",
-      "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/send-alerts",
-      "schedule": "30 13 * * *"
-    },
-    {
-      "path": "/api/cron/candidate-alerts",
-      "schedule": "45 13 * * *"
-    },
-    {
-      "path": "/api/cron/employer-report",
-      "schedule": "0 14 1 * *"
-    },
-    {
-      "path": "/api/cron/saved-job-reminder",
-      "schedule": "0 13 * * 3,6"
-    },
-    {
-      "path": "/api/cron/push-notifications",
-      "schedule": "30 14 * * *"
-    },
-    {
       "path": "/api/cron/expiry-warnings",
       "schedule": "0 22 * * *"
-    },
-    {
-      "path": "/api/cron/source-presence-unpublish",
-      "schedule": "55 12 * * *"
-    },
-    {
-      "path": "/api/cron/health-anomaly-check",
-      "schedule": "0 13 * * *"
-    },
-    {
-      "path": "/api/cron/purge-soft-deleted",
-      "schedule": "30 8 * * *"
-    },
-    {
-      "path": "/api/cron/purge-inactive-users",
-      "schedule": "45 8 * * *"
-    },
-    {
-      "path": "/api/cron/dsar-overdue",
-      "schedule": "0 9 * * *"
     },
     {
       "path": "/api/cron/refresh-site-stats",

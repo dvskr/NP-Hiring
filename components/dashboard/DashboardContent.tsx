@@ -509,6 +509,27 @@ export default function DashboardContent() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [hasFetched, setHasFetched] = useState(false)
+    // Recommendations dismissed this session — hidden immediately; the
+    // server-side dismissedAt filter keeps them hidden on the next load.
+    const [dismissedRecIds, setDismissedRecIds] = useState<ReadonlySet<string>>(new Set())
+
+    // Engagement write-side of the recommendation feedback loop (audit
+    // B14/B88): clickedAt feeds the nightly cron's employer-affinity boost,
+    // dismissedAt removes the job from future batches/renders. Fire-and-
+    // forget — engagement tracking must never block or break navigation.
+    const trackRecommendation = useCallback((jobId: string, action: 'click' | 'dismiss') => {
+        fetch('/api/recommendations/click', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobId, action }),
+            keepalive: true, // survive the page navigating away to the job
+        }).catch(() => { /* best-effort telemetry — never surface an error */ })
+    }, [])
+
+    const dismissRecommendation = useCallback((jobId: string) => {
+        trackRecommendation(jobId, 'dismiss')
+        setDismissedRecIds(prev => new Set(prev).add(jobId))
+    }, [trackRecommendation])
 
     const fetchDashboard = useCallback(async (ids: string[]) => {
         try {
@@ -724,17 +745,30 @@ export default function DashboardContent() {
                             {DASHBOARD_PROFILE_NUDGE_CLAIM}
                         </p>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {/* B83: chips deep-link into the settings tab that
+                                holds the missing field. fieldId is 'tab-<key>'
+                                (see lib/profile-completeness.ts) and the
+                                settings page reads ?tab=<key> on mount, so
+                                stripping the prefix lands the user exactly
+                                where the fix happens. */}
                             {completeness.missingItems.slice(0, 4).map((item) => (
-                                <span key={item.label} style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                    fontSize: '12px', color: '#6B7F8A',
-                                    padding: '4px 10px', borderRadius: '20px',
-                                    background: '#EDF5F0',
-                                    border: '1px solid #D5E8E0',
-                                    boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.6)',
-                                }}>
+                                <Link
+                                    key={item.label}
+                                    href={`/settings?tab=${item.fieldId.replace(/^tab-/, '')}`}
+                                    title={`Go to settings — ${item.label}`}
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                        fontSize: '12px', color: '#6B7F8A',
+                                        padding: '4px 10px', borderRadius: '20px',
+                                        background: '#EDF5F0',
+                                        border: '1px solid #D5E8E0',
+                                        boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.6)',
+                                        textDecoration: 'none',
+                                        cursor: 'pointer',
+                                    }}
+                                >
                                     {item.label} <span style={{ color: '#BE185D', fontWeight: 600 }}>+{item.weight}%</span>
-                                </span>
+                                </Link>
                             ))}
                             {completeness.missingItems.length > 4 && (
                                 <span style={{ fontSize: '12px', color: '#6B7F8A', padding: '4px 0', alignSelf: 'center' }}>
@@ -993,7 +1027,7 @@ export default function DashboardContent() {
                     </Link>
                 </div>
 
-                {recommendedJobs.length === 0 ? (
+                {recommendedJobs.filter((job) => !dismissedRecIds.has(job.id)).length === 0 ? (
                     <div style={{ ...cardBase, textAlign: 'center', padding: '48px 24px' }}>
                         <Briefcase size={32} style={{ color: '#A8C5B8', margin: '0 auto 12px' }} />
                         <p style={{ fontSize: '14px', color: '#6B7F8A' }}>
@@ -1008,10 +1042,43 @@ export default function DashboardContent() {
                        collapsed badly on phones (title + company would clip
                        to nothing once the right-column action buttons ate the
                        row width). Grid view stacks: header (logo + title +
-                       company + save/share), badges, then apply CTA. */
+                       company + save/share), badges, then apply CTA.
+
+                       Audit B14/B88: each AI-generated card (recommendationTier
+                       present) reports engagement — link click-throughs write
+                       clickedAt (capture-phase, anchors only, so JobCard's
+                       save/share buttons don't count), and the "Not interested"
+                       control writes dismissedAt + hides the card. Rule-based
+                       fallback recommendations have no CandidateRecommendation
+                       rows, so they render without the dismiss control. */
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        {recommendedJobs.map((job) => (
-                            <JobCard key={job.id} job={job as unknown as JobCardJob} />
+                        {recommendedJobs.filter((job) => !dismissedRecIds.has(job.id)).map((job) => (
+                            <div
+                                key={job.id}
+                                onClickCapture={(e) => {
+                                    if (!job.recommendationTier) return
+                                    const target = e.target as HTMLElement | null
+                                    if (target?.closest('a')) trackRecommendation(job.id, 'click')
+                                }}
+                            >
+                                <JobCard job={job as unknown as JobCardJob} />
+                                {job.recommendationTier && (
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => dismissRecommendation(job.id)}
+                                            aria-label={`Not interested in ${job.title} at ${job.employer}`}
+                                            style={{
+                                                background: 'none', border: 'none', cursor: 'pointer',
+                                                fontSize: '12px', color: '#8A9BA6', padding: '2px 6px',
+                                                textDecoration: 'underline', textUnderlineOffset: '2px',
+                                            }}
+                                        >
+                                            Not interested
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         ))}
                     </div>
                 )}

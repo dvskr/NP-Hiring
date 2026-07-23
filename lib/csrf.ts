@@ -4,6 +4,18 @@
  * Verifies that mutation requests (POST/PUT/PATCH/DELETE) originate
  * from our own domain by checking the Origin or Referer header.
  * This blocks cross-site form submissions and fetch() attacks.
+ *
+ * B98 design note (2026-07-18): protection is enforced CENTRALLY from
+ * middleware.ts via `enforceApiCsrf()` for every mutation under /api/*,
+ * instead of hand-adding `verifyCsrf()` to ~90 route handlers. Rationale:
+ *   - one enforcement point → new routes are protected by default;
+ *   - zero churn across route files (lowest-risk mechanical change);
+ *   - identical acceptance rules to the existing per-route `verifyCsrf()`
+ *     call sites (which remain in place as defense in depth).
+ * Exemptions: Bearer-token requests (extension JWT, cron secrets) and
+ * signature-verified endpoints (/api/webhooks/*, /api/inngest) — each of
+ * those carries its own non-cookie authentication, so browser-cookie CSRF
+ * does not apply.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -24,6 +36,39 @@ const ALLOWED_ORIGINS = [
         ].filter((origin): origin is string => Boolean(origin))
     ),
 ];
+
+const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/**
+ * API paths exempt from the middleware-level CSRF gate. Each verifies its
+ * caller with a non-cookie credential, so the Origin check is meaningless
+ * for them (senders are servers, not browsers):
+ *   /api/webhooks/* — Stripe / Resend signature verification
+ *   /api/inngest    — Inngest request signing (INNGEST_SIGNING_KEY)
+ * Cron routes are deliberately NOT listed: Vercel cron sends a Bearer token
+ * (skipped below) and admin manual triggers are same-origin browser calls
+ * that pass the Origin check — so they keep CSRF protection for free.
+ */
+const CSRF_EXEMPT_API_PREFIXES = ['/api/webhooks', '/api/inngest'];
+
+function isCsrfExemptPath(pathname: string): boolean {
+    return CSRF_EXEMPT_API_PREFIXES.some(
+        (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    );
+}
+
+/**
+ * True when `origin` is first-party. Beyond the static allowlist, an Origin
+ * that exactly matches the origin actually being served (request.nextUrl)
+ * is accepted — browsers set the Origin header themselves, so a page on
+ * another site can never present ours. This keeps Vercel preview
+ * deployments (URLs not in the static list) working without widening the
+ * policy.
+ */
+function isAllowedOrigin(origin: string, request: NextRequest): boolean {
+    if (ALLOWED_ORIGINS.includes(origin)) return true;
+    return origin === request.nextUrl.origin;
+}
 
 /**
  * Call at the top of any state-changing API handler (POST/PUT/PATCH/DELETE).
@@ -52,7 +97,7 @@ export function verifyCsrf(request: NextRequest): NextResponse | null {
 
     // Check Origin header first (more reliable)
     if (origin) {
-        if (ALLOWED_ORIGINS.includes(origin)) {
+        if (isAllowedOrigin(origin, request)) {
             return null;
         }
         return NextResponse.json(
@@ -65,7 +110,7 @@ export function verifyCsrf(request: NextRequest): NextResponse | null {
     if (referer) {
         try {
             const refererOrigin = new URL(referer).origin;
-            if (ALLOWED_ORIGINS.includes(refererOrigin)) {
+            if (isAllowedOrigin(refererOrigin, request)) {
                 return null;
             }
         } catch {
@@ -78,4 +123,26 @@ export function verifyCsrf(request: NextRequest): NextResponse | null {
     }
 
     return null;
+}
+
+/**
+ * Middleware-level CSRF gate (B98). Applies `verifyCsrf` to every
+ * state-changing request under /api/* except signature-verified endpoints.
+ * Returns null when the request may proceed, or a 403 NextResponse.
+ *
+ * Safe-by-construction paths through this gate:
+ * - GET/HEAD/OPTIONS (incl. CORS preflight): not mutations → skipped
+ * - Extension / API clients: send `Authorization: Bearer …` → skipped
+ * - Server-to-server callers (Vercel cron, Stripe CLI, RFC 8058
+ *   List-Unsubscribe POSTs): no Origin/Referer headers → allowed (they
+ *   cannot carry first-party session cookies cross-site anyway)
+ * - Same-origin browser traffic (incl. preview deployments): Origin
+ *   matches allowlist or the served origin → allowed
+ */
+export function enforceApiCsrf(request: NextRequest): NextResponse | null {
+    const pathname = request.nextUrl.pathname;
+    if (!pathname.startsWith('/api/')) return null;
+    if (!MUTATION_METHODS.has(request.method.toUpperCase())) return null;
+    if (isCsrfExemptPath(pathname)) return null;
+    return verifyCsrf(request);
 }

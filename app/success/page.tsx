@@ -36,10 +36,22 @@ function SuccessContent() {
   });
 
   useEffect(() => {
-    // Always clean up the in-memory job draft regardless of path
-    localStorage.removeItem('jobFormData');
+    // B85: do NOT wipe the draft up-front. The localStorage draft is the
+    // employer's only copy of the form — clearing it before payment
+    // verification means a failed/unpaid session forces a full re-type.
+    // We clear only once the job is confirmed in: free posts land here
+    // after /api/jobs/post-free succeeded, and paid posts clear when
+    // Stripe reports the session as paid.
+    // B81: the paid path previously cleared jobFormData but left
+    // jobScreeningQuestions behind, leaking stale questions into the next
+    // post — both keys are cleared together now.
+    const clearJobDraft = () => {
+      localStorage.removeItem('jobFormData');
+      localStorage.removeItem('jobScreeningQuestions');
+    };
 
     if (isFreeMode) {
+      clearJobDraft();
       // P7: free post conversion event (no Stripe purchase event for free posts)
       const jobId = searchParams.get('jobId') ?? 'unknown';
       trackSubmitFreePost(jobId);
@@ -72,6 +84,10 @@ function SuccessContent() {
         }
 
         if (res.status === 202 || data.processing) {
+          // Stripe reports the session paid (202/processing only occur for
+          // paid sessions) — the money is in, so the draft is safe to clear
+          // even while activation lags. Idempotent across retries.
+          clearJobDraft();
           // Webhook not yet processed. Retry up to maxAttempts.
           attempts += 1;
           if (attempts >= maxAttempts) {
@@ -91,6 +107,7 @@ function SuccessContent() {
           return;
         }
 
+        clearJobDraft();
         setState({ loading: false, error: null, session: data });
       } catch {
         if (cancelled) return;

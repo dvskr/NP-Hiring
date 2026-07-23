@@ -69,11 +69,21 @@ If counts collapsed to 0, classifier is too strict — review `RULES` in `lib/ps
 
 ```bash
 # Trigger the aggregate-pseo cron once so pseoStats reflects new filter logic.
-curl -X POST https://pmhnphiring.com/api/cron/aggregate-pseo \
+# The route is GET-only (POST returns 405).
+curl -s "https://pmhnphiring.com/api/cron/aggregate-pseo" \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-Without this, the sitemap-index batch counts will lag the actual page renders for up to 12h (the normal cron cadence).
+Notes:
+
+- The cron runs on a **6h cadence** (`15 0,6,12,18 * * *` — see
+  `config/cron-schedule.ts` / `vercel.json`), so even without a manual
+  trigger, pseoStats catches up within ~6h.
+- One invocation refreshes all setting×state rows immediately, but
+  category×city rows refresh via a **rotating 200-city cursor with
+  self-chaining** (see `app/api/cron/aggregate-pseo/route.ts`). A single
+  manual trigger kicks off the chain that walks the full city list; pass
+  `?offset=0` to force the rotation to restart from the top.
 
 ---
 

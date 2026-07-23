@@ -73,9 +73,20 @@ export const config = {
   /** Returns limits for a posting. All tiers get the same limits. */
   getTierLimits: (_tier?: PricingTier | string) => config.limits,
 
-  // Kept for active reference by app/api/employer/invoice/route.ts.
-  // TODO (audit #2): replace with reading actual amount from the Stripe session.
-  getStripePriceInCents: (_tier?: PricingTier | string) => config.stripePriceInCents,
+  // ─── Legacy invoice fallback (B11 / audit #2) ───
+  // Frozen historical launch price ($199) for the invoice/receipt fallback
+  // path ONLY. Post-2026-04-30 charges are invoiced from the JobCharge
+  // ledger (amountCents = what Stripe actually charged); this constant only
+  // covers pre-ledger rows that have no JobCharge. It is deliberately
+  // DECOUPLED from `stripePriceInCents` so a future list-price change can
+  // never rewrite historical invoices. Do not reuse for live pricing.
+  legacyInvoiceFallbackCents: 19900,
+
+  // Kept for active reference by app/api/employer/invoice/route.ts and the
+  // receipt route: fallback amount when no JobCharge ledger row exists
+  // (pre-2026-04-30 payments). Returns the frozen historical price those
+  // rows actually paid — NOT the current list price.
+  getStripePriceInCents: (_tier?: PricingTier | string) => config.legacyInvoiceFallbackCents,
 }
 
 // Type export

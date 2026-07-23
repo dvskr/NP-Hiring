@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Briefcase, Clock, ChevronRight, AlertCircle, Trash2, Loader2, ArrowRight, FileCheck, MapPin } from 'lucide-react';
+import { Clock, ChevronRight, AlertCircle, Trash2, Loader2, ArrowRight, FileCheck, MapPin, RefreshCw } from 'lucide-react';
 import { brand } from '@/config/brand';
 
 interface Application {
@@ -72,27 +72,57 @@ export default function MyApplicationsPage() {
     const [applications, setApplications] = useState<Application[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    /**
+     * B57: every load failure used to render as "Please sign in" — a 500,
+     * a network drop, and a genuine 401 were indistinguishable, sending
+     * already-signed-in users to the login page for no reason. 'auth' only
+     * when the API actually returns 401; anything else is 'load' and gets
+     * a Retry button instead of a sign-in link.
+     */
+    const [errorKind, setErrorKind] = useState<'auth' | 'load' | null>(null);
     const [withdrawing, setWithdrawing] = useState<string | null>(null);
+    const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetch('/api/applications')
-            .then(r => {
-                if (!r.ok) throw new Error('Failed to load');
-                return r.json();
-            })
-            .then(data => setApplications(data))
-            .catch(() => setError('Please sign in to view your applications.'))
-            .finally(() => setLoading(false));
+    const loadApplications = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        setErrorKind(null);
+        try {
+            const res = await fetch('/api/applications');
+            if (res.status === 401) {
+                setErrorKind('auth');
+                setError('Please sign in to view your applications.');
+                return;
+            }
+            if (!res.ok) {
+                throw new Error(`Applications request failed (${res.status})`);
+            }
+            const data = await res.json();
+            setApplications(data);
+        } catch {
+            setErrorKind('load');
+            setError('We couldn’t load your applications — check your connection and try again.');
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
-    const handleWithdraw = async (applicationId: string, jobId: string) => {
+    useEffect(() => {
+        void loadApplications();
+    }, [loadApplications]);
+
+    const handleWithdraw = async (applicationId: string) => {
         if (!confirm('Are you sure you want to withdraw this application? Your personal data will be removed.')) return;
         setWithdrawing(applicationId);
+        setWithdrawError(null);
         try {
+            // The endpoint identifies the row by applicationId (it verifies
+            // ownership server-side). Sending anything else 400s — which is
+            // exactly how this button was silently broken before.
             const res = await fetch('/api/applications/withdraw', {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jobId }),
+                body: JSON.stringify({ applicationId }),
             });
             if (res.ok) {
                 setApplications(prev =>
@@ -101,9 +131,11 @@ export default function MyApplicationsPage() {
                         : a
                     )
                 );
+            } else {
+                setWithdrawError('Couldn’t withdraw this application. Please try again.');
             }
         } catch {
-            // Silently fail
+            setWithdrawError('Couldn’t withdraw this application — check your connection and try again.');
         } finally {
             setWithdrawing(null);
         }
@@ -168,7 +200,7 @@ export default function MyApplicationsPage() {
                     </>
                 )}
 
-                {/* ═══ Error ═══ */}
+                {/* ═══ Error — auth (401) vs load failure (everything else) ═══ */}
                 {error && (
                     <div style={{ ...cardBase, textAlign: 'center', padding: '60px 24px' }}>
                         <AlertCircle size={40} style={{ color: '#EF4444', marginBottom: '16px', marginInline: 'auto', display: 'block' }} />
@@ -176,19 +208,37 @@ export default function MyApplicationsPage() {
                             fontSize: '18px', fontWeight: 700,
                             fontFamily: 'var(--font-lora), Georgia, serif',
                             color: '#1A2E35', marginBottom: '8px',
-                        }}>Sign in required</h2>
+                        }}>{errorKind === 'auth' ? 'Sign in required' : 'Something went wrong'}</h2>
                         <p style={{ color: '#8A9BA6', fontSize: '14px', marginBottom: '24px', lineHeight: 1.6 }}>{error}</p>
-                        <Link href="/login?redirectTo=/my-applications" style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '8px',
-                            padding: '10px 20px', borderRadius: '12px',
-                            background: 'linear-gradient(145deg, #9D174D, #BE185D)',
-                            color: '#fff', fontSize: '13px', fontWeight: 600,
-                            textDecoration: 'none',
-                            boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
-                        }}>
-                            Sign In
-                            <ArrowRight size={14} />
-                        </Link>
+                        {errorKind === 'auth' ? (
+                            <Link href="/login?redirectTo=/my-applications" style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                padding: '10px 20px', borderRadius: '12px',
+                                background: 'linear-gradient(145deg, #9D174D, #BE185D)',
+                                color: '#fff', fontSize: '13px', fontWeight: 600,
+                                textDecoration: 'none',
+                                boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                            }}>
+                                Sign In
+                                <ArrowRight size={14} />
+                            </Link>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => { void loadApplications(); }}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                    padding: '10px 20px', borderRadius: '12px',
+                                    background: 'linear-gradient(145deg, #9D174D, #BE185D)',
+                                    color: '#fff', fontSize: '13px', fontWeight: 600,
+                                    border: '1px solid rgba(190,24,93,0.4)', cursor: 'pointer',
+                                    boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                                }}
+                            >
+                                <RefreshCw size={14} />
+                                Try Again
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -268,6 +318,17 @@ export default function MyApplicationsPage() {
                             })}
                         </div>
                     </div>
+
+                    {/* ─── Withdraw error banner ─── */}
+                    {withdrawError && (
+                        <div role="alert" style={{
+                            marginBottom: '12px', padding: '12px 16px', borderRadius: '10px',
+                            background: '#FDECEA', border: '1px solid #F5C6C0',
+                            color: '#B3261E', fontSize: '13px', fontWeight: 600,
+                        }}>
+                            {withdrawError}
+                        </div>
+                    )}
 
                     {/* ─── Applications List ─── */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -369,7 +430,7 @@ export default function MyApplicationsPage() {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 {!isWithdrawn && (
                                                     <button
-                                                        onClick={() => handleWithdraw(app.id, app.job.id)}
+                                                        onClick={() => handleWithdraw(app.id)}
                                                         disabled={withdrawing === app.id}
                                                         className="app-action-btn"
                                                         title="Withdraw application"

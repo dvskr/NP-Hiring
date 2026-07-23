@@ -2,18 +2,97 @@ import Stripe from 'stripe';
 import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
-import { sendConfirmationEmail, sendRenewalConfirmationEmail, sendRefundConfirmationEmail, getOrCreateUnsubToken } from '@/lib/email-service';
+import { sendRenewalConfirmationEmail, sendRefundConfirmationEmail, getOrCreateUnsubToken } from '@/lib/email-service';
 import { config, PricingTier } from '@/lib/config';
 import { renewalExpiresAt } from '@/lib/expires-at';
 import { logger } from '@/lib/logger';
 import { pingAllSearchEngines } from '@/lib/search-indexing';
-import { anonymizeEmail } from '@/lib/server-utils';
 import { trackServerPurchase } from '@/lib/analytics-server';
+import { captureException } from '@/lib/sentry';
+import { sendDiscordMessage } from '@/lib/discord-notifier';
+import { sanitizeForDiscord } from '@/lib/sanitize-for-discord';
+import { activatePaidJobCheckout, fetchInvoiceData } from './activate-paid-job';
 
 function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return null;
   return new Stripe(key);
+}
+
+/**
+ * V8: payment-webhook failures must reach a human. Every cron in this repo
+ * alerts Discord on failure, but the payments webhook — the one place where
+ * money has been taken — previously only wrote logger.error to Vercel logs.
+ * If Stripe exhausts its ~3-day retry window against a persistent failure,
+ * the money is taken, the job stays unpublished, and nobody is told.
+ *
+ * Sends to Sentry (captureException) AND Discord. Best-effort: alerting can
+ * never make a failing webhook fail harder.
+ */
+async function alertWebhookFailure(
+  reason: string,
+  err: unknown,
+  extras: Record<string, string | number | undefined>,
+): Promise<void> {
+  try {
+    captureException(err instanceof Error ? err : new Error(`${reason}${err ? `: ${String(err)}` : ''}`), {
+      tags: { area: 'stripe-webhook' },
+      extra: { reason, ...extras },
+    });
+    const rawMessage = err instanceof Error ? err.message : err ? String(err) : reason;
+    const detail = Object.entries(extras)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => `${k}=${v}`)
+      .join(' · ');
+    await sendDiscordMessage('', [{
+      title: `🚨 Stripe webhook: ${reason}`,
+      description: '```\n' + sanitizeForDiscord(rawMessage).slice(0, 400) + '\n```'
+        + (detail ? `\n${sanitizeForDiscord(detail).slice(0, 300)}` : ''),
+      color: 0xFF0000,
+    }]);
+  } catch (alertErr) {
+    logger.error('[Stripe] Failed to deliver webhook failure alert', alertErr, { reason });
+  }
+}
+
+/**
+ * B109: atomically claim a webhook-triggered email send via the EmailSend
+ * dedupe key (unique). The whole-event dedupe (ProcessedStripeEvent) is
+ * rolled back on partial failure so Stripe retries — which would re-run
+ * side effects that DID succeed, like an email send. Insert-then-send:
+ * a P2002 on the key means an earlier delivery already sent (or is
+ * sending) this exact email, so the retry skips it.
+ *
+ * Fails OPEN on unexpected errors: a broken guard must not block a
+ * legitimate email — worst case is the pre-B109 duplicate-send behavior.
+ */
+async function claimEmailSend(dedupeKey: string, to: string, emailType: string): Promise<boolean> {
+  try {
+    await prisma.emailSend.create({
+      data: {
+        dedupeKey,
+        to,
+        subject: `[claim] ${emailType}`,
+        emailType,
+        status: 'claimed',
+        metadata: { guard: 'stripe-webhook' },
+      },
+    });
+    return true;
+  } catch (err) {
+    if ((err as { code?: string } | null)?.code === 'P2002') return false;
+    logger.error('[Stripe] Email-send claim failed — proceeding without dedupe', err, { dedupeKey });
+    return true;
+  }
+}
+
+/** Release a claim after a FAILED send so a later retry can send it. Best-effort. */
+async function releaseEmailClaim(dedupeKey: string): Promise<void> {
+  try {
+    await prisma.emailSend.delete({ where: { dedupeKey } });
+  } catch (err) {
+    logger.error('[Stripe] Failed to release email-send claim after failed send', err, { dedupeKey });
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -77,6 +156,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true, deduped: true });
       }
       logger.error('Failed to record processed Stripe event', dedupeErr, { eventId: event.id });
+      await alertWebhookFailure('Idempotency check failed', dedupeErr, { eventId: event.id, eventType: event.type });
       return NextResponse.json({ error: 'Idempotency check failed' }, { status: 500 });
     }
 
@@ -89,38 +169,14 @@ export async function POST(request: NextRequest) {
         await prisma.processedStripeEvent.delete({ where: { eventId: event.id } });
       } catch (cleanupErr) {
         logger.error('[Stripe] Failed to roll back dedupe row before 500 — Stripe retry may be silently dropped', cleanupErr, { eventId: event.id });
+        // V8: this is the worst case — the retry is about to be silently
+        // swallowed by P2002. It MUST reach a human.
+        await alertWebhookFailure('Dedupe rollback failed — Stripe retry may be silently dropped', cleanupErr, { eventId: event.id, eventType: event.type });
       }
     };
 
-    // Helper: pull invoice URLs off a session that had `invoice_creation` enabled.
-    // Returns null fields gracefully if the invoice is missing or can't be fetched —
-    // payment processing must never fail because the invoice URL lookup hiccupped.
-    const fetchInvoiceData = async (
-      stripeClient: Stripe,
-      session: Stripe.Checkout.Session
-    ): Promise<{
-      stripeInvoiceId: string | null;
-      invoicePdfUrl: string | null;
-      hostedInvoiceUrl: string | null;
-      invoiceNumber: string | null;
-    }> => {
-      const invoiceId = typeof session.invoice === 'string' ? session.invoice : session.invoice?.id ?? null;
-      if (!invoiceId) {
-        return { stripeInvoiceId: null, invoicePdfUrl: null, hostedInvoiceUrl: null, invoiceNumber: null };
-      }
-      try {
-        const invoice = await stripeClient.invoices.retrieve(invoiceId);
-        return {
-          stripeInvoiceId: invoice.id ?? invoiceId,
-          invoicePdfUrl: invoice.invoice_pdf ?? null,
-          hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
-          invoiceNumber: invoice.number ?? null,
-        };
-      } catch (invErr) {
-        logger.error('Failed to retrieve Stripe invoice for JobCharge', invErr, { invoiceId, sessionId: session.id });
-        return { stripeInvoiceId: invoiceId, invoicePdfUrl: null, hostedInvoiceUrl: null, invoiceNumber: null };
-      }
-    };
+    // NOTE: fetchInvoiceData moved to ./activate-paid-job.ts (shared with the
+    // verify-checkout-session self-heal and the reconciliation sweep).
 
     // Handle checkout.session.completed event
     if (event.type === 'checkout.session.completed') {
@@ -143,37 +199,11 @@ export async function POST(request: NextRequest) {
       // Handle renewal payment
       if (type === 'renewal') {
         try {
-          // Calculate new expiry via renewalExpiresAt (UTC math, capped at 365
-          // days from createdAt to prevent indefinite stacking from repeated
-          // back-to-back renewals).
-          //   - Extends from existing expiresAt if still in the future (audit #22)
-          //   - Otherwise extends from now (late renewers don't bank dead time)
-          //   - Hard cap so 6 paid renewals can't push a posting 2 years out
           const renewalTier = (tier || 'pro') as PricingTier;
-          const existingJob = await prisma.job.findUnique({
-            where: { id: jobId },
-            select: { expiresAt: true, createdAt: true },
-          });
-          const newExpiresAt = renewalExpiresAt({
-            currentExpiry: existingJob?.expiresAt ?? null,
-            originalCreatedAt: existingJob?.createdAt ?? new Date(),
-            durationDays: config.getDurationDays(renewalTier),
-          });
 
-          // Update job
-          const job = await prisma.job.update({
-            where: { id: jobId },
-            data: {
-              expiresAt: newExpiresAt,
-              isPublished: true,
-              isVerifiedEmployer: true,
-              ...(config.isFeaturedTier(renewalTier) && { isFeatured: true }),
-            },
-          });
-
-          // Update employer job payment status. Audit #8: surface a loud failure
-          // if the EmployerJob row is missing — previously we silently extended the
-          // job without recording payment status or sending the receipt email.
+          // Audit #8: surface a loud failure if the EmployerJob row is
+          // missing — previously we silently extended the job without
+          // recording payment status or sending the receipt email.
           const employerJob = await prisma.employerJob.findFirst({
             where: { jobId: jobId },
           });
@@ -184,6 +214,9 @@ export async function POST(request: NextRequest) {
               sessionId: session.id,
               tier: renewalTier,
             });
+            await alertWebhookFailure('EmployerJob missing for paid renewal', null, {
+              eventId: event.id, jobId, sessionId: session.id,
+            });
             await cleanupDedupe();  // C2: let Stripe retry self-heal read-after-write lag
             return NextResponse.json(
               { error: 'EmployerJob record missing for renewed job' },
@@ -191,22 +224,66 @@ export async function POST(request: NextRequest) {
             );
           }
 
-          {
-            await prisma.employerJob.update({
-              where: { id: employerJob.id },
-              // Reset expiryWarningSentAt so the renewed posting (new, later
-              // expiresAt) gets its own 5-day-out warning. Without this, a job
-              // warned once is permanently excluded from the expiry-warnings cron.
-              data: { paymentStatus: 'paid', pricingTier: renewalTier, expiryWarningSentAt: null },
+          const existingJob = await prisma.job.findUnique({
+            where: { id: jobId },
+            select: { expiresAt: true, createdAt: true, title: true, slug: true },
+          });
+          if (!existingJob) {
+            // Caught by the branch catch below → alert + dedupe rollback + 500.
+            throw new Error(`Renewal webhook: Job ${jobId} not found`);
+          }
+
+          // B109: per-session idempotency for the renewal STATE writes.
+          // The JobCharge row (unique on stripeSessionId) doubles as the
+          // "applied" marker because it commits in the SAME transaction as
+          // the expiry extension. A Stripe retry after a partial failure
+          // therefore either sees no charge row (nothing committed — safe
+          // to redo everything) or the charge row (state fully applied —
+          // skip to the email guard). Previously each retry re-extended
+          // expiresAt from the already-extended value, compounding the
+          // renewal until the 365-day cap.
+          const existingCharge = await prisma.jobCharge.findUnique({
+            where: { stripeSessionId: session.id },
+            select: { id: true },
+          });
+          const isFirstApplication = existingCharge === null;
+
+          // Audit #2: the JobCharge records the actual amount paid ($179
+          // renewal vs $199 new post). Audit #28: persist payment_intent so
+          // the refund webhook can match `charge.refunded` back to this row.
+          // Fetched once — reused by the ledger write and the email below.
+          const renewalInvoiceData = await fetchInvoiceData(stripe, session);
+
+          let newExpiresAt: Date;
+          if (isFirstApplication) {
+            // Calculate new expiry via renewalExpiresAt (UTC math, capped at
+            // 365 days from createdAt to prevent indefinite stacking):
+            //   - Extends from existing expiresAt if still in the future (audit #22)
+            //   - Otherwise extends from now (late renewers don't bank dead time)
+            newExpiresAt = renewalExpiresAt({
+              currentExpiry: existingJob.expiresAt,
+              originalCreatedAt: existingJob.createdAt,
+              durationDays: config.getDurationDays(renewalTier),
             });
 
-            // Audit #2: record a JobCharge for this renewal so invoices reflect
-            // the actual amount paid ($179 renewal vs $199 new post).
-            // Audit #28: also persist payment_intent so the refund webhook can
-            // match `charge.refunded` events back to this JobCharge row.
-            const renewalInvoiceData = await fetchInvoiceData(stripe, session);
-            try {
-              await prisma.jobCharge.create({
+            await prisma.$transaction([
+              prisma.job.update({
+                where: { id: jobId },
+                data: {
+                  expiresAt: newExpiresAt,
+                  isPublished: true,
+                  isVerifiedEmployer: true,
+                  ...(config.isFeaturedTier(renewalTier) && { isFeatured: true }),
+                },
+              }),
+              prisma.employerJob.update({
+                where: { id: employerJob.id },
+                // Reset expiryWarningSentAt so the renewed posting (new, later
+                // expiresAt) gets its own 5-day-out warning. Without this, a job
+                // warned once is permanently excluded from the expiry-warnings cron.
+                data: { paymentStatus: 'paid', pricingTier: renewalTier, expiryWarningSentAt: null },
+              }),
+              prisma.jobCharge.create({
                 data: {
                   employerJobId: employerJob.id,
                   stripeSessionId: session.id,
@@ -216,31 +293,42 @@ export async function POST(request: NextRequest) {
                   type: 'renewal',
                   ...renewalInvoiceData,
                 },
-              });
-            } catch (chargeErr) {
-              // Idempotency on stripeSessionId — duplicate webhooks shouldn't fail the flow.
-              const code = (chargeErr as { code?: string } | null)?.code;
-              if (code !== 'P2002') {
-                logger.error('Failed to record JobCharge for renewal', chargeErr, { jobId });
-              }
-            }
-
-            // Get or create email lead for unsubscribe token
-            let emailLead = await prisma.emailLead.findUnique({
-              where: { email: employerJob.contactEmail },
+              }),
+            ]);
+          } else {
+            // Retry after the state transaction already committed — do NOT
+            // re-extend. The job row already carries the renewed expiry.
+            newExpiresAt = existingJob.expiresAt ?? new Date();
+            logger.info('Renewal state already applied for this session — skipping to email guard', {
+              jobId,
+              sessionId: session.id,
             });
+          }
 
-            if (!emailLead) {
-              emailLead = await prisma.emailLead.create({
-                data: { email: employerJob.contactEmail },
-              });
-            }
+          // Get or create email lead for unsubscribe token
+          let emailLead = await prisma.emailLead.findUnique({
+            where: { email: employerJob.contactEmail },
+          });
 
-            // Send renewal confirmation email. Same stable-URL pattern as
-            // the new-post flow (see comment in the else-branch below) —
-            // link to our dashboard endpoint so the recipient always gets
-            // the latest "Paid"-stamped PDF, not the open-state PDF
-            // captured before invoice.paid fires.
+          if (!emailLead) {
+            emailLead = await prisma.emailLead.create({
+              data: { email: employerJob.contactEmail },
+            });
+          }
+
+          // Send renewal confirmation email, guarded by an EmailSend dedupe
+          // claim (B109) so a Stripe redelivery can never double-send it.
+          // Same stable-URL pattern as the new-post flow — link to our
+          // dashboard endpoint so the recipient always gets the latest
+          // "Paid"-stamped PDF, not the open-state PDF captured before
+          // invoice.paid fires.
+          const renewalEmailKey = `renewal-confirmation:${session.id}`;
+          const emailClaimed = await claimEmailSend(
+            renewalEmailKey,
+            employerJob.contactEmail,
+            'renewal_confirmation',
+          );
+          if (emailClaimed) {
             const renewalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? '';
             const stableRenewalInvoiceUrl = renewalBaseUrl
               ? `${renewalBaseUrl}/api/employer/invoice?jobId=${jobId}&token=${employerJob.dashboardToken}`
@@ -249,7 +337,7 @@ export async function POST(request: NextRequest) {
             try {
               await sendRenewalConfirmationEmail(
                 employerJob.contactEmail,
-                job.title,
+                existingJob.title,
                 newExpiresAt,
                 employerJob.dashboardToken,
                 emailLead.unsubscribeToken,
@@ -261,31 +349,45 @@ export async function POST(request: NextRequest) {
               );
             } catch (emailError) {
               logger.error('Failed to send renewal confirmation email', emailError, { jobId });
-              // Don't throw - job already renewed
+              // Don't throw - job already renewed. Release the claim so a
+              // future redelivery can attempt the send again.
+              await releaseEmailClaim(renewalEmailKey);
             }
+          } else {
+            logger.info('Renewal confirmation email already sent for this session — skipping duplicate', {
+              jobId,
+              sessionId: session.id,
+            });
           }
 
           logger.info('Job renewed', { jobId, tier });
 
-          // P7: server-side purchase event (fire-and-forget)
-          trackServerPurchase({
-            clientId: jobId,
-            sessionId: session.id,
-            amountCents: session.amount_total ?? config.stripeRenewalPriceInCents,
-            currency: session.currency ?? 'usd',
-            type: 'renewal',
-            tier: renewalTier,
-            jobId,
-          }).catch(() => { /* logged inside */ });
+          if (isFirstApplication) {
+            // P7: server-side purchase event (fire-and-forget). Only on the
+            // first application — a webhook retry must not double-count the
+            // purchase (B109).
+            trackServerPurchase({
+              clientId: jobId,
+              sessionId: session.id,
+              amountCents: session.amount_total ?? config.stripeRenewalPriceInCents,
+              currency: session.currency ?? 'usd',
+              type: 'renewal',
+              tier: renewalTier,
+              jobId,
+            }).catch(() => { /* logged inside */ });
 
-          // Ping search engines for renewed job (fire-and-forget)
-          if (job.slug) {
-            pingAllSearchEngines(`${brand.baseUrl}/jobs/${job.slug}`).catch((err) =>
-              logger.error('[Stripe] Background indexing ping failed (renewal)', err)
-            );
+            // Ping search engines for renewed job (fire-and-forget)
+            if (existingJob.slug) {
+              pingAllSearchEngines(`${brand.baseUrl}/jobs/${existingJob.slug}`).catch((err) =>
+                logger.error('[Stripe] Background indexing ping failed (renewal)', err)
+              );
+            }
           }
         } catch (prismaError) {
           logger.error('Error renewing job in database', prismaError, { jobId });
+          await alertWebhookFailure('Renewal processing failed', prismaError, {
+            eventId: event.id, jobId, sessionId: session.id,
+          });
           await cleanupDedupe();  // C2: let Stripe retry succeed
           return NextResponse.json(
             { error: 'Failed to renew job' },
@@ -293,33 +395,25 @@ export async function POST(request: NextRequest) {
           );
         }
       } else {
-        // Original flow: new job posting
+        // Original flow: new job posting. F32: the publish/charge/email logic
+        // lives in ./activate-paid-job.ts, shared with the
+        // verify-checkout-session self-heal and the daily reconciliation
+        // sweep so the three paths can never drift. Cross-path idempotency
+        // is an atomic pending→paid claim inside the shared function; this
+        // webhook additionally keeps its ProcessedStripeEvent dedupe above.
         try {
-          // Update job to published
-          const job = await prisma.job.update({
-            where: { id: jobId },
-            data: { isPublished: true, isVerifiedEmployer: true },
-          });
+          const activation = await activatePaidJobCheckout(stripe, session);
 
-          // Update employer job payment status and get the record
-          const employerJob = await prisma.employerJob.findFirst({
-            where: { jobId: jobId },
-          });
-
-          if (!employerJob) {
-            // C3 fix: previously a missing EmployerJob row caused this
-            // branch to be skipped silently — `isPublished` was set to
-            // true, no JobCharge was recorded, no confirmation email was
-            // sent, and the handler returned 200. Stripe never retried
-            // and the money was effectively unrecorded.
-            //
-            // Returning 500 makes Stripe redeliver the event so the
-            // condition (e.g. transient DB read-after-write lag) can
-            // self-heal. The job row's `isPublished=true` write above
-            // stays — it's idempotent and a republish on retry is fine.
+          if (activation.outcome === 'employer_job_missing') {
+            // C3 fix: a missing EmployerJob row must not be skipped silently.
+            // Returning 500 makes Stripe redeliver the event so the condition
+            // (e.g. transient DB read-after-write lag) can self-heal.
             logger.error('[Stripe] EmployerJob not found for paid checkout — returning 500 so Stripe retries', undefined, {
               jobId,
               sessionId: session.id,
+            });
+            await alertWebhookFailure('EmployerJob missing for paid checkout', null, {
+              eventId: event.id, jobId, sessionId: session.id,
             });
             await cleanupDedupe();  // C2: roll back dedupe so Stripe retry actually replays
             return NextResponse.json(
@@ -328,106 +422,16 @@ export async function POST(request: NextRequest) {
             );
           }
 
-          {
-            const paidTier = session.metadata?.pricing || 'pro';
-            await prisma.employerJob.update({
-              where: { id: employerJob.id },
-              data: { paymentStatus: 'paid', pricingTier: paidTier },
-            });
-
-            // Audit #2: record JobCharge for the new-post payment.
-            // Audit #28: also persist payment_intent so the refund webhook can
-            // match `charge.refunded` events back to this JobCharge row.
-            const newPostInvoiceData = await fetchInvoiceData(stripe, session);
-            try {
-              await prisma.jobCharge.create({
-                data: {
-                  employerJobId: employerJob.id,
-                  stripeSessionId: session.id,
-                  stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
-                  amountCents: session.amount_total ?? config.stripePriceInCents,
-                  currency: session.currency ?? 'usd',
-                  type: 'new',
-                  ...newPostInvoiceData,
-                },
-              });
-            } catch (chargeErr) {
-              const code = (chargeErr as { code?: string } | null)?.code;
-              if (code !== 'P2002') {
-                logger.error('Failed to record JobCharge for new post', chargeErr, { jobId });
-              }
-            }
-
-            // Send confirmation email.
-            //
-            // 2026-05-15 fix: this email fires inside `checkout.session.completed`,
-            // BEFORE Stripe transitions the invoice to "paid". If we pass
-            // `invoicePdfUrl` directly, the recipient may download an
-            // "amount due" PDF. Instead, link to our dashboard invoice
-            // endpoint — it 302-redirects to whatever URL is currently in
-            // JobCharge.invoicePdfUrl. The `invoice.paid` handler updates
-            // that URL within a few hundred ms, so by the time the user
-            // clicks the email link they get the "Paid" PDF.
-            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? '';
-            const stableInvoiceUrl = baseUrl
-              ? `${baseUrl}/api/employer/invoice?jobId=${job.id}&token=${employerJob.dashboardToken}`
-              : null;
-
-            try {
-              await sendConfirmationEmail(
-                employerJob.contactEmail,
-                job.title,
-                job.id,
-                employerJob.dashboardToken,
-                undefined, // unsubscribeToken — sendConfirmationEmail looks it up by email
-                undefined, // durationDays — paid posts use config.durationDays default
-                {
-                  invoicePdfUrl: stableInvoiceUrl,
-                  hostedInvoiceUrl: newPostInvoiceData.hostedInvoiceUrl,
-                  invoiceNumber: newPostInvoiceData.invoiceNumber,
-                }
-              );
-            } catch (emailError) {
-              logger.error('Failed to send confirmation email', emailError, { jobId });
-              // Don't throw - job already created
-            }
-
-            // Clean up any job drafts for this email (no longer needed)
-            try {
-              const deletedDrafts = await prisma.jobDraft.deleteMany({
-                where: { email: employerJob.contactEmail },
-              });
-              if (deletedDrafts.count > 0) {
-                const anonymizedEmail = anonymizeEmail(employerJob.contactEmail);
-                logger.debug('Deleted drafts', { count: deletedDrafts.count, email: anonymizedEmail });
-              }
-            } catch (draftError) {
-              logger.error('Failed to delete job drafts', draftError, { jobId });
-              // Don't throw - job already created
-            }
-          }
-
-          logger.info('Job published', { jobId });
-
-          // P7: server-side purchase event (fire-and-forget)
-          trackServerPurchase({
-            clientId: jobId,
-            sessionId: session.id,
-            amountCents: session.amount_total ?? config.stripePriceInCents,
-            currency: session.currency ?? 'usd',
-            type: 'new',
-            tier: session.metadata?.pricing,
-            jobId,
-          }).catch(() => { /* logged inside */ });
-
-          // Ping search engines for new job (fire-and-forget)
-          if (job.slug) {
-            pingAllSearchEngines(`${brand.baseUrl}/jobs/${job.slug}`).catch((err) =>
-              logger.error('[Stripe] Background indexing ping failed (new job)', err)
-            );
+          if (activation.outcome === 'already_active') {
+            // The verify-page self-heal or the reconciliation sweep beat this
+            // webhook to it. Nothing to redo — acknowledge the event.
+            logger.info('[Stripe] Checkout already activated by another path', { jobId, sessionId: session.id });
           }
         } catch (prismaError) {
           logger.error('Error updating job in database', prismaError, { jobId });
+          await alertWebhookFailure('New-post activation failed', prismaError, {
+            eventId: event.id, jobId, sessionId: session.id,
+          });
           await cleanupDedupe();  // C2: roll back dedupe so Stripe retry actually replays
           return NextResponse.json(
             { error: 'Failed to update job' },
@@ -481,6 +485,7 @@ export async function POST(request: NextRequest) {
         });
       } catch (invErr) {
         logger.error('Error handling invoice.paid webhook', invErr);
+        await alertWebhookFailure('invoice.paid handler failed', invErr, { eventId: event.id });
         await cleanupDedupe();  // C2
         return NextResponse.json({ error: 'Failed to refresh invoice URLs' }, { status: 500 });
       }
@@ -529,11 +534,16 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        // Flip the EmployerJob paymentStatus + (if full refund) unpublish the job
-        const employerJob = await prisma.employerJob.findUnique({
-          where: { id: jobCharge.employerJobId },
-          include: { job: { select: { id: true, title: true } } },
-        });
+        // Flip the EmployerJob paymentStatus + (if full refund) unpublish the
+        // job. B112: employerJobId is nullable now (FK ON DELETE SET NULL) —
+        // a null means the posting was deleted after payment; the ledger row
+        // survives for accounting but there is no entitlement to revoke.
+        const employerJob = jobCharge.employerJobId
+          ? await prisma.employerJob.findUnique({
+              where: { id: jobCharge.employerJobId },
+              include: { job: { select: { id: true, title: true } } },
+            })
+          : null;
 
         if (employerJob) {
           // Only a FULL refund revokes entitlement. A partial/goodwill refund
@@ -558,18 +568,35 @@ export async function POST(request: NextRequest) {
             });
           }
 
-          // Best-effort refund-confirmation email (don't fail the webhook on email errors)
-          try {
-            const unsubToken = await getOrCreateUnsubToken(employerJob.contactEmail);
-            await sendRefundConfirmationEmail(
-              employerJob.contactEmail,
-              employerJob.job?.title ?? 'your job posting',
-              refundedAmount,
-              isPartial,
-              unsubToken,
-            );
-          } catch (emailErr) {
-            logger.error('Failed to send refund confirmation email', emailErr, { jobChargeId: jobCharge.id });
+          // Best-effort refund-confirmation email (don't fail the webhook on
+          // email errors), guarded by an EmailSend dedupe claim (B109). Keyed
+          // on the refund id when available so each distinct partial refund
+          // gets its own email, but a redelivery of the same refund event
+          // can never double-send.
+          const refundEmailKey = `refund-confirmation:${latestRefund?.id ?? `${charge.id}:${refundedAmount}`}`;
+          const refundEmailClaimed = await claimEmailSend(
+            refundEmailKey,
+            employerJob.contactEmail,
+            'refund_confirmation',
+          );
+          if (refundEmailClaimed) {
+            try {
+              const unsubToken = await getOrCreateUnsubToken(employerJob.contactEmail);
+              await sendRefundConfirmationEmail(
+                employerJob.contactEmail,
+                employerJob.job?.title ?? 'your job posting',
+                refundedAmount,
+                isPartial,
+                unsubToken,
+              );
+            } catch (emailErr) {
+              logger.error('Failed to send refund confirmation email', emailErr, { jobChargeId: jobCharge.id });
+              await releaseEmailClaim(refundEmailKey);
+            }
+          } else {
+            logger.info('Refund confirmation email already sent for this refund — skipping duplicate', {
+              jobChargeId: jobCharge.id,
+            });
           }
         } else {
           logger.warn('charge.refunded: JobCharge has no matching EmployerJob — orphaned ledger row', { jobChargeId: jobCharge.id });
@@ -584,6 +611,7 @@ export async function POST(request: NextRequest) {
         });
       } catch (refundErr) {
         logger.error('Error handling charge.refunded webhook', refundErr);
+        await alertWebhookFailure('charge.refunded handler failed', refundErr, { eventId: event.id });
         await cleanupDedupe();  // C2
         return NextResponse.json({ error: 'Failed to handle refund' }, { status: 500 });
       }
@@ -613,10 +641,14 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ received: true, note: 'no matching JobCharge' });
         }
 
-        const employerJob = await prisma.employerJob.findUnique({
-          where: { id: jobCharge.employerJobId },
-          include: { job: { select: { id: true, title: true } } },
-        });
+        // B112: employerJobId nullable (FK ON DELETE SET NULL) — see the
+        // charge.refunded handler above.
+        const employerJob = jobCharge.employerJobId
+          ? await prisma.employerJob.findUnique({
+              where: { id: jobCharge.employerJobId },
+              include: { job: { select: { id: true, title: true } } },
+            })
+          : null;
 
         if (employerJob) {
           await prisma.employerJob.update({
@@ -637,6 +669,7 @@ export async function POST(request: NextRequest) {
         }
       } catch (disputeErr) {
         logger.error('Error handling charge.dispute.created webhook', disputeErr);
+        await alertWebhookFailure('charge.dispute.created handler failed', disputeErr, { eventId: event.id });
         await cleanupDedupe();  // C2
         return NextResponse.json({ error: 'Failed to handle dispute' }, { status: 500 });
       }
@@ -645,6 +678,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (error) {
     logger.error('Webhook error', error);
+    await alertWebhookFailure('Unhandled webhook error', error, { eventId: dedupedEventId ?? undefined });
     // C2: roll back the idempotency row so Stripe's retry actually runs.
     // Without this, an uncaught exception leaves the event marked
     // "processed" while the side-effects (charge ledger, email, publish
@@ -654,6 +688,7 @@ export async function POST(request: NextRequest) {
         await prisma.processedStripeEvent.delete({ where: { eventId: dedupedEventId } });
       } catch (cleanupErr) {
         logger.error('[Stripe] Failed to roll back dedupe row in outer catch — Stripe retry may be silently dropped', cleanupErr, { eventId: dedupedEventId });
+        await alertWebhookFailure('Dedupe rollback failed in outer catch — Stripe retry may be silently dropped', cleanupErr, { eventId: dedupedEventId });
       }
     }
     return NextResponse.json(

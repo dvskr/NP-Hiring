@@ -1,9 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
+import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmployerMessageNotification } from '@/lib/email-service';
 import { canSendInMail, getEmployerTier } from '@/lib/tier-limits';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { sanitizeText } from '@/lib/sanitize';
 
 /**
  * GET /api/employer/messages — List sent messages for the employer
@@ -87,7 +89,8 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { recipientId, subject, body: messageBody, jobId } = body;
 
-        if (!recipientId || !subject || !messageBody) {
+        if (!recipientId || !subject || !messageBody
+            || typeof subject !== 'string' || typeof messageBody !== 'string') {
             return NextResponse.json({ error: 'recipientId, subject, and body are required' }, { status: 400 });
         }
 
@@ -105,15 +108,23 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Recipient not found' }, { status: 404 });
         }
 
-        // Check if a conversation already exists — replies are always free
-        // (no featured job gate, no InMail credit check)
+        // Replies are free ONLY when the message lands in an existing thread
+        // for this exact (pair, job) key — the same key the find-or-create
+        // below uses. Opening a NEW thread (e.g. a new job-scoped thread to a
+        // previously-contacted candidate) is new outreach: an InMail is a
+        // unique conversation (see getInMailsForPosting), so it must pass the
+        // featured-job gate + credit check. Previously ANY prior conversation
+        // with the candidate skipped the gate, letting an employer open
+        // unlimited new job-scoped threads for free.
         const existingConversation = await prisma.conversation.findFirst({
             where: {
+                jobId: jobId || null,
                 OR: [
                     { participantA: senderProfile.id, participantB: recipient.id },
                     { participantA: recipient.id, participantB: senderProfile.id },
                 ],
             },
+            select: { id: true },
         });
 
         if (!existingConversation) {
@@ -176,59 +187,83 @@ export async function POST(req: NextRequest) {
             jobTitle = job?.title || null;
         }
 
-        // Find or create a Conversation for this sender-recipient pair
-        // Try both orderings since participantA/B are interchangeable
-        let conversation = await prisma.conversation.findFirst({
-            where: {
-                OR: [
-                    { participantA: senderProfile.id, participantB: recipient.id, jobId: jobId || null },
-                    { participantA: recipient.id, participantB: senderProfile.id, jobId: jobId || null },
-                ],
-            },
-        });
-
-        if (!conversation) {
-            conversation = await prisma.conversation.create({
-                data: {
-                    participantA: senderProfile.id,
-                    participantB: recipient.id,
+        // Find or create a Conversation for this sender-recipient pair, then
+        // write the message + bump lastMessageAt atomically. New conversations
+        // store participants in sorted order so the (participantA,
+        // participantB, jobId) unique key actually dedupes; finds still check
+        // both orderings because legacy rows may be unnormalized.
+        const sendMessage = async () => prisma.$transaction(async (tx) => {
+            let conversation = await tx.conversation.findFirst({
+                where: {
                     jobId: jobId || null,
-                    subject,
+                    OR: [
+                        { participantA: senderProfile.id, participantB: recipient.id },
+                        { participantA: recipient.id, participantB: senderProfile.id },
+                    ],
                 },
             });
-        }
 
-        // Create the message linked to the conversation
-        const message = await prisma.employerMessage.create({
-            data: {
-                senderId: senderProfile.id,
-                recipientId: recipient.id,
-                conversationId: conversation.id,
-                subject,
-                body: messageBody,
-                ...(jobId && { jobId }),
-            },
+            if (!conversation) {
+                const [participantA, participantB] = [senderProfile.id, recipient.id].sort();
+                conversation = await tx.conversation.create({
+                    data: {
+                        participantA,
+                        participantB,
+                        jobId: jobId || null,
+                        subject,
+                    },
+                });
+            }
+
+            const message = await tx.employerMessage.create({
+                data: {
+                    senderId: senderProfile.id,
+                    recipientId: recipient.id,
+                    conversationId: conversation.id,
+                    subject,
+                    // Same sanitizer as the reply path (POST /api/conversations/[id])
+                    body: sanitizeText(messageBody.trim(), 2000),
+                    ...(jobId && { jobId }),
+                },
+            });
+
+            await tx.conversation.update({
+                where: { id: conversation.id },
+                data: { lastMessageAt: new Date() },
+            });
+
+            return { conversation, message };
         });
 
-        // Update conversation's lastMessageAt
-        await prisma.conversation.update({
-            where: { id: conversation.id },
-            data: { lastMessageAt: new Date() },
+        const result = await sendMessage().catch(async (err: unknown) => {
+            // P2002 = a concurrent request created the same (pair, job) thread
+            // between our find and create, aborting the transaction. Retry once:
+            // the re-find now sees the winner's row and this lands as a reply.
+            if ((err as { code?: string } | null)?.code !== 'P2002') {
+                throw err;
+            }
+            return sendMessage();
         });
+        const { conversation, message } = result;
 
         // Send email notification (non-blocking)
         const senderName = [senderProfile.firstName, senderProfile.lastName].filter(Boolean).join(' ') || 'An employer';
 
         if (recipient.email) {
-            sendEmployerMessageNotification(
-                recipient.email,
-                recipient.firstName,
-                senderName,
-                senderProfile.company,
-                subject,
-                messageBody,
-                jobTitle
-            ).catch(err => console.error('Email notification error:', err));
+            // after() keeps the invocation alive until the send completes —
+            // a bare fire-and-forget can be frozen with the function once the
+            // response returns, silently dropping the notification.
+            after(
+                sendEmployerMessageNotification(
+                    recipient.email,
+                    recipient.firstName,
+                    senderName,
+                    senderProfile.company,
+                    subject,
+                    messageBody,
+                    jobTitle
+                ).catch(err => logger.error('Email notification error', err))
+            );
         }
 
         return NextResponse.json({

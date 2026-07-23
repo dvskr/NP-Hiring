@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getEmployerTier, getEmployerActivePostings } from '@/lib/tier-limits';
 import { PricingTier } from '@/lib/config';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/employer/saved-candidates
@@ -169,12 +170,19 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await req.json();
-    const { candidateId, note, postingId } = body;
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== 'object') {
+        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+    const { candidateId, note, postingId } = body as { candidateId?: unknown; note?: unknown; postingId?: unknown };
 
-    if (!candidateId) {
+    if (!candidateId || typeof candidateId !== 'string') {
         return NextResponse.json({ error: 'candidateId is required' }, { status: 400 });
     }
+    if (postingId !== undefined && postingId !== null && typeof postingId !== 'string') {
+        return NextResponse.json({ error: 'postingId must be a string' }, { status: 400 });
+    }
+    const noteValue = typeof note === 'string' && note.length > 0 ? note : null;
 
     // Look up candidate by supabaseId
     const candidate = await prisma.userProfile.findUnique({
@@ -186,25 +194,64 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
     }
 
-    // Upsert: compound unique on [employerId, candidateId, employerJobId]
-    const saved = await prisma.savedCandidate.upsert({
-        where: {
-            employerId_candidateId_employerJobId: {
-                employerId: profile.id,
-                candidateId: candidate.id,
-                employerJobId: postingId || null,
-            },
-        },
-        update: { note: note || null },
-        create: {
+    try {
+        let saved;
+        if (postingId) {
+            // Posting-scoped save: the compound unique [employerId, candidateId,
+            // employerJobId] is valid here because all three keys are strings.
+            saved = await prisma.savedCandidate.upsert({
+                where: {
+                    employerId_candidateId_employerJobId: {
+                        employerId: profile.id,
+                        candidateId: candidate.id,
+                        employerJobId: postingId,
+                    },
+                },
+                update: { note: noteValue },
+                create: {
+                    employerId: profile.id,
+                    candidateId: candidate.id,
+                    employerJobId: postingId,
+                    note: noteValue,
+                },
+            });
+        } else {
+            // General save (no posting selected): the generated compound-unique
+            // input requires `employerJobId: string`, so passing null into the
+            // upsert throws a Prisma validation error (this used to 500 every
+            // posting-less save). Postgres also treats NULLs as distinct in the
+            // unique index, so the constraint could never dedupe these rows —
+            // dedupe in code via findFirst + update/create instead.
+            const existing = await prisma.savedCandidate.findFirst({
+                where: {
+                    employerId: profile.id,
+                    candidateId: candidate.id,
+                    employerJobId: null,
+                },
+                select: { id: true },
+            });
+            saved = existing
+                ? await prisma.savedCandidate.update({
+                    where: { id: existing.id },
+                    data: { note: noteValue },
+                })
+                : await prisma.savedCandidate.create({
+                    data: {
+                        employerId: profile.id,
+                        candidateId: candidate.id,
+                        employerJobId: null,
+                        note: noteValue,
+                    },
+                });
+        }
+        return NextResponse.json({ success: true, id: saved.id }, { status: 201 });
+    } catch (error) {
+        logger.error('Error saving candidate', error, {
             employerId: profile.id,
-            candidateId: candidate.id,
-            employerJobId: postingId || null,
-            note: note || null,
-        },
-    });
-
-    return NextResponse.json({ success: true, id: saved.id }, { status: 201 });
+            postingId: postingId || null,
+        });
+        return NextResponse.json({ error: 'Failed to save candidate' }, { status: 500 });
+    }
 }
 
 /**
@@ -228,11 +275,17 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await req.json();
-    const { candidateId, postingId } = body;
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== 'object') {
+        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+    const { candidateId, postingId } = body as { candidateId?: unknown; postingId?: unknown };
 
-    if (!candidateId) {
+    if (!candidateId || typeof candidateId !== 'string') {
         return NextResponse.json({ error: 'candidateId is required' }, { status: 400 });
+    }
+    if (postingId !== undefined && postingId !== null && typeof postingId !== 'string') {
+        return NextResponse.json({ error: 'postingId must be a string' }, { status: 400 });
     }
 
     // Look up candidate by supabaseId
@@ -245,13 +298,23 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
     }
 
-    await prisma.savedCandidate.deleteMany({
-        where: {
+    try {
+        // deleteMany is a filter (not the compound unique), so `null` is a
+        // valid match here — it removes all posting-less "general saves",
+        // including any duplicates.
+        await prisma.savedCandidate.deleteMany({
+            where: {
+                employerId: profile.id,
+                candidateId: candidate.id,
+                employerJobId: postingId || null,
+            },
+        });
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        logger.error('Error unsaving candidate', error, {
             employerId: profile.id,
-            candidateId: candidate.id,
-            employerJobId: postingId || null,
-        },
-    });
-
-    return NextResponse.json({ success: true });
+            postingId: postingId || null,
+        });
+        return NextResponse.json({ error: 'Failed to remove saved candidate' }, { status: 500 });
+    }
 }

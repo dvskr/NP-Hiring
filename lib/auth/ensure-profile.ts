@@ -27,12 +27,16 @@
 import type { User } from '@supabase/supabase-js'
 import type { PrismaClient } from '@prisma/client'
 import { logger } from '@/lib/logger'
+import { syncToBeehiiv } from '@/lib/beehiiv'
 
 interface SupabaseAuthMetadata {
   role?: string
   company?: string
   first_name?: string
   last_name?: string
+  want_job_highlights?: boolean
+  highlights_frequency?: string
+  newsletter_opt_in?: boolean
 }
 
 export interface AuthMetadataDerivedFields {
@@ -40,6 +44,16 @@ export interface AuthMetadataDerivedFields {
   company: string | null
   firstName: string | null
   lastName: string | null
+  /**
+   * Signup opt-ins stashed in auth metadata by SignUpForm. In the
+   * confirm-required email flow the client's immediate profile POST 401s
+   * (no session cookie yet), so these are the only surviving record of
+   * what the user checked at signup. Defaults are conservative: absent
+   * metadata (old accounts, OAuth) reads as opted-out.
+   */
+  wantJobHighlights: boolean
+  highlightsFrequency: 'daily' | 'weekly'
+  newsletterOptIn: boolean
 }
 
 /**
@@ -58,6 +72,99 @@ export function readSignupMetadata(user: User): AuthMetadataDerivedFields {
     company: role === 'employer' && meta.company ? meta.company : null,
     firstName: meta.first_name ?? null,
     lastName: meta.last_name ?? null,
+    wantJobHighlights: role === 'job_seeker' && meta.want_job_highlights === true,
+    highlightsFrequency: meta.highlights_frequency === 'weekly' ? 'weekly' : 'daily',
+    newsletterOptIn: meta.newsletter_opt_in === true,
+  }
+}
+
+/**
+ * Completes the signup opt-ins that the client-side profile POST used to
+ * carry (F27). Mirrors the record creation in `POST /api/auth/profile` and
+ * the Google-OAuth branch of `app/auth/callback/route.ts`:
+ *   - employers  → EmployerLead (sales tracking), guarded by contactEmail
+ *   - seekers    → EmailLead upsert (newsletterOptIn), Beehiiv sync, and —
+ *                  if the user checked "job highlights" — a JobAlert with
+ *                  confirmedAt set (single opt-in: the signup checkbox is
+ *                  the consent event; the digest cron skips unconfirmed
+ *                  alerts entirely).
+ *
+ * Idempotent by construction (findFirst guards + upsert), and only invoked
+ * from ensureProfileFromAuth's create branch, which never runs for the
+ * autoconfirm/OAuth paths — those already created these records.
+ */
+export async function completeSignupOptIns(
+  prisma: PrismaClient,
+  email: string,
+  derived: AuthMetadataDerivedFields,
+): Promise<void> {
+  if (derived.role === 'employer') {
+    const existingEmployerLead = await prisma.employerLead.findFirst({
+      where: { contactEmail: email },
+    })
+    if (!existingEmployerLead) {
+      const contactName =
+        [derived.firstName, derived.lastName].filter(Boolean).join(' ') || null
+      await prisma.employerLead.create({
+        data: {
+          companyName: derived.company || contactName || 'Unknown',
+          contactEmail: email,
+          contactName,
+          source: 'employer_signup',
+          status: 'prospect',
+        },
+      })
+      logger.info('[completeSignupOptIns] EmployerLead created', { email })
+    }
+    return
+  }
+
+  // Job seekers → email_leads FIRST (FK: JobAlert.email → EmailLead.email)
+  await prisma.emailLead.upsert({
+    where: { email },
+    update: {
+      isSubscribed: true,
+      newsletterOptIn: derived.newsletterOptIn ? true : undefined,
+    },
+    create: {
+      email,
+      source: 'signup',
+      isSubscribed: true,
+      newsletterOptIn: derived.newsletterOptIn,
+    },
+  })
+
+  // Beehiiv newsletter sync (fire-and-forget inside the lib)
+  syncToBeehiiv(email, { utmSource: 'signup' })
+
+  if (derived.wantJobHighlights) {
+    const existingAlert = await prisma.jobAlert.findFirst({ where: { email } })
+    if (!existingAlert) {
+      await prisma.jobAlert.create({
+        data: {
+          email,
+          name: 'Job Highlights',
+          keyword: null,
+          location: null,
+          mode: null,
+          jobType: null,
+          minSalary: null,
+          maxSalary: null,
+          frequency: derived.highlightsFrequency,
+          isActive: true,
+          // Single opt-in: the user explicitly checked "job highlights"
+          // during signup. The digest cron only sends to alerts with
+          // confirmedAt set, so leaving it null would make this alert
+          // permanently invisible to the sender.
+          confirmedAt: new Date(),
+          token: crypto.randomUUID(),
+        },
+      })
+      logger.info('[completeSignupOptIns] JobAlert created', {
+        email,
+        frequency: derived.highlightsFrequency,
+      })
+    }
   }
 }
 
@@ -135,5 +242,26 @@ export async function ensureProfileFromAuth<
     hasEmployerMetadata: derived.role === 'employer',
     source: options.logSource ?? null,
   })
+
+  // F27: in the confirm-required email flow the client's profile POST 401s
+  // before a session exists, silently dropping the signup opt-ins (JobAlert,
+  // EmailLead/newsletter, EmployerLead, Beehiiv). They were stashed in auth
+  // metadata at signUp, so complete them here — this branch only runs when
+  // no profile row existed, which excludes the autoconfirm/OAuth paths that
+  // already created these records alongside their profile.
+  try {
+    await completeSignupOptIns(prisma, user.email, derived)
+  } catch (optInError) {
+    // Never block auth on opt-in bookkeeping — profile creation succeeded.
+    // NOTE: logger contract is error(message, error?, context?) — the
+    // exception goes in slot 2 so Sentry captures the real error, not the
+    // context object.
+    logger.error(
+      '[ensureProfileFromAuth] signup opt-in completion failed',
+      optInError,
+      { email: user.email, role: derived.role, source: options.logSource ?? null },
+    )
+  }
+
   return created as unknown as T
 }

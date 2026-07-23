@@ -1,4 +1,4 @@
-﻿import { initiateLogin, logout, getAuthState, refreshTokenIfNeeded } from '@/shared/auth';
+﻿import { initiateLogin, logout, getAuthState, getExtensionToken, refreshTokenIfNeeded } from '@/shared/auth';
 import { fetchProfile, getProfileReadiness, fetchUsage, classifyFields, extractResumeSections, recordAutofill } from '@/shared/api';
 import { captureError } from '@/shared/errorHandler';
 import { ALARM_NAMES, TOKEN_REFRESH_INTERVAL, PROFILE_REFRESH_INTERVAL, API_BASE_URL } from '@/shared/constants';
@@ -90,6 +90,12 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
 
         case 'GET_AUTH_STATE':
             return getAuthState();
+
+        case 'REFRESH_TOKEN':
+            // Content scripts delegate token refresh here: only the
+            // background/popup contexts can run the mint fetch inside a
+            // board-origin tab where the session cookie is attached.
+            return getExtensionToken();
 
         case 'GET_PROFILE': {
             const profile = await fetchProfile();
@@ -206,21 +212,29 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
 
                 log(`[PMHNP-BG] AI classified ${result.classified.length} fields`);
 
-                // 5. Map results to fill instructions
+                // 5. Map results to fill instructions.
+                // SECURITY (audit F30): the server zod-validates the model
+                // output, but re-validate here as defense-in-depth — the
+                // background never acts on an entry whose index is out of
+                // bounds, whose value is oversized, or whose confidence is
+                // outside 0..1. Model output is auto-acted-on, so both ends
+                // of the pipe enforce the same envelope.
+                const MAX_AI_VALUE_LENGTH = 4000;
                 const mappings = result.classified
-                    .filter((c: { confidence: number; value: string }) => c.confidence >= 0.1 && c.value)
+                    .filter((c: { index: number; confidence: number; value: string }) =>
+                        Number.isInteger(c.index) && c.index >= 0 && c.index < fields.length &&
+                        typeof c.value === 'string' && c.value.length > 0 && c.value.length <= MAX_AI_VALUE_LENGTH &&
+                        typeof c.confidence === 'number' && c.confidence >= 0.1 && c.confidence <= 1)
                     .map((c: { index: number; value: string; confidence: number }) => {
                         const f = fields[c.index];
                         let interaction: string = 'text';
 
-                        if (f) {
-                            if (f.type === 'select') interaction = 'select';
-                            else if (f.type === 'radio') interaction = 'radio';
-                            else if (f.type === 'checkbox') interaction = 'checkbox';
-                            else if (f.type === 'date') interaction = 'date';
-                            else if (f.type === 'custom-dropdown') interaction = 'dropdown';
-                            else if (f.type === 'file') interaction = 'file';
-                        }
+                        if (f.type === 'select') interaction = 'select';
+                        else if (f.type === 'radio') interaction = 'radio';
+                        else if (f.type === 'checkbox') interaction = 'checkbox';
+                        else if (f.type === 'date') interaction = 'date';
+                        else if (f.type === 'custom-dropdown') interaction = 'dropdown';
+                        else if (f.type === 'file') interaction = 'file';
 
                         return {
                             index: c.index,

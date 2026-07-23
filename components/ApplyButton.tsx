@@ -41,13 +41,22 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
   // isAuthenticated — if a caller still provides it we honor it as the initial
   // value, otherwise we detect via /api/auth/me on mount.
   const [authed, setAuthed] = useState<boolean>(isAuthenticated ?? false);
+  // Latches true once the auth state is actually KNOWN: immediately when the
+  // caller supplied isAuthenticated, otherwise when the /api/auth/me probe
+  // settles (success or failure). The ?apply=1 auto-open effect below gates
+  // on this so it never acts on the provisional authed=false default.
+  const [authResolved, setAuthResolved] = useState<boolean>(typeof isAuthenticated === 'boolean');
   useEffect(() => {
-    if (typeof isAuthenticated === 'boolean') return; // caller supplied it
+    if (typeof isAuthenticated === 'boolean') {
+      // authResolved was initialized true for this case — nothing to probe.
+      return;
+    }
     let active = true;
     fetch('/api/auth/me')
       .then((r) => r.json())
       .then((d) => { if (active) setAuthed(!!d?.id); })
-      .catch(() => { });
+      .catch(() => { })
+      .finally(() => { if (active) setAuthResolved(true); });
     return () => { active = false; };
   }, [isAuthenticated]);
   // Use the shared detection so the detail-page button matches the
@@ -84,13 +93,36 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
     if (autoOpened.current) return;
     if (searchParams?.get('apply') !== '1') return;
     if (!applyOnPlatform) return;
+    // F26: wait until auth state is KNOWN before latching. The job detail
+    // page doesn't pass isAuthenticated, so authed starts false while the
+    // /api/auth/me probe is in flight — acting on that provisional value
+    // showed the "Sign in to apply" gate to users who had JUST signed in
+    // (every post-auth return now routes back through ?apply=1).
+    if (!authResolved) return;
     autoOpened.current = true;
     if (!authed) {
       setShowAuthModal(true);
     } else {
       setShowPlatformApply(true);
     }
-  }, [searchParams, applyOnPlatform, authed]);
+  }, [searchParams, applyOnPlatform, authed, authResolved]);
+
+  // Safety net: if the auth probe resolves to authenticated while the
+  // sign-in gate is showing (e.g. the user clicked Apply during the brief
+  // pre-resolution window), swap the gate for the real apply flow instead
+  // of asking an already-authenticated user to sign in again.
+  useEffect(() => {
+    if (!authed || !showAuthModal) return;
+    // Deferred a tick so the gate→apply swap is a single async transition
+    // rather than a cascading synchronous re-render inside the effect.
+    const swap = setTimeout(() => {
+      setShowAuthModal(false);
+      if (applyOnPlatform) {
+        setShowPlatformApply(true);
+      }
+    }, 0);
+    return () => clearTimeout(swap);
+  }, [authed, showAuthModal, applyOnPlatform]);
 
   const applied = isApplied(jobId) || serverApplied?.applied;
   const appliedDate = getAppliedDate(jobId);
@@ -154,14 +186,24 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
     setShowPlatformApply(false);
   };
 
+  // F26: build the post-auth return target from pathname + search (not just
+  // pathname) so ?apply=1 survives the login/signup round trip. For
+  // in-platform jobs we force apply=1 even when the user clicked Apply
+  // directly on the detail page, so the apply modal auto re-opens via the
+  // ?apply=1 effect above instead of making them find the button again.
+  const buildReturnUrl = (): string => {
+    const params = new URLSearchParams(window.location.search);
+    if (applyOnPlatform) params.set('apply', '1');
+    const query = params.toString();
+    return query ? `${window.location.pathname}?${query}` : window.location.pathname;
+  };
+
   const handleSignIn = () => {
-    const returnUrl = window.location.pathname;
-    window.location.href = `/login?redirectTo=${encodeURIComponent(returnUrl)}`;
+    window.location.href = `/login?redirectTo=${encodeURIComponent(buildReturnUrl())}`;
   };
 
   const handleSignUp = () => {
-    const returnUrl = window.location.pathname;
-    window.location.href = `/signup?redirectTo=${encodeURIComponent(returnUrl)}`;
+    window.location.href = `/signup?redirectTo=${encodeURIComponent(buildReturnUrl())}`;
   };
 
   return (

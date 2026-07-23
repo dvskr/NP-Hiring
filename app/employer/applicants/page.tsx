@@ -28,7 +28,7 @@ export const metadata: Metadata = {
  * a tab swap inside another page.
  */
 export default async function EmployerApplicantsPage() {
-    await requireEmployer();
+    await requireEmployer('/employer/applicants');
 
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();

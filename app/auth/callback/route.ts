@@ -102,18 +102,26 @@ export async function GET(request: Request) {
               })
             }
           } else {
-            // Job seekers → email_leads with newsletter opt-in
+            // Job seekers → email_leads. B73: newsletter opt-in requires the
+            // same explicit consent as the email signup flow — SignUpForm
+            // stashes a `newsletter_opt_in` checkbox value in auth metadata,
+            // and readSignupMetadata (lib/auth/ensure-profile.ts) treats
+            // absent metadata as opted OUT. Google OAuth carries no such
+            // checkbox, so OAuth signups default to newsletterOptIn: false
+            // instead of being silently subscribed. Mirrors ensure-profile's
+            // "never downgrade an existing opt-in" update semantics.
+            const newsletterConsent = metadata.newsletter_opt_in === true
             await prisma.emailLead.upsert({
               where: { email: data.user.email },
               update: {
                 isSubscribed: true,
-                newsletterOptIn: true,
+                newsletterOptIn: newsletterConsent ? true : undefined,
               },
               create: {
                 email: data.user.email,
                 source: 'google_signup',
                 isSubscribed: true,
-                newsletterOptIn: true,
+                newsletterOptIn: newsletterConsent,
               },
             })
           }
@@ -140,6 +148,10 @@ export async function GET(request: Request) {
                   maxSalary: null,
                   frequency: 'daily',
                   isActive: true,
+                  // Single opt-in: account creation is the consent event. The
+                  // digest cron only sends to alerts with confirmedAt set, so
+                  // leaving it null makes this alert permanently invisible.
+                  confirmedAt: new Date(),
                   token: crypto.randomUUID(),
                 }
               })

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyExtensionToken } from '@/lib/verify-extension-token';
+import {
+    AUTOFILL_AI_MONTHLY_LIMITS,
+    getMonthlyAiGenerations,
+    startOfCurrentMonth,
+    tierFromRole,
+} from '../_lib/quota';
 
 
 export async function GET(req: NextRequest) {
@@ -12,7 +18,7 @@ export async function GET(req: NextRequest) {
 
         // Get current period (calendar month)
         const now = new Date();
-        const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const periodStart = startOfCurrentMonth(now);
         const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
         // Get usage for this period
@@ -24,7 +30,10 @@ export async function GET(req: NextRequest) {
         });
 
         const autofillsUsed = usageRecords.filter(r => r.fieldsFilled > 0).length;
-        const aiGenerationsUsed = usageRecords.reduce((sum, r) => sum + r.aiGenerations, 0);
+        // Audit F29: the displayed number MUST be the same SUM the
+        // enforcement helper uses — both call getMonthlyAiGenerations so
+        // they can never disagree.
+        const aiGenerationsUsed = await getMonthlyAiGenerations(user.userId);
 
         // Check tier
         const profile = await prisma.userProfile.findUnique({
@@ -32,12 +41,16 @@ export async function GET(req: NextRequest) {
             select: { role: true },
         });
 
-        const tier = profile?.role === 'premium' ? 'premium' : profile?.role === 'pro' ? 'pro' : 'free';
+        const tier = tierFromRole(profile?.role);
 
+        // AI caps come from the shared quota module (audit F29); the
+        // autofill-count caps are display-only and stay local.
+        const aiCapFor = (t: typeof tier): number | 'unlimited' =>
+            Number.isFinite(AUTOFILL_AI_MONTHLY_LIMITS[t]) ? AUTOFILL_AI_MONTHLY_LIMITS[t] : 'unlimited';
         const tierLimits: Record<string, { autofills: number | 'unlimited'; ai: number | 'unlimited' }> = {
-            free: { autofills: 10, ai: 10 },
-            pro: { autofills: 'unlimited' as const, ai: 100 },
-            premium: { autofills: 'unlimited' as const, ai: 'unlimited' as const },
+            free: { autofills: 10, ai: aiCapFor('free') },
+            pro: { autofills: 'unlimited' as const, ai: aiCapFor('pro') },
+            premium: { autofills: 'unlimited' as const, ai: aiCapFor('premium') },
         };
 
         const limits = tierLimits[tier] || tierLimits.free;

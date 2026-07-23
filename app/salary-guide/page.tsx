@@ -3,14 +3,29 @@ import { Metadata } from 'next';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowUpRight, ArrowRight } from 'lucide-react';
+import { ArrowUpRight, ArrowRight, DollarSign, Calendar, Briefcase, Star, TrendingUp, HelpCircle } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import SalaryGuideForm from '@/components/SalaryGuideForm';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CopyCitation from '@/components/CopyCitation';
 import SalaryCalculator from '@/components/SalaryCalculator';
+import { STAT_SOURCES } from '@/lib/stats-sources';
 
 const STORAGE_BASE = brand.assets.storageBase;
+
+// ── Cited figures (audit B51: single source of truth) ──────────────────
+// Every national salary / growth / shortage / FPA claim on this page
+// derives from lib/stats-sources.ts so it cannot disagree with the
+// homepage FAQ, job-page widgets, or state FAQs. Update that file, not
+// this page. The previous 126K-era hardcodes (an earlier OEWS vintage)
+// contradicted the cited figure; a drift test
+// (tests/regressions/aeo-content-citation-stats.test.ts) now blocks
+// re-hardcoding a national salary here.
+const NATIONAL_SALARY = STAT_SOURCES.averageSalary; // '$129,210' (BLS OEWS May 2024 median)
+const NATIONAL_SALARY_K = Math.round(Number(NATIONAL_SALARY.value) / 1000); // 129
+const NP_GROWTH = STAT_SOURCES.blsGrowth2032; // '45%'
+const FPA_STATES = STAT_SOURCES.fullPracticeStates; // '27 states + DC' (AANP)
+const SHORTAGE_POP = STAT_SOURCES.hrsaShortagePopulation; // '90 million+' (HRSA, primary care)
 
 // Enable ISR with daily revalidation
 export const revalidate = 86400;
@@ -96,8 +111,8 @@ export const metadata: Metadata = {
   // `absolute` opts out of the layout title template so the brand suffix
   // doesn't get appended a second time (was rendering "... | PMHNP Hiring
   // | PMHNP Hiring" — audit 09 M-17).
-  title: { absolute: `${brand.niche.short} Salary Guide 2026 — $126K+ Avg by State | ${brand.name}` },
-  description: `Complete 2026 ${brand.niche.short} salary data: national avg $126K+, top 10% earn $165K+. All 50 states, by experience level, practice setting, and negotiation tips.`,
+  title: { absolute: `${brand.niche.short} Salary Guide 2026 — $${NATIONAL_SALARY_K}K Median by State | ${brand.name}` },
+  description: `Complete 2026 ${brand.niche.short} salary data: national median ${NATIONAL_SALARY.formatted} (BLS). All 50 states, by experience level, practice setting, and negotiation tips.`,
   keywords: [
     `${brand.niche.descriptor} salary`,
     `${brand.niche.short.toLowerCase()} salary`,
@@ -109,8 +124,8 @@ export const metadata: Metadata = {
     `${brand.niche.short.toLowerCase()} salary guide`,
   ],
   openGraph: {
-    title: `${brand.niche.short} Salary Guide 2026 | $126,000+ Average`,
-    description: `Complete guide to ${brand.niche.short} salaries. National average $126,000+, top 10% earn $165,000+. State-by-state breakdown and tips to maximize earnings.`,
+    title: `${brand.niche.short} Salary Guide 2026 | ${NATIONAL_SALARY.formatted} Median`,
+    description: `Complete guide to ${brand.niche.short} salaries. National median ${NATIONAL_SALARY.formatted} (BLS OEWS). State-by-state breakdown and tips to maximize earnings.`,
     type: 'website',
     url: `${BASE_URL}/salary-guide`,
     images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`, width: 1280, height: 900, alt: `${brand.niche.short} salary guide 2026 showing ${brand.niche.descriptor} pay by state with interactive salary comparison table` }],
@@ -164,7 +179,7 @@ const factorCards = [
 ];
 
 const faqData = [
-  { q: `How much do ${brand.niche.short}s make in 2026?`, a: `The national average ${brand.niche.short} salary is about $126,000-$135,000 per year in 2026, based on data from BLS, ZipRecruiter, Indeed, PayScale, and Glassdoor. The top 10% earn $165,000 or more. New graduates start at $95,000-$115,000, while experienced ${brand.niche.short}s earn $150,000-$180,000+.` },
+  { q: `How much do ${brand.niche.short}s make in 2026?`, a: `The national median ${brand.niche.short} salary is ${NATIONAL_SALARY.formatted} per year (${NATIONAL_SALARY.source}). New graduates typically start at $95,000-$115,000, while experienced ${brand.niche.short}s earn $150,000-$180,000+ depending on setting, specialty, and location.` },
   { q: `Which state pays ${brand.niche.short}s the most?`, a: `${brand.niche.short} pay is consistently highest in West Coast and Northeast markets — California, Washington, Oregon, Nevada, and New Jersey rank near the top in federal wage data. When adjusted for cost of living, several Midwest and Southern states offer stronger real purchasing power.` },
   { q: `Do telehealth ${brand.niche.short}s make less than in-person?`, a: `Telehealth ${brand.niche.short}s typically earn $120,000 to $170,000 — broadly comparable to in-person roles, which vary more by setting and acuity. Telehealth offers excellent flexibility, and some national telehealth platforms pay $180,000+ for experienced ${brand.niche.short}s with multi-state licenses.` },
   { q: `How can I increase my ${brand.niche.short} salary?`, a: 'Top strategies include: specializing in high-demand areas like acute care, emergency, or psychiatric-mental health (+10-25% premium), practicing in Full Practice Authority states (+12-15% premium), considering private practice ownership ($180,000-$300,000+), working in rural/underserved areas for loan repayment incentives, and always negotiating total compensation.' },
@@ -195,12 +210,14 @@ export default async function SalaryGuidePage() {
     "@context": "https://schema.org",
     "@type": "Article",
     "headline": `2026 ${brand.niche.short} Salary Guide: ${brand.niche.long} Pay by State`,
-    "description": `Comprehensive ${brand.niche.short} salary data for 2026 including state-by-state pay, experience levels, specialty premiums, and market trends. Based on BLS, ZipRecruiter, Indeed, and 10,000+ job postings.`,
+    "description": `Comprehensive ${brand.niche.short} salary data for 2026 including state-by-state pay, experience levels, specialty premiums, and market trends. Based on ${NATIONAL_SALARY.source} and live job postings listed on ${brand.name}.`,
     "image": `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`,
     "datePublished": "2026-01-01T00:00:00Z",
     "dateModified": new Date().toISOString(),
     "author": { "@type": "Organization", "name": brand.name, "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.png` } },
-    "publisher": { "@type": "Organization", "name": brand.name, "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.svg` } },
+    // B56: publisher logo previously referenced an SVG path that does not
+    // exist in public/ — /logo.png is the real asset.
+    "publisher": { "@type": "Organization", "name": brand.name, "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.png` } },
     "mainEntityOfPage": { "@type": "WebPage", "@id": `${brand.baseUrl}/salary-guide` }
   };
 
@@ -243,7 +260,7 @@ export default async function SalaryGuidePage() {
               {brand.niche.short} Salary Guide
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
-              National average <strong>$126,000+</strong> per year. State-by-state breakdown, experience levels, practice settings, and tips to maximize earnings.
+              National median <strong>{NATIONAL_SALARY.formatted}</strong> per year (BLS OEWS, May 2024). State-by-state breakdown, experience levels, practice settings, and tips to maximize earnings.
             </p>
           </div>
 
@@ -273,10 +290,10 @@ export default async function SalaryGuidePage() {
               }}>
                 <h3 style={{ fontSize: '13px', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Key Numbers</h3>
                 {[
-                  { value: '$126K+', label: 'National Avg', bg: '#D4F5E9', color: '#065F46' },
+                  { value: `$${NATIONAL_SALARY_K}K`, label: 'National Median', bg: '#D4F5E9', color: '#065F46' },
                   { value: '$95K', label: 'Entry Level', bg: '#E0E7FF', color: '#3730A3' },
                   { value: '$165K+', label: 'Top 10%', bg: '#FEF3C7', color: '#92400E' },
-                  { value: '45%', label: 'Job Growth', bg: '#FFE0D3', color: '#7C2D12' },
+                  { value: NP_GROWTH.formatted, label: 'Job Growth', bg: '#FFE0D3', color: '#7C2D12' },
                 ].map(s => (
                   <div key={s.label} className="sal-stat-pill" style={{
                     display: 'flex', alignItems: 'center', gap: '10px',
@@ -309,11 +326,16 @@ export default async function SalaryGuidePage() {
               border: '2px solid rgba(190,24,93,0.10)',
             }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`} alt="Salary" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px', flexShrink: 0 }} />
+                <div style={{
+                  width: '44px', height: '44px', borderRadius: '14px', background: '#D4E2D4',
+                  color: '#1E3A5F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                  <DollarSign size={24} />
+                </div>
                 <div>
                   <h2 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Quick Answer: {brand.niche.short} Salary in {currentYear}</h2>
                   <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>
-                    The average {brand.niche.short} salary is <strong>$126,000-$135,000 per year</strong> in {currentYear}. The top 10% earn <strong>$165,000+</strong>.
+                    The median {brand.niche.short} salary is <strong>{NATIONAL_SALARY.formatted} per year</strong> ({NATIONAL_SALARY.source}).
                     New graduates start at $95,000-$115,000, while experienced {brand.niche.short}s (7-15 years) earn $150,000-$180,000.
                     Private practice owners can earn $180,000-$300,000+. Pay runs highest in West Coast and Northeast
                     markets, with California, Washington, and New Jersey near the top in federal wage data.
@@ -325,10 +347,10 @@ export default async function SalaryGuidePage() {
                 paddingTop: '18px', borderTop: '1px solid rgba(0,0,0,0.06)',
               }} className="sal-quick-stats">
                 {[
-                  { value: '$126,000+', label: 'National Average', color: '#BE185D' },
+                  { value: NATIONAL_SALARY.formatted, label: 'National Median (BLS)', color: '#BE185D' },
                   { value: '$165,000+', label: 'Top 10% Earn', color: '#BE185D' },
-                  { value: '45%', label: 'Job Growth by 2032', color: '#F59E0B' },
-                  { value: '10,000+', label: 'Jobs Analyzed', color: '#F59E0B' },
+                  { value: NP_GROWTH.formatted, label: 'Job Growth by 2032', color: '#F59E0B' },
+                  { value: overallStats.jobsWithSalary.toLocaleString('en-US'), label: 'Live Postings Analyzed', color: '#F59E0B' },
                 ].map(s => (
                   <div key={s.label} style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '20px', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
@@ -439,7 +461,9 @@ export default async function SalaryGuidePage() {
             {/* Experience Level (8 cols) */}
             <div className="sal-bento-exp emp-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden' }}>
               <div style={{ padding: '24px 28px 8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp`} alt="Experience" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
+                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#D4E2D4', color: '#1E3A5F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Calendar size={22} />
+                </div>
                 <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>By Experience Level</h3>
               </div>
               <div style={{ padding: '0 0 0' }}>
@@ -467,7 +491,9 @@ export default async function SalaryGuidePage() {
             {/* Practice Setting (4 cols) */}
             <div className="sal-bento-setting emp-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '24px 22px', overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-briefcase.webp`} alt="Setting" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
+                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#D4E2D4', color: '#1E3A5F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Briefcase size={22} />
+                </div>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>By Setting</h3>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -490,7 +516,9 @@ export default async function SalaryGuidePage() {
             {/* Specialty Premiums (6 cols) */}
             <div className="sal-bento-spec emp-bento-card" style={{ ...clayCard, gridColumn: 'span 6', padding: '0', overflow: 'hidden' }}>
               <div style={{ padding: '24px 28px 8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-star.webp`} alt="Specialty" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
+                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#D4E2D4', color: '#1E3A5F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Star size={22} />
+                </div>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Specialty Premiums</h3>
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
@@ -510,11 +538,13 @@ export default async function SalaryGuidePage() {
               ...clayCard, gridColumn: 'span 6', padding: '24px 22px',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-chart.webp`} alt="Practice Authority" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
+                <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#D4E2D4', color: '#1E3A5F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <TrendingUp size={22} />
+                </div>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Full Practice Authority</h3>
               </div>
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 16px' }}>
-                <strong>34 states + DC</strong> have FPA. {brand.niche.short}s in FPA states earn <strong style={{ color: '#BE185D' }}>12-15% more</strong> on average.
+                <strong>{FPA_STATES.formatted}</strong> grant FPA ({FPA_STATES.source}). {brand.niche.short}s in FPA states earn <strong style={{ color: '#BE185D' }}>12-15% more</strong> on average.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div style={{ padding: '14px 16px', borderRadius: '14px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
@@ -563,8 +593,11 @@ export default async function SalaryGuidePage() {
                 </tr>
               </thead>
               <tbody>
+                {/* Audit B51: the fabricated 'Average Salary' trend row
+                    (158k-to-165k donor-era figures that contradicted the
+                    cited BLS median) was removed. Do not re-add a salary
+                    trend without a citable source in lib/stats-sources.ts. */}
                 {[
-                  { metric: 'Average Salary', v24: '$158,000', v25: '$162,000', v26: '$165,000' },
                   { metric: 'Job Postings (Monthly)', v24: '12,500', v25: '14,200', v26: '15,800' },
                   { metric: 'Telehealth %', v24: '48%', v25: '55%', v26: '62%' },
                   { metric: 'Time to Fill (days)', v24: '45', v25: '38', v26: '32' },
@@ -584,9 +617,8 @@ export default async function SalaryGuidePage() {
           <div style={{ ...clayCard, padding: '22px 28px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
             <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#831843', margin: '0 0 10px' }}>Why Demand is High</h3>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: '13px', color: '#5A4A42' }}>
-              <li>• <strong>123 million</strong> Americans in shortage areas</li>
-              <li>• <strong>6,203</strong> additional providers needed</li>
-              <li>• <strong>45%</strong> projected NP job growth through 2032</li>
+              <li>• <strong>{SHORTAGE_POP.formatted}</strong> Americans live in primary-care shortage areas (HRSA)</li>
+              <li>• <strong>{NP_GROWTH.formatted}</strong> projected NP job growth through 2032 (BLS)</li>
             </ul>
           </div>
         </div>
@@ -635,7 +667,9 @@ export default async function SalaryGuidePage() {
                   display: 'flex', alignItems: 'center', gap: '12px',
                   fontSize: '15px', fontWeight: 600, color: '#1A2E35', listStyle: 'none',
                 }}>
-                  <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp`} alt="FAQ" width={28} height={28} style={{ width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0 }} />
+                  <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#D4E2D4', color: '#1E3A5F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <HelpCircle size={16} />
+                  </div>
                   {q}
                 </summary>
                 <div style={{ padding: '0 24px 18px 64px', fontSize: '14px', color: '#5A4A42', lineHeight: 1.65 }}>{a}</div>
@@ -661,7 +695,7 @@ export default async function SalaryGuidePage() {
           {/* Data Sources */}
           <div style={{ ...clayCard, padding: '16px 24px', background: 'rgba(0,0,0,0.02)', marginBottom: '24px', textAlign: 'center' }}>
             <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
-              <strong>Data Sources & Methodology:</strong> Bureau of Labor Statistics (BLS), ZipRecruiter, Indeed, PayScale, Glassdoor, CompHealth, and analysis of 10,000+ active {brand.niche.short} job postings. Industry data updated January {currentYear}. Real-time job posting data updated daily.
+              <strong>Data Sources & Methodology:</strong> Bureau of Labor Statistics (BLS OEWS, May 2024), HRSA, AANP, and analysis of {overallStats.jobsWithSalary.toLocaleString('en-US')} active {brand.niche.short} job postings with disclosed salary on this board. Job posting data updates daily.
             </p>
           </div>
 
@@ -706,7 +740,7 @@ export default async function SalaryGuidePage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', padding: '24px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)' }}>
               <Image
-                src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/cta-illustration.webp`}
+                src="/images/employers/cta-illustration-v2.webp"
                 alt={`Find high-paying ${brand.niche.short} jobs`}
                 width={280} height={220}
                 style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px' }}

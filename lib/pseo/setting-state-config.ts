@@ -288,15 +288,17 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
 
 // Narrative fields (heroSubtitle/benefits/tips/keywords) in the legacy configs
 // below were rewritten for the all-NP board (2026-07 awkward-phrase sweep).
-// TODO(content): salaryRange figures are still broad PMHNP-era bands — retune
-// alongside the lib/stats-sources.ts salary re-sourcing pass.
+// Salary bands retuned 2026-07 to the config/niche/salary.ts anchors (staff
+// NP ≈ $95-140K W-2, typical comparison band $110K-170K, locum/IC $60-150/hr).
+// TODO(content): refine bands with per-setting market data alongside the
+// lib/stats-sources.ts salary re-sourcing pass.
 export const SETTING_CONFIGS: Record<string, SettingConfig> = {
   remote: {
     slug: 'remote',
     label: 'Remote',
     fullLabel: 'Remote NP',
     heroSubtitle: 'Work from home nurse practitioner positions',
-    salaryRange: '$130K-200K',
+    salaryRange: '$110K-170K',
     keywords: ['remote nurse practitioner', 'work from home np', 'remote np jobs', 'telehealth np'],
     faqCategory: 'remote',
     buildWhere: (stateName: string) => ({
@@ -322,7 +324,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Telehealth',
     fullLabel: 'Telehealth NP',
     heroSubtitle: 'Virtual care nurse practitioner positions',
-    salaryRange: '$130K-200K',
+    salaryRange: '$110K-170K',
     keywords: ['telehealth nurse practitioner', 'telemedicine np', 'virtual care np', 'telehealth np jobs'],
     faqCategory: 'telehealth',
     buildWhere: (stateName: string) => ({
@@ -348,7 +350,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Inpatient',
     fullLabel: 'Inpatient NP',
     heroSubtitle: 'Hospital & acute care positions',
-    salaryRange: '$140K-200K',
+    salaryRange: '$115K-180K',
     keywords: ['inpatient nurse practitioner', 'hospital np', 'acute care np', 'inpatient np jobs'],
     faqCategory: 'inpatient',
     buildWhere: (stateName: string) => ({
@@ -374,7 +376,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Outpatient',
     fullLabel: 'Outpatient NP',
     heroSubtitle: 'Clinic & private practice positions',
-    salaryRange: '$130K-190K',
+    salaryRange: '$105K-160K',
     keywords: ['outpatient nurse practitioner', 'clinic np', 'private practice np', 'outpatient np jobs'],
     faqCategory: 'outpatient',
     buildWhere: (stateName: string) => ({
@@ -385,7 +387,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     benefits: [
       { title: 'Work-Life Balance', description: 'Most outpatient positions offer M-F schedules with no nights, weekends, or on-call requirements.', iconName: 'Clock' },
       { title: 'Long-Term Relationships', description: 'Build meaningful patient relationships through ongoing primary, preventive, and chronic care.', iconName: 'Heart' },
-      { title: 'Private Practice Path', description: 'Outpatient experience is the foundation for starting your own practice earning $200K+ with full autonomy.', iconName: 'DollarSign' },
+      { title: 'Private Practice Path', description: 'Outpatient experience is the foundation for starting your own practice with full clinical and financial autonomy.', iconName: 'DollarSign' },
     ],
     tips: [
       'Start with structured clinic work before private practice',
@@ -433,7 +435,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Full-Time',
     fullLabel: 'Full-Time NP',
     heroSubtitle: 'Permanent full-time NP positions',
-    salaryRange: '$130K-200K',
+    salaryRange: '$110K-170K',
     keywords: ['full-time nurse practitioner', 'permanent np', 'full time np jobs', 'W-2 np'],
     faqCategory: 'full-time',
     buildWhere: (stateName: string) => ({
@@ -511,7 +513,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'New Grad',
     fullLabel: 'New Grad NP',
     heroSubtitle: 'Entry-level positions for new NP graduates',
-    salaryRange: '$110K-160K',
+    salaryRange: '$95K-140K',
     keywords: ['new grad nurse practitioner', 'entry level np', 'new graduate np', 'np residency', 'np fellowship'],
     faqCategory: 'new-grad',
     buildWhere: (stateName: string) => buildKeywordWhere(
@@ -520,8 +522,8 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       'new-grad',
     ),
     benefits: [
-      { title: 'Mentorship Programs', description: 'Many new grad positions include structured mentorship with experienced psychiatrists and PMHNPs.', iconName: 'Users' },
-      { title: 'Competitive Starting Pay', description: 'New grad PMHNPs start at $110K-160K+ with full benefits, signing bonuses, and loan repayment.', iconName: 'DollarSign' },
+      { title: 'Mentorship Programs', description: 'Many new grad positions include structured mentorship with experienced physicians and senior NPs.', iconName: 'Users' },
+      { title: 'Competitive Starting Pay', description: 'New grad NPs start at $95K-140K with full benefits, signing bonuses, and loan repayment.', iconName: 'DollarSign' },
       { title: 'Clinical Growth', description: 'First roles build your clinical foundation — choose settings that offer diverse patient populations and supervision.', iconName: 'TrendingUp' },
     ],
     tips: [
@@ -536,9 +538,9 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     slug: '1099',
     label: '1099',
     fullLabel: '1099 NP',
-    heroSubtitle: 'Independent contractor psychiatric NP positions',
-    salaryRange: '$75-150+/hr',
-    keywords: ['1099 pmhnp', 'independent contractor pmhnp', 'self-employed pmhnp', 'IC psychiatric nurse practitioner'],
+    heroSubtitle: 'Independent contractor nurse practitioner positions',
+    salaryRange: '$60-150+/hr',
+    keywords: ['1099 nurse practitioner', 'independent contractor np', 'self-employed np', 'IC nurse practitioner'],
     faqCategory: '1099',
     buildWhere: (stateName: string) => buildKeywordWhere(
       ['1099', 'independent contractor', 'contractor', 'self-employed', 'IC position'],
@@ -546,7 +548,7 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
       '1099',
     ),
     benefits: [
-      { title: 'Higher Gross Pay', description: '1099 PMHNPs earn $75-150+/hr — 20-40% higher than W-2 rates with significant tax deduction opportunities.', iconName: 'DollarSign' },
+      { title: 'Higher Gross Pay', description: '1099 NPs earn $60-150+/hr — often 20-40% higher than W-2 rates with significant tax deduction opportunities.', iconName: 'DollarSign' },
       { title: 'Schedule Control', description: 'Set your own hours, work with multiple clients, and control your patient volume and caseload.', iconName: 'Clock' },
       { title: 'Tax Advantages', description: 'Deduct business expenses, contribute $66K/year to SEP-IRA, and write off home office and mileage.', iconName: 'Shield' },
     ],

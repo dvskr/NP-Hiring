@@ -2,13 +2,22 @@
  * Consent state + event bus.
  *
  * Source of truth (Sprint 4 onwards): the HttpOnly cookie
- * `pmhnp_consent_v2`, set by `POST /api/consent`. Server reads it via
- * `cookies()` in `app/layout.tsx` and passes initial state to client
- * components as a prop.
+ * `pmhnp_consent_v2`, set by `POST /api/consent`. An XSS payload can
+ * never FLIP the authoritative record (writes go only through the API).
+ *
+ * Initialization (ISR fix F5): the root layout must stay free of Dynamic
+ * APIs (`headers()`/`cookies()`) or every route silently loses ISR. So
+ * instead of the layout reading the HttpOnly cookie server-side,
+ * middleware mirrors its value into the NON-HttpOnly cookie named by
+ * CONSENT_MIRROR_COOKIE on every non-crawler request, and the client
+ * boundary (components/consent/*) reads that mirror from document.cookie
+ * after mount via `getMirroredConsent()`. The mirror is read-only
+ * convenience state: tampering with it only affects the tamperer's own
+ * browser-side GA defaults, never the server-recorded consent.
  *
  * Client components (CookieConsent banner, ConsentGatedTelemetry,
- * GoogleAnalytics inline script) read the prop and listen for the
- * `pmhnp:consent-changed` window event to react to mid-session
+ * GoogleAnalytics) receive that initial state as a prop and listen for
+ * the `pmhnp:consent-changed` window event to react to mid-session
  * accept/deny without a page reload.
  *
  * `getConsentCategories()` below still reads localStorage purely as a
@@ -47,6 +56,15 @@ export const CONSENT_REOPEN_EVENT = 'pmhnp:consent-reopen';
 export const PRIVACY_SIGNAL_COOKIE = 'pmhnp_privacy_signal';
 export const CONSENT_REGION_COOKIE = 'pmhnp_consent_region';
 export const CONSENT_COOKIE = 'pmhnp_consent_v2';
+/**
+ * Non-HttpOnly mirror of CONSENT_COOKIE, written by middleware on every
+ * non-crawler request so client components can initialize consent state
+ * from document.cookie without the root layout calling `cookies()`
+ * (which would opt every route out of ISR — see lib doc comment above).
+ * Deliberately NOT donor-prefixed like its legacy siblings above — new
+ * identifiers must stay brand-neutral (niche-copy ratchet).
+ */
+export const CONSENT_MIRROR_COOKIE = 'consent_mirror';
 
 /**
  * Format used for both the legacy localStorage value and the new
@@ -127,6 +145,17 @@ function readCookie(name: string): string | null {
 export function getConsentRegion(): ConsentRegion {
     const value = readCookie(CONSENT_REGION_COOKIE);
     return value === 'implied' ? 'implied' : 'strict';
+}
+
+/**
+ * Reads the middleware-maintained mirror of the HttpOnly consent cookie
+ * (see CONSENT_MIRROR_COOKIE). Client-side only; returns null on the
+ * server, when no consent has been recorded, or when the mirror fails
+ * validation (wrong version / malformed — same rules as the server-side
+ * parse).
+ */
+export function getMirroredConsent(): ConsentCategories | null {
+    return parseConsentCookie(readCookie(CONSENT_MIRROR_COOKIE));
 }
 
 /**

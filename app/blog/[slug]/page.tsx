@@ -47,7 +47,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const url = `${brand.baseUrl}/blog/${slug}`;
 
     return {
-        title: post.title.match(/\(\d{4}\)\s*$/) ? post.title : `${post.title} (${new Date().getFullYear()})`,
+        // B54: no auto-appended year. Stamping the current year onto every
+        // title fabricates freshness (a 2026 badge on an unrevised post,
+        // silently rolling to 2027) — a YMYL trust hit. If a year belongs
+        // in a title, the author writes it into post.title.
+        title: post.title,
         // Description should describe the post, not echo the title (audit
         // 09 M-24). Generic-but-relevant fallback when meta_description
         // is absent — log so editorial can backfill the missing field.
@@ -311,115 +315,25 @@ export default async function BlogPostPage({ params }: Props) {
         publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
     } : null;
 
-    // Slug-specific FAQ schemas for Google rich results
-    const blogFaqData: Record<string, Array<{ name: string; text: string }>> = {
-        'how-to-become-a-pmhnp': [
-            {
-                name: `How long does it take to become an ${brand.niche.short}?`,
-                text: `It typically takes 6-8 years total: 4 years for a BSN, 1-2 years of RN experience, and 2-3 years for an MSN or DNP with ${brand.niche.short} specialization.`,
-            },
-            {
-                name: `What degree do you need to be an ${brand.niche.short}?`,
-                text: `You need a Master of Science in Nursing (MSN) or Doctor of Nursing Practice (DNP) with a ${brand.niche.long} specialization from an accredited program. You must also pass the ${brand.niche.short} certification exam through ANCC.`,
-            },
-            {
-                name: `Can an ${brand.niche.short} prescribe medication?`,
-                text: `Yes. ${brand.niche.short}s can prescribe psychiatric medications including antidepressants, antipsychotics, mood stabilizers, and controlled substances. Prescribing authority varies by state, with some states granting full practice authority and others requiring physician collaboration.`,
-            },
-            {
-                name: `What is the difference between an ${brand.niche.short} and a psychiatrist?`,
-                text: `Both can diagnose and treat behavioral health conditions and prescribe medications. Psychiatrists complete medical school (MD/DO) plus a 4-year residency. ${brand.niche.short}s complete nursing school plus a master's or doctoral nursing program. ${brand.niche.short}s typically spend more time on therapy and holistic care, while psychiatrists often focus on medication management.`,
-            },
-            {
-                name: `Is ${brand.niche.short} a good career?`,
-                text: `Yes. ${brand.niche.short}s are among the most in-demand healthcare providers in the US. Job growth is projected at 40%+ through 2031, and there are 10,000+ open positions nationwide. The nationwide provider shortage ensures strong demand for years to come.`,
-            },
-        ],
-        'new-grad-pmhnp-first-job': [
-            {
-                name: `Can new grad ${brand.niche.short}s get hired without experience?`,
-                text: `Yes. Due to the nationwide provider shortage, many employers actively hire new grad ${brand.niche.short}s. Telehealth companies, community health centers, and large health systems commonly offer new grad ${brand.niche.short} positions with mentorship and supervision.`,
-            },
-            {
-                name: `What is the best setting for a new grad ${brand.niche.short}?`,
-                text: `Community health centers and outpatient clinics are often recommended for new grads because they offer diverse patient populations, structured supervision, and exposure to a wide range of diagnoses. Inpatient settings and telehealth are also options depending on comfort level.`,
-            },
-            {
-                name: `How many jobs are available for new grad ${brand.niche.short}s?`,
-                text: `There are hundreds of new grad-friendly ${brand.niche.short} positions available at any given time. ${brand.name} lists new grad-specific roles that can be filtered at ${brand.domain}/jobs/new-grad.`,
-            },
-        ],
-        'pmhnp-vs-psychiatrist': [
-            {
-                name: `Can an ${brand.niche.short} do everything a psychiatrist can?`,
-                text: `${brand.niche.short}s can diagnose behavioral health conditions, prescribe medications including controlled substances, and provide therapy. The main differences are in training path and, in some states, practice authority requirements. In full practice authority states, ${brand.niche.short}s operate independently.`,
-            },
-            {
-                name: `Do ${brand.niche.short}s make as much as psychiatrists?`,
-                text: `No. Psychiatrists earn $250,000-$400,000+ annually while ${brand.niche.short}s typically earn between $120,000 and $170,000. However, ${brand.niche.short}s require significantly less training time and student debt, often resulting in a better return on investment earlier in their career.`,
-            },
-            {
-                name: `Should I become an ${brand.niche.short} or a psychiatrist?`,
-                text: `It depends on your goals. If you want a faster path to practice (6-8 years vs 12+ years), lower student debt, and a holistic nursing approach, ${brand.niche.short} is the better fit. If you want the highest salary ceiling and full medical training, psychiatry may be preferred.`,
-            },
-        ],
-    };
-
-    // Dynamic FAQ generation for state license posts
-    const stateSlugMatch = slug.match(/^how-to-get-your-pmhnp-license-in-(.+)-2026/);
-    if (stateSlugMatch && !blogFaqData[slug]) {
-        const stateNameRaw = stateSlugMatch[1].replace(/-/g, ' ');
-        const stateName = stateNameRaw.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        blogFaqData[slug] = [
-            {
-                name: `How long does it take to get an ${brand.niche.short} license in ${stateName}?`,
-                text: `The timeline to obtain your ${brand.niche.short} license in ${stateName} typically takes 2-4 weeks after submitting a complete application, assuming you have already earned your MSN/DNP, passed the ANCC PMHNP-BC certification exam, and hold an active RN license. Processing times vary based on ${stateName}'s Board of Nursing workload.`,
-            },
-            {
-                name: `What are the requirements to become an ${brand.niche.short} in ${stateName}?`,
-                text: `To practice as an ${brand.niche.short} in ${stateName}, you need: (1) an active RN license, (2) a Master's or Doctoral degree in nursing with ${brand.niche.short} specialization from an accredited program, (3) national board certification through ANCC or AANP, and (4) an APRN license from ${stateName}'s Board of Nursing. Prescriptive authority may require additional applications.`,
-            },
-            {
-                name: `What is the average ${brand.niche.short} salary in ${stateName}?`,
-                text: `${brand.niche.short} salaries in ${stateName} vary by setting and experience. Refer to the salary section in our detailed ${stateName} licensing guide above for the latest data, including comparisons between inpatient, outpatient, and telehealth settings.`,
-            },
-        ];
-    }
-
-    // HowTo schema for state license guides (Google shows numbered steps in search)
-    const howToSchema = stateSlugMatch ? (() => {
-        const stateNameRaw = stateSlugMatch[1].replace(/-/g, ' ');
-        const sn = stateNameRaw.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        return {
-            '@context': 'https://schema.org',
-            '@type': 'HowTo',
-            name: `How to Get Your ${brand.niche.short} License in ${sn}`,
-            description: `Step-by-step guide to obtaining your Psychiatric-Mental Health Nurse Practitioner license in ${sn}.`,
-            totalTime: 'P60D',
-            estimatedCost: { '@type': 'MonetaryAmount', currency: 'USD', value: '500-1500' },
-            image: post.image_url || undefined,
-            step: [
-                { '@type': 'HowToStep', position: 1, name: 'Complete MSN or DNP', text: `Earn a Master of Science in Nursing (MSN) or Doctor of Nursing Practice (DNP) degree with a Psychiatric-Mental Health Nurse Practitioner specialization from an CCNE or ACEN accredited program.` },
-                { '@type': 'HowToStep', position: 2, name: 'Pass the ANCC PMHNP-BC Exam', text: 'Pass the American Nurses Credentialing Center (ANCC) Psychiatric-Mental Health Nurse Practitioner Board Certification (PMHNP-BC) examination.' },
-                { '@type': 'HowToStep', position: 3, name: `Apply for ${sn} RN License`, text: `Obtain or verify your Registered Nurse (RN) license with the ${sn} Board of Nursing. If licensed in another state, apply for licensure by endorsement.` },
-                { '@type': 'HowToStep', position: 4, name: `Apply for ${sn} APRN License`, text: `Submit your Advanced Practice Registered Nurse (APRN) application to the ${sn} Board of Nursing, including proof of education, national certification, and any required fees.` },
-                { '@type': 'HowToStep', position: 5, name: 'Apply for Prescriptive Authority', text: `Apply for prescriptive authority through ${sn}'s Board of Nursing or Board of Pharmacy, which allows you to prescribe medications including controlled substances.` },
-                { '@type': 'HowToStep', position: 6, name: 'Register with DEA', text: 'Register with the Drug Enforcement Administration (DEA) to obtain a DEA number, required for prescribing controlled substances.' },
-                { '@type': 'HowToStep', position: 7, name: 'Apply for NPI Number', text: 'Apply for a National Provider Identifier (NPI) number through the National Plan and Provider Enumeration System (NPPES), required for billing and insurance purposes.' },
-            ],
-        };
-    })() : null;
-
-    // Resolution order for FAQPage rich-result eligibility (audit 14 MEDIUM):
-    //   1. post.faq_json from the DB — populated via the n8n content
-    //      pipeline so any blog post can have its own FAQ.
-    //   2. blogFaqData[slug] hardcoded map — covers the 3 legacy posts
-    //      shipped before the column existed.
-    //   3. State-license dynamic generation populated into blogFaqData
-    //      above for /how-to-get-your-pmhnp-license-in-* slugs.
+    // B45: the donor board's slug-keyed FAQ/HowTo structures were removed.
+    // This template previously carried:
+    //   - a hardcoded blogFaqData map keyed to three donor PMHNP slugs
+    //     ('how-to-become-a-pmhnp', 'new-grad-pmhnp-first-job',
+    //     'pmhnp-vs-psychiatrist') whose answers quoted donor-era claims
+    //     ("10,000+ open positions", PMHNP salary bands);
+    //   - a HowTo + dynamic FAQ branch keyed to the donor slug pattern
+    //     /^how-to-get-your-pmhnp-license-in-(.+)-2026/, which can never
+    //     match this board's license-guide slugs ('np-license-<state>',
+    //     see LICENSE_GUIDE_SLUG_PREFIX) — and the series is unpublished
+    //     anyway (LICENSE_GUIDE_SERIES_PUBLISHED=false, zero posts).
+    // All of it was dead code that would have emitted psych-specific,
+    // fabricated schema if a slug ever collided. FAQ data now comes ONLY
+    // from post.faq_json (n8n content pipeline). When the NP license
+    // series is authored, add an NP-specific HowTo keyed to
+    // LICENSE_GUIDE_SLUG_REGEX alongside it.
     const faqQuestions = (post.faq_json && post.faq_json.length > 0)
         ? post.faq_json
-        : blogFaqData[slug];
+        : null;
     const faqSchema = faqQuestions ? {
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
@@ -445,9 +359,6 @@ export default async function BlogPostPage({ params }: Props) {
             )}
             {videoSchema && (
                 <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoSchema) }} />
-            )}
-            {howToSchema && (
-                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />
             )}
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
                 '@context': 'https://schema.org', '@type': 'BreadcrumbList',
@@ -482,10 +393,12 @@ export default async function BlogPostPage({ params }: Props) {
                                 <label>Read Time</label>
                                 <strong>{readTime}</strong>
                             </div>
-                            {post.updated_at && (
+                            {(post.reviewed_at || post.updated_at) && (
                                 <div>
                                     <label>Last Reviewed</label>
-                                    <strong>{formatDate(post.updated_at)}</strong>
+                                    {/* Same date the BlogPosting.dateModified schema
+                                        emits — real editorial timestamps only. */}
+                                    <strong>{formatDate(post.reviewed_at || post.updated_at)}</strong>
                                 </div>
                             )}
                             <div>
@@ -568,14 +481,21 @@ export default async function BlogPostPage({ params }: Props) {
                         authors when a real Person record is wired into lib/blog.ts
                         (runbook H12). */}
                     <div className="ed-author">
-                        <div className="ed-author-avatar" aria-hidden="true">P</div>
+                        {/* Brand initial (was a leftover donor 'P' for PMHNP). */}
+                        <div className="ed-author-avatar" aria-hidden="true">{brand.name.charAt(0)}</div>
                         <div>
                             <div className="ed-author-role">Published by</div>
                             <h4 className="ed-author-name">{brand.name}</h4>
                             <p className="ed-author-bio">{brand.name} is a job board for {brand.niche.descriptor}s, operated by Akari Labs LLC. This article is editorial commentary aggregated from public sources and is not medical advice.</p>
-                            <div className="ed-author-badges">
-                                <span className="ed-author-badge">Updated {new Date().getFullYear()}</span>
-                            </div>
+                            {/* B54: the always-current "Updated {currentYear}" badge
+                                fabricated freshness on every render. Show the real
+                                editorial date instead (same source as the schema's
+                                dateModified), or nothing when none exists. */}
+                            {(post.reviewed_at || post.updated_at) && (
+                                <div className="ed-author-badges">
+                                    <span className="ed-author-badge">Updated {formatDate(post.reviewed_at || post.updated_at)}</span>
+                                </div>
+                            )}
                         </div>
                         <Link href="/about" className="ed-author-link">
                             About Us <ArrowRight size={14} />

@@ -1,6 +1,6 @@
 {
   "_curation_status": "CURATED — 36 cases, 8-10 candidates each, 1-3 expected hits per case. Cases 1-6 hand-curated by engineering. Cases 7-30 SYNTHETIC_NEEDS_REVIEW (Claude-generated coverage expansion). Cases 31-36 ADVERSARIAL_VECTOR_BLINDSPOTS — designed to force the LLM rerank to apply judgment beyond cosine similarity. Live eval on the original 30 cases hit precision@3 = 1.000 with vector baseline = 0.878 (lift 1.14× — below the 1.20× gate because vector was already saturating). The adversarial cases drop the vector baseline by attacking known cosine weaknesses: vague queries, sparse profiles where the right answer has minimal keyword density, negative-keyword traps (candidate explicitly states they do NOT do the thing), specialty transitions buried in bio text, implicit knockouts that aren't in titles, and judgment calls between three candidates with identical keyword density. These cases REQUIRE reading and understanding, not just matching.",
-  "promptVersion": "v1",
+  "promptVersion": "v2",
   "description": "Talent-search rerank golden cases. Each case = (job summary, candidate list with ≥8 entries) → expected top-K candidate indices. Eval gate: mean(rerank precision@K) must be ≥ 1.20 × mean(vector precision@K) per architecture §1.3.4.",
   "cases": [
     {

@@ -3,9 +3,7 @@ import {
   getSourcePerformance,
   getAllSourcesPerformance,
   getSourceTrends,
-  updateDailyStats,
 } from '@/lib/source-analytics';
-import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 
@@ -83,61 +81,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST /api/analytics/sources
- * Admin endpoint to update daily stats
- * 
- * Body:
- * - action: 'update-daily'
- */
-export async function POST(request: NextRequest) {
-    // Rate limiting
-    const rateLimitResult = await rateLimit(request, 'analytics-src', RATE_LIMITS.general);
-    if (rateLimitResult) return rateLimitResult;
-
-  try {
-    // Verify CRON_SECRET
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (!cronSecret) {
-      return NextResponse.json(
-        { error: 'CRON_SECRET not configured' },
-        { status: 500 }
-      );
-    }
-
-    const token = authHeader?.replace('Bearer ', '');
-    if (token !== cronSecret) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Parse request body
-    const body = await request.json();
-    const { action } = body;
-
-    if (action === 'update-daily') {
-      await updateDailyStats();
-      
-      return NextResponse.json({
-        success: true,
-        message: 'Daily stats updated successfully',
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    return NextResponse.json(
-      { error: 'Invalid action. Supported: update-daily' },
-      { status: 400 }
-    );
-  } catch (error) {
-    console.error('[API] Error in analytics POST:', error);
-    return NextResponse.json(
-      { error: 'Failed to process request' },
-      { status: 500 }
-    );
-  }
-}
+// NOTE (dead-code cleanup, B15): a POST handler used to live here whose only
+// action ('update-daily') invoked lib/source-analytics.ts:updateDailyStats().
+// No cron or UI ever called it (config/cron-schedule.ts is the full cron
+// inventory), so the aggregation it triggered never ran. Both were removed
+// 2026-07-18. The admin-gated GET above remains as internal tooling over the
+// live recordIngestionStats / ApplyClick write paths.

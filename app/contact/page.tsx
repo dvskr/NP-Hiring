@@ -114,7 +114,7 @@ export default function ContactPage() {
                         </p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/clay_hero_contact.webp`} alt={`Contact ${brand.niche.short} Jobs`} width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
+                        <Image src="/images/contact/hero.webp" alt={`Contact ${brand.niche.short} Jobs`} width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
                     </div>
                 </div>
             </section>

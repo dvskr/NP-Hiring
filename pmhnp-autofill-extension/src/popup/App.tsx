@@ -9,7 +9,7 @@ import {
     checkApplicationPage,
     triggerAutofill,
 } from '@/shared/messaging';
-import { SETTINGS_URL, SIGNUP_URL } from '@/shared/constants';
+import { BOARD_DOMAIN, BOARD_NAME, SETTINGS_URL, SIGNUP_URL } from '@/shared/constants';
 import { log, warn } from '@/shared/logger';
 
 type ViewState = 'loading' | 'logged_out' | 'logged_in' | 'on_application';
@@ -116,10 +116,10 @@ export default function App() {
             {/* Header Logo */}
             <div className="flex items-center gap-2 mb-4">
                 <div className="w-11 h-11 rounded-lg bg-white flex items-center justify-center p-0.5">
-                    <img src="/logo.png" alt="PMHNP Hiring" className="w-full h-full object-contain" />
+                    <img src="/logo.png" alt={BOARD_NAME} className="w-full h-full object-contain" />
                 </div>
                 <div>
-                    <h1 className="text-sm font-semibold text-white leading-tight">PMHNP Hiring</h1>
+                    <h1 className="text-sm font-semibold text-white leading-tight">{BOARD_NAME}</h1>
                     <p className="text-[10px] text-text-secondary leading-tight">Autofill Agent</p>
                 </div>
             </div>
@@ -128,13 +128,13 @@ export default function App() {
             {viewState === 'logged_out' && (
                 <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 py-4">
                     <p className="text-sm text-text-secondary">
-                        Autofill PMHNP job applications in seconds
+                        Autofill NP job applications in seconds
                     </p>
                     <button
                         onClick={handleLogin}
                         className="w-full py-2.5 px-4 bg-teal hover:bg-teal-hover text-navy font-semibold rounded-lg transition-all duration-200 text-sm"
                     >
-                        Login to pmhnphiring.com
+                        Login to {BOARD_DOMAIN}
                     </button>
                     <a
                         href={SIGNUP_URL}

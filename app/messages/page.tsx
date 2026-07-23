@@ -9,6 +9,7 @@ import {
     Paperclip, FileText, X, Trash2, MoreVertical, Pencil, Check,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useToast } from '@/components/ui/ToastProvider';
 
 /** Format date as actual date/time for messaging (not relative like "Just posted") */
 function formatMessageDate(date: string | Date): string {
@@ -125,8 +126,10 @@ function Avatar({ user, size = 40 }: { user: OtherUser; size?: number }) {
 
 export default function MessagesPage() {
     const router = useRouter();
+    const { toast: notifyToast } = useToast();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
     const [totalUnread, setTotalUnread] = useState(0);
 
     // Thread state
@@ -134,10 +137,12 @@ export default function MessagesPage() {
     const [convDetail, setConvDetail] = useState<ConversationDetail | null>(null);
     const [thread, setThread] = useState<ThreadMessage[]>([]);
     const [threadLoading, setThreadLoading] = useState(false);
+    const [threadError, setThreadError] = useState(false);
 
     // Reply state
     const [replyText, setReplyText] = useState('');
     const [sending, setSending] = useState(false);
+    const [sendError, setSendError] = useState<string | null>(null);
     const threadEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -172,18 +177,25 @@ export default function MessagesPage() {
         })();
     }, [router]);
 
-    // Fetch conversations
+    // Fetch conversations — a failed fetch sets loadError so the UI can
+    // distinguish "could not load" from a genuinely empty inbox.
     const fetchConversations = useCallback(async () => {
         setLoading(true);
+        setLoadError(false);
         try {
             const res = await fetch('/api/conversations');
-            if (!res.ok) { setConversations([]); return; }
+            if (!res.ok) {
+                setConversations([]);
+                setLoadError(true);
+                return;
+            }
             const data = await res.json();
             setConversations(data.conversations || []);
             setTotalUnread(data.totalUnread || 0);
         } catch (err) {
             console.error('Error fetching conversations:', err);
             setConversations([]);
+            setLoadError(true);
         } finally {
             setLoading(false);
         }
@@ -197,10 +209,16 @@ export default function MessagesPage() {
     const openConversation = useCallback(async (convId: string) => {
         setActiveConvId(convId);
         setThreadLoading(true);
+        setThreadError(false);
         setReplyText('');
+        setSendError(null);
         try {
             const res = await fetch(`/api/conversations/${convId}`);
-            if (!res.ok) return;
+            if (!res.ok) {
+                setThreadError(true);
+                notifyToast('Could not open conversation. Please try again.', 'error');
+                return;
+            }
             const data = await res.json();
             setConvDetail(data.conversation);
             setThread(data.messages || []);
@@ -215,10 +233,12 @@ export default function MessagesPage() {
             });
         } catch (err) {
             console.error('Error fetching thread:', err);
+            setThreadError(true);
+            notifyToast('Could not open conversation. Please try again.', 'error');
         } finally {
             setThreadLoading(false);
         }
-    }, [conversations]);
+    }, [conversations, notifyToast]);
 
     useEffect(() => {
         if (threadEndRef.current) {
@@ -237,11 +257,11 @@ export default function MessagesPage() {
 
         const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
         if (!allowed.includes(file.type)) {
-            alert('Only PDF, DOC, and DOCX files are allowed.');
+            notifyToast('Only PDF, DOC, and DOCX files are allowed.', 'error');
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
-            alert('File must be under 5MB.');
+            notifyToast('File must be under 5MB.', 'error');
             return;
         }
 
@@ -252,23 +272,25 @@ export default function MessagesPage() {
             const res = await fetch('/api/upload/message-attachment', { method: 'POST', body: formData });
             if (!res.ok) {
                 const data = await res.json();
-                alert(data.error || 'Upload failed');
+                notifyToast(data.error || 'Upload failed', 'error');
                 return;
             }
             const data = await res.json();
             setPendingAttachment({ path: data.path, url: data.url, name: data.name });
         } catch (err) {
             console.error('File upload error:', err);
-            alert('Upload failed. Please try again.');
+            notifyToast('Upload failed. Please try again.', 'error');
         } finally {
             setUploading(false);
         }
     };
 
-    // Send reply
+    // Send reply — on failure the composer text and attachment are kept so the
+    // user can retry from the inline error banner without retyping.
     const handleSendReply = async () => {
         if ((!replyText.trim() && !pendingAttachment) || !activeConvId || sending) return;
         setSending(true);
+        setSendError(null);
         try {
             const payload: Record<string, string> = {};
             if (replyText.trim()) payload.body = replyText.trim();
@@ -283,11 +305,12 @@ export default function MessagesPage() {
                 body: JSON.stringify(payload),
             });
             if (!res.ok) {
-                const data = await res.json();
-                if (data.awaitingReply) {
+                let data: { awaitingReply?: boolean; error?: string } | null = null;
+                try { data = await res.json(); } catch { /* non-JSON error body */ }
+                if (data?.awaitingReply) {
                     showToast('⏳ Please wait for the employer to respond before sending another message');
                 } else {
-                    alert(data.error || 'Failed to send');
+                    setSendError(data?.error || 'Failed to send');
                 }
                 return;
             }
@@ -307,6 +330,7 @@ export default function MessagesPage() {
             ));
         } catch (err) {
             console.error('Error sending reply:', err);
+            setSendError('Failed to send');
         } finally {
             setSending(false);
         }
@@ -333,7 +357,7 @@ export default function MessagesPage() {
             const res = await fetch(`/api/conversations/${deleteModal.convId}/messages/${deleteModal.id}`, { method: 'DELETE' });
             if (!res.ok) {
                 const data = await res.json();
-                alert(data.error || 'Failed to delete');
+                notifyToast(data.error || 'Failed to delete', 'error');
                 return;
             }
             const data = await res.json();
@@ -356,7 +380,7 @@ export default function MessagesPage() {
             const res = await fetch(`/api/conversations/${deleteModal.id}`, { method: 'DELETE' });
             if (!res.ok) {
                 const data = await res.json();
-                alert(data.error || 'Failed to delete');
+                notifyToast(data.error || 'Failed to delete', 'error');
                 return;
             }
             // Remove from list
@@ -387,7 +411,7 @@ export default function MessagesPage() {
             });
             if (!res.ok) {
                 const data = await res.json();
-                alert(data.error || 'Failed to edit');
+                notifyToast(data.error || 'Failed to edit', 'error');
                 return;
             }
             const data = await res.json();
@@ -433,6 +457,28 @@ export default function MessagesPage() {
                 <div style={{ display: 'flex', justifyContent: 'center', padding: '64px 0' }}>
                     <Loader2 size={32} className="animate-spin" style={{ color: '#F472B6' }} />
                 </div>
+            ) : loadError ? (
+                <div role="alert" style={{
+                    textAlign: 'center', padding: '64px 24px',
+                    backgroundColor: '#F7FBF8', border: borderVal, borderRadius: '20px',
+                    boxShadow: '6px 6px 16px rgba(0,0,0,0.05), -3px -3px 10px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.6)',
+                }}>
+                    <p style={{ color: '#EF4444', fontSize: '16px', marginBottom: '12px' }}>
+                        Couldn&apos;t load your messages. Please try again.
+                    </p>
+                    <button
+                        onClick={fetchConversations}
+                        style={{
+                            padding: '12px 28px', borderRadius: '14px',
+                            background: 'linear-gradient(145deg, #9D174D, #BE185D)',
+                            color: '#fff', fontWeight: 600, fontSize: '14px',
+                            border: 'none', cursor: 'pointer',
+                            boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 1px rgba(255,255,255,0.2)',
+                        }}
+                    >
+                        Try Again
+                    </button>
+                </div>
             ) : conversations.length === 0 ? (
                 <div style={{
                     textAlign: 'center', padding: '64px 24px',
@@ -465,11 +511,22 @@ export default function MessagesPage() {
                     }} className="messages-list-panel hide-scrollbar">
                         {conversations.map(conv => (
                             <div key={conv.id} style={{ position: 'relative' }}
-                                onMouseEnter={(e) => { const btn = e.currentTarget.querySelector('.conv-menu-btn') as HTMLElement; if (btn) btn.style.opacity = '1'; }}
-                                onMouseLeave={(e) => { const btn = e.currentTarget.querySelector('.conv-menu-btn') as HTMLElement; if (btn) btn.style.opacity = '0'; setConvMenuId(null); }}
+                                onMouseLeave={() => setConvMenuId(null)}
                             >
                                 <div
+                                    role="button"
+                                    tabIndex={0}
+                                    className="conv-row"
                                     onClick={() => openConversation(conv.id)}
+                                    onKeyDown={(e) => {
+                                        // Only act on keys pressed on the row itself, not on
+                                        // the nested conversation-options button.
+                                        if (e.target !== e.currentTarget) return;
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            openConversation(conv.id);
+                                        }
+                                    }}
                                     style={{
                                         display: 'flex', alignItems: 'flex-start', gap: '12px',
                                         width: '100%', textAlign: 'left',
@@ -505,6 +562,9 @@ export default function MessagesPage() {
                                                     {formatMessageDate(conv.lastMessageAt)}
                                                 </span>
                                                 <button
+                                                    aria-label="Conversation options"
+                                                    aria-haspopup="true"
+                                                    aria-expanded={convMenuId === conv.id}
                                                     onClick={(e) => { e.stopPropagation(); setConvMenuId(convMenuId === conv.id ? null : conv.id); }}
                                                     style={{
                                                         background: 'none', border: 'none',
@@ -619,6 +679,39 @@ export default function MessagesPage() {
                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                 <Loader2 size={28} className="animate-spin" style={{ color: '#F472B6' }} />
                             </div>
+                        ) : threadError ? (
+                            <div role="alert" style={{
+                                display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', justifyContent: 'center',
+                                height: '100%', padding: '40px', gap: '12px',
+                                textAlign: 'center',
+                            }}>
+                                <p style={{ color: '#EF4444', fontSize: '15px', margin: 0 }}>
+                                    Couldn&apos;t open this conversation.
+                                </p>
+                                <button
+                                    onClick={() => { if (activeConvId) openConversation(activeConvId); }}
+                                    style={{
+                                        padding: '10px 24px', borderRadius: '14px',
+                                        background: 'linear-gradient(145deg, #9D174D, #BE185D)',
+                                        color: '#fff', fontWeight: 600, fontSize: '14px',
+                                        border: 'none', cursor: 'pointer',
+                                        boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 1px rgba(255,255,255,0.2)',
+                                    }}
+                                >
+                                    Try Again
+                                </button>
+                                <button
+                                    onClick={() => { setActiveConvId(null); setThreadError(false); setConvDetail(null); setThread([]); }}
+                                    style={{
+                                        background: 'none', border: 'none', cursor: 'pointer',
+                                        color: 'var(--text-secondary)', fontSize: '13px',
+                                        textDecoration: 'underline', padding: '4px',
+                                    }}
+                                >
+                                    Back to conversations
+                                </button>
+                            </div>
                         ) : convDetail ? (
                             <>
                                 {/* Thread Header — LinkedIn style: name, title/company */}
@@ -630,6 +723,7 @@ export default function MessagesPage() {
                                     flexShrink: 0,
                                 }}>
                                     <button
+                                        aria-label="Back to conversations"
                                         onClick={() => { setActiveConvId(null); setConvDetail(null); setThread([]); }}
                                         style={{
                                             background: 'none', border: 'none', cursor: 'pointer',
@@ -725,18 +819,11 @@ export default function MessagesPage() {
                                         return (
                                             <div
                                                 key={msg.id}
+                                                className="msg-row"
                                                 style={{
                                                     display: 'flex',
                                                     flexDirection: 'column',
                                                     alignItems: msg.isFromMe ? 'flex-end' : 'flex-start',
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    const btns = e.currentTarget.querySelectorAll('.msg-action-btn') as NodeListOf<HTMLElement>;
-                                                    btns.forEach(btn => btn.style.opacity = '1');
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    const btns = e.currentTarget.querySelectorAll('.msg-action-btn') as NodeListOf<HTMLElement>;
-                                                    btns.forEach(btn => btn.style.opacity = '0');
                                                 }}
                                             >
                                                 <div style={{
@@ -873,7 +960,6 @@ export default function MessagesPage() {
                                                                     background: 'none', border: 'none',
                                                                     cursor: 'pointer', padding: '2px 4px',
                                                                     color: 'var(--text-tertiary)',
-                                                                    opacity: 0, transition: 'opacity 0.15s',
                                                                     fontSize: '11px',
                                                                     display: 'flex', alignItems: 'center', gap: '3px',
                                                                 }}
@@ -893,7 +979,6 @@ export default function MessagesPage() {
                                                                 background: 'none', border: 'none',
                                                                 cursor: 'pointer', padding: '2px 4px',
                                                                 color: 'var(--text-tertiary)',
-                                                                opacity: 0, transition: 'opacity 0.15s',
                                                                 fontSize: '11px',
                                                                 display: 'flex', alignItems: 'center', gap: '3px',
                                                             }}
@@ -963,10 +1048,40 @@ export default function MessagesPage() {
                                                 {pendingAttachment.name}
                                             </span>
                                             <button
+                                                aria-label="Remove attachment"
                                                 onClick={() => setPendingAttachment(null)}
                                                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: 'var(--text-tertiary)', flexShrink: 0 }}
                                             >
                                                 <X size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Send failure banner — composer text is preserved for retry */}
+                                    {sendError && (
+                                        <div role="alert" style={{
+                                            display: 'flex', alignItems: 'center', gap: '8px',
+                                            padding: '8px 12px', marginBottom: '8px',
+                                            borderRadius: '8px',
+                                            backgroundColor: 'rgba(239,68,68,0.08)',
+                                            border: '1px solid rgba(239,68,68,0.25)',
+                                            fontSize: '13px', color: '#EF4444',
+                                        }}>
+                                            <span style={{ flex: 1 }}>{sendError} — your message was not delivered.</span>
+                                            <button
+                                                onClick={handleSendReply}
+                                                disabled={sending}
+                                                style={{
+                                                    background: 'none',
+                                                    border: '1px solid rgba(239,68,68,0.4)',
+                                                    borderRadius: '6px', padding: '4px 12px',
+                                                    fontSize: '12px', fontWeight: 600,
+                                                    color: '#EF4444',
+                                                    cursor: sending ? 'wait' : 'pointer',
+                                                    flexShrink: 0,
+                                                }}
+                                            >
+                                                Retry
                                             </button>
                                         </div>
                                     )}
@@ -1029,6 +1144,7 @@ export default function MessagesPage() {
                                             }}
                                         />
                                         <button
+                                            aria-label="Send message"
                                             onClick={handleSendReply}
                                             disabled={(!replyText.trim() && !pendingAttachment) || sending}
                                             style={{
@@ -1221,6 +1337,19 @@ export default function MessagesPage() {
                 }
                 .hide-scrollbar::-webkit-scrollbar {
                     display: none;
+                }
+                .conv-row:focus-visible {
+                    outline: 2px solid #BE185D;
+                    outline-offset: -2px;
+                }
+                .msg-action-btn {
+                    opacity: 0;
+                    transition: opacity 0.15s;
+                }
+                .msg-row:hover .msg-action-btn,
+                .msg-row:focus-within .msg-action-btn,
+                .msg-action-btn:focus-visible {
+                    opacity: 1;
                 }
             `}</style>
         </div>

@@ -18,6 +18,7 @@
  */
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { MIN_JOBS_FOR_CATEGORY_CITY } from '@/lib/pseo/render-gate';
 import { prisma } from '@/lib/prisma';
 import { getCityBySlug } from '@/lib/pseo/city-data/cities';
 import { CODE_TO_STATE } from '@/lib/pseo/setting-state-config';
@@ -77,7 +78,9 @@ export default async function CategoryLocationsExplore({
             where: {
                 type: 'category-city',
                 categorySlug,
-                totalJobs: { gte: 1 },
+                // Category×city pages 404 below the render gate; setting-state
+                // pages (above) render at 1-2 jobs, so gte: 1 stays correct there.
+                totalJobs: { gte: MIN_JOBS_FOR_CATEGORY_CITY },
             },
             select: { locationSlug: true, totalJobs: true },
             orderBy: { totalJobs: 'desc' },

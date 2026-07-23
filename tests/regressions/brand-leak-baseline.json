@@ -1,6 +1,4 @@
 {
-  "app/api/auth/send-confirmation/route.ts": 3,
-  "app/api/og/route.tsx": 7,
   "app/blog/[slug]/page.tsx": 3,
   "app/contact/layout.tsx": 1,
   "app/contact/page.tsx": 1,
@@ -9,12 +7,7 @@
   "app/salary-guide/page.tsx": 2,
   "app/terms/page.tsx": 3,
   "lib/email-templates-v2.ts": 1,
-  "lib/image-seo.ts": 15,
-  "lib/inngest/functions/recommendation-digest.ts": 1,
   "lib/invoice-generator.tsx": 1,
-  "lib/video-seo.ts": 13,
-  "middleware.ts": 6,
   "public/humans.txt": 1,
-  "public/llms-full.txt": 1,
-  "public/push-sw.js": 2
+  "public/llms-full.txt": 1
 }

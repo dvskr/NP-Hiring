@@ -27,6 +27,7 @@ vi.mock('@/lib/prisma', () => {
                 findUnique: vi.fn(),
                 create: vi.fn(),
                 update: vi.fn(),
+                deleteMany: vi.fn(),
             },
             jobAlert: {
                 findMany: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock('@/lib/prisma', () => {
                 update: vi.fn(),
                 updateMany: vi.fn(),
                 delete: vi.fn(),
+                deleteMany: vi.fn(),
             },
             employerJob: {
                 findFirst: vi.fn(),
@@ -161,7 +163,26 @@ vi.mock('@/lib/prisma', () => {
                 groupBy: vi.fn(),
                 deleteMany: vi.fn(),
             },
+            savedJob: {
+                findMany: vi.fn(),
+                upsert: vi.fn(),
+                deleteMany: vi.fn(),
+            },
+            pushSubscription: {
+                findMany: vi.fn(),
+                upsert: vi.fn(),
+                deleteMany: vi.fn(),
+            },
+            candidateTag: {
+                findMany: vi.fn(),
+                create: vi.fn(),
+                count: vi.fn(),
+                deleteMany: vi.fn(),
+            },
             $queryRaw: vi.fn(),
+            // Batch form only (array of PrismaPromises). Test files that need
+            // the interactive callback form define their own module mock.
+            $transaction: vi.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
         },
     };
 });

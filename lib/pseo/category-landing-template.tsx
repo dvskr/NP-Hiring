@@ -12,11 +12,12 @@
  * query-correct until that content ships.
  *
  * QUERY NOTE: the legacy keyword registry (lib/filters.ts CATEGORY_FILTERS)
- * and the ingest classifier (lib/pseo/category-tagger.ts) still carry the
- * pre-fork PMHNP tag set. For slugs with no keyword entry we gate on the
+ * still carries the donor board's keyword set, while the ingest classifier
+ * (lib/pseo/category-tagger.ts) now emits the 42-slug NP taxonomy (2026-07
+ * classifier migration). For slugs with no keyword entry we gate on the
  * precomputed `categoryTags` column instead of letting
  * buildCategoryWhereClause degrade to "all published jobs" — pages render
- * an honest empty state until the classifier is migrated to the NP taxonomy.
+ * an honest empty state until those rows are tagged.
  */
 import { Prisma } from '@prisma/client';
 import { Metadata } from 'next';

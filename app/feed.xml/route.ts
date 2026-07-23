@@ -1,6 +1,7 @@
 import { brand } from '@/config/brand';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { slugify } from '@/lib/utils';
 
 const BASE_URL = brand.baseUrl;
 
@@ -17,6 +18,7 @@ export async function GET() {
       select: {
         id: true,
         title: true,
+        slug: true,
         employer: true,
         location: true,
         city: true,
@@ -37,7 +39,11 @@ export async function GET() {
       : new Date().toUTCString();
 
     const items = jobs.map(job => {
-      const slug = `${job.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}-${job.id}`;
+      // MUST match the job page's canonical exactly (app/jobs/[slug]/
+      // page.tsx: `job.slug || slugify(job.title, job.id)`). A divergent
+      // inline slug here previously published feed URLs whose rel=canonical
+      // pointed elsewhere for titles with apostrophes/slashes/parens.
+      const slug = job.slug || slugify(job.title, job.id);
       const salary = job.normalizedMinSalary && job.normalizedMaxSalary
         ? ` | $${Math.round(Number(job.normalizedMinSalary) / 1000)}K-$${Math.round(Number(job.normalizedMaxSalary) / 1000)}K`
         : '';

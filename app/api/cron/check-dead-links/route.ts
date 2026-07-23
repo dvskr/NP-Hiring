@@ -6,6 +6,7 @@ import { inngest } from '@/lib/inngest/client';
 import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { withCronTracking } from '@/lib/cron/track';
+import { assessApplyLinkSafety } from './url-guard';
 
 export const maxDuration = 300; // 5 minutes — checks up to 1500 links with 250s time budget
 
@@ -255,6 +256,34 @@ async function checkOne(job: JobToCheck, log = logger): Promise<HealthDecision> 
             },
         };
     }
+    // B102: SSRF guard — never probe non-https, private-network, or
+    // IP-literal targets sourced from externally-controlled applyLink data.
+    // Conservative outcome: inconclusive (alive: true), so a guard rejection
+    // can never unpublish a job by itself; it only withholds the probe.
+    const verdict = assessApplyLinkSafety(job.applyLink);
+    if (!verdict.safe) {
+        log.warn('Apply link blocked by SSRF guard', {
+            jobId: job.id,
+            source: job.sourceProvider ?? 'unknown',
+            reason: verdict.reason,
+        });
+        return {
+            alive: true,
+            reason: 'inconclusive_other',
+            evidence: {
+                finalStatus: null,
+                finalUrl: '',
+                redirectHops: 0,
+                softMatch: null,
+                elapsedMs: 0,
+                errorKind: null,
+                errorMessage: `ssrf_guard_blocked:${verdict.reason}`,
+                checkerVersion: 'n/a',
+                sourceProbe: null,
+            },
+        };
+    }
+
     const decision = await checkJobHealth(job.applyLink, job.sourceProvider, {
         externalId: job.externalId,
     });

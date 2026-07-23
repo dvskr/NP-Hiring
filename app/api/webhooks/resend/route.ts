@@ -5,6 +5,30 @@ import { Webhook } from 'svix';
 
 const WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET || '';
 
+// B75: Svix dedupe (below) blocks replays of the SAME event, but distinct
+// events can still arrive out of order (e.g. `email.delivered` after
+// `email.opened`, or an `email.opened` after `email.bounced`). Blindly
+// writing each event's status would downgrade the engagement funnel, so
+// every EmailSend status write is guarded by this precedence ladder: an
+// incoming status only overwrites statuses strictly below it.
+// 'sent' is the sendAndLog default; 'failed' never has a resendId so the
+// webhook can't match those rows anyway.
+const STATUS_PRECEDENCE: Record<string, number> = {
+  sent: 0,
+  delivered: 1,
+  opened: 2,
+  clicked: 3,
+  bounced: 4,
+  complained: 5,
+};
+
+/** Statuses an incoming status is allowed to overwrite (strictly lower rank). */
+function overwritableStatuses(incoming: string): string[] {
+  const rank = STATUS_PRECEDENCE[incoming];
+  if (rank === undefined) return [];
+  return Object.keys(STATUS_PRECEDENCE).filter(s => STATUS_PRECEDENCE[s] < rank);
+}
+
 interface ResendWebhookPayload {
   type: string;
   data: {
@@ -79,9 +103,13 @@ export async function POST(request: NextRequest) {
           'email.opened': 'opened',
           'email.clicked': 'clicked',
         };
+        const nextStatus = statusMap[eventType];
+        // B75: only upgrade — an out-of-order `delivered` must not clobber
+        // `opened`/`clicked`, and no engagement event may un-suppress a row
+        // already marked bounced/complained.
         await prisma.emailSend.updateMany({
-          where: { resendId },
-          data: { status: statusMap[eventType] },
+          where: { resendId, status: { in: overwritableStatuses(nextStatus) } },
+          data: { status: nextStatus },
         });
       }
       return NextResponse.json({ received: true, action: 'tracked', event: eventType });
@@ -147,10 +175,12 @@ export async function POST(request: NextRequest) {
     // Update the EmailSend log status ONCE per webhook (not per recipient).
     // Resend sends one webhook per email send so this is keyed by resendId,
     // not by recipient — avoids redundant writes if a multi-recipient webhook ever ships.
+    // B75: precedence-guarded so a late `bounced` can't downgrade `complained`.
     if (resendId) {
+      const terminalStatus = suppressionReason === 'bounce' ? 'bounced' : 'complained';
       await prisma.emailSend.updateMany({
-        where: { resendId },
-        data: { status: suppressionReason === 'bounce' ? 'bounced' : 'complained' },
+        where: { resendId, status: { in: overwritableStatuses(terminalStatus) } },
+        data: { status: terminalStatus },
       });
     }
 

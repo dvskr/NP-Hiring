@@ -4,7 +4,14 @@ export const IS_DEV = (() => {
     catch { return true; }
 })();
 
-export const API_BASE_URL = IS_DEV ? 'http://localhost:3000' : 'https://pmhnphiring.com';
+// ─── Board identity ───
+// Mirrors config/brand.ts in the main app (brand.domain / brand.baseUrl).
+// The extension builds standalone and cannot import the app's config —
+// keep these values in lockstep with config/brand.ts.
+export const BOARD_NAME = 'NP Hiring';
+export const BOARD_DOMAIN = 'nphiring.com';
+
+export const API_BASE_URL = IS_DEV ? 'http://localhost:3000' : `https://${BOARD_DOMAIN}`;
 export const PROFILE_EXPORT_ENDPOINT = '/api/profile/export';
 export const AUTH_EXTENSION_TOKEN_ENDPOINT = '/api/auth/extension-token';
 export const AI_GENERATE_ENDPOINT = '/api/autofill/generate-answer';
@@ -29,6 +36,8 @@ export const EXTENSION_VERSION = '1.0.0';
 export const LOGIN_URL = `${API_BASE_URL}/login?source=extension`;
 export const SIGNUP_URL = `${API_BASE_URL}/signup`;
 export const SETTINGS_URL = `${API_BASE_URL}/settings`;
+// The board has no /support route — /contact is the support surface.
+export const SUPPORT_URL = `${API_BASE_URL}/contact`;
 export const PRICING_URL = `${API_BASE_URL}/pricing`;
 export const DASHBOARD_URL = `${API_BASE_URL}/dashboard`;
 export const EXTENSION_CONNECTED_PATH = '/dashboard';

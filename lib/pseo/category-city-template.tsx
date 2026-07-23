@@ -8,7 +8,7 @@
  * - Local market demand score
  * - Cost-of-living adjusted salary
  * - Healthcare landscape for the area
- * - Mental health provider shortage indicators
+ * - Provider shortage indicators
  * - Community profile
  * - Nearby city cross-links
  * - State licensure quick reference
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { cache } from 'react';
 import { withTagFallback, type CategoryTag } from './category-tagger';
-import { shouldRenderCategoryCity } from './render-gate';
+import { shouldRenderCategoryCity, MIN_JOBS_FOR_CATEGORY_CITY } from './render-gate';
 import { JOB_LISTING_OMIT } from './job-listing-omit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { brand } from '@/config/brand';
@@ -44,6 +44,13 @@ import {
 } from '@/lib/state-practice-authority';
 import { PseoPageViewTracker } from '@/components/analytics/ViewTrackers';
 import { buildCityFacts, buildTaxonomyCityNarrative } from './city-narrative';
+import { STATE_ELIGIBLE_CATEGORY_SLUGS } from './taxonomy-registry';
+
+// Categories with a real /jobs/<category>/[state] route. City-only categories
+// (the other 21) 410 at the middleware for state-shaped URLs, so every
+// state-level link/breadcrumb below must fall back to the /jobs/state/{slug}
+// hub for them instead of emitting a guaranteed-410 URL.
+const STATE_ELIGIBLE_SET = new Set<string>(STATE_ELIGIBLE_CATEGORY_SLUGS);
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -67,18 +74,17 @@ export interface CategoryConfig {
 }
 
 // Specialty configs (supplement the setting configs from setting-state-config.ts)
-// NP taxonomy migration (2026-07): the five PMHNP-only specialty configs
+// NP taxonomy migration (2026-07): the five donor-niche-only specialty configs
 // were removed — their slugs are no longer in taxonomy-registry.ts.
-// TODO(content): narrative fields (heroSubtitle/benefits/tips/keywords) in
-// the kept configs below are still PMHNP-era psych-specific copy — pending
-// all-NP editorial rewrite (docs/pilot-fork-runbook.md §3).
+// Narrative fields in the kept configs below were rewritten for the all-NP
+// board (2026-07); salary bands align to the config/niche/salary.ts anchors.
 export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   'new-grad': {
     slug: 'new-grad',
     label: 'New Grad',
     fullLabel: `New Graduate ${brand.niche.short}`,
     heroSubtitle: 'Entry-level & new graduate positions',
-    salaryRange: '$115K-160K',
+    salaryRange: '$95K-140K',
     keywords: ['new grad np', 'entry level np', 'new graduate np', 'np fellowship'],
     faqCategory: 'new-grad',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -105,7 +111,7 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Per Diem',
     fullLabel: `Per Diem ${brand.niche.short}`,
     heroSubtitle: 'PRN & flexible schedule positions',
-    salaryRange: '$80-150/hr',
+    salaryRange: '$60-110/hr',
     keywords: ['per diem np', 'PRN np', 'part time np', 'flexible np'],
     faqCategory: 'per-diem',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -116,7 +122,7 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Maximum Flexibility', description: 'Set your own schedule — work as many or as few shifts as you want, when you want.', iconName: 'Activity' },
-      { title: 'Higher Hourly Rate', description: 'Per diem roles pay $80-$150+/hr, often 20-40% more than the hourly equivalent of full-time work.', iconName: 'DollarSign' },
+      { title: 'Higher Hourly Rate', description: 'Per diem roles pay $60-$110+/hr — a premium over the hourly equivalent of salaried full-time work.', iconName: 'DollarSign' },
       { title: 'Income Supplement', description: 'Perfect for supplementing a full-time position or private practice while maintaining clinical variety.', iconName: 'TrendingUp' },
     ],
     tips: [
@@ -130,15 +136,15 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
 };
 
 // Job Type configs
-// TODO(content): narrative fields (heroSubtitle/benefits/tips/keywords) below
-// are still PMHNP-era psych-specific copy — pending all-NP editorial rewrite.
+// Narrative copy below was rewritten for the all-NP board (2026-07); salary
+// bands align to the config/niche/salary.ts anchors.
 export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   'full-time': {
     slug: 'full-time',
     label: 'Full-Time',
     fullLabel: `Full-Time ${brand.niche.short}`,
     heroSubtitle: `Permanent full-time ${brand.niche.short} positions with benefits`,
-    salaryRange: '$120K-190K',
+    salaryRange: '$110K-170K',
     keywords: ['full time np', 'permanent np', 'salaried np'],
     faqCategory: 'remote', // Use remote FAQ as closest match
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -165,7 +171,7 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Part-Time',
     fullLabel: `Part-Time ${brand.niche.short}`,
     heroSubtitle: `Flexible part-time ${brand.niche.short} positions`,
-    salaryRange: '$55-95/hr',
+    salaryRange: '$60-100/hr',
     keywords: ['part time np', 'half time np', 'flexible np'],
     faqCategory: 'per-diem',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -192,7 +198,7 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Contract',
     fullLabel: `Contract ${brand.niche.short}`,
     heroSubtitle: `Contract & locum tenens ${brand.niche.short} assignments`,
-    salaryRange: '$85-160/hr',
+    salaryRange: '$70-150/hr',
     keywords: ['contract np', 'locum tenens np', '1099 np', 'temp np'],
     faqCategory: 'travel',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -202,7 +208,7 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('contract'),
     }),
     benefits: [
-      { title: 'Premium Pay', description: 'Contract rates are typically 30-60% higher than permanent positions — $85-$160+/hour.', iconName: 'DollarSign' },
+      { title: 'Premium Pay', description: 'Contract rates are typically 20-50% higher than permanent positions — $70-$150+/hour.', iconName: 'DollarSign' },
       { title: 'Tax Advantages', description: '1099 contractors can deduct travel, housing, CME, malpractice insurance, and home office expenses.', iconName: 'TrendingUp' },
       { title: 'Geographic Freedom', description: 'Try different cities, practice settings, and patient populations before committing long-term.', iconName: 'MapPin' },
     ],
@@ -217,15 +223,15 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
 };
 
 // Experience Level configs
-// TODO(content): narrative fields (heroSubtitle/benefits/tips/keywords) below
-// are still PMHNP-era psych-specific copy — pending all-NP editorial rewrite.
+// Narrative copy below was rewritten for the all-NP board (2026-07); salary
+// bands align to the config/niche/salary.ts anchors.
 export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
   'entry-level': {
     slug: 'entry-level',
     label: 'Entry-Level',
     fullLabel: `Entry-Level ${brand.niche.short}`,
     heroSubtitle: `New graduate & early-career ${brand.niche.short} positions with mentorship`,
-    salaryRange: '$105K-145K',
+    salaryRange: '$95K-140K',
     keywords: ['entry level np', 'new grad np', 'junior np', '0-2 years np'],
     faqCategory: 'new-grad',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -236,7 +242,7 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Structured Mentorship', description: `Most entry-level positions include 6-12 months of supervised practice with experienced physicians or senior ${brand.niche.short}s.`, iconName: 'Users' },
-      { title: 'Competitive Starting Pay', description: `${brand.niche.short} shortage means entry-level pay starts at $105K-$145K — strong compensation right out of school.`, iconName: 'DollarSign' },
+      { title: 'Competitive Starting Pay', description: `${brand.niche.short} shortage means entry-level pay starts at $95K-$140K — strong compensation right out of school.`, iconName: 'DollarSign' },
       { title: 'Career Launchpad', description: 'Build your clinical foundation with manageable caseloads (8-12 patients/day) before scaling up.', iconName: 'TrendingUp' },
     ],
     tips: [
@@ -252,7 +258,7 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Mid-Career',
     fullLabel: `Mid-Career ${brand.niche.short}`,
     heroSubtitle: `Experienced ${brand.niche.short} positions for 3-7 years of practice`,
-    salaryRange: '$135K-175K',
+    salaryRange: '$120K-160K',
     keywords: ['experienced np', 'mid career np', '3-5 years np', 'senior np positions'],
     faqCategory: 'remote',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -262,14 +268,14 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('mid-career'),
     }),
     benefits: [
-      { title: 'Higher Compensation', description: `Mid-career ${brand.niche.short}s earn $135K-$175K with premium benefits, CME budgets, and leadership bonuses.`, iconName: 'DollarSign' },
+      { title: 'Higher Compensation', description: `Mid-career ${brand.niche.short}s earn $120K-$160K with premium benefits, CME budgets, and leadership bonuses.`, iconName: 'DollarSign' },
       { title: 'Autonomy & Flexibility', description: 'With proven experience, choose between independent practice, hybrid schedules, or specialized roles.', iconName: 'Activity' },
-      { title: 'Specialization Options', description: 'Pivot into addiction medicine, child/adolescent, forensic psych, or private practice consulting.', iconName: 'Shield' },
+      { title: 'Specialization Options', description: 'Pivot into urgent care, dermatology, cardiology, palliative care, or private practice consulting.', iconName: 'Shield' },
     ],
     tips: [
-      'Leverage experience for higher base salary (benchmark $150K+)',
+      'Leverage experience for higher base salary (benchmark $140K+)',
       'Negotiate productivity bonuses or profit-sharing',
-      'Consider adding niche certifications (CARN, BCBA, forensic)',
+      'Consider adding niche certifications (ENP, GS-C, wound care)',
       'Explore leadership tracks (clinical director, program manager)',
       'Build your referral network for future private practice',
     ],
@@ -279,7 +285,7 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Senior',
     fullLabel: `Senior ${brand.niche.short}`,
     heroSubtitle: 'Leadership & advanced practice positions for 7+ years experience',
-    salaryRange: '$160K-220K+',
+    salaryRange: '$150K-200K+',
     keywords: ['senior np', 'lead np', 'director np', 'advanced practice nurse practitioner'],
     faqCategory: 'remote',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -289,12 +295,12 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('senior'),
     }),
     benefits: [
-      { title: 'Top-Tier Compensation', description: `Senior ${brand.niche.short}s earn $160K-$220K+ with equity, executive benefits, and performance bonuses.`, iconName: 'DollarSign' },
+      { title: 'Top-Tier Compensation', description: `Senior ${brand.niche.short}s earn $150K-$200K+ with equity, executive benefits, and performance bonuses.`, iconName: 'DollarSign' },
       { title: 'Leadership Impact', description: `Shape clinical programs, mentor junior providers, and influence organizational clinical strategy.`, iconName: 'Users' },
       { title: 'Private Practice Ready', description: 'Your reputation and network support a thriving independent or group practice transition.', iconName: 'TrendingUp' },
     ],
     tips: [
-      'Target clinical director or VP-level roles ($180K-$220K+)',
+      'Target clinical director or VP-level roles ($170K-$200K+)',
       'Negotiate equity or partnership opportunities',
       'Consider building your own private practice or telehealth group',
       'Pursue board certification in subspecialties for premium positioning',
@@ -304,15 +310,15 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
 };
 
 // Employer Type configs
-// TODO(content): narrative fields (heroSubtitle/benefits/tips/keywords) below
-// are still PMHNP-era psych-specific copy — pending all-NP editorial rewrite.
+// Narrative copy below was rewritten for the all-NP board (2026-07); salary
+// bands align to the config/niche/salary.ts anchors.
 export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   hospital: {
     slug: 'hospital',
     label: 'Hospital',
     fullLabel: `Hospital ${brand.niche.short}`,
     heroSubtitle: `Hospital-based ${brand.niche.short} positions with full benefits`,
-    salaryRange: '$125K-180K',
+    salaryRange: '$115K-180K',
     keywords: ['hospital np', 'inpatient hospital np', 'academic medical center np'],
     faqCategory: 'inpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -339,7 +345,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Private Practice',
     fullLabel: `Private Practice ${brand.niche.short}`,
     heroSubtitle: `Independent & group practice ${brand.niche.short} opportunities`,
-    salaryRange: '$140K-250K+',
+    salaryRange: '$130K-200K+',
     keywords: ['private practice np', 'independent np', 'group practice np', 'own practice np'],
     faqCategory: 'outpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -349,15 +355,15 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('private-practice'),
     }),
     benefits: [
-      { title: 'Highest Earning Potential', description: `Private practice ${brand.niche.short}s can earn $200K-$250K+ with autonomy over fee schedules and patient volume.`, iconName: 'DollarSign' },
+      { title: 'Highest Earning Potential', description: `Practice owners and partners can earn $180K+ with autonomy over fee schedules, payer mix, and patient volume.`, iconName: 'DollarSign' },
       { title: 'Schedule Control', description: 'Set your own hours, choose your patient mix, and build a practice that fits your lifestyle.', iconName: 'Activity' },
-      { title: 'Clinical Autonomy', description: 'Full control over treatment plans, medication management, and therapy integration without corporate protocols.', iconName: 'Shield' },
+      { title: 'Clinical Autonomy', description: 'Full control over treatment plans, visit cadence, and care model without corporate protocols.', iconName: 'Shield' },
     ],
     tips: [
       'Full practice authority states are ideal for independent practice',
       'Start by joining an established group before going solo',
-      'Build a panel of 300-500 patients for sustainable income',
-      'Invest in EHR (SimplePractice, TherapyNotes) and billing software',
+      'Build a sustainable patient panel sized to your specialty and visit model',
+      'Invest in an EHR and billing platform suited to your specialty',
       'Get credentialed with major insurers before launching',
     ],
   },
@@ -418,15 +424,15 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
 };
 
 // Population Specialty configs
-// TODO(content): narrative fields (heroSubtitle/benefits/tips/keywords) below
-// are still PMHNP-era psych-specific copy — pending all-NP editorial rewrite.
+// Narrative copy below was rewritten for the all-NP board (2026-07); salary
+// bands align to the config/niche/salary.ts anchors.
 export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   geriatric: {
     slug: 'geriatric',
     label: 'Geriatric',
     fullLabel: `Geriatric ${brand.niche.short}`,
     heroSubtitle: `Older adult & geriatric ${brand.niche.short} positions`,
-    salaryRange: '$125K-180K',
+    salaryRange: '$110K-160K',
     keywords: ['geriatric np', 'gerontology np', 'elderly care NP', 'older adult health'],
     faqCategory: 'inpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -445,16 +451,16 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       'Understand polypharmacy risks and Beers Criteria medications',
       'Learn dementia assessment tools (MoCA, MMSE, GDS)',
       'Build relationships with geriatricians for collaborative care',
-      'SNF consultant roles can pay $150-$200/hour',
+      'SNF and consulting roles often command premium hourly rates',
     ],
   },
   veterans: {
     slug: 'veterans',
     label: 'Veterans',
-    fullLabel: `Veterans ${brand.niche.short}`, // TODO(content): benefits/tips below are psych-specific (PTSD/trauma) — pending all-NP rewrite
+    fullLabel: `Veterans ${brand.niche.short}`,
     heroSubtitle: `Military & veteran-focused ${brand.niche.short} positions`,
-    salaryRange: '$120K-175K',
-    keywords: ['veterans np', 'military health np', 'PTSD np', 'veteran care NP'],
+    salaryRange: '$110K-170K',
+    keywords: ['veterans np', 'military health np', 'VA community care np', 'veteran care NP'],
     faqCategory: 'inpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
       isPublished: true,
@@ -463,13 +469,13 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('veterans'),
     }),
     benefits: [
-      { title: 'Critical Mission', description: `22 veterans die by suicide daily — veteran-focused ${brand.niche.short}s directly save lives through expert care.`, iconName: 'Heart' },
-      { title: 'Specialized Training', description: 'Access to VA-funded CPT, PE, and EMDR training — gold-standard trauma therapies at no cost.', iconName: 'Shield' },
+      { title: 'Critical Mission', description: `Veterans carry distinct health burdens — polytrauma, TBI, toxic exposures, chronic pain — and veteran-focused ${brand.niche.short}s close real care gaps.`, iconName: 'Heart' },
+      { title: 'Specialized Training', description: 'VA-funded continuing education and fellowship pathways span primary care, rehabilitation, and specialty medicine.', iconName: 'Shield' },
       { title: 'Federal Benefits', description: 'VA positions include federal pension, TSP matching, 26+ days PTO, and up to $200K loan repayment.', iconName: 'DollarSign' },
     ],
     tips: [
-      'PTSD and TBI expertise is the most in-demand skill set',
-      'Get trained in CPT (Cognitive Processing Therapy) and PE (Prolonged Exposure)',
+      'TBI, polytrauma, and toxic-exposure (PACT Act) expertise is in high demand',
+      'Learn VA disability and service-connected documentation requirements',
       'Military-connected clinicians are especially valued',
       `Community-based veteran organizations also hire ${brand.niche.short}s`,
       'Tri-care network providers serve military families outside VA system',
@@ -480,7 +486,7 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'LGBTQ+',
     fullLabel: `LGBTQ+ Affirming ${brand.niche.short}`,
     heroSubtitle: `LGBTQ+ affirming ${brand.niche.short} positions`,
-    salaryRange: '$120K-175K',
+    salaryRange: '$110K-170K',
     keywords: ['lgbtq np', 'gender affirming np', 'transgender health', 'lgbtq affirming NP'],
     faqCategory: 'outpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -861,11 +867,33 @@ async function getCityJobs(config: CategoryConfig, city: CityData, skip = 0, tak
   }
 }
 
-const EMPTY_STATS = { totalJobs: 0, rawAvgSalary: 0, colAdjustedSalary: 0 };
+interface CityStats {
+  totalJobs: number;
+  rawAvgSalary: number;
+  colAdjustedSalary: number;
+  /**
+   * When the counts were actually computed: pseoStats.updatedAt for fresh
+   * cached rows, "now" for live-count fallbacks, null when no data exists
+   * (the page redirects/404s before rendering in that case).
+   */
+  statsAsOf: Date | null;
+}
+
+const EMPTY_STATS: CityStats = { totalJobs: 0, rawAvgSalary: 0, colAdjustedSalary: 0, statsAsOf: null };
+
+// Staleness window for cached pseoStats rows. Matches PSEO_STALENESS_HOURS in
+// app/api/sitemaps/cities/[batch]/route.ts and the aggregate-pseo staleness
+// probe (app/api/cron/aggregate-pseo/staleness.ts) — 3x the 6h cron cadence.
+// Rows older than this are treated as unreliable: a stale positive count would
+// otherwise render frozen job counts (soft-404 pattern on never-refreshed
+// cities), so we recount live instead.
+const STATS_STALENESS_HOURS = 36;
+const STATS_STALENESS_MS = STATS_STALENESS_HOURS * 60 * 60 * 1000;
 
 // Perf2: cache() dedupes the duplicate call within a render (metadata + page
 // component both call getCityStats with the same module-level config/city refs).
-const getCityStats = cache(async function getCityStats(config: CategoryConfig, city: CityData) {
+const getCityStats = cache(async function getCityStats(config: CategoryConfig, city: CityData): Promise<CityStats> {
+  let cachedRow: { totalJobs: number; rawAvgSalary: number; colAdjustedSalary: number; updatedAt: Date } | null = null;
   try {
     const stats = await prisma.pseoStats.findUnique({
       where: {
@@ -878,14 +906,21 @@ const getCityStats = cache(async function getCityStats(config: CategoryConfig, c
     });
 
     if (stats && stats.totalJobs > 0) {
-      return {
-        totalJobs: stats.totalJobs,
-        rawAvgSalary: stats.rawAvgSalary,
-        colAdjustedSalary: stats.colAdjustedSalary,
-      };
+      cachedRow = stats;
+      const isFresh = Date.now() - stats.updatedAt.getTime() <= STATS_STALENESS_MS;
+      if (isFresh) {
+        return {
+          totalJobs: stats.totalJobs,
+          rawAvgSalary: stats.rawAvgSalary,
+          colAdjustedSalary: stats.colAdjustedSalary,
+          statsAsOf: stats.updatedAt,
+        };
+      }
     }
-    
-    // Fallback: live count when pseoStats cache is empty/stale
+
+    // Fallback: live count when the pseoStats cache is empty, zero, or stale.
+    // A stale positive row is NOT trusted — if the live count is 0 the page
+    // correctly redirects instead of rendering frozen counts.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where = config.buildWhere(city.state, city.name) as any;
     const liveCount = await prisma.job.count({ where });
@@ -897,15 +932,41 @@ const getCityStats = cache(async function getCityStats(config: CategoryConfig, c
       });
       const rawAvg = Math.round(((salaryAgg._avg.normalizedMinSalary ?? 0) + (salaryAgg._avg.normalizedMaxSalary ?? 0)) / 2 / 1000);
       const colAdj = Math.round(rawAvg * (100 / (city.costOfLivingIndex || 100)));
-      return { totalJobs: liveCount, rawAvgSalary: rawAvg, colAdjustedSalary: colAdj };
+      return { totalJobs: liveCount, rawAvgSalary: rawAvg, colAdjustedSalary: colAdj, statsAsOf: new Date() };
     }
 
     return EMPTY_STATS;
   } catch (error) {
     console.error(`[category-city] Failed to fetch stats for ${config.slug}/${city.slug}:`, error);
+    // If the live recount failed but we hold a (possibly stale) positive row,
+    // prefer it — with its REAL date — over redirecting a page that likely
+    // still has jobs. Transient DB errors must not 308 live pages away.
+    if (cachedRow) {
+      return {
+        totalJobs: cachedRow.totalJobs,
+        rawAvgSalary: cachedRow.rawAvgSalary,
+        colAdjustedSalary: cachedRow.colAdjustedSalary,
+        statsAsOf: cachedRow.updatedAt,
+      };
+    }
     return EMPTY_STATS;
   }
 });
+
+/**
+ * Hero badge copy that only claims "updated today" when the underlying data
+ * was actually computed today (UTC). Fresh-cache rows carry pseoStats
+ * .updatedAt; live fallback counts are "now". Anything older shows the real
+ * date so stale-positive rows can't render a false freshness claim.
+ */
+function formatStatsBadge(totalJobs: number, statsAsOf: Date | null): string {
+  const asOf = statsAsOf ?? new Date();
+  const isToday = asOf.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10);
+  const freshness = isToday
+    ? 'updated today'
+    : `updated ${asOf.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}`;
+  return `${totalJobs} live roles · ${freshness}`;
+}
 
 // ─── Market Demand Score ───────────────────────────────────────────────────────
 
@@ -1128,15 +1189,16 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
     // State not found, skip
   }
 
-  // GSC Fix (P1.5): gate cross-links by pseoStats.totalJobs ≥ 1.
-  // Empty cross-links generated thousands of "Discovered — currently not
-  // indexed" entries. Pseo stats are pre-aggregated, so these queries are fast.
+  // GSC Fix (P1.5): gate cross-links by the same threshold the target page
+  // renders at. Category×city pages notFound() below MIN_JOBS_FOR_CATEGORY_CITY,
+  // so linking combos sitting at 1-2 jobs produces systematic internal links to
+  // 404s. Pseo stats are pre-aggregated, so these queries are fast.
   const allOtherCategoryConfigs = Object.values(ALL_CATEGORY_CONFIGS).filter((c) => c.slug !== config.slug);
   const otherCategoryRows = await prisma.pseoStats.findMany({
     where: {
       type: 'category-city',
       locationSlug: citySlug,
-      totalJobs: { gte: 1 },
+      totalJobs: { gte: MIN_JOBS_FOR_CATEGORY_CITY },
       categorySlug: { in: allOtherCategoryConfigs.map(c => c.slug) },
     },
     select: { categorySlug: true },
@@ -1147,7 +1209,29 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
   // Get visual assets from the registry for this category
   const assets = CATEGORY_ASSET_REGISTRY[config.slug];
 
-  // Nearby cities — gate by THIS category having ≥1 job in each candidate
+  // Explore-card hrefs: only append /city/{slug} to hrefs that are real
+  // category pages AND clear the ≥3 render gate for this city. Non-category
+  // destinations (/salary-guide, /jobs/locations) have no per-city route —
+  // blindly appending produced /salary-guide/city/* 404s and middleware 410s
+  // on every asset-bearing page. Thin category combos fall back to the
+  // category landing page instead of a guaranteed 404.
+  const categorySlugSet = new Set(Object.values(ALL_CATEGORY_CONFIGS).map(c => c.slug));
+  const exploreCardLinks = (assets?.exploreCards ?? []).map(card => {
+    if (card.href.includes('/city/')) return { ...card, resolvedHref: card.href };
+    const cardSlug = card.href.startsWith('/jobs/') ? card.href.slice('/jobs/'.length) : null;
+    if (cardSlug === null || !categorySlugSet.has(cardSlug)) {
+      return { ...card, resolvedHref: card.href };
+    }
+    return {
+      ...card,
+      resolvedHref: validOtherCategorySlugs.has(cardSlug)
+        ? `${card.href}/city/${citySlug}`
+        : card.href,
+    };
+  });
+
+  // Nearby cities — gate by THIS category clearing the render threshold in each
+  // candidate city (the target pages 404 below MIN_JOBS_FOR_CATEGORY_CITY).
   const candidateNearby = city!.nearbyCities
     .map((slug) => getCityBySlug(slug))
     .filter((c): c is CityData => c !== undefined)
@@ -1158,7 +1242,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
           type: 'category-city',
           categorySlug: config.slug,
           locationSlug: { in: candidateNearby.map(c => c.slug) },
-          totalJobs: { gte: 1 },
+          totalJobs: { gte: MIN_JOBS_FOR_CATEGORY_CITY },
         },
         select: { locationSlug: true },
       })
@@ -1207,14 +1291,54 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
     boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
   };
 
+  // ═══ FAQ — SINGLE source array (audit B52) ═══
+  // This ONE array feeds BOTH the FAQPage JSON-LD and the visible
+  // accordion below. The template previously maintained two hand-copied
+  // versions that had drifted apart (different practice-authority
+  // wording, truncated health-system lists, a missing salary-range
+  // sentence) — Google treats schema answers that don't match visible
+  // content as spammy structured data. Never fork this array again.
+  const categoryCityFaqs = [
+    {
+      q: `How many ${config.label.toLowerCase()} ${brand.niche.short} jobs are available in ${city!.name}, ${city!.stateCode}?`,
+      a: `There ${stats.totalJobs === 1 ? 'is' : 'are'} currently ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} ${stats.totalJobs === 1 ? 'position' : 'positions'} available in ${city!.name}, ${city!.stateCode}. New positions are posted regularly as demand for ${brand.niche.descriptor}s continues to grow.`,
+    },
+    {
+      q: `What is the average ${brand.niche.short} salary in ${city!.name}?`,
+      a: stats.rawAvgSalary > 0
+        ? `The average ${config.label.toLowerCase()} ${brand.niche.short} salary in ${city!.name} is approximately $${stats.rawAvgSalary}K per year. Adjusted for the local cost of living (index: ${city!.costOfLivingIndex}), this equates to about $${stats.colAdjustedSalary}K in purchasing power. The typical range for ${config.label.toLowerCase()} positions is ${config.salaryRange}.`
+        : `${config.label} ${brand.niche.short} positions in ${city!.name} typically pay ${config.salaryRange}. Actual compensation depends on experience, employer type, and whether the role includes benefits. ${city!.name}'s cost of living index is ${city!.costOfLivingIndex} (national average = 100).`,
+    },
+    {
+      q: `Does ${city!.state} allow ${brand.niche.short}s full practice authority?`,
+      a: practiceAuthority ? `${city!.state} has ${practiceAuthority.authority.toLowerCase()} practice authority for nurse practitioners. ${String(practiceAuthority.authority).includes('Full') ? `${brand.niche.short}s can practice independently, prescribe medications, and diagnose without physician oversight.` : String(practiceAuthority.authority).includes('Reduced') ? `${brand.niche.short}s require a collaborative agreement with a physician but can prescribe and diagnose with that arrangement.` : `${brand.niche.short}s must practice under physician supervision for prescribing and some clinical decisions.`}` : `Contact the ${city!.state} Board of Nursing for current practice authority information.`,
+    },
+    {
+      q: `Is ${city!.name} a good place for ${brand.niche.short} careers?`,
+      a: `${city!.name} ${city!.mentalHealthShortage ? `is a federally designated Health Professional Shortage Area (HPSA), meaning there is high demand and often sign-on bonuses, loan repayment programs, and competitive salaries for ${brand.niche.short}s.` : `has growing demand for ${brand.niche.descriptor}s.`} With a population of ${city!.population.toLocaleString('en-US')}${city!.metroArea ? ` and part of the ${city!.metroArea} metro area` : ''}, ${city!.name} offers ${city!.healthcareSystems.length > 0 ? `access to major health systems including ${city!.healthcareSystems.slice(0, 3).join(', ')}` : 'a variety of practice settings'}.`,
+    },
+    {
+      q: `What qualifications do I need for ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${city!.name}?`,
+      a: `To work as an ${brand.niche.short} in ${city!.name}, ${city!.stateCode}, you need: (1) A Master's or Doctoral degree in nursing with ${brand.niche.short} specialization, (2) National board certification (ANCC or AANP), (3) An active RN and APRN license in ${city!.state}, and (4) DEA registration for prescribing controlled substances. ${config.label === 'Entry-Level' ? 'Many entry-level positions accept new graduates and provide structured mentorship.' : config.label === 'Senior' ? 'Senior positions typically require 7+ years of experience and may require subspecialty certifications.' : `${config.label} positions may have additional requirements specific to the employer and setting.`}`,
+    },
+  ];
+
   return (
     <div style={{ backgroundColor: '#FDFBF7' }}>
       {/* ═══ SCHEMAS ═══ */}
+      {/* State crumb: city-only categories have no /jobs/{cat}/{state} route
+          (middleware 410s that shape), so their state crumb points at the
+          /jobs/state/{slug} hub instead — never a 410 URL in schema. */}
       <BreadcrumbSchema items={[
         { name: 'Home', url: brand.baseUrl },
         { name: 'Jobs', url: `${brand.baseUrl}/jobs` },
         { name: config.label, url: `${brand.baseUrl}/jobs/${config.slug}` },
-        { name: city!.state, url: `${brand.baseUrl}/jobs/${config.slug}/${stateToSlug(city!.state)}` },
+        {
+          name: city!.state,
+          url: STATE_ELIGIBLE_SET.has(config.slug)
+            ? `${brand.baseUrl}/jobs/${config.slug}/${stateToSlug(city!.state)}`
+            : `${brand.baseUrl}/jobs/state/${stateToSlug(city!.state)}`,
+        },
         { name: city!.name, url: `${brand.baseUrl}${basePath}` },
       ]} />
       {/* D9: ItemList schema */}
@@ -1269,7 +1393,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
         bgColor={assets?.bgColor || '#BE185D'}
         heroImage={assets?.heroImage || `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
         heroAlt={`${config.label} ${brand.niche.short} working in ${city!.name}, ${city!.stateCode}`}
-        badgeText={`${stats.totalJobs} live roles · updated today`}
+        badgeText={formatStatsBadge(stats.totalJobs, stats.statsAsOf)}
         breadcrumbs={['Careers', config.label, city!.name]}
         headlineLine1={config.label}
         headlineLine2={brand.niche.short}
@@ -1325,9 +1449,17 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                     </div>
                   )}
                   <div className="flex flex-wrap justify-center gap-3">
-                    <Link href={`/jobs/${config.slug}/${stateToSlug(city!.state)}`} className="inline-block px-6 py-3 text-white rounded-lg font-medium hover:opacity-90" style={{ backgroundColor: 'var(--color-primary)' }}>
-                      {config.label} Jobs in {city!.state}
-                    </Link>
+                    {/* City-only categories have no /jobs/{cat}/{state} route
+                        (middleware 410) — send those to the state hub. */}
+                    {STATE_ELIGIBLE_SET.has(config.slug) ? (
+                      <Link href={`/jobs/${config.slug}/${stateToSlug(city!.state)}`} className="inline-block px-6 py-3 text-white rounded-lg font-medium hover:opacity-90" style={{ backgroundColor: 'var(--color-primary)' }}>
+                        {config.label} Jobs in {city!.state}
+                      </Link>
+                    ) : (
+                      <Link href={`/jobs/state/${stateToSlug(city!.state)}`} className="inline-block px-6 py-3 text-white rounded-lg font-medium hover:opacity-90" style={{ backgroundColor: 'var(--color-primary)' }}>
+                        All {city!.state} Jobs
+                      </Link>
+                    )}
                     <Link href={`/jobs/city/${citySlug}`} className="inline-block px-6 py-3 rounded-lg font-medium" style={{ color: 'var(--color-primary)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
                       All {city!.name} Jobs
                     </Link>
@@ -1645,9 +1777,9 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             Other {brand.niche.short} Job Types in {city!.name}
           </h2>
           <div className="pseo-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-            {assets?.exploreCards && assets.exploreCards.length > 0 ? (
-              assets.exploreCards.map(c => (
-                <Link key={c.href} href={c.href.includes('/city/') ? c.href : `${c.href}/city/${citySlug}`} className="pseo-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
+            {exploreCardLinks.length > 0 ? (
+              exploreCardLinks.map(c => (
+                <Link key={c.href} href={c.resolvedHref} className="pseo-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
                   <Image src={c.icon} alt="" width={48} height={48} sizes="48px" style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />
                   <span style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', display: 'block', marginBottom: '4px' }}>{c.label}</span>
                   <span style={{ fontSize: '12px', color: '#7A6A62', display: 'block' }}>{c.sub}</span>
@@ -1715,72 +1847,42 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             </p>
           </section>
 
-          {/* ── AEO: Frequently Asked Questions with Schema ─────────────────── */}
-          {(() => {
-            const faqs = [
-              {
-                q: `How many ${config.label.toLowerCase()} ${brand.niche.short} jobs are available in ${city!.name}, ${city!.stateCode}?`,
-                a: `There ${stats.totalJobs === 1 ? 'is' : 'are'} currently ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} ${stats.totalJobs === 1 ? 'position' : 'positions'} available in ${city!.name}, ${city!.stateCode}. New positions are posted regularly as demand for ${brand.niche.descriptor}s continues to grow.`,
-              },
-              {
-                q: `What is the average ${brand.niche.short} salary in ${city!.name}?`,
-                a: stats.rawAvgSalary > 0
-                  ? `The average ${config.label.toLowerCase()} ${brand.niche.short} salary in ${city!.name} is approximately $${stats.rawAvgSalary}K per year. Adjusted for the local cost of living (index: ${city!.costOfLivingIndex}), this equates to about $${stats.colAdjustedSalary}K in purchasing power. The typical range for ${config.label.toLowerCase()} positions is ${config.salaryRange}.`
-                  : `${config.label} ${brand.niche.short} positions in ${city!.name} typically pay ${config.salaryRange}. Actual compensation depends on experience, employer type, and whether the role includes benefits. ${city!.name}'s cost of living index is ${city!.costOfLivingIndex} (national average = 100).`,
-              },
-              {
-                q: `Does ${city!.state} allow ${brand.niche.short}s full practice authority?`,
-                a: practiceAuthority ? `${city!.state} has ${practiceAuthority.authority.toLowerCase()} practice authority for nurse practitioners. ${String(practiceAuthority.authority).includes('Full') ? `${brand.niche.short}s can practice independently, prescribe medications, and diagnose without physician oversight.` : String(practiceAuthority.authority).includes('Reduced') ? `${brand.niche.short}s require a collaborative agreement with a physician but can prescribe and diagnose with that arrangement.` : `${brand.niche.short}s must practice under physician supervision for prescribing and some clinical decisions.`}` : `Contact the ${city!.state} Board of Nursing for current practice authority information.`,
-              },
-              {
-                q: `Is ${city!.name} a good place for ${brand.niche.short} careers?`,
-                a: `${city!.name} ${city!.mentalHealthShortage ? `is a federally designated Health Professional Shortage Area (HPSA), meaning there is high demand and often sign-on bonuses, loan repayment programs, and competitive salaries for ${brand.niche.short}s.` : `has growing demand for ${brand.niche.descriptor}s.`} With a population of ${city!.population.toLocaleString('en-US')}${city!.metroArea ? ` and part of the ${city!.metroArea} metro area` : ''}, ${city!.name} offers ${city!.healthcareSystems.length > 0 ? `access to major health systems including ${city!.healthcareSystems.join(', ')}` : 'a variety of practice settings'}.`,
-              },
-              {
-                q: `What qualifications do I need for ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${city!.name}?`,
-                a: `To work as an ${brand.niche.short} in ${city!.name}, ${city!.stateCode}, you need: (1) A Master's or Doctoral degree in nursing with ${brand.niche.short} specialization, (2) National board certification (ANCC or AANP), (3) An active RN and APRN license in ${city!.state}, and (4) DEA registration for prescribing controlled substances. ${config.label === 'Entry-Level' ? 'Many entry-level positions accept new graduates and provide structured mentorship.' : config.label === 'Senior' ? 'Senior positions typically require 7+ years of experience and may require subspecialty certifications.' : `${config.label} positions may have additional requirements specific to the employer and setting.`}`,
-              },
-            ];
-            return (
-              <>
-                {/* FAQ Schema JSON-LD */}
-                <script
-                  type="application/ld+json"
-                  dangerouslySetInnerHTML={{
-                    __html: JSON.stringify({
-                      '@context': 'https://schema.org',
-                      '@type': 'FAQPage',
-                      mainEntity: faqs.map(faq => ({
-                        '@type': 'Question',
-                        name: faq.q,
-                        acceptedAnswer: {
-                          '@type': 'Answer',
-                          text: faq.a,
-                        },
-                      })),
-                    }),
-                  }}
-                />
-                {/* Speakable Schema — marks content sections for voice/AI consumption */}
-                <script
-                  type="application/ld+json"
-                  dangerouslySetInnerHTML={{
-                    __html: JSON.stringify({
-                      '@context': 'https://schema.org',
-                      '@type': 'WebPage',
-                      name: `${config.label} ${brand.niche.short} Jobs in ${city!.name}, ${city!.stateCode}`,
-                      speakable: {
-                        '@type': 'SpeakableSpecification',
-                        cssSelector: ['#answer-summary', '.faq-answer'],
-                      },
-                      url: `${brand.baseUrl}${basePath}`,
-                    }),
-                  }}
-                />
-                {/* Visible FAQ Section — Accordion Style */}
-              </>
-            );
-          })()}
+          {/* ── AEO: Frequently Asked Questions with Schema ───────────────────
+              Fed by categoryCityFaqs (hoisted above `return`) — the SAME
+              array renders the visible accordion section below (B52). */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'FAQPage',
+                mainEntity: categoryCityFaqs.map(faq => ({
+                  '@type': 'Question',
+                  name: faq.q,
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: faq.a,
+                  },
+                })),
+              }),
+            }}
+          />
+          {/* Speakable Schema — marks content sections for voice/AI consumption */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'WebPage',
+                name: `${config.label} ${brand.niche.short} Jobs in ${city!.name}, ${city!.stateCode}`,
+                speakable: {
+                  '@type': 'SpeakableSpecification',
+                  cssSelector: ['#answer-summary', '.faq-answer'],
+                },
+                url: `${brand.baseUrl}${basePath}`,
+              }),
+            }}
+          />
         </div>
       </div>
 
@@ -1795,32 +1897,9 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
           </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {(() => {
-              const faqs = [
-                {
-                  q: `How many ${config.label.toLowerCase()} ${brand.niche.short} jobs are available in ${city!.name}, ${city!.stateCode}?`,
-                  a: `There ${stats.totalJobs === 1 ? 'is' : 'are'} currently ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} ${stats.totalJobs === 1 ? 'position' : 'positions'} available in ${city!.name}, ${city!.stateCode}. New positions are posted regularly as demand for ${brand.niche.descriptor}s continues to grow.`,
-                },
-                {
-                  q: `What is the average ${brand.niche.short} salary in ${city!.name}?`,
-                  a: stats.rawAvgSalary > 0
-                    ? `The average ${config.label.toLowerCase()} ${brand.niche.short} salary in ${city!.name} is approximately $${stats.rawAvgSalary}K per year. Adjusted for the local cost of living (index: ${city!.costOfLivingIndex}), this equates to about $${stats.colAdjustedSalary}K in purchasing power.`
-                    : `${config.label} ${brand.niche.short} positions in ${city!.name} typically pay ${config.salaryRange}. Actual compensation depends on experience, employer type, and whether the role includes benefits.`,
-                },
-                {
-                  q: `Does ${city!.state} allow ${brand.niche.short}s full practice authority?`,
-                  a: practiceAuthority ? `${city!.state} has ${practiceAuthority.authority.toLowerCase()} practice authority for nurse practitioners. ${String(practiceAuthority.authority).includes('Full') ? `${brand.niche.short}s can practice independently without physician oversight.` : String(practiceAuthority.authority).includes('Reduced') ? `${brand.niche.short}s require a collaborative agreement with a physician.` : `${brand.niche.short}s must practice under physician supervision for prescribing and some clinical decisions.`}` : `Contact the ${city!.state} Board of Nursing for current practice authority information.`,
-                },
-                {
-                  q: `Is ${city!.name} a good place for ${brand.niche.short} careers?`,
-                  a: `${city!.name} ${city!.mentalHealthShortage ? 'is a federally designated Health Professional Shortage Area (HPSA), meaning there is high demand and often sign-on bonuses and loan repayment programs.' : `has growing demand for ${brand.niche.descriptor}s.`} With a population of ${city!.population.toLocaleString('en-US')}${city!.metroArea ? ` in the ${city!.metroArea} metro` : ''}, ${city!.name} offers ${city!.healthcareSystems.length > 0 ? `access to major health systems including ${city!.healthcareSystems.slice(0, 3).join(', ')}` : 'a variety of practice settings'}.`,
-                },
-                {
-                  q: `What qualifications do I need for ${config.label.toLowerCase()} ${brand.niche.short} jobs?`,
-                  a: `To work as an ${brand.niche.short} in ${city!.name}, you need: a Master's or Doctoral degree in nursing with ${brand.niche.short} specialization, national board certification (ANCC or AANP), an active RN and APRN license in ${city!.state}, and DEA registration for prescribing controlled substances.`,
-                },
-              ];
-              return faqs.map((faq, i) => (
+            {/* Same categoryCityFaqs array as the FAQPage JSON-LD above —
+                do NOT fork a second copy here (B52). */}
+            {categoryCityFaqs.map((faq, i) => (
                 <details key={i} className="pseo-faq-item" style={{
                   background: '#FFFFFF',
                   borderRadius: '16px',
@@ -1839,8 +1918,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                     <p className="faq-answer" style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '16px 0 0' }}>{faq.a}</p>
                   </div>
                 </details>
-              ));
-            })()}
+            ))}
           </div>
         </section>
       </div>

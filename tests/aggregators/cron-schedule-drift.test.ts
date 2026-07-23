@@ -32,7 +32,10 @@ import { WORKDAY_TOTAL_CHUNKS } from '@/lib/aggregators/workday';
  * constants; this literal tail is fixed. Bump it deliberately when
  * adding/removing a non-chunked cron.
  */
-const NON_CHUNKED_CRON_COUNT = 40;
+// B106 (2026-07-18): dropped 40 → 22 when 21 housekeeping crons were
+// consolidated into 3 batch dispatcher entries (see CRON_BATCHES in
+// config/cron-schedule.ts) to fit Vercel Pro's 40-cron limit.
+const NON_CHUNKED_CRON_COUNT = 22;
 
 const INGEST_PREFIX = '/api/cron/ingest?';
 

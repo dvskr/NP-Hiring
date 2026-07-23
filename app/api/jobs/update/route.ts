@@ -5,6 +5,9 @@ import { summarizeForMeta } from '@/lib/description-cleaner';
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { inngest } from '@/lib/inngest/client';
+import { normalizeSalary } from '@/lib/salary-normalizer';
+import { formatDisplaySalary } from '@/lib/salary-display';
+import { parseLocation } from '@/lib/location-parser';
 
 interface ScreeningQuestionInput {
   text: string;
@@ -57,11 +60,19 @@ export async function POST(request: NextRequest) {
       ...rawJobData,
       description: normalizeContentWhitespace(rawJobData.description ?? ''),
     };
+    const sanitizedPosting = sanitizeJobPosting({
+      title: normalizedRawJobData.title,
+      employer: '', // employer name is not editable through this endpoint
+      location: normalizedRawJobData.location,
+      description: normalizedRawJobData.description,
+      applyLink: normalizedRawJobData.applyLink ?? null,
+      contactEmail: normalizedRawJobData.contactEmail ?? '',
+    });
     const jobData = {
       ...normalizedRawJobData,
-      title: sanitizeJobPosting({ ...normalizedRawJobData, employer: '' } as any).title,
-      location: sanitizeJobPosting({ ...normalizedRawJobData, employer: '' } as any).location,
-      description: sanitizeJobPosting({ ...normalizedRawJobData, employer: '' } as any).description,
+      title: sanitizedPosting.title,
+      location: sanitizedPosting.location,
+      description: sanitizedPosting.description,
       applyLink: rawJobData.applyLink ? sanitizeUrl(rawJobData.applyLink) : null,
       contactEmail: rawJobData.contactEmail ? sanitizeEmail(rawJobData.contactEmail) : undefined,
       companyWebsite: rawJobData.companyWebsite ? sanitizeUrl(rawJobData.companyWebsite) : undefined,
@@ -89,6 +100,30 @@ export async function POST(request: NextRequest) {
     // Apply-on-platform: clear applyLink when switching to in-platform.
     const applyOnPlatform = rawJobData.applyOnPlatform === true;
 
+    // Re-derive the computed columns the rest of the app actually reads.
+    // JobCard renders displaySalary, the salary filter uses normalizedMin/Max,
+    // and the location/remote facets use city/state/stateCode/isRemote/isHybrid.
+    // The create paths (post-free, create-checkout) derive all of these; an
+    // edit that skips them leaves cards and filters serving pre-edit values.
+    const parsedMinSalary = jobData.minSalary ? Math.round(jobData.minSalary) : null;
+    const parsedMaxSalary = jobData.maxSalary ? Math.round(jobData.maxSalary) : null;
+    const parsedSalaryPeriod = jobData.salaryPeriod || (parsedMinSalary || parsedMaxSalary ? 'year' : null);
+
+    const normalizedSalary = normalizeSalary({
+      minSalary: parsedMinSalary,
+      maxSalary: parsedMaxSalary,
+      salaryPeriod: parsedSalaryPeriod,
+      title: jobData.title,
+    });
+
+    const displaySalary = formatDisplaySalary(
+      normalizedSalary.normalizedMinSalary,
+      normalizedSalary.normalizedMaxSalary,
+      parsedSalaryPeriod
+    );
+
+    const parsedLoc = parseLocation(jobData.location);
+
     // Update job
     const updatedJob = await prisma.job.update({
       where: { id: employerJob.jobId },
@@ -101,9 +136,19 @@ export async function POST(request: NextRequest) {
         descriptionSummary: summarizeForMeta(jobData.description),
         applyLink: applyOnPlatform ? null : jobData.applyLink,
         applyOnPlatform,
-        minSalary: jobData.minSalary ? Math.round(jobData.minSalary) : null,
-        maxSalary: jobData.maxSalary ? Math.round(jobData.maxSalary) : null,
-        salaryPeriod: jobData.salaryPeriod || null,
+        minSalary: parsedMinSalary,
+        maxSalary: parsedMaxSalary,
+        salaryPeriod: parsedSalaryPeriod,
+        normalizedMinSalary: normalizedSalary.normalizedMinSalary,
+        normalizedMaxSalary: normalizedSalary.normalizedMaxSalary,
+        salaryIsEstimated: normalizedSalary.salaryIsEstimated,
+        salaryConfidence: normalizedSalary.salaryConfidence,
+        displaySalary,
+        city: parsedLoc.city,
+        state: parsedLoc.state,
+        stateCode: parsedLoc.stateCode,
+        isRemote: parsedLoc.isRemote,
+        isHybrid: parsedLoc.isHybrid,
         benefits: Array.isArray(rawJobData.benefits) ? rawJobData.benefits : undefined,
         setting: rawJobData.setting !== undefined ? (rawJobData.setting || null) : undefined,
         population: rawJobData.population !== undefined ? (rawJobData.population || null) : undefined,

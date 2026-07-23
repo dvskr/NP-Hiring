@@ -71,7 +71,7 @@ export type EmailType =
   | 'renewal_confirmation'
   | 'refund_confirmation'
   | 'expiry_warning'
-  | 'draft_saved'
+  | 'password_reset'
   | 'employer_message'
   | 'candidate_inquiry'
   | 'candidate_alert'
@@ -85,7 +85,6 @@ export type EmailType =
   | 'contact_confirmation'
   | 'contact_internal'
   | 'employer_outreach'
-  | 'email_job'
   | 'auth_confirm'
   | 'recommendation_digest'
   | 'account_purge_warning'
@@ -181,6 +180,35 @@ export async function sendAndLog(
   }
 
   const result = await resend.emails.send(sendParams);
+
+  // The Resend SDK does NOT throw on API-level failures — it resolves with
+  // { data: null, error }. Treating that as success is how failed sends
+  // (including GDPR purge warnings that then stamp idempotency markers) get
+  // silently lost. Log the failure as status='failed' and throw so every
+  // caller's try/catch reports { success: false } instead of a false success.
+  if (result?.error) {
+    const errMsg = result.error.message || 'unknown Resend error';
+    try {
+      await prisma.emailSend.create({
+        data: {
+          resendId: null,
+          to: params.to,
+          subject: params.subject,
+          emailType,
+          status: 'failed',
+          metadata: {
+            ...(metadata ?? {}),
+            error: errMsg,
+            errorName: result.error.name ?? null,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    } catch (e) {
+      logger.error('Failed to log failed email send', e, { emailType, to: params.to });
+    }
+    logger.error('Resend send failed', result.error, { emailType, to: params.to });
+    throw new Error(`Email send failed (${emailType}): ${errMsg}`);
+  }
 
   // Non-blocking log — don't let logging failure break email sending
   try {
@@ -385,11 +413,13 @@ export async function sendConfirmationEmail(
 ): Promise<EmailResult> {
   try {
     const jobSlug = slugify(jobTitle, jobId);
-    // Token-based dashboard URL when available so employers without an account
-    // can still access their listing/analytics from this email.
-    const dashboardUrl = dashboardToken
-      ? `${BASE_URL}/employer/dashboard/${dashboardToken}`
-      : `${BASE_URL}/employer/dashboard`;
+    // The token dashboard (/employer/dashboard/[token]) is deprecated — it
+    // unconditionally redirects to the employer login, so token deep links
+    // just add a redirect hop. Link the real dashboard instead; logged-out
+    // employers get bounced through /login?next=/employer/dashboard and land
+    // back where the email pointed. (dashboardToken param retained for
+    // caller compatibility; no longer used in links.)
+    const dashboardUrl = `${BASE_URL}/employer/dashboard`;
 
     const featuresLine = `${durationDays}-day listing · Featured badge · ${config.limits.candidateUnlocksPerPosting} candidate unlocks · ${config.limits.inmailsPerPosting} InMails · Full analytics`;
 
@@ -476,7 +506,9 @@ export async function sendRenewalConfirmationEmail(
       month: 'long',
       day: 'numeric'
     });
-    const dashboardUrl = `${BASE_URL}/employer/dashboard/${dashboardToken}`;
+    // Deprecated token dashboard just redirects to login — link the real
+    // dashboard (dashboardToken param retained for caller compatibility).
+    const dashboardUrl = `${BASE_URL}/employer/dashboard`;
 
     const invoiceLine = invoice?.invoicePdfUrl || invoice?.hostedInvoiceUrl
       ? `${invoice.invoiceNumber ? `Invoice #${invoice.invoiceNumber} · ` : ''}${invoice.invoicePdfUrl ? `<a href="${invoice.invoicePdfUrl}" style="color:${V2.teal};text-decoration:underline;">Download PDF</a>` : ''}${invoice.invoicePdfUrl && invoice.hostedInvoiceUrl ? ' · ' : ''}${invoice.hostedInvoiceUrl ? `<a href="${invoice.hostedInvoiceUrl}" style="color:${V2.teal};text-decoration:underline;">View online</a>` : ''}`
@@ -546,7 +578,9 @@ export async function sendExpiryWarningEmail(
       day: 'numeric'
     });
 
-    const dashboardUrl = `${BASE_URL}/employer/dashboard/${dashboardToken}`;
+    // Deprecated token dashboard just redirects to login — link the real
+    // dashboard (dashboardToken param retained for caller compatibility).
+    const dashboardUrl = `${BASE_URL}/employer/dashboard`;
     const discountPct = Math.round((1 - config.renewalPrice / config.postingPrice) * 100);
 
     const html = emailShellV2(`
@@ -654,47 +688,13 @@ export async function sendRefundConfirmationEmail(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 7. DRAFT SAVED EMAIL
+// 7. DRAFT SAVED EMAIL — removed
 // ═══════════════════════════════════════════════════════════════════════════════
-
-export async function sendDraftSavedEmail(
-  email: string,
-  resumeToken: string
-): Promise<EmailResult> {
-  try {
-    const resumeUrl = `${BASE_URL}/post-job?resume=${resumeToken}`;
-
-    const html = emailShellV2(`
-      ${headerBlockV2('Your Draft Is Saved', '')}
-      ${spacerV2(12)}
-      ${simpleBlock('hero-draft-saved.png', 'We saved your progress. Your draft is ready whenever you are \u2014 pick up right where you left off. This link expires in 30 days.')}
-      ${spacerV2(32)}
-      <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
-        ${primaryButtonV2('Continue Your Posting', resumeUrl)}
-      </td></tr>
-      ${spacerV2(48)}
-      ${closeContentV2()}`,
-      unsubscribeFooterV2('sample'),
-      'Your job posting draft has been saved.'
-    );
-
-    await sendAndLog({
-      from: EMAIL_FROM,
-      to: email,
-      subject: `📝 Continue your ${brand.niche.short} job posting`,
-      html,
-    }, 'draft_saved');
-
-    logger.info('Draft saved email sent', { email });
-    return { success: true };
-  } catch (error) {
-    logger.error('Error sending draft saved email', error, { email });
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to send draft saved email',
-    };
-  }
-}
+// `sendDraftSavedEmail` was a dead export: its only caller was retired in the
+// 2026-05-14 draft-flow cutover and no production code imported it since.
+// Removed 2026-07-18 (audit backlog B21). The 'draft_saved' EmailType was
+// retired from the union at the same time — historical EmailSend rows keep
+// the string value; nothing sends it anymore.
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 8. CONTACT FORM CONFIRMATION (User-facing)
@@ -1003,18 +1003,52 @@ export async function sendNewCandidateAlertEmail(
     const unsubToken = await getOrCreateUnsubToken(recipientEmail);
     const unsubscribeUrl = `${BASE_URL}/unsubscribe?token=${unsubToken}`;
 
+    // B70: the digest previously discarded every candidate detail the cron
+    // built (name/headline/specialties/states/experience) and sent a generic
+    // "a new candidate joined" body. Render a card per candidate so the
+    // employer can judge relevance from the inbox. All fields are
+    // user-supplied profile content → escape everything.
+    const count = candidates.length;
+    const candidateCardsHtml = candidates.slice(0, 10).map((c) => {
+      const metaParts = [
+        c.specialties.length > 0 ? escapeHtml(c.specialties.slice(0, 4).join(', ')) : null,
+        c.states.length > 0 ? `Licensed: ${escapeHtml(c.states.slice(0, 6).join(', '))}` : null,
+        typeof c.experience === 'number' && c.experience > 0
+          ? `${c.experience} yr${c.experience === 1 ? '' : 's'} experience`
+          : null,
+      ].filter(Boolean).join(' &middot; ');
+      return `<tr><td class="content-pad" style="padding:0 40px 12px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffff;border:1px solid #E8ECE9;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+          <tr><td style="padding:16px 20px;">
+            <p style="margin:0 0 3px;font-family:${SANS_V2};font-size:15px;font-weight:700;color:${V2.textHeading};"><a href="${c.profileUrl}" style="color:${V2.textHeading};text-decoration:none;">${escapeHtml(c.name)}</a></p>
+            ${c.headline ? `<p style="margin:0 0 6px;font-family:${SANS_V2};font-size:13px;color:${V2.textBody};line-height:1.5;">${escapeHtml(c.headline)}</p>` : ''}
+            ${metaParts ? `<p style="margin:0 0 8px;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">${metaParts}</p>` : ''}
+            <a href="${c.profileUrl}" style="font-family:${SANS_V2};font-size:13px;font-weight:600;color:${V2.teal};text-decoration:underline;">View profile &rarr;</a>
+          </td></tr>
+        </table>
+      </td></tr>`;
+    }).join('');
+
+    const introText = count === 1
+      ? `A new candidate matching your hiring criteria has joined the platform and is open to new positions.`
+      : `${count} new candidates matching your hiring criteria have joined the platform and are open to new positions.`;
+
     const html = emailShellV2(`
-      ${headerBlockV2('New Candidate Match', '')}
+      ${headerBlockV2(count === 1 ? 'New Candidate Match' : `${count} New Candidate Matches`, '')}
       ${spacerV2(12)}
-      ${simpleBlock('hero-new-candidate.png', `A new candidate matching your hiring criteria has joined the platform and is open to new positions.`)}
-      ${spacerV2(32)}
+      ${simpleBlock('hero-new-candidate.png', introText)}
+      ${spacerV2(24)}
+      ${candidateCardsHtml}
+      ${spacerV2(20)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
-        ${primaryButtonV2('View Candidate Profile', `${SITE_URL}/employer/candidates`)}
+        ${primaryButtonV2(count === 1 ? 'View Candidate Profile' : 'View All Candidates', `${SITE_URL}/employer/candidates`)}
       </td></tr>
       ${spacerV2(48)}
       ${closeContentV2()}`,
       unsubscribeFooterV2(unsubToken),
-      `A new candidate matching your criteria just joined.`
+      count === 1
+        ? `A new candidate matching your criteria just joined.`
+        : `${count} new candidates matching your criteria just joined.`
     );
 
     await sendAndLog({
@@ -1322,7 +1356,7 @@ export async function sendPerformanceReportEmail(
       <tr><td class="content-pad" style="padding:0 40px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>${statBlockV2(totalViews.toLocaleString(), 'Views')}<td width="8"></td>${statBlockV2(totalClicks.toLocaleString(), 'Apply Clicks')}<td width="8"></td>${statBlockV2(totalApps.toLocaleString(), 'Applications')}</tr></table></td></tr>
       ${spacerV2(28)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
-        ${primaryButtonV2('View Full Report', `${BASE_URL}/employer/dashboard/${jobs[0]?.dashboardToken || ''}`)}
+        ${primaryButtonV2('View Full Report', `${BASE_URL}/employer/dashboard`)}
       </td></tr>
       ${spacerV2(48)}
       ${closeContentV2()}`,

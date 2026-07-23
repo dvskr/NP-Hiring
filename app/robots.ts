@@ -102,6 +102,7 @@ const FULL_DISALLOW = [
   '/employer/dashboard',
   '/employer/candidates',
   '/employer/applicants',
+  '/employer/analytics',
   '/employer/talent-search',
   '/employer/renewal-success',
   '/employer/settings',
@@ -143,6 +144,7 @@ const SOCIAL_DISALLOW = [
   '/employer/dashboard',
   '/employer/candidates',
   '/employer/applicants',
+  '/employer/analytics',
   '/employer/talent-search',
   '/employer/settings',
   '/employer/login',
@@ -258,6 +260,7 @@ export default function robots(): MetadataRoute.Robots {
           '/employer/dashboard',
           '/employer/candidates',
           '/employer/applicants',
+          '/employer/analytics',
           '/employer/talent-search',
           '/employer/settings',
           '/settings',
@@ -278,9 +281,16 @@ export default function robots(): MetadataRoute.Robots {
       // signal "we welcome these crawlers" is unmistakable to AI tools
       // that scan robots.txt for per-bot rules. Same disallow list as
       // the catch-all — no throttle, full public coverage.
+      //
+      // Explicit `Allow: /` (2026-07-18, audit B46): the ClaudeBot
+      // incident above proved that real-world AI-crawler parsers fall
+      // back to a conservative "everything disallowed" reading when a
+      // named rule block has Disallow lines but no positive Allow rule.
+      // Every named AI bot gets the same explicit root Allow so none of
+      // them can misread the bulk disallow list as a site-wide block.
       {
         userAgent: [...AI_CRAWLERS],
-        allow: PUBLIC_ALLOW,
+        allow: ['/', ...PUBLIC_ALLOW],
         disallow: effectiveFullDisallow,
       },
       // SEO link-graph crawlers grouped. Same posture: explicit allow

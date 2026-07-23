@@ -8,6 +8,6 @@ export const metadata: Metadata = {
 };
 
 export default async function EmployerSettingsPage() {
-    await requireEmployer();
+    await requireEmployer('/employer/settings');
     return <EmployerSettingsClient />;
 }

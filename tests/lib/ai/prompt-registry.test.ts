@@ -10,11 +10,19 @@ beforeEach(() => {
 });
 
 describe('lib/ai/prompts/registry', () => {
-    it('loads the candidate_scoring v1 prompt and reports id + version', async () => {
-        const p = await loadPrompt('candidate_scoring');
+    it('loads the pinned candidate_scoring v1 prompt and reports id + version', async () => {
+        // Pinned load — v2 (niche-neutral rewrite, audit V0) is now the
+        // unpinned latest; this test keeps covering explicit version pins.
+        const p = await loadPrompt('candidate_scoring', 'v1');
         expect(p.id).toBe('candidate_scoring');
         expect(p.version).toBe('v1');
         expect(p.rawSystem).toContain('PMHNP');
+    });
+
+    it('resolves the unpinned load to the latest version (v2 after audit V0)', async () => {
+        const p = await loadPrompt('candidate_scoring');
+        expect(p.version).toBe('v2');
+        expect(p.supersedes).toBe('v1');
     });
 
     it('renders {{var}} placeholders with provided values', async () => {

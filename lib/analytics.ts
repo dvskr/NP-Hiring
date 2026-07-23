@@ -92,17 +92,78 @@ function gtag(...args: unknown[]) {
 // All non-essential storage is 'denied' by default (GDPR/CCPA/ePrivacy).
 // CookieConsent component flips signals to 'granted' on user accept.
 
-export function initConsentDefaults() {
+/**
+ * Push the Consent Mode v2 defaults. Must run before gtag.js executes.
+ *
+ * `cats` is the previously recorded per-category consent (from the
+ * middleware-mirrored consent cookie — see lib/consent.ts). Passing
+ * null (no prior choice) keeps every non-essential signal 'denied'.
+ *
+ * Called from GoogleAnalytics.tsx as plain module code — NOT an inline
+ * <script> — so no CSP nonce is needed and the root layout can stay
+ * static/ISR-compatible (ISR fix F5).
+ */
+export function initConsentDefaults(cats: { analytics: boolean; marketing: boolean } | null = null) {
+  const analytics: ConsentState = cats?.analytics === true ? 'granted' : 'denied';
+  const marketing: ConsentState = cats?.marketing === true ? 'granted' : 'denied';
   gtag('consent', 'default', {
-    analytics_storage: 'denied',
-    ad_storage: 'denied',
-    ad_user_data: 'denied',
-    ad_personalization: 'denied',
+    analytics_storage: analytics,
+    ad_storage: marketing,
+    ad_user_data: marketing,
+    ad_personalization: marketing,
     functionality_storage: 'granted',
-    personalization_storage: 'denied',
+    personalization_storage: analytics,
     security_storage: 'granted',
     wait_for_update: 500,           // ms to wait for consent before first hit
   } as Record<string, unknown>);
+}
+
+/**
+ * One-time GA4 bootstrap: the `gtag('js')` timestamp plus the base
+ * config. Replaces the former inline `ga-init` <script> in
+ * GoogleAnalytics.tsx (inline scripts need a per-request CSP nonce,
+ * which forced the root layout to read headers() and killed ISR).
+ * Queued via dataLayer, so ordering vs. gtag.js loading is safe.
+ */
+export function initGaBase() {
+  if (!GA_ID || typeof window === 'undefined') return;
+  // Restore the classic-snippet global (regression guard): gtag.js itself
+  // NEVER defines window.gtag — the deleted inline script's top-level
+  // `function gtag(){dataLayer.push(arguments)}` was the only definition.
+  // Direct consumers guard on `typeof window.gtag === 'function'`
+  // (e.g. PseoPageViewTracker's pseo_page_view event in
+  // components/analytics/ViewTrackers.tsx), so without this shim those
+  // events silently stop firing. Must push the real Arguments object —
+  // GA4 ignores plain arrays.
+  if (typeof window.gtag !== 'function') {
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function gtagShim() {
+      // eslint-disable-next-line prefer-rest-params
+      window.dataLayer.push(arguments);
+    };
+  }
+  gtag('js', new Date());
+  gtag('config', GA_ID, {
+    // SEO Fix M17: send_page_view: false. RouteChangeTracker owns the
+    // entire page_view lifecycle (initial + SPA route changes) —
+    // firing one here too would double-count every session.
+    send_page_view: false,
+    page_path: window.location.pathname,
+    cookie_flags: 'SameSite=None;Secure',
+    cookie_domain: 'auto',
+    cookie_expires: 63072000,
+    anonymize_ip: true,
+    allow_google_signals: false,
+    allow_ad_personalization_signals: false,
+    custom_map: {
+      dimension1: 'user_role',
+      dimension2: 'job_source',
+      dimension3: 'work_mode',
+      dimension4: 'job_state',
+      dimension5: 'apply_method',
+      metric1: 'results_count',
+    },
+  });
 }
 
 export function updateConsent(consent: Partial<ConsentConfig>) {

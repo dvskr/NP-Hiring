@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { config } from '@/lib/config';
 import { trackViewPostJobPage } from '@/lib/analytics';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
@@ -15,6 +16,7 @@ import { Building2, MapPin, FileText, DollarSign, Rocket, ChevronRight, ChevronL
 import { EXPERIENCE_BUCKETS, deriveExperienceLabel } from '@/lib/experience-label';
 import JdStarterPanel from '@/components/post-job/JdStarterPanel';
 import ConfirmDialog, { type ConfirmConfig } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/ToastProvider';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
@@ -351,6 +353,7 @@ function StepProgressBar({ currentStep, onStepClick, completedSteps }: {
 
 function PostJobContent() {
   const router = useRouter();
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -378,6 +381,13 @@ function PostJobContent() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  // F3: paid-posting funnel gate. Combines the server-checked availability
+  // signal (ENABLE_PAID_POSTING flag + stripeConfigured, via
+  // /api/create-checkout/availability) with the free-quota status so an
+  // employer whose next post REQUIRES payment learns BEFORE filling the
+  // form that paid posting isn't open yet — instead of 503ing at Pay.
+  const [paidGateLoading, setPaidGateLoading] = useState(true);
+  const [showPaidComingSoon, setShowPaidComingSoon] = useState(false);
 
   const {
     register,
@@ -459,6 +469,44 @@ function PostJobContent() {
     }
     checkUser();
   }, [setValue, router]);
+
+  // F3: resolve the paid-posting gate once auth/role are known. Fails OPEN on
+  // any fetch error — the checkout APIs still return a stable 503 code, and
+  // the preview/checkout pages re-check. Never block posting on a transient
+  // status-fetch failure.
+  useEffect(() => {
+    if (isAuthLoading) return;
+    if (!user || (userRole !== 'employer' && userRole !== 'admin')) {
+      setPaidGateLoading(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const [availabilityRes, quotaRes] = await Promise.all([
+          fetch('/api/create-checkout/availability'),
+          fetch('/api/employer/free-quota-status'),
+        ]);
+        if (cancelled || !availabilityRes.ok || !quotaRes.ok) return;
+        const availability = await availabilityRes.json();
+        const quota = await quotaRes.json();
+        if (cancelled) return;
+        // Only employers who would be routed to PAID checkout are gated:
+        // eligible with no free post remaining. Free-post-eligible employers
+        // (and edge cases the quota API rejects for other reasons) proceed —
+        // their path never reaches Stripe.
+        const nextPostRequiresPayment = quota?.eligible === true && quota?.willBeFree === false;
+        if (availability?.available === false && nextPostRequiresPayment) {
+          setShowPaidComingSoon(true);
+        }
+      } catch {
+        // Fail open — see comment above.
+      } finally {
+        if (!cancelled) setPaidGateLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isAuthLoading, user, userRole]);
 
   // Hydration priority:
   //   1. ?resume=<token> — legacy email-link path (kept for back-compat)
@@ -679,8 +727,8 @@ function PostJobContent() {
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Logo must be under 2MB'); return; }
-    if (!file.type.startsWith('image/')) { alert('Please upload an image file'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast('Logo must be under 2MB', 'error'); return; }
+    if (!file.type.startsWith('image/')) { toast('Please upload an image file', 'error'); return; }
     setUploadingLogo(true);
     try {
       const formData = new FormData();
@@ -867,6 +915,52 @@ function PostJobContent() {
             >
               Sign out and create an Employer account
             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // F3: hold the form until the paid-posting gate resolves so an employer
+  // who would dead-end at a closed checkout never starts the wizard.
+  if (paidGateLoading) return <LoadingFallback />;
+
+  // F3: "Paid posting coming soon" — shown INSTEAD of the form when this
+  // employer's next post requires payment but paid posting isn't open yet
+  // (ENABLE_PAID_POSTING off, or Stripe not configured).
+  if (showPaidComingSoon) {
+    return (
+      <div style={{ maxWidth: '560px', margin: '0 auto', padding: '48px 16px' }}>
+        <div style={{ ...cardBase, padding: '40px 32px', textAlign: 'center' }}>
+          <div style={{
+            width: '56px', height: '56px', borderRadius: '18px', margin: '0 auto 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'linear-gradient(145deg, #BE185D, #9D174D)',
+            boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.2)',
+          }}>
+            <Rocket size={24} color="#fff" />
+          </div>
+          <h2 style={{ fontSize: '22px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 8px' }}>
+            Paid posting is coming soon
+          </h2>
+          <p style={{ fontSize: '14px', color: '#6B7F8A', margin: '0 0 28px', lineHeight: 1.5 }}>
+            Your organization has used its free job post, and paid posting isn&apos;t
+            open on {brand.name} yet. Email us and we&apos;ll notify you the moment
+            checkout is ready.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <Link href="/employer/dashboard" style={{
+              ...clayBtn, justifyContent: 'center',
+              background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
+              boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
+            }}>
+              Go to your dashboard
+            </Link>
+            <a href={`mailto:${brand.email.replyTo}`} style={{
+              ...clayBtn, justifyContent: 'center', background: '#F5F6F8', color: '#6B7F8A',
+            }}>
+              Contact support
+            </a>
           </div>
         </div>
       </div>

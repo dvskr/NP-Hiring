@@ -2,7 +2,7 @@ import { brand } from '@/config/brand';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Metadata } from 'next';
-import { ArrowRight, BookOpen, Newspaper, PenLine } from 'lucide-react';
+import { ArrowRight, BookOpen, Newspaper, PenLine, DollarSign, Search } from 'lucide-react';
 import {
     getPublishedPosts,
     getPostCount,
@@ -427,29 +427,31 @@ export default async function BlogIndexPage({
                     </h2>
                     <div className="blog-cta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                         {[
-                            { href: '/salary-guide', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`, title: 'Salary Guide', desc: '2026 data with state breakdowns' },
-                            { href: '/jobs', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp`, title: 'Browse Jobs', desc: `10,000+ ${brand.niche.short} positions` },
-                            { href: '/resources', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-chart.webp`, title: 'Resources', desc: 'Licensure guides & tools' },
-                        ].map(item => (
-                            <Link key={item.href} href={item.href} className="blog-cta-card" style={{
-                                ...clayCard, padding: '28px 22px', textDecoration: 'none',
-                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center',
-                            }}>
-                                <div style={{
-                                    width: '64px', height: '64px', borderRadius: '18px',
-                                    background: 'linear-gradient(145deg, #F8F6F2, #EEEBE5)',
-                                    boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.7), inset -2px -2px 4px rgba(0,0,0,0.04), 3px 3px 8px rgba(0,0,0,0.05)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                            { href: '/salary-guide', IconComp: DollarSign, title: 'Salary Guide', desc: '2026 data with state breakdowns' },
+                            { href: '/jobs', IconComp: Search, title: 'Browse Jobs', desc: `10,000+ ${brand.niche.short} positions` },
+                            { href: '/resources', IconComp: BookOpen, title: 'Resources', desc: 'Licensure guides & tools' },
+                        ].map(item => {
+                            const IconC = item.IconComp;
+                            return (
+                                <Link key={item.href} href={item.href} className="blog-cta-card" style={{
+                                    ...clayCard, padding: '28px 22px', textDecoration: 'none',
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center',
                                 }}>
-                                    <Image src={item.icon} alt={item.title} width={40} height={40} style={{ width: '40px', height: '40px', borderRadius: '10px', objectFit: 'contain' }} />
-                                </div>
-                                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>{item.title}</h3>
-                                <p style={{ fontSize: '13px', color: '#5A4A42', margin: 0, lineHeight: 1.5 }}>{item.desc}</p>
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                    Explore <ArrowRight size={14} />
-                                </span>
-                            </Link>
-                        ))}
+                                    <div style={{
+                                        width: '64px', height: '64px', borderRadius: '18px',
+                                        background: '#D4E2D4', color: '#1E3A5F',
+                                        boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.7), inset -2px -2px 4px rgba(0,0,0,0.04), 3px 3px 8px rgba(0,0,0,0.05)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                    }}>
+                                        <IconC size={28} />
+                                    </div>
+                                    <div>
+                                        <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 4px' }}>{item.title}</h3>
+                                        <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>{item.desc}</p>
+                                    </div>
+                                </Link>
+                            );
+                        })}
                     </div>
                 </div>
             </section>

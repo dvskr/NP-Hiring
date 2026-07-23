@@ -10,6 +10,8 @@ import Link from 'next/link';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import useAppliedJobs from '@/lib/hooks/useAppliedJobs';
 import useSavedJobs from '@/lib/hooks/useSavedJobs';
+import ConfirmDialog, { ConfirmConfig } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/ToastProvider';
 
 type TabType = 'saved' | 'applied';
 type SortOption = 'recent' | 'salary' | 'title';
@@ -40,6 +42,12 @@ export default function SavedJobsPage() {
   const [appliedError, setAppliedError] = useState<string | null>(null);
   const [appliedInitialized, setAppliedInitialized] = useState(false);
   const lastFetchedIds = useRef<string>('');
+
+  // Shared confirm modal (B66) — both destructive "Clear" actions route
+  // through the app-wide ConfirmDialog instead of window.confirm.
+  const [confirm, setConfirm] = useState<ConfirmConfig | null>(null);
+  const [clearingApplied, setClearingApplied] = useState(false);
+  const { toast } = useToast();
 
   const fetchSavedJobs = useCallback(async (ids: string[]) => {
     if (ids.length === 0) {
@@ -128,18 +136,99 @@ export default function SavedJobsPage() {
     });
   };
 
+  // B66: "Clear all" saved jobs was one accidental click from wiping the
+  // whole list with no confirmation (the applied-history clear always
+  // confirmed). Route it through the shared ConfirmDialog.
   const handleClearAll = () => {
-    clearSavedJobs();
-    setJobs([]);
+    setConfirm({
+      title: 'Clear all saved jobs?',
+      description: `This removes all ${savedIds.length} saved job${savedIds.length !== 1 ? 's' : ''} from your list. This cannot be undone.`,
+      confirmLabel: 'Clear all',
+      variant: 'danger',
+      onConfirm: () => {
+        setConfirm(null);
+        clearSavedJobs();
+        setJobs([]);
+      },
+    });
+  };
+
+  /**
+   * B0: "Clear history" must never hard-delete submitted in-platform
+   * applications. The hook's clearAll fires DELETE /api/applications per
+   * jobId, which removes the JobApplication row outright — for an app the
+   * candidate actually submitted, that yanks them out of the employer's
+   * pipeline and destroys the consent audit record (consentGiven /
+   * consentGivenAt). So we partition first: rows with submitted content
+   * (consent, cover letter, resume, screening answers, an advanced
+   * pipeline status, or a withdrawal record) are preserved and stay
+   * visible; only pure click-through tracking rows are cleared.
+   * Anonymous users have no server rows, so their local-only history
+   * clears unconditionally.
+   */
+  const clearAppliedHistory = async () => {
+    setClearingApplied(true);
+    try {
+      const res = await fetch('/api/applications');
+      if (res.status === 401) {
+        // Anonymous — localStorage-only click history; nothing to protect.
+        clearAppliedJobs();
+        setAppliedJobsData([]);
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(`Applications request failed (${res.status})`);
+      }
+      const apps = (await res.json()) as Array<{
+        jobId: string;
+        status: string;
+        coverLetter: string | null;
+        coverLetterUrl: string | null;
+        resumeUrl: string | null;
+        consentGiven: boolean;
+        withdrawnAt: string | null;
+        screeningAnswers: unknown;
+      }>;
+      const protectedIds = new Set(
+        apps
+          .filter((a) =>
+            a.consentGiven === true
+            || !!a.coverLetter
+            || !!a.coverLetterUrl
+            || !!a.resumeUrl
+            || a.screeningAnswers != null
+            || (a.status && a.status !== 'applied')
+            || !!a.withdrawnAt,
+          )
+          .map((a) => a.jobId),
+      );
+      const clearable = appliedJobs.filter((id) => !protectedIds.has(id));
+      for (const id of clearable) removeApplied(id);
+      setAppliedJobsData((prev) => prev.filter((job) => protectedIds.has(job.id)));
+      if (protectedIds.size > 0) {
+        toast(
+          `Cleared ${clearable.length} — ${protectedIds.size} submitted application${protectedIds.size !== 1 ? 's' : ''} kept. Manage them from My Applications.`,
+          'success',
+        );
+      }
+    } catch {
+      toast('Couldn’t clear your history — please try again.', 'error');
+    } finally {
+      setClearingApplied(false);
+    }
   };
 
   const handleClearApplied = () => {
-    if (confirm('Are you sure you want to clear your application history? This cannot be undone.')) {
-      // The hook wipes both localStorage and the user's server-side rows
-      // (when authenticated). No reload needed — state updates flow through.
-      clearAppliedJobs();
-      setAppliedJobsData([]);
-    }
+    setConfirm({
+      title: 'Clear application history?',
+      description: 'This clears jobs you clicked through to from this list. Applications you submitted on this site are kept — employers still see them, and you can withdraw any of them from My Applications.',
+      confirmLabel: 'Clear history',
+      variant: 'danger',
+      onConfirm: () => {
+        setConfirm(null);
+        void clearAppliedHistory();
+      },
+    });
   };
 
   const handleRemoveJob = (jobId: string, e: React.MouseEvent) => {
@@ -279,15 +368,20 @@ export default function SavedJobsPage() {
                     )}
                     <button
                         onClick={activeTab === 'saved' ? handleClearAll : handleClearApplied}
+                        disabled={activeTab === 'applied' && clearingApplied}
                         style={{
                             display: 'inline-flex', alignItems: 'center', gap: '6px',
                             fontSize: '13px', fontWeight: 600, color: '#EF4444',
                             background: '#FEF2F2', border: '1px solid #FECACA',
                             borderRadius: '10px', padding: '6px 14px',
-                            cursor: 'pointer', transition: 'all 0.2s',
+                            cursor: activeTab === 'applied' && clearingApplied ? 'wait' : 'pointer',
+                            opacity: activeTab === 'applied' && clearingApplied ? 0.6 : 1,
+                            transition: 'all 0.2s',
                         }}
                     >
-                        <Trash2 size={14} />
+                        {activeTab === 'applied' && clearingApplied
+                            ? <Loader2 size={14} className="animate-spin" />
+                            : <Trash2 size={14} />}
                         Clear {activeTab === 'saved' ? 'all' : 'history'}
                     </button>
                 </div>
@@ -549,6 +643,14 @@ export default function SavedJobsPage() {
         )}
 
       </div>
+
+      {/* ═══ Shared confirm modal (Clear all / Clear history) ═══ */}
+      {confirm && (
+        <ConfirmDialog
+          {...confirm}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
 
       {/* ═══ Hover styles ═══ */}
       <style>{`

@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ChevronDown, User, Clock, FileText, X, Mail, Download, Eye, EyeOff, CheckSquare, Square } from 'lucide-react';
+import { ChevronDown, User, Clock, FileText, X, Mail, Download, Eye, EyeOff, CheckSquare, Square, AlertTriangle, RefreshCw } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { useToast } from '@/components/ui/ToastProvider';
 import ComposeMessageModal from './ComposeMessageModal';
 
 const STATUSES = [
@@ -58,6 +59,19 @@ interface JobOption {
     title: string;
 }
 
+/**
+ * Encode one CSV cell safely (exported for regression tests):
+ *   - RFC 4180: wrap in quotes and double any embedded quotes, so commas,
+ *     quotes, and newlines in candidate-supplied text can't corrupt rows.
+ *   - Formula-injection guard: cells starting with = + - @ (or tab/CR) get a
+ *     leading apostrophe so spreadsheet apps treat them as text, not formulas
+ *     (candidate names / cover letters are attacker-controlled input).
+ */
+export function csvCell(raw: string): string {
+    const guarded = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+    return `"${guarded.replace(/"/g, '""')}"`;
+}
+
 /* ═══ Clay Design Tokens ═══ */
 const cardBase: React.CSSProperties = {
     background: '#FFFFFF',
@@ -95,9 +109,11 @@ const selectBase: React.CSSProperties = {
 };
 
 export default function ApplicantsTab() {
+    const { toast } = useToast();
     const [applicants, setApplicants] = useState<Applicant[]>([]);
     const [jobs, setJobs] = useState<JobOption[]>([]);
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState('all');
     const [jobFilter, setJobFilter] = useState('all');
     const [editingNotes, setEditingNotes] = useState<string | null>(null);
@@ -113,22 +129,31 @@ export default function ApplicantsTab() {
 
     const fetchApplicants = useCallback(async () => {
         setLoading(true);
+        setFetchError(null);
         try {
             const params = new URLSearchParams();
             if (statusFilter !== 'all') params.set('status', statusFilter);
             if (jobFilter !== 'all') params.set('jobId', jobFilter);
 
             const res = await fetch(`/api/employer/applicants?${params}`);
-            if (!res.ok) { setApplicants([]); setJobs([]); return; }
+            if (!res.ok) {
+                throw new Error(`Applicants request failed (${res.status})`);
+            }
             const text = await res.text();
-            if (!text) { setApplicants([]); setJobs([]); return; }
+            if (!text) {
+                throw new Error('Applicants request returned an empty response');
+            }
             const data = JSON.parse(text);
             setApplicants(data.applicants || []);
             setJobs(data.jobs || []);
         } catch (err) {
+            // A failed fetch must never render as "no applicants yet" — an
+            // employer reviewing candidates on a paid posting would be told
+            // nobody applied. Surface an error panel with Retry instead.
             console.error('Error fetching applicants:', err);
             setApplicants([]);
             setJobs([]);
+            setFetchError('We couldn’t load your applicants. This is a loading problem, not an empty pipeline.');
         } finally {
             setLoading(false);
         }
@@ -138,24 +163,52 @@ export default function ApplicantsTab() {
         fetchApplicants();
     }, [fetchApplicants]);
 
-    const handleStatusChange = async (applicationId: string, newStatus: string) => {
+    // Core status PATCH with an optimistic update and an explicit rollback on
+    // failure. Returns whether the server accepted the change so bulk callers
+    // can count partial failures. Does NOT toast — callers decide how to
+    // report (single change vs. "2 of 5 failed").
+    const performStatusChange = async (applicationId: string, newStatus: string): Promise<boolean> => {
+        const target = applicants.find(a => a.id === applicationId);
+        if (!target) return false;
+        const previous = { status: target.status, statusUpdatedAt: target.statusUpdatedAt };
+
+        // Optimistic: reflect the change immediately so the dropdown doesn't lag.
+        setApplicants(prev =>
+            prev.map(a => a.id === applicationId
+                ? { ...a, status: newStatus, statusUpdatedAt: new Date().toISOString() }
+                : a
+            )
+        );
+
         try {
             const res = await fetch('/api/employer/applicants', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ applicationId, status: newStatus }),
             });
-
-            if (res.ok) {
-                setApplicants(prev =>
-                    prev.map(a => a.id === applicationId
-                        ? { ...a, status: newStatus, statusUpdatedAt: new Date().toISOString() }
-                        : a
-                    )
-                );
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({} as { error?: string }));
+                throw new Error(data.error || `Status update failed (${res.status})`);
             }
+            return true;
         } catch (err) {
             console.error('Error updating status:', err);
+            // Roll back the optimistic change — never leave the UI claiming a
+            // status the server rejected.
+            setApplicants(prev =>
+                prev.map(a => a.id === applicationId
+                    ? { ...a, status: previous.status, statusUpdatedAt: previous.statusUpdatedAt }
+                    : a
+                )
+            );
+            return false;
+        }
+    };
+
+    const handleStatusChange = async (applicationId: string, newStatus: string) => {
+        const ok = await performStatusChange(applicationId, newStatus);
+        if (!ok) {
+            toast('Couldn’t update applicant status — please try again.', 'error');
         }
     };
 
@@ -166,18 +219,21 @@ export default function ApplicantsTab() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ applicationId, notes: notesValue }),
             });
-
-            if (res.ok) {
-                setApplicants(prev =>
-                    prev.map(a => a.id === applicationId
-                        ? { ...a, notes: notesValue }
-                        : a
-                    )
-                );
-                setEditingNotes(null);
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({} as { error?: string }));
+                throw new Error(data.error || `Notes save failed (${res.status})`);
             }
+            setApplicants(prev =>
+                prev.map(a => a.id === applicationId
+                    ? { ...a, notes: notesValue }
+                    : a
+                )
+            );
+            setEditingNotes(null);
         } catch (err) {
             console.error('Error saving notes:', err);
+            // Keep the editor open so the typed note isn't lost on failure.
+            toast('Couldn’t save notes — please try again.', 'error');
         }
     };
 
@@ -185,15 +241,24 @@ export default function ApplicantsTab() {
         return STATUSES.find(s => s.value === status) || STATUSES[0];
     };
 
-    // Bulk status change
+    // Bulk status change — reports partial failures honestly instead of
+    // silently dropping them, and keeps the failed rows selected for retry.
     const handleBulkStatusChange = async (newStatus: string) => {
         if (selectedIds.size === 0) return;
         setBulkUpdating(true);
         try {
-            await Promise.all(
-                Array.from(selectedIds).map(id => handleStatusChange(id, newStatus))
-            );
-            setSelectedIds(new Set());
+            const ids = Array.from(selectedIds);
+            const results = await Promise.all(ids.map(id => performStatusChange(id, newStatus)));
+            const failedIds = ids.filter((_, i) => !results[i]);
+            if (failedIds.length > 0) {
+                toast(
+                    `${failedIds.length} of ${ids.length} status updates failed — the failed applicants are still selected so you can retry.`,
+                    'error',
+                );
+                setSelectedIds(new Set(failedIds));
+            } else {
+                setSelectedIds(new Set());
+            }
         } finally {
             setBulkUpdating(false);
         }
@@ -228,9 +293,9 @@ export default function ApplicantsTab() {
         }));
         const headers = Object.keys(rows[0] || {});
         const csv = [
-            headers.join(','),
-            ...rows.map(r => headers.map(h => `"${(r as Record<string, string>)[h] || ''}"`).join(','))
-        ].join('\n');
+            headers.map(csvCell).join(','),
+            ...rows.map(r => headers.map(h => csvCell((r as Record<string, string>)[h] || '')).join(','))
+        ].join('\r\n');
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -365,8 +430,31 @@ export default function ApplicantsTab() {
                     return null;
                 })()}
 
-                {/* Applicants List */}
-                {applicants.length === 0 ? (
+                {/* Fetch Error Panel — distinct from the genuinely-empty state */}
+                {fetchError ? (
+                    <div style={{
+                        ...cardBase, padding: '48px 24px', textAlign: 'center',
+                        border: '1px solid #FECACA',
+                    }}>
+                        <AlertTriangle size={36} style={{ color: '#DC2626', margin: '0 auto 12px' }} />
+                        <p style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
+                            Couldn&apos;t load applicants
+                        </p>
+                        <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 16px' }}>
+                            {fetchError}
+                        </p>
+                        <button
+                            onClick={() => { void fetchApplicants(); }}
+                            style={{
+                                ...clayBtn, background: 'linear-gradient(145deg, #BE185D, #9D174D)',
+                                color: '#fff', border: 'none',
+                                boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                            }}
+                        >
+                            <RefreshCw size={13} /> Retry
+                        </button>
+                    </div>
+                ) : applicants.length === 0 ? (
                     <div style={{
                         ...cardBase, padding: '48px 24px', textAlign: 'center',
                     }}>

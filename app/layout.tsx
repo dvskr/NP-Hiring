@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { headers, cookies } from 'next/headers';
-import { CONSENT_COOKIE, parseConsentCookie } from '@/lib/consent';
 import { brand } from '@/config/brand';
 // Newsreader is loaded only in app/blog/layout.tsx (scoped to /blog/*) so
 // non-blog pages don't pay the cost of a font that's only used by editorial
@@ -21,8 +19,8 @@ import LayoutShell from '@/components/LayoutShell';
 import MainContent from '@/components/MainContent';
 import MobileHideOnAppRoutes from '@/components/MobileHideOnAppRoutes';
 
-import GoogleAnalytics from '@/components/GoogleAnalytics';
-import ConsentGatedTelemetry from '@/components/ConsentGatedTelemetry';
+import AnalyticsConsentBoundary from '@/components/consent/AnalyticsConsentBoundary';
+import CookieConsentBoundary from '@/components/consent/CookieConsentBoundary';
 import ScrollIndicator from '@/components/ScrollIndicator';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 
@@ -30,7 +28,6 @@ const STORAGE_BASE = brand.assets.storageBase;
 
 const ExitIntentPopup = dynamic(() => import('@/components/ExitIntentPopup'));
 const PushNotificationPrompt = dynamic(() => import('@/components/PushNotificationPrompt'));
-const CookieConsent = dynamic(() => import('@/components/CookieConsent'));
 const PWAInstallBanner = dynamic(() => import('@/components/PWAInstallBanner'));
 
 const inter = Inter({
@@ -159,17 +156,26 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+// ISR fix F5: this layout MUST NOT call headers()/cookies() (or any other
+// Dynamic API). In Next 16 a single Dynamic API read in the root layout
+// opts EVERY route into dynamic rendering, silently disabling all
+// `export const revalidate` ISR (job detail, listings, companies, pSEO) —
+// which is exactly the Googlebot-crawl-burst → DB-pool-exhaustion → 5xx
+// scenario those pages' caching exists to prevent.
+//
+//   - The CSP nonce read is gone: GoogleAnalytics no longer renders inline
+//     scripts, so nothing in the layout tree needs the per-request nonce
+//     (middleware still sets the CSP header itself).
+//   - Consent initialization moved to a client boundary
+//     (components/consent/*) fed by a middleware-mirrored, non-HttpOnly
+//     copy of the consent cookie read from document.cookie after mount.
+//     The authoritative HttpOnly cookie (audit gap #19) is unchanged —
+//     writes still only happen via POST /api/consent.
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const nonce = (await headers()).get('x-nonce') || '';
-  // Read the HttpOnly consent cookie at SSR time so we can initialize
-  // GA, Speed Insights, and the banner with the right state without
-  // exposing the value to client JavaScript (closes audit gap #19).
-  const initialConsent = parseConsentCookie((await cookies()).get(CONSENT_COOKIE)?.value);
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -288,8 +294,7 @@ export default async function RootLayout({
         <ThemeProvider>
           <ToastProvider>
             <div style={{ width: '100%', maxWidth: '100vw', position: 'relative', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-              <GoogleAnalytics nonce={nonce} initialConsent={initialConsent} />
-              <ConsentGatedTelemetry initialConsent={initialConsent} />
+              <AnalyticsConsentBoundary />
               <LayoutShell>
                 <Header />
               </LayoutShell>
@@ -302,7 +307,7 @@ export default async function RootLayout({
                 <ScrollIndicator />
                 <ExitIntentPopup />
                 <PushNotificationPrompt />
-                <CookieConsent initialConsent={initialConsent} />
+                <CookieConsentBoundary />
                 <PWAInstallBanner />
               </LayoutShell>
             </div>

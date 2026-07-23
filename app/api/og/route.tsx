@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
   const title = searchParams.get('title');
   const type = searchParams.get('type'); // 'page' for category/blog/location pages
   const subtitle = searchParams.get('subtitle') || '';
-  const company = searchParams.get('company') || 'PMHNP Hiring';
+  // F2: default company is the board's own brand (job pages always pass
+  // job.employer; this only fires when the param is missing entirely).
+  const company = searchParams.get('company') || brand.name;
   const salary = searchParams.get('salary') || 'Competitive Pay';
   const location = searchParams.get('location') || 'Remote / On-site';
   const jobType = searchParams.get('jobType') || 'Full-time';
@@ -110,9 +112,9 @@ export async function GET(request: NextRequest) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   {logoSrc ? (
-                    <img src={logoSrc} alt="PMHNP Hiring" width={200} height={70} style={{ objectFit: 'contain' }} />
+                    <img src={logoSrc} alt={brand.name} width={200} height={70} style={{ objectFit: 'contain' }} />
                   ) : (
-                    <div style={{ display: 'flex', fontSize: 28, fontWeight: 800, color: '#F472B6' }}>PMHNP Hiring</div>
+                    <div style={{ display: 'flex', fontSize: 28, fontWeight: 800, color: '#F472B6' }}>{brand.name}</div>
                   )}
                 </div>
                 <div style={{
@@ -196,9 +198,9 @@ export async function GET(request: NextRequest) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   {logoSrc ? (
-                    <img src={logoSrc} alt="PMHNP Hiring" width={200} height={70} style={{ objectFit: 'contain' }} />
+                    <img src={logoSrc} alt={brand.name} width={200} height={70} style={{ objectFit: 'contain' }} />
                   ) : (
-                    <div style={{ display: 'flex', fontSize: 28, fontWeight: 800, color: '#F472B6' }}>PMHNP Hiring</div>
+                    <div style={{ display: 'flex', fontSize: 28, fontWeight: 800, color: '#F472B6' }}>{brand.name}</div>
                   )}
                 </div>
                 <div style={{
@@ -277,9 +279,9 @@ export async function GET(request: NextRequest) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   {logoSrc ? (
-                    <img src={logoSrc} alt="PMHNP Hiring" width={200} height={80} style={{ objectFit: 'contain' }} />
+                    <img src={logoSrc} alt={brand.name} width={200} height={80} style={{ objectFit: 'contain' }} />
                   ) : (
-                    <div style={{ display: 'flex', fontSize: 28, fontWeight: 800, color: '#F472B6' }}>PMHNP Hiring</div>
+                    <div style={{ display: 'flex', fontSize: 28, fontWeight: 800, color: '#F472B6' }}>{brand.name}</div>
                   )}
                 </div>
 

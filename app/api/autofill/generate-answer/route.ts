@@ -3,6 +3,35 @@ import { prisma } from '@/lib/prisma';
 import { verifyExtensionToken } from '@/lib/verify-extension-token';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage';
+import { complete } from '@/lib/ai/gateway';
+import { AiGatewayError } from '@/lib/ai/types';
+import { z } from 'zod';
+import { checkAutofillAiQuota, quotaExceededResponse } from '../_lib/quota';
+import { checkAutofillAiFeature, aiGatewayErrorResponse } from '../_lib/guard';
+import { fetchResumeTextFromSignedUrl } from '../_lib/resume-text';
+
+// ─── Request validation (audit B96) ───
+//
+// Every field below lands in the LLM prompt, so unvalidated input was both
+// a prompt-bloat cost vector (unbounded questionText/jobDescription) and a
+// correctness bug (non-string questionText threw on .toLowerCase → 500;
+// absurd maxLength values steered the "approximately N characters" prompt
+// instruction). maxLength is clamped server-side — malformed values degrade
+// to the 300-char default instead of failing the fill.
+export const generateAnswerRequestSchema = z.object({
+    questionText: z.string().trim().min(1, 'questionText is required').max(2_000),
+    questionKey: z.string().max(200).optional().nullable().catch(null),
+    jobTitle: z.string().max(300).catch(''),
+    jobDescription: z.string().max(20_000).catch(''),
+    employerName: z.string().max(300).catch(''),
+    maxLength: z.coerce.number().int().min(20).max(1_500).catch(300),
+}).transform((v) => ({
+    ...v,
+    questionKey: v.questionKey ?? '',
+    jobTitle: v.jobTitle ?? '',
+    jobDescription: v.jobDescription ?? '',
+    employerName: v.employerName ?? '',
+}));
 
 
 export async function POST(req: NextRequest) {
@@ -16,48 +45,19 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const body = await req.json();
-        const {
-            questionText,
-            questionKey,
-            jobTitle,
-            jobDescription,
-            employerName,
-            maxLength = 300,
-        } = body;
+        // Kill switch (audit F31).
+        const disabled = await checkAutofillAiFeature('ai.candidate.autofill_answer', user.userId);
+        if (disabled) return disabled;
 
-        if (!questionText) {
-            return NextResponse.json({ error: 'questionText is required' }, { status: 400 });
-        }
-
-        // Check usage / rate limits
-        const profile = await prisma.userProfile.findUnique({
-            where: { id: user.userId },
-            select: { role: true },
-        });
-
-        const tier = profile?.role === 'premium' ? 'premium' : profile?.role === 'pro' ? 'pro' : 'free';
-        const aiLimit = tier === 'free' ? 10 : tier === 'pro' ? 100 : Infinity;
-
-        // Count this month's AI generations
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
-
-        const usageCount = await prisma.autofillUsage.count({
-            where: {
-                userId: user.userId,
-                createdAt: { gte: startOfMonth },
-                aiGenerations: { gt: 0 },
-            },
-        });
-
-        if (usageCount >= aiLimit) {
+        const body = await req.json().catch(() => null);
+        const parsedBody = generateAnswerRequestSchema.safeParse(body ?? {});
+        if (!parsedBody.success) {
             return NextResponse.json(
-                { error: 'AI generation limit reached for this month', tier, limit: aiLimit },
-                { status: 429 }
+                { error: parsedBody.error.issues[0]?.message || 'Invalid request body' },
+                { status: 400 }
             );
         }
+        const { questionText, questionKey, jobTitle, jobDescription, employerName, maxLength } = parsedBody.data;
 
         // Check if we have a stored open-ended response that matches
         const storedResponses = await prisma.candidateOpenEndedResponse.findMany({
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
         const matchingStored = storedResponses.find(
             (r) =>
-                r.questionKey === questionKey ||
+                (questionKey !== '' && r.questionKey === questionKey) ||
                 r.questionText.toLowerCase().includes(questionText.toLowerCase().substring(0, 30))
         );
 
@@ -78,6 +78,13 @@ export async function POST(req: NextRequest) {
                 basedOnStoredResponse: true,
             });
         }
+
+        // Monthly AI-generation quota (audit F29) — the shared SUM-based
+        // helper (replaces the old row-count check that disagreed with the
+        // usage display). Checked AFTER the stored-response path so capped
+        // users still get their saved answers for free.
+        const quota = await checkAutofillAiQuota(user.userId, 1);
+        if (!quota.allowed) return quotaExceededResponse(quota);
 
         // Fetch candidate profile for context
         const candidateProfile = await prisma.userProfile.findUnique({
@@ -104,41 +111,37 @@ export async function POST(req: NextRequest) {
                 ...extractRequestContext(req),
                 reason: 'chrome autofill — generate-answer',
             });
-            if (signedUrl) resumeText = await extractResumeText(signedUrl);
+            if (signedUrl) resumeText = await fetchResumeTextFromSignedUrl(signedUrl);
         }
         const prompt = buildPrompt(questionText, jobTitle, jobDescription, employerName, profileContext, resumeText, maxLength);
 
-        // Call OpenAI
-        const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-        if (!OPENAI_API_KEY) {
-            return NextResponse.json({ error: 'AI service not configured' }, { status: 503 });
-        }
-
-        const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-                model: 'gpt-4o',
+        // Routed through the LLM gateway (audit F28/V4): registered
+        // autofill_answer task (gpt-5-mini primary, claude-sonnet-4-6
+        // fallback) with timeout, circuit breaker, and ai_call_log cost
+        // tracking — replaces the raw gpt-4o fetch (a model the
+        // architecture doc deprecates and the pricing registry omits).
+        let answer = '';
+        let modelUsed = 'unknown';
+        try {
+            const response = await complete({
+                task: 'autofill_answer',
+                tenant: { type: 'candidate', id: user.userId },
+                promptId: 'autofill_answer',
+                promptVersion: 'v2',
                 messages: [
                     { role: 'system', content: systemPrompt() },
                     { role: 'user', content: prompt },
                 ],
-                max_completion_tokens: Math.min(maxLength * 2, 1000),
-                temperature: 0.7,
-            }),
-        });
-
-        if (!aiResponse.ok) {
-            const errorBody = await aiResponse.text();
-            console.error('OpenAI error:', errorBody);
-            return NextResponse.json({ error: 'AI generation failed' }, { status: 502 });
+            });
+            answer = response.content.trim();
+            modelUsed = response.model;
+        } catch (err) {
+            if (err instanceof AiGatewayError) {
+                console.error('AI answer gateway error:', err.code);
+                return aiGatewayErrorResponse(err, 'AI generation');
+            }
+            throw err;
         }
-
-        const aiData = await aiResponse.json();
-        const answer = aiData.choices?.[0]?.message?.content?.trim() || '';
 
         // Record usage
         await prisma.autofillUsage.create({
@@ -154,7 +157,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             answer,
             questionKey: questionKey || '',
-            model: aiData.model || 'gpt-4o-mini',
+            model: modelUsed,
             basedOnStoredResponse: false,
         });
     } catch (error) {
@@ -212,7 +215,7 @@ Your task is to generate professional, compelling responses to job application q
 
 Guidelines:
 - Write in first person as the candidate
-- Be specific and use clinical terminology appropriate for PMHNPs
+- Be specific and use clinical terminology appropriate for the candidate's NP/APRN specialty
 - Reference the candidate's actual credentials and experience when provided
 - Keep responses concise and within the requested length
 - Be professional but personable
@@ -247,27 +250,6 @@ function buildPrompt(
     return prompt;
 }
 
-// ─── Resume Text Extraction ───
-
-async function extractResumeText(resumeUrl: string | null | undefined): Promise<string> {
-    if (!resumeUrl) return '';
-
-    try {
-        const response = await fetch(resumeUrl);
-        if (!response.ok) return '';
-
-        const buffer = Buffer.from(await response.arrayBuffer());
-
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const pdfParseModule = require('pdf-parse');
-        const pdfParse = pdfParseModule.default || pdfParseModule;
-        const data = await pdfParse(buffer);
-
-
-        // Cap at 4000 chars to avoid token limits
-        return data.text?.substring(0, 4000) || '';
-    } catch (err) {
-        console.error('Resume text extraction failed:', err);
-        return '';
-    }
-}
+// Resume text extraction moved to ../_lib/resume-text.ts (audit B89): the
+// old inline extractor called pdf-parse's removed v1 function API, threw on
+// every invocation, and silently generated answers without resume context.

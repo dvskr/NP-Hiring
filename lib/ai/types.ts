@@ -24,6 +24,13 @@ export type AiTaskId =
     // Phase 2 — wired in Sprint 2.x.
     | 'application_coach'
     | 'cover_letter'
+    // Chrome-extension autofill AI (audit F28/V4) — replaces the raw
+    // fetch('https://api.openai.com/...') calls the autofill routes used to
+    // make outside the gateway (invalid 'gpt-5.2' pin, no cost log, no
+    // timeout, no fallback).
+    | 'autofill_classify'
+    | 'autofill_answer'
+    | 'autofill_resume_extract'
     // Phase 3 — wired in Sprint 3.x.
     | 'jd_generator'
     | 'bias_audit'

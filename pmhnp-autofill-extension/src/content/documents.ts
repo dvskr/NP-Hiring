@@ -1,6 +1,6 @@
 import type { DocumentEntry, DocumentAttachResult } from '@/shared/types';
 import { getAuthHeaders } from '@/shared/auth';
-import { API_BASE_URL } from '@/shared/constants';
+import { API_BASE_URL, BOARD_DOMAIN } from '@/shared/constants';
 
 /**
  * Downloads a file from the user's profile document URL and attaches it to a file input.
@@ -88,12 +88,12 @@ export async function attachDocuments(
 
 /**
  * Downloads a document blob from the file URL.
- * Uses authenticated proxy if the URL is on pmhnphiring.com.
+ * Uses authenticated proxy if the URL is on the board's own domain.
  */
 async function downloadDocument(doc: DocumentEntry): Promise<File> {
     let blob: Blob;
 
-    if (doc.fileUrl.includes('pmhnphiring.com') || doc.fileUrl.startsWith('/')) {
+    if (doc.fileUrl.includes(BOARD_DOMAIN) || doc.fileUrl.startsWith('/')) {
         // Authenticated download through our API
         const headers = await getAuthHeaders();
         const url = doc.fileUrl.startsWith('/') ? `${API_BASE_URL}${doc.fileUrl}` : doc.fileUrl;

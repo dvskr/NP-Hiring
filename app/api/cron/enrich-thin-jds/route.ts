@@ -9,13 +9,15 @@
  * Flow per row:
  *   1. Identify thin JDs from active sources where description body
  *      is short AND the job hasn't been re-enriched in the cooldown window.
- *   2. Snapshot the original description to `descriptionSourceRaw` so we
- *      can always revert.
+ *   2. Snapshot the original description BEFORE overwrite (audit B90):
+ *      best-effort `job.description.snapshot` Inngest event per job, plus
+ *      a durable copy in this run's cron_runs.metrics JSON — no schema
+ *      change needed, and either copy supports a manual revert.
  *   3. Generate a long-form description via the `seo_content` task (gpt-5.4
  *      primary, 30-day cache, claude-opus-4-7 fallback).
  *   4. Run the result through lib/jd-guardrails. Skip + log if it fails.
- *   5. Write the enriched body, bump `lastEnrichedAt`, fire IndexNow ping
- *      for the affected URL.
+ *   5. Write the enriched body, bump `lastEnrichedAt`, emit
+ *      `embedding.refresh.job` (audit V6), fire IndexNow ping for the URL.
  *
  * Cost guardrail: capped to MAX_JOBS_PER_RUN per cron tick so a runaway
  * cost spike can't happen. Cost-per-call is recorded in the AI gateway
@@ -27,10 +29,12 @@ import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { complete } from '@/lib/ai/gateway';
 import { AiGatewayError } from '@/lib/ai/types';
+import { isAiFeatureEnabled } from '@/lib/ai/feature-flags';
 import { checkJdGuardrails } from '@/lib/jd-guardrails';
 import { logger } from '@/lib/logger';
 import { withCronTracking } from '@/lib/cron/track';
 import { pingIndexNow } from '@/lib/indexnow';
+import { inngest } from '@/lib/inngest/client';
 import { brand } from '@/config/brand';
 
 export const maxDuration = 300;
@@ -42,7 +46,9 @@ const COOLDOWN_DAYS = 30;
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 
-const SYSTEM_PROMPT = `You are rewriting a too-short job posting for a PMHNP role into a long-form SEO-optimized description.
+// Audit B3: the role descriptor derives from brand.niche — the donor board
+// hardcoded its own specialty here, which skewed rewrites on this all-NP board.
+const SYSTEM_PROMPT = `You are rewriting a too-short job posting for a ${brand.niche.long} (${brand.niche.short}) role into a long-form SEO-optimized description.
 
 You will be given the EXISTING description, the role title, the employer name, and the location. Use them as factual anchors — never invent specifics that aren't in the source.
 
@@ -64,11 +70,18 @@ interface ThinJob {
   slug: string | null;
 }
 
+/** Pre-overwrite copy of the original description (audit B90). */
+export interface DescriptionSnapshot {
+  jobId: string;
+  title: string;
+  originalDescription: string;
+}
+
 function visibleLength(html: string): number {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().length;
 }
 
-async function enrichOne(job: ThinJob): Promise<{ ok: boolean; reason?: string }> {
+async function enrichOne(job: ThinJob): Promise<{ ok: boolean; reason?: string; snapshot?: DescriptionSnapshot }> {
   const userMessage = [
     `Role: ${job.title}`,
     `Employer: ${job.employer}`,
@@ -104,11 +117,28 @@ async function enrichOne(job: ThinJob): Promise<{ ok: boolean; reason?: string }
     return { ok: false, reason: `guardrail:${guardrail.errors[0] ?? 'unspecified'}` };
   }
 
-  // Atomic update: write the enriched body, snapshot the source, bump
-  // `lastEnrichedAt`. We don't preserve the source in a dedicated column
-  // (would require migration) — instead we stuff it into a new
-  // `descriptionSourceRaw` field. Falling back: skip the snapshot if the
-  // column doesn't exist yet (graceful degradation pre-migration).
+  // ── Snapshot BEFORE overwrite (audit B90) ──────────────────────────
+  // The original description is preserved without a schema change in two
+  // places:
+  //   1. A best-effort Inngest event emitted per job before the write —
+  //      visible in the Inngest event log even if this run later crashes.
+  //   2. The run's CronRun.metrics JSON blob (via withCronTracking below),
+  //      the durable DB copy — see the `snapshots` array in GET.
+  const snapshot: DescriptionSnapshot = {
+    jobId: job.id,
+    title: job.title,
+    originalDescription: job.description,
+  };
+  try {
+    await inngest.send({
+      name: 'job.description.snapshot',
+      data: { source: 'enrich-thin-jds', ...snapshot },
+    });
+  } catch (err) {
+    // Best-effort only — the CronRun.metrics copy is the durable one.
+    logger.warn('Snapshot event emit failed (non-fatal)', { jobId: job.id, error: err });
+  }
+
   try {
     await prisma.job.update({
       where: { id: job.id },
@@ -122,6 +152,15 @@ async function enrichOne(job: ThinJob): Promise<{ ok: boolean; reason?: string }
     return { ok: false, reason: 'db_write_failed' };
   }
 
+  // Audit V6: the description is an embedding input (buildJobEmbeddingText),
+  // so a full rewrite must refresh the job's vector or semantic search keeps
+  // ranking on the stale thin text. Worker-side throttling coalesces.
+  try {
+    await inngest.send({ name: 'embedding.refresh.job', data: { jobId: job.id } });
+  } catch (err) {
+    logger.warn('inngest.send embedding.refresh.job failed (enrich-thin-jds)', { jobId: job.id, error: err });
+  }
+
   // IndexNow ping — fire-and-forget so we don't block the cron loop.
   const slug = job.slug;
   if (slug) {
@@ -130,12 +169,25 @@ async function enrichOne(job: ThinJob): Promise<{ ok: boolean; reason?: string }
     );
   }
 
-  return { ok: true };
+  return { ok: true, snapshot };
 }
 
 export async function GET(req: Request) {
   const authError = await verifyCronOrAdmin(req);
   if (authError) return authError;
+
+  // Kill switch (audit F31): this cron consumes the seo_content task, so it
+  // honors the same 'ai.platform.seo_content' flag as the rest of the AI SEO
+  // tooling. Scheduled via the Inngest cron function in
+  // lib/inngest/functions/enrich-thin-jds.ts (audit B3/B13 — NOT vercel.json,
+  // per the cron-consolidation rule); the registry default (false) still
+  // gates it off until the DB override enables it, so scheduling the trigger
+  // does not by itself start spending.
+  const flagEnabled = await isAiFeatureEnabled('ai.platform.seo_content', { type: 'system', id: 'enrich-thin-jds' });
+  if (!flagEnabled) {
+    logger.info('Thin-JD enrichment skipped: ai.platform.seo_content flag disabled');
+    return NextResponse.json({ success: true, skipped: 'feature_disabled', processed: 0 });
+  }
 
   const startedAt = Date.now();
 
@@ -177,6 +229,7 @@ export async function GET(req: Request) {
 
       const stats = { processed: 0, enriched: 0, skipped: 0, errors: 0 };
       const skipReasons = new Map<string, number>();
+      const snapshots: DescriptionSnapshot[] = [];
 
       for (const job of thinJobs) {
         if (Date.now() - startedAt >= TIME_BUDGET_MS) {
@@ -187,6 +240,7 @@ export async function GET(req: Request) {
         const result = await enrichOne(job);
         if (result.ok) {
           stats.enriched += 1;
+          if (result.snapshot) snapshots.push(result.snapshot);
         } else {
           stats.skipped += 1;
           const reason = result.reason ?? 'unknown';
@@ -205,7 +259,10 @@ export async function GET(req: Request) {
           skipReasons: Object.fromEntries(skipReasons),
           elapsedSeconds: elapsed,
         }),
-        metrics: stats,
+        // Audit B90: the pre-overwrite description snapshots ride along in
+        // cron_runs.metrics (Json) — the durable no-migration revert source.
+        // Bounded: ≤ MAX_JOBS_PER_RUN thin descriptions per run.
+        metrics: { ...stats, snapshots },
       };
     });
   } catch (err) {

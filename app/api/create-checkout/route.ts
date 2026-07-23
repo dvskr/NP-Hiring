@@ -14,6 +14,7 @@ import {
   normalizeContentWhitespace,
 } from '@/lib/sanitize';
 import { createClient } from '@/lib/supabase/server';
+import { isFeatureEnabled } from '@/lib/env';
 import { normalizeSalary } from '@/lib/salary-normalizer';
 import { formatDisplaySalary } from '@/lib/salary-display';
 import { computeQualityScore } from '@/lib/utils/quality-score';
@@ -30,6 +31,12 @@ function getStripe(): Stripe | null {
 }
 
 interface CheckoutRequestBody {
+  /**
+   * B78 — resume an abandoned checkout. When set, every other field is
+   * ignored: the already-persisted Job + EmployerJob are re-used and a
+   * fresh Stripe session is minted for them instead of creating duplicates.
+   */
+  resumeJobId?: string;
   title: string;
   companyName: string;
   companyWebsite?: string;
@@ -70,11 +77,23 @@ export async function POST(request: NextRequest) {
   if (rateLimitResult) return rateLimitResult;
 
   try {
+    // F3: ENABLE_PAID_POSTING is the real master switch — checked BEFORE the
+    // Stripe key so an intentionally-deferred launch (flag off) is
+    // distinguishable from a misconfiguration (flag on, key missing). Both
+    // codes are stable and machine-readable for the funnel UI.
+    if (!isFeatureEnabled('paidPosting')) {
+      logger.warn('Paid checkout attempted while ENABLE_PAID_POSTING is off');
+      return NextResponse.json(
+        { error: 'Paid job posting is not available yet', code: 'PAID_POSTING_DISABLED' },
+        { status: 503 }
+      );
+    }
+
     const stripe = getStripe();
     if (!stripe) {
       logger.error('Paid checkout attempted but STRIPE_SECRET_KEY is not configured', null);
       return NextResponse.json(
-        { error: 'Paid checkout is currently unavailable' },
+        { error: 'Paid checkout is currently unavailable', code: 'STRIPE_NOT_CONFIGURED' },
         { status: 503 }
       );
     }
@@ -83,6 +102,7 @@ export async function POST(request: NextRequest) {
 
     // Auth — paid posts still must be tied to an authenticated employer.
     let userId: string | null = null;
+    let profileEmail: string | null = null;
     try {
       const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -102,9 +122,17 @@ export async function POST(request: NextRequest) {
         );
       }
       userId = user.id;
+      profileEmail = profile.email ?? user.email ?? null;
     } catch (authErr) {
       logger.warn('Failed to fetch user session in create-checkout', { error: authErr });
       return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
+    }
+
+    // ── B78: resume an abandoned checkout ─────────────────────────────
+    // The employer dashboard's "Complete payment" action posts
+    // { resumeJobId } for a row stuck 'pending' (or swept to 'expired').
+    if (typeof rawBody.resumeJobId === 'string' && rawBody.resumeJobId.trim()) {
+      return resumeAbandonedCheckout(stripe, rawBody.resumeJobId.trim(), userId, profileEmail);
     }
 
     // Sanitize core fields
@@ -396,4 +424,145 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * B78 — mint a fresh Stripe Checkout session for an existing unpaid job.
+ *
+ * Checkout abandonment leaves the Job + EmployerJob rows persisted with
+ * paymentStatus='pending' (or 'expired' after the reconciliation sweep).
+ * Stripe sessions hard-expire after 24h, so the original session URL is
+ * useless — this creates a new session carrying the SAME metadata shape as
+ * the original (jobId / pricing / dashboardToken), so the existing webhook,
+ * verify-checkout-session, and reconciliation activation paths all work
+ * unchanged.
+ */
+async function resumeAbandonedCheckout(
+  stripe: Stripe,
+  jobId: string,
+  userId: string | null,
+  userEmail: string | null,
+): Promise<NextResponse> {
+  const employerJob = await prisma.employerJob.findFirst({
+    where: { jobId },
+    include: {
+      job: {
+        select: { id: true, title: true, employer: true, location: true, archivedAt: true },
+      },
+    },
+  });
+
+  if (!employerJob || !employerJob.job) {
+    return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+  }
+
+  // Ownership mirrors the employer dashboard query: linked userId first,
+  // contactEmail as the legacy fallback for pre-auth-link rows.
+  const ownsByUser = !!userId && employerJob.userId === userId;
+  const ownsByEmail =
+    !!userEmail && employerJob.contactEmail.toLowerCase() === userEmail.toLowerCase();
+  if (!ownsByUser && !ownsByEmail) {
+    return NextResponse.json({ error: 'You do not have access to this job' }, { status: 403 });
+  }
+
+  if (employerJob.paymentStatus !== 'pending' && employerJob.paymentStatus !== 'expired') {
+    return NextResponse.json(
+      { error: 'This job does not have an outstanding payment', code: 'NOT_RESUMABLE' },
+      { status: 409 }
+    );
+  }
+  if (employerJob.job.archivedAt) {
+    return NextResponse.json(
+      { error: 'Restore this job from the archive before completing payment' },
+      { status: 409 }
+    );
+  }
+
+  // Revive rows the reconciliation sweep marked 'expired' — the shared
+  // activation path only claims pending→paid, so the row must be 'pending'
+  // again before the new session can complete. Guarded update so a
+  // concurrently-arriving activation can never be overwritten.
+  if (employerJob.paymentStatus === 'expired') {
+    await prisma.employerJob.updateMany({
+      where: { id: employerJob.id, paymentStatus: 'expired' },
+      data: { paymentStatus: 'pending' },
+    });
+  }
+
+  // Restart the listing window — the paid duration should run from the
+  // payment the employer is about to make, not from the abandoned attempt
+  // days earlier.
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + config.durationDays);
+  await prisma.job.update({ where: { id: jobId }, data: { expiresAt } });
+
+  const pricing = (employerJob.pricingTier as PricingTier) || 'pro';
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Job Post: ${employerJob.job.title}`,
+            description: `${employerJob.job.employer} - ${employerJob.job.location}`,
+          },
+          unit_amount: config.stripePriceInCents,
+        },
+        quantity: 1,
+      },
+    ],
+    mode: 'payment',
+    customer_email: employerJob.contactEmail,
+    billing_address_collection: 'required',
+    tax_id_collection: { enabled: true },
+    payment_intent_data: {
+      receipt_email: employerJob.contactEmail,
+    },
+    invoice_creation: {
+      enabled: true,
+      invoice_data: {
+        description: `Job Post: ${employerJob.job.title} — ${employerJob.job.employer} (${employerJob.job.location})`,
+        metadata: {
+          jobId: employerJob.job.id,
+          employerJobId: employerJob.id,
+        },
+        rendering_options: { amount_tax_display: 'exclude_tax' },
+      },
+    },
+    success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/employer/dashboard`,
+    metadata: {
+      jobId: employerJob.job.id,
+      pricing,
+      dashboardToken: employerJob.dashboardToken,
+    },
+  });
+
+  if (!session.url) {
+    logger.error('Stripe returned a resume-checkout session without a URL', null, { sessionId: session.id });
+    return NextResponse.json(
+      { error: 'Checkout session created but URL is missing' },
+      { status: 502 }
+    );
+  }
+
+  logger.info('Resume-payment checkout session created for abandoned job', {
+    jobId,
+    employerJobId: employerJob.id,
+    sessionId: session.id,
+  });
+
+  // Same browser-binding cookie as the fresh-post path —
+  // /api/verify-checkout-session only releases the dashboardToken when the
+  // cookie matches the session_id.
+  const response = NextResponse.json({ sessionId: session.id, url: session.url });
+  response.cookies.set('pmhnp_checkout_session', session.id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60,
+  });
+  return response;
 }

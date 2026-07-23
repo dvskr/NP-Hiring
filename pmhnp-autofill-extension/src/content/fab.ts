@@ -11,7 +11,7 @@ interface FabPosition {
 
 const FAB_HTML = `
 <div id="pmhnp-fab-wrapper" style="all:initial;">
-  <div id="pmhnp-fab" role="button" tabindex="0" aria-label="PMHNP Autofill">
+  <div id="pmhnp-fab" role="button" tabindex="0" aria-label="NP Hiring Autofill">
     <div id="pmhnp-fab-icon"></div>
     <div id="pmhnp-fab-pulse"></div>
     <div id="pmhnp-fab-tooltip">Click to autofill</div>

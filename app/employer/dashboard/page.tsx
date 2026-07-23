@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 export default async function EmployerDashboardPage() {
     // Require employer or admin role — redirects to /unauthorized otherwise
-    await requireEmployer();
+    await requireEmployer('/employer/dashboard');
 
     const supabase = await createClient();
 

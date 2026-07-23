@@ -81,6 +81,10 @@ export default function PreviewPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quotaStatus, setQuotaStatus] = useState<QuotaStatus | null>(null);
+  // F3: server-checked paid-posting availability (ENABLE_PAID_POSTING flag +
+  // stripeConfigured). null = unknown (fail open — the checkout API still
+  // 503s with a stable code if a paid attempt slips through).
+  const [paidPostingAvailable, setPaidPostingAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('jobFormData');
@@ -110,6 +114,21 @@ export default function PreviewPage() {
         if (!cancelled) setQuotaStatus(data);
       } catch {
         /* leave quotaStatus null — falls back to neutral copy */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/create-checkout/availability');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setPaidPostingAvailable(data?.available === true);
+      } catch {
+        /* leave null — fail open, checkout API is the hard gate */
       }
     })();
     return () => { cancelled = true; };
@@ -174,7 +193,17 @@ export default function PreviewPage() {
           result.freePostsUsed ?? config.freePostsPerEmail,
           result.freePostsLimit ?? config.freePostsPerEmail
         );
-        router.push('/post-job/checkout');
+        // F3: don't route into a checkout that cannot complete. When paid
+        // posting is off (flag or Stripe unconfigured) the checkout page's
+        // Pay button would only ever 503 — surface the state here instead.
+        if (paidPostingAvailable === false) {
+          setError(
+            "Your organization has used its free post, and paid posting isn't open yet. " +
+            'Your job details are saved — contact support and we\'ll notify you when checkout is available.'
+          );
+        } else {
+          router.push('/post-job/checkout');
+        }
       } else {
         setError(result.error || 'Failed to post job');
       }
@@ -522,6 +551,19 @@ export default function PreviewPage() {
             </div>
           </div>
         </div>
+
+        {/* F3: upfront warning — this employer's next post requires payment
+            but paid posting isn't open yet, so publishing today is impossible.
+            Shown BEFORE they click, matching the /post-job pre-form gate. */}
+        {paidPostingAvailable === false && quotaStatus?.eligible === true && quotaStatus.willBeFree === false && (
+          <div style={{ ...cardBase, padding: '14px 18px', marginBottom: '16px', background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: '#92400E', margin: 0 }}>
+              Your organization has used its free post — paid posting is coming soon
+              and isn&apos;t open yet, so this job can&apos;t be published today. Your
+              draft stays saved.
+            </p>
+          </div>
+        )}
 
         {/* Error */}
         {error && (

@@ -223,6 +223,11 @@ export async function POST(request: NextRequest) {
               maxSalary: null,
               frequency: highlightsFrequency || 'daily',
               isActive: true,
+              // Single opt-in: the user explicitly checked "job highlights"
+              // during signup. The digest cron only sends to alerts with
+              // confirmedAt set, so leaving it null makes this alert
+              // permanently invisible to the sender.
+              confirmedAt: new Date(),
               token: crypto.randomUUID(),
             }
           })

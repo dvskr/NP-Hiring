@@ -2,8 +2,10 @@
 
 import Script from 'next/script';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, Suspense, useCallback } from 'react';
+import { useEffect, useState, Suspense, useCallback } from 'react';
 import {
+  initConsentDefaults,
+  initGaBase,
   trackPageView,
   setUserId,
   setUserProperties,
@@ -57,105 +59,68 @@ function UserIdentitySync() {
 
 // ── Main Component ──────────────────────────────────────────────
 interface GoogleAnalyticsProps {
-  nonce?: string;
   /**
-   * Initial consent state from the HttpOnly cookie, read by the server
-   * component. When present we bake the analytics/marketing flags
-   * directly into the consent default — no localStorage probe needed.
+   * Initial consent state, read client-side from the middleware-mirrored
+   * consent cookie by AnalyticsConsentBoundary. Baked into the Consent
+   * Mode v2 defaults before gtag.js loads — no localStorage probe needed.
    */
   initialConsent?: ConsentCategories | null;
 }
 
-export default function GoogleAnalytics({ nonce, initialConsent = null }: GoogleAnalyticsProps) {
-  if (!GA_MEASUREMENT_ID || process.env.NODE_ENV !== 'production') {
+/**
+ * GA4 bootstrap WITHOUT inline <script> blocks (ISR fix F5).
+ *
+ * The previous version injected two inline scripts (consent defaults +
+ * gtag config) which required a per-request CSP nonce — and reading that
+ * nonce via headers() in the root layout silently opted every route out
+ * of ISR. Consent defaults and the base config are now pushed onto the
+ * dataLayer from bundled module code (lib/analytics), which CSP allows
+ * via 'self'; only the external, host-allowlisted gtag.js loader remains
+ * a <Script>. Ordering is guaranteed by gating the loader on
+ * `bootstrapped`: everything queued in dataLayer before gtag.js loads is
+ * replayed by GA in order, so the consent defaults always precede the
+ * first hit.
+ */
+export default function GoogleAnalytics({ initialConsent = null }: GoogleAnalyticsProps) {
+  const [bootstrapped, setBootstrapped] = useState(false);
+
+  useEffect(() => {
+    if (!GA_MEASUREMENT_ID || process.env.NODE_ENV !== 'production') return;
+    // 1. Consent Mode v2 defaults — must be queued before gtag.js executes.
+    initConsentDefaults(initialConsent);
+    // 2. gtag('js') + base config (send_page_view: false — see M17 note
+    //    in lib/analytics.initGaBase).
+    initGaBase();
+    // Deferred a tick: the dataLayer queue above is already populated
+    // synchronously, so rendering the gtag.js <Script> one tick later
+    // preserves ordering without a cascading sync re-render.
+    const arm = setTimeout(() => setBootstrapped(true), 0);
+    // initialConsent is fixed for the lifetime of this mount (the
+    // boundary mounts us once, after the mirror cookie read); consent
+    // CHANGES flow through gtag('consent','update') from the banner.
+    return () => clearTimeout(arm);
+  }, [initialConsent]);
+
+  if (!GA_MEASUREMENT_ID || process.env.NODE_ENV !== 'production' || !bootstrapped) {
     return null;
   }
 
-  const analytics = initialConsent?.analytics === true ? 'granted' : 'denied';
-  const marketing = initialConsent?.marketing === true ? 'granted' : 'denied';
-
   return (
     <>
-      {/*
-        1. Consent Mode v2 defaults — must run before gtag.js executes.
-           Both scripts use `afterInteractive`; Next.js executes
-           afterInteractive Scripts in source order so consent-defaults
-           runs first and gtag.js sees `dataLayer` + `gtag` already set up.
-           Using `beforeInteractive` here blocks the HTML parser before
-           paint on every page (~50–200ms TBT on mid-range mobile) and is
-           not necessary because gtag.js itself is afterInteractive.
-           Defaults are baked from the HttpOnly cookie at SSR time so we
-           never touch localStorage and the consent state is always
-           authoritative on the first paint.
-      */}
-      <Script id="ga-consent-defaults" strategy="afterInteractive" nonce={nonce}>
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('consent', 'default', {
-            'analytics_storage': '${analytics}',
-            'ad_storage': '${marketing}',
-            'ad_user_data': '${marketing}',
-            'ad_personalization': '${marketing}',
-            'functionality_storage': 'granted',
-            'personalization_storage': '${analytics}',
-            'security_storage': 'granted',
-            'wait_for_update': 500
-          });
-        `}
-      </Script>
-
-      {/* 2. Load gtag.js */}
+      {/* External loader only — host-allowlisted in the middleware CSP
+          (script-src https://www.googletagmanager.com), so no nonce and
+          no Dynamic API read anywhere in the layout tree. */}
       <Script
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
         strategy="afterInteractive"
-        nonce={nonce}
       />
 
-      {/* 3. Initialize GA4 with enhanced config */}
-      <Script id="ga-init" strategy="afterInteractive" nonce={nonce}>
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          
-          gtag('config', '${GA_MEASUREMENT_ID}', {
-            // SEO Fix M17: send_page_view: false. Previously this fired one
-            // page_view at config time AND RouteChangeTracker fired a second
-            // page_view 100ms later for the same initial load — double-counting
-            // every session and inflating TBT. RouteChangeTracker now owns
-            // the entire page_view lifecycle (initial + SPA route changes).
-            send_page_view: false,
-            page_path: window.location.pathname,
-            cookie_flags: 'SameSite=None;Secure',
-            cookie_domain: 'auto',
-            cookie_expires: 63072000,
-            anonymize_ip: true,
-            allow_google_signals: false,
-            allow_ad_personalization_signals: false,
-            custom_map: {
-              'dimension1': 'user_role',
-              'dimension2': 'job_source',
-              'dimension3': 'work_mode',
-              'dimension4': 'job_state',
-              'dimension5': 'apply_method',
-              'metric1': 'results_count'
-            }
-          });
-
-          // No localStorage probe — the consent default above is
-          // already authoritative because it was baked from the
-          // HttpOnly cookie. Subsequent updates flow through
-          // gtag('consent','update', ...) calls fired by the banner.
-        `}
-      </Script>
-
-      {/* 4. SPA Route Tracker */}
+      {/* SPA Route Tracker */}
       <Suspense fallback={null}>
         <RouteChangeTracker />
       </Suspense>
 
-      {/* 5. User Identity Sync */}
+      {/* User Identity Sync */}
       <UserIdentitySync />
     </>
   );

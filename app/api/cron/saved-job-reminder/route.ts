@@ -111,11 +111,21 @@ export async function GET(request: NextRequest) {
 
                 if (validJobs.length === 0) continue
 
-                await sendSavedJobReminderEmail(
+                const result = await sendSavedJobReminderEmail(
                     profile.email,
                     profile.firstName,
                     validJobs
                 )
+
+                // sendSavedJobReminderEmail swallows send failures and returns
+                // { success: false } rather than throwing. Only stamp the dedup
+                // marker after a real send (mirrors the expiry-warnings fix) —
+                // stamping a failed send silently drops this cycle's reminder
+                // and misreports it as sent.
+                if (!result.success) {
+                    errors.push(`User ${userId}: ${result.error ?? 'send failed'}`)
+                    continue
+                }
                 sentCount++
 
                 // Mark as reminded (dedup)

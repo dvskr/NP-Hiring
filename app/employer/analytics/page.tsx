@@ -22,6 +22,6 @@ export const metadata = {
 };
 
 export default async function EmployerAnalyticsPage() {
-  await requireEmployer();
+  await requireEmployer('/employer/analytics');
   return <EmployerAnalyticsClient />;
 }

@@ -10,8 +10,8 @@ export default async function CandidateDetailPage({
 }: {
     params: Promise<{ id: string }>
 }) {
-    await requireEmployer()
     const { id } = await params
+    await requireEmployer(`/employer/candidates/${encodeURIComponent(id)}`)
 
     return <CandidateProfileClient candidateId={id} />
 }

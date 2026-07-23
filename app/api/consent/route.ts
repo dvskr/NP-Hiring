@@ -10,12 +10,17 @@ import {
 /**
  * POST /api/consent — set the user's consent choice as an HttpOnly cookie.
  *
- * The cookie is server-only-readable so a successful XSS payload cannot
- * flip it or read it. Client-side code learns the user's choice via the
- * server-rendered initial prop on the layout (read via cookies() in a
- * Server Component) — never via document.cookie.
+ * The cookie is server-only-writable-and-readable, so a successful XSS
+ * payload cannot flip the recorded choice. Client-side code learns the
+ * user's prior choice via the middleware-maintained non-HttpOnly MIRROR
+ * cookie (CONSENT_MIRROR_COOKIE in lib/consent.ts, read by
+ * components/consent/* after mount) — the root layout must NOT read this
+ * cookie via cookies(), because any Dynamic API in the root layout
+ * disables ISR app-wide (ISR fix F5). The mirror is read-only
+ * convenience state; this HttpOnly cookie remains the authoritative
+ * record.
  *
- * Closes audit gap #19 (consent stored in localStorage = XSS-readable).
+ * Closes audit gap #19 (consent stored in localStorage = XSS-writable).
  */
 const bodySchema = z.object({
     categories: z.object({

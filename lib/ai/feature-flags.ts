@@ -34,6 +34,12 @@ export type AiFeatureFlag =
     | 'ai.candidate.application_coach'
     | 'ai.candidate.cover_letter'
     | 'ai.candidate.resume_parser'
+    // Chrome-extension autofill AI (audit F31) — one flag per live route so
+    // each can be killed independently without touching the others.
+    | 'ai.candidate.autofill_classify'
+    | 'ai.candidate.autofill_answer'
+    | 'ai.candidate.autofill_bulk'
+    | 'ai.candidate.autofill_extract'
     // Phase 3.
     | 'ai.employer.jd_generator'
     | 'ai.employer.bias_audit'
@@ -59,9 +65,24 @@ const FLAG_REGISTRY: Record<AiFeatureFlag, FlagDefault> = {
     'ai.candidate.recommendations_email': { default: false, description: 'Weekly recommendation digest email (opt-in)' },
     'ai.employer.talent_search':          { default: false, description: 'Vector talent search in employer dashboard' },
     'ai.candidate.application_coach':     { default: false, description: 'Pre-submit feedback on applications' },
-    'ai.candidate.cover_letter':          { default: false, description: 'Cover letter generator' },
+    // Audit F31: the extension's generate-cover-letter route now honors this
+    // flag. Default stays false — the route was returning 502 on every
+    // request pre-fix (invalid 'gpt-5.2' pin, audit F28), so nothing live is
+    // lost, and launching the repaired paid-only feature becomes a deliberate
+    // flag flip (DB override or default change) rather than an accident.
+    'ai.candidate.cover_letter':          { default: false, description: 'Cover letter generator (extension route gated)' },
     'ai.candidate.resume_parser':         { default: true,  description: 'Resume → profile auto-fill (already shipped)' },
-    'ai.employer.jd_generator':           { default: false, description: 'Job description generator wizard' },
+    // Autofill AI routes are shipped extension features — default true so
+    // gating them doesn't silently turn off live functionality; env/DB
+    // overrides are the kill switches.
+    'ai.candidate.autofill_classify':     { default: true,  description: 'Extension: AI form-field classification (classify-fields)' },
+    'ai.candidate.autofill_answer':       { default: true,  description: 'Extension: AI screening-question answers (generate-answer)' },
+    'ai.candidate.autofill_bulk':         { default: true,  description: 'Extension: bulk AI screening answers (generate-bulk)' },
+    'ai.candidate.autofill_extract':      { default: true,  description: 'Extension: resume section extraction (extract-resume-sections)' },
+    // default flipped false → true (audit F31): the ai-jd route is live and
+    // was serving generations unconditionally — the registry misrepresented
+    // production and the kill switch was a no-op.
+    'ai.employer.jd_generator':           { default: true,  description: 'Job description generator wizard (live)' },
     'ai.employer.bias_audit':             { default: false, description: 'Inline bias audit on JD submit' },
     'ai.employer.outreach_composer':      { default: false, description: 'Pre-drafted personalized outreach messages' },
     'ai.employer.candidate_compare':      { default: false, description: 'Side-by-side AI candidate comparison' },

@@ -23,10 +23,15 @@
  *    23:10 → 00:55 (105m) — both inside the window. If a wave
  *    stretches (more chunks, later offsets), re-check before
  *    regenerating.
- * 3. Vercel plan cron limits: this board schedules 58 entries, under
- *    the Pro plan's documented 64-cron cap. (The template shipped 69
- *    with the non-ATS sources scheduled — see DISABLED_SOURCES below
- *    for why this board runs fewer.)
+ * 3. Vercel plan cron limits: the Pro plan's documented cap is 40 cron
+ *    jobs (a previous version of this comment claimed 64 — that number
+ *    was never in Vercel's docs). This board schedules exactly 40
+ *    entries: 32 ingestion-wave entries + 8 housekeeping entries, after
+ *    the B106 consolidation folded 21 low-frequency housekeeping crons
+ *    into 3 sequential batch dispatchers (see CRON_BATCHES below).
+ *    There is NO headroom left — before adding a new cron, either add
+ *    it as a target inside an existing batch (cadence permitting) or
+ *    move it to an Inngest schedule (lib/inngest/functions/).
  * ─────────────────────────────────────────────────────────────────────
  */
 
@@ -155,33 +160,105 @@ const WAVE_B_INGESTION: readonly CronEntry[] = [
     { path: '/api/cron/ingest-wave-summary', schedule: '55 0 * * *' },
 ];
 
-/** Housekeeping crons — independent of the ingestion waves, kept literal. */
+// ─── Housekeeping batches (B106 cron-limit consolidation) ────────────
+//
+// Vercel Pro caps a project at 40 cron entries; the previous schedule had
+// 58. The 21 low-frequency housekeeping crons below are consolidated into
+// 3 sequential batch dispatchers served by app/api/cron/batch/[group].
+// The dispatcher invokes each target route over HTTP (with the CRON_SECRET
+// bearer) ONE AT A TIME, so DB-load characteristics stay serialized —
+// stricter than the old minute-staggering. Cadences are preserved exactly
+// (daily stays daily, twice-daily stays twice-daily) via the batch
+// schedule plus per-target gates; only the minute-of-day shifts.
+//
+// Targets keep their own routes, auth, maxDuration, and withCronTracking
+// names, so CronRun history and the cron watchdog
+// (lib/inngest/functions/cron-watchdog.ts) keep working per-cron.
+
+/** A single route invoked by a batch dispatcher. */
+export interface CronBatchTarget {
+    readonly path: string;
+    /** Run only when the dispatcher fires in one of these UTC hours. */
+    readonly utcHours?: readonly number[];
+    /** Run only on these UTC days of week (0=Sun … 6=Sat). */
+    readonly utcDaysOfWeek?: readonly number[];
+    /** Run only on these UTC days of month (1–31). */
+    readonly utcDaysOfMonth?: readonly number[];
+}
+
+export interface CronBatch {
+    /** URL segment: dispatched at /api/cron/batch/<group>. */
+    readonly group: string;
+    readonly schedule: string;
+    /** Invoked strictly in order; a failing target does not stop the rest. */
+    readonly targets: readonly CronBatchTarget[];
+}
+
+export const CRON_BATCHES: readonly CronBatch[] = [
+    {
+        // Daily morning maintenance (was 6 entries between 04:45 and 09:30).
+        group: 'morning',
+        schedule: '30 8 * * *',
+        targets: [
+            { path: '/api/cron/cleanup-rejected-jobs' },   // was 45 4
+            { path: '/api/cron/engagement-anomaly' },      // was 0 5
+            { path: '/api/cron/purge-soft-deleted' },      // was 30 8
+            { path: '/api/cron/purge-inactive-users' },    // was 45 8
+            { path: '/api/cron/dsar-overdue' },            // was 0 9
+            { path: '/api/cron/gsc-health-check' },        // was 30 9
+        ],
+    },
+    {
+        // Twice-daily expiry/health sweep (was 5 entries at 12:xx/18:xx).
+        // Order preserved from the old minute offsets: cleanup-expired must
+        // flip expired jobs before deindex-expired submits removals.
+        group: 'midday',
+        schedule: '10 12,18 * * *',
+        targets: [
+            { path: '/api/cron/cleanup-expired' },         // was 10 12,18
+            { path: '/api/cron/freshness-decay' },         // was 20 12,18
+            { path: '/api/cron/check-dead-links' },        // was 30 12,18
+            { path: '/api/cron/deindex-expired' },         // was 45 12,18
+            // Daily (not twice-daily) — gate to the 12:00 invocation only.
+            { path: '/api/cron/source-presence-unpublish', utcHours: [12] }, // was 55 12
+        ],
+    },
+    {
+        // Daily reporting/alerts/notifications (was 10 entries, 13:00–14:30).
+        // Order preserved from the old clock order.
+        group: 'daily',
+        schedule: '0 13 * * *',
+        targets: [
+            { path: '/api/cron/daily-report' },            // was 0 13
+            { path: '/api/cron/health-anomaly-check' },    // was 0 13
+            // Wednesday + Saturday only — cadence preserved via gate.
+            { path: '/api/cron/saved-job-reminder', utcDaysOfWeek: [3, 6] }, // was 0 13 * * 3,6
+            { path: '/api/cron/index-urls' },              // was 15 13
+            { path: '/api/cron/send-alerts' },             // was 30 13
+            { path: '/api/cron/index-pseo' },              // was 45 13
+            { path: '/api/cron/candidate-alerts' },        // was 45 13
+            { path: '/api/cron/embedding-drift-check' },   // was 0 14
+            // Monthly on the 1st — cadence preserved via gate.
+            { path: '/api/cron/employer-report', utcDaysOfMonth: [1] },      // was 0 14 1 * *
+            { path: '/api/cron/push-notifications' },      // was 30 14
+        ],
+    },
+];
+
+/**
+ * Housekeeping crons — batch dispatcher entries plus the crons that keep
+ * their own vercel.json entry (multi-hour cadences that no batch matches,
+ * or hourly frequency).
+ */
 const HOUSEKEEPING: readonly CronEntry[] = [
+    ...CRON_BATCHES.map((batch) => ({
+        path: `/api/cron/batch/${batch.group}`,
+        schedule: batch.schedule,
+    })),
     { path: '/api/cron/enrich-jobs', schedule: '0 6,12,18,22 * * *' },
-    { path: '/api/cron/cleanup-expired', schedule: '10 12,18 * * *' },
-    { path: '/api/cron/cleanup-rejected-jobs', schedule: '45 4 * * *' },
     { path: '/api/cron/aggregate-pseo', schedule: '15 0,6,12,18 * * *' },
-    { path: '/api/cron/freshness-decay', schedule: '20 12,18 * * *' },
-    { path: '/api/cron/check-dead-links', schedule: '30 12,18 * * *' },
-    { path: '/api/cron/engagement-anomaly', schedule: '0 5 * * *' },
-    { path: '/api/cron/daily-report', schedule: '0 13 * * *' },
-    { path: '/api/cron/index-urls', schedule: '15 13 * * *' },
-    { path: '/api/cron/index-pseo', schedule: '45 13 * * *' },
-    { path: '/api/cron/deindex-expired', schedule: '45 12,18 * * *' },
     { path: '/api/cron/historical-deindex', schedule: '0 1,7,19 * * *' },
-    { path: '/api/cron/gsc-health-check', schedule: '30 9 * * *' },
-    { path: '/api/cron/embedding-drift-check', schedule: '0 14 * * *' },
-    { path: '/api/cron/send-alerts', schedule: '30 13 * * *' },
-    { path: '/api/cron/candidate-alerts', schedule: '45 13 * * *' },
-    { path: '/api/cron/employer-report', schedule: '0 14 1 * *' },
-    { path: '/api/cron/saved-job-reminder', schedule: '0 13 * * 3,6' },
-    { path: '/api/cron/push-notifications', schedule: '30 14 * * *' },
     { path: '/api/cron/expiry-warnings', schedule: '0 22 * * *' },
-    { path: '/api/cron/source-presence-unpublish', schedule: '55 12 * * *' },
-    { path: '/api/cron/health-anomaly-check', schedule: '0 13 * * *' },
-    { path: '/api/cron/purge-soft-deleted', schedule: '30 8 * * *' },
-    { path: '/api/cron/purge-inactive-users', schedule: '45 8 * * *' },
-    { path: '/api/cron/dsar-overdue', schedule: '0 9 * * *' },
     { path: '/api/cron/refresh-site-stats', schedule: '15 * * * *' },
 ];
 

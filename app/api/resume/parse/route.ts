@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { parseResume, ParsedResume } from '@/lib/resume-parser';
 import { rateLimit } from '@/lib/rate-limit';
-import { downloadResumeBytes, extractRequestContext } from '@/lib/resume-storage';
+import { downloadResumeBytes, extractRequestContext, toBareResumePath } from '@/lib/resume-storage';
+import { isAiFeatureEnabled } from '@/lib/ai/feature-flags';
 import { inngest } from '@/lib/inngest/client';
 
 /**
@@ -33,6 +34,18 @@ const SUPPORTED_RESUME_CONTENT_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/msword',
 ]);
+
+/**
+ * Storage object keys are forward-slash relative paths
+ * ("<prefix>/<supabaseId>/<timestamp>-<file>" — see uploadResume in
+ * lib/supabase-storage.ts). A leading slash, backslashes, or dot /
+ * dot-dot segments never occur in legitimate uploads — treat them as
+ * hostile input (audit V7).
+ */
+function containsPathTraversal(path: string): boolean {
+  if (path.startsWith('/') || path.includes('\\')) return true;
+  return path.split('/').some((segment) => segment === '..' || segment === '.');
+}
 
 function inferContentTypeFromPath(resumePath: string): string {
   const lower = resumePath.toLowerCase();
@@ -77,6 +90,21 @@ export async function POST(request: NextRequest) {
     }
     userId = user.id;
 
+    // Kill switch (audit V7): the resume parser ships behind
+    // 'ai.candidate.resume_parser' like every other AI feature —
+    // KILL_AI_CANDIDATE_RESUME_PARSER=1 (or an admin DB override) turns
+    // this route off within the flag cache TTL (~1 min) without a deploy.
+    const parserEnabled = await isAiFeatureEnabled('ai.candidate.resume_parser', {
+      type: 'candidate',
+      id: user.id,
+    });
+    if (!parserEnabled) {
+      return NextResponse.json(
+        { error: 'Resume parsing is temporarily unavailable.', code: 'feature_disabled' },
+        { status: 503 },
+      );
+    }
+
     // Mark profile as parsing-in-progress.
     // updateMany doesn't throw P2025 ("record not found") if the profile row
     // doesn't exist yet — previously the missing-profile case crashed the
@@ -104,8 +132,52 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'resumeUrl is required' }, { status: 400 });
       }
 
+      // IDOR guard (audit V7): never trust the client-supplied storage
+      // path. Normalize it, reject traversal outright, and require it to
+      // resolve to the caller's OWN stored resume (profile.resumeUrl,
+      // written by /api/upload). Without this, any authenticated user
+      // who obtained another candidate's storage path (e.g. from a
+      // previously-minted signed URL) could re-download and parse that
+      // resume here — with the access audit-logged as a self-parse
+      // (ownerId === actorId), laundering the DocumentAccessLog trail
+      // and bypassing the employer route's visibility/unlock gates.
+      const requestedPath = toBareResumePath(rawResumeUrl);
+      if (!requestedPath) {
+        await markProfileFailed(user.id);
+        return NextResponse.json(
+          { error: 'resumeUrl is not a valid storage path' },
+          { status: 400 },
+        );
+      }
+
+      if (containsPathTraversal(requestedPath)) {
+        logger.warn('Resume parse blocked: traversal attempt in resumeUrl', { userId: user.id });
+        await markProfileFailed(user.id);
+        return NextResponse.json({ error: 'Invalid resume path' }, { status: 403 });
+      }
+
+      const profileRow = await prisma.userProfile.findUnique({
+        where: { supabaseId: user.id },
+        select: { resumeUrl: true },
+      });
+      const ownedPath = toBareResumePath(profileRow?.resumeUrl);
+
+      if (!ownedPath || requestedPath !== ownedPath) {
+        logger.warn("Resume parse blocked: path is not the caller's own resume", {
+          userId: user.id,
+          hasStoredResume: Boolean(ownedPath),
+        });
+        await markProfileFailed(user.id);
+        return NextResponse.json(
+          { error: 'You can only parse your own uploaded resume.' },
+          { status: 403 },
+        );
+      }
+
       const reqCtx = extractRequestContext(request);
-      const downloaded = await downloadResumeBytes(rawResumeUrl, {
+      // ownedPath is verified above to be the caller's own document, so
+      // the audit row's ownerId === actorId is genuinely accurate.
+      const downloaded = await downloadResumeBytes(ownedPath, {
         actorId: user.id,
         ownerId: user.id,
         audience: 'system',

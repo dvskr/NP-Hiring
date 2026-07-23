@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { CONSENT_COOKIE, parseConsentCookie } from '@/lib/consent';
+import { recordSemanticSearchEvent } from '@/lib/ai/semantic-search-experiment';
 
 export async function POST(
   request: NextRequest,
@@ -33,6 +34,13 @@ export async function POST(
         },
       },
     });
+
+    // B80: semantic-search A/B apply event. Best-effort and internally
+    // caught — only tenants that already hold an experiment assignment
+    // produce a row, so this is a no-op for everyone outside the test.
+    // Not PII-gated: it stores tenant/arm/jobId (the same non-identifying
+    // signal as the aggregate counter above), no session/referrer/UA.
+    await recordSemanticSearchEvent('apply', id);
 
     // The detailed per-click record (sessionId, referrer, userAgent)
     // counts as analytics under CPRA "sharing" — only persist it when

@@ -12,6 +12,7 @@ import AnalyticsTab from '@/components/employer/AnalyticsTab';
 import SavedCandidatesTab from '@/components/employer/SavedCandidatesTab';
 import MessagesTab from '@/components/employer/MessagesTab';
 import UsageWidget from '@/components/employer/UsageWidget';
+import { useToast } from '@/components/ui/ToastProvider';
 import { brand } from '@/config/brand';
 
 /* ═══════════════════════════════════════════
@@ -81,6 +82,7 @@ const clayBtn: React.CSSProperties = {
 
 export default function EmployerDashboardClient({ employerEmail, employerName, jobs, dashboardToken }: EmployerDashboardClientProps) {
     const isTokenAccess = !!dashboardToken;
+    const { toast } = useToast();
 
     const [renewingJobId, setRenewingJobId] = useState<string | null>(null);
     const [showRenewModal, setShowRenewModal] = useState(false);
@@ -184,15 +186,32 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                 headers: { 'Content-Type': 'application/json' },
                 body: reason ? JSON.stringify({ reason, note: note ?? undefined }) : undefined,
             });
-            const result = await res.json();
-            if (res.ok && result.success) {
-                setLocalJobs(prev => prev.map(j =>
-                    j.id === job.id ? { ...j, isPublished: result.isPublished } : j
-                ));
+            const result: { success?: boolean; isPublished?: boolean; error?: string; message?: string } =
+                await res.json().catch(() => ({}));
+            if (!res.ok || !result.success) {
+                // Prefer the server's human-readable message (e.g. the 402
+                // payment-required copy) over the terse error code.
+                throw new Error(result.message || result.error || `Request failed (${res.status})`);
             }
-        } catch { /* silent */ } finally {
-            setTogglingJobId(null);
+            setLocalJobs(prev => prev.map(j =>
+                j.id === job.id ? { ...j, isPublished: result.isPublished ?? !j.isPublished } : j
+            ));
+            // Close the reason modal only on success — a failed pause keeps
+            // the modal (and the chosen reason) open so nothing is lost.
             setUnpublishTarget(null);
+        } catch (err) {
+            console.error('Error toggling publish state:', err);
+            const detail = err instanceof Error && err.message && !err.message.startsWith('Request failed')
+                ? ` ${err.message}`
+                : '';
+            toast(
+                job.isPublished
+                    ? `Couldn’t pause this job — please try again.${detail}`
+                    : `Couldn’t republish this job — please try again.${detail}`,
+                'error',
+            );
+        } finally {
+            setTogglingJobId(null);
         }
     };
 
@@ -220,16 +239,55 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
         setArchiveTarget(null);
         try {
             const res = await fetch(`/api/employer/jobs/${job.id}/archive`, { method: 'PATCH' });
-            const result = await res.json();
-            if (res.ok && result.success) {
-                setLocalJobs(prev => prev.map(j =>
-                    j.id === job.id
-                        ? { ...j, archivedAt: result.archivedAt, isPublished: result.archivedAt ? false : j.isPublished }
-                        : j
-                ));
+            const result: { success?: boolean; archivedAt?: string | null; error?: string } =
+                await res.json().catch(() => ({}));
+            if (!res.ok || !result.success) {
+                throw new Error(result.error || `Request failed (${res.status})`);
             }
-        } catch { /* silent */ } finally {
+            setLocalJobs(prev => prev.map(j =>
+                j.id === job.id
+                    ? { ...j, archivedAt: result.archivedAt ?? null, isPublished: result.archivedAt ? false : j.isPublished }
+                    : j
+            ));
+        } catch (err) {
+            console.error('Error toggling archive state:', err);
+            toast(
+                job.archivedAt
+                    ? 'Couldn’t restore this job — please try again.'
+                    : 'Couldn’t archive this job — please try again.',
+                'error',
+            );
+        } finally {
             setArchivingJobId(null);
+        }
+    };
+
+    // B78: resume an abandoned checkout. The original Stripe session
+    // hard-expired 24h after creation, so "Complete payment" asks
+    // /api/create-checkout for a fresh session bound to the SAME job row
+    // ({ resumeJobId }) and redirects into it.
+    const [resumingJobId, setResumingJobId] = useState<string | null>(null);
+    const handleResumePayment = async (job: Job) => {
+        setResumingJobId(job.id);
+        trackBeginCheckout(config.stripePriceInCents, 'new');
+        try {
+            const res = await fetch('/api/create-checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ resumeJobId: job.id }),
+            });
+            const result: { url?: string; error?: string } = await res.json().catch(() => ({}));
+            if (!res.ok || !result.url) {
+                throw new Error(result.error || `Request failed (${res.status})`);
+            }
+            window.location.href = result.url;
+        } catch (err) {
+            console.error('Error resuming checkout:', err);
+            const detail = err instanceof Error && err.message && !err.message.startsWith('Request failed')
+                ? ` ${err.message}`
+                : '';
+            toast(`Couldn’t restart checkout — please try again.${detail}`, 'error');
+            setResumingJobId(null);
         }
     };
 
@@ -266,7 +324,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
             }
         } catch (err) {
             console.error('Renewal checkout error:', err);
-            alert(err instanceof Error ? err.message : 'Failed to start renewal process');
+            toast(err instanceof Error ? err.message : 'Failed to start renewal process', 'error');
             setRenewingJobId(null);
         }
     };
@@ -785,6 +843,29 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                                     </button>
                                                 );
                                             })()}
+                                            {/* B78: Complete-payment action for abandoned checkouts.
+                                                The Unpaid badge told the employer something was wrong
+                                                but offered no way to fix it — this mints a fresh
+                                                Stripe session for the existing job row. */}
+                                            {mounted && !job.isPublished && job.paymentStatus === 'pending' && !job.archivedAt && (
+                                                <button
+                                                    onClick={() => handleResumePayment(job)}
+                                                    disabled={resumingJobId === job.id}
+                                                    className="emp-action-btn"
+                                                    style={{
+                                                        ...clayBtn,
+                                                        background: 'linear-gradient(145deg, #9D174D, #BE185D)',
+                                                        color: '#fff', border: 'none',
+                                                        boxShadow: '3px 3px 8px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                                                        opacity: resumingJobId === job.id ? 0.6 : 1,
+                                                    }}
+                                                >
+                                                    {resumingJobId === job.id
+                                                        ? <Loader2 size={14} className="animate-spin" />
+                                                        : <Rocket size={14} />}
+                                                    {resumingJobId === job.id ? 'Redirecting…' : 'Complete payment'}
+                                                </button>
+                                            )}
                                             {/* Upgrade button removed — single-tier model */}
                                             {mounted && shouldShowRenew(job) && (
                                                 <button

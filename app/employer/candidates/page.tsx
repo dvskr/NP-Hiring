@@ -9,7 +9,7 @@ export const metadata = {
 }
 
 export default async function CandidatesPage() {
-    await requireEmployer()
+    await requireEmployer('/employer/candidates')
 
     // Suspense wraps the client because CandidateSearchClient calls
     // useSearchParams() to honor the ?ai=1 deep-link from the talent-search

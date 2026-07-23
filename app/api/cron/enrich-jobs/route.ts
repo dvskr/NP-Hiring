@@ -4,6 +4,7 @@ import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { extractWithLLM } from '@/lib/llm-enrichment';
 import { withCronTracking } from '@/lib/cron/track';
+import { inngest } from '@/lib/inngest/client';
 
 export const maxDuration = 300; // 5 minutes
 
@@ -145,7 +146,7 @@ export async function GET(req: Request) {
       processed: 0, enriched: 0, salaryUpdated: 0, jobTypeUpdated: 0, modeUpdated: 0,
       cityUpdated: 0, stateUpdated: 0, settingUpdated: 0, populationUpdated: 0,
       expLevelUpdated: 0, benefitsUpdated: 0, errors: 0, noData: 0, skippedThin: 0,
-      totalInputTokens: 0, totalOutputTokens: 0,
+      totalInputTokens: 0, totalOutputTokens: 0, embeddingRefreshes: 0,
     };
 
     for (let i = 0; i < jobs.length; i += BATCH_SIZE) {
@@ -177,6 +178,19 @@ export async function GET(req: Request) {
           // instead of re-selecting forever.
           await prisma.job.update({ where: { id: r.value.job.id }, data: { lastEnrichedAt: new Date() } });
           stats.skippedThin++;
+          continue;
+        }
+
+        // Audit B92: a FAILED extraction attempt (API error, timeout,
+        // malformed JSON, missing key) must NOT stamp lastEnrichedAt —
+        // stamping would permanently evict the job from the never-enriched
+        // cohort, so a one-hour OpenAI outage would leave every job in that
+        // window unenriched forever. Leave it unstamped and let the next
+        // run retry. Only a SUCCESSFUL call that found nothing ("noData")
+        // falls through to the stamp + heuristic fallback below.
+        if ('failed' in r.value && r.value.failed) {
+          stats.errors++;
+          console.warn(`[Enrich Jobs] LLM extraction failed for job ${r.value.job.id} — leaving lastEnrichedAt unstamped for retry`);
           continue;
         }
 
@@ -360,6 +374,23 @@ export async function GET(req: Request) {
           });
         } catch {
           stats.errors++;
+          continue;
+        }
+
+        // Audit V6: enrichment just mutated fields that are part of the
+        // job's embedding text (buildJobEmbeddingText embeds setting,
+        // population, state, benefits alongside title/description). Emit
+        // the refresh event so semantic search / recommendations rank on
+        // the enriched content. The worker throttles per-job, so repeated
+        // emits coalesce. Best-effort — enrichment itself already landed.
+        const EMBEDDED_FIELDS = ['setting', 'population', 'state', 'benefits'] as const;
+        if (EMBEDDED_FIELDS.some((f) => updateData[f] !== undefined)) {
+          try {
+            await inngest.send({ name: 'embedding.refresh.job', data: { jobId: job.id } });
+            stats.embeddingRefreshes++;
+          } catch (err) {
+            console.warn(`[Enrich Jobs] inngest.send embedding.refresh.job failed for ${job.id}:`, err);
+          }
         }
       }
 
@@ -380,6 +411,7 @@ export async function GET(req: Request) {
       enriched: stats.enriched,
       noDataFound: stats.noData,
       errors: stats.errors,
+      embeddingRefreshes: stats.embeddingRefreshes,
       fieldsUpdated: {
         salary: stats.salaryUpdated,
         jobType: stats.jobTypeUpdated,

@@ -2,34 +2,34 @@
 
 import { useState, useEffect } from 'react';
 import { trackJobSave, trackJobUnsave, buildJobItem } from '@/lib/analytics';
-// F2: share the canonical map-shaped store with useSavedJobs so the detail-page
-// button and the list-page hook can no longer corrupt each other's localStorage.
-import { read, add, remove } from '@/lib/saved-jobs';
+// B82: go through the shared useSavedJobs hook (same as JobCard) instead of
+// writing localStorage directly. The hook is auth-aware — for signed-in users
+// it POSTs/DELETEs /api/saved-jobs so the detail-page save survives across
+// devices and shows up on the server-backed /saved page; for anonymous users
+// it stays localStorage-only. It also broadcasts changes, so a save here
+// immediately updates every JobCard bookmark on the page.
+import useSavedJobs from '@/lib/hooks/useSavedJobs';
 
 interface SaveJobButtonProps {
   jobId: string;
 }
 
 export default function SaveJobButton({ jobId }: SaveJobButtonProps) {
-  const [isSaved, setIsSaved] = useState(false);
-
+  const { isSaved: isJobSaved, saveJob, removeJob } = useSavedJobs();
+  // Mount guard: SSR markup renders "unsaved" (no localStorage on the server),
+  // so the first client paint must match it to avoid a hydration mismatch.
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    // Defer the read so SSR markup (unsaved) matches the first client paint,
-    // then reconcile against the shared store.
-    const timer = setTimeout(() => {
-      setIsSaved(jobId in read());
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [jobId]);
+    setMounted(true);
+  }, []);
+  const isSaved = mounted && isJobSaved(jobId);
 
   const toggleSave = () => {
     if (isSaved) {
-      remove(jobId);
-      setIsSaved(false);
+      removeJob(jobId);
       trackJobUnsave(buildJobItem({ id: jobId, title: '' }));
     } else {
-      add(jobId);
-      setIsSaved(true);
+      saveJob(jobId);
       trackJobSave(buildJobItem({ id: jobId, title: '' }));
     }
   };

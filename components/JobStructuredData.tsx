@@ -216,10 +216,22 @@ export default function JobStructuredData({ job }: JobStructuredDataProps) {
     },
   });
 
+  // SEO/security fix (B29): job.title/description/employer arrive from
+  // external aggregators. A literal "</script>" inside any of them would
+  // terminate this script element early — corrupting the JobPosting schema
+  // and letting the remainder of the string parse as markup (XSS vector).
+  // Escape < and > as </> inside the JSON string (same pattern as
+  // app/jobs/page.tsx, app/blog/page.tsx, app/salary-guide/page.tsx) —
+  // JSON.parse output is identical, but the payload can never break out of
+  // the <script> element.
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(structuredData)
+          .replace(/</g, '\\u003c')
+          .replace(/>/g, '\\u003e'),
+      }}
     />
   );
 }

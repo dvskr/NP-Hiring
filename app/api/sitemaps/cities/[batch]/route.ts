@@ -6,9 +6,10 @@
  * thousands of empty pages to Google (which was the root cause of most GSC
  * coverage issues).
  * 
- * Phase 6: Expanded from 8 to 13 categories (added addiction, new-grad,
- * 1099, behavioral-health, correctional). Also includes state-level URLs.
- * 
+ * Categories come from the taxonomy registry's CITY-eligible set (all 42
+ * slugs — lib/pseo/taxonomy-registry.ts). Also includes state-level URLs
+ * for the 21 state-eligible settings.
+ *
  * Routes:
  *   /api/sitemaps/cities/0 → first 10K URLs
  *   /api/sitemaps/cities/1 → next 10K URLs
@@ -19,11 +20,15 @@ import { prisma } from '@/lib/prisma';
 import { CITIES } from '@/lib/pseo/city-data/cities';
 import { getAllSettingSlugs, getAllStateSlugs } from '@/lib/pseo/setting-state-config';
 import { brand } from '@/config/brand';
-import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
+import { CITY_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
-// Category set comes from the drift-guarded registry — index/route.ts reads
-// the same export, so the index and batches can never disagree.
-const SITEMAP_CATEGORIES = STATE_ELIGIBLE_CATEGORY_SLUGS;
+// Category set comes from the drift-guarded registry. The category×city
+// surface is CITY-eligible (all 42 slugs — see taxonomy-registry.ts), not
+// the 21-slug STATE-eligible subset this route previously used, which left
+// half the category×city surface with zero sitemap presence. The pseoStats
+// job-count/freshness gates below still prune empty combos, so widening the
+// allow-list only admits pages that genuinely render and index.
+const SITEMAP_CATEGORIES = CITY_ELIGIBLE_CATEGORY_SLUGS;
 
 const BATCH_SIZE = 10000;
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
@@ -52,16 +57,29 @@ const SITEMAP_CATEGORY_SET = new Set(SITEMAP_CATEGORIES);
 const MIN_SITEMAP_JOBS = 3;
 const MIN_SITEMAP_POPULATION = 10000;
 
-// 36h = 3x the 12h aggregate-pseo cron cadence. Allows a single missed run
-// without dropping URLs from the sitemap; catches sustained aggregator failure
+// 36h = 6x the 6h aggregate-pseo cron cadence ("15 0,6,12,18 * * *" in
+// vercel.json / config/cron-schedule.ts). Allows several missed runs without
+// dropping URLs from the sitemap; catches sustained aggregator failure
 // before Google indexes pages whose underlying jobs already expired.
 const PSEO_STALENESS_HOURS = 36;
+
+// One sitemap entry: canonical URL + the pseoStats row's real refresh time.
+interface SitemapEntry {
+  loc: string;
+  lastmod: string; // YYYY-MM-DD
+}
+
+// B27: lastmod comes from the pseoStats row's updatedAt (when the aggregator
+// last recomputed that page's inventory) instead of "today" on every request.
+// Fabricated always-fresh lastmod erodes Google's trust in the signal
+// site-wide and burns crawl budget re-fetching pages that never changed.
+const toLastmod = (d: Date): string => d.toISOString().split('T')[0];
 
 // Generate only URLs where sufficient jobs exist in quality cities, plus
 // state-level pSEO URLs. All gating is driven by pseoStats so the sitemap
 // never disagrees with the page-level noindex gate.
-async function getActiveCategoryCityUrls(): Promise<string[]> {
-  const urls: string[] = [];
+async function getActiveCategoryCityUrls(): Promise<SitemapEntry[]> {
+  const urls: SitemapEntry[] = [];
   const freshnessThreshold = new Date(Date.now() - PSEO_STALENESS_HOURS * 60 * 60 * 1000);
   const validStateSlugs = new Set(getAllStateSlugs());
   const settingSlugs = new Set(getAllSettingSlugs());
@@ -79,7 +97,7 @@ async function getActiveCategoryCityUrls(): Promise<string[]> {
         totalJobs: { gte: MIN_SITEMAP_JOBS },
         updatedAt: { gte: freshnessThreshold },
       },
-      select: { categorySlug: true, locationSlug: true },
+      select: { categorySlug: true, locationSlug: true, updatedAt: true },
     });
     for (const row of categoryCityRows) {
       // Defense in depth against stale aggregator rows whose slugs were
@@ -87,7 +105,10 @@ async function getActiveCategoryCityUrls(): Promise<string[]> {
       if (!SITEMAP_CATEGORY_SET.has(row.categorySlug)) continue;
       const population = CITY_POPULATION_LOOKUP.get(row.locationSlug);
       if (population === undefined || population < MIN_SITEMAP_POPULATION) continue;
-      urls.push(`${BASE_URL}/jobs/${row.categorySlug}/city/${row.locationSlug}`);
+      urls.push({
+        loc: `${BASE_URL}/jobs/${row.categorySlug}/city/${row.locationSlug}`,
+        lastmod: toLastmod(row.updatedAt),
+      });
     }
   } catch (err) {
     // If pseoStats is empty/unreachable, skip category×city URLs entirely.
@@ -106,12 +127,15 @@ async function getActiveCategoryCityUrls(): Promise<string[]> {
         totalJobs: { gte: 1 },
         updatedAt: { gte: freshnessThreshold },
       },
-      select: { categorySlug: true, locationSlug: true },
+      select: { categorySlug: true, locationSlug: true, updatedAt: true },
     });
     for (const row of settingStateRows) {
       if (!settingSlugs.has(row.categorySlug)) continue;
       if (!validStateSlugs.has(row.locationSlug)) continue;
-      urls.push(`${BASE_URL}/jobs/${row.categorySlug}/${row.locationSlug}`);
+      urls.push({
+        loc: `${BASE_URL}/jobs/${row.categorySlug}/${row.locationSlug}`,
+        lastmod: toLastmod(row.updatedAt),
+      });
     }
   } catch (err) {
     console.error('[sitemaps/cities] pseoStats setting-state lookup failed; omitting setting×state URLs:', err);
@@ -143,13 +167,12 @@ export async function GET(
   const end = Math.min(start + BATCH_SIZE, allUrls.length);
   const batchUrls = allUrls.slice(start, end);
 
-  const lastmod = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-
+  // B27: per-URL lastmod from pseoStats.updatedAt — see toLastmod above.
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${batchUrls.map(url => `  <url>
-    <loc>${url}</loc>
-    <lastmod>${lastmod}</lastmod>
+${batchUrls.map(entry => `  <url>
+    <loc>${entry.loc}</loc>
+    <lastmod>${entry.lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>`).join('\n')}

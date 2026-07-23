@@ -37,6 +37,14 @@ const STORAGE_BASE = brand.assets.storageBase;
 // Each job page runs 10-12 DB queries (relatedJobs, companyInfo, salaryData, blogPosts, etc.).
 // Without caching, Googlebot crawling thousands of pages simultaneously exhausts the DB
 // connection pool → 5xx errors. 3600s trades freshness for stability.
+//
+// ISR fix F5: this revalidate is only REAL while the whole layout tree stays
+// free of Dynamic APIs — a single headers()/cookies() read in app/layout.tsx
+// opts the route into dynamic rendering and silently turns this constant into
+// a no-op (middleware's crawler CDN cache deliberately excludes job-detail
+// URLs because THIS is supposed to cover them — see middleware.ts, the
+// "Edge-cache public pSEO listing pages" block, and the F5 comment in
+// app/layout.tsx). Guarded by tests/regressions/shell-isr-static-layout.test.ts.
 export const revalidate = 3600;
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
@@ -55,7 +63,7 @@ const getJob = cache(async function getJob(id: string): Promise<JobResult> {
     // First check if job exists at all (any status)
     const anyJob = await prisma.job.findUnique({
       where: { id },
-      select: { id: true, isPublished: true, employer: true, title: true },
+      select: { id: true, isPublished: true, expiresAt: true, employer: true, title: true },
     });
 
     if (!anyJob) {
@@ -63,8 +71,22 @@ const getJob = cache(async function getJob(id: string): Promise<JobResult> {
       return { status: 'gone' };
     }
 
-    // Job exists but is unpublished/expired → 410 Gone
-    if (!anyJob.isPublished) {
+    // Expired-job contract (B31) — ONE behavior, implemented in two layers:
+    //   1. middleware.ts (job-410 gate) is the AUTHORITATIVE response: it
+    //      serves a real HTTP 410 for unpublished OR date-expired jobs when
+    //      the Supabase env vars are configured. Server Components can't
+    //      emit a 410 status from a page render, so the edge owns it.
+    //   2. THIS page is the mirror fallback (env unconfigured, cache-miss
+    //      races): it must classify jobs by the SAME predicate —
+    //      unpublished OR date-expired — and render the noindexed
+    //      "Position Filled" shell. Previously only !isPublished was
+    //      checked here, so a published-but-date-expired job rendered as a
+    //      fully live, indexable page whenever middleware couldn't run —
+    //      the two layers disagreed depending on env config.
+    // If you change this predicate, change the middleware gate in the same
+    // commit (tests/regressions/seo-sitemaps-expired-mirror.test.ts pins both).
+    const dateExpired = !!anyJob.expiresAt && anyJob.expiresAt.getTime() < Date.now();
+    if (!anyJob.isPublished || dateExpired) {
       return { status: 'expired', employer: anyJob.employer, title: anyJob.title };
     }
 
@@ -682,6 +704,15 @@ export default async function JobPage({ params }: JobPageProps) {
 
   const job = result.job;
 
+  // B34: single canonical URL for every surface on this page. Must match
+  // generateMetadata's alternates.canonical and JobStructuredData's `url`
+  // exactly (both derive from `job.slug || slugify(job.title, job.id)` on
+  // brand.baseUrl). Previously ShareButtons re-slugified the title (drifts
+  // from the stored slug after title edits / punctuation) and
+  // BreadcrumbSchema fell back to the bare id — three different URL forms
+  // for the same job splinter shares and schema signals across variants.
+  const canonicalJobUrl = `${brand.baseUrl}/jobs/${job.slug || slugify(job.title, job.id)}`;
+
   // H9 fix: previously `getRelevantBlogPosts` was awaited AFTER this
   // Promise.all, adding 50-100ms of pure serial latency to every cache
   // miss render of the hottest page on the site. Pulled into the same
@@ -776,7 +807,7 @@ export default async function JobPage({ params }: JobPageProps) {
         { name: 'Home', url: brand.baseUrl },
         { name: 'Jobs', url: `${brand.baseUrl}/jobs` },
         ...(job.state ? [{ name: job.state, url: `${brand.baseUrl}/jobs/state/${job.state.toLowerCase().replace(/\s+/g, '-')}` }] : []),
-        { name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` },
+        { name: job.title, url: canonicalJobUrl },
       ]} />
       <JobViewTracker job={{ id: job.id, title: job.title, employer: job.employer, jobType: job.jobType || undefined, stateCode: job.stateCode || undefined, sourceProvider: job.sourceProvider || undefined, normalizedMinSalary: job.normalizedMinSalary }} />
       <div style={{ backgroundColor: '#F5F0EB', minHeight: '100vh', paddingTop: '1px', paddingBottom: '40px' }}>
@@ -1103,7 +1134,7 @@ export default async function JobPage({ params }: JobPageProps) {
                   <p className="text-xs font-semibold mb-3" style={{ color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Share this job</p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <ShareButtons
-                      url={`${BASE_URL}/jobs/${slugify(job.title, job.id)}`}
+                      url={canonicalJobUrl}
                       title={job.title}
                       company={job.employer}
                     />
@@ -1165,7 +1196,7 @@ export default async function JobPage({ params }: JobPageProps) {
                 <p className="text-sm mb-3" style={{ color: 'var(--text-tertiary)' }}>Share this job:</p>
                 <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
                   <ShareButtons
-                    url={`${BASE_URL}/jobs/${slugify(job.title, job.id)}`}
+                    url={canonicalJobUrl}
                     title={job.title}
                     company={job.employer}
                   />

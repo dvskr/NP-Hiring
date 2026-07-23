@@ -76,6 +76,10 @@ export async function GET(req: NextRequest) {
         : [];
     const chargesByJob = new Map<string, typeof charges>();
     for (const c of charges) {
+        // B112: employerJobId is nullable since the FK (ON DELETE SET NULL)
+        // landed. The `in` filter above can't return null rows, but the type
+        // no longer proves it — skip defensively.
+        if (!c.employerJobId) continue;
         const arr = chargesByJob.get(c.employerJobId) ?? [];
         arr.push(c);
         chargesByJob.set(c.employerJobId, arr);

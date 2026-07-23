@@ -1,6 +1,6 @@
 {
   "_curation_status": "SEED_ONLY — 5 representative cases. Production target: 100 hand-rated cases curated by a PMHNP recruiter or clinical director per docs/ai-implementation-plan.md ticket 0.2.4. Until that curation lands, the eval CI gate runs but the small N means the threshold floor is advisory, not statistically significant.",
-  "promptVersion": "v1",
+  "promptVersion": "v2",
   "description": "Candidate scoring golden cases. Each case is a (job, candidate) pair with a human-rated expected score band ±10pt by default and optional must/mustNotMention assertions on matchReasons.",
   "cases": [
     {

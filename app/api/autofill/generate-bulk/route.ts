@@ -2,7 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyExtensionToken } from '@/lib/verify-extension-token';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { complete } from '@/lib/ai/gateway';
+import { AiGatewayError } from '@/lib/ai/types';
+import { checkAutofillAiQuota, quotaExceededResponse } from '../_lib/quota';
+import { checkAutofillAiFeature, aiGatewayErrorResponse } from '../_lib/guard';
 
+interface BulkQuestion {
+    questionText: string;
+    questionKey?: string;
+    jobTitle?: string;
+    employerName?: string;
+    jobDescription?: string;
+    maxLength?: number;
+}
+
+interface BulkResult {
+    answer: string;
+    questionKey: string;
+    model: string;
+    basedOnStoredResponse: boolean;
+    /** Present when generation failed for THIS question (audit F28 — the
+     *  old code silently returned answer:'' with no signal). */
+    error?: string;
+}
 
 export async function POST(req: NextRequest) {
     // Rate limiting
@@ -15,8 +37,12 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // Kill switch (audit F31).
+        const disabled = await checkAutofillAiFeature('ai.candidate.autofill_bulk', user.userId);
+        if (disabled) return disabled;
+
         const body = await req.json();
-        const { questions } = body;
+        const { questions } = body as { questions: BulkQuestion[] };
 
         if (!Array.isArray(questions) || questions.length === 0) {
             return NextResponse.json({ error: 'questions array is required' }, { status: 400 });
@@ -26,15 +52,25 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Maximum 10 questions per bulk request' }, { status: 400 });
         }
 
-        const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-        if (!OPENAI_API_KEY) {
-            return NextResponse.json({ error: 'AI service not configured' }, { status: 503 });
-        }
-
         // Check stored responses first
         const storedResponses = await prisma.candidateOpenEndedResponse.findMany({
             where: { userId: user.userId },
         });
+
+        const findStored = (q: BulkQuestion) =>
+            storedResponses.find(
+                (r) => r.questionKey === q.questionKey ||
+                    r.questionText.toLowerCase().includes(q.questionText.toLowerCase().substring(0, 30))
+            );
+
+        // Monthly AI-generation quota (audit F29): count how many questions
+        // actually need the model (stored answers are free), and check the
+        // WHOLE batch against the shared SUM-based cap BEFORE any model call.
+        const aiNeeded = questions.filter((q) => !findStored(q)?.response).length;
+        if (aiNeeded > 0) {
+            const quota = await checkAutofillAiQuota(user.userId, aiNeeded);
+            if (!quota.allowed) return quotaExceededResponse(quota);
+        }
 
         // Fetch profile context once
         const profile = await prisma.userProfile.findUnique({
@@ -48,14 +84,11 @@ export async function POST(req: NextRequest) {
         });
 
         const profileContext = buildProfileContext(profile);
-        const results = [];
+        const results: BulkResult[] = [];
 
         for (const q of questions) {
             // Check stored first
-            const stored = storedResponses.find(
-                (r) => r.questionKey === q.questionKey ||
-                    r.questionText.toLowerCase().includes(q.questionText.toLowerCase().substring(0, 30))
-            );
+            const stored = findStored(q);
 
             if (stored?.response) {
                 results.push({
@@ -67,7 +100,9 @@ export async function POST(req: NextRequest) {
                 continue;
             }
 
-            // Generate via AI
+            // Generate via the LLM gateway (audit F28/V4) — registered
+            // autofill_answer task instead of the raw 'gpt-5.2' fetch that
+            // failed 100% of the time and surfaced as silent empty answers.
             try {
                 const prompt = `Generate a professional response for this PMHNP job application question.
 
@@ -80,50 +115,46 @@ ${q.jobDescription ? `**Job Context:** ${q.jobDescription.substring(0, 500)}` : 
 
 Write approximately ${q.maxLength || 300} characters. Be specific and professional.`;
 
-                const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${OPENAI_API_KEY}`,
-                    },
-                    body: JSON.stringify({
-                        model: 'gpt-5.2',
-                        messages: [
-                            {
-                                role: 'system',
-                                content: 'You are a career coach for PMHNPs. Generate concise, professional job application responses.',
-                            },
-                            { role: 'user', content: prompt },
-                        ],
-                        max_completion_tokens: Math.min((q.maxLength || 300) * 2, 800),
-                        temperature: 0.7,
-                    }),
+                const response = await complete({
+                    task: 'autofill_answer',
+                    tenant: { type: 'candidate', id: user.userId },
+                    promptId: 'autofill_bulk',
+                    promptVersion: 'v2',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are a career coach for PMHNPs. Generate concise, professional job application responses.',
+                        },
+                        { role: 'user', content: prompt },
+                    ],
                 });
 
-                if (aiResponse.ok) {
-                    const aiData = await aiResponse.json();
-                    const answer = aiData.choices?.[0]?.message?.content?.trim() || '';
-                    results.push({
-                        answer,
-                        questionKey: q.questionKey || '',
-                        model: aiData.model || 'gpt-4o-mini',
-                        basedOnStoredResponse: false,
-                    });
-                } else {
-                    results.push({
-                        answer: '',
-                        questionKey: q.questionKey || '',
-                        model: '',
-                        basedOnStoredResponse: false,
-                    });
-                }
-            } catch {
+                results.push({
+                    answer: response.content.trim(),
+                    questionKey: q.questionKey || '',
+                    model: response.model,
+                    basedOnStoredResponse: false,
+                });
+            } catch (err) {
+                // Explicit per-question error (audit F28) — never a silent
+                // empty answer again.
+                const message = err instanceof AiGatewayError
+                    ? `AI generation failed (${err.code})`
+                    : 'AI generation failed';
+                console.error('Bulk generation question failed:', err instanceof AiGatewayError ? err.code : err);
                 results.push({
                     answer: '',
                     questionKey: q.questionKey || '',
                     model: '',
                     basedOnStoredResponse: false,
+                    error: message,
                 });
+                // If the gateway rate limiter tripped, every remaining
+                // question would fail the same way — bail out with the
+                // proper 429 unless we already have partial results to keep.
+                if (err instanceof AiGatewayError && err.code === 'rate_limited' && results.length === 1) {
+                    return aiGatewayErrorResponse(err, 'Bulk generation');
+                }
             }
         }
 

@@ -16,6 +16,11 @@ import { evalDriftFunctions } from '@/lib/inngest/functions/eval-drift';
 import { embeddingFunctions } from '@/lib/inngest/functions/embeddings';
 import { recommendationFunctions } from '@/lib/inngest/functions/recommendations';
 import { recommendationDigestFunctions } from '@/lib/inngest/functions/recommendation-digest';
+import { paymentReconciliationFunctions } from '@/lib/inngest/functions/payment-reconciliation';
+import { broadcastFunctions } from '@/lib/inngest/functions/broadcast-send';
+import { enrichThinJdsFunctions } from '@/lib/inngest/functions/enrich-thin-jds';
+import { autofillTelemetryRetentionFunctions } from '@/lib/inngest/functions/autofill-telemetry-retention';
+import { cronWatchdogFunctions } from '@/lib/inngest/functions/cron-watchdog';
 
 export const { GET, POST, PUT } = serve({
     client: inngest,
@@ -25,5 +30,10 @@ export const { GET, POST, PUT } = serve({
         ...embeddingFunctions,
         ...recommendationFunctions,
         ...recommendationDigestFunctions,
+        ...paymentReconciliationFunctions,
+        ...broadcastFunctions,
+        ...enrichThinJdsFunctions,
+        ...autofillTelemetryRetentionFunctions,
+        ...cronWatchdogFunctions,
     ],
 });

@@ -3,7 +3,7 @@ import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { getAllPublishedSlugs } from '@/lib/blog'
-import { getAllMetroSlugs } from '@/lib/metro-data'
+import { METRO_CITIES } from '@/lib/metro-data'
 import { activeIndexableJobWhere } from '@/lib/active-job-filter'
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry'
 
@@ -11,10 +11,21 @@ import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry'
 // /sitemap.xml triggers a full DB scan across jobs, companies, and blog tables.
 export const revalidate = 3600;
 
-const METRO_SLUGS = getAllMetroSlugs();
+// SEO fix (B28): activeIndexableJobWhere() bakes `now` into the returned
+// Prisma where-clause. It used to be frozen here at MODULE scope, so a warm
+// serverless instance kept comparing expiresAt against its cold-start time —
+// jobs that expired since then stayed in the sitemap while middleware served
+// their URLs as 410. It is now computed per-request inside sitemap().
 
-// Shared filter: published, not expired, and not a repeated dead link (S6).
-const ACTIVE_JOB_WHERE = activeIndexableJobWhere();
+// B33: metro-page adjacency sets — MUST mirror getMetroStats in
+// app/jobs/metro/[slug]/page.tsx, which widens these three metros to
+// adjacent cities when counting inventory. Only used to decide whether a
+// metro has ≥1 active job before advertising it in the sitemap.
+const METRO_ADJACENT_CITIES: Record<string, string[]> = {
+  'New York': ['Brooklyn', 'Queens', 'Bronx'],
+  'Tampa': ['St. Petersburg', 'Clearwater'],
+  'Dallas': ['Fort Worth', 'Plano', 'Arlington'],
+}
 
 // All 50 US states + DC
 const US_STATES = [
@@ -61,6 +72,10 @@ const STATE_NAME_TO_CODE: Record<string, string> = {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl
 
+  // Shared filter: published, not expired, and not a repeated dead link (S6).
+  // Computed per-request (B28) so `now` is never stale on warm instances.
+  const ACTIVE_JOB_WHERE = activeIndexableJobWhere()
+
   // GSC Fix (P1.4): use the actual latest job date, or "now" as a safe live
   // fallback. Previously hard-coded "2026-03-01" — a stale stamp made every
   // sitemap entry look 2+ months old and signaled "this site isn't being
@@ -101,14 +116,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // /jobs/new-grad — Google logs that as "Submitted URL redirected" in GSC
     // and burns crawl budget on a hop that yields no new content.
     { url: `${baseUrl}/jobs/new-grad`, lastModified: latestJobDate, changeFrequency: 'weekly', priority: 0.9 },
-    // Metro landing pages
-    ...METRO_SLUGS.map(slug => ({
-      url: `${baseUrl}/jobs/metro/${slug}`,
-      lastModified: latestJobDate,
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
-    })),
   ]
+
+  // Metro landing pages — DB-gated below (B33) so metros with zero active
+  // inventory are not advertised (their pages render an editorial shell with
+  // an empty job list — a soft-404 magnet when submitted via sitemap). This
+  // `let`-bound default (all metros) is the degraded-mode fallback used by
+  // the outer catch when the DB is unhealthy.
+  let metroPages: MetadataRoute.Sitemap = METRO_CITIES.map(m => ({
+    url: `${baseUrl}/jobs/metro/${m.slug}`,
+    lastModified: latestJobDate,
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }))
 
   // Category landing pages
   const categoryLandingPages: MetadataRoute.Sitemap = ALL_CATEGORY_SLUGS.map(slug => ({
@@ -176,31 +196,74 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // and the URL bounces between "indexed → 404 → not indexed" until the
     // state has data again. The state.toLowerCase().replace pattern matches
     // US_STATES slugs (e.g. "Wyoming" → "wyoming", "New York" → "new-york").
+    // B27: each groupBy also pulls _max.updatedAt so every section carries a
+    // REAL per-page lastmod (the newest job feeding that page) instead of
+    // flattening everything to one site-wide date — over-claiming freshness
+    // erodes Google's trust in lastmod across the whole property.
     const stateJobCounts = await prisma.job.groupBy({
       by: ['state'],
       where: { ...ACTIVE_JOB_WHERE, state: { not: null } },
       _count: { state: true },
+      _max: { updatedAt: true },
     });
     const stateSalaryCounts = await prisma.job.groupBy({
       by: ['state'],
       where: { ...ACTIVE_JOB_WHERE, state: { not: null }, normalizedMinSalary: { not: null } },
       _count: { state: true },
+      _max: { updatedAt: true },
     });
     const slugify = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
+    const stateLastmod = new Map<string, Date>();
+    for (const r of stateJobCounts) {
+      if (r._max.updatedAt) stateLastmod.set(slugify((r.state || '').trim()), r._max.updatedAt);
+    }
+    const stateSalaryLastmod = new Map<string, Date>();
+    for (const r of stateSalaryCounts) {
+      if (r._max.updatedAt) stateSalaryLastmod.set(slugify((r.state || '').trim()), r._max.updatedAt);
+    }
     const statesWithJobs = new Set(stateJobCounts.map(r => slugify((r.state || '').trim())));
     const statesWithSalary = new Set(stateSalaryCounts.map(r => slugify((r.state || '').trim())));
     statePages = US_STATES.filter(s => statesWithJobs.has(s)).map(state => ({
       url: `${baseUrl}/jobs/state/${state}`,
-      lastModified: latestJobDate,
+      lastModified: stateLastmod.get(state) ?? latestJobDate,
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     }));
     salaryGuideStatePages = US_STATES.filter(s => statesWithSalary.has(s)).map(state => ({
       url: `${baseUrl}/salary-guide/${state}`,
-      lastModified: latestJobDate,
+      lastModified: stateSalaryLastmod.get(state) ?? latestJobDate,
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     }));
+
+    // B33: metro sitemap gate — only advertise metros with ≥1 active job.
+    // Mirrors the inventory match in app/jobs/metro/[slug]/page.tsx
+    // getMetroStats (city `contains` + stateCode match, widened by the
+    // METRO_ADJACENT_CITIES sets above), on top of the indexable-job filter.
+    const metroCityRows = await prisma.job.groupBy({
+      by: ['city', 'stateCode'],
+      where: { ...ACTIVE_JOB_WHERE, city: { not: null }, stateCode: { not: null } },
+      _count: { _all: true },
+      _max: { updatedAt: true },
+    });
+    metroPages = METRO_CITIES
+      .map(m => {
+        const cityNeedles = [m.city, ...(METRO_ADJACENT_CITIES[m.city] ?? [])].map(c => c.toLowerCase());
+        const matching = metroCityRows.filter(row =>
+          (row.stateCode || '').toLowerCase() === m.stateCode.toLowerCase() &&
+          cityNeedles.some(needle => (row.city || '').toLowerCase().includes(needle))
+        );
+        if (matching.length === 0) return null;
+        const newest = matching.reduce<Date | null>((acc, row) =>
+          row._max.updatedAt && (!acc || row._max.updatedAt > acc) ? row._max.updatedAt : acc, null);
+        return {
+          url: `${baseUrl}/jobs/metro/${m.slug}`,
+          lastModified: newest ?? latestJobDate,
+          changeFrequency: 'weekly' as const,
+          priority: 0.8,
+        };
+      })
+      .filter((m): m is NonNullable<typeof m> => m !== null);
 
     // Top city pages (DB-driven, only active non-expired jobs).
     //
@@ -214,6 +277,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       by: ['city', 'state'],
       where: { ...ACTIVE_JOB_WHERE, city: { not: null }, state: { not: null } },
       _count: { city: true },
+      _max: { updatedAt: true },
       orderBy: { _count: { city: 'desc' } },
       take: 2000,
     })
@@ -230,7 +294,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         const slug = `${c.city!.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${code.toLowerCase()}`;
         return {
           url: `${baseUrl}/jobs/city/${slug}`,
-          lastModified: latestJobDate,
+          // B27: real per-city freshness — newest job in that city.
+          lastModified: c._max.updatedAt ?? latestJobDate,
           changeFrequency: 'weekly' as const,
           priority: 0.7,
         };
@@ -249,6 +314,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         },
       },
       select: {
+        id: true,
         normalizedName: true,
         _count: {
           select: {
@@ -259,17 +325,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         },
       },
     });
+    // B27: per-company lastmod — newest active job per company in ONE query
+    // instead of flattening every company page to the site-wide date.
+    const companyLastmodRows = await prisma.job.groupBy({
+      by: ['companyId'],
+      where: { ...ACTIVE_JOB_WHERE, companyId: { not: null } },
+      _max: { updatedAt: true },
+    });
+    const companyLastmod = new Map<string, Date>();
+    for (const r of companyLastmodRows) {
+      if (r.companyId && r._max.updatedAt) companyLastmod.set(r.companyId, r._max.updatedAt);
+    }
     const companyPages: MetadataRoute.Sitemap = companiesWithJobs
       .filter(c => c._count.jobs >= 8) // Only companies with ≥8 active jobs (tightened from 5 to reduce thin pages)
       .map(c => ({
-        url: `${baseUrl}/companies/${c.normalizedName}`,
-        lastModified: latestJobDate,
+        // B30: emit the canonical kebab form only. Legacy rows still store
+        // space-form normalizedName ("life stance") — a raw interpolation
+        // produced literal-space URLs that are invalid in sitemap XML and
+        // that middleware 410'd in kebab form. Single-space→hyphen is the
+        // exact inverse of the page resolver's legacy fallback
+        // (app/companies/[slug]/page.tsx: slug.replace(/-/g, ' ')), so the
+        // emitted URL always round-trips to the stored row.
+        url: `${baseUrl}/companies/${c.normalizedName.replace(/ /g, '-')}`,
+        lastModified: companyLastmod.get(c.id) ?? latestJobDate,
         changeFrequency: 'weekly' as const,
         priority: 0.6,
       }))
 
     const all = [
       ...staticPages,
+      ...metroPages,
       ...categoryLandingPages,
       ...landingPages,
       ...statePages,
@@ -304,6 +389,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     logger.error('Error generating sitemap, returning static pages only:', error)
     return [
       ...staticPages,
+      ...metroPages,
       ...categoryLandingPages,
       ...landingPages,
       ...statePages,

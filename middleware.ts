@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { brand } from '@/config/brand';
+import { enforceApiCsrf } from '@/lib/csrf';
+import { CONSENT_COOKIE, CONSENT_MIRROR_COOKIE } from '@/lib/consent';
 import { updateSession } from '@/lib/supabase/middleware';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { isKnownCitySlug } from '@/lib/pseo/city-data/city-slugs-edge';
@@ -41,13 +43,22 @@ function styled410(opts: {
     subtext: string;
     title?: string; // browser tab title
 }): NextResponse {
-    const tabTitle = opts.title ?? `${opts.badge} — PMHNP Hiring`;
+    const tabTitle = opts.title ?? `${opts.badge} — ${brand.name}`;
     const safe = (s: string) => s
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+
+    // Brand wordmark (F2: no donor-brand hardcoding — everything derives
+    // from config/brand.ts). Multi-word names italicize the trailing words
+    // to match the site header's accent styling.
+    const nameParts = brand.name.split(' ');
+    const logoTextHtml = nameParts.length > 1
+        ? `${safe(nameParts[0])} <span class="accent">${safe(nameParts.slice(1).join(' '))}</span>`
+        : safe(brand.name);
+    const logoInitial = safe(brand.name.charAt(0));
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -185,8 +196,8 @@ function styled410(opts: {
 <body>
 <header class="header">
   <a href="/" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;">
-    <span class="logo-mark">P</span>
-    <span class="logo-text">PMHNP <span class="accent">Hiring</span></span>
+    <span class="logo-mark">${logoInitial}</span>
+    <span class="logo-text">${logoTextHtml}</span>
   </a>
 </header>
 <main>
@@ -195,7 +206,7 @@ function styled410(opts: {
     <h1>${safe(opts.heading)}</h1>
     <p class="subtext">${safe(opts.subtext)}</p>
     <div class="cta-row">
-      <a href="/jobs" class="cta-primary">Browse all PMHNP jobs &rarr;</a>
+      <a href="/jobs" class="cta-primary">Browse all ${safe(brand.niche.short)} jobs &rarr;</a>
       <a href="/" class="cta-ghost">Back to home</a>
     </div>
   </section>
@@ -208,7 +219,7 @@ function styled410(opts: {
     </a>
     <a href="/jobs/telehealth" class="quick-card">
       <div class="quick-label">Telehealth</div>
-      <div class="quick-sub">Virtual psychiatric care</div>
+      <div class="quick-sub">Virtual care roles</div>
     </a>
     <a href="/jobs/outpatient" class="quick-card">
       <div class="quick-label">Outpatient</div>
@@ -240,7 +251,7 @@ function gone410(reason: string): NextResponse {
         badge: 'Page Removed',
         heading: 'This page is no longer available',
         subtext: reason,
-        title: 'Page Permanently Removed — PMHNP Hiring',
+        title: `Page Permanently Removed — ${brand.name}`,
     });
 }
 
@@ -398,6 +409,45 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     const pathname = url.pathname;
 
+    // ── CSRF Gate for State-Changing API Routes (B98) ─────────────────
+    // Centralized Origin/Referer verification for every POST/PUT/PATCH/
+    // DELETE under /api/*. Previously only 6 routes called verifyCsrf()
+    // themselves; the other ~90 mutation routes relied on SameSite cookie
+    // behavior alone. Enforcing here protects new routes by default.
+    // Bearer-token requests (extension JWT, cron secrets) and signature-
+    // verified endpoints (/api/webhooks/*, /api/inngest) are exempted
+    // inside enforceApiCsrf — see lib/csrf.ts for the full design note.
+    if (pathname.startsWith('/api/')) {
+        const csrfError = enforceApiCsrf(request);
+        if (csrfError) return csrfError;
+    }
+
+    // ── Trailing Slash Stripping (MUST run before the 410 gates) ─────
+    // Fixes "Duplicate, Google chose different canonical than user" GSC issue.
+    // /jobs/remote/ and /jobs/remote are the same page but different URLs.
+    // Enforce no-trailing-slash for all non-root paths.
+    //
+    // SEO fix (B26): this block and the case-fold below used to run AFTER
+    // the 410 gates. A mixed-case or trailing-slash variant of a perfectly
+    // valid page (/jobs/Remote, /jobs/state/Florida, /companies/Acme-X)
+    // failed the case-sensitive allowlist/DB lookups and was served
+    // 410 + noindex instead of the correct 301 to its canonical form.
+    // Normalize first; the 410 gates below then only ever see canonical
+    // lowercase, no-trailing-slash paths.
+    if (pathname !== '/' && pathname.endsWith('/')) {
+        url.pathname = pathname.slice(0, -1);
+        return NextResponse.redirect(url, 301);
+    }
+
+    // ── URL Case Normalization (MUST run before the 410 gates) ───────
+    // GSC Fix: /jobs/Remote and /jobs/remote are different URLs to Google.
+    // 301 redirect any path containing uppercase letters to its lowercase
+    // equivalent. Excludes _next/ paths and API routes with tokens.
+    if (/[A-Z]/.test(pathname) && !pathname.startsWith('/_next')) {
+        url.pathname = pathname.toLowerCase();
+        return NextResponse.redirect(url, 301);
+    }
+
     // ── 410 Gone for Deleted/Expired Job URLs ─────────────────────────
     // GSC Fix: Returns HTTP 410 for job detail pages where the job no longer
     // exists or is unpublished. This tells Google to permanently de-index
@@ -415,8 +465,8 @@ export async function middleware(request: NextRequest) {
                 return styled410({
                     badge: 'Position Removed',
                     heading: 'This position is no longer available',
-                    subtext: "This job listing has been permanently removed. Don't worry — we have hundreds of similar PMHNP positions open right now.",
-                    title: 'Position Removed — PMHNP Hiring',
+                    subtext: `This job listing has been permanently removed. Don't worry — we have hundreds of similar ${brand.niche.short} positions open right now.`,
+                    title: `Position Removed — ${brand.name}`,
                 });
             }
             // Cached "live" result short-circuits the DB call entirely.
@@ -444,6 +494,15 @@ export async function middleware(request: NextRequest) {
                         // the page route, which renders a 200 soft-404 ("Position
                         // Filled" body). Listings/sitemaps already exclude expired
                         // jobs, so a 410 on the detail URL is consistent.
+                        //
+                        // Expired-job contract (B31): THIS gate is the authoritative
+                        // response — real HTTP 410 — whenever the Supabase env vars
+                        // are configured. app/jobs/[slug]/page.tsx getJob() MIRRORS
+                        // the same predicate (unpublished OR date-expired) and
+                        // renders a noindexed "Position Filled" shell as the
+                        // fallback when this gate can't run (pages can't emit a
+                        // real 410 status). Change the predicate in BOTH places or
+                        // tests/regressions/seo-sitemaps-expired-mirror.test.ts fails.
                         const row = rows[0];
                         const dateExpired = !!row?.expires_at && new Date(row.expires_at).getTime() < Date.now();
                         if (rows.length === 0 || !row.is_published || dateExpired) {
@@ -451,8 +510,8 @@ export async function middleware(request: NextRequest) {
                             return styled410({
                                 badge: 'Position Removed',
                                 heading: 'This position is no longer available',
-                                subtext: "This job listing has been permanently removed. Don't worry — we have hundreds of similar PMHNP positions open right now.",
-                                title: 'Position Removed — PMHNP Hiring',
+                                subtext: `This job listing has been permanently removed. Don't worry — we have hundreds of similar ${brand.niche.short} positions open right now.`,
+                                title: `Position Removed — ${brand.name}`,
                             });
                         }
                         // Live — cache the negative so subsequent requests skip the round-trip.
@@ -487,8 +546,8 @@ export async function middleware(request: NextRequest) {
             return styled410({
                 badge: 'Page Not Found',
                 heading: 'This page doesn’t exist',
-                subtext: 'The page you’re looking for isn’t here — it may have moved or never existed. Browse current PMHNP openings instead.',
-                title: 'Page Not Found — PMHNP Hiring',
+                subtext: `The page you’re looking for isn’t here — it may have moved or never existed. Browse current ${brand.niche.short} openings instead.`,
+                title: `Page Not Found — ${brand.name}`,
             });
         }
     }
@@ -537,13 +596,57 @@ export async function middleware(request: NextRequest) {
                         }
                     );
                     if (res.ok) {
-                        const rows = await res.json();
+                        let rows = await res.json();
+                        // SEO fix (B30): the sitemap now emits kebab-case
+                        // company URLs, but rows inserted before the
+                        // normalizer changed still hold the legacy space
+                        // form ("life stance"). The page resolver
+                        // (app/companies/[slug]/page.tsx
+                        // resolveCompanyNormalizedName) falls back from
+                        // "life-stance" to "life stance" — this gate must
+                        // apply the SAME fallback or it 410s the exact
+                        // kebab URL the page is built to resolve.
+                        let lookupDefinitive = true;
+                        if (rows.length === 0 && decodedSlug.includes('-')) {
+                            const legacyLookup = encodeURIComponent(decodedSlug.replace(/-/g, ' '));
+                            const legacyRes = await fetch(
+                                `${supabaseUrl}/rest/v1/companies?normalized_name=eq.${legacyLookup}&select=id`,
+                                {
+                                    headers: {
+                                        'apikey': supabaseKey,
+                                        'Authorization': `Bearer ${supabaseKey}`,
+                                    },
+                                }
+                            );
+                            if (legacyRes.ok) {
+                                rows = await legacyRes.json();
+                            } else {
+                                // Transient failure — never 410 on incomplete
+                                // evidence. Fall through to the page handler.
+                                lookupDefinitive = false;
+                                console.error('[middleware:company-410] Supabase non-OK on legacy-slug lookup', {
+                                    status: legacyRes.status,
+                                    rawSlug,
+                                });
+                            }
+                        }
                         if (rows.length > 0) {
                             const companyId = rows[0].id;
                             // Count active published jobs for this company.
+                            //
+                            // V1 fix: "active" must match the sitemap's predicate
+                            // (lib/active-job-filter.ts activeIndexableJobWhere),
+                            // which treats `expiresAt IS NULL` as active. The old
+                            // filter (`expires_at=gt.now`) EXCLUDED null-expiry
+                            // rows, so a company whose active jobs all had null
+                            // expiry was sitemap-listed yet 410'd here. Null
+                            // expiry currently only enters via the admin job
+                            // create/edit path, but the two predicates must not
+                            // diverge.
                             const nowIso = new Date().toISOString();
+                            const activeExpiry = `or=(expires_at.is.null,expires_at.gt.${encodeURIComponent(nowIso)})`;
                             const countRes = await fetch(
-                                `${supabaseUrl}/rest/v1/jobs?company_id=eq.${companyId}&is_published=eq.true&expires_at=gt.${encodeURIComponent(nowIso)}&select=id&limit=1`,
+                                `${supabaseUrl}/rest/v1/jobs?company_id=eq.${companyId}&is_published=eq.true&${activeExpiry}&select=id&limit=1`,
                                 {
                                     headers: {
                                         'apikey': supabaseKey,
@@ -561,17 +664,18 @@ export async function middleware(request: NextRequest) {
                                     return styled410({
                                         badge: 'No Open Positions',
                                         heading: 'This employer has no current openings',
-                                        subtext: "This company doesn't have any active PMHNP openings right now. Browse positions from other employers below.",
-                                        title: 'No Open Positions — PMHNP Hiring',
+                                        subtext: `This company doesn't have any active ${brand.niche.short} openings right now. Browse positions from other employers below.`,
+                                        title: `No Open Positions — ${brand.name}`,
                                     });
                                 }
                                 // Live company with jobs — cache so the next
                                 // crawler hit skips both Supabase round-trips.
                                 cacheLookupSet(cacheKey, false);
                             }
-                        } else {
+                        } else if (lookupDefinitive) {
                             // GSC Fix (P2.4): company slug doesn't match any Company.normalizedName
-                            // at all. Pre-Mar-19, the sitemap regex-slugified Job.employer strings
+                            // at all (in either kebab or legacy space form — B30).
+                            // Pre-Mar-19, the sitemap regex-slugified Job.employer strings
                             // and submitted them as /companies/{slug}; many didn't match a real
                             // Company row → ~2,000+ zombie URLs in Google's index that 404'd.
                             // Returning 410 here de-indexes them in days vs months for 404s.
@@ -609,7 +713,7 @@ export async function middleware(request: NextRequest) {
         // /jobs/state/{x} — state listing
         if (segs.length === 3 && segs[1] === 'state') {
             if (!resolveStateSlug(segs[2])) {
-                return gone410(`No PMHNP listings exist for the state "${segs[2]}".`);
+                return gone410(`No ${brand.niche.short} listings exist for the state "${segs[2]}".`);
             }
         }
         // /jobs/metro/{x} — metro landing page
@@ -628,14 +732,14 @@ export async function middleware(request: NextRequest) {
                 if (STATE_ELIGIBLE_TAXONOMIES.has(cat)) {
                     // Valid state-eligible taxonomy — tail must be a real state slug.
                     if (!resolveStateSlug(tail)) {
-                        return gone410(`No PMHNP listings exist for "${cat}" in "${tail}".`);
+                        return gone410(`No ${brand.niche.short} listings exist for "${cat}" in "${tail}".`);
                     }
                 } else if (CITY_ELIGIBLE_TAXONOMIES.has(cat)) {
                     // City-only taxonomy used in state-shaped URL — invalid shape.
                     return gone410(`The URL pattern /jobs/${cat}/${tail} is not a valid listing (use /jobs/${cat}/city/{slug}).`);
                 } else {
                     // Unknown taxonomy entirely — never a valid page.
-                    return gone410(`The category "${cat}" is not a recognized PMHNP listing.`);
+                    return gone410(`The category "${cat}" is not a recognized ${brand.niche.short} listing.`);
                 }
             }
         }
@@ -644,10 +748,10 @@ export async function middleware(request: NextRequest) {
             const cat = segs[1];
             const slug = segs[3];
             if (!CITY_ELIGIBLE_TAXONOMIES.has(cat)) {
-                return gone410(`The category "${cat}" is not a recognized PMHNP city listing.`);
+                return gone410(`The category "${cat}" is not a recognized ${brand.niche.short} city listing.`);
             }
             if (!isKnownCitySlug(slug)) {
-                return gone410(`No PMHNP city page exists for "${slug}".`);
+                return gone410(`No ${brand.niche.short} city page exists for "${slug}".`);
             }
         }
         // /jobs/city/{slug} — generic city listing
@@ -702,24 +806,9 @@ export async function middleware(request: NextRequest) {
 
     const cspHeader = cspDirectives.join('; ');
 
-    // ── Trailing Slash Stripping ─────────────────────────────────────
-    // Fixes "Duplicate, Google chose different canonical than user" GSC issue.
-    // /jobs/remote/ and /jobs/remote are the same page but different URLs.
-    // Enforce no-trailing-slash for all non-root paths.
-
-    if (pathname !== '/' && pathname.endsWith('/')) {
-        url.pathname = pathname.slice(0, -1);
-        return NextResponse.redirect(url, 301);
-    }
-
-    // ── URL Case Normalization ────────────────────────────────────────
-    // GSC Fix: /jobs/Remote and /jobs/remote are different URLs to Google.
-    // 301 redirect any path containing uppercase letters to its lowercase
-    // equivalent. Excludes _next/ paths and API routes with tokens.
-    if (/[A-Z]/.test(pathname) && !pathname.startsWith('/_next')) {
-        url.pathname = pathname.toLowerCase();
-        return NextResponse.redirect(url, 301);
-    }
+    // ── Trailing-slash + case normalization moved ABOVE the 410 gates ─
+    // (B26) — see the top of this function. Keeping the section marker here
+    // so readers scanning the redirect pipeline know where they went.
 
     // ── Page=1 Stripping ─────────────────────────────────────────────
     // GSC Fix: /jobs/remote?page=1 is a duplicate of /jobs/remote.
@@ -825,18 +914,28 @@ export async function middleware(request: NextRequest) {
     // Refresh the Supabase session (keeps auth cookies alive)
     const response = await updateSession(request);
 
-    // Set CSP header and pass nonce to layout via request header.
+    // Set the CSP header.
     // Skip CSP injection for routes that self-manage a route-specific policy:
     //   /api/email-preview — inline polling script that resizes iframes
     //   /widget            — iframe-embeddable jobs widget; needs
     //                        `frame-ancestors *.edu` instead of `'none'`
+    //
+    // ISR fix F5: the nonce is NO LONGER forwarded to the app via an
+    // x-nonce header — the root layout used to read it with headers(),
+    // which opted every route into dynamic rendering and silently
+    // disabled all ISR. Nothing in the layout tree renders an inline
+    // executable <script> anymore (GA runs from bundled module code +
+    // a host-allowlisted external loader; JSON-LD data blocks are not
+    // executed so CSP does not apply to them). The per-request nonce
+    // stays in the CSP header purely to keep the strict no-inline-script
+    // posture: any future inline script must be a client-side concern or
+    // this decision must be consciously revisited.
     const skipCsp =
       request.nextUrl.pathname.startsWith('/api/email-preview') ||
       request.nextUrl.pathname.startsWith('/widget');
     if (!skipCsp) {
       response.headers.set('Content-Security-Policy', cspHeader);
     }
-    response.headers.set('x-nonce', nonce);
 
     // ── GPC / DNT Privacy Signals ────────────────────────────────────
     // CCPA/CPRA legally requires honoring Global Privacy Control.
@@ -895,6 +994,34 @@ export async function middleware(request: NextRequest) {
             secure: !isLocalhost,
             maxAge: 60 * 60 * 24, // 1 day — re-evaluated on every visit
         });
+
+        // ── Consent Mirror (ISR fix F5) ──────────────────────────────
+        // The authoritative consent cookie is HttpOnly (audit gap #19 —
+        // XSS can't flip the recorded choice; writes only via
+        // POST /api/consent). The root layout used to read it with
+        // cookies(), which disabled ISR app-wide. Instead, mirror its
+        // value into a non-HttpOnly cookie each request so the client
+        // consent boundary (components/consent/*) can initialize from
+        // document.cookie. Read-only convenience state: tampering with
+        // the mirror only affects that browser's own GA defaults, never
+        // the server-side record. Crawler responses stay Set-Cookie-free
+        // (see the consent-region rationale above) so they remain
+        // CDN-cacheable.
+        const consentValue = request.cookies.get(CONSENT_COOKIE)?.value;
+        if (consentValue) {
+            response.cookies.set(CONSENT_MIRROR_COOKIE, consentValue, {
+                path: '/',
+                sameSite: 'lax',
+                secure: !isLocalhost,
+                // Refreshed on every request; expiry only matters when the
+                // user stops visiting. Matches the region cookie's 1 day.
+                maxAge: 60 * 60 * 24,
+            });
+        } else if (request.cookies.get(CONSENT_MIRROR_COOKIE)) {
+            // Consent was cleared (DELETE /api/consent) — drop the stale
+            // mirror so the banner re-prompts with a clean slate.
+            response.cookies.delete(CONSENT_MIRROR_COOKIE);
+        }
     }
 
     // ── CORS Headers for API Routes ──────────────────────────────────
@@ -1002,9 +1129,19 @@ export async function middleware(request: NextRequest) {
     // minutes. Crawler responses carry no Set-Cookie (consent block above), so
     // the CDN will cache them; `CDN-Cache-Control` controls the edge cache only,
     // not the browser. Listings stay at most ~5 min stale (fine — jobs don't
-    // change second-by-second). Job-detail pages already have their own ISR, so
-    // they're excluded here. NOTE: confirm in prod by checking the response
-    // headers / `x-vercel-cache` on a pSEO URL with a crawler UA.
+    // change second-by-second).
+    //
+    // Job-detail pages are excluded because they are covered by ISR
+    // (`export const revalidate = 3600` in app/jobs/[slug]/page.tsx).
+    // That ISR is only REAL while the root layout stays free of Dynamic
+    // APIs — a single headers()/cookies() read in app/layout.tsx opts
+    // every route into dynamic rendering and silently turns this
+    // exclusion into "no caching at all for job-detail crawls" (the exact
+    // DB-pool-exhaustion scenario this block exists to prevent). See the
+    // ISR fix F5 comment in app/layout.tsx; if a Dynamic API ever has to
+    // return to the layout, extend this crawler cache to job-detail URLs
+    // instead. NOTE: confirm in prod by checking the response headers /
+    // `x-vercel-cache` on a pSEO URL with a crawler UA.
     const isJobDetailUrl =
         /\/jobs\/[^/]*[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(pathname);
     if (

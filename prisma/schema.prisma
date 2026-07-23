@@ -122,6 +122,11 @@ model Job {
   recommendations          CandidateRecommendation[]
 
   @@index([isPublished])
+  // B104: composite for every expiry-gated query — cleanup-expired's
+  // (isPublished, expiresAt < now) scan, sitemap/listing freshness filters,
+  // and expiry-warnings. cleanup-expired's code comment referenced this
+  // index before it existed; migration 20260718000000 made it real.
+  @@index([isPublished, expiresAt])
   @@index([isFeatured])
   @@index([location])
   @@index([createdAt(sort: Desc)])
@@ -284,6 +289,7 @@ model EmployerJob {
   user                UserProfile?     @relation(fields: [userId], references: [supabaseId])
   profileViews        ProfileView[]
   savedCandidates     SavedCandidate[]
+  jobCharges          JobCharge[]
 
   @@index([userId])
   @@index([editToken])
@@ -317,7 +323,15 @@ model ProcessedStripeEvent {
 /// supports partial refunds; full-refund flag is `refundedAmountCents = amountCents`.
 model JobCharge {
   id                    String    @id @default(uuid())
-  employerJobId         String    @map("employer_job_id")
+  // B112: nullable + FK with ON DELETE SET NULL. The ledger must survive
+  // job deletion (accounting/refund audit trail), so Cascade is wrong; and
+  // Restrict would make the GDPR purge + cleanup crons unable to delete a
+  // Job (Job → EmployerJob cascade would be blocked by the charge row).
+  // The charge.refunded / charge.dispute.created handlers already treat a
+  // charge with no EmployerJob as an orphaned ledger row and skip
+  // entitlement revocation with a loud warn.
+  employerJobId         String?   @map("employer_job_id")
+  employerJob           EmployerJob? @relation(fields: [employerJobId], references: [id], onDelete: SetNull)
   stripeSessionId       String    @unique @map("stripe_session_id")
   stripePaymentIntentId String?   @unique @map("stripe_payment_intent_id")
   stripeInvoiceId       String?   @map("stripe_invoice_id")
@@ -1256,6 +1270,13 @@ model EmailSend {
   emailType String   @map("email_type")
   status    String   @default("sent")
   metadata  Json?
+  // B109: idempotency guard for webhook-triggered emails. Stripe redelivers
+  // events after partial failures; a claim row (status='claimed') with a
+  // per-effect key (e.g. `renewal-confirmation:<sessionId>`) is inserted
+  // before sending — a P2002 on the key means the email was already sent
+  // (or is being sent) by an earlier delivery, so the retry skips it.
+  // Null for ordinary sends logged by sendAndLog.
+  dedupeKey String?  @unique @map("dedupe_key")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([to])

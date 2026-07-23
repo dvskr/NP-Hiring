@@ -1,12 +1,15 @@
 
 /**
  * Structured Logger for Production
- * 
+ *
  * Features:
  * - Log levels (debug, info, warn, error)
  * - JSON format in production, pretty in development
  * - Request context support
  * - Timestamp and metadata
+ * - error() forwards to Sentry when a DSN is configured (see
+ *   forwardErrorToSentry below) so handled errors in API route catch
+ *   blocks are visible without every call site importing lib/sentry.
  */
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
@@ -136,6 +139,127 @@ function formatLog(level: LogLevel, message: string, context?: LogContext, error
     return output;
 }
 
+// --- Sentry forwarding (F35) -----------------------------------------------
+// Nearly every API route catches errors and calls logger.error, which used to
+// be plain console output — so handled failures never reached Sentry. When a
+// DSN is configured, error-level logs are forwarded to Sentry.captureException.
+// The SDK is loaded lazily via dynamic import so client bundles never pull it
+// in through this module, and everything degrades to a clean no-op when the
+// DSN is absent (local dev, tests).
+
+/**
+ * Marker set on Error objects that have already been sent to Sentry.
+ * Uses the global symbol registry (Symbol.for) so every copy of this module
+ * — and lib/sentry.ts / instrumentation.ts — agree on the same key. Prevents
+ * double-capture when an error is logged AND rethrown into onRequestError,
+ * or logged AND passed to lib/sentry.captureException.
+ */
+const SENTRY_CAPTURED_MARKER = Symbol.for('np-hiring.sentry.captured');
+
+export function isSentryCaptured(error: unknown): boolean {
+    return (
+        typeof error === 'object' &&
+        error !== null &&
+        (error as Record<symbol, unknown>)[SENTRY_CAPTURED_MARKER] === true
+    );
+}
+
+export function markSentryCaptured(error: unknown): void {
+    if (typeof error !== 'object' || error === null) return;
+    try {
+        (error as Record<symbol, unknown>)[SENTRY_CAPTURED_MARKER] = true;
+    } catch {
+        // Frozen/sealed error object — worst case is a duplicate Sentry event.
+    }
+}
+
+// Simple fixed-window rate limit so a hot error loop can't flood Sentry.
+const SENTRY_FORWARD_WINDOW_MS = 60_000;
+const SENTRY_FORWARD_MAX_PER_WINDOW = 20;
+let sentryForwardWindowStart = 0;
+let sentryForwardCount = 0;
+
+function underSentryRateLimit(now: number): boolean {
+    if (now - sentryForwardWindowStart >= SENTRY_FORWARD_WINDOW_MS) {
+        sentryForwardWindowStart = now;
+        sentryForwardCount = 0;
+    }
+    if (sentryForwardCount >= SENTRY_FORWARD_MAX_PER_WINDOW) {
+        return false;
+    }
+    sentryForwardCount += 1;
+    return true;
+}
+
+interface SentryLike {
+    captureException: (error: unknown, ctx?: { extra?: Record<string, unknown> }) => unknown;
+}
+
+let sentryModulePromise: Promise<SentryLike | null> | null = null;
+
+/**
+ * In-flight fire-and-forget Sentry forwards. Lets tests (and any graceful
+ * shutdown path) await pending captures deterministically instead of
+ * guessing with timers; entries remove themselves on settle.
+ */
+const pendingSentryForwards = new Set<Promise<unknown>>();
+
+export function flushSentryForwards(): Promise<unknown> {
+    return Promise.allSettled([...pendingSentryForwards]);
+}
+
+function loadSentry(): Promise<SentryLike | null> {
+    if (!sentryModulePromise) {
+        sentryModulePromise = import('@sentry/nextjs')
+            .then((mod) => mod as unknown as SentryLike)
+            .catch(() => null); // SDK unavailable in this runtime — console output already emitted
+    }
+    return sentryModulePromise;
+}
+
+/**
+ * Best-effort, fire-and-forget forward of an error-level log to Sentry.
+ * Never throws into the caller; console output is always emitted first by
+ * Logger.error regardless of what happens here.
+ */
+function forwardErrorToSentry(message: string, error: unknown, context?: LogContext): void {
+    try {
+        // No-op unless a DSN is configured (same check as lib/sentry.ts).
+        if (!process.env.SENTRY_DSN && !process.env.NEXT_PUBLIC_SENTRY_DSN) return;
+        // Server/edge only — browser errors are handled by instrumentation-client.ts.
+        if (typeof window !== 'undefined') return;
+        // lib/sentry.ts emits '[Sentry] ...' dev logs right before capturing
+        // itself; forwarding those would double-capture.
+        if (message.startsWith('[Sentry]')) return;
+        if (isSentryCaptured(error)) return;
+        if (!underSentryRateLimit(Date.now())) return;
+
+        markSentryCaptured(error);
+
+        const toCapture = error instanceof Error ? error : new Error(message);
+        const forward = loadSentry().then((Sentry) => {
+            if (!Sentry) return;
+            try {
+                Sentry.captureException(toCapture, {
+                    extra: {
+                        logMessage: message,
+                        ...(context ?? {}),
+                        ...(error !== undefined && !(error instanceof Error)
+                            ? { originalValue: String(error) }
+                            : {}),
+                    },
+                });
+            } catch {
+                // Telemetry must never break the caller.
+            }
+        });
+        pendingSentryForwards.add(forward);
+        void forward.finally(() => pendingSentryForwards.delete(forward));
+    } catch {
+        // Forwarding must never throw into application code.
+    }
+}
+
 class Logger {
     private context: LogContext = {};
 
@@ -175,8 +299,10 @@ class Logger {
 
     error(message: string, error?: unknown, context?: LogContext): void {
         if (!shouldLog('error')) return;
-        const output = formatLog('error', message, { ...this.context, ...context }, error);
+        const mergedContext = { ...this.context, ...context };
+        const output = formatLog('error', message, mergedContext, error);
         console.error(output);
+        forwardErrorToSentry(message, error, mergedContext);
     }
 }
 

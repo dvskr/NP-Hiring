@@ -9,6 +9,7 @@ import { cache } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getCitiesByState } from './city-data/cities';
+import { MIN_JOBS_FOR_CATEGORY_CITY } from './render-gate';
 import { Metadata } from 'next';
 import { JOB_LISTING_OMIT } from './job-listing-omit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
@@ -266,7 +267,9 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
   const validNeighborSlugs = new Set(validNeighborRows.map(r => r.locationSlug));
   const neighbors = rawNeighbors.filter(n => validNeighborSlugs.has(stateToSlug(n)));
 
-  // Top cities in this state where THIS setting has ≥1 city-level job
+  // Top cities in this state where THIS setting clears the category×city
+  // render gate — those pages 404 below MIN_JOBS_FOR_CATEGORY_CITY, so linking
+  // 1-2-job combos creates internal links to 404s.
   const stateCode = STATE_CODES[stateName!];
   const candidateCities = stateCode
     ? getCitiesByState(stateCode)
@@ -280,7 +283,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
           type: 'category-city',
           categorySlug: config.slug,
           locationSlug: { in: candidateSlugs },
-          totalJobs: { gte: 1 },
+          totalJobs: { gte: MIN_JOBS_FOR_CATEGORY_CITY },
           updatedAt: { gte: pseoFreshnessThreshold },
         },
         select: { locationSlug: true },
@@ -297,7 +300,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
     : 100;
   const shortageCount = topCities.filter(c => c.mentalHealthShortage).length;
 
-  /* Design Tokens â€” matched to category-city-template */
+  /* Design Tokens — matched to category-city-template */
   const clayCard: React.CSSProperties = {
     background: '#FFFFFF', borderRadius: '20px',
     border: '1px solid rgba(255,255,255,0.5)',
@@ -355,14 +358,14 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
         bgColor={assets?.bgColor || '#BE185D'}
         heroImage={assets?.heroImage || `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
         heroAlt={`${config.label} ${brand.niche.short} jobs in ${stateName}`}
-        badgeText={`${stats.totalJobs} live roles Â· updated today`}
+        badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', config.label, stateName!]}
         headlineLine1={config.label}
         headlineLine2={brand.niche.short}
         headlineSub={`jobs in ${stateName}.`}
         stats={[
           { value: `${stats.totalJobs}`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : config.salaryRange.split('â€“')[0] || '$130K+', label: 'avg salary' },
+          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : config.salaryRange.split('–')[0] || '$130K+', label: 'avg salary' },
           { value: `${stats.topEmployers.length}`, label: 'employers' },
         ]}
         description={`${config.label} ${brand.niche.short} positions in ${stateName}. ${config.heroSubtitle}.`}
@@ -447,7 +450,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     {config.label} Alerts
                   </h3>
                   <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
-                    New {config.label.toLowerCase()} {brand.niche.short} positions in {stateName} â€” delivered daily.
+                    New {config.label.toLowerCase()} {brand.niche.short} positions in {stateName} — delivered daily.
                   </p>
                   <Link href="/job-alerts" style={{
                     display: 'block', width: '100%', textAlign: 'center',
@@ -487,7 +490,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                   {config.tips.map((tip, i) => (
                     <li key={i} style={{ display: 'flex', gap: '8px', padding: '6px 0', borderBottom: i < config.tips.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none', fontSize: '13px', color: '#5A4A42', lineHeight: 1.5 }}>
-                      <span style={{ color: '#BE185D', fontWeight: 700 }}>â€¢</span>
+                      <span style={{ color: '#BE185D', fontWeight: 700 }}>•</span>
                       <span>{tip}</span>
                     </li>
                   ))}
@@ -584,7 +587,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>{config.label} Alerts</h3>
                 <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                  New {config.label.toLowerCase()} listings in {stateName} â€” delivered daily.
+                  New {config.label.toLowerCase()} listings in {stateName} — delivered daily.
                 </p>
                 <Link href="/job-alerts" style={{
                   padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',

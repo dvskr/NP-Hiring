@@ -59,7 +59,10 @@ export async function POST(request: NextRequest) {
     }
 
     const confirmationUrl = data.properties.action_link
-    logger.info('Generated confirmation link', { email: normalizedEmail, url: confirmationUrl })
+    // Never log the action_link itself — it is a live one-click auth
+    // credential; anyone with log access could hijack the account before
+    // the user clicks it.
+    logger.info('Generated confirmation link', { email: normalizedEmail })
 
     // Build email using the V2 Warm Diorama design system
     const html = emailShellV2(`
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest) {
       ${spacerV2(8)}
       <tr><td class="content-pad" style="padding:0 40px;">
         <p style="margin:0 0 24px;font-family:${SERIF};font-size:19px;color:${V2.textBody};line-height:1.6;">
-          Thanks for signing up for PMHNP Hiring! Please confirm your email address by clicking the button below.
+          Thanks for signing up for ${brand.name}! Please confirm your email address by clicking the button below.
         </p>
       </td></tr>
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
@@ -84,7 +87,7 @@ export async function POST(request: NextRequest) {
       `<p style="margin:0;font-family:${SANS};font-size:12px;color:${V2.textMuted};">
         If you didn\u2019t create this account, you can safely ignore this email.
       </p>`,
-      'Confirm your PMHNP Hiring account \u2014 one click to activate!'
+      `Confirm your ${brand.name} account \u2014 one click to activate!`
     )
 
     // Account confirmation is transactional and required to use the platform —
@@ -93,7 +96,7 @@ export async function POST(request: NextRequest) {
     await sendAndLog({
       from: '', // overridden by sendAndLog (transactional sender)
       to: normalizedEmail,
-      subject: 'Confirm your PMHNP Hiring account',
+      subject: `Confirm your ${brand.name} account`,
       html,
     }, 'auth_confirm', { isSignup: true })
 

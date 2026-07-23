@@ -48,6 +48,25 @@ export default function CheckoutPage() {
   const [jobData, setJobData] = useState<JobFormData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // F3: server-checked paid-posting availability (ENABLE_PAID_POSTING flag +
+  // stripeConfigured). null = unknown → fail open; the create-checkout API
+  // still returns a stable 503 code if payment is attempted anyway.
+  const [paidPostingAvailable, setPaidPostingAvailable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/create-checkout/availability');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setPaidPostingAvailable(data?.available === true);
+      } catch {
+        /* leave null — fail open */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     // Checkout always requires paid form data
@@ -177,6 +196,36 @@ export default function CheckoutPage() {
     }
     return 'Not specified';
   };
+
+  // F3: paid posting isn't open (flag off or Stripe unconfigured) — show a
+  // clear "coming soon" state instead of letting the Pay button 503.
+  if (paidPostingAvailable === false) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-16">
+        <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <h1 className="text-2xl font-bold mb-2">Paid posting is coming soon</h1>
+          <p className="text-gray-600 mb-6">
+            Checkout isn&apos;t open yet, so paid job posts can&apos;t be purchased
+            right now. Your job details are saved — we&apos;ll have this ready shortly.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Link
+              href="/employer/dashboard"
+              className="w-full bg-pink-600 text-white py-3 rounded-lg font-semibold hover:bg-pink-700 transition-colors"
+            >
+              Go to your dashboard
+            </Link>
+            <Link
+              href="/post-job"
+              className="w-full text-gray-600 hover:text-pink-600 transition-colors text-sm py-2"
+            >
+              ← Back to your job post
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Show loading while checking localStorage
   if (!jobData) {

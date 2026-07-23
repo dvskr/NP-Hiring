@@ -9,7 +9,7 @@ export const metadata = {
 }
 
 export default async function DashboardPage() {
-  const { profile } = await requireAuth()
+  const { profile } = await requireAuth('/dashboard')
 
   // Redirect employers to their dedicated dashboard
   if (profile?.role === 'employer') {
