@@ -43,6 +43,16 @@ const REGISTRY = [
     { src: 'public/images/how-it-works/step-employer-track.webp', css: 280 },
     // /for-employers comparison-section CTA card
     { src: 'public/images/employers/cta-illustration-v2.webp', css: 260 },
+    // /salary-guide "Factors Affecting Salary" icon tiles. NOTE: sources are
+    // only 96px, so the ladder caps at 2x — DPR 2.25–3 reuses the 96px file.
+    // Truly crisp high-DPR icons need the artwork regenerated at >=144px
+    // (ideally 1024 like the other illustrations).
+    { src: 'public/images/salary-guide/factor-location.webp', css: 48 },
+    { src: 'public/images/salary-guide/factor-experience.webp', css: 48 },
+    { src: 'public/images/salary-guide/factor-setting.webp', css: 48 },
+    { src: 'public/images/salary-guide/factor-employment.webp', css: 48 },
+    { src: 'public/images/salary-guide/factor-specialty.webp', css: 48 },
+    { src: 'public/images/salary-guide/factor-negotiate.webp', css: 48 },
     // Homepage "How it works" seeker steps (FeaturedJobs.tsx apricot panel)
     { src: 'public/images/how-it-works/seeker-step1-v2.webp', css: 80 },
     { src: 'public/images/how-it-works/seeker-step2-v2.webp', css: 80 },
