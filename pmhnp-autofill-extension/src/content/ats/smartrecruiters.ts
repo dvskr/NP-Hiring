@@ -3,6 +3,7 @@ import { detectFormFields } from '../detector';
 import { fillSingleField, triggerReactChange } from '../filler';
 
 import { setCachedResumeEducation } from '../screening-resolver';
+import { buildFallbackCoverLetter } from '@/shared/constants';
 import { log, warn } from '@/shared/logger';
 
 // â”€â”€â”€ Core Handler â”€â”€â”€
@@ -1069,7 +1070,7 @@ async function fillMessageTextarea(profile: Record<string, unknown>): Promise<vo
 
     const p = (profile as any)?.personal;
     const name = p ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : '';
-    const msg = `I am writing to express my strong interest in this position. As a Psychiatric-Mental Health Nurse Practitioner (PMHNP) with clinical experience, I am confident I can make a meaningful contribution to your team. I look forward to discussing how my skills and experience align with your needs.\n\nBest regards,\n${name}`;
+    const msg = buildFallbackCoverLetter(name);
 
     log('[PMHNP] Filling message textarea (overwriting existing content)');
     // Clear existing content first (supervisor value may have been placed here by main filler)

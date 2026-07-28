@@ -404,7 +404,7 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
       url: session.url,
     });
-    response.cookies.set('pmhnp_checkout_session', session.id, {
+    response.cookies.set('checkout_session_bind', session.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -557,7 +557,7 @@ async function resumeAbandonedCheckout(
   // /api/verify-checkout-session only releases the dashboardToken when the
   // cookie matches the session_id.
   const response = NextResponse.json({ sessionId: session.id, url: session.url });
-  response.cookies.set('pmhnp_checkout_session', session.id, {
+  response.cookies.set('checkout_session_bind', session.id, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

@@ -11,6 +11,20 @@ export const IS_DEV = (() => {
 export const BOARD_NAME = 'NP Hiring';
 export const BOARD_DOMAIN = 'nphiring.com';
 
+// Role wording mirrors config/brand.ts (brand.niche.long / brand.niche.short)
+// — keep in lockstep, same policy as BOARD_NAME/BOARD_DOMAIN above.
+export const BOARD_ROLE_NAME = 'Nurse Practitioner (NP)';
+
+/**
+ * Fallback message / cover letter filled when the user has no saved cover
+ * letter and AI generation is unavailable. Single source — the donor board
+ * shipped this string inlined per call site with PMHNP-specific role copy
+ * (audit B7).
+ */
+export function buildFallbackCoverLetter(name: string): string {
+    return `I am writing to express my strong interest in this position. As a ${BOARD_ROLE_NAME} with clinical experience, I am confident I can make a meaningful contribution to your team. I look forward to discussing how my skills and experience align with your needs.\n\nBest regards,\n${name}`;
+}
+
 export const API_BASE_URL = IS_DEV ? 'http://localhost:3000' : `https://${BOARD_DOMAIN}`;
 export const PROFILE_EXPORT_ENDPOINT = '/api/profile/export';
 export const AUTH_EXTENSION_TOKEN_ENDPOINT = '/api/auth/extension-token';

@@ -16,7 +16,7 @@ The arm picker is a salted FNV-1a hash, so a tenant's arm is deterministic even 
 
 ### `semantic_search.v1`
 
-Wired into `GET /api/jobs/search/semantic`. Anonymous callers get a sticky 1-year HTTP-only cookie (`pmhnp_exp_anon`) so the arm survives across sessions.
+Wired into `GET /api/jobs/search/semantic`. Anonymous callers get a sticky 1-year HTTP-only cookie (`exp_anon_id`) so the arm survives across sessions.
 
 | Arm | Behavior |
 |---|---|

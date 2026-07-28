@@ -1,5 +1,5 @@
 import type { DetectedField, MappedField, ProfileData, License } from '@/shared/types';
-import { US_STATES, STATE_ABBREVIATION_TO_NAME } from '@/shared/constants';
+import { US_STATES, STATE_ABBREVIATION_TO_NAME, buildFallbackCoverLetter } from '@/shared/constants';
 
 // ─── Core Mapping ───
 
@@ -279,12 +279,12 @@ function getDirectMapping(field: DetectedField, profile: ProfileData): DirectMap
         // Message / Cover letter
         message: () => {
             const name = `${p.firstName || ''} ${p.lastName || ''}`.trim();
-            const msg = `I am writing to express my strong interest in this position. As a Psychiatric-Mental Health Nurse Practitioner (PMHNP) with clinical experience, I am confident I can make a meaningful contribution to your team. I look forward to discussing how my skills and experience align with your needs.\n\nBest regards,\n${name}`;
+            const msg = buildFallbackCoverLetter(name);
             return { profileKey: 'personal.message', value: msg, confidence: field.confidence };
         },
         cover_letter: () => {
             const name = `${p.firstName || ''} ${p.lastName || ''}`.trim();
-            const msg = `I am writing to express my strong interest in this position. As a Psychiatric-Mental Health Nurse Practitioner (PMHNP) with clinical experience, I am confident I can make a meaningful contribution to your team. I look forward to discussing how my skills and experience align with your needs.\n\nBest regards,\n${name}`;
+            const msg = buildFallbackCoverLetter(name);
             return { profileKey: 'personal.coverLetter', value: msg, confidence: field.confidence };
         },
     };

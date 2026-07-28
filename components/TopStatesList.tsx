@@ -1,6 +1,6 @@
 'use client';
 
-import { LazyMotion, domAnimation, m } from 'framer-motion';
+import { LazyMotion, domAnimation, m, useReducedMotion } from 'framer-motion';
 import Link from 'next/link';
 import StateImage from './StateImage';
 import { brand } from '@/config/brand';
@@ -32,6 +32,12 @@ interface TopStatesProps {
 }
 
 export default function TopStatesList({ states }: TopStatesProps) {
+    // B60: honor prefers-reduced-motion for JS-driven framer entrance
+    // animations. `initial={false}` renders elements in their visible
+    // resting state so whileInView never moves them. Hook is called before
+    // the early return below (rules of hooks).
+    const reduceMotion = useReducedMotion();
+
     if (!states.length) return null;
 
     const dioramaStates = states.filter((s) => DIORAMA_STATES.has(s.slug)).slice(0, 10);
@@ -42,7 +48,7 @@ export default function TopStatesList({ states }: TopStatesProps) {
             <div className="max-w-7xl mx-auto px-6">
                 {/* Header */}
                 <m.div
-                    initial="hidden"
+                    initial={reduceMotion ? false : 'hidden'}
                     whileInView="visible"
                     viewport={{ once: true, margin: '-60px' }}
                     variants={stagger}
@@ -59,7 +65,7 @@ export default function TopStatesList({ states }: TopStatesProps) {
                 {/* Diorama grid: 5 columns */}
                 <m.div
                     className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 mb-8"
-                    initial="hidden"
+                    initial={reduceMotion ? false : 'hidden'}
                     whileInView="visible"
                     viewport={{ once: true, margin: '-60px' }}
                     variants={stagger}
@@ -115,7 +121,7 @@ export default function TopStatesList({ states }: TopStatesProps) {
                 {/* Browse all jobs pebble button */}
                 <m.div
                     className="flex justify-center"
-                    initial={{ opacity: 0, y: 12 }}
+                    initial={reduceMotion ? false : { opacity: 0, y: 12 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: 0.4 }}

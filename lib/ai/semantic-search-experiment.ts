@@ -29,7 +29,7 @@ import {
 } from '@/lib/ai/experiments';
 
 /** Sticky anonymous-tenant cookie — set by GET /api/jobs/search/semantic. */
-export const SEMANTIC_ANON_COOKIE = 'pmhnp_exp_anon';
+export const SEMANTIC_ANON_COOKIE = 'exp_anon_id';
 
 export const SEMANTIC_SEARCH_EXPERIMENT = {
     experiment: 'semantic_search.v1',

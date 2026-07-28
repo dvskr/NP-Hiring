@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { MapPin, ArrowUpRight } from 'lucide-react';
-import { LazyMotion, domAnimation, m } from 'framer-motion';
+import { LazyMotion, domAnimation, m, useReducedMotion } from 'framer-motion';
 import { trackJobListView, buildJobItem } from '@/lib/analytics';
 
 /* ── "How it works + Latest openings", F1 split poster (user-approved
@@ -285,6 +285,12 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
     const [mounted, setMounted] = useState(false);
     useEffect(() => { setMounted(true); }, []);
 
+    // B60: honor prefers-reduced-motion for the JS-driven framer entrance
+    // animations (the global CSS gate in globals.css cannot reach inline
+    // styles framer sets). `initial={false}` renders elements already in
+    // their visible resting state, so whileInView becomes a no-op.
+    const reduceMotion = useReducedMotion();
+
     useEffect(() => {
         if (jobs.length === 0) return;
         trackJobListView(
@@ -313,7 +319,7 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
                 {/* ═══ LEFT: how-it-works tree on its own warm panel ═══ */}
                 <m.div
                     className="fjs-col-left"
-                    initial="hidden"
+                    initial={reduceMotion ? false : 'hidden'}
                     whileInView="visible"
                     viewport={{ once: true }}
                     variants={stagger}
@@ -370,7 +376,7 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
                 {/* ═══ RIGHT: latest openings ═══ */}
                 <m.div
                     className="fjs-col-right"
-                    initial="hidden"
+                    initial={reduceMotion ? false : 'hidden'}
                     whileInView="visible"
                     viewport={{ once: true }}
                     variants={stagger}

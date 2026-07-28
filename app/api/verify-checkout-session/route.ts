@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     //      matched against the EmployerJob row further below.
     // Anonymous callers replaying a session_id from a referer header or
     // browser history get a 401 before any Stripe call happens.
-    const checkoutCookie = request.cookies.get('pmhnp_checkout_session')?.value;
+    const checkoutCookie = request.cookies.get('checkout_session_bind')?.value;
     const cookieMatches = checkoutCookie === sessionId;
     const authedUser = cookieMatches ? null : await getAuthedUser();
     if (!cookieMatches && !authedUser) {

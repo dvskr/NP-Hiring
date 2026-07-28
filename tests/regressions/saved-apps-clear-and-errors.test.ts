@@ -4,7 +4,10 @@
  * B0  — app/saved "Clear history" must never hard-delete submitted
  *       in-platform applications (employer pipeline rows + consent
  *       records). The clear partitions server rows first and only
- *       removes pure click-through tracking entries.
+ *       removes pure click-through tracking entries. Because GET
+ *       /api/applications caps at take:50, ids absent from a full page
+ *       are of unknown status and must default to protected — otherwise
+ *       submitted applications older than the 50 newest get DELETEd.
  * B66 — "Clear all" saved jobs is destructive and must confirm via the
  *       shared ConfirmDialog (window.confirm is banned app-wide).
  * B57 — my-applications load failures must distinguish a real 401 from
@@ -47,11 +50,26 @@ describe('B0: "Clear history" preserves submitted in-platform applications', () 
         expect(savedPage).toContain('!!a.withdrawnAt');
     });
 
-    it('only clears rows outside the protected set', () => {
-        expect(savedPage).toMatch(/const clearable = appliedJobs\.filter\(\(id\) => !protectedIds\.has\(id\)\)/);
+    it('only clears rows positively verified as pure tracking entries', () => {
+        // An id is clearable only when the server row was seen and failed
+        // every protection marker...
+        expect(savedPage).toMatch(/knownIds\.has\(id\)\s*\?\s*!protectedIds\.has\(id\)/);
         expect(savedPage).toMatch(/for \(const id of clearable\) removeApplied\(id\)/);
-        // The rendered applied grid keeps the protected rows visible.
-        expect(savedPage).toMatch(/prev\.filter\(\(job\) => protectedIds\.has\(job\.id\)\)/);
+        // ...and the rendered applied grid keeps everything not cleared.
+        expect(savedPage).toMatch(/prev\.filter\(\(job\) => !clearableSet\.has\(job\.id\)\)/);
+    });
+
+    it('guards against the take:50 truncation of GET /api/applications', () => {
+        // The client constant must mirror the route cap.
+        expect(savedPage).toContain('const APPLICATIONS_API_PAGE_SIZE = 50');
+        const applicationsRoute = read('app/api/applications/route.ts');
+        expect(applicationsRoute).toMatch(/take:\s*50/);
+        // A full page means the inventory may be truncated: local ids
+        // absent from the response default to protected, never clearable.
+        expect(savedPage).toMatch(/const isCompleteInventory = apps\.length < APPLICATIONS_API_PAGE_SIZE/);
+        expect(savedPage).toMatch(/:\s*isCompleteInventory/);
+        // The old blanket partition (unknown ids treated as clearable) is gone.
+        expect(savedPage).not.toMatch(/const clearable = appliedJobs\.filter\(\(id\) => !protectedIds\.has\(id\)\)/);
     });
 
     it('unconditional clearAll only runs on the anonymous (401) path', () => {

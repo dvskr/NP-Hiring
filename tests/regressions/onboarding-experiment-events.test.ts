@@ -28,7 +28,7 @@ describe('B80 — shared experiment module', () => {
   const src = read(LIB);
 
   it('exports the config, cookie name, and the event recorder', () => {
-    expect(src).toContain("export const SEMANTIC_ANON_COOKIE = 'pmhnp_exp_anon'");
+    expect(src).toContain("export const SEMANTIC_ANON_COOKIE = 'exp_anon_id'");
     expect(src).toContain("experiment: 'semantic_search.v1'");
     expect(src).toMatch(/export async function recordSemanticSearchEvent/);
   });

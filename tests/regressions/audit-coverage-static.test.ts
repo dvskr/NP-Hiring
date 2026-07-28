@@ -225,7 +225,9 @@ describe('dead routes and files are gone', () => {
     'app/for-job-seekers/create-profile/page.tsx',
     'components/ai/ForYouRecommendations.tsx',
     'app/api/recommendations/route.ts',
-    'app/api/recommendations/click/route.ts',
+    // app/api/recommendations/click/route.ts was deliberately revived for the
+    // B14/B88 recommendation engagement loop (clickedAt/dismissedAt writes) —
+    // see tests/regressions/ai-quality-recommendations.test.ts.
     'pmhnp-autofill-extension/src/content/ai.ts',
     'pmhnp-autofill-extension/src/content/ai-classifier.ts',
     'pmhnp-autofill-extension/src/shared/usage.ts',

@@ -108,6 +108,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // B114: cookie-less callers must be the employer who owns this renewal —
+    // being signed in is NOT enough (any account could otherwise probe
+    // session ids for job titles). Match the authed identity against the
+    // EmployerJob row: userId when the posting is account-linked;
+    // contactEmail covers legacy rows with no linked account. Mirrors the
+    // ownership check in /api/verify-checkout-session.
+    if (!cookieMatches && authedUser) {
+      const ownsRenewal =
+        (employerJob.userId !== null && employerJob.userId === authedUser.id) ||
+        (authedUser.email !== null &&
+          employerJob.contactEmail.toLowerCase() === authedUser.email.toLowerCase());
+      if (!ownsRenewal) {
+        logger.warn('Verify renewal session: authed caller does not own this session', {
+          sessionId,
+          userId: authedUser.id,
+        });
+        return NextResponse.json(
+          { error: 'This renewal session belongs to a different account' },
+          { status: 403 }
+        );
+      }
+    }
+
     // Sec3 fix (2026-06-01): cookie-bind the dashboardToken. The new-post
     // /api/verify-checkout-session was patched against this same leak
     // ages ago (H1) but renewal was missed. session_id appears in URLs,

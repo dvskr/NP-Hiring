@@ -53,7 +53,7 @@ describe('B78 — create-checkout resume mode', () => {
     // Metadata must match what the webhook / verify / sweep activation reads.
     const resumeSection = src.slice(src.indexOf('async function resumeAbandonedCheckout'));
     expect(resumeSection).toMatch(/metadata:\s*\{\s*jobId:\s*employerJob\.job\.id,\s*pricing,\s*dashboardToken:\s*employerJob\.dashboardToken,?\s*\}/);
-    expect(resumeSection).toContain("response.cookies.set('pmhnp_checkout_session', session.id");
+    expect(resumeSection).toContain("response.cookies.set('checkout_session_bind', session.id");
   });
 });
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
-import { LazyMotion, domAnimation, m } from 'framer-motion';
+import { LazyMotion, domAnimation, m, useReducedMotion } from 'framer-motion';
 import { brand } from '@/config/brand';
 
 const fadeUp = {
@@ -128,16 +128,27 @@ const css = `
         .ehw-inner { padding: 40px 16px !important; }
         .ehw-inner h2 { font-size: 24px !important; margin-bottom: 32px !important; }
     }
+    /* B60: the infinite dot pulse is decorative — stop it for users who
+       prefer reduced motion (component-scoped styles aren't reachable from
+       the global gate at the end of globals.css). */
+    @media (prefers-reduced-motion: reduce) {
+        .ehw-dot::after { animation: none; }
+    }
 `;
 
 export default function EmployerHowItWorks() {
+    // B60: honor prefers-reduced-motion for JS-driven framer entrance
+    // animations. `initial={false}` renders elements in their visible
+    // resting state so whileInView never moves them.
+    const reduceMotion = useReducedMotion();
+
     return (
         <LazyMotion features={domAnimation}>
         <section className="ehw-wrap">
             <style>{css}</style>
 
             <m.div
-                initial="hidden"
+                initial={reduceMotion ? false : 'hidden'}
                 whileInView="visible"
                 viewport={{ once: true, margin: '-60px' }}
                 variants={stagger}

@@ -108,6 +108,27 @@ export default function AdminEmailPage() {
     const [loadingTemplates, setLoadingTemplates] = useState(false);
     const [templateName, setTemplateName] = useState('');
 
+    // ── Session admin's own email (test-send target) ──
+    // B25: test sends previously went to a hardcoded personal address. The
+    // target is now the signed-in admin's profile email, fetched once.
+    const [adminEmail, setAdminEmail] = useState<string | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        fetch('/api/auth/profile')
+            .then(async (res) => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
+            .then((profile: { email?: string }) => {
+                if (!cancelled && typeof profile?.email === 'string' && profile.email) {
+                    setAdminEmail(profile.email);
+                }
+            })
+            .catch(() => { /* handled at send time — test send disabled without an email */ });
+        return () => { cancelled = true; };
+    }, []);
+
     const showMsg = (text: string, isError = false) => {
         setMsg({ text, isError });
         setTimeout(() => setMsg(null), 5000);
@@ -172,9 +193,13 @@ export default function AdminEmailPage() {
         finally { setSending(false); }
     };
 
-    // ── Test send (to admin) ──
+    // ── Test send (to the signed-in admin's own inbox) ──
     const handleTestSend = async () => {
         if (!subject || !body) { showMsg('Subject and body are required', true); return; }
+        if (!adminEmail) {
+            showMsg('Could not determine your account email for the test send — reload the page and try again.', true);
+            return;
+        }
         setSending(true);
         try {
             const res = await fetch('/api/admin/email/send', {
@@ -184,7 +209,7 @@ export default function AdminEmailPage() {
                     subject: `[TEST] ${subject}`,
                     body,
                     audience: 'custom',
-                    customEmails: ['daggu@live.com'], // admin email
+                    customEmails: [adminEmail], // the signed-in admin's own email
                 }),
             });
             const data = await res.json();

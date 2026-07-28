@@ -8,8 +8,13 @@
  *      and export `<source>Aggregator: Aggregator`.
  *   2. Add the source key to `JobSource` in lib/aggregators/types.ts.
  *   3. Register the export below.
- *   4. Add cron entries to vercel.json (count must equal the
- *      adapter's `chunkCount` — see tests/aggregators/chunk-count.test.ts).
+ *   4. Schedule it in config/cron-schedule.ts — vercel.json's `crons` are
+ *      GENERATED from that file (`npm run crons:generate`); entry count must
+ *      equal the adapter's `chunkCount` (tests/aggregators/chunk-count.test.ts).
+ *      If the board intentionally does NOT run the source, list it in
+ *      DISABLED_SOURCES there instead — tests/aggregators/
+ *      cron-schedule-drift.test.ts requires every registry source to be
+ *      either scheduled or explicitly disabled.
  */
 
 import type { Aggregator, JobSource } from './types';

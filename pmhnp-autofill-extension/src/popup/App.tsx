@@ -116,7 +116,7 @@ export default function App() {
             {/* Header Logo */}
             <div className="flex items-center gap-2 mb-4">
                 <div className="w-11 h-11 rounded-lg bg-white flex items-center justify-center p-0.5">
-                    <img src="/logo.png" alt={BOARD_NAME} className="w-full h-full object-contain" />
+                    <img src="/icons/icon-128.png" alt={BOARD_NAME} className="w-full h-full object-contain" />
                 </div>
                 <div>
                     <h1 className="text-sm font-semibold text-white leading-tight">{BOARD_NAME}</h1>

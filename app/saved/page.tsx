@@ -16,6 +16,14 @@ import { useToast } from '@/components/ui/ToastProvider';
 type TabType = 'saved' | 'applied';
 type SortOption = 'recent' | 'salary' | 'title';
 
+/**
+ * GET /api/applications hard-caps its response at 50 rows
+ * (app/api/applications/route.ts — `take: 50`). Must stay in sync with the
+ * route: the "Clear history" partition below uses it to detect a possibly
+ * truncated inventory.
+ */
+const APPLICATIONS_API_PAGE_SIZE = 50;
+
 /* ── Clay design tokens (matches dashboard) ── */
 const cardBase: React.CSSProperties = {
     background: '#F7FBF8',
@@ -165,6 +173,19 @@ export default function SavedJobsPage() {
    * visible; only pure click-through tracking rows are cleared.
    * Anonymous users have no server rows, so their local-only history
    * clears unconditionally.
+   *
+   * Truncation guard: GET /api/applications caps at 50 rows, so the
+   * response is NOT a complete inventory for users with more than 50
+   * application rows. A local id absent from the response is therefore
+   * ambiguous — it could be a local-only click-through with no server row,
+   * or a submitted application older than the 50 newest. Only when the
+   * response came back short of the cap (provably complete) can absent ids
+   * be safely treated as local-only and cleared. On a full page, absent
+   * ids default to protected: we only clear rows we positively verified
+   * as pure tracking entries. Residual trade-off: a user with exactly 50
+   * rows, or with >50 rows and stale local-only ids, keeps some clearable
+   * entries — we accept keeping too much over deleting submitted
+   * applications.
    */
   const clearAppliedHistory = async () => {
     setClearingApplied(true);
@@ -202,12 +223,22 @@ export default function SavedJobsPage() {
           )
           .map((a) => a.jobId),
       );
-      const clearable = appliedJobs.filter((id) => !protectedIds.has(id));
+      const knownIds = new Set(apps.map((a) => a.jobId));
+      // A short page proves the server returned every row this user has;
+      // a full page may hide older rows beyond the cap.
+      const isCompleteInventory = apps.length < APPLICATIONS_API_PAGE_SIZE;
+      const clearable = appliedJobs.filter((id) =>
+        knownIds.has(id)
+          ? !protectedIds.has(id)
+          : isCompleteInventory, // absent id: only clearable when provably local-only
+      );
+      const clearableSet = new Set(clearable);
       for (const id of clearable) removeApplied(id);
-      setAppliedJobsData((prev) => prev.filter((job) => protectedIds.has(job.id)));
-      if (protectedIds.size > 0) {
+      setAppliedJobsData((prev) => prev.filter((job) => !clearableSet.has(job.id)));
+      const keptCount = appliedJobs.length - clearable.length;
+      if (keptCount > 0) {
         toast(
-          `Cleared ${clearable.length} — ${protectedIds.size} submitted application${protectedIds.size !== 1 ? 's' : ''} kept. Manage them from My Applications.`,
+          `Cleared ${clearable.length} — ${keptCount} kept. Submitted applications are never removed here; manage them from My Applications.`,
           'success',
         );
       }
