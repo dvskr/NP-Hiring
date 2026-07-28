@@ -48,9 +48,14 @@ const linkColumns = [
       { label: `VA ${brand.niche.short} Jobs`, href: '/jobs/va' },
       { label: `Veterans ${brand.niche.short} Jobs`, href: '/jobs/veterans' },
       { label: `New Grad ${brand.niche.short}`, href: '/jobs/new-grad' },
-      { label: 'Behavioral Health', href: '/jobs/behavioral-health' },
-      { label: 'Substance Abuse', href: '/jobs/substance-abuse' },
-      { label: 'Child & Adolescent', href: '/jobs/child-adolescent' },
+      // Content audit P0 #2: the previous three links here (behavioral-health,
+      // substance-abuse, child-adolescent) were donor-board slugs that
+      // middleware 410s — every page footer-linked three dead URLs. Replaced
+      // with live high-value specialty hubs from lib/pseo/taxonomy-registry.ts
+      // (each app/jobs/<slug>/page.tsx verified to exist and render).
+      { label: `Family Practice ${brand.niche.short} Jobs`, href: '/jobs/family-practice' },
+      { label: `Primary Care ${brand.niche.short} Jobs`, href: '/jobs/primary-care' },
+      { label: `Acute Care ${brand.niche.short} Jobs`, href: '/jobs/acute-care' },
     ],
   },
   {
@@ -73,6 +78,10 @@ const linkColumns = [
       { label: 'Pricing', href: '/pricing' },
       { label: 'Browse Companies', href: '/companies' },
       { label: 'For Employers', href: '/for-employers' },
+      // Content audit P0 #7: /for-programs (the program-director jobs-widget
+      // funnel) had ZERO inbound links sitewide — orphaned from both nav and
+      // sitemap. The footer link is its crawl-discovery path.
+      { label: 'For Nursing Programs', href: '/for-programs' },
     ],
   },
   {

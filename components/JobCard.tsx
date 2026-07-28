@@ -112,6 +112,15 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
     !easyApply &&
     !!job.applyLink &&
     (job.sourceType === 'employer' || isDirectApplyUrl(job.applyLink));
+  // Every employer post — free or paid — is sold a "Featured badge" on the
+  // listing card (Terms §7, /pricing + /faq feature lists, post-job page,
+  // onboarding/confirmation emails). The visible badge was retired
+  // 2026-05-16, which silently broke that promise for paying employers;
+  // restored 2026-07-28 keyed on the same signal as the accent border:
+  // sourceType='employer' covers all employer posts (their rows are created
+  // with isFeatured:false while the DB flag is reserved for a future premium
+  // tier), and job.isFeatured additionally honors admin-featured listings.
+  const showFeaturedBadge = job.isFeatured || job.sourceType === 'employer';
 
   // Card "Easy Apply" → navigate to job detail with ?apply=1 so the apply
   // popup auto-opens. Stops the surrounding card-link from firing too.
@@ -290,6 +299,9 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
                 <Badge variant="salary" size="sm">
                   {salaryDisplay.startsWith('$') ? salaryDisplay : `$${salaryDisplay}`}
                 </Badge>
+              )}
+              {showFeaturedBadge && (
+                <Badge variant="featured" size="sm">★ Featured</Badge>
               )}
               {job.jobType && <Badge variant="outline" size="sm">{job.jobType}</Badge>}
               {displayMode && <Badge variant="outline" size="sm">{displayMode}</Badge>}
@@ -597,6 +609,9 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
             <Badge variant="salary" size="sm">
               {salaryDisplay.startsWith('$') ? salaryDisplay : `$${salaryDisplay}`}
             </Badge>
+          )}
+          {showFeaturedBadge && (
+            <Badge variant="featured" size="sm">★ Featured</Badge>
           )}
           {job.jobType && <Badge variant="outline" size="sm">{job.jobType}</Badge>}
           {displayMode && <Badge variant="outline" size="sm">{displayMode}</Badge>}

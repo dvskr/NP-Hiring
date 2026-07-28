@@ -46,7 +46,28 @@ interface DashboardJob {
 interface Application {
     id: string
     appliedAt: string
+    // Real pipeline status from JobApplication.status — the /api/dashboard
+    // payload returns full application rows (include, no select), so this
+    // is always present.
+    status: string
     job: DashboardJob
+}
+
+/**
+ * P0 #9: real JobApplication.status → badge config. Mirrors the
+ * STATUS_CONFIG map in app/my-applications/page.tsx (same labels/colors)
+ * so the two surfaces can never disagree about what a status looks like.
+ * Previously the dashboard FABRICATED statuses ("Under Review",
+ * "In Progress") from days elapsed since application.
+ */
+const APPLICATION_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+    applied: { label: 'Applied', color: '#6B7280', bg: '#EDF2EE' },
+    screening: { label: 'Screening', color: '#D97706', bg: '#FEF3C7' },
+    interview: { label: 'Interview', color: '#2563EB', bg: '#DBEAFE' },
+    offered: { label: 'Offered', color: '#7C3AED', bg: '#EDE9FE' },
+    hired: { label: 'Hired', color: '#059669', bg: '#D1FAE5' },
+    rejected: { label: 'Not Selected', color: '#DC2626', bg: '#FEE2E2' },
+    withdrawn: { label: 'Withdrawn', color: '#9CA3AF', bg: '#F3F4F6' },
 }
 
 interface DashboardData {
@@ -940,11 +961,9 @@ export default function DashboardContent() {
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {applications.map((app) => {
-                                // Derive status from time since application
-                                const daysSince = Math.floor((Date.now() - new Date(app.appliedAt).getTime()) / (1000 * 60 * 60 * 24))
-                                const status = daysSince <= 1 ? { label: 'Submitted', color: '#BE185D', bg: '#FBCFE8' }
-                                    : daysSince <= 5 ? { label: 'Under Review', color: '#D97706', bg: '#FEF3C7' }
-                                    : { label: 'In Progress', color: '#818CF8', bg: '#EDE9FE' }
+                                // P0 #9: real JobApplication.status — never
+                                // derived/fabricated from elapsed time.
+                                const status = APPLICATION_STATUS_CONFIG[app.status] ?? APPLICATION_STATUS_CONFIG.applied
                                 return (
                                 <CompactJobCard
                                     key={app.id}

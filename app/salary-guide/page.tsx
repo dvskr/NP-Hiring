@@ -9,8 +9,14 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CopyCitation from '@/components/CopyCitation';
 import SalaryCalculator from '@/components/SalaryCalculator';
 import { STAT_SOURCES } from '@/lib/stats-sources';
+import { SALARY_GUIDE_PDF_AVAILABLE } from '@/app/api/salary-guide/pdf-availability';
 
-const STORAGE_BASE = brand.assets.storageBase;
+// ── Editorial review date (audit P0 #23, B54 principle) ─────────────────
+// The Article schema's dateModified must reflect a REAL content review,
+// never render time — `new Date()` fabricated freshness on every request.
+// Update this literal only when the guide's figures/copy are actually
+// reviewed. (State salary pages omit dates entirely for the same reason.)
+const LAST_REVIEWED_DATE = '2026-07-28';
 
 // ── Cited figures (audit B51: single source of truth) ──────────────────
 // Every national salary / growth / shortage / FPA claim on this page
@@ -30,6 +36,11 @@ const SHORTAGE_POP = STAT_SOURCES.hrsaShortagePopulation; // '90 million+' (HRSA
 export const revalidate = 86400;
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
+
+// P0 OG sweep: edge-generated card via /api/og — the previous Supabase
+// page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
+// The median in the title derives from STAT_SOURCES above, never hardcoded.
+const SALARY_GUIDE_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Salary Guide 2026 — ${NATIONAL_SALARY.formatted} Median`)}&type=page`;
 
 // State codes mapping
 const STATE_CODES: Record<string, string> = {
@@ -127,9 +138,9 @@ export const metadata: Metadata = {
     description: `Complete guide to ${brand.niche.short} salaries. National median ${NATIONAL_SALARY.formatted} (BLS OEWS). State-by-state breakdown and tips to maximize earnings.`,
     type: 'website',
     url: `${BASE_URL}/salary-guide`,
-    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`, width: 1280, height: 900, alt: `${brand.niche.short} salary guide 2026 showing ${brand.niche.descriptor} pay by state with interactive salary comparison table` }],
+    images: [{ url: SALARY_GUIDE_OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} salary guide 2026 showing ${brand.niche.descriptor} pay by state with interactive salary comparison table` }],
   },
-  twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`] },
+  twitter: { card: 'summary_large_image', images: [SALARY_GUIDE_OG_IMAGE] },
   alternates: { canonical: `${brand.baseUrl}/salary-guide` },
 };
 
@@ -222,10 +233,10 @@ export default async function SalaryGuidePage() {
     "@context": "https://schema.org",
     "@type": "Article",
     "headline": `2026 ${brand.niche.short} Salary Guide: ${brand.niche.long} Pay by State`,
-    "description": `Comprehensive ${brand.niche.short} salary data for 2026 including state-by-state pay, experience levels, specialty premiums, and market trends. Based on ${NATIONAL_SALARY.source} and live job postings listed on ${brand.name}.`,
-    "image": `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`,
+    "description": `Comprehensive ${brand.niche.short} salary data for 2026 including state-by-state pay, experience levels, specialty premiums, and practice settings. Based on ${NATIONAL_SALARY.source} and live job postings listed on ${brand.name}.`,
+    "image": SALARY_GUIDE_OG_IMAGE,
     "datePublished": "2026-01-01T00:00:00Z",
-    "dateModified": new Date().toISOString(),
+    "dateModified": `${LAST_REVIEWED_DATE}T00:00:00Z`,
     "author": { "@type": "Organization", "name": brand.name, "url": brand.baseUrl, "logo": { "@type": "ImageObject", "url": `${brand.baseUrl}/logo.png` } },
     // B56: publisher logo previously referenced an SVG path that does not
     // exist in public/ — /logo.png is the real asset.
@@ -319,17 +330,22 @@ export default async function SalaryGuidePage() {
                 ))}
               </div>
 
-              {/* PDF download card */}
-              <div className="emp-bento-card" style={{
-                ...clayCard, padding: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
-                border: '1.5px solid rgba(190,24,93,0.12)',
-              }}>
-                <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#831843', margin: '0 0 10px' }}>📄 Download Free PDF Guide</h3>
-                <SalaryGuideForm />
-                <p style={{ fontSize: '10px', color: '#94A3B8', marginTop: '8px', marginBottom: 0 }}>
-                  Sources: BLS, ZipRecruiter, Indeed, PayScale, Glassdoor, CompHealth
-                </p>
-              </div>
+              {/* PDF download card — gated until the PDF deliverable is
+                  real (audit P0 #6): the email funnel previously promised
+                  a PDF whose storage object 404s. Flip the flag in
+                  app/api/salary-guide/pdf-availability.ts once uploaded. */}
+              {SALARY_GUIDE_PDF_AVAILABLE && (
+                <div className="emp-bento-card" style={{
+                  ...clayCard, padding: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
+                  border: '1.5px solid rgba(190,24,93,0.12)',
+                }}>
+                  <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#831843', margin: '0 0 10px' }}>📄 Download Free PDF Guide</h3>
+                  <SalaryGuideForm />
+                  <p style={{ fontSize: '10px', color: '#94A3B8', marginTop: '8px', marginBottom: 0 }}>
+                    Sources: BLS, ZipRecruiter, Indeed, PayScale, Glassdoor, CompHealth
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Quick Answer (full-width 12 cols) */}
@@ -389,7 +405,7 @@ export default async function SalaryGuidePage() {
               {brand.niche.short} Salary by State
             </h2>
             <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '500px', margin: '0 auto 12px', lineHeight: 1.6 }}>
-              See how {brand.niche.short} salaries compare across different states. Click any state to view available jobs.
+              See how {brand.niche.short} salaries compare across different states. Click any state name for its full salary breakdown.
             </p>
 
             {/* Note */}
@@ -399,7 +415,9 @@ export default async function SalaryGuidePage() {
             }}>
               <p style={{ fontSize: '12px', color: '#831843', margin: 0, lineHeight: 1.5 }}>
                 <strong>Note:</strong> Real-time salary data from active {brand.niche.short} job postings.
-                For comprehensive state-by-state data including cost-of-living adjustments, download our full PDF guide above.
+                {SALARY_GUIDE_PDF_AVAILABLE
+                  ? ' For comprehensive state-by-state data including cost-of-living adjustments, download our full PDF guide above.'
+                  : ' Each state name links to a detailed page with pay by setting and top employers.'}
               </p>
             </div>
 
@@ -428,7 +446,12 @@ export default async function SalaryGuidePage() {
                             }}>{i + 1}</span>
                           )}
                           <div>
-                            <span style={{ fontWeight: 600, color: '#1A2E35' }}>{state.state}</span>
+                            {/* Audit P0 #20: the hub must link its own 51
+                                state children — same slug derivation as
+                                app/salary-guide/[state]/page.tsx. */}
+                            <Link href={`/salary-guide/${state.slug}`} className="sal-state-link" style={{ fontWeight: 600, color: '#1A2E35', textDecoration: 'none' }}>
+                              {state.state}
+                            </Link>
                             <span style={{ fontSize: '11px', color: '#94A3B8', marginLeft: '6px' }}>{state.stateCode}</span>
                           </div>
                         </div>
@@ -583,7 +606,13 @@ export default async function SalaryGuidePage() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════
-          SECTION 5: MARKET TRENDS (slate bg)
+          SECTION 5: MARKET DEMAND (slate bg)
+          Audit P0 #22: the former "Market Trends" table (invented monthly
+          posting counts, telehealth share, and time-to-fill trend rows)
+          was fabricated — those figures appear nowhere in
+          lib/stats-sources.ts or any cited source, so the table was
+          deleted. Only sourced claims remain. Do not re-add trend rows
+          without a citable source.
           ═══════════════════════════════════════════════════════════════ */}
       <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
@@ -591,43 +620,10 @@ export default async function SalaryGuidePage() {
             Market Intelligence
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '36px' }}>
-            {currentYear} {brand.niche.short} Market Trends
+            Why {brand.niche.short} Demand Is High
           </h2>
 
-          <div className="emp-compare-table" style={{ ...clayCard, padding: '0', overflowX: 'auto', marginBottom: '20px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed', minWidth: '480px' }}>
-              <thead>
-                <tr style={{ background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(190,24,93,0.02))' }}>
-                  <th style={{ padding: '14px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Metric</th>
-                  <th style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>2024</th>
-                  <th style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>2025</th>
-                  <th style={{ padding: '14px 20px', textAlign: 'center', fontWeight: 800, color: '#BE185D', borderBottom: '2px solid rgba(190,24,93,0.2)', fontSize: '11px', textTransform: 'uppercase' }}>2026</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Audit B51: the fabricated 'Average Salary' trend row
-                    (158k-to-165k donor-era figures that contradicted the
-                    cited BLS median) was removed. Do not re-add a salary
-                    trend without a citable source in lib/stats-sources.ts. */}
-                {[
-                  { metric: 'Job Postings (Monthly)', v24: '12,500', v25: '14,200', v26: '15,800' },
-                  { metric: 'Telehealth %', v24: '48%', v25: '55%', v26: '62%' },
-                  { metric: 'Time to Fill (days)', v24: '45', v25: '38', v26: '32' },
-                ].map((row, i) => (
-                  <tr key={row.metric} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
-                    <td style={{ padding: '12px 24px', fontWeight: 500, color: '#1A2E35', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{row.metric}</td>
-                    <td style={{ padding: '12px 20px', textAlign: 'center', color: '#94A3B8', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{row.v24}</td>
-                    <td style={{ padding: '12px 20px', textAlign: 'center', color: '#94A3B8', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{row.v25}</td>
-                    <td style={{ padding: '12px 20px', textAlign: 'center', fontWeight: 700, color: '#BE185D', borderBottom: '1px solid rgba(0,0,0,0.04)', background: 'rgba(190,24,93,0.03)' }}>{row.v26}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Why Demand is High */}
           <div style={{ ...clayCard, padding: '22px 28px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#831843', margin: '0 0 10px' }}>Why Demand is High</h3>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: '13px', color: '#5A4A42' }}>
               <li>• <strong>{SHORTAGE_POP.formatted}</strong> Americans live in primary-care shortage areas (HRSA)</li>
               <li>• <strong>{NP_GROWTH.formatted}</strong> projected NP job growth through 2032 (BLS)</li>
@@ -814,6 +810,10 @@ export default async function SalaryGuidePage() {
         }
         .emp-compare-table tbody tr:hover {
           background: rgba(190,24,93,0.04) !important;
+        }
+        .sal-state-link:hover {
+          color: #BE185D !important;
+          text-decoration: underline !important;
         }
         .sal-stat-pill {
           transition: transform 0.2s ease, box-shadow 0.2s ease;

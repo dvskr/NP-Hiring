@@ -228,9 +228,13 @@ export default function PreviewPage() {
   }
 
   const salary = formatSalary(formData.salaryMin, formData.salaryMax, formData.salaryPeriod);
-  // 2026-05-16: Featured flag retired for standard tier. Reserved for a
-  // future premium tier. Existing paid posts still rank above aggregator
-  // content via the EmployerJob relation (see lib/utils/job-sort.ts).
+  // isFeatured mirrors what post-free/create-checkout actually write for
+  // standard-tier rows (false — the DB flag is reserved for a future premium
+  // tier). The visible "Featured" badge every employer post is sold
+  // (Terms §7, /pricing, /faq) is keyed on sourceType='employer' inside
+  // <JobCard> (restored 2026-07-28), so the card preview below shows it
+  // exactly as candidates will see it. Ranking above aggregator content
+  // comes from the EmployerJob relation (see lib/utils/job-sort.ts).
   const isFeatured = false;
 
   // Build a Job-shaped object from form data so we can render the REAL <JobCard>
@@ -300,7 +304,7 @@ export default function PreviewPage() {
     : quotaStatus?.eligible === true
       ? `Live for ${quotaStatus?.paidDurationDays ?? config.durationDays} days`
       : `Live for ${config.durationDays} days`;
-  const packageDetails = `Top placement · ${config.limits.candidateUnlocksPerPosting} candidate unlocks · ${config.limits.inmailsPerPosting} InMails · Applicant analytics`;
+  const packageDetails = `Featured badge · Top placement · ${config.limits.candidateUnlocksPerPosting} candidate unlocks · ${config.limits.inmailsPerPosting} InMails · Applicant analytics`;
 
   return (
     <div style={{ background: '#F5F0EB', minHeight: '100vh', padding: '0 16px 80px' }}>
@@ -401,9 +405,11 @@ export default function PreviewPage() {
                 </div>
               </div>
 
-              {/* Badges Row. "Featured" pill removed 2026-05-16 — see
-                  components/JobCard.tsx for the matching change. Reserved
-                  for a future premium tier. */}
+              {/* Badges Row. No "Featured" pill here on purpose: this mock
+                  mirrors app/jobs/[slug]/page.tsx, which renders no Featured
+                  pill on the detail header. The Featured badge employers are
+                  sold appears on the listing card — see the real <JobCard>
+                  preview above (badge restored 2026-07-28). */}
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '16px' }}>
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: '5px',

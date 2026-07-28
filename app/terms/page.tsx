@@ -5,7 +5,9 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import Image from 'next/image';
 import { FileText } from 'lucide-react';
 
-const STORAGE_BASE = brand.assets.storageBase;
+// P0 OG sweep: edge-generated card via /api/og — the previous Supabase
+// page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
+const TERMS_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent('Terms of Service')}&type=page`;
 
 // Legal identity — every entity/venue/descriptor reference on this page
 // must come from brand.legal so a fork can never ship a ToS naming the
@@ -18,9 +20,9 @@ export const metadata: Metadata = {
   title: 'Terms of Service',
   description: `Read the Terms of Service for ${brand.name}, operated by ${ENTITY}. Understand your rights, responsibilities, pricing, refunds, and platform policies for the #1 ${brand.niche.short} job board.`,
   openGraph: {
-    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-terms-of-service.webp`, width: 1280, height: 900, alt: 'PMHNP Hiring terms of service page with user rights, employer responsibilities, and platform policies' }],
+    images: [{ url: TERMS_OG_IMAGE, width: 1200, height: 630, alt: `${brand.name} terms of service page with user rights, employer responsibilities, and platform policies` }],
   },
-  twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-terms-of-service.webp`] },
+  twitter: { card: 'summary_large_image', images: [TERMS_OG_IMAGE] },
   alternates: { canonical: `${brand.baseUrl}/terms` },
 };
 

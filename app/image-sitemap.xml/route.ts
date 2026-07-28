@@ -9,6 +9,12 @@ export const revalidate = 86400; // daily
 
 /**
  * Generates an image sitemap following Google's image sitemap extension.
+ *
+ * P0 OG sweep: entries come from lib/image-seo.ts, which now only maps
+ * board-resolvable images (local /images/** paths or the /api/og edge
+ * renderer) — never a remote storage bucket. Image locs are XML-escaped
+ * because /api/og URLs carry `&`-joined query params.
+ *
  * @see https://developers.google.com/search/docs/crawling-indexing/sitemaps/image-sitemaps
  */
 export function GET() {
@@ -20,9 +26,9 @@ export function GET() {
 ${images
             .map(
                 (entry) => `  <url>
-    <loc>${BASE_URL}${entry.url}</loc>
+    <loc>${escapeXml(`${BASE_URL}${entry.url}`)}</loc>
     <image:image>
-      <image:loc>${entry.image.startsWith('http') ? entry.image : `${BASE_URL}${entry.image}`}</image:loc>
+      <image:loc>${escapeXml(entry.image.startsWith('http') ? entry.image : `${BASE_URL}${entry.image}`)}</image:loc>
       <image:title>${escapeXml(entry.title)}</image:title>
       <image:caption>${escapeXml(entry.caption)}</image:caption>
     </image:image>

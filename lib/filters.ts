@@ -6,7 +6,15 @@ import {
     PSYCH_EMPLOYER_PATTERNS,
     NP_CREDENTIAL_SIGNALS,
     NON_PSYCH_EMPLOYER_BLOCKLIST,
+    ROLE_TITLE_REGEX,
+    TITLE_CONTEXT_WORDS,
 } from '@/config/niche/relevance';
+import { CATEGORY_AXES } from '@/lib/pseo/taxonomy-registry';
+import {
+    CANONICAL_CATEGORY_SLUGS,
+    withTagFallback,
+    type CategoryTag,
+} from '@/lib/pseo/category-tagger';
 
 /**
  * "Posted Within" semantics (revised 2026-05-06).
@@ -93,9 +101,94 @@ export function minYearsQualifyClause(n: number): Prisma.JobWhereInput {
 }
 
 /**
+ * Display labels for category / specialty slugs. Labels DERIVE from the
+ * slug (title case) so new taxonomy entries label themselves; overrides
+ * cover only the slugs whose display form isn't plain title case. Niche
+ * vocabulary stays in lib/pseo/taxonomy-registry.ts — no specialty list
+ * is restated here.
+ */
+const CATEGORY_LABEL_OVERRIDES: Record<string, string> = {
+    'adult-gerontology': 'Adult-Gerontology',
+    'full-time': 'Full-Time',
+    'lgbtq': 'LGBTQ+',
+    'mid-career': 'Mid-Career',
+    'part-time': 'Part-Time',
+    'va': 'VA',
+    'women-health': "Women's Health",
+};
+
+export function categoryFilterLabel(slug: string): string {
+    const override = CATEGORY_LABEL_OVERRIDES[slug];
+    if (override) return override;
+    return slug
+        .split('-')
+        .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+        .join(' ');
+}
+
+/**
+ * /jobs Specialty filter — the clinical specialty axis from the taxonomy
+ * registry, matched at query time via the precomputed Job.categoryTags
+ * column (withTagFallback keeps not-yet-backfilled rows visible through
+ * the ingest classifier's legacy keyword OR). Option values ARE the
+ * registry slugs, so the filter UI, the ?specialty= URL param, and the
+ * pSEO category pages can never drift. The legacy 'Telehealth' / 'Travel'
+ * param values are NOT in this list — they are work-type filters with a
+ * pre-registry URL contract, handled separately in buildWhereClause.
+ */
+export interface SpecialtyFilterOption {
+    /** URL param value — a taxonomy-registry specialty slug. */
+    value: string;
+    /** Human-readable checkbox / pill label. */
+    label: string;
+}
+
+export const SPECIALTY_FILTER_OPTIONS: readonly SpecialtyFilterOption[] =
+    CATEGORY_AXES.specialty.map((slug) => ({ value: slug, label: categoryFilterLabel(slug) }));
+
+const SPECIALTY_FILTER_SLUG_SET: ReadonlySet<string> = new Set<string>(CATEGORY_AXES.specialty);
+
+function isCanonicalCategorySlug(slug: string): slug is CategoryTag {
+    return (CANONICAL_CATEGORY_SLUGS as readonly string[]).includes(slug);
+}
+
+/**
+ * "Senior <credential>" / "Lead <credential>" title clauses for the
+ * senior and mid-career matchers, derived from the niche pack's
+ * credential vocabulary (ROLE_TITLE_REGEX short tokens + the long-form
+ * TITLE_CONTEXT_WORDS) so seniority matching works for EVERY NP/APRN
+ * credential the board serves — "Senior FNP", "Lead CRNA",
+ * "Senior AGACNP" — instead of a single specialty's abbreviation.
+ */
+const SHORT_CREDENTIAL_ALTERNATION = ROLE_TITLE_REGEX.source.match(/\(\?:([a-z|]+)\)/);
+const SENIOR_LEAD_CREDENTIAL_TERMS: readonly string[] = Array.from(
+    new Set(
+        [
+            ...(SHORT_CREDENTIAL_ALTERNATION ? SHORT_CREDENTIAL_ALTERNATION[1].split('|') : []),
+            ...TITLE_CONTEXT_WORDS.map((word) => word.trim()),
+        ].filter((word) => word.length > 1),
+    ),
+);
+
+const SENIOR_LEAD_TITLE_CLAUSES: Prisma.JobWhereInput[] = ['senior', 'lead'].flatMap(
+    (prefix) =>
+        SENIOR_LEAD_CREDENTIAL_TERMS.map(
+            (credential): Prisma.JobWhereInput => ({
+                title: { contains: `${prefix} ${credential}`, mode: 'insensitive' },
+            }),
+        ),
+);
+
+/**
  * Centralized Category Filter Registry
  * Single source of truth for all category page filters.
  * Used by both /jobs/[category]/page.tsx AND /jobs?category=[slug]
+ *
+ * Keys are taxonomy-registry slugs (lib/pseo/taxonomy-registry.ts).
+ * Registry slugs WITHOUT an entry here (the 2026-07 NP specialties and
+ * APRN roles) gate on the precomputed categoryTags column instead — see
+ * the ?category= fallback in buildWhereClause and the equivalent branch
+ * in lib/pseo/category-landing-template.tsx.
  */
 // Per-slug structured-flag OR clauses that augment the keyword regex. Shared by
 // BOTH the category-page builder and the ?category= querystring builder so
@@ -109,16 +202,6 @@ export const CATEGORY_EXTRA_OR: Record<string, Prisma.JobWhereInput[]> = {
 };
 
 export const CATEGORY_FILTERS: Record<string, Prisma.JobWhereInput[]> = {
-  'child-adolescent': [
-    { title: { contains: 'child and adolescent', mode: 'insensitive' } },
-    { title: { contains: 'child/adolescent', mode: 'insensitive' } },
-    { title: { contains: 'child psychiatr', mode: 'insensitive' } },
-    { title: { contains: 'child & adolescent', mode: 'insensitive' } },
-    { title: { contains: 'pediatric psych', mode: 'insensitive' } },
-    { title: { contains: 'pediatric mental', mode: 'insensitive' } },
-    { title: { contains: 'CAPMHNP', mode: 'insensitive' } },
-    { title: { contains: 'adolescent psychiatr', mode: 'insensitive' } },
-  ],
   'community-health': [
     { title: { contains: 'community health', mode: 'insensitive' } },
     { title: { contains: 'community mental health', mode: 'insensitive' } },
@@ -139,7 +222,7 @@ export const CATEGORY_FILTERS: Record<string, Prisma.JobWhereInput[]> = {
   ],
   // Bare `fellowship` / `residency` removed 2026-05-15 — they matched
   // post-grad APP fellowships requiring 3-5 yrs prior NP experience.
-  // The `program` suffix is required so PMHNP residency / fellowship
+  // The `program` suffix is required so NP residency / fellowship
   // training programs are caught while post-grad fellowships aren't.
   'new-grad': [
     { title: { contains: 'new grad', mode: 'insensitive' } },
@@ -156,16 +239,6 @@ export const CATEGORY_FILTERS: Record<string, Prisma.JobWhereInput[]> = {
     { title: { contains: 'private practice', mode: 'insensitive' } },
     { title: { contains: 'community mental health', mode: 'insensitive' } },
   ],
-  'substance-abuse': [
-    { title: { contains: 'substance', mode: 'insensitive' } },
-    { title: { contains: 'addiction', mode: 'insensitive' } },
-    { title: { contains: 'suboxone', mode: 'insensitive' } },
-    { title: { contains: 'dual diagnosis', mode: 'insensitive' } },
-    { title: { contains: 'SUD ', mode: 'insensitive' } },
-    { title: { contains: 'medication-assisted', mode: 'insensitive' } },
-    { title: { contains: 'medication assisted treatment', mode: 'insensitive' } },
-    { title: { contains: 'buprenorphine', mode: 'insensitive' } },
-  ],
   'telehealth': [
     { title: { contains: 'telehealth', mode: 'insensitive' } },
     { title: { contains: 'telemedicine', mode: 'insensitive' } },
@@ -176,13 +249,6 @@ export const CATEGORY_FILTERS: Record<string, Prisma.JobWhereInput[]> = {
     { title: { contains: 'contract', mode: 'insensitive' } },
     { title: { contains: 'temp-to-perm', mode: 'insensitive' } },
     { title: { contains: 'temporary', mode: 'insensitive' } },
-  ],
-  'crisis': [
-    { title: { contains: 'crisis', mode: 'insensitive' } },
-    { title: { contains: 'emergency psych', mode: 'insensitive' } },
-    { title: { contains: 'acute stabilization', mode: 'insensitive' } },
-    { title: { contains: 'psychiatric urgent', mode: 'insensitive' } },
-    { title: { contains: 'urgent psychiatric', mode: 'insensitive' } },
   ],
   'entry-level': [
     { title: { contains: 'entry level', mode: 'insensitive' } },
@@ -227,10 +293,11 @@ export const CATEGORY_FILTERS: Record<string, Prisma.JobWhereInput[]> = {
     { title: { contains: 'program director', mode: 'insensitive' } },
     { title: { contains: 'clinical director', mode: 'insensitive' } },
     { title: { contains: 'lead clinician', mode: 'insensitive' } },
-    { title: { contains: 'lead PMHNP', mode: 'insensitive' } },
-    { title: { contains: 'senior PMHNP', mode: 'insensitive' } },
     { title: { contains: 'senior NP', mode: 'insensitive' } },
-    { title: { contains: 'senior nurse practitioner', mode: 'insensitive' } },
+    // Senior/lead forms for every NP/APRN credential in the niche pack —
+    // replaces two hardcoded single-credential literals that only matched
+    // the donor board's specialty abbreviation.
+    ...SENIOR_LEAD_TITLE_CLAUSES,
   ],
   'part-time': [
     { title: { contains: 'part-time', mode: 'insensitive' } },
@@ -252,22 +319,21 @@ export const CATEGORY_FILTERS: Record<string, Prisma.JobWhereInput[]> = {
     // bare "years of experience" description match were removed 2026-05-14
     // because they swept in ~45% of the board. The structured
     // `minYearsExperience >= 5` clause below replaces those signals.
-    { title: { contains: 'senior PMHNP', mode: 'insensitive' } },
+    // Senior/lead-IC forms for every NP/APRN credential in the niche pack
+    // ("Senior FNP", "Lead CRNA", …) — replaces the donor board's
+    // single-credential literals so seniority matching works across the
+    // whole taxonomy.
     { title: { contains: 'senior NP', mode: 'insensitive' } },
-    { title: { contains: 'senior nurse practitioner', mode: 'insensitive' } },
-    { title: { contains: 'lead PMHNP', mode: 'insensitive' } },
+    ...SENIOR_LEAD_TITLE_CLAUSES,
     { title: { contains: 'clinical lead', mode: 'insensitive' } },
     { title: { contains: 'clinical leader', mode: 'insensitive' } },
-    { title: { contains: 'PMHNP supervisor', mode: 'insensitive' } },
     { title: { contains: 'NP supervisor', mode: 'insensitive' } },
+    { title: { contains: 'APRN supervisor', mode: 'insensitive' } },
     { title: { contains: 'nurse practitioner supervisor', mode: 'insensitive' } },
     { title: { contains: 'medical director', mode: 'insensitive' } },
     { title: { contains: 'clinical director', mode: 'insensitive' } },
     { title: { contains: 'program director', mode: 'insensitive' } },
-    { title: { contains: 'chief of mental health', mode: 'insensitive' } },
     { title: { contains: 'clinic director', mode: 'insensitive' } },
-    { title: { contains: 'director of psych', mode: 'insensitive' } },
-    { title: { contains: 'PMHNP director', mode: 'insensitive' } },
     { title: { contains: 'vice president', mode: 'insensitive' } },
     // Structured experience: 5+ years required
     { minYearsExperience: { gte: 5 } },
@@ -286,40 +352,6 @@ export const CATEGORY_FILTERS: Record<string, Prisma.JobWhereInput[]> = {
     { title: { contains: 'independent contractor', mode: 'insensitive' } },
     { title: { contains: 'independent practice', mode: 'insensitive' } },
     { description: { contains: '1099', mode: 'insensitive' } },
-  ],
-  // Addiction / SUD focus. Tightened 2026-05-14:
-  //   - Dropped bare `description: 'addiction'` — matched generic
-  //     boilerplate ("we treat anxiety, depression, addiction…"), driving
-  //     ~95% ambiguous results.
-  //   - Replaced bare title `recovery` with "addiction recovery" /
-  //     "recovery center" / "in recovery" to avoid post-op recovery FPs.
-  'addiction': [
-    { title: { contains: 'addiction', mode: 'insensitive' } },
-    { title: { contains: 'substance', mode: 'insensitive' } },
-    { title: { contains: 'substance use', mode: 'insensitive' } },
-    { title: { contains: ' SUD', mode: 'insensitive' } },
-    { title: { contains: ' MAT ', mode: 'insensitive' } },
-    { title: { contains: 'MAT program', mode: 'insensitive' } },
-    { title: { contains: 'MAT &', mode: 'insensitive' } },
-    { title: { contains: 'opioid', mode: 'insensitive' } },
-    { title: { contains: 'detox', mode: 'insensitive' } },
-    { title: { contains: 'addiction recovery', mode: 'insensitive' } },
-    { title: { contains: 'recovery center', mode: 'insensitive' } },
-    { title: { contains: 'suboxone', mode: 'insensitive' } },
-    { title: { contains: 'buprenorphine', mode: 'insensitive' } },
-    { description: { contains: 'substance use disorder', mode: 'insensitive' } },
-    { description: { contains: 'MAT program', mode: 'insensitive' } },
-    { description: { contains: 'buprenorphine', mode: 'insensitive' } },
-  ],
-  'behavioral-health': [
-    { title: { contains: 'behavioral health', mode: 'insensitive' } },
-    { title: { contains: 'behavioral', mode: 'insensitive' } },
-    { title: { contains: 'mental health', mode: 'insensitive' } },
-    { title: { contains: 'psychiatric', mode: 'insensitive' } },
-    { title: { contains: 'psych NP', mode: 'insensitive' } },
-    { title: { contains: 'PMHNP', mode: 'insensitive' } },
-    { description: { contains: 'behavioral health', mode: 'insensitive' } },
-    { description: { contains: 'behavioral health facility', mode: 'insensitive' } },
   ],
   'inpatient': [
     { title: { contains: 'inpatient', mode: 'insensitive' } },
@@ -376,7 +408,7 @@ export const CATEGORY_EXCLUSIONS: Record<string, Prisma.JobWhereInput[]> = {
     { jobType: { equals: 'Full-Time', mode: 'insensitive' } },
   ],
   'senior': [
-    // Exclude non-PMHNP leadership roles
+    // Exclude non-clinical / non-provider leadership roles
     { title: { contains: 'Nursing Director', mode: 'insensitive' } },
     { title: { contains: 'HR Director', mode: 'insensitive' } },
     { title: { contains: 'IT Director', mode: 'insensitive' } },
@@ -411,7 +443,8 @@ export const CATEGORY_EXCLUSIONS: Record<string, Prisma.JobWhereInput[]> = {
 
 /**
  * Global Exclusions — applied to EVERY query site-wide.
- * Removes jobs that should never appear on a PMHNP job board.
+ * Removes jobs that should never appear on the board (roles that are not
+ * NP/APRN positions at all — see config/niche/relevance.ts).
  */
 // Query-time vocabularies (PSYCH_TITLE_SIGNALS, NP_CREDENTIAL_SIGNALS,
 // NON_PSYCH_EMPLOYER_BLOCKLIST) live in config/niche/relevance.ts alongside
@@ -559,7 +592,7 @@ export function buildCategoryWhereClause(
     });
   }
 
-  // Global exclusions (removes non-PMHNP jobs)
+  // Global exclusions (removes out-of-scope non-NP roles)
   GLOBAL_EXCLUSIONS.forEach(exclusion => {
     andConditions.push({ NOT: exclusion });
   });
@@ -606,7 +639,7 @@ export function buildWhereClause(filters: FilterState): Prisma.JobWhereInput {
 
   const andConditions: Prisma.JobWhereInput[] = [];
 
-  // Apply global exclusions (removes non-PMHNP jobs from all queries)
+  // Apply global exclusions (removes out-of-scope non-NP roles from all queries)
   GLOBAL_EXCLUSIONS.forEach(exclusion => {
     andConditions.push({ NOT: exclusion });
   });
@@ -630,16 +663,24 @@ export function buildWhereClause(filters: FilterState): Prisma.JobWhereInput {
   // Category filter (enterprise pattern: reuses same filter as category pages).
   // Include CATEGORY_EXTRA_OR so ?category=new-grad matches the same jobs as the
   // /jobs/new-grad page (both reach newGradFriendly-flagged jobs).
-  if (filters.category && (CATEGORY_FILTERS[filters.category] || CATEGORY_EXTRA_OR[filters.category])) {
-    andConditions.push({
-      OR: [...(CATEGORY_FILTERS[filters.category] ?? []), ...(CATEGORY_EXTRA_OR[filters.category] ?? [])],
-    });
+  const categoryKeywordOr = filters.category
+    ? [...(CATEGORY_FILTERS[filters.category] ?? []), ...(CATEGORY_EXTRA_OR[filters.category] ?? [])]
+    : [];
+  if (filters.category && categoryKeywordOr.length > 0) {
+    andConditions.push({ OR: categoryKeywordOr });
     // Apply exclusions to remove false positives
     if (CATEGORY_EXCLUSIONS[filters.category]) {
       CATEGORY_EXCLUSIONS[filters.category].forEach(exclusion => {
         andConditions.push({ NOT: exclusion });
       });
     }
+  } else if (filters.category && isCanonicalCategorySlug(filters.category)) {
+    // Registry slugs without a legacy keyword entry — the 2026-07 NP
+    // taxonomy's specialty / APRN categories, plus 'remote' (whose keyword
+    // entry is deliberately empty) — gate on the precomputed categoryTags
+    // column, the same fallback the category landing pages use, instead of
+    // silently ignoring the param (or pushing a match-nothing `OR: []`).
+    andConditions.push(withTagFallback(filters.category) as Prisma.JobWhereInput);
   }
 
   // Work Mode (OR within category)
@@ -730,7 +771,14 @@ export function buildWhereClause(filters: FilterState): Prisma.JobWhereInput {
     });
   }
 
-  // Specialty (keyword-based, OR within category)
+  // Specialty (OR within the section when multiple values are checked).
+  //   • Clinical specialties: UI values are the taxonomy registry's
+  //     specialty slugs, matched via the precomputed categoryTags column
+  //     (withTagFallback keeps not-yet-backfilled rows visible through
+  //     the ingest classifier's legacy keyword OR).
+  //   • Work-type values ('Telehealth' / 'Travel'): legacy keyword
+  //     matchers — this URL contract predates the registry and is
+  //     preserved as-is.
   if (filters.specialty && filters.specialty.length > 0) {
     const specialtyConditions: Prisma.JobWhereInput[] = [];
 
@@ -752,6 +800,12 @@ export function buildWhereClause(filters: FilterState): Prisma.JobWhereInput {
           { title: { contains: 'locum', mode: 'insensitive' } },
         ],
       });
+    }
+
+    for (const selected of filters.specialty) {
+      if (SPECIALTY_FILTER_SLUG_SET.has(selected) && isCanonicalCategorySlug(selected)) {
+        specialtyConditions.push(withTagFallback(selected) as Prisma.JobWhereInput);
+      }
     }
 
     if (specialtyConditions.length > 0) {

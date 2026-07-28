@@ -14,7 +14,10 @@ const STORAGE_BASE = brand.assets.storageBase;
 // rendered for the toggle UX) consume this list — they cannot diverge.
 const FAQ_ITEMS = [
     { q: `Is ${brand.name} free for job seekers?`, a: 'Yes! Browsing jobs, setting up alerts, and applying are completely free. We never charge job seekers.' },
-    { q: 'How often are jobs updated?', a: 'Our pipeline runs twice daily, pulling from 3,000+ companies across major job boards and direct career pages.' },
+    // P0 #5: cadence claim only — the previous answer carried a hardcoded
+    // company-count figure (config/niche/copy.ts RULE: evergreen claims
+    // only; live counters come from lib/site-stats.ts).
+    { q: 'How often are jobs updated?', a: 'Our pipeline runs twice daily, pulling new listings from major job boards and direct employer career pages.' },
     { q: 'How do I post a job as an employer?', a: 'Create a free employer account and post your job listing. Featured listings are available for enhanced visibility.' },
     { q: 'Can I get daily job alerts?', a: 'Absolutely! Sign up for free and set your preferences (location, job type, salary range). We\'ll email you matching jobs daily.' },
     { q: 'How do I delete my account?', a: `Go to Settings > Account and click "Delete Account", or email us at ${brand.email.support} and we'll handle it within 24 hours.` },

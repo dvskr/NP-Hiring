@@ -2,37 +2,56 @@ import { brand } from '@/config/brand';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { slugify } from '@/lib/utils';
+import { activeIndexableJobWhere } from '@/lib/active-job-filter';
+import { getSiteStats } from '@/lib/site-stats';
 
 const BASE_URL = brand.baseUrl;
 
 /**
  * RSS Feed — /feed.xml
- * 
- * Serves the 50 most recent published PMHNP jobs as an RSS 2.0 feed.
+ *
+ * Serves the 50 most recent active, indexable jobs as an RSS 2.0 feed.
  * Used by Google News, Feedly, AI systems, and job aggregators.
  */
 export async function GET() {
   try {
-    const jobs = await prisma.job.findMany({
-      where: { isPublished: true },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        employer: true,
-        location: true,
-        city: true,
-        state: true,
-        description: true,
-        descriptionSummary: true,
-        normalizedMinSalary: true,
-        normalizedMaxSalary: true,
-        createdAt: true,
-        isRemote: true,
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
+    const [jobs, siteStats] = await Promise.all([
+      prisma.job.findMany({
+        // P0 #21: bare `isPublished: true` kept serving expired and
+        // repeatedly-dead-link jobs to aggregators after they 410'd on the
+        // site. activeIndexableJobWhere() is the shared indexable-surface
+        // gate (published + not expired + not flagged as a dead link) that
+        // the sitemaps already use.
+        where: activeIndexableJobWhere(),
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          employer: true,
+          location: true,
+          city: true,
+          state: true,
+          description: true,
+          descriptionSummary: true,
+          normalizedMinSalary: true,
+          normalizedMaxSalary: true,
+          createdAt: true,
+          isRemote: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      getSiteStats(),
+    ]);
+
+    // P0 #5: the channel description previously hardcoded a fabricated
+    // five-digit inventory count plus a "number one" superlative
+    // (config/niche/copy.ts RULE: no hardcoded counts; wire
+    // lib/site-stats.ts for live numbers). Same rounding pattern as the
+    // homepage generateMetadata.
+    const jobCountDisplay = siteStats.totalJobs > 1000
+      ? `${(Math.floor(siteStats.totalJobs / 100) * 100).toLocaleString()}+`
+      : siteStats.totalJobs.toLocaleString();
 
     const pubDate = jobs[0]?.createdAt
       ? new Date(jobs[0].createdAt).toUTCString()
@@ -65,7 +84,7 @@ export async function GET() {
   <channel>
     <title>${brand.name} — Latest ${brand.niche.medium} Jobs</title>
     <link>${BASE_URL}</link>
-    <description>The latest ${brand.niche.short} job listings from the #1 ${brand.niche.descriptor} job board. 10,000+ positions across all 50 states, updated daily.</description>
+    <description>The latest ${brand.niche.short} job listings from ${brand.name} — ${jobCountDisplay} positions across the United States, updated daily.</description>
     <language>en-us</language>
     <lastBuildDate>${pubDate}</lastBuildDate>
     <atom:link href="${BASE_URL}/feed.xml" rel="self" type="application/rss+xml"/>

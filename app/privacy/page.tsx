@@ -7,13 +7,17 @@ import { brand } from '@/config/brand';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
+// P0 OG sweep: edge-generated card via /api/og — the previous Supabase
+// page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
+const PRIVACY_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent('Privacy Policy')}&type=page`;
+
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description: `Privacy Policy for ${brand.name}. Learn how we collect, use, and protect your information.`,
   openGraph: {
-    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-privacy-policy.webp`, width: 1280, height: 900, alt: `${brand.name} privacy policy page detailing data collection, security measures, and user privacy rights` }],
+    images: [{ url: PRIVACY_OG_IMAGE, width: 1200, height: 630, alt: `${brand.name} privacy policy page detailing data collection, security measures, and user privacy rights` }],
   },
-  twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-privacy-policy.webp`] },
+  twitter: { card: 'summary_large_image', images: [PRIVACY_OG_IMAGE] },
   alternates: { canonical: `${brand.baseUrl}/privacy` },
 };
 

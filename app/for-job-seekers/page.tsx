@@ -12,9 +12,11 @@ import {
   Check, X, Star, Sparkles, DollarSign, Bell, Bookmark, FileText, SlidersHorizontal, BookOpen, Gift, Award,
 } from 'lucide-react';
 
-const STORAGE_BASE = brand.assets.storageBase;
-
 export const revalidate = 3600;
+
+// P0 OG sweep: edge-generated card via /api/og — the previous Supabase
+// page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
+const SEEKERS_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Find Your Next ${brand.niche.short} Role`)}&type=page`;
 
 export const metadata: Metadata = {
   title: `For Job Seekers — Find Your Next ${brand.niche.short} Role | ${brand.name}`,
@@ -25,9 +27,9 @@ export const metadata: Metadata = {
   description:
     `Find your next ${brand.niche.long} position. Search thousands of verified roles, compare salaries, get daily alerts, and apply directly — 100% free forever.`,
   openGraph: {
-    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-seeker-career-resources.webp`, width: 1280, height: 900, alt: `${brand.niche.short} job seeker career resources` }],
+    images: [{ url: SEEKERS_OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} job seeker career resources` }],
   },
-  twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-seeker-career-resources.webp`] },
+  twitter: { card: 'summary_large_image', images: [SEEKERS_OG_IMAGE] },
   alternates: { canonical: `${brand.baseUrl}/for-job-seekers` },
 };
 

@@ -4,13 +4,39 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { X, ChevronDown, ChevronUp, Search, MapPin } from 'lucide-react';
 import { FilterState, FilterCounts, DEFAULT_FILTERS } from '@/types/filters';
-import { filtersToParams, parseFiltersFromParams } from '@/lib/filters';
+import {
+  filtersToParams,
+  parseFiltersFromParams,
+  categoryFilterLabel,
+  SPECIALTY_FILTER_OPTIONS,
+} from '@/lib/filters';
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { SALARY_FILTER_BUCKETS } from '@/config/niche/stats';
 import { trackSearch, trackFilterChange } from '@/lib/analytics';
 
+// Human-readable names for the active-category pill — derived from the
+// taxonomy registry (single source of truth), so removed donor slugs can't
+// linger here and new registry slugs label themselves automatically.
+const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
+  ALL_CATEGORY_SLUGS.map((slug) => [slug, categoryFilterLabel(slug)]),
+);
+
+// Pill labels for the `specialty` URL param: registry-slug values use their
+// display label; the two legacy work-type values keep their checkbox labels.
+const SPECIALTY_VALUE_LABELS: Record<string, string> = {
+  ...Object.fromEntries(SPECIALTY_FILTER_OPTIONS.map((opt) => [opt.value, opt.label])),
+  Telehealth: 'Telehealth',
+  Travel: 'Travel / Locum',
+};
+
 interface CheckboxFilterProps {
   label: string;
-  count: number;
+  /**
+   * Result-count badge. `0` renders a gray zero badge; omit (undefined) to
+   * hide the badge entirely — used for filter values the counts API does
+   * not report yet, so we never fabricate a "0 jobs" signal.
+   */
+  count?: number;
   checked: boolean;
   onChange: () => void;
   disabled?: boolean;
@@ -40,14 +66,16 @@ function CheckboxFilter({ label, count, checked, onChange, disabled }: CheckboxF
         />
         <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{label}</span>
       </div>
-      <span style={{
-        fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '12px',
-        backgroundColor: count === 0 ? '#F3F4F6' : '#FCE7F3',
-        color: count === 0 ? '#9CA3AF' : '#9D174D',
-        boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.7), 1px 1px 2px rgba(0,0,0,0.03)',
-      }}>
-        {(count || 0).toLocaleString()}
-      </span>
+      {typeof count === 'number' && (
+        <span style={{
+          fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '12px',
+          backgroundColor: count === 0 ? '#F3F4F6' : '#FCE7F3',
+          color: count === 0 ? '#9CA3AF' : '#9D174D',
+          boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.7), 1px 1px 2px rgba(0,0,0,0.03)',
+        }}>
+          {count.toLocaleString()}
+        </span>
+      )}
     </label>
   );
 }
@@ -197,6 +225,12 @@ export default function LinkedInFilters() {
     router.push(`/jobs?${filtersToParams(newFilters as FilterState).toString()}`, { scroll: false });
   };
 
+  // Per-specialty counts: the typed FilterCounts.specialty only declares the
+  // two legacy work-type keys; registry-slug keys flow through untyped once
+  // the filter-counts API reports them. Undefined hides the badge (we never
+  // fabricate a zero).
+  const specialtyCounts = (counts?.specialty ?? {}) as Partial<Record<string, number>>;
+
   // Count active filters (including category)
   const activeFilterCount =
     filters.workMode.length +
@@ -210,31 +244,6 @@ export default function LinkedInFilters() {
     (filters.salaryMin ? 1 : 0) +
     (filters.postedWithin ? 1 : 0) +
     (filters.category ? 1 : 0);
-
-  // Human-readable category names
-  const CATEGORY_LABELS: Record<string, string> = {
-    'child-adolescent': 'Child & Adolescent',
-    'community-health': 'Community Health',
-    'correctional': 'Correctional',
-    'new-grad': 'New Grad',
-    'outpatient': 'Outpatient',
-    'substance-abuse': 'Substance Abuse',
-    'travel': 'Travel',
-    'senior': 'Senior',
-    'telehealth': 'Telehealth',
-    'contract': 'Contract',
-    'crisis': 'Crisis',
-    'entry-level': 'Entry Level',
-    'full-time': 'Full-Time',
-    'geriatric': 'Geriatric',
-    'hospital': 'Hospital',
-    'lgbtq': 'LGBTQ+',
-    'locum-tenens': 'Locum Tenens',
-    'mid-career': 'Mid-Career',
-    'part-time': 'Part-Time',
-    'per-diem': 'Per Diem',
-    'private-practice': 'Private Practice',
-  };
 
   // Get active filter pills
   const getActiveFilters = () => {
@@ -280,7 +289,7 @@ export default function LinkedInFilters() {
       filters.specialty.forEach(spec => {
         pills.push({
           key: `specialty-${spec}`,
-          label: spec,
+          label: SPECIALTY_VALUE_LABELS[spec] || spec,
           onRemove: () => toggleArrayFilter('specialty', spec),
         });
       });
@@ -548,8 +557,27 @@ export default function LinkedInFilters() {
               />
             </FilterSection>
 
-            {/* Specialty */}
+            {/* Specialty — the taxonomy registry's clinical specialty axis
+                (SPECIALTY_FILTER_OPTIONS in lib/filters.ts), riding the same
+                `specialty` URL param as the legacy work-type values. Count
+                badges appear per specialty once the filter-counts API
+                reports keys for these slugs. */}
             <FilterSection title="Specialty">
+              {SPECIALTY_FILTER_OPTIONS.map((option) => (
+                <CheckboxFilter
+                  key={option.value}
+                  label={option.label}
+                  count={specialtyCounts[option.value]}
+                  checked={filters.specialty?.includes(option.value) || false}
+                  onChange={() => toggleArrayFilter('specialty', option.value)}
+                />
+              ))}
+            </FilterSection>
+
+            {/* Work Type — the legacy Telehealth / Travel keyword filters.
+                Their 'Telehealth' / 'Travel' URL values predate the taxonomy
+                registry and are preserved as-is. */}
+            <FilterSection title="Work Type">
               <CheckboxFilter
                 label="Telehealth"
                 count={counts?.specialty?.Telehealth || 0}

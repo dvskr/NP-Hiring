@@ -29,14 +29,11 @@ export default async function LoginPage({
   }
 
   return (
-    <AuthLayout
-      illustration="/illustrations/auth-login.png"
-      testimonial={{
-        quote: `"I found my dream remote ${brand.niche.short} position in less than a week. The job matching was incredibly accurate."`,
-        name: 'Sarah M., PMHNP-BC',
-        title: 'Austin, TX',
-      }}
-    >
+    // P0 #18: the fabricated first-name-only testimonial was removed — same
+    // E-E-A-T rationale as the purged /about testimonials (app/about/
+    // AboutClient.tsx SEO Fix H11). Reinstate ONLY with a real, opted-in,
+    // attributable quote.
+    <AuthLayout illustration="/illustrations/auth-login.png">
       <Suspense
         fallback={
           <div className="space-y-4">

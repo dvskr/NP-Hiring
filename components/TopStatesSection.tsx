@@ -1,21 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import TopStatesList from '@/components/TopStatesList';
 
-const FALLBACK_STATES = [
-    { name: 'New York', count: 63, slug: 'new-york' },
-    { name: 'Massachusetts', count: 46, slug: 'massachusetts' },
-    { name: 'Florida', count: 45, slug: 'florida' },
-    { name: 'Pennsylvania', count: 42, slug: 'pennsylvania' },
-    { name: 'California', count: 40, slug: 'california' },
-    { name: 'Texas', count: 32, slug: 'texas' },
-    { name: 'North Carolina', count: 28, slug: 'north-carolina' },
-    { name: 'Colorado', count: 26, slug: 'colorado' },
-    { name: 'Illinois', count: 23, slug: 'illinois' },
-    { name: 'Virginia', count: 22, slug: 'virginia' },
-    { name: 'Georgia', count: 22, slug: 'georgia' },
-    { name: 'Ohio', count: 20, slug: 'ohio' },
-];
-
 function toSlug(name: string): string {
     return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
@@ -50,9 +35,11 @@ export default async function TopStatesSection() {
         console.error('Error fetching state data:', error);
     }
 
-    if (states.length < 8) {
-        states = FALLBACK_STATES;
-    }
-
+    // P0 #24: omit, never fabricate. The previous hardcoded fallback list
+    // rendered invented per-state job counts whenever live data was thin.
+    // Mirroring the homepage-FAQ omit-not-fabricate pattern: with no live
+    // data, TopStatesList renders nothing at all (it returns null for an
+    // empty list); with partial data we show only the real counts we
+    // actually have.
     return <TopStatesList states={states} />;
 }

@@ -125,10 +125,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title,
     description,
     keywords: [
-      `pmhnp jobs ${metro.city.toLowerCase()}`,
-      `psychiatric nurse practitioner ${metro.city.toLowerCase()}`,
-      `pmhnp salary ${metro.city.toLowerCase()}`,
-      `mental health np jobs ${metro.stateCode.toLowerCase()}`,
+      `${brand.niche.short.toLowerCase()} jobs ${metro.city.toLowerCase()}`,
+      `${brand.niche.descriptor} jobs ${metro.city.toLowerCase()}`,
+      `${brand.niche.short.toLowerCase()} salary ${metro.city.toLowerCase()}`,
+      `${brand.niche.descriptor} jobs ${metro.stateCode.toLowerCase()}`,
     ],
     openGraph: {
       title: `${brand.niche.short} Jobs in ${metro.city}, ${metro.stateCode}`,

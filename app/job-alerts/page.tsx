@@ -174,8 +174,11 @@ function JobAlertsContent() {
         headlineLine2="a Dream Job"
         headlineSub="Personalized alerts"
         stats={[
-          { value: "200+", label: 'New Daily' },
-          { value: "10K+", label: 'Active Jobs' }
+          // P0 #5: evergreen cadence/price claims only — the previous
+          // numeric figures were fabricated inventory counts
+          // (config/niche/copy.ts RULE: no hardcoded counts).
+          { value: 'Daily', label: 'Job Updates' },
+          { value: 'Free', label: 'For Job Seekers' }
         ]}
         description={`Get personalized ${brand.niche.short} job alerts delivered straight to your inbox. Be the first to apply to jobs that match your exact criteria.`}
         ctaLabel="Manage Alerts"
@@ -451,19 +454,21 @@ function JobAlertsContent() {
               </div>
             </div>
 
-            {/* Stats */}
+            {/* Stats — P0 #5: evergreen cadence/price claims only. The
+                previous tiles carried fabricated inventory counts
+                (config/niche/copy.ts RULE: no hardcoded counts). */}
             <div style={{ ...cardBase, padding: '20px' }}>
               <p style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Trusted by {brand.niche.short}s
+                Why set an alert?
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{ ...cardRecessed, padding: '12px', textAlign: 'center' }}>
-                  <p style={{ fontSize: '22px', fontWeight: 800, color: '#BE185D', margin: '0 0 2px' }}>200+</p>
-                  <p style={{ fontSize: '10px', color: '#8A9BA6', margin: 0 }}>New jobs daily</p>
+                  <p style={{ fontSize: '22px', fontWeight: 800, color: '#BE185D', margin: '0 0 2px' }}>Daily</p>
+                  <p style={{ fontSize: '10px', color: '#8A9BA6', margin: 0 }}>New job updates</p>
                 </div>
                 <div style={{ ...cardRecessed, padding: '12px', textAlign: 'center' }}>
-                  <p style={{ fontSize: '22px', fontWeight: 800, color: '#BE185D', margin: '0 0 2px' }}>10,000+</p>
-                  <p style={{ fontSize: '10px', color: '#8A9BA6', margin: 0 }}>Active listings</p>
+                  <p style={{ fontSize: '22px', fontWeight: 800, color: '#BE185D', margin: '0 0 2px' }}>Free</p>
+                  <p style={{ fontSize: '10px', color: '#8A9BA6', margin: 0 }}>No cost, ever</p>
                 </div>
               </div>
             </div>

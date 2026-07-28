@@ -17,12 +17,13 @@ import {
     BookOpen,
 } from 'lucide-react';
 
-const STORAGE_BASE = brand.assets.storageBase;
-
-// Shared OG/schema image for every state salary page. Single definition
-// so the (donor-named) asset path appears exactly once in this file —
-// the niche-copy ratchet counts occurrences.
-const SALARY_GUIDE_OG_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-salary-guide-2026.webp`;
+// P0 OG sweep: per-state OG/schema image rendered by the board's own
+// /api/og edge route — the previous shared Supabase page-screenshot lived
+// in an unpopulated bucket and 400'd on every share (pattern:
+// app/for-employers/page.tsx). Absolute URL because it also feeds the
+// Article JSON-LD `image`.
+const salaryGuideOgImage = (stateName: string, code: string): string =>
+    `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Salary in ${stateName} (${code})`)}&type=page`;
 
 export const revalidate = 86400; // ISR daily
 
@@ -177,7 +178,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // The "Average Pay, Jobs & Cost of Living" suffix moved into the description.
     const title = `${brand.niche.short} Salary in ${stateName} (${code}) 2026 — Avg Pay & Jobs`;
     const description = `${brand.niche.short} salary data for ${stateName}: average pay by practice setting, top employers, and open positions. Updated daily.`;
-    const ogImage = SALARY_GUIDE_OG_IMAGE;
+    const ogImage = salaryGuideOgImage(stateName, code);
 
     return {
         title,
@@ -189,7 +190,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
             type: 'website',
             url: `${brand.baseUrl}/salary-guide/${slug}`,
             siteName: brand.name,
-            images: [{ url: ogImage, width: 1280, height: 900, alt: `${brand.niche.short} Salary in ${stateName} 2026` }],
+            images: [{ url: ogImage, width: 1200, height: 630, alt: `${brand.niche.short} Salary in ${stateName} 2026` }],
         },
         twitter: {
             card: 'summary_large_image',
@@ -308,7 +309,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                     author: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
                     publisher: { '@type': 'Organization', name: brand.name, logo: { '@type': 'ImageObject', url: `${brand.baseUrl}/logo.png` } },
                     mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl },
-                    image: SALARY_GUIDE_OG_IMAGE,
+                    image: salaryGuideOgImage(stateName, stateCode),
                     url: pageUrl,
                 }) }}
             />

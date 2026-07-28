@@ -42,6 +42,32 @@ const CONTACT_BODY = encodeURIComponent(
 )
 const MAILTO = `mailto:${CONTACT_EMAIL}?subject=${CONTACT_SUBJECT}&body=${CONTACT_BODY}`
 
+// Single source of truth for the FAQ content. Both the FAQPage JSON-LD and
+// the visible accordion in SECTION 5 consume this list — they cannot
+// diverge (repo pattern: app/contact/page.tsx).
+const programFaqs = [
+  {
+    q: 'Is there a cost to my program?',
+    a: `No. The widget and quarterly placement report are both free for accredited ${brand.niche.short} programs. We make money from employers who post jobs on the main site.`,
+  },
+  {
+    q: 'Do you collect data on our students?',
+    a: 'No. The widget is anonymous — we track aggregate clicks on the widget itself, but never tie clicks to individual students. No accounts, no PII, no cookies set on your students.',
+  },
+  {
+    q: "What if my IT team can't add an iframe?",
+    a: "We can also send you a co-branded link your students can bookmark or you can put in your LMS. Email us and we'll work with you.",
+  },
+  {
+    q: 'How is the placement report compiled?',
+    a: `We aggregate the active ${brand.niche.short} listings in your state by setting (outpatient, inpatient, telehealth, etc.), salary range, and employer type. After your widget has been live for ~90 days we add cohort-specific data showing where students from your program have been viewing roles.`,
+  },
+  {
+    q: 'Can I see another program using the widget?',
+    a: 'Yes — once we have a few installs we share live examples on request. Email us.',
+  },
+]
+
 async function getProgramsStats() {
   try {
     const [totalJobs, stateRows, subscribers] = await Promise.all([
@@ -85,6 +111,24 @@ export default async function ForProgramsPage() {
           { name: 'Home', url: brand.baseUrl },
           { name: 'For Program Directors', url: `${brand.baseUrl}/for-programs` },
         ]}
+      />
+
+      {/* FAQPage JSON-LD — derives from the SAME programFaqs array the
+          visible SECTION 5 accordion renders, so schema and page copy
+          cannot diverge (repo pattern: app/contact/page.tsx). */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: programFaqs.map(({ q, a }) => ({
+              '@type': 'Question',
+              name: q,
+              acceptedAnswer: { '@type': 'Answer', text: a },
+            })),
+          }),
+        }}
       />
 
       {/* ═══════════════════════════════════════════════════════════════
@@ -1089,7 +1133,7 @@ export default async function ForProgramsPage() {
                 }}
               >
                 Forward the snippet to your web admin, or send us your
-                career-services URL — we'll install it for you.
+                career-services URL — we&apos;ll install it for you.
               </p>
             </div>
             <a
@@ -1275,28 +1319,7 @@ export default async function ForProgramsPage() {
             Frequently Asked
           </h2>
 
-          {[
-            {
-              q: 'Is there a cost to my program?',
-              a: `No. The widget and quarterly placement report are both free for accredited ${brand.niche.short} programs. We make money from employers who post jobs on the main site.`,
-            },
-            {
-              q: 'Do you collect data on our students?',
-              a: 'No. The widget is anonymous — we track aggregate clicks on the widget itself, but never tie clicks to individual students. No accounts, no PII, no cookies set on your students.',
-            },
-            {
-              q: "What if my IT team can't add an iframe?",
-              a: "We can also send you a co-branded link your students can bookmark or you can put in your LMS. Email us and we'll work with you.",
-            },
-            {
-              q: 'How is the placement report compiled?',
-              a: `We aggregate the active ${brand.niche.short} listings in your state by setting (outpatient, inpatient, telehealth, etc.), salary range, and employer type. After your widget has been live for ~90 days we add cohort-specific data showing where students from your program have been viewing roles.`,
-            },
-            {
-              q: 'Can I see another program using the widget?',
-              a: 'Yes — once we have a few installs we share live examples on request. Email us.',
-            },
-          ].map(({ q, a }, i) => (
+          {programFaqs.map(({ q, a }, i) => (
             <details
               key={i}
               style={{
@@ -1353,7 +1376,7 @@ export default async function ForProgramsPage() {
               lineHeight: 1.1,
             }}
           >
-            Let's Help Your Students<br />
+            Let&apos;s Help Your Students<br />
             <span style={{ color: '#BE185D' }}>Get Hired</span>
           </h2>
           <p
@@ -1365,7 +1388,7 @@ export default async function ForProgramsPage() {
             }}
           >
             Send us a quick email with your program name and a few times
-            that work for a 15-minute intro call. We'll come prepared with
+            that work for a 15-minute intro call. We&apos;ll come prepared with
             a sample widget for your state.
           </p>
           <a

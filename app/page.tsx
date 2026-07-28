@@ -12,7 +12,11 @@ import HomepageFAQ from '@/components/HomepageFAQ';
 import EmployerHowItWorks from '@/components/EmployerHowItWorks';
 import dynamic from 'next/dynamic';
 
-const STORAGE_BASE = brand.assets.storageBase;
+// P0 OG sweep: the previous OG image lived in an unpopulated Supabase
+// bucket and 400'd on every social share. Bare /api/og renders the
+// board's edge-generated homepage card (logo, headline, live-stat row) —
+// same pattern as app/for-employers/page.tsx.
+const HOME_OG_IMAGE = `${brand.baseUrl}/api/og`;
 
 // Below-fold interactive components — defer from critical bundle
 const ExitIntentPopup = dynamic(() => import('@/components/ExitIntentPopup'));
@@ -60,16 +64,16 @@ export async function generateMetadata(): Promise<Metadata> {
       description: `Browse ${jobCountDisplay} ${brand.niche.descriptor} jobs. Remote, hybrid, and in-person positions with salary transparency.`,
       images: [
         {
-          url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`,
-          width: 1280,
-          height: 900,
-          alt: `${brand.name} job board homepage showing ${jobCountDisplay} ${brand.niche.descriptor} jobs from ${uniqueEmployerCount}+ companies across 50 states`,
+          url: HOME_OG_IMAGE,
+          width: 1200,
+          height: 630,
+          alt: `${brand.name} job board — ${jobCountDisplay} ${brand.niche.descriptor} jobs from ${uniqueEmployerCount}+ companies across 50 states`,
         },
       ],
     },
     twitter: {
       card: 'summary_large_image',
-      images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`],
+      images: [HOME_OG_IMAGE],
     },
     alternates: {
       canonical: brand.baseUrl,

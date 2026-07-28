@@ -12,6 +12,7 @@ import JobCard from '@/components/JobCard';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { stateToSlug } from '@/lib/pseo/setting-state-config';
+import { METRO_CITIES } from '@/lib/metro-data';
 import StateFAQ from '@/components/StateFAQ';
 import { Job } from '@/lib/types';
 import {
@@ -477,6 +478,22 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
   const stateSlug = stateToSlug(stateName);
   const basePath = `/jobs/state/${stateSlug}`;
 
+  // Metro guides in this state (editorial pages at /jobs/metro/[slug]) —
+  // linked from the Explore section so the metro pages are not orphans.
+  const stateMetros = METRO_CITIES.filter((m) => m.state === stateName);
+
+  // ONE array feeds both the visible FAQ accordion and the FAQPage JSON-LD —
+  // the schema must never emit truncated stubs that mismatch the visible
+  // answers (same single-source pattern as app/jobs/metro/[slug]/page.tsx
+  // and the B48/B52 regression guards).
+  const stateFaqs = [
+    { q: `How many ${brand.niche.short} jobs are in ${stateName}?`, a: `There are currently ${stats.totalJobs} ${brand.niche.adjective} nurse practitioner positions available in ${stateName}${stats.avgSalary > 0 ? `, with an average salary of $${stats.avgSalary}K/year` : ''}. New positions are added daily.` },
+    { q: `What is the practice authority in ${stateName}?`, a: practiceAuthority ? practiceAuthority.details : `Practice authority in ${stateName} varies. Check state-specific NP practice regulations for the most current requirements.` },
+    { q: `What is the average ${brand.niche.short} salary in ${stateName}?`, a: stats.avgSalary > 0 ? `The average ${brand.niche.short} salary in ${stateName} is $${stats.avgSalary}K/year. Salaries vary based on experience, setting, and whether the role is W-2 or 1099.` : `${brand.niche.short} salaries in ${stateName} typically range from $130K to $200K+ depending on setting and experience level.` },
+    { q: `Which cities in ${stateName} have the most ${brand.niche.short} jobs?`, a: citiesWithJobs.length > 0 ? `Top cities for ${brand.niche.short} jobs in ${stateName} include ${citiesWithJobs.slice(0, 4).map(c => `${c.name} (${c.count} jobs)`).join(', ')}.` : `${brand.niche.short} positions in ${stateName} are distributed across multiple cities and include remote telehealth options.` },
+    { q: `Can I work remotely as an ${brand.niche.short} in ${stateName}?`, a: `Yes, many telehealth and remote ${brand.niche.short} positions allow you to practice from ${stateName}. You'll need an active NP license in the state where your patient resides.` },
+  ];
+
   /* Design Tokens */
   const clayCard: React.CSSProperties = {
     background: '#FFFFFF', borderRadius: '20px',
@@ -752,6 +769,24 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
               </div>
             )}
 
+            {/* Metro Guides — editorial metro landing pages in this state */}
+            {stateMetros.length > 0 && (
+              <div style={{ marginBottom: '24px', paddingBottom: '24px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#7A6A62', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
+                  {stateName} Metro Guides
+                </h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {stateMetros.map((m) => (
+                    <Link key={m.slug} href={`/jobs/metro/${m.slug}`}
+                      className="pseo-pill"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 16px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#1A2E35', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '3px 3px 8px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
+                      {m.city} {brand.niche.short} Guide <ArrowRight size={12} style={{ color: '#BE185D' }} />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Job Types — clay pills */}
             <div style={{ marginBottom: '24px', paddingBottom: '24px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
               <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#7A6A62', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
@@ -833,13 +868,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>{brand.niche.short} Jobs in {stateName}</h2>
           <div style={{ display: 'grid', gap: '12px' }}>
-            {[
-              { q: `How many ${brand.niche.short} jobs are in ${stateName}?`, a: `There are currently ${stats.totalJobs} ${brand.niche.adjective} nurse practitioner positions available in ${stateName}${stats.avgSalary > 0 ? `, with an average salary of $${stats.avgSalary}K/year` : ''}. New positions are added daily.` },
-              { q: `What is the practice authority in ${stateName}?`, a: practiceAuthority ? practiceAuthority.details : `Practice authority in ${stateName} varies. Check state-specific NP practice regulations for the most current requirements.` },
-              { q: `What is the average ${brand.niche.short} salary in ${stateName}?`, a: stats.avgSalary > 0 ? `The average ${brand.niche.short} salary in ${stateName} is $${stats.avgSalary}K/year. Salaries vary based on experience, setting, and whether the role is W-2 or 1099.` : `${brand.niche.short} salaries in ${stateName} typically range from $130K to $200K+ depending on setting and experience level.` },
-              { q: `Which cities in ${stateName} have the most ${brand.niche.short} jobs?`, a: citiesWithJobs.length > 0 ? `Top cities for ${brand.niche.short} jobs in ${stateName} include ${citiesWithJobs.slice(0, 4).map(c => `${c.name} (${c.count} jobs)`).join(', ')}.` : `${brand.niche.short} positions in ${stateName} are distributed across multiple cities and include remote telehealth options.` },
-              { q: `Can I work remotely as an ${brand.niche.short} in ${stateName}?`, a: `Yes, many telehealth and remote ${brand.niche.short} positions allow you to practice from ${stateName}. You'll need an active NP license in the state where your patient resides.` },
-            ].map((faq, idx) => (
+            {stateFaqs.map((faq, idx) => (
               <details key={idx} className="faq-accordion" style={{ ...clayCard, overflow: 'hidden' }}>
                 <summary style={{ padding: '20px 28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', listStyle: 'none', fontSize: '16px', fontWeight: 700, color: '#1A2E35', lineHeight: 1.4 }}>
                   <span>{faq.q}</span>
@@ -849,13 +878,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
               </details>
             ))}
           </div>
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [
-            { q: `How many ${brand.niche.short} jobs are in ${stateName}?`, a: `There are currently ${stats.totalJobs} positions available in ${stateName}.` },
-            { q: `What is the practice authority in ${stateName}?`, a: practiceAuthority?.details || `Practice authority varies by state.` },
-            { q: `What is the average ${brand.niche.short} salary in ${stateName}?`, a: stats.avgSalary > 0 ? `$${stats.avgSalary}K/year` : `$130K-$200K+` },
-            { q: `Which cities in ${stateName} have the most ${brand.niche.short} jobs?`, a: citiesWithJobs.slice(0, 4).map(c => c.name).join(', ') || 'Multiple cities' },
-            { q: `Can I work remotely as an ${brand.niche.short} in ${stateName}?`, a: `Yes, many telehealth positions are available.` },
-          ].map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: stateFaqs.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }) }} />
         </section>
       </div>
 

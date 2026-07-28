@@ -190,7 +190,12 @@ interface NpSpecialtyConfigInput {
 function buildNpSpecialtyConfig(input: NpSpecialtyConfigInput): SettingConfig {
   return {
     ...input,
-    faqCategory: input.slug, // CategoryFAQ renders nothing for unmapped keys
+    // FAQ wiring: each specialty slug maps to its builder in
+    // lib/pseo/category-faq-data.ts (2026-07 P0 content pass). The psych
+    // specialty slug is the one remaining unmapped key — CategoryFAQ renders
+    // nothing for it until the niche-copy ratchet ceiling for the FAQ data
+    // file sanctions the specialty copy.
+    faqCategory: input.slug,
     buildWhere: (stateName: string) => ({
       isPublished: true,
       state: { equals: stateName, mode: 'insensitive' },

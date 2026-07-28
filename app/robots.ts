@@ -136,6 +136,10 @@ const FULL_DISALLOW = [
 //   preview cards useful without re-trapping Googlebot in the original
 //   "Indexed though blocked by robots.txt" state.
 const SOCIAL_DISALLOW = [
+  // Blocks infrastructure API routes — but the social-bot rule block
+  // below MUST pair this with the PUBLIC_ALLOW carve-outs so /api/og
+  // (every og:image on the site) out-matches this prefix. See the rule
+  // block comment before it's tempted back to a bare `allow: '/'`.
   '/api/',
   '/admin',
   '/dashboard',
@@ -307,9 +311,18 @@ export default function robots(): MetadataRoute.Robots {
       // everything public; the lighter SOCIAL_DISALLOW just keeps
       // them out of auth-gated surfaces where the preview would be
       // a login shell anyway.
+      //
+      // PUBLIC_ALLOW carve-out (2026-07-28, P0 #1 hardening): the bare
+      // `allow: '/'` lost to SOCIAL_DISALLOW's `/api/` under RFC 9309
+      // longest-match-wins, so the very crawlers that render share cards
+      // (Twitterbot, LinkedInBot, Slackbot, facebookexternalhit) were
+      // disallowed from fetching the /api/og images every og:image tag
+      // now points at. Well-behaved preview bots honor robots.txt for
+      // og:image fetches, so cards rendered without images. /api/og must
+      // out-match /api/ here just like it does in the `*` rule.
       {
         userAgent: [...SOCIAL_BOTS],
-        allow: '/',
+        allow: ['/', ...PUBLIC_ALLOW],
         disallow: SOCIAL_DISALLOW,
       },
     ],

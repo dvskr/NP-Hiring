@@ -211,11 +211,25 @@ export async function buildCategoryLandingMetadata(
     const page = Math.max(1, parseInt(searchParams.page || '1', 10) || 1);
     const totalJobs = await prisma.job.count({ where: categoryWhere(slug) });
     const countPrefix = totalJobs > 0 ? `${totalJobs} ` : '';
+    const description = totalJobs > 0
+        ? `Find ${totalJobs} ${role} jobs. Salaries, top employers, and new openings updated daily.`
+        : `Browse ${role} jobs. New openings, salary data, and top employers updated daily.`;
     return {
         title: `${countPrefix}${role} Jobs`,
-        description: totalJobs > 0
-            ? `Find ${totalJobs} ${role} jobs. Salaries, top employers, and new openings updated daily.`
-            : `Browse ${role} jobs. New openings, salary data, and top employers updated daily.`,
+        description,
+        // OG images route through the board's own /api/og renderer — the same
+        // pattern as app/jobs/va/page.tsx — never a remote storage bucket.
+        openGraph: {
+            title: `${countPrefix}${role} Jobs`,
+            description,
+            type: 'website',
+            images: [{
+                url: `/api/og?type=page&title=${encodeURIComponent(`${role} Jobs`)}&subtitle=${encodeURIComponent(totalJobs > 0 ? `${totalJobs} open positions — updated daily` : 'Salaries, top employers, and new openings')}`,
+                width: 1200,
+                height: 630,
+                alt: `${role} Jobs`,
+            }],
+        },
         alternates: { canonical: `${brand.baseUrl}/jobs/${slug}` },
         // Noindex paginated views and (for now) empty categories — a 0-job
         // landing page is a thin doorway until inventory is tagged.

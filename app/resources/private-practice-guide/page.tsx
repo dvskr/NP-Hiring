@@ -4,13 +4,14 @@ import Link from 'next/link';
 import { Building2, DollarSign, FileText, CheckCircle, Shield, Users, BookOpen, Landmark } from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 
-const STORAGE_BASE = brand.assets.storageBase;
-
 // Editorial review constants — bump LAST_REVIEWED on each pass so Article
 // dateModified reflects real freshness, not the original publish date.
 const PUBLISHED_AT = '2026-03-19';
 const LAST_REVIEWED = '2026-03-19';
-const HERO_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp`;
+// P0 OG sweep: edge-generated card via /api/og — the previous Supabase
+// page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
+// Absolute URL because it also feeds Article JSON-LD `image`.
+const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`How to Start an ${brand.niche.short} Private Practice`)}&type=page`;
 
 export const metadata: Metadata = {
   title: `How to Start an ${brand.niche.short} Private Practice — Step-by-Step Guide 2026`,
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
     title: `How to Start an ${brand.niche.short} Private Practice — 2026 Guide`,
     description: `Step-by-step guide to launching your own ${brand.niche.descriptor} private practice.`,
     type: 'article',
-    images: [{ url: HERO_IMAGE, width: 1280, height: 900, alt: `How to Start an ${brand.niche.short} Private Practice — 2026 Guide` }],
+    images: [{ url: HERO_IMAGE, width: 1200, height: 630, alt: `How to Start an ${brand.niche.short} Private Practice — 2026 Guide` }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -197,7 +198,10 @@ export default function PrivatePracticeGuidePage() {
               How to Start an {brand.niche.short} Private Practice
             </h1>
             <p className="text-sm text-pink-200 text-center mt-2 mb-4">
-              Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} | Step-by-step startup guide
+              {/* Audit P0 #23: render the real review date (same constant the
+                  Article schema emits) — never render time, which fabricated
+                  freshness and contradicted dateModified. */}
+              Last Updated: {new Date(`${LAST_REVIEWED}T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })} | Step-by-step startup guide
             </p>
             <p className="text-lg md:text-xl text-pink-100 mb-6">
               From LLC formation to full caseload — everything you need to launch your {brand.niche.short} practice

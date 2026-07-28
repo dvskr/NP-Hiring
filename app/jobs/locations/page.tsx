@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, Wifi, TrendingUp, Globe, Video, Plane, GraduationCap, Calendar } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { METRO_CITIES } from '@/lib/metro-data';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CategoryHero from '@/components/CategoryHero';
 import StateImage from '@/components/StateImage';
@@ -445,6 +446,48 @@ export default async function LocationsPage() {
               </>
             )}
           </div>
+
+          {/* ═══ Metro Guides — editorial metro landing pages ═══ */}
+          {METRO_CITIES.length > 0 && (
+            <div className="mb-12">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                <MapPin className="h-6 w-6" style={{ color: '#BE185D' }} />
+                <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 800, fontFamily: 'var(--font-lora, Georgia, serif)', color: '#1A2E35', margin: 0 }}>
+                  Metro Area Guides
+                </h2>
+              </div>
+              <p style={{ fontSize: '14px', color: '#7A6A62', marginTop: '-12px', marginBottom: '20px', lineHeight: 1.5 }}>
+                In-depth {brand.niche.short} job guides for major metros — practice authority, cost of living, top employers, and local licensure notes.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {METRO_CITIES.map((metro) => (
+                  <Link key={metro.slug} href={`/jobs/metro/${metro.slug}`} className="group">
+                    <div className="h-full rounded-xl p-5 hover:shadow-md transition-all duration-200 group-hover:-translate-y-1" style={clayCard}>
+                      <h3 className="font-bold mb-1 transition-colors" style={{ color: '#1A2E35' }}>
+                        {metro.city}
+                      </h3>
+                      <p className="text-xs font-medium mb-3" style={{ color: '#7A6A62' }}>
+                        {metro.state} ({metro.stateCode})
+                      </p>
+                      <span style={{
+                        display: 'inline-block', padding: '3px 10px', borderRadius: '10px',
+                        fontSize: '11px', fontWeight: 700, marginBottom: '12px',
+                        background: metro.practiceAuthority === 'Full' ? '#D1FAE5' : metro.practiceAuthority === 'Reduced' ? '#FEF3C7' : '#FEE2E2',
+                        color: metro.practiceAuthority === 'Full' ? '#065F46' : metro.practiceAuthority === 'Reduced' ? '#92400E' : '#991B1B',
+                      }}>
+                        {metro.practiceAuthority} Practice
+                      </span>
+                      <div className="text-sm font-medium flex items-center gap-1" style={{ color: '#BE185D' }}>
+                        Read Guide
+                        <span className="group-hover:translate-x-1 transition-transform">→</span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Top Cities Section */}
           {stats.topCities.length > 0 && (

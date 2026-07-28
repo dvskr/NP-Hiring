@@ -1,25 +1,36 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Download, CheckCircle, Loader2, Mail } from 'lucide-react';
+import { useState, useSyncExternalStore } from 'react';
+import Link from 'next/link';
+import { Download, CheckCircle, Loader2, Mail, ArrowRight } from 'lucide-react';
+import { SALARY_GUIDE_PDF_AVAILABLE } from '@/app/api/salary-guide/pdf-availability';
 
 interface ResourceDownloadGateProps {
     resourceUrl: string;
     resourceTitle: string;
 }
 
-const STORAGE_KEY = 'pmhnp_resource_unlocked';
+const STORAGE_KEY = 'resource_download_unlocked';
+
+// localStorage read via useSyncExternalStore instead of a setState-in-effect
+// (react-hooks/set-state-in-effect): server snapshot is false, client snapshot
+// reads storage after hydration — same behavior, no cascading render.
+const subscribeNoop = () => () => {};
+const getUnlockedSnapshot = () => {
+    try {
+        return localStorage.getItem(STORAGE_KEY) === 'true';
+    } catch {
+        return false;
+    }
+};
+const getUnlockedServerSnapshot = () => false;
 
 export default function ResourceDownloadGate({ resourceUrl, resourceTitle }: ResourceDownloadGateProps) {
-    const [unlocked, setUnlocked] = useState(false);
+    const storedUnlocked = useSyncExternalStore(subscribeNoop, getUnlockedSnapshot, getUnlockedServerSnapshot);
+    const [justUnlocked, setJustUnlocked] = useState(false);
+    const unlocked = storedUnlocked || justUnlocked;
     const [email, setEmail] = useState('');
     const [status, setStatus] = useState<'idle' | 'loading' | 'done'>('idle');
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setUnlocked(localStorage.getItem(STORAGE_KEY) === 'true');
-        }
-    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -34,12 +45,32 @@ export default function ResourceDownloadGate({ resourceUrl, resourceTitle }: Res
                 body: JSON.stringify({ email: trimmed, source: 'resource_download' }),
             });
         } catch { /* silent */ }
-        localStorage.setItem(STORAGE_KEY, 'true');
-        setUnlocked(true);
+        try {
+            localStorage.setItem(STORAGE_KEY, 'true');
+        } catch { /* storage unavailable — session-only unlock */ }
+        setJustUnlocked(true);
         setStatus('done');
         // Auto-trigger download
         window.open(resourceUrl, '_blank');
     };
+
+    // Audit P0 #6: the salary-guide PDF this gate delivers does not exist
+    // yet (dead storage object) — running email capture for a dead link is
+    // dishonest. Until the PDF is real (flip the flag in
+    // app/api/salary-guide/pdf-availability.ts), deliver something real
+    // instead: the live /salary-guide content, no email required.
+    if (!SALARY_GUIDE_PDF_AVAILABLE) {
+        return (
+            <Link
+                href="/salary-guide"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white transition-colors"
+                style={{ background: 'linear-gradient(135deg, #F472B6, #DB2777)' }}
+            >
+                View the Full Salary Guide
+                <ArrowRight size={18} />
+            </Link>
+        );
+    }
 
     if (unlocked) {
         return (

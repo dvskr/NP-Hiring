@@ -45,6 +45,10 @@ export async function GET(request: NextRequest) {
                 select: {
                     id: true,
                     title: true,
+                    // Content audit P0 #3: the stored slug column MUST be
+                    // selected — without it the `job.slug ||` fallback below
+                    // always fires and every URL is re-derived from the title.
+                    slug: true,
                 },
                 orderBy: { createdAt: 'desc' },
             });
@@ -63,9 +67,16 @@ export async function GET(request: NextRequest) {
                 };
             }
 
-            // Build full URLs
+            // Build full URLs.
+            // MUST match the job page's canonical exactly (app/jobs/[slug]/
+            // page.tsx: `job.slug || slugify(job.title, job.id)`) — same fix
+            // as app/feed.xml/route.ts. Deriving the slug from the title alone
+            // spent the 200/day Google Indexing API quota on URLs whose
+            // rel=canonical pointed elsewhere for titles with apostrophes,
+            // slashes, or parens, or for jobs whose title changed after the
+            // slug was stored.
             const urls = recentJobs.map((job) => {
-                const slug = slugify(job.title, job.id);
+                const slug = job.slug || slugify(job.title, job.id);
                 return `${BASE_URL}/jobs/${slug}`;
             });
 

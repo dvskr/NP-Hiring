@@ -7,7 +7,6 @@ import { slugify } from '@/lib/utils';
 import JobsPageClient from './JobsPageClient';
 import { Job } from '@/lib/types';
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 // Nav-only params do not constitute a user filter — paginated and sorted
 // views of the unfiltered list should still be crawled (page>=2 is noindexed
@@ -101,17 +100,17 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
       title: `${title} - Find Your Next Position`,
       description,
       type: 'website',
-      // SEO Fix C8: previously pointed at `pmhnp-job-board-og.webp` which
-      // returns 404 from Supabase, breaking every social share of /jobs and
-      // every filtered jobs URL. Pointing at the existing homepage asset
-      // until a dedicated OG image is uploaded.
-      images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`, width: 1280, height: 900, alt: `${brand.niche.short} Job Board — Browse ${brand.niche.adjective} nurse practitioner jobs` }],
+      // P0 OG sweep: the previous Supabase page-screenshot 400'd on every
+      // social share of /jobs and every filtered jobs URL. The board's own
+      // /api/og edge renderer carries the live filter-aware title instead
+      // (same pattern as app/for-employers/page.tsx).
+      images: [{ url: `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${jobCountDisplay} ${brand.niche.short} Jobs`)}&type=page`, width: 1200, height: 630, alt: `${brand.niche.short} Job Board — Browse ${brand.niche.adjective} nurse practitioner jobs` }],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-job-board-homepage.webp`],
+      images: [`${brand.baseUrl}/api/og?title=${encodeURIComponent(`${jobCountDisplay} ${brand.niche.short} Jobs`)}&type=page`],
     },
     alternates: {
       canonical,
@@ -157,9 +156,14 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
   // re-fetched /api/jobs. Now SSR and CSR build the identical order per sort.
   const orderBy = buildJobsOrderBy(sort as JobSort);
 
+  // Fetch inside try/catch, but construct JSX AFTER it — React renders JSX
+  // lazily, so component errors would never be caught here anyway
+  // (react-hooks/error-boundaries).
+  let jobs: Job[] = [];
+  let total = 0;
   try {
     // Fetch jobs with same logic as API route
-    const [rawJobs, total] = await Promise.all([
+    const [rawJobs, jobCount] = await Promise.all([
       prisma.job.findMany({
         where,
         orderBy,
@@ -200,45 +204,8 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
     ]);
 
     // Map employer logo onto job objects
-    const jobs = rawJobs.map(j => ({ ...j, companyLogoUrl: j.employerJobs?.companyLogoUrl || null, employerJobs: undefined }));
-
-    // Build ItemList schema for job carousel rich results
-    const jobListSchema = {
-      '@context': 'https://schema.org',
-      '@type': 'ItemList',
-      name: `${brand.niche.long} & APRN Jobs`,
-      numberOfItems: total,
-      itemListElement: jobs.slice(0, 10).map((job, i) => {
-        const j = job as { id: string; slug?: string | null; title: string };
-        const slug = j.slug || slugify(j.title, j.id);
-        return {
-          '@type': 'ListItem',
-          position: i + 1,
-          name: job.title,
-          url: `${brand.baseUrl}/jobs/${slug}`,
-        };
-      }),
-    };
-
-    return (
-      <>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jobListSchema).replace(/</g, '\\u003c').replace(/>/g, '\\u003e') }}
-        />
-        {/* Breadcrumb renders INSIDE JobsPageClient, in the right-hand main
-            column above the H1 — that puts it at the top-right corner of
-            the FILTERS panel (not above it, where the fixed sidebar would
-            paint over it). Same JSON-LD BreadcrumbList serializes inline
-            regardless of where the component lives, so SEO is unchanged. */}
-        <JobsPageClient
-          initialJobs={jobs as unknown as Job[]}
-          initialTotal={total}
-          initialPage={page}
-          initialTotalPages={Math.ceil(total / limit)}
-        />
-      </>
-    );
+    jobs = rawJobs.map(j => ({ ...j, companyLogoUrl: j.employerJobs?.companyLogoUrl || null, employerJobs: undefined })) as unknown as Job[];
+    total = jobCount;
   } catch (error) {
     console.error('Error fetching jobs on server:', error);
 
@@ -254,4 +221,42 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
       </>
     );
   }
+
+  // Build ItemList schema for job carousel rich results
+  const jobListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${brand.niche.long} & APRN Jobs`,
+    numberOfItems: total,
+    itemListElement: jobs.slice(0, 10).map((job, i) => {
+      const j = job as { id: string; slug?: string | null; title: string };
+      const slug = j.slug || slugify(j.title, j.id);
+      return {
+        '@type': 'ListItem',
+        position: i + 1,
+        name: job.title,
+        url: `${brand.baseUrl}/jobs/${slug}`,
+      };
+    }),
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jobListSchema).replace(/</g, '\\u003c').replace(/>/g, '\\u003e') }}
+      />
+      {/* Breadcrumb renders INSIDE JobsPageClient, in the right-hand main
+          column above the H1 — that puts it at the top-right corner of
+          the FILTERS panel (not above it, where the fixed sidebar would
+          paint over it). Same JSON-LD BreadcrumbList serializes inline
+          regardless of where the component lives, so SEO is unchanged. */}
+      <JobsPageClient
+        initialJobs={jobs}
+        initialTotal={total}
+        initialPage={page}
+        initialTotalPages={Math.ceil(total / limit)}
+      />
+    </>
+  );
 }

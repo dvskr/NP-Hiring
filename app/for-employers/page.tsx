@@ -7,7 +7,7 @@ import EmployerHowItWorks from '@/components/EmployerHowItWorks';
 import FeaturedTestimonials from '@/components/FeaturedTestimonials';
 import { config } from '@/lib/config';
 import {
-  Check, ArrowRight, X, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign,
+  Check, ArrowRight, X, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign, HelpCircle,
 } from 'lucide-react';
 
 const STORAGE_BASE = brand.assets.storageBase;
@@ -67,10 +67,60 @@ const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: t
   { feature: 'Instant Apply Notifications', us: true, indeed: true, linkedin: true },
 ];
 
+// Single source of truth for the FAQ content. Both the FAQPage JSON-LD and
+// the visible accordion consume this list — they cannot diverge (repo
+// pattern: app/contact/page.tsx). Every number below comes from lib/config
+// or matches copy already published on /pricing and /faq — never invent a
+// figure here.
+const employerFaqs = [
+  {
+    q: `How much does it cost to hire on ${brand.name}?`,
+    a: `Your first job post is completely free with every feature included — no credit card required. After that it's a flat $${config.postingPrice} per post, and renewals are $${config.renewalPrice}. No subscriptions, no pay-per-click bidding, no contracts.`,
+  },
+  {
+    q: 'What does every job post include?',
+    a: `Every post — free or paid — includes the full package: a ${config.durationDays}-day listing (${config.freeDurationDays} days for free posts), Featured badge, top search placement, ${config.limits.candidateUnlocksPerPosting} candidate profile unlocks, ${config.limits.inmailsPerPosting} InMails, up to 5 screening questions, and a live analytics dashboard.`,
+  },
+  {
+    q: 'Who sees my job posting?',
+    a: `Your listing reaches a 100% ${brand.niche.medium} audience — candidates actively searching on ${brand.name}. It's also highlighted in daily job-alert emails to subscribed candidates and gets its own indexed SEO page on Google.`,
+  },
+  {
+    q: 'How do candidates apply?',
+    a: 'Candidates apply directly on the platform and you get an instant notification for every application. You can also search the candidate pool yourself, unlock full profiles, and message qualified matches with InMails before they apply.',
+  },
+  {
+    q: 'Can I edit my posting after it goes live?',
+    a: 'Yes. Open your employer dashboard from the link in your confirmation email and click Edit on any posting — changes to salary, requirements, or the description go live immediately.',
+  },
+  {
+    q: 'Do you offer refunds or volume discounts?',
+    a: `If you're unsatisfied, contact us at ${brand.email.support} within 7 days of posting and we'll work with you. Posting 5+ positions? Email us for volume pricing.`,
+  },
+];
+
 export default async function ForEmployersPage() {
   return (
     <>
       <BreadcrumbSchema items={[{ name: 'Home', url: brand.baseUrl }, { name: 'For Employers', url: `${brand.baseUrl}/for-employers` }]} />
+
+      {/* FAQPage JSON-LD — derives from the SAME employerFaqs array the
+          visible FAQ section renders below, so schema and page copy cannot
+          diverge (repo pattern: app/contact/page.tsx). */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: employerFaqs.map(({ q, a }) => ({
+              '@type': 'Question',
+              name: q,
+              acceptedAnswer: { '@type': 'Answer', text: a },
+            })),
+          }),
+        }}
+      />
 
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 1: RECEIPT HERO — "one flat price" (user-approved EH4
@@ -454,6 +504,42 @@ export default async function ForEmployersPage() {
               </div>
             </div>
 
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          SECTION 5: FAQ (renders from employerFaqs — the same array that
+          feeds the FAQPage JSON-LD above; markup matches /pricing)
+          ═══════════════════════════════════════════════════════════════ */}
+      <section style={{ padding: '80px 16px', background: '#FFF' }}>
+        <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+            Common Questions
+          </p>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '32px' }}>Frequently Asked Questions</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {employerFaqs.map(({ q, a }) => (
+              <details key={q} style={{ ...clayCard, padding: 0, overflow: 'hidden' }}>
+                <summary style={{
+                  padding: '18px 24px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  fontSize: '15px', fontWeight: 600, color: '#1A2E35', listStyle: 'none',
+                }}>
+                  <div style={{
+                    width: '28px', height: '28px', borderRadius: '8px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'linear-gradient(145deg, #BE185D, #9D174D)',
+                    boxShadow: '2px 2px 5px rgba(190,24,93,0.12)',
+                    flexShrink: 0,
+                  }}>
+                    <HelpCircle size={14} color="#fff" />
+                  </div>
+                  {q}
+                </summary>
+                <div style={{ padding: '0 24px 18px 64px', fontSize: '14px', color: '#5A4A42', lineHeight: 1.65 }}>{a}</div>
+              </details>
+            ))}
           </div>
         </div>
       </section>

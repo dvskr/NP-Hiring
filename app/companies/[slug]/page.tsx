@@ -314,7 +314,10 @@ export default async function CompanyPage({ params }: Props) {
                 </div>
             </div>
 
-            {/* JSON-LD Organization Structured Data */}
+            {/* JSON-LD Organization Structured Data.
+                P0 #14: escape < / > so a scraped company description
+                containing "</script>" can't break out of the script tag
+                (XSS / broken schema). Same pattern as app/jobs/page.tsx. */}
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{
@@ -325,7 +328,7 @@ export default async function CompanyPage({ params }: Props) {
                         url: company.website || `${brand.baseUrl}/companies/${slug}`,
                         ...(company.logoUrl && { logo: company.logoUrl }),
                         ...(company.description && { description: company.description }),
-                    }),
+                    }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e'),
                 }}
             />
         </>

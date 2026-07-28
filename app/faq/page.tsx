@@ -1,7 +1,6 @@
 import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import FAQAccordion from '@/components/FAQAccordion';
@@ -9,10 +8,12 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import { Mail, HelpCircle } from 'lucide-react';
 import { config } from '@/lib/config';
+import { STAT_SOURCES } from '@/lib/stats-sources';
 
-const STORAGE_BASE = brand.assets.storageBase;
-
-const FAQ_OG_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-hiring-frequently-asked-questions.webp`;
+// Edge-generated OG card — no dependency on storage assets that don't
+// exist on this board (the old pmhnp-*.webp URL 400s). Same pattern as
+// app/for-employers/page.tsx.
+const FAQ_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.name} FAQ`)}&type=page`;
 
 export const metadata: Metadata = {
   // `absolute` opts out of the layout title template so we don't end up
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: `${brand.baseUrl}/faq`,
     siteName: brand.name,
-    images: [{ url: FAQ_OG_IMAGE, width: 1280, height: 900, alt: `${brand.name} FAQ — job posting, salary transparency, job alerts, employer features` }],
+    images: [{ url: FAQ_OG_IMAGE, width: 1200, height: 630, alt: `${brand.name} FAQ — job posting, salary transparency, job alerts, employer features` }],
   },
   twitter: { card: 'summary_large_image', title: `${brand.name} FAQ`, images: [FAQ_OG_IMAGE] },
   alternates: {
@@ -139,7 +140,7 @@ export default function FAQPage() {
     },
     {
       question: `What is the ROI of an ${brand.niche.short} degree?`,
-      answer: `The ROI is excellent. Graduate school costs $35,000-$80,000 for an MSN. ${brand.niche.short}s earn a median of about $126,000 — roughly $40,000 more per year than the average RN. Most ${brand.niche.short}s pay off their graduate degree investment within 2-4 years of working.`
+      answer: `The ROI is excellent. Graduate school costs vary by program, and ${brand.niche.short}s earn a median of ${STAT_SOURCES.averageSalary.formatted} per year (${STAT_SOURCES.averageSalary.source}, ${STAT_SOURCES.averageSalary.asOf}) — well above the median RN salary — so most ${brand.niche.short}s recoup their graduate-degree investment within a few years of full-time practice.`
     },
     {
       question: `What are the top 3 ${brand.niche.short} jobs for new grads?`,
@@ -150,7 +151,7 @@ export default function FAQPage() {
   const salaryFaqs = [
     {
       question: `What is the average salary of a ${brand.niche.descriptor} in the United States?`,
-      answer: `The average ${brand.niche.short} salary in 2026 is about $126,000-$135,000 per year. New graduates typically start at $95,000-$115,000, while experienced ${brand.niche.short}s in high-demand specialties and settings earn $150,000-$180,000+. Private practice owners and locum tenens providers can earn more depending on volume and overhead.`
+      answer: `${brand.niche.short}s earn a median annual salary of ${STAT_SOURCES.averageSalary.formatted} based on the ${STAT_SOURCES.averageSalary.source} (${STAT_SOURCES.averageSalary.asOf}). Salaries range from roughly $120,000 for new graduates to $200,000+ for experienced ${brand.niche.short}s in high-demand specialties and settings. Private practice owners and locum tenens providers can earn more depending on volume and overhead.`
     },
     {
       question: `Which states pay the highest salaries for ${brand.niche.short}s?`,
@@ -158,7 +159,7 @@ export default function FAQPage() {
     },
     {
       question: `How do ${brand.niche.descriptor} salaries vary by specialty?`,
-      answer: `Compensation varies meaningfully by specialty. Acute care, psychiatric-mental health, and emergency ${brand.niche.short}s typically sit at the higher end — often 10-20% above the national median — while family practice and primary-care roles cluster near it. Setting matters as much as specialty: hospital, VA, and correctional roles usually out-pay clinic positions, and Full Practice Authority states tend to carry a premium.`
+      answer: `Compensation varies meaningfully by specialty. Acute care, psychiatric-mental health, and emergency ${brand.niche.short}s typically sit at the higher end of the range, while family practice and primary-care roles cluster near the national median. Setting matters as much as specialty: hospital, VA, and correctional roles usually out-pay clinic positions, and Full Practice Authority states tend to carry a premium.`
     },
     {
       question: `Does having a DNP vs MSN affect an ${brand.niche.short}'s salary?`,
@@ -166,11 +167,11 @@ export default function FAQPage() {
     },
     {
       question: `How can you make the most money as an ${brand.niche.short}?`,
-      answer: "Top strategies include: owning a private practice ($200K-$300K+), specializing in high-demand areas like acute, emergency, or correctional care, practicing in Full Practice Authority states (+12-15% premium), working locum tenens ($150K-$250K), and always negotiating total compensation."
+      answer: "Top strategies include: owning a private practice, specializing in high-demand areas like acute, emergency, or correctional care, practicing in Full Practice Authority states, working locum tenens, and always negotiating total compensation rather than base salary alone."
     },
     {
       question: `What is the salary range for locum tenens ${brand.niche.short} jobs?`,
-      answer: `Locum tenens ${brand.niche.short}s earn $150,000-$250,000+ annually, with hourly rates of $85-$150+. This includes housing stipends, travel allowances, and malpractice coverage. Locum tenens pay rates are typically 20-50% higher than permanent positions, making it one of the highest-earning ${brand.niche.short} career paths.`
+      answer: `Locum tenens ${brand.niche.short}s are typically paid hourly, commonly in the $60-$150+ per hour range depending on specialty and setting, with CRNA locum rates at the top of the market. Packages usually include housing stipends, travel allowances, and malpractice coverage, and locum rates typically run higher than comparable permanent positions — making it one of the higher-earning ${brand.niche.short} career paths.`
     },
   ];
 
@@ -181,7 +182,7 @@ export default function FAQPage() {
     },
     {
       question: `What are the certification requirements for ${brand.niche.short} graduates?`,
-      answer: `After graduating from an accredited ${brand.niche.short} program, you must pass a national board certification exam for your population focus (ANCC or AANP, roughly $315-$395), apply for state APRN licensure, obtain an NPI number, register with the DEA for prescriptive authority ($888/3 years), and create a CAQH ProView profile for insurance credentialing. Board certification typically renews every 5 years with continuing-education requirements.`
+      answer: `After graduating from an accredited ${brand.niche.short} program, you must pass a national board certification exam for your population focus (ANCC or AANP), apply for state APRN licensure, obtain an NPI number, register with the DEA for prescriptive authority, and create a CAQH ProView profile for insurance credentialing. Board certification typically renews every 5 years with continuing-education requirements.`
     },
     {
       question: `What extra certifications can an ${brand.niche.short} get?`,
@@ -189,7 +190,7 @@ export default function FAQPage() {
     },
     {
       question: `Are there state licensure rules that affect demand for ${brand.niche.short}s?`,
-      answer: `Yes. States with Full Practice Authority (34 states + DC) allow ${brand.niche.short}s to practice independently, driving higher demand and salaries. Reduced and restricted practice states require physician collaboration or supervision, which can limit the number of available positions and affect compensation.`
+      answer: `Yes. States with Full Practice Authority (${STAT_SOURCES.fullPracticeStates.formatted} per the ${STAT_SOURCES.fullPracticeStates.source}, ${STAT_SOURCES.fullPracticeStates.asOf}) allow ${brand.niche.short}s to practice independently, driving higher demand and salaries. Reduced and restricted practice states require physician collaboration or supervision, which can limit the number of available positions and affect compensation.`
     },
     {
       question: `What skills are employers seeking in ${brand.niche.short} graduates?`,
@@ -197,7 +198,7 @@ export default function FAQPage() {
     },
     {
       question: `What negotiation strategies can enhance salary offers for ${brand.niche.short}s?`,
-      answer: `Key strategies include researching market rates by state and setting, negotiating total compensation (not just base salary), asking for sign-on bonuses ($5,000-$30,000), requesting CME allowance ($2,000-$5,000/year), student loan repayment assistance, additional PTO, and flexible scheduling. ${brand.niche.short}s who negotiate typically secure 5-15% higher starting salaries.`
+      answer: `Key strategies include researching market rates by state and setting, negotiating total compensation (not just base salary), asking for a sign-on bonus, requesting a CME allowance, student loan repayment assistance, additional PTO, and flexible scheduling. ${brand.niche.short}s who negotiate typically secure meaningfully higher starting offers than those who accept the first number.`
     },
   ];
 
@@ -241,7 +242,24 @@ export default function FAQPage() {
                   </p>
               </div>
               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/clay_hero_faq.webp`} alt={`FAQ ${brand.niche.short} Jobs`} width={280} height={280} style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))' }} priority />
+                  {/* Exact-DPR ladder (scripts/regen-image-ladders.mjs) — reuses the
+                      already-laddered how-it-works illustration so the priority LCP
+                      image paints 1:1 physical pixels at every display scale (the
+                      old Supabase clay_hero_faq.webp 400s — dead bucket). See
+                      components/EmployerHowItWorks.tsx for the pattern. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                      src="/images/how-it-works/step-employer-browse-560.webp"
+                      srcSet={[280, 350, 420, 490, 560, 630, 700, 840]
+                          .map((w) => `/images/how-it-works/step-employer-browse-${w}.webp ${w}w`)
+                          .join(', ')}
+                      sizes="280px"
+                      alt={`Illustration: browsing ${brand.niche.short} jobs and answers on ${brand.name}`}
+                      width={280} height={280}
+                      style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '20px', boxShadow: '0 20px 30px rgba(0,0,0,0.15)', display: 'block' }}
+                      fetchPriority="high"
+                      decoding="async"
+                  />
               </div>
           </div>
       </section>

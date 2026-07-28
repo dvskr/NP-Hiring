@@ -5,15 +5,16 @@ import { Shield, MapPin, CheckCircle, AlertTriangle, XCircle } from 'lucide-reac
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { STATE_PRACTICE_AUTHORITY, getStatesByAuthority, getAuthorityColor, type PracticeAuthority } from '@/lib/state-practice-authority';
 
-const STORAGE_BASE = brand.assets.storageBase;
-
 // Bump on each editorial review pass — Article.dateModified should reflect
 // real freshness, not be permanently frozen at the original publish date.
 // Update at least quarterly; sooner if NLC membership or state authority
 // classifications change.
 const PUBLISHED_AT = '2026-03-19';
 const LAST_REVIEWED = '2026-03-19';
-const HERO_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp`;
+// P0 OG sweep: edge-generated card via /api/og — the previous Supabase
+// page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
+// Absolute URL because it also feeds Article JSON-LD `image`.
+const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Full Practice Authority Guide`)}&type=page`;
 
 export const metadata: Metadata = {
   title: `${brand.niche.short} Full Practice Authority Guide 2026 — All 50 States`,
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
     title: `Full Practice Authority Guide for ${brand.niche.short}s — 2026`,
     description: `State-by-state FPA classifications. See where ${brand.niche.descriptor}s can practice independently.`,
     type: 'article',
-    images: [{ url: HERO_IMAGE, width: 1280, height: 900, alt: `${brand.niche.short} Full Practice Authority Guide 2026` }],
+    images: [{ url: HERO_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} Full Practice Authority Guide 2026` }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -112,7 +113,10 @@ export default function FPAGuidePage() {
               {brand.niche.short} Full Practice Authority Guide 2026
             </h1>
             <p className="text-sm text-pink-200 text-center mt-2 mb-4">
-              Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              {/* Audit P0 #23: render the real review date (same constant the
+                  Article schema emits) — never render time, which fabricated
+                  freshness and contradicted dateModified. */}
+              Last Updated: {new Date(`${LAST_REVIEWED}T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
             </p>
             <p className="text-lg md:text-xl text-pink-100 mb-6">
               State-by-state practice authority classifications for {brand.niche.descriptor}s

@@ -11,7 +11,9 @@ import {
 import VideoJsonLd from '@/components/VideoJsonLd';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 
-const STORAGE_BASE = brand.assets.storageBase;
+// P0 OG sweep: edge-generated card via /api/og — the previous Supabase
+// page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
+const BLOG_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Career Blog`)}&type=page`;
 
 // ISR: blog index changes when posts publish/unpublish; 1-hour revalidate is
 // well within the editorial cadence. Previously force-dynamic meant every
@@ -24,9 +26,9 @@ export const metadata: Metadata = {
     description:
         `${brand.niche.short} career guides, salary insights, and job market trends from the #1 ${brand.niche.short} job board.`,
     openGraph: {
-        images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp`, width: 1280, height: 900, alt: `${brand.niche.short} career blog with expert guides on salary negotiation, state spotlights, and job market insights` }],
+        images: [{ url: BLOG_OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} career blog with expert guides on salary negotiation, state spotlights, and job market insights` }],
     },
-    twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-insights-blog.webp`] },
+    twitter: { card: 'summary_large_image', images: [BLOG_OG_IMAGE] },
     alternates: {
         canonical: `${brand.baseUrl}/blog`,
     },
@@ -428,7 +430,8 @@ export default async function BlogIndexPage({
                     <div className="blog-cta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                         {[
                             { href: '/salary-guide', IconComp: DollarSign, title: 'Salary Guide', desc: '2026 data with state breakdowns' },
-                            { href: '/jobs', IconComp: Search, title: 'Browse Jobs', desc: `10,000+ ${brand.niche.short} positions` },
+                            // P0 #5: evergreen cadence claim — was a fabricated five-digit inventory count.
+                            { href: '/jobs', IconComp: Search, title: 'Browse Jobs', desc: `New ${brand.niche.short} positions daily` },
                             { href: '/resources', IconComp: BookOpen, title: 'Resources', desc: 'Licensure guides & tools' },
                         ].map(item => {
                             const IconC = item.IconComp;

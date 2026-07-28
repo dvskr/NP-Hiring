@@ -5,11 +5,12 @@ import VideoJsonLd from '@/components/VideoJsonLd';
 import { prisma } from '@/lib/prisma';
 import AboutClient from './AboutClient';
 
-const STORAGE_BASE = brand.assets.storageBase;
-
 export const revalidate = 3600;
 
-const ABOUT_OG_IMAGE = `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/about-pmhnp-hiring-platform.webp`;
+// P0 OG sweep: edge-generated card via /api/og — the previous Supabase
+// page-screenshot lived in an unpopulated bucket and 400'd on every share
+// (pattern: app/for-employers/page.tsx).
+const ABOUT_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`About ${brand.name}`)}&type=page`;
 
 export const metadata: Metadata = {
   title: `About Us - The #1 Job Board for ${brand.niche.medium}s`,
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: `${brand.baseUrl}/about`,
     siteName: brand.name,
-    images: [{ url: ABOUT_OG_IMAGE, width: 1280, height: 900, alt: `About ${brand.name}` }],
+    images: [{ url: ABOUT_OG_IMAGE, width: 1200, height: 630, alt: `About ${brand.name}` }],
   },
   twitter: { card: 'summary_large_image', title: `About ${brand.name}`, images: [ABOUT_OG_IMAGE] },
   alternates: { canonical: `${brand.baseUrl}/about` },

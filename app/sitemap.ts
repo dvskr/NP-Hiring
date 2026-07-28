@@ -110,12 +110,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/terms`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${baseUrl}/privacy`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${baseUrl}/pricing`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.7 },
+    // Content audit P0 #7: these four indexable pages were missing from the
+    // sitemap entirely. /companies is the employer-directory hub (DB-driven,
+    // refreshed as inventory changes — company detail pages are emitted
+    // further down, but the hub itself was never advertised); /for-programs
+    // is the program-director funnel (footer-linked from every page);
+    // /security and /sub-processors are trust/legal pages that get the same
+    // treatment as /terms and /privacy.
+    { url: `${baseUrl}/companies`, lastModified: latestJobDate, changeFrequency: 'daily', priority: 0.7 },
+    { url: `${baseUrl}/for-programs`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${baseUrl}/security`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${baseUrl}/sub-processors`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'yearly', priority: 0.3 },
     // Content hub pages
-    // Sitemap submits the canonical destination directly. Previously /new-grad
-    // was advertised here but next.config.ts permanently redirects it to
-    // /jobs/new-grad — Google logs that as "Submitted URL redirected" in GSC
-    // and burns crawl budget on a hop that yields no new content.
-    { url: `${baseUrl}/jobs/new-grad`, lastModified: latestJobDate, changeFrequency: 'weekly', priority: 0.9 },
+    // /jobs/new-grad is NOT listed here: 'new-grad' is a registry category
+    // slug, so categoryLandingPages below already emits it (daily, 0.9).
+    // A second static entry produced a duplicate <loc> in the same sitemap
+    // — the exact duplicate-URL quality hit the categoryStatePages comment
+    // warns about. (The /new-grad → /jobs/new-grad redirect note lives on:
+    // sitemaps must submit the canonical destination, which the registry
+    // entry does.)
   ]
 
   // Metro landing pages — DB-gated below (B33) so metros with zero active

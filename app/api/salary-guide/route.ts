@@ -5,16 +5,28 @@ import { logger } from '@/lib/logger';
 import { buildSalaryGuideHtml, sendAndLog, isEmailSuppressed } from '@/lib/email-service';
 import { rateLimit } from '@/lib/rate-limit';
 import { brand } from '@/config/brand';
-
-const STORAGE_BASE = brand.assets.storageBase;
+import { SALARY_GUIDE_PDF_AVAILABLE } from './pdf-availability';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 
-// Environment-aware URLs
-const PDF_URL = process.env.SALARY_GUIDE_URL || `${STORAGE_BASE}/storage/v1/object/public/resources/PMHNP_Salary_Guide_2026.pdf`;
+// Environment-aware PDF URL — env override first, then this board's own
+// asset from config/brand.ts (audit P0 #6: the previous fallback pointed
+// at the donor board's branded PDF asset).
+const PDF_URL = process.env.SALARY_GUIDE_URL || brand.assets.salaryGuidePdf;
 
 export async function POST(request: NextRequest) {
   try {
+    // Audit P0 #6: while the PDF deliverable does not exist, refuse before
+    // capturing the lead or sending an email with a dead link. The UI hides
+    // the form behind the same flag; this guards direct POSTs too.
+    if (!SALARY_GUIDE_PDF_AVAILABLE) {
+      logger.warn('Salary guide request refused — PDF deliverable not yet available');
+      return NextResponse.json(
+        { success: false, error: 'The salary guide PDF is not yet available. All salary data is free at /salary-guide.' },
+        { status: 503 }
+      );
+    }
+
     // Rate limiting — 5 req/min (sends emails, must be strict)
     const rateLimitResult = await rateLimit(request, 'salary-guide', { limit: 5, windowSeconds: 60 });
     if (rateLimitResult) return rateLimitResult;
@@ -69,7 +81,7 @@ export async function POST(request: NextRequest) {
     await sendAndLog({
       from: '', // overridden by sendAndLog (marketing sender — salary_guide is in MARKETING_EMAIL_TYPES)
       to: normalizedEmail,
-      subject: `Your ${currentYear} PMHNP Salary Guide is Ready`,
+      subject: `Your ${currentYear} ${brand.niche.short} Salary Guide is Ready`,
       html: buildSalaryGuideHtml(PDF_URL, unsubscribeToken),
     }, 'salary_guide', { year: currentYear }, `${BASE_URL}/unsubscribe?token=${unsubscribeToken}`);
 

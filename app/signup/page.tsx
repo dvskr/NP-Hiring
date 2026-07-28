@@ -29,14 +29,11 @@ export default async function SignUpPage({
   }
 
   return (
-    <AuthLayout
-      illustration="/illustrations/auth-signup.png"
-      testimonial={{
-        quote: '"Setting up my profile took 2 minutes, and I was getting matched with relevant positions the same day."',
-        name: `James R., ${brand.niche.short}`,
-        title: 'Denver, CO',
-      }}
-    >
+    // P0 #18: the fabricated first-name-only testimonial was removed — same
+    // E-E-A-T rationale as the purged /about testimonials (app/about/
+    // AboutClient.tsx SEO Fix H11). Reinstate ONLY with a real, opted-in,
+    // attributable quote.
+    <AuthLayout illustration="/illustrations/auth-signup.png">
       <Suspense
         fallback={
           <div className="space-y-4">

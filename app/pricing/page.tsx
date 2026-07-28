@@ -6,7 +6,10 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { config } from '@/lib/config';
 import { Check, ArrowRight, X, HelpCircle, RefreshCw, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign } from 'lucide-react';
 
-const STORAGE_BASE = brand.assets.storageBase;
+// Edge-generated OG card — no dependency on storage assets that don't
+// exist on this board (the old pmhnp-*.webp URL 400s). Same pattern as
+// app/for-employers/page.tsx.
+const PRICING_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Pricing — first post free, then $${config.postingPrice}`)}&type=page`;
 
 export const metadata: Metadata = {
     title: `Pricing — ${brand.niche.short} Job Board | First Post Free, Then $${config.postingPrice}`,
@@ -15,9 +18,9 @@ export const metadata: Metadata = {
     openGraph: {
         title: `Pricing — ${brand.niche.short} Job Board`,
         description: `Post ${brand.niche.short} jobs — first one free, then $${config.postingPrice}/post. Every post gets the full package.`,
-        images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`, width: 1280, height: 900, alt: `${brand.niche.short} job board pricing` }],
+        images: [{ url: PRICING_OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} job board pricing` }],
     },
-    twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`] },
+    twitter: { card: 'summary_large_image', images: [PRICING_OG_IMAGE] },
     alternates: { canonical: `${brand.baseUrl}/pricing` },
 };
 
@@ -86,6 +89,24 @@ export default function PricingPage() {
                 { name: 'Home', url: brand.baseUrl },
                 { name: 'Pricing', url: `${brand.baseUrl}/pricing` },
             ]} />
+
+            {/* FAQPage JSON-LD — derives from the SAME `faqs` array the visible
+                accordion renders below, so schema and page copy cannot diverge
+                (repo pattern: app/contact/page.tsx). */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify({
+                        '@context': 'https://schema.org',
+                        '@type': 'FAQPage',
+                        mainEntity: faqs.map(({ q, a }) => ({
+                            '@type': 'Question',
+                            name: q,
+                            acceptedAnswer: { '@type': 'Answer', text: a },
+                        })),
+                    }),
+                }}
+            />
 
             {/* ═══════════════════════════════════════════════════════════════
                 SECTION 1: HERO + BENTO GRID (pricing card is the first bento card)
@@ -352,11 +373,22 @@ export default function PricingPage() {
                                 background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
                                 padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                                <Image
-                                    src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/cta-illustration.webp`}
+                                {/* Exact-DPR ladder (scripts/regen-image-ladders.mjs) so the
+                                    browser paints 1:1 physical pixels at every display
+                                    scaling — same asset + pattern as the /for-employers CTA
+                                    card (the old Supabase cta-illustration.webp 400s). */}
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src="/images/employers/cta-illustration-v2-520.webp"
+                                    srcSet={[260, 325, 390, 455, 520, 585, 650, 780]
+                                        .map((w) => `/images/employers/cta-illustration-v2-${w}.webp ${w}w`)
+                                        .join(', ')}
+                                    sizes="260px"
                                     alt={`Successful ${brand.niche.short} hiring celebration`}
-                                    width={280} height={220}
-                                    style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px' }}
+                                    width={260} height={260}
+                                    style={{ width: '100%', maxWidth: '260px', height: 'auto', borderRadius: '14px', display: 'block' }}
+                                    loading="lazy"
+                                    decoding="async"
                                 />
                             </div>
                             <div style={{ padding: '28px 24px' }}>

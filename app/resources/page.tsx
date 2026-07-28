@@ -20,6 +20,9 @@ export const revalidate = 86400;
 // instead of the donor board's PMHNP-branded asset, which 404s on this board.
 const SALARY_GUIDE_URL = process.env.SALARY_GUIDE_URL || brand.assets.salaryGuidePdf;
 
+// P0 OG sweep: metadata card renders via the board's own /api/og edge route.
+const RESOURCES_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Career Resources`)}&type=page`;
+
 // Audit F12: metadata describes the ACTUAL inventory — 3 in-depth guides
 // (FPA, private practice, 1099 vs W2), the interactive salary tool, and the
 // licensure checker. The previous article-count and state-guide-series
@@ -38,9 +41,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: `${brand.niche.short} Career Resources — Salary Tool & Licensure Checker`,
     description: `Free career resources for ${brand.niche.descriptor}s: salary calculator, state licensure checker, and in-depth practice guides.`,
-    images: [{ url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp`, width: 1280, height: 900, alt: `${brand.niche.short} career resources and guides` }],
+    // P0 OG sweep: edge-generated card via /api/og — the previous Supabase
+    // page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
+    images: [{ url: RESOURCES_OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} career resources and guides` }],
   },
-  twitter: { card: 'summary_large_image', images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-career-resources-guides.webp`] },
+  twitter: { card: 'summary_large_image', images: [RESOURCES_OG_IMAGE] },
   alternates: { canonical: `${brand.baseUrl}/resources` },
 };
 

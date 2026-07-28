@@ -1,40 +1,57 @@
 import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
+import { getSiteStats } from '@/lib/site-stats';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 
-const STORAGE_BASE = brand.assets.storageBase;
-
 export const revalidate = 3600; // ISR: revalidate every hour
 
-export const metadata: Metadata = {
-  title: `${brand.niche.short} Employers — Companies Hiring ${brand.niche.long}s`,
-  description:
-    `Browse companies actively hiring ${brand.niche.short}s. See open positions, salary data, and apply directly. Updated daily with 3,000+ employers across all 50 states.`,
-  openGraph: {
-    title: `Companies Hiring ${brand.niche.short}s — ${brand.name}`,
-    description: `Explore employers with open ${brand.niche.descriptor} positions.`,
-    url: `${brand.baseUrl}/companies`,
-    type: 'website',
-    siteName: brand.name,
-    images: [{
-      url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`,
-      width: 1280,
-      height: 900,
-      alt: `Companies hiring ${brand.niche.short}s`,
-    }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: `Companies Hiring ${brand.niche.short}s`,
-    description: `Browse 3,000+ employers actively hiring ${brand.niche.descriptor}s.`,
-    images: [`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pages/pmhnp-employer-hiring-solutions.webp`],
-  },
-  alternates: {
-    canonical: `${brand.baseUrl}/companies`,
-  },
-};
+// P0 OG sweep: edge-generated card via /api/og — the previous Supabase
+// page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
+const COMPANIES_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Companies Hiring ${brand.niche.short}s`)}&type=page`;
+
+/**
+ * P0 #5: employer counts derive from the cached SiteStat snapshot
+ * (lib/site-stats.ts) instead of the hardcoded four-digit employer count
+ * that drifted from real inventory (config/niche/copy.ts RULE: no
+ * hardcoded counts in evergreen surfaces). Mirrors the homepage
+ * generateMetadata pattern.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const { totalCompanies } = await getSiteStats();
+  const companyCountDisplay = totalCompanies > 1000
+    ? `${(Math.floor(totalCompanies / 100) * 100).toLocaleString()}+`
+    : totalCompanies.toLocaleString();
+
+  return {
+    title: `${brand.niche.short} Employers — Companies Hiring ${brand.niche.long}s`,
+    description:
+      `Browse companies actively hiring ${brand.niche.short}s. See open positions, salary data, and apply directly. Updated daily with ${companyCountDisplay} employers nationwide.`,
+    openGraph: {
+      title: `Companies Hiring ${brand.niche.short}s — ${brand.name}`,
+      description: `Explore employers with open ${brand.niche.descriptor} positions.`,
+      url: `${brand.baseUrl}/companies`,
+      type: 'website',
+      siteName: brand.name,
+      images: [{
+        url: COMPANIES_OG_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: `Companies hiring ${brand.niche.short}s`,
+      }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `Companies Hiring ${brand.niche.short}s`,
+      description: `Browse ${companyCountDisplay} employers actively hiring ${brand.niche.descriptor}s.`,
+      images: [COMPANIES_OG_IMAGE],
+    },
+    alternates: {
+      canonical: `${brand.baseUrl}/companies`,
+    },
+  };
+}
 
 /* ─── Claymorphism tokens ─── */
 const clayCard: React.CSSProperties = {

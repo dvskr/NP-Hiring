@@ -235,8 +235,12 @@ export default function SalaryCalculator({ stateSalaries, nationalAvg }: Props) 
             </span>
           </div>
 
+          {/* Audit P0 #22: no fabricated posting counts (the old "ten
+              thousand plus postings" boast) — the base figures come from
+              live postings on this board plus BLS wage data, so say
+              exactly that. */}
           <p style={{ fontSize: '10px', color: '#94A3B8', marginTop: '14px', lineHeight: 1.4 }}>
-            * Estimates based on BLS, ZipRecruiter, Indeed, and 10,000+ job postings. Actual salary varies by employer.
+            * Estimates based on BLS wage data and live job postings on {brand.name}. Actual salary varies by employer.
           </p>
         </div>
       </div>
