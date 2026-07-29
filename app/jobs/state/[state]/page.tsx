@@ -13,6 +13,9 @@ import JobCard from '@/components/JobCard';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { stateToSlug, SETTING_CONFIGS } from '@/lib/pseo/setting-state-config';
+// P3 #9: the city-slug builder/guard pair the /jobs/city/[slug] route round-trips
+// against — see cityLinkResolves for why building the slug is not enough.
+import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
 import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { buildPlainStateNarrative } from '@/lib/pseo/state-narrative';
 import { STAT_SOURCES } from '@/lib/stats-sources';
@@ -346,14 +349,23 @@ async function getCitiesWithJobs(stateName: string, stateCode: string): Promise<
   return cityData
     .filter(c => c.city && c.city.trim().length > 0)
     .map(c => {
-      const sanitizedCity = (c.city as string).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const name = c.city as string;
+      // P3 #9: the "Top Cities" grid links /jobs/city/<slug>, and that route does
+      // not look the slug up — it rebuilds a city NAME from it and matches the DB
+      // `city` column. Every non-alphanumeric character collapses to a hyphen on
+      // the way out and returns as a space, so "St. Louis" → st-louis-mo → "St
+      // Louis" matches zero rows and the page hard-404s. cityLinkResolves is P2's
+      // guard for exactly that round-trip (curated metros exempt: /jobs/city/*
+      // 308s to /jobs/metro/* for those). Rows it rejects keep their real name and
+      // count — the state narrative still names them — but carry an empty slug so
+      // the grid can omit the link instead of pointing at a known 404.
+      const linkable = cityLinkResolves(name, stateCode);
       return {
-        name: c.city as string,
+        name,
         count: c._count.city,
-        slug: sanitizedCity ? `${sanitizedCity}-${stateCode.toLowerCase()}` : '',
+        slug: linkable ? buildCitySlug(name, stateCode) : '',
       };
-    })
-    .filter(c => c.slug.length > 0);
+    });
 }
 
 /**
@@ -510,6 +522,12 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
     topCategoryLabels,
     topCityNames: citiesWithJobs.slice(0, 3).map((c) => c.name),
   });
+
+  // P3 #9: only cities whose slug survives the /jobs/city/[slug] round-trip are
+  // eligible for the Top Cities grid — see getCitiesWithJobs. The narrative above
+  // deliberately keeps naming the true top three whether they are linkable or not,
+  // so dropping a dead link never silently rewrites a factual claim.
+  const linkableCities = citiesWithJobs.filter((c) => c.slug.length > 0);
 
   const totalPages = Math.ceil(stats.totalJobs / limit);
 
@@ -819,13 +837,13 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More {brand.niche.short} Opportunities in {stateName}</h2>
 
           {/* Top Cities */}
-          {citiesWithJobs.length > 0 && (
+          {linkableCities.length > 0 && (
             <div style={{ marginBottom: '28px' }}>
               <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#7A6A62', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '14px' }}>
                 Top Cities
               </h3>
               <div className="cat-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
-                {citiesWithJobs.map((c) => (
+                {linkableCities.map((c) => (
                   <Link key={c.slug} href={`/jobs/city/${c.slug}`}
                     className="pseo-pill"
                     style={{ ...clayCard, display: 'block', padding: '14px 10px', textAlign: 'center', textDecoration: 'none' }}>

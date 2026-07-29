@@ -2,6 +2,9 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { selectEligibleCities } from '@/lib/pseo/related-cities';
+// P3 #9: the round-trip guard for THIS route's own builder/parser pair — a related
+// city whose name does not survive parseCitySlug must not be linked.
+import { cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
 import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, TrendingUp, Building2, Bell, MapPinned, ArrowRight } from 'lucide-react';
@@ -267,8 +270,18 @@ async function getRelatedCities(
 
     // #4: only surface cities at/above the page's MIN_JOBS render gate so the
     // sidebar never links to a city page that will notFound() (soft-404 trap).
+    //
+    // P3 #9: clearing the count gate is necessary but not sufficient. buildCitySlug
+    // is lossy and parseCitySlug (above) is its inverse, so a stored name with a
+    // period, apostrophe or hyphen — "St. Louis" → st-louis-mo → "St Louis" —
+    // rebuilds into a DIFFERENT string, matches zero rows in getCityStats and
+    // hard-404s on the same MIN_JOBS gate. cityLinkResolves runs that exact
+    // round-trip (and exempts curated metros, which resolve by slug). Both the
+    // sidebar and the "More {state} Cities" mesh render off this list.
     return selectEligibleCities(
-        cityData.map(c => ({ city: c.city, count: c._count.city })),
+        cityData
+            .filter(c => c.city && cityLinkResolves(c.city, stateCode))
+            .map(c => ({ city: c.city, count: c._count.city })),
         currentCity,
         8,
     ).map(c => ({

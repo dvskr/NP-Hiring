@@ -171,6 +171,41 @@ const nextConfig: NextConfig = {
         destination: '/jobs/city/:slug',
         permanent: true,
       },
+      // P3 #9: three city slugs shipped with the diacritic DELETED instead of
+      // folded, because the dead cities.ts generator stripped non-[a-z0-9]
+      // before any Unicode normalization:
+      //   La Cañada Flintridge, CA → la-caada-flintridge-ca
+      //   Cañon City, CO           → caon-co
+      //   Española, NM             → espaola-nm
+      // scripts/repair-city-slug-diacritics.ts rewrote them to the folded form,
+      // which also drops the old spellings out of the middleware allowlist
+      // (lib/pseo/city-data/city-slugs-edge.ts) — so without these three the old
+      // URLs would start answering 410 and any that Google indexed would lose
+      // their equity instead of handing it to the repaired URL. We cannot know
+      // whether they have traffic, so the redirect is mandatory, not optional.
+      //
+      // Category × city ONLY. The generic /jobs/city/<slug> route is deliberately
+      // NOT redirected: it does not read the dataset at all — it rebuilds a city
+      // NAME out of the slug and matches that against the DB `city` column, which
+      // misses for the old AND the new spelling alike. Redirecting there would
+      // point a 404 at another 404, the one irreversible version of this mistake
+      // (same lesson as the temporary-307 note at the bottom of this block).
+      // Pinned by tests/regressions/p3-city-slug-integrity.test.ts.
+      {
+        source: '/jobs/:category/city/la-caada-flintridge-ca',
+        destination: '/jobs/:category/city/la-canada-flintridge-ca',
+        permanent: true,
+      },
+      {
+        source: '/jobs/:category/city/caon-co',
+        destination: '/jobs/:category/city/canon-city-co',
+        permanent: true,
+      },
+      {
+        source: '/jobs/:category/city/espaola-nm',
+        destination: '/jobs/:category/city/espanola-nm',
+        permanent: true,
+      },
       // Bots invent /salary-guide/city/<slug>; canonical content lives at /salary-guide
       {
         source: '/salary-guide/city/:slug*',

@@ -46,6 +46,11 @@ import {
   getAuthorityLabel,
   StatePracticeInfo,
 } from '@/lib/state-practice-authority';
+// P3 #9: the /jobs/city/[slug] route does NOT read the city dataset — it rebuilds
+// a city NAME out of the slug and matches that against the DB `city` column. These
+// two are P2's builder/guard pair for that round-trip, and importing them here is
+// the same cross-import components/tools/city-picker-data.ts already makes.
+import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
 import { PseoPageViewTracker } from '@/components/analytics/ViewTrackers';
 import { buildCityFacts, buildTaxonomyCityNarrative } from './city-narrative';
 import { getTopCityEmployers } from './city-employers';
@@ -1395,6 +1400,19 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
   const demand = getMarketDemandScore(city!, stats.totalJobs);
   const basePath = `/jobs/${config.slug}/city/${citySlug}`;
 
+  // P3 #9: the "All {city} Jobs" CTA below used to link `/jobs/city/${citySlug}`
+  // with the DATASET slug. That route never looks the slug up — it splits it,
+  // title-cases the segments and matches the result against the DB `city` column
+  // — so for the 210 of 4,135 dataset slugs that do not round-trip (dropped
+  // trailing "City"/"Village"/"Town", collapsed punctuation, folded diacritics)
+  // every rendered category×city page carried an outbound link to a hard 404.
+  // Build the ROUTE-shaped slug and emit the link only when the round-trip
+  // actually resolves; otherwise omit it — the state CTA next to it already
+  // gives the empty state somewhere to go. Never link a known 404.
+  const allCityJobsHref = cityLinkResolves(city!.name, city!.stateCode)
+    ? `/jobs/city/${buildCitySlug(city!.name, city!.stateCode)}`
+    : null;
+
   // #13: employers actually hiring in this city, grouped from live postings.
   // 87.6% of cities carry an empty static `healthcareSystems` list (and the
   // cross-state repair emptied more), so the "Healthcare" block was mostly a
@@ -1750,9 +1768,11 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                         All {city!.state} Jobs
                       </Link>
                     )}
-                    <Link href={`/jobs/city/${citySlug}`} className="inline-block px-6 py-3 rounded-lg font-medium" style={{ color: 'var(--color-primary)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                      All {city!.name} Jobs
-                    </Link>
+                    {allCityJobsHref && (
+                      <Link href={allCityJobsHref} className="inline-block px-6 py-3 rounded-lg font-medium" style={{ color: 'var(--color-primary)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+                        All {city!.name} Jobs
+                      </Link>
+                    )}
                   </div>
                 </div>
               ) : (

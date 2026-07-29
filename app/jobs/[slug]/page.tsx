@@ -27,6 +27,9 @@ import RelatedBlogPosts, { getRelevantBlogSlugs } from '@/components/RelatedBlog
 import InternalLinks from '@/components/InternalLinks';
 import { CareerPulseCard, ApplicationTipsCard } from '@/components/jobs/SidebarVisualCards';
 import { prisma } from '@/lib/prisma';
+// P3 #9: the city breadcrumb is both an internal link and a BreadcrumbList
+// ListItem, so it must not carry a URL the city route cannot resolve.
+import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
 import { getPostBySlug } from '@/lib/blog';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -783,15 +786,31 @@ export default async function JobPage({ params }: JobPageProps) {
     });
   }
 
-  // Add city if available (with state code for proper routing)
+  // Add city if available (with state code for proper routing).
+  //
+  // P3 #9: /jobs/city/[slug] never looks a slug up — it rebuilds a city NAME out
+  // of it and matches that against the DB `city` column. The builder collapses
+  // every non-alphanumeric run to a hyphen and the parser turns hyphens back into
+  // spaces, so a stored "St. Louis" / "Lee's Summit" / "Winston-Salem" round-trips
+  // to a DIFFERENT string, matches zero rows and hard-404s. This crumb is also a
+  // BreadcrumbList ListItem, so the dead URL was handed to Google as structured
+  // data too. Emit it only when the round-trip resolves; otherwise drop the crumb
+  // (Home › Jobs › State › this job) rather than publish a link to a known 404.
   if (job.city && job.stateCode) {
-    const citySlug = `${job.city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}-${job.stateCode.toLowerCase()}`;
-    breadcrumbItems.push({
-      label: job.city,
-      href: `/jobs/city/${citySlug}`,
-    });
-  } else if (job.city) {
-    // Fallback: no state code, use resolveAmbiguousSlug-compatible format
+    if (cityLinkResolves(job.city, job.stateCode)) {
+      breadcrumbItems.push({
+        label: job.city,
+        href: `/jobs/city/${buildCitySlug(job.city, job.stateCode)}`,
+      });
+    }
+  } else if (job.city && cityLinkResolves(job.city, 'xx')) {
+    // Fallback: no state code, use resolveAmbiguousSlug-compatible format (no
+    // -{state} suffix — the route resolves it against the DB instead). 'xx' is a
+    // stand-in code so cityLinkResolves judges the CITY half only, which is the
+    // half this URL has; that ambiguous lookup de-slugifies exactly as lossily,
+    // so a name failing the round-trip 404s there as well. Same stand-in idiom as
+    // the dataset-wide assertion in
+    // tests/regressions/p2-mesh-directories-state-cities.test.ts.
     breadcrumbItems.push({
       label: job.city,
       href: `/jobs/city/${job.city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}`,

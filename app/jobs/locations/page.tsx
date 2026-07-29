@@ -11,6 +11,7 @@ import StateImage from '@/components/StateImage';
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 import { STATE_CODES } from '@/lib/pseo/setting-state-config';
 import {
+  buildCitySlug,
   buildStateCityDirectory,
   cityLinkResolves,
   shouldRenderStateCityDirectory,
@@ -159,15 +160,25 @@ async function getLocationStats() {
       slug: s.state!.toLowerCase().replace(/\s+/g, '-'),
     }));
 
-  // Process cities with explicit typing — include state code in slug for proper routing
+  // Process cities with explicit typing — include state code in slug for proper routing.
+  //
+  // P3 #9: every row here becomes a /jobs/city/<slug> tile, and that route does not
+  // look the slug up — it rebuilds a city NAME from it and matches the DB `city`
+  // column, so a name carrying a period, apostrophe or hyphen ("St. Louis" →
+  // st-louis-mo → "St Louis") matches zero rows and hard-404s. Reject those with
+  // the same guard the city directories below already use, and build the surviving
+  // slugs with the shared builder instead of a fourth inline copy of it. Filtered
+  // here rather than at the render site so the metadata description's metro count
+  // (line ~255) describes what the page actually links.
   const processedCities = topCities
     .filter((c: CityGroupResult) => c.city !== null && c.state !== null && c.stateCode !== null)
+    .filter((c: CityGroupResult) => cityLinkResolves(c.city!, c.stateCode || ''))
     .map((c: CityGroupResult) => ({
       name: c.city!,
       state: c.state!,
       stateCode: c.stateCode || '',
       count: c._count.city,
-      slug: `${c.city!.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}-${(c.stateCode || '').toLowerCase()}`,
+      slug: buildCitySlug(c.city!, c.stateCode || ''),
     }));
 
   const cityDirectories: StateCityDirectoryLink[] = processedStates

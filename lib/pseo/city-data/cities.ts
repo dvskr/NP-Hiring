@@ -10,8 +10,23 @@
 //
 //   node scripts/repair-city-data-collisions.mjs          (--check in CI)
 //
-// Do not hand-edit records: run that script, then regenerate the edge slug
-// allowlist with `npx tsx scripts/generate-city-slugs-edge.ts`. Never refill a
+// The same generator also slugified by DELETING every character outside
+// [a-z0-9] with no Unicode folding first, so a diacritic vanished instead of
+// transliterating ("La Cañada Flintridge" → la-caada-flintridge-ca). Those three
+// slugs were repaired in place, and their nearbyCities references rewritten, by:
+//
+//   node_modules/.bin/ts-node --transpile-only -r tsconfig-paths/register \
+//     --project scripts/tsconfig.json scripts/repair-city-slug-diacritics.ts
+//                                                              (--check in CI)
+//
+// The canonical slug form for this dataset is buildCityDatasetSlug() in
+// ./slugify.ts — it is NOT the /jobs/city/[slug] route slug, which round-trips
+// through the DB city name instead (see app/jobs/locations/[state]/directory.ts).
+//
+// Do not hand-edit records: run those scripts, then regenerate the edge slug
+// allowlist with `npx tsx scripts/generate-city-slugs-edge.ts`. Any slug change
+// needs a matching 301 in next.config.ts — a shipped slug may be indexed, and
+// dropping it from the allowlist makes middleware.ts 410 it. Never refill a
 // null/empty field with an estimate — resolve cities by (name, state) via
 // getCityByNameState() below, and let surfaces omit what is unknown.
 
@@ -540,7 +555,7 @@ export const CITIES: CityData[] = [
     metroArea: "Albuquerque",
     mentalHealthShortage: true,
     healthcareSystems: ["University of New Mexico Health","Presbyterian Healthcare","Lovelace Health System"],
-    nearbyCities: ["sunland-park-nm","los-alamos-nm","south-valley-nm","alamogordo-nm","lovington-nm","espaola-nm"],
+    nearbyCities: ["sunland-park-nm","los-alamos-nm","south-valley-nm","alamogordo-nm","lovington-nm","espanola-nm"],
     providerRatio: "low",
     medianIncome: 53992,
     stateRank: 1,
@@ -3311,7 +3326,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: false,
     healthcareSystems: [],
-    nearbyCities: ["calabasas-ca","la-caada-flintridge-ca","goleta-ca","gardena-ca","simi-valley-ca","rio-vista-ca"],
+    nearbyCities: ["calabasas-ca","la-canada-flintridge-ca","goleta-ca","gardena-ca","simi-valley-ca","rio-vista-ca"],
     providerRatio: "moderate",
     medianIncome: 84097,
     stateRank: 41,
@@ -3872,7 +3887,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: false,
     healthcareSystems: [],
-    nearbyCities: ["susanville-ca","la-caada-flintridge-ca","fullerton-ca","lindsay-ca","vineyard-ca","palmdale-ca"],
+    nearbyCities: ["susanville-ca","la-canada-flintridge-ca","fullerton-ca","lindsay-ca","vineyard-ca","palmdale-ca"],
     providerRatio: "moderate",
     medianIncome: 84097,
     stateRank: 48,
@@ -3906,7 +3921,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: false,
     healthcareSystems: [],
-    nearbyCities: ["north-highlands-ca","altadena-ca","goleta-ca","greenfield-ca","la-caada-flintridge-ca","vineyard-ca"],
+    nearbyCities: ["north-highlands-ca","altadena-ca","goleta-ca","greenfield-ca","la-canada-flintridge-ca","vineyard-ca"],
     providerRatio: "moderate",
     medianIncome: 84097,
     stateRank: 49,
@@ -4382,7 +4397,7 @@ export const CITIES: CityData[] = [
     metroArea: "Denver-Aurora-Lakewood",
     mentalHealthShortage: false,
     healthcareSystems: ["UCHealth","SCL Health","Denver Health","Kaiser Permanente","HealthONE"],
-    nearbyCities: ["the-pinery-co","pueblo-co","durango-co","parker-co","caon-co","windsor-co"],
+    nearbyCities: ["the-pinery-co","pueblo-co","durango-co","parker-co","canon-city-co","windsor-co"],
     providerRatio: "low",
     medianIncome: 82254,
     stateRank: 8,
@@ -15024,7 +15039,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: false,
     healthcareSystems: [],
-    nearbyCities: ["altadena-ca","greenfield-ca","vallejo-ca","goleta-ca","la-caada-flintridge-ca","albany-ca"],
+    nearbyCities: ["altadena-ca","greenfield-ca","vallejo-ca","goleta-ca","la-canada-flintridge-ca","albany-ca"],
     providerRatio: "moderate",
     medianIncome: 84097,
     stateRank: 193,
@@ -15296,7 +15311,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: true,
     healthcareSystems: [],
-    nearbyCities: ["espaola-nm","chaparral-nm","los-alamos-nm","sunland-park-nm","gallup-nm","albuquerque-nm"],
+    nearbyCities: ["espanola-nm","chaparral-nm","los-alamos-nm","sunland-park-nm","gallup-nm","albuquerque-nm"],
     providerRatio: "critical",
     medianIncome: 53992,
     stateRank: 5,
@@ -17013,7 +17028,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: false,
     healthcareSystems: [],
-    nearbyCities: ["susanville-ca","la-caada-flintridge-ca","palmdale-ca","stockton-ca","vallejo-ca","rancho-mirage-ca"],
+    nearbyCities: ["susanville-ca","la-canada-flintridge-ca","palmdale-ca","stockton-ca","vallejo-ca","rancho-mirage-ca"],
     providerRatio: "moderate",
     medianIncome: 84097,
     stateRank: 210,
@@ -23388,7 +23403,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: false,
     healthcareSystems: [],
-    nearbyCities: ["north-highlands-ca","greenfield-ca","altadena-ca","la-caada-flintridge-ca","vallejo-ca","calabasas-ca"],
+    nearbyCities: ["north-highlands-ca","greenfield-ca","altadena-ca","la-canada-flintridge-ca","vallejo-ca","calabasas-ca"],
     providerRatio: "moderate",
     medianIncome: 84097,
     stateRank: 251,
@@ -23677,7 +23692,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: true,
     healthcareSystems: [],
-    nearbyCities: ["superior-co","highlands-ranch-co","englewood-co","loveland-co","northglenn-co","caon-co"],
+    nearbyCities: ["superior-co","highlands-ranch-co","englewood-co","loveland-co","northglenn-co","canon-city-co"],
     providerRatio: "low",
     medianIncome: 82254,
     stateRank: 30,
@@ -33877,7 +33892,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: false,
     healthcareSystems: [],
-    nearbyCities: ["fullerton-ca","gardena-ca","rio-vista-ca","goleta-ca","lincoln-ca","la-caada-flintridge-ca"],
+    nearbyCities: ["fullerton-ca","gardena-ca","rio-vista-ca","goleta-ca","lincoln-ca","la-canada-flintridge-ca"],
     providerRatio: "moderate",
     medianIncome: 84097,
     stateRank: 319,
@@ -37813,7 +37828,7 @@ export const CITIES: CityData[] = [
     name: "La Cañada Flintridge",
     state: "California",
     stateCode: "CA",
-    slug: "la-caada-flintridge-ca",
+    slug: "la-canada-flintridge-ca",
     population: 20573,
     costOfLivingIndex: 142,
     lat: 36.2762,
@@ -40592,7 +40607,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: true,
     healthcareSystems: [],
-    nearbyCities: ["the-pinery-co","pueblo-co","parker-co","windsor-co","westminster-co","caon-co"],
+    nearbyCities: ["the-pinery-co","pueblo-co","parker-co","windsor-co","westminster-co","canon-city-co"],
     providerRatio: "low",
     medianIncome: 82254,
     stateRank: 43,
@@ -41000,7 +41015,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: false,
     healthcareSystems: [],
-    nearbyCities: ["north-highlands-ca","altadena-ca","goleta-ca","vallejo-ca","la-caada-flintridge-ca","albany-ca"],
+    nearbyCities: ["north-highlands-ca","altadena-ca","goleta-ca","vallejo-ca","la-canada-flintridge-ca","albany-ca"],
     providerRatio: "moderate",
     medianIncome: 84097,
     stateRank: 367,
@@ -44698,7 +44713,7 @@ export const CITIES: CityData[] = [
     name: "Cañon City",
     state: "Colorado",
     stateCode: "CO",
-    slug: "caon-co",
+    slug: "canon-city-co",
     population: 17141,
     costOfLivingIndex: 105,
     lat: 39.0248,
@@ -45879,7 +45894,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: false,
     healthcareSystems: [],
-    nearbyCities: ["vineyard-ca","palmdale-ca","la-caada-flintridge-ca","simi-valley-ca","lindsay-ca","stockton-ca"],
+    nearbyCities: ["vineyard-ca","palmdale-ca","la-canada-flintridge-ca","simi-valley-ca","lindsay-ca","stockton-ca"],
     providerRatio: "moderate",
     medianIncome: 84097,
     stateRank: 383,
@@ -46015,7 +46030,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: true,
     healthcareSystems: [],
-    nearbyCities: ["los-alamos-nm","espaola-nm","roswell-nm","albuquerque-nm","gallup-nm","alamogordo-nm"],
+    nearbyCities: ["los-alamos-nm","espanola-nm","roswell-nm","albuquerque-nm","gallup-nm","alamogordo-nm"],
     providerRatio: "critical",
     medianIncome: 53992,
     stateRank: 14,
@@ -46389,7 +46404,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: true,
     healthcareSystems: [],
-    nearbyCities: ["roswell-nm","espaola-nm","sunland-park-nm","los-alamos-nm","gallup-nm","carlsbad-nm"],
+    nearbyCities: ["roswell-nm","espanola-nm","sunland-park-nm","los-alamos-nm","gallup-nm","carlsbad-nm"],
     providerRatio: "critical",
     medianIncome: 53992,
     stateRank: 15,
@@ -56215,7 +56230,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: true,
     healthcareSystems: [],
-    nearbyCities: ["espaola-nm","sunland-park-nm","roswell-nm","albuquerque-nm","chaparral-nm","gallup-nm"],
+    nearbyCities: ["espanola-nm","sunland-park-nm","roswell-nm","albuquerque-nm","chaparral-nm","gallup-nm"],
     providerRatio: "critical",
     medianIncome: 53992,
     stateRank: 17,
@@ -63610,7 +63625,7 @@ export const CITIES: CityData[] = [
     metroArea: null,
     mentalHealthShortage: true,
     healthcareSystems: [],
-    nearbyCities: ["pueblo-co","durango-co","parker-co","westminster-co","windsor-co","caon-co"],
+    nearbyCities: ["pueblo-co","durango-co","parker-co","westminster-co","windsor-co","canon-city-co"],
     providerRatio: "low",
     medianIncome: 82254,
     stateRank: 61,
@@ -67359,7 +67374,7 @@ export const CITIES: CityData[] = [
     name: "Española",
     state: "New Mexico",
     stateCode: "NM",
-    slug: "espaola-nm",
+    slug: "espanola-nm",
     population: 10526,
     costOfLivingIndex: 93,
     lat: 34.5305,
