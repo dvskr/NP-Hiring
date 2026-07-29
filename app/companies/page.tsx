@@ -4,6 +4,7 @@ import { getSiteStats } from '@/lib/site-stats';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 
 export const revalidate = 3600; // ISR: revalidate every hour
 
@@ -68,12 +69,26 @@ const clayCard: React.CSSProperties = {
 };
 
 export default async function CompaniesIndexPage() {
+  const now = new Date();
+
+  // P1 #12 (hub links): the card set and its "N open positions" label must
+  // use the SAME predicate the profile page uses to decide whether it 404s.
+  // The hub previously counted every published row including expired ones, so
+  // it linked to — and advertised job counts for — profiles that render a 404.
+  //
+  // That fix first used a hand-rolled `expiresAt: { gt: now }`, which matched
+  // the profile page but made BOTH of them wrong in the other direction:
+  // expiresAt=NULL counts as ACTIVE everywhere else in the repo
+  // (lib/active-job-filter.ts, and the sitemap + middleware gates built on
+  // it), so null-expiry employers were dropped from this directory entirely
+  // while sitemap.xml still submitted their profile URLs. Both files now use
+  // the shared helper — one predicate, no drift.
+  const activeJobWhere = activeIndexableJobWhere(now);
+
   const companies = await prisma.company.findMany({
     where: {
       jobs: {
-        some: {
-          isPublished: true,
-        },
+        some: activeJobWhere,
       },
     },
     select: {
@@ -85,7 +100,7 @@ export default async function CompaniesIndexPage() {
       _count: {
         select: {
           jobs: {
-            where: { isPublished: true },
+            where: activeJobWhere,
           },
         },
       },
@@ -201,7 +216,13 @@ export default async function CompaniesIndexPage() {
               return (
                 <Link
                   key={company.id}
-                  href={`/companies/${company.normalizedName}`}
+                  // B30 inverse (app/sitemap.ts): rows inserted before the
+                  // normalizer changed still store the space form
+                  // ("life stance"), which interpolates to a %20 URL that
+                  // mismatches the canonical kebab URL the sitemap emits.
+                  // Single-space→hyphen is the exact inverse of the profile
+                  // resolver's legacy fallback, so the link round-trips.
+                  href={`/companies/${company.normalizedName.replace(/ /g, '-')}`}
                   style={{ textDecoration: 'none' }}
                 >
                   <div

@@ -155,6 +155,28 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
         description: 'Full Practice Authority',
         details: 'Kansas PMHNPs have full independent practice authority.',
     },
+    // ── 2026-07 correction (P1 #11) ──
+    // New York and Massachusetts were carried as 'reduced', which put this
+    // dataset at 25 states + DC while three other places in the repo assumed
+    // 27 states + DC: this block's own header, the section counts below
+    // (12 reduced / 11 restricted — which only sum to 51 jurisdictions if
+    // these two are full), and STAT_SOURCES.fullPracticeStates ('27 states +
+    // DC', AANP State Practice Environment) as rendered on /jobs, /faq,
+    // /salary-guide and /for-employers/resources/how-to-hire.
+    // AANP classifies both as Full Practice: NY under the Nurse Practitioner
+    // Modernization Act (permanent since 2022), MA under Chapter 227 of the
+    // Acts of 2020 (effective 2021). Both carry an experience threshold, so
+    // the details strings state it rather than promising day-one autonomy.
+    'New York': {
+        authority: 'full',
+        description: 'Full Practice Authority',
+        details: 'New York grants full practice authority to PMHNPs who have completed 3,600 hours of qualifying practice; below that threshold a written collaborative relationship with a physician still applies.',
+    },
+    'Massachusetts': {
+        authority: 'full',
+        description: 'Full Practice Authority',
+        details: 'Massachusetts grants full practice authority to PMHNPs after at least two years of supervised practice; the supervision requirement applies only during that transition period.',
+    },
 
     // Reduced Practice States (12 states)
     'Alabama': {
@@ -197,11 +219,6 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
         description: 'Reduced Practice',
         details: 'New Jersey PMHNPs need a collaborative agreement with a physician.',
     },
-    'New York': {
-        authority: 'reduced',
-        description: 'Reduced Practice',
-        details: 'New York requires a collaborative agreement for PMHNPs, though recent legislation is expanding autonomy.',
-    },
     'Ohio': {
         authority: 'reduced',
         description: 'Reduced Practice',
@@ -238,11 +255,6 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
         authority: 'restricted',
         description: 'Restricted Practice',
         details: 'Georgia requires PMHNPs to practice under physician supervision with a protocol agreement.',
-    },
-    'Massachusetts': {
-        authority: 'reduced',
-        description: 'Reduced Practice',
-        details: 'Massachusetts requires PMHNPs to have a supervisory agreement, though requirements vary by practice setting.',
     },
     'Michigan': {
         authority: 'restricted',

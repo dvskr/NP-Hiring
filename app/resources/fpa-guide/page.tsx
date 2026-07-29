@@ -41,6 +41,13 @@ export default function FPAGuidePage() {
 
   const allStates = Object.entries(STATE_PRACTICE_AUTHORITY).sort(([a], [b]) => a.localeCompare(b));
 
+  // D.C. is a jurisdiction in the dataset, not a state, so `fullStates` already
+  // counts it. Both places below render "<n> states + DC", which double-counted
+  // it. Subtract it so the figure reads 27 states + DC — matching
+  // STAT_SOURCES.fullPracticeStates (AANP), the same number /jobs, /faq,
+  // /salary-guide and /for-employers cite.
+  const fullStateCount = fullStates.filter((s) => s !== 'District of Columbia').length;
+
   const fpaFaqs = [
     {
       question: `What is Full Practice Authority for ${brand.niche.short}s?`,
@@ -48,7 +55,7 @@ export default function FPAGuidePage() {
     },
     {
       question: "How many states have Full Practice Authority for nurse practitioners?",
-      answer: `As of 2026, ${fullStates.length} states (plus Washington D.C.) grant Full Practice Authority to ${brand.niche.short}s. ${reducedStates.length} states have Reduced Practice (requiring collaborative agreements), and ${restrictedStates.length} states have Restricted Practice (requiring physician supervision).`
+      answer: `As of 2026, ${fullStateCount} states (plus Washington D.C.) grant Full Practice Authority to ${brand.niche.short}s. ${reducedStates.length} states have Reduced Practice (requiring collaborative agreements), and ${restrictedStates.length} states have Restricted Practice (requiring physician supervision).`
     },
     {
       question: `Does Full Practice Authority affect ${brand.niche.short} salary?`,
@@ -158,7 +165,7 @@ export default function FPAGuidePage() {
                     <h3 className="font-semibold text-green-800">Full Practice Authority</h3>
                   </div>
                   <p className="text-sm text-green-700">Independent practice. No physician oversight. Full prescriptive authority including Schedule II-V.</p>
-                  <p className="text-xs text-green-600 mt-2 font-semibold">{fullStates.length} states + DC</p>
+                  <p className="text-xs text-green-600 mt-2 font-semibold">{fullStateCount} states + DC</p>
                 </div>
                 <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
                   <div className="flex items-center gap-2 mb-2">

@@ -17,6 +17,7 @@ import {
 } from '@/lib/blog';
 import { autoLinkCategories } from '@/lib/autoLink';
 import { ArrowRight } from 'lucide-react';
+import EditorialByline, { editorialSchemaFields } from '@/components/EditorialByline';
 import EditorialTOC from '@/components/blog/EditorialTOC';
 import EditorialToolbar from '@/components/blog/EditorialToolbar';
 import EditorialShare from '@/components/blog/EditorialShare';
@@ -252,14 +253,17 @@ export default async function BlogPostPage({ params }: Props) {
 
     // JSON-LD BlogPosting schema
     //
-    // SEO Fix C1 (YMYL): the previous author/reviewedBy block named
-    // "PMHNP Hiring Editorial Team" and a fictional "PMHNP Clinical Review
-    // Board" — neither corresponds to a real, named person. Shipping
-    // fake clinical credentials in healthcare YMYL content is a manual
-    // action risk. Until a real PMHNP-BC reviewer is contracted (and
-    // their name + license number can be cited), the schema names the
-    // Organization as the author with NO `reviewedBy` field. Adding a
-    // real Person.author is the path forward — see runbook B.1.
+    // Authorship stays at the Organization level — posts are editorially
+    // produced from cited data sources, not individually authored, and
+    // fabricating clinical credentials on healthcare YMYL content is a
+    // manual-action risk (SEO Fix C1). The editorialSchemaFields() spread
+    // below is the sanctioned path forward: it contributes NOTHING while
+    // brand.editorial.reviewer (config/brand.ts) is null, and emits the
+    // review attribution as a schema.org Person derived from that same
+    // config once a real credentialed reviewer is contracted — the
+    // visible byline (components/EditorialByline.tsx) renders from the
+    // identical object, so schema and UI can never disagree. See
+    // /editorial-policy for the public-facing version of this policy.
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'BlogPosting',
@@ -291,7 +295,16 @@ export default async function BlogPostPage({ params }: Props) {
         keywords: post.target_keyword || undefined,
         articleSection: categoryLabel,
         url: currentUrl,
+        // {} while brand.editorial.reviewer is null; the real reviewer's
+        // Person record when configured. Never a fabricated name.
+        ...editorialSchemaFields(),
     };
+
+    // JSON-LD serialization guard (same chain as BreadcrumbSchema / the
+    // jobs templates): escape </> so post-derived strings can never break
+    // out of the <script> element.
+    const toJsonLd = (obj: unknown): string =>
+        JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 
     // VideoObject schema when a YouTube video or Supabase video is associated
     const videoSchema = post.youtube_video_id ? {
@@ -352,15 +365,15 @@ export default async function BlogPostPage({ params }: Props) {
             <EditorialStickyFix />
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                dangerouslySetInnerHTML={{ __html: toJsonLd(jsonLd) }}
             />
             {faqSchema && (
-                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: toJsonLd(faqSchema) }} />
             )}
             {videoSchema && (
-                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoSchema) }} />
+                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: toJsonLd(videoSchema) }} />
             )}
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: toJsonLd({
                 '@context': 'https://schema.org', '@type': 'BreadcrumbList',
                 itemListElement: [
                     { '@type': 'ListItem', position: 1, name: 'Home', item: brand.baseUrl },
@@ -406,6 +419,15 @@ export default async function BlogPostPage({ params }: Props) {
                                 <strong>{categoryLabel}</strong>
                             </div>
                         </div>
+                        {/* P1 #8: visible byline. Renders for every post —
+                            generic and license-guide branches alike — but
+                            the license-guide series is machine-generated
+                            from repo data and no human read it, so it gets
+                            the generated-content byline instead of an
+                            editorial-review claim (licenseSlugMatch, ~line
+                            104). A named credentialed reviewer, once
+                            contracted, supersedes both. */}
+                        <EditorialByline variant="hero" generated={Boolean(licenseSlugMatch)} />
                     </div>
                     <div className="ed-hero-side">
                         {/* Hero is the LCP element on virtually every post page.
@@ -472,21 +494,22 @@ export default async function BlogPostPage({ params }: Props) {
                     <EditorialShare title={post.title} url={currentUrl} />
 
 
-                    {/* SEO Fix C1: removed the "PMHNP-BC Reviewed" / "ANCC Certified"
-                        badges and the "Clinical Editorial Team" byline because no
-                        real, named PMHNP-BC reviewer can be cited. Shipping fake
-                        clinical credentials on YMYL healthcare content is a
-                        manual-action risk. The simplified author card below names
-                        the publishing organization and date only. Restore named
-                        authors when a real Person record is wired into lib/blog.ts
-                        (runbook H12). */}
+                    {/* SEO Fix C1 + P1 #8: the author card names the publishing
+                        organization; the EditorialByline inside it renders the
+                        review status straight from brand.editorial.reviewer
+                        (config/brand.ts) — the editorial team + policy link
+                        while that config is null, the real named credentialed
+                        reviewer once contracted. Fake credentials are never
+                        rendered because the byline and the schema derive from
+                        the same config object. */}
                     <div className="ed-author">
-                        {/* Brand initial (was a leftover donor 'P' for PMHNP). */}
+                        {/* Brand initial. */}
                         <div className="ed-author-avatar" aria-hidden="true">{brand.name.charAt(0)}</div>
                         <div>
                             <div className="ed-author-role">Published by</div>
                             <h4 className="ed-author-name">{brand.name}</h4>
-                            <p className="ed-author-bio">{brand.name} is a job board for {brand.niche.descriptor}s, operated by Akari Labs LLC. This article is editorial commentary aggregated from public sources and is not medical advice.</p>
+                            <p className="ed-author-bio">{brand.name} is a job board for {brand.niche.descriptor}s, operated by {brand.legal.entityName}. This article is editorial commentary aggregated from public sources and is not medical advice.</p>
+                            <EditorialByline generated={Boolean(licenseSlugMatch)} />
                             {/* B54: the always-current "Updated {currentYear}" badge
                                 fabricated freshness on every render. Show the real
                                 editorial date instead (same source as the schema's
@@ -497,8 +520,8 @@ export default async function BlogPostPage({ params }: Props) {
                                 </div>
                             )}
                         </div>
-                        <Link href="/about" className="ed-author-link">
-                            About Us <ArrowRight size={14} />
+                        <Link href="/editorial-policy" className="ed-author-link">
+                            Editorial Policy <ArrowRight size={14} />
                         </Link>
                     </div>
 
@@ -522,7 +545,7 @@ export default async function BlogPostPage({ params }: Props) {
                         }}
                     >
                         <strong style={{ display: 'block', marginBottom: '4px', color: '#1A2E35' }}>Editorial note</strong>
-                        This article is for informational purposes only and is not medical, clinical, legal, or financial advice. Always consult a licensed clinician, your state board of nursing, or a qualified professional for individual care, licensure, or career decisions. {brand.name} is a job board operated by Akari Labs LLC and is not a medical, regulatory, or licensing authority.
+                        This article is for informational purposes only and is not medical, clinical, legal, or financial advice. Always consult a licensed clinician, your state board of nursing, or a qualified professional for individual care, licensure, or career decisions. {brand.name} is a job board operated by {brand.legal.entityName} and is not a medical, regulatory, or licensing authority.
                     </aside>
                 </div>
 

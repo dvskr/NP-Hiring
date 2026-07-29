@@ -28,6 +28,16 @@ export interface FAQItem {
 // the specialty, which the niche-copy ratchet ceiling for this file
 // (tests/regressions/niche-copy-pseo-support-files.test.ts) does not yet
 // sanction — raise that ceiling before adding it here.
+//
+// P1 #5 landing-page pass (2026-07-29): builders added for the remaining
+// category-landing slugs (urgent-care, home-health, neonatal, oncology,
+// cardiology, primary-care, hospitalist, dermatology, orthopedic,
+// clinical-nurse-specialist) so the 19 template landings render a real FAQ
+// block + FAQPage schema, plus the three P1 #15 specialty verticals
+// (aesthetics, pain-management, palliative-hospice) that wrap the same
+// template. Same truth rules as the P0 pass — state-licensure specifics the
+// repo does not hold (fees, CE hours, prescribing limits) point readers at
+// the state board instead of being asserted as facts.
 export type CategorySlug =
     | 'remote'
     | 'telehealth'
@@ -50,7 +60,20 @@ export type CategorySlug =
     | 'acute-care'
     | 'emergency'
     | 'anesthesia'
-    | 'midwifery';
+    | 'midwifery'
+    | 'urgent-care'
+    | 'home-health'
+    | 'neonatal'
+    | 'oncology'
+    | 'cardiology'
+    | 'primary-care'
+    | 'hospitalist'
+    | 'dermatology'
+    | 'orthopedic'
+    | 'clinical-nurse-specialist'
+    | 'aesthetics'
+    | 'pain-management'
+    | 'palliative-hospice';
 
 export interface CategoryFaqInput {
     category: CategorySlug;
@@ -82,7 +105,25 @@ export const CATEGORY_LABELS: Record<CategorySlug, string> = {
     emergency: 'Emergency',
     anesthesia: 'Nurse Anesthetist',
     midwifery: 'Nurse Midwife',
+    'urgent-care': 'Urgent Care',
+    'home-health': 'Home Health',
+    neonatal: 'Neonatal',
+    oncology: 'Oncology',
+    cardiology: 'Cardiology',
+    'primary-care': 'Primary Care',
+    hospitalist: 'Hospitalist',
+    dermatology: 'Dermatology',
+    orthopedic: 'Orthopedic',
+    'clinical-nurse-specialist': 'Clinical Nurse Specialist',
+    aesthetics: 'Aesthetics',
+    'pain-management': 'Pain Management',
+    'palliative-hospice': 'Palliative & Hospice',
 };
+
+/** Type guard: does this slug have FAQ data (label + optional builder)? */
+export function isCategoryFaqSlug(slug: string): slug is CategorySlug {
+    return slug in CATEGORY_LABELS;
+}
 
 // ─── Shared citation-backed phrasing ────────────────────────────────────────
 // TRUTH RULE: the only figures allowed in the builders below are the cited
@@ -423,7 +464,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do pediatric ${brand.niche.short}s need?`,
-            answer: `PNPs certify through the Pediatric Nursing Certification Board (PNCB) as CPNP-PC (primary care) or CPNP-AC (acute care), or through ANCC (PPCNP-BC), after completing a pediatric-focused graduate program and obtaining state APRN licensure.`,
+            answer: `PNPs certify through the Pediatric Nursing Certification Board (PNCB) as CPNP-PC (primary care) or CPNP-AC (acute care), after completing a pediatric-focused graduate program and obtaining state APRN licensure. ANCC retired its pediatric primary care exam (PPCNP-BC), so PNCB is the certification route for new candidates.`,
         },
         {
             question: `What is the average pediatric ${brand.niche.short} salary?`,
@@ -554,6 +595,259 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         {
             question: `Where do certified nurse midwives work?`,
             answer: `Hospital labor and delivery units, freestanding birth centers, OB/GYN group practices, community health programs, and home-birth practices. Call schedules vary substantially — clarify call frequency, backup arrangements, and birth volume expectations when comparing offers.`,
+        },
+    ],
+
+    // ─── Category-landing slugs (2026-07-29 P1 #5 content pass) ─────────────
+    'urgent-care': ({ totalJobs, avgSalary }) => [
+        {
+            question: `What does an urgent care ${brand.niche.short} do?`,
+            answer: `Urgent care ${brand.niche.short}s treat episodic, walk-in complaints — infections, minor injuries, lacerations, and sprains — for patients of all ages, handling assessment, treatment, and disposition within a single visit. There are currently ${totalJobs} urgent care positions listed here.`,
+        },
+        {
+            question: `What certification do urgent care ${brand.niche.short}s need?`,
+            answer: `Most urgent care roles require family-track certification (FNP-C through AANP or FNP-BC through ANCC) for all-ages scope, plus state APRN licensure and DEA registration. The ENP specialty credential strengthens candidacy for higher-acuity sites. Employers also screen for procedural skills such as laceration repair, splinting, and plain-film interpretation.`,
+        },
+        {
+            question: `What is the average urgent care ${brand.niche.short} salary?`,
+            answer: specialtySalaryAnswer('Urgent care NP', avgSalary),
+        },
+        {
+            question: `What schedules do urgent care ${brand.niche.short}s work?`,
+            answer: `Urgent care runs on defined shifts — commonly three or four longer shifts per week including some evenings and weekends — with no patient panel or after-hours documentation to carry between shifts. Clarify the weekend and holiday rotation before accepting an offer.`,
+        },
+        {
+            question: `Can urgent care ${brand.niche.short}s practice independently?`,
+            answer: NP_FPA_ANSWER,
+        },
+    ],
+    'home-health': ({ totalJobs, avgSalary }) => [
+        {
+            question: `What does a home health ${brand.niche.short} do?`,
+            answer: `Home health ${brand.niche.short}s deliver primary and transitional care during home visits — assessments, medication reconciliation, chronic disease management, and annual wellness visits for homebound and medically complex patients. There are currently ${totalJobs} home health positions listed here.`,
+        },
+        {
+            question: `What qualifications do home health ${brand.niche.short} roles require?`,
+            answer: `A graduate ${brand.niche.short} degree with national certification through AANP or ANCC (family or adult-gerontology track, matched to the patient population), state APRN licensure, and DEA registration. Because visits happen without an on-site team, employers screen for independent assessment skills, and a valid driver's license is standard.`,
+        },
+        {
+            question: `How are home health ${brand.niche.short}s paid?`,
+            answer: specialtySalaryAnswer('Home health NP', avgSalary) + ' Many home-based programs pay per completed visit rather than straight salary, and most add mileage or vehicle allowances.',
+        },
+        {
+            question: `What does a typical home health ${brand.niche.short} day look like?`,
+            answer: `A route of scheduled home visits across a defined territory, with documentation between stops or in blocks. Visit counts vary by program and patient complexity — ask about daily visit expectations, territory size, and drive-time compensation when comparing roles.`,
+        },
+        {
+            question: `Can home health ${brand.niche.short}s practice independently?`,
+            answer: NP_FPA_ANSWER,
+        },
+    ],
+    neonatal: ({ totalJobs, avgSalary }) => [
+        {
+            question: `What does a neonatal ${brand.niche.short} (NNP) do?`,
+            answer: `NNPs manage premature and critically ill newborns in Level II–IV NICUs — attending high-risk deliveries, leading resuscitations, performing procedures such as line placement and intubation, and guiding families through intensive care. There are currently ${totalJobs} neonatal positions listed here.`,
+        },
+        {
+            question: `What certification do neonatal ${brand.niche.short}s need?`,
+            answer: `NNPs complete a graduate neonatal NP program — admission commonly requires Level III/IV NICU RN experience — then certify as NNP-BC through the National Certification Corporation (NCC), alongside state APRN licensure. NRP (Neonatal Resuscitation Program) completion is standard.`,
+        },
+        {
+            question: `What is the average neonatal ${brand.niche.short} salary?`,
+            answer: specialtySalaryAnswer('Neonatal NP', avgSalary) + ' Around-the-clock NICU coverage means night, weekend, and call differentials are a routine part of total pay.',
+        },
+        {
+            question: `What schedules do neonatal ${brand.niche.short}s work?`,
+            answer: `NICUs run 24/7, so NNP schedules are shift-based — commonly 12- or 24-hour blocks with rotating nights and weekends. Ask how delivery coverage, call, and post-call time are structured when comparing units.`,
+        },
+    ],
+    oncology: ({ totalJobs, avgSalary }) => [
+        {
+            question: `What does an oncology ${brand.niche.short} do?`,
+            answer: `Oncology ${brand.niche.short}s manage patients through cancer treatment and survivorship — symptom management, treatment monitoring, toxicity checks for chemotherapy and immunotherapy, and long-term follow-up in partnership with medical oncologists. There are currently ${totalJobs} oncology positions listed here.`,
+        },
+        {
+            question: `What certification do oncology ${brand.niche.short}s need?`,
+            answer: `Oncology roles are filled by ${brand.niche.short}s certified through AANP or ANCC on the track matching the population (family or adult-gerontology; pediatric oncology roles use PNCB certification). The optional AOCNP credential through ONCC (Oncology Nursing Certification Corporation) recognizes accumulated oncology NP practice hours.`,
+        },
+        {
+            question: `What is the average oncology ${brand.niche.short} salary?`,
+            answer: specialtySalaryAnswer('Oncology NP', avgSalary),
+        },
+        {
+            question: `Where do oncology ${brand.niche.short}s work?`,
+            answer: `Academic cancer centers, community oncology practices, infusion clinics, and survivorship programs. Roles differ in treatment-phase focus — active treatment, infusion oversight, or survivorship follow-up — so confirm the clinic mix in each listing.`,
+        },
+        {
+            question: `Do I need oncology experience to start?`,
+            answer: `Many centers hire ${brand.niche.short}s with strong medical backgrounds and train the oncology layer — chemotherapy and immunotherapy competencies, oncologic emergencies, and symptom management — through structured onboarding. Dedicated oncology NP fellowships exist at larger academic centers.`,
+        },
+    ],
+    cardiology: ({ totalJobs, avgSalary }) => [
+        {
+            question: `What does a cardiology ${brand.niche.short} do?`,
+            answer: `Cardiology ${brand.niche.short}s manage cardiovascular disease across clinic and hospital settings — heart failure management, guideline-directed medication titration, device checks, stress-test supervision, and pre/post-procedure care with cath lab and EP teams. There are currently ${totalJobs} cardiology positions listed here.`,
+        },
+        {
+            question: `What certification do cardiology ${brand.niche.short}s need?`,
+            answer: `Outpatient cardiology roles are filled by ${brand.niche.short}s certified through AANP or ANCC (family or adult-gerontology track). Inpatient and ICU cardiology typically requires the acute care track — AGACNP-BC through ANCC or ACNPC-AG through AACN. ACLS is standard, and employers screen for ECG interpretation fluency.`,
+        },
+        {
+            question: `What is the average cardiology ${brand.niche.short} salary?`,
+            answer: specialtySalaryAnswer('Cardiology NP', avgSalary) + ' Call stipends and inpatient differentials commonly add to base pay in hospital-based roles.',
+        },
+        {
+            question: `Where do cardiology ${brand.niche.short}s work?`,
+            answer: `Heart failure clinics, general cardiology practices, device and electrophysiology programs, cath lab teams, and cardiovascular surgery step-down units. Clinic-only, inpatient-only, and hybrid roles all appear on this board — check each listing's setting.`,
+        },
+    ],
+    'primary-care': ({ totalJobs, avgSalary }) => [
+        {
+            question: `What does a primary care ${brand.niche.short} do?`,
+            answer: `Primary care ${brand.niche.short}s provide first-contact care for a continuity panel — prevention, chronic disease management, acute visits, and care coordination. There are currently ${totalJobs} primary care positions listed here, across private practices, health systems, FQHCs, and value-based care groups.`,
+        },
+        {
+            question: `What certification do primary care ${brand.niche.short}s need?`,
+            answer: `Primary care spans three tracks: FNP (all ages, certified FNP-C through AANP or FNP-BC through ANCC), AGPCNP (adult panels, through ANCC or AANP), and pediatric primary care (CPNP-PC through PNCB). All require state APRN licensure and DEA registration.`,
+        },
+        {
+            question: `What is the average primary care ${brand.niche.short} salary?`,
+            answer: specialtySalaryAnswer('Primary care NP', avgSalary) + ' FQHC and shortage-area roles frequently add NHSC loan repayment and PSLF eligibility, which can raise total compensation well beyond base salary.',
+        },
+        {
+            question: `Can primary care ${brand.niche.short}s practice independently?`,
+            answer: NP_FPA_ANSWER,
+        },
+        {
+            question: `What is the job outlook for primary care ${brand.niche.short}s?`,
+            answer: `Strong — the BLS projects ${NP_GROWTH_CITED} employment growth for ${brand.niche.descriptor}s from 2022 to 2032, and primary care absorbs much of that demand as practices expand team-based care models.`,
+        },
+    ],
+    hospitalist: ({ totalJobs, avgSalary }) => [
+        {
+            question: `What does a hospitalist ${brand.niche.short} do?`,
+            answer: `Hospitalist ${brand.niche.short}s practice inpatient medicine — admissions, daily rounding, cross-cover, and discharge planning — co-managing adult general medicine patients with physician hospitalists. There are currently ${totalJobs} hospitalist positions listed here.`,
+        },
+        {
+            question: `What certification do hospitalist ${brand.niche.short}s need?`,
+            answer: `Adult inpatient medicine teams prefer the acute care track: AGACNP-BC through ANCC or ACNPC-AG through AACN. Some services consider family-track ${brand.niche.short}s with inpatient experience — check each listing. Hospital credentialing and privileging define the final scope.`,
+        },
+        {
+            question: `What is the average hospitalist ${brand.niche.short} salary?`,
+            answer: specialtySalaryAnswer('Hospitalist NP', avgSalary) + ' Night-block and holiday differentials are standard additions in most hospital medicine groups.',
+        },
+        {
+            question: `What schedules do hospitalist ${brand.niche.short}s work?`,
+            answer: `Block schedules dominate — commonly seven days on, seven days off, with day and night rotations. That concentration makes hospitalist work attractive for clinicians who want extended time off between blocks; clarify the night-shift share before signing.`,
+        },
+    ],
+    dermatology: ({ totalJobs, avgSalary }) => [
+        {
+            question: `What does a dermatology ${brand.niche.short} do?`,
+            answer: `Dermatology ${brand.niche.short}s manage medical dermatology — acne, psoriasis, eczema, and skin cancer surveillance — plus procedures such as biopsies and cryotherapy, and cosmetic services in many practices. There are currently ${totalJobs} dermatology positions listed here.`,
+        },
+        {
+            question: `What certification do dermatology ${brand.niche.short}s need?`,
+            answer: `A national ${brand.niche.short} certification through AANP or ANCC (family or adult-gerontology track) plus state APRN licensure. Dermatology itself is learned in practice: employers screen for derm experience or provide structured training. The optional DCNP credential through the Dermatology Nursing Certification Board recognizes dermatology NP practice hours.`,
+        },
+        {
+            question: `What is the average dermatology ${brand.niche.short} salary?`,
+            answer: specialtySalaryAnswer('Dermatology NP', avgSalary) + ' Productivity and cosmetic-service bonuses in busy practices can push total compensation above base.',
+        },
+        {
+            question: `Is dermatology a good specialty for work-life balance?`,
+            answer: `Dermatology is among the most schedule-friendly ${brand.niche.short} specialties: clinic-based weekday hours with no inpatient call in most practices. Demand routinely outstrips appointment supply, which keeps clinic days full and productivity bonuses attainable.`,
+        },
+    ],
+    orthopedic: ({ totalJobs, avgSalary }) => [
+        {
+            question: `What does an orthopedic ${brand.niche.short} do?`,
+            answer: `Orthopedic ${brand.niche.short}s work across sports medicine, joint replacement, and spine practices — fracture care, joint injections, pre- and post-operative management, and first-assist duties in the OR for surgical roles. There are currently ${totalJobs} orthopedic positions listed here.`,
+        },
+        {
+            question: `What certification do orthopedic ${brand.niche.short}s need?`,
+            answer: `A national ${brand.niche.short} certification through AANP or ANCC (family or adult-gerontology track per the practice population) plus state APRN licensure. The optional ONP-C credential through the Orthopaedic Nurses Certification Board (ONCB) recognizes orthopedic NP practice, and surgical roles require RNFA or first-assist credentialing per hospital policy.`,
+        },
+        {
+            question: `What is the average orthopedic ${brand.niche.short} salary?`,
+            answer: specialtySalaryAnswer('Orthopedic NP', avgSalary) + ' Call stipends and first-assist premiums add upside in surgical practices.',
+        },
+        {
+            question: `Do orthopedic ${brand.niche.short}s work in the OR?`,
+            answer: `Many do — first-assist roles split the week between clinic panels and OR days. Clinic-only roles focus on new injuries, post-op checks, casting, splinting, and image-guided injections. Listings usually state whether first-assisting is expected, so match the mix to your training.`,
+        },
+    ],
+    'clinical-nurse-specialist': ({ totalJobs }) => [
+        {
+            question: `What does a clinical nurse specialist (CNS) do?`,
+            answer: `CNSs are APRNs who work at three levels at once: direct specialty patient care, advancing nursing practice at the bedside, and driving system-level quality and safety outcomes. There are currently ${totalJobs} CNS positions listed here across critical care, medical-surgical, pediatric, and other specialty lines.`,
+        },
+        {
+            question: `How is a CNS different from a nurse practitioner?`,
+            answer: `Both are APRN roles, but they optimize for different things: ${brand.niche.descriptor}s center on direct patient management and prescribing, while CNSs blend direct care with staff development, evidence-based practice change, and unit-level quality ownership. Prescriptive authority for CNSs varies more by state than it does for ${brand.niche.short}s.`,
+        },
+        {
+            question: `What certification do clinical nurse specialists need?`,
+            answer: `A graduate CNS program (MSN or DNP) in a defined specialty population, then national certification — for example AGCNS-BC through ANCC or the ACCNS credentials through AACN — alongside state APRN licensure. CNS title recognition varies by state, so verify the rules with the state board.`,
+        },
+        {
+            question: `Where do clinical nurse specialists work?`,
+            answer: `Predominantly health systems and hospitals — critical care, perioperative, medical-surgical, oncology, and pediatric service lines — plus quality departments and professional-development teams. Compensation varies with the system's model for the role; compare posted ranges on individual listings.`,
+        },
+    ],
+    // ── 2026-07 P1 #15 verticals ────────────────────────────────────────────
+    aesthetics: ({ totalJobs, avgSalary }) => [
+        {
+            question: `What does an aesthetic ${brand.niche.short} do?`,
+            answer: `Aesthetic ${brand.niche.short}s deliver cosmetic and medical aesthetic care — neuromodulator and dermal filler injections, laser and energy-based treatments, skin rejuvenation, and medical-grade skincare planning. There are currently ${totalJobs} aesthetics positions listed here across medical spas, dermatology and plastic surgery practices, and NP-owned clinics.`,
+        },
+        {
+            question: `What certification do aesthetic ${brand.niche.short}s need?`,
+            answer: `A national ${brand.niche.short} certification through AANP or ANCC (family or adult-gerontology track) plus state APRN licensure. Aesthetics itself is learned in practice — employers screen for injectable and device training, often through manufacturer-led programs. The optional CANS credential through the Plastic Surgical Nursing Certification Board recognizes aesthetic practice hours.`,
+        },
+        {
+            question: `Can ${brand.niche.descriptor}s own an aesthetics practice?`,
+            answer: `It depends on the state. Ownership, medical-director, and delegation rules for cosmetic procedures are set by state law and vary widely — some states allow ${brand.niche.descriptor}-owned practices outright, others require a physician relationship. Confirm the current rules with your state board of nursing and medical board before planning ownership.`,
+        },
+        {
+            question: `What is the average aesthetic ${brand.niche.short} salary?`,
+            answer: specialtySalaryAnswer('Aesthetic NP', avgSalary) + ' Aesthetics roles frequently pair a base rate with commission on procedures and retail products, so total pay tracks patient volume and service mix closely.',
+        },
+    ],
+    'pain-management': ({ totalJobs, avgSalary }) => [
+        {
+            question: `What does a pain management ${brand.niche.short} do?`,
+            answer: `Pain management ${brand.niche.short}s evaluate and treat acute, chronic, and cancer-related pain with multimodal plans — medication management, interventional procedures, rehabilitation, and behavioral approaches. There are currently ${totalJobs} pain management positions listed here across interventional pain clinics, spine and orthopedic groups, cancer centers, and hospital pain services.`,
+        },
+        {
+            question: `What certification do pain management ${brand.niche.short}s need?`,
+            answer: `A national ${brand.niche.short} certification through AANP or ANCC (family or adult-gerontology track per the patient population), state APRN licensure, and DEA registration — controlled-substance prescribing is central to the role. Pain management itself is generally learned in practice.`,
+        },
+        {
+            question: `What are the prescribing rules for pain management ${brand.niche.short}s?`,
+            answer: `Controlled-substance authority, opioid-prescribing limits, and prescription drug monitoring program (PDMP) requirements are set state by state and change frequently. Check the current rules with the state board of nursing where you plan to practice rather than relying on general guidance.`,
+        },
+        {
+            question: `What is the average pain management ${brand.niche.short} salary?`,
+            answer: specialtySalaryAnswer('Pain management NP', avgSalary) + ' Interventional and procedure-heavy practices typically add productivity upside on top of base pay.',
+        },
+    ],
+    'palliative-hospice': ({ totalJobs, avgSalary }) => [
+        {
+            question: `What does a palliative care or hospice ${brand.niche.short} do?`,
+            answer: `Palliative and hospice ${brand.niche.short}s manage symptoms and goals of care for patients with serious, advanced, or life-limiting illness — pain and dyspnea control, advance care planning, and family support alongside interdisciplinary teams. There are currently ${totalJobs} positions listed here across hospital consult services, clinics, home-based programs, and inpatient hospice units.`,
+        },
+        {
+            question: `What is the difference between palliative care and hospice?`,
+            answer: `Palliative care runs alongside active, disease-directed treatment at any stage of a serious illness. Hospice is comfort-directed care for patients who are no longer pursuing curative treatment, delivered at home, in facilities, or in inpatient hospice units. Many ${brand.niche.descriptor}s work across both.`,
+        },
+        {
+            question: `What certification do palliative care ${brand.niche.short}s need?`,
+            answer: `A national ${brand.niche.short} certification through AANP or ANCC (adult-gerontology or family track per the patient population), state APRN licensure, and DEA registration for symptom management. The optional ACHPN credential through the Hospice and Palliative Credentialing Center (HPCC) recognizes advanced hospice and palliative practice.`,
+        },
+        {
+            question: `What is the average palliative care ${brand.niche.short} salary?`,
+            answer: specialtySalaryAnswer('Palliative care NP', avgSalary) + ' Home-based and on-call-carrying programs commonly add mileage allowances or call stipends.',
         },
     ],
 };

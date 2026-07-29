@@ -10,6 +10,12 @@ import CopyCitation from '@/components/CopyCitation';
 import SalaryCalculator from '@/components/SalaryCalculator';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { SALARY_GUIDE_PDF_AVAILABLE } from '@/app/api/salary-guide/pdf-availability';
+// P1 #7: by-specialty salary pages — the premium table below links each
+// covered specialty to its /salary-guide/specialty/<slug> deep-dive. The
+// psych slug comes from the registry constant so the reference-niche term
+// stays confined there (niche-copy debt ratchet).
+import { PSYCH_SPECIALTY_SLUG } from '@/lib/pseo/taxonomy-registry';
+import { SALARY_SPECIALTY_PAGES } from '@/app/salary-guide/specialty/specialty-config';
 
 // ── Editorial review date (audit P0 #23, B54 principle) ─────────────────
 // The Article schema's dateModified must reflect a REAL content review,
@@ -169,12 +175,14 @@ const settingData = [
   { setting: 'Community Health (FQHC)', range: '$100,000 - $130,000', notes: 'May qualify for loan forgiveness programs', color: '#6B7280' },
 ];
 
-const specialtyData = [
-  { specialty: 'Acute Care / Hospitalist', premium: '+10-20%', notes: 'AGACNP certification, hospital demand' },
-  { specialty: 'Psychiatric-Mental Health', premium: '+10-20%', notes: 'PMHNP-BC certification, provider shortage' },
-  { specialty: 'Emergency / Urgent Care', premium: '+10-20%', notes: 'Dynamic environment, flexible scheduling' },
-  { specialty: 'Dermatology / Aesthetics', premium: '+10-25%', notes: 'Procedure-driven, cash-pay revenue' },
-  { specialty: 'Gerontology / Palliative', premium: '+5-10%', notes: 'Growing aging population' },
+// `slug` links a row to its by-specialty deep-dive page (P1 #7); rows
+// without a matching specialty page (settings/geography rows) stay plain.
+const specialtyData: { specialty: string; premium: string; notes: string; slug?: string }[] = [
+  { specialty: 'Acute Care / Hospitalist', premium: '+10-20%', notes: 'AGACNP certification, hospital demand', slug: 'acute-care' },
+  { specialty: 'Psychiatric-Mental Health', premium: '+10-20%', notes: 'PMHNP-BC certification, provider shortage', slug: PSYCH_SPECIALTY_SLUG },
+  { specialty: 'Emergency / Urgent Care', premium: '+10-20%', notes: 'Dynamic environment, flexible scheduling', slug: 'emergency' },
+  { specialty: 'Dermatology / Aesthetics', premium: '+10-25%', notes: 'Procedure-driven, cash-pay revenue', slug: 'dermatology' },
+  { specialty: 'Gerontology / Palliative', premium: '+5-10%', notes: 'Growing aging population', slug: 'adult-gerontology' },
   { specialty: 'Private Practice (Owner)', premium: '+20-40%', notes: 'Higher risk, no benefits' },
   { specialty: 'Rural / Underserved', premium: '+10-15%', notes: 'Often includes loan repayment' },
 ];
@@ -341,8 +349,15 @@ export default async function SalaryGuidePage() {
                 }}>
                   <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#831843', margin: '0 0 10px' }}>📄 Download Free PDF Guide</h3>
                   <SalaryGuideForm />
+                  {/* Must list only what the delivered PDF's Methodology
+                      section actually cites (scripts/generate-salary-pdf.ts →
+                      methodologySources = the four STAT_SOURCES entries, plus
+                      this board's own live postings). Commercial aggregators
+                      were named here but appear nowhere in the artifact —
+                      unsourced attribution on a YMYL page. Guarded by
+                      tests/regressions/p1-salary-pdf-copy-truth.test.ts. */}
                   <p style={{ fontSize: '10px', color: '#94A3B8', marginTop: '8px', marginBottom: 0 }}>
-                    Sources: BLS, ZipRecruiter, Indeed, PayScale, Glassdoor, CompHealth
+                    Sources: BLS OEWS, BLS Employment Projections, AANP, HRSA, and live {brand.name} postings
                   </p>
                 </div>
               )}
@@ -414,10 +429,15 @@ export default async function SalaryGuidePage() {
               background: '#FDF2F8', border: '1px solid #FBCFE8',
             }}>
               <p style={{ fontSize: '12px', color: '#831843', margin: 0, lineHeight: 1.5 }}>
-                <strong>Note:</strong> Real-time salary data from active {brand.niche.short} job postings.
-                {SALARY_GUIDE_PDF_AVAILABLE
-                  ? ' For comprehensive state-by-state data including cost-of-living adjustments, download our full PDF guide above.'
-                  : ' Each state name links to a detailed page with pay by setting and top employers.'}
+                {/* Not flag-gated: this table IS the state-by-state source.
+                    The PDF deliberately freezes no state wage snapshot (it
+                    would overstate typical pay — see the note above
+                    fetchLiveInventory in scripts/generate-salary-pdf.ts), so
+                    the download must never be advertised as the place to get
+                    state data. Traffic flows the other way: the PDF points
+                    readers here. */}
+                <strong>Note:</strong> Real-time salary data from active {brand.niche.short} job postings, updated daily.
+                {' '}Each state name links to a detailed page with pay by setting and top employers.
               </p>
             </div>
 
@@ -560,12 +580,34 @@ export default async function SalaryGuidePage() {
                 <tbody>
                   {specialtyData.map((item, i) => (
                     <tr key={i} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
-                      <td style={{ padding: '10px 28px', fontWeight: 500, color: '#1A2E35', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>{item.specialty}</td>
+                      <td style={{ padding: '10px 28px', fontWeight: 500, color: '#1A2E35', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                        {/* P1 #7: covered specialties link to their deep-dive salary page */}
+                        {item.slug ? (
+                          <Link href={`/salary-guide/specialty/${item.slug}`} className="sal-state-link" style={{ color: '#1A2E35', textDecoration: 'none' }}>
+                            {item.specialty}
+                          </Link>
+                        ) : (
+                          item.specialty
+                        )}
+                      </td>
                       <td style={{ padding: '10px 20px', textAlign: 'right', fontWeight: 700, color: '#BE185D', borderBottom: '1px solid rgba(0,0,0,0.04)', whiteSpace: 'nowrap' }}>{item.premium}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              {/* P1 #7: full by-specialty guides (config-driven — one array
+                  feeds these chips, the index hub, and the sitemap). */}
+              <div style={{ padding: '14px 28px 20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 10px' }}>
+                <span style={{ fontSize: '11.5px', fontWeight: 600, color: '#64748B' }}>Full salary guides:</span>
+                {SALARY_SPECIALTY_PAGES.map(p => (
+                  <Link key={p.slug} href={`/salary-guide/specialty/${p.slug}`} className="sal-state-link" style={{ fontSize: '11.5px', fontWeight: 600, color: '#BE185D', textDecoration: 'none' }}>
+                    {p.credential ?? p.label}
+                  </Link>
+                ))}
+                <Link href="/salary-guide/specialty" className="sal-state-link" style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E3A5F', textDecoration: 'none' }}>
+                  Compare all →
+                </Link>
+              </div>
             </div>
 
             {/* FPA Impact (6 cols) */}

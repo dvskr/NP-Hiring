@@ -27,8 +27,8 @@
  *
  * ✅ Route-folder migration COMPLETE: the physical app/jobs/<slug>/
  * folders and the JOBS_TOP_SEGMENTS set in jobs-segments-edge.ts now
- * match this registry (42 category folders + 5 namespace segments; the
- * 21 state-eligible slugs each have an [state] sub-folder). The drift
+ * match this registry (45 category folders + 5 namespace segments; the
+ * 28 state-eligible slugs each have an [state] sub-folder). The drift
  * test (tests/seo/jobs-segments-drift.test.ts) enforces this and PASSES;
  * if it fails, a folder or registry entry changed without its
  * counterpart.
@@ -38,6 +38,18 @@
  * pages. New boards define their own axes/slugs here AND create the
  * matching app/jobs/<slug>/ folders (the drift test fails until both
  * sides agree).
+ *
+ * ⚠️ DEPLOY STEP FOR ANY *NEW* SLUG — re-run the tag backfill:
+ *     npx tsx scripts/backfill-category-tags.ts --force --apply
+ * A new slug starts with zero rows carrying it in Job.categoryTags, and
+ * withTagFallback()'s keyword fallback only rescues rows whose
+ * categoryTags array is EMPTY (lib/pseo/category-tagger.ts). Every
+ * already-backfilled row therefore stays invisible to the new category
+ * until the classifier re-runs — the landing page renders a real but
+ * empty result set (correctly noindexed by the zero-inventory gate, so
+ * nothing thin gets indexed; it just has no inventory). The 2026-07
+ * P1 #15 slugs (aesthetics, pain-management, palliative-hospice) are in
+ * exactly that state until the backfill runs.
  */
 
 /**
@@ -57,6 +69,8 @@ export const CATEGORY_AXES = {
         'women-health', 'acute-care', 'emergency', 'psychiatric-mental-health',
         'oncology', 'cardiology', 'primary-care', 'hospitalist',
         'dermatology', 'orthopedic',
+        // 2026-07 P1 #15: high-volume NP verticals (content-gap synthesis §7).
+        'aesthetics', 'pain-management', 'palliative-hospice',
     ],
     /** APRN cohort beyond NPs (CRNA / CNM / CNS). */
     aprn: ['anesthesia', 'midwifery', 'clinical-nurse-specialist'],
@@ -65,22 +79,32 @@ export const CATEGORY_AXES = {
     population: ['geriatric', 'veterans', 'lgbtq'],
 } as const;
 
-/** All 42 category landing-page slugs (union of the axes). */
+/** All 45 category landing-page slugs (union of the axes). */
 export const ALL_CATEGORY_SLUGS: readonly string[] = Object.values(CATEGORY_AXES).flat();
 
 /**
- * Categories with a /jobs/<category>/[state] sub-route (21 physical
+ * Categories with a /jobs/<category>/[state] sub-route (28 physical
  * `[state]` folders). Middleware 410s state URLs outside this set.
- * Mirrors the donor's STATE_ELIGIBLE_TAXONOMIES: all modalities and job
- * types, the high-volume NP specialties where state-by-state demand is
- * real, the APRN roles whose state licensing genuinely varies
- * (anesthesia, midwifery), and new-grad.
+ * Started from the donor's STATE_ELIGIBLE_TAXONOMIES (all modalities and
+ * job types, the high-volume NP specialties where state-by-state demand
+ * is real, the APRN roles whose state licensing genuinely varies, and
+ * new-grad); extended 2026-07 (P1 #14) with the remaining high-demand
+ * specialties + the urgent-care/home-health settings.
+ *
+ * Every slug here MUST have a matching entry in SETTING_CONFIGS
+ * (lib/pseo/setting-state-config.ts) — the [state] template notFound()s
+ * for keys without a config, which would 404 all 51 state pages.
+ * tests/regressions/p1-taxonomy-expansion-registry.test.ts enforces this.
  */
 export const STATE_ELIGIBLE_CATEGORY_SLUGS: readonly string[] = [
     'remote', 'telehealth', 'inpatient', 'outpatient', 'travel',
+    'urgent-care', 'home-health',
     'full-time', 'part-time', 'contract', 'per-diem', 'locum-tenens', '1099',
     'family-practice', 'adult-gerontology', 'pediatric', 'women-health',
     'acute-care', 'emergency', 'psychiatric-mental-health',
+    // 2026-07 P1 #14: high-demand specialties promoted to the [state] tier
+    // ("primary care NP jobs in Texas" is a head query — synthesis §7).
+    'primary-care', 'oncology', 'cardiology', 'hospitalist', 'dermatology',
     'anesthesia', 'midwifery',
     'new-grad',
 ];

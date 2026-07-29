@@ -5,8 +5,11 @@ import {
   V2, SANS, SERIF,
 } from '@/lib/email-templates-v2';
 import { brand } from '@/config/brand';
+import { SALARY_GUIDE_EDITION_YEAR } from '@/app/api/salary-guide/pdf-availability';
 
-const STORAGE_BASE = brand.assets.storageBase;
+// (brand.assets.storageBase is no longer referenced here — the salary-guide
+// preview was the last template pointing at the donor board's storage
+// bucket, and it now links the real locally-served PDF.)
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl).replace(/\/$/, '');
 const IMG = process.env.EMAIL_ASSETS_URL || `${BASE_URL}/images/email`;
@@ -352,14 +355,20 @@ export const v2Templates: Record<string, V2TemplateEntry> = {
   },
 
   // 10. Salary Guide
+  // Preview must mirror lib/email-service.ts buildSalaryGuideHtml — same
+  // body copy, same edition year, same PDF URL. It previously carried the
+  // pre-P0 text ("salary ranges across all 50 states, remote versus
+  // in-person pay differentials") pointed at the donor board's dead
+  // storage object (PMHNP_Salary_Guide_2026.pdf), so the admin preview
+  // showed a guide that neither exists nor matches the real deliverable.
   'salary-guide': {
     label: 'Salary Guide Delivery',
     desc: 'Sent when a user requests the salary guide',
-    fn: () => simple('hero-salary-guide.png', 'Your 2026 Salary Guide',
-      `Your comprehensive ${brand.niche.short} compensation report is ready. It includes salary ranges across all 50 states, remote versus in-person pay differentials, and negotiation strategies.`,
-      'Download Salary Guide (PDF)', `${STORAGE_BASE}/storage/v1/object/public/resources/PMHNP_Salary_Guide_2026.pdf`,
-      `Your 2026 ${brand.niche.short} Salary Guide is ready.`,
-      `${spacerV2(16)}${secondary(`Looking for opportunities? <a href="${BASE_URL}/jobs" style="color:${V2.teal};text-decoration:underline;">Browse open positions</a>.`)}`),
+    fn: () => simple('hero-salary-guide.png', `Your ${SALARY_GUIDE_EDITION_YEAR} Salary Guide`,
+      `Your ${brand.niche.short} compensation report is ready. It covers the federal national wage benchmark, pay by experience level, practice setting and specialty premium, and what to check before you negotiate. State-by-state pay changes daily, so the guide points you to the free live table on the site rather than freezing a snapshot.`,
+      'Download Salary Guide (PDF)', brand.assets.salaryGuidePdf,
+      `Your ${SALARY_GUIDE_EDITION_YEAR} ${brand.niche.short} Salary Guide is ready.`,
+      `${spacerV2(16)}${secondary(`Want pay by state? See the <a href="${BASE_URL}/salary-guide" style="color:${V2.teal};text-decoration:underline;">daily-updated state table</a>. Looking for opportunities? <a href="${BASE_URL}/jobs" style="color:${V2.teal};text-decoration:underline;">Browse open positions</a>.`)}`),
   },
 
   // 12. Employer Message

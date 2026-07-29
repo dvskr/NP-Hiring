@@ -11,7 +11,10 @@ import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import JobCard from '@/components/JobCard';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
-import { stateToSlug } from '@/lib/pseo/setting-state-config';
+import { stateToSlug, SETTING_CONFIGS } from '@/lib/pseo/setting-state-config';
+import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
+import { buildPlainStateNarrative } from '@/lib/pseo/state-narrative';
+import { STAT_SOURCES } from '@/lib/stats-sources';
 import { METRO_CITIES } from '@/lib/metro-data';
 import StateFAQ from '@/components/StateFAQ';
 import { Job } from '@/lib/types';
@@ -465,9 +468,38 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
       locationSlug: stateSlugForLookup,
       totalJobs: { gte: 1 },
     },
-    select: { categorySlug: true },
+    select: { categorySlug: true, totalJobs: true },
+    orderBy: { totalJobs: 'desc' },
   });
   const validSettingSlugs = new Set(validSettingRows.map(r => r.categorySlug));
+
+  // P1 #16 (state side): derive the category pill list from the registry's
+  // state-eligible set instead of a hardcoded slug array — new state-eligible
+  // categories appear automatically and removed slugs can never emit a 410
+  // link. The live inventory gate (≥1 active job via pseoStats) is unchanged.
+  const categoryPills = STATE_ELIGIBLE_CATEGORY_SLUGS
+    .filter((slug) => validSettingSlugs.has(slug))
+    .map((slug) => ({ slug, label: SETTING_CONFIGS[slug]?.label ?? slug }));
+
+  // P1 #11: deterministic per-state narrative — practice authority, live
+  // salary aggregate, live category/city inventory, NLC note. All figures
+  // come from the DB aggregates above or repo regulatory data.
+  // Filter BEFORE slicing so a stale pseoStats row for a retired slug (no
+  // SETTING_CONFIGS entry) costs a mention rather than silently shrinking
+  // the list to two categories.
+  const topCategoryLabels = validSettingRows
+    .map((row) => SETTING_CONFIGS[row.categorySlug]?.label)
+    .filter((label): label is string => Boolean(label))
+    .slice(0, 3);
+  const stateNarrative = buildPlainStateNarrative({
+    stateName,
+    stateCode,
+    totalJobs: stats.totalJobs,
+    avgSalaryK: stats.avgSalary,
+    uniqueEmployerCount: stats.uniqueEmployerCount,
+    topCategoryLabels,
+    topCityNames: citiesWithJobs.slice(0, 3).map((c) => c.name),
+  });
 
   const totalPages = Math.ceil(stats.totalJobs / limit);
 
@@ -489,7 +521,11 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
   const stateFaqs = [
     { q: `How many ${brand.niche.short} jobs are in ${stateName}?`, a: `There are currently ${stats.totalJobs} ${brand.niche.adjective} nurse practitioner positions available in ${stateName}${stats.avgSalary > 0 ? `, with an average salary of $${stats.avgSalary}K/year` : ''}. New positions are added daily.` },
     { q: `What is the practice authority in ${stateName}?`, a: practiceAuthority ? practiceAuthority.details : `Practice authority in ${stateName} varies. Check state-specific NP practice regulations for the most current requirements.` },
-    { q: `What is the average ${brand.niche.short} salary in ${stateName}?`, a: stats.avgSalary > 0 ? `The average ${brand.niche.short} salary in ${stateName} is $${stats.avgSalary}K/year. Salaries vary based on experience, setting, and whether the role is W-2 or 1099.` : `${brand.niche.short} salaries in ${stateName} typically range from $130K to $200K+ depending on setting and experience level.` },
+    // No-live-data branch cites the BLS national median instead of the
+    // unsourced band that used to ship here — and, because this array also
+    // feeds the FAQPage JSON-LD below, into structured data.
+    // Omit-or-cite: never fabricate a state salary band.
+    { q: `What is the average ${brand.niche.short} salary in ${stateName}?`, a: stats.avgSalary > 0 ? `The average ${brand.niche.short} salary in ${stateName} is $${stats.avgSalary}K/year, based on ${stateName} postings on ${brand.name} that disclose pay. Salaries vary based on experience, setting, and whether the role is W-2 or 1099.` : `Too few ${stateName} postings currently disclose pay to publish a state average. Nationally, ${brand.niche.descriptor}s earn a median of ${STAT_SOURCES.averageSalary.formatted} per year (${STAT_SOURCES.averageSalary.source}); compare ${stateName} offers posting by posting, since setting, experience, and W-2 vs 1099 structure drive most of the spread.` },
     { q: `Which cities in ${stateName} have the most ${brand.niche.short} jobs?`, a: citiesWithJobs.length > 0 ? `Top cities for ${brand.niche.short} jobs in ${stateName} include ${citiesWithJobs.slice(0, 4).map(c => `${c.name} (${c.count} jobs)`).join(', ')}.` : `${brand.niche.short} positions in ${stateName} are distributed across multiple cities and include remote telehealth options.` },
     { q: `Can I work remotely as an ${brand.niche.short} in ${stateName}?`, a: `Yes, many telehealth and remote ${brand.niche.short} positions allow you to practice from ${stateName}. You'll need an active NP license in the state where your patient resides.` },
   ];
@@ -518,19 +554,22 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
           })),
         }) }} />
       )}
-      {/* AggregateOffer schema — shows salary range in SERPs */}
-      {stats.avgSalary > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-          '@context': 'https://schema.org',
-          '@type': 'AggregateOffer',
-          name: `${brand.niche.short} Jobs in ${stateName}`,
-          offerCount: stats.totalJobs,
-          lowPrice: Math.round(stats.avgSalary * 0.8) * 1000,
-          highPrice: Math.round(stats.avgSalary * 1.2) * 1000,
-          priceCurrency: 'USD',
-          url: `${brand.baseUrl}/jobs/state/${stateSlug}`,
-        }) }} />
-      )}
+      {/* AggregateOffer node removed (P1 #11 truth sweep, 2026-07).
+          It emitted lowPrice = avgSalary x 0.8 and highPrice = avgSalary x 1.2
+          — a +/-20% spread that traced to no source (not lib/stats-sources.ts,
+          not config/niche/salary.ts) and had no visible counterpart: every
+          salary figure this page renders is either the live point average
+          ($<avg>k) or the cited BLS median. That served Google a band the page
+          never shows, the exact schema/visible divergence this package exists
+          to remove.
+          Not replaced with the live bounds either: schema.org lowPrice /
+          highPrice mean the cheapest and dearest offer in the set, so neither
+          the avg-of-mins/avg-of-maxes pair nor a collapsed point value is a
+          truthful reading, and a bare page-level AggregateOffer is not a
+          Google-supported rich-result type on a listing hub (JobPosting
+          .baseSalary is, and it is emitted per job on the detail pages).
+          Omit rather than fabricate. The salary claim survives in the FAQPage
+          JSON-LD below, single-sourced from the visible accordion. */}
 
       {/* ═══ HERO ═══ */}
       <CategoryHero
@@ -544,7 +583,12 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
         headlineSub={`in ${stateName}.`}
         stats={[
           { value: `${stats.totalJobs}`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K+', label: 'avg salary' },
+          // Drop the stat rather than fabricate a floor when no posting in
+          // the state discloses pay (omit-not-fabricate — the placeholder
+          // that used to sit here traced to no source in the repo).
+          ...(stats.avgSalary > 0
+            ? [{ value: `$${stats.avgSalary}k`, label: 'avg salary' }]
+            : []),
           { value: `${stats.uniqueEmployerCount}`, label: 'employers' },
         ]}
         description={`Browse all ${brand.niche.adjective} NP positions in ${stateName}. Remote telehealth, outpatient clinics, inpatient facilities, and private practice opportunities.`}
@@ -654,7 +698,13 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>{stateName} Overview</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Working as an {brand.niche.short} in {stateName}</h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Key information for {brand.niche.descriptor}s practicing in {stateName}.</p>
+          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 28px', lineHeight: 1.6 }}>Key information for {brand.niche.descriptor}s practicing in {stateName}.</p>
+
+          {/* P1 #11: per-state narrative block — deterministic prose built from
+              practice-authority data, the live salary aggregate, live
+              category/city inventory, and NLC membership. Replaces the single
+              templated sentence that made all 51 hubs read near-identical. */}
+          <p style={{ fontSize: '15px', color: '#5A4A42', maxWidth: '820px', margin: '0 auto 48px', lineHeight: 1.8 }}>{stateNarrative}</p>
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Practice Authority (8col) + Salary (4col) */}
@@ -681,7 +731,13 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
               </div>
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Salary & Compensation</h3>
-                <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>{brand.niche.short}s in {stateName} earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K+'} annually.
+                {/* Cite the BLS national median when the state has no
+                    disclosed-pay inventory — the previous fallback here was
+                    an unsourced band. */}
+                <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
+                  {stats.avgSalary > 0
+                    ? `${brand.niche.short}s in ${stateName} earn $${stats.avgSalary}k annually across ${stateName} postings that disclose pay.`
+                    : `Too few ${stateName} postings disclose pay for a state average. The national median is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`}
                 </p>
               </div>
             </div>
@@ -787,32 +843,21 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
               </div>
             )}
 
-            {/* Job Types — clay pills */}
+            {/* Specialties & job types — clay pills. Guarded like the Nearby
+                States and Metro Guides blocks above so a state whose setting
+                inventory is empty never renders a bare heading + divider. */}
+            {categoryPills.length > 0 && (
             <div style={{ marginBottom: '24px', paddingBottom: '24px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
               <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#7A6A62', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
-                Job Types in {stateName}
+                Specialties & Job Types in {stateName}
               </h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {/* GSC Fix (P1.5): only render settings that have a state-eligible
-                    page AND ≥1 active job in this state. Removed the city-only
-                    taxonomies (substance-abuse, child-adolescent, private-practice,
-                    per-diem) from this list because they have no /jobs/{cat}/{state}
-                    page — those URLs would 410. */}
-                {[
-                  { slug: 'remote', label: 'Remote' },
-                  { slug: 'telehealth', label: 'Telehealth' },
-                  { slug: 'outpatient', label: 'Outpatient' },
-                  { slug: 'inpatient', label: 'Inpatient' },
-                  { slug: 'travel', label: 'Travel' },
-                  { slug: 'new-grad', label: 'New Grad' },
-                  { slug: 'full-time', label: 'Full-Time' },
-                  { slug: 'part-time', label: 'Part-Time' },
-                  { slug: 'contract', label: 'Contract' },
-                  // NP taxonomy migration (2026-07): addiction / behavioral-health
-                  // candidates removed — slugs no longer exist in the registry.
-                  { slug: 'correctional', label: 'Correctional' },
-                  { slug: '1099', label: '1099' },
-                ].filter((setting) => validSettingSlugs.has(setting.slug)).map((setting) => (
+                {/* P1 #16 (state side): pills derive from the registry's
+                    STATE_ELIGIBLE_CATEGORY_SLUGS (see categoryPills above), so
+                    only categories with a real /jobs/{cat}/{state} route AND
+                    ≥1 active job here are linked — a stale hardcoded list can
+                    no longer drop new categories or emit 410 links (GSC P1.5). */}
+                {categoryPills.map((setting) => (
                   <Link key={setting.slug} href={`/jobs/${setting.slug}/${stateSlug}`}
                     className="pseo-pill"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 16px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#1A2E35', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '3px 3px 8px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
@@ -821,6 +866,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                 ))}
               </div>
             </div>
+            )}
 
             {/* Resources — clay row */}
             <div>

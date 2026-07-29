@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
+import { parseFaqJson, parseReviewedAt } from '@/app/api/admin/blog/validate';
 
 /**
  * GET /api/admin/blog
@@ -54,6 +56,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Editorially-authored schema fields (FAQPage JSON-LD + dateModified).
+        const faqResult = parseFaqJson(body.faqJson);
+        if (!faqResult.ok) {
+            return NextResponse.json({ success: false, error: faqResult.error }, { status: 400 });
+        }
+        const reviewedResult = parseReviewedAt(body.reviewedAt);
+        if (!reviewedResult.ok) {
+            return NextResponse.json({ success: false, error: reviewedResult.error }, { status: 400 });
+        }
+
         // Generate slug
         const baseSlug = title
             .toLowerCase()
@@ -73,6 +85,15 @@ export async function POST(request: NextRequest) {
                 targetKeyword: targetKeyword || null,
                 imageUrl: imageUrl || null,
                 publishDate: status === 'published' ? new Date() : null,
+                reviewedAt: reviewedResult.value,
+                // Prisma's nullable-Json input type is InputJsonValue |
+                // DbNull | JsonNull — a typed FaqEntry[] doesn't satisfy
+                // its index-signature constraint, so it needs the cast.
+                // Without it `tsc --noEmit` (and therefore `next build`,
+                // which type-checks) fails on this route.
+                faqJson: faqResult.value === null
+                    ? Prisma.DbNull
+                    : (faqResult.value as unknown as Prisma.InputJsonValue),
             },
         });
 

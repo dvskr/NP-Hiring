@@ -17,18 +17,19 @@
  */
 
 export const JOBS_TOP_SEGMENTS: ReadonlySet<string> = new Set([
-  // 42 NP taxonomy category slugs (lib/pseo/taxonomy-registry.ts) +
+  // 45 NP taxonomy category slugs (lib/pseo/taxonomy-registry.ts) +
   // 5 namespace segments (city, state, metro, locations, edit).
-  '1099', 'acute-care', 'adult-gerontology', 'anesthesia', 'cardiology',
-  'city', 'clinical-nurse-specialist', 'community-health', 'contract',
-  'correctional', 'dermatology', 'edit', 'emergency', 'entry-level',
-  'family-practice', 'full-time', 'geriatric', 'home-health', 'hospital',
-  'hospitalist', 'inpatient', 'lgbtq', 'locations', 'locum-tenens',
-  'metro', 'mid-career', 'midwifery', 'neonatal', 'new-grad', 'oncology',
-  'orthopedic', 'outpatient', 'part-time', 'pediatric', 'per-diem',
-  'primary-care', 'private-practice', 'psychiatric-mental-health',
-  'remote', 'senior', 'state', 'telehealth', 'travel', 'urgent-care',
-  'va', 'veterans', 'women-health',
+  '1099', 'acute-care', 'adult-gerontology', 'aesthetics', 'anesthesia',
+  'cardiology', 'city', 'clinical-nurse-specialist', 'community-health',
+  'contract', 'correctional', 'dermatology', 'edit', 'emergency',
+  'entry-level', 'family-practice', 'full-time', 'geriatric',
+  'home-health', 'hospital', 'hospitalist', 'inpatient', 'lgbtq',
+  'locations', 'locum-tenens', 'metro', 'mid-career', 'midwifery',
+  'neonatal', 'new-grad', 'oncology', 'orthopedic', 'outpatient',
+  'pain-management', 'palliative-hospice', 'part-time', 'pediatric',
+  'per-diem', 'primary-care', 'private-practice',
+  'psychiatric-mental-health', 'remote', 'senior', 'state', 'telehealth',
+  'travel', 'urgent-care', 'va', 'veterans', 'women-health',
 ]);
 
 const UUID_SUFFIX = /([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/i;

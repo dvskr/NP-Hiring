@@ -3,7 +3,7 @@ import { cache } from 'react';
 import Image from 'next/image';
 import { formatSalary, slugify, getJobFreshness, getExpiryStatus, expandInlineBullets, splitAtSectionMarkers } from '@/lib/utils';
 import { sanitizeHtmlContent } from '@/lib/sanitize';
-import { MapPin, Briefcase, Monitor, BadgeCheck, ArrowRight, Search } from 'lucide-react';
+import { MapPin, Briefcase, Monitor, BadgeCheck, ArrowRight, Search, Laptop, Video, Plane, Building2, BedDouble, DollarSign, type LucideIcon } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import { Job, Company } from '@/lib/types';
 import SaveJobButton from '@/components/SaveJobButton';
@@ -30,8 +30,6 @@ import { prisma } from '@/lib/prisma';
 import { getPostBySlug } from '@/lib/blog';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-
-const STORAGE_BASE = brand.assets.storageBase;
 
 // ISR: Cache job detail pages for 1 hour.
 // Each job page runs 10-12 DB queries (relatedJobs, companyInfo, salaryData, blogPosts, etc.).
@@ -567,13 +565,15 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
     boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
   };
 
-  const actionCards = [
-    { href: '/jobs', label: 'Browse All Jobs', sub: 'View all open positions', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
-    { href: '/jobs/remote', label: 'Remote Jobs', sub: 'Work from anywhere', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-    { href: '/jobs/telehealth', label: 'Telehealth Jobs', sub: `Virtual ${brand.niche.adjective} care`, icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-    { href: '/jobs/travel', label: 'Travel Jobs', sub: 'Explore new locations', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_travel.webp` },
-    { href: '/jobs/outpatient', label: 'Outpatient Jobs', sub: 'Clinic-based roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
-    { href: '/jobs/inpatient', label: 'Inpatient Jobs', sub: 'Hospital settings', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
+  // Dead-asset purge (2026-07): explore-card art moved off the retired
+  // Supabase bucket onto lucide icons (local-asset pattern, b371b37).
+  const actionCards: { href: string; label: string; sub: string; icon: LucideIcon }[] = [
+    { href: '/jobs', label: 'Browse All Jobs', sub: 'View all open positions', icon: MapPin },
+    { href: '/jobs/remote', label: 'Remote Jobs', sub: 'Work from anywhere', icon: Laptop },
+    { href: '/jobs/telehealth', label: 'Telehealth Jobs', sub: `Virtual ${brand.niche.adjective} care`, icon: Video },
+    { href: '/jobs/travel', label: 'Travel Jobs', sub: 'Explore new locations', icon: Plane },
+    { href: '/jobs/outpatient', label: 'Outpatient Jobs', sub: 'Clinic-based roles', icon: Building2 },
+    { href: '/jobs/inpatient', label: 'Inpatient Jobs', sub: 'Hospital settings', icon: BedDouble },
   ];
 
   return (
@@ -631,7 +631,13 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
                   ...clayCard, display: 'flex', flexDirection: 'column', alignItems: 'center',
                   padding: '20px 12px', textAlign: 'center', textDecoration: 'none',
                 }}>
-                <img src={card.icon} alt="" width={40} height={40} loading="lazy" decoding="async" style={{ marginBottom: '10px', objectFit: 'contain' }} />
+                <span style={{
+                  width: '40px', height: '40px', borderRadius: '12px', marginBottom: '10px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(190,24,93,0.08)', color: '#BE185D',
+                }}>
+                  <card.icon size={22} />
+                </span>
                 <div style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', marginBottom: '3px' }}>{card.label}</div>
                 <div style={{ fontSize: '11px', color: '#7A6A62' }}>{card.sub}</div>
               </a>
@@ -651,7 +657,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
               background: 'linear-gradient(135deg, #BE185D, #9D174D)',
               boxShadow: '4px 4px 12px rgba(190,24,93,0.2), -2px -2px 6px rgba(255,255,255,0.3), inset 1px 1px 2px rgba(255,255,255,0.2)',
             }}>
-            <img src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp`} alt="" width={22} height={22} loading="lazy" decoding="async" style={{ objectFit: 'contain' }} />2026 {brand.niche.short} Salary Guide →</a>
+            <DollarSign size={18} aria-hidden="true" />2026 {brand.niche.short} Salary Guide →</a>
         </div>
 
       </div>

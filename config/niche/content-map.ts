@@ -4,20 +4,20 @@
  * This file is DATA ONLY; the selection and rendering logic stays in
  * the consuming components.
  *
- * ── NP HIRING LAUNCH STATUS (2026-07-02) ─────────────────────────────
- * This board has NO authored blog content yet (content/blog/ posts are
- * inherited PMHNP articles slated for removal; the donor NP board also
- * launched with an empty blog). Every slug list below is therefore
- * EMPTY, and the license-guide series is gated OFF via
- * LICENSE_GUIDE_SERIES_PUBLISHED until the series is written. The
- * consumers handle empty gracefully:
- *   - components/RelatedBlogPosts.tsx returns null for zero posts;
- *   - components/HomepageBlogSection.tsx returns null for an empty
- *     featured list (mirrors the donor's "no dead links" launch state);
- *   - the pSEO/salary-guide licensure links render only when
- *     LICENSE_GUIDE_SERIES_PUBLISHED is true.
- * Seeding 5–10 NP posts and flipping these lists back on is a
- * post-launch content task.
+ * ── NP HIRING CONTENT STATUS (2026-07-29, P1 #2/#3) ──────────────────
+ * The launch content batch is authored:
+ *   - Six evergreen NP posts live as .mdx in content/blog/ and are
+ *     wired into every slug list below. They serve from the blog_posts
+ *     table — run `npx tsx scripts/sync-blog-to-db.ts` against prod
+ *     BEFORE deploying this file so the homepage links resolve.
+ *   - The 51-post licensure series is generated deterministically from
+ *     lib/blog-license-guides.ts and served by lib/blog.ts as a code
+ *     fallback (DB rows, synced via `npx tsx scripts/sync-blog-to-db.ts
+ *     --license-guides`, take precedence). Because all 51 render from
+ *     code, LICENSE_GUIDE_SERIES_PUBLISHED is now true — the gate can
+ *     never 404 a subset of states.
+ * The consumers still handle empty gracefully (RelatedBlogPosts /
+ * HomepageBlogSection return null on empty lists) for future forks.
  *
  * ── WHAT EACH MAP FEEDS ───────────────────────────────────────────────
  *   RELATED_BLOG_SLUGS       getRelevantBlogSlugs() in
@@ -47,10 +47,10 @@
  * 3-post cap live in getRelevantBlogSlugs() in
  * components/RelatedBlogPosts.tsx.
  *
- * NP HIRING: all groups EMPTY — no NP posts authored yet. With every
- * group empty the sidebar renders nothing (RelatedBlogPosts returns
- * null on zero posts). Populate as NP guides are published (salary
- * guide first — it's the `always` slot).
+ * NP HIRING: populated with the six-post seed batch in content/blog/
+ * (P1 #3). Slugs resolve through getPostBySlug(), so until the sync
+ * script has run against prod a missing post silently drops out of the
+ * sidebar rather than 404ing.
  */
 export const RELATED_BLOG_SLUGS: {
     /** Always included on every job page. */
@@ -62,21 +62,25 @@ export const RELATED_BLOG_SLUGS: {
     /** General career guides used to fill up to 3 posts. */
     generalFallback: string[];
 } = {
-    always: [],
-    remoteOrTelehealth: [],
-    newGrad: [],
-    generalFallback: [],
+    always: ['np-salary-guide'],
+    remoteOrTelehealth: ['remote-telehealth-np-jobs-guide'],
+    newGrad: ['new-grad-np-first-job'],
+    generalFallback: [
+        'highest-paying-np-specialties',
+        'fnp-vs-pmhnp-vs-agacnp',
+        'np-1099-vs-w2',
+    ],
 };
 
 /**
  * Slug prefix of the state-licensure blog series ('np-license-alabama'
  * … 'np-license-wyoming', 50 states + DC).
  *
- * ⚠️ NP HIRING: this series is UNWRITTEN — the prefix is reserved, but
- * zero posts exist under it. All code-derived links to the series are
- * gated behind LICENSE_GUIDE_SERIES_PUBLISHED (below) so nothing links
- * to it until it ships. CODE derives links and lookups from this prefix
- * in four places:
+ * NP HIRING: the series is AUTHORED — all 51 posts generate
+ * deterministically from lib/blog-license-guides.ts (practice authority,
+ * NLC membership, board links, cited salary stats) and are served by
+ * lib/blog.ts, with DB rows as editorial overrides. CODE derives links
+ * and lookups from this prefix in four places:
  *   - lib/pseo/category-city-template.tsx (a link on EVERY category×city page)
  *   - app/salary-guide/[state]/page.tsx (related-guide link)
  *   - app/blog/[slug]/page.tsx (license-post detection for related content)
@@ -94,11 +98,24 @@ export const LICENSE_GUIDE_SLUG_PREFIX = 'np-license-';
  * be internal 404s at pSEO scale — the category×city template alone
  * links from ~100K+ pages).
  *
- * FLIP TO true ONLY once all 51 posts ('np-license-<state-slug>' for
- * every state slug + district-of-columbia) exist in content/blog/ —
- * partial publication still 404s the missing states.
+ * TRUE since 2026-07-29 (P1 #2): all 51 posts render deterministically
+ * from lib/blog-license-guides.ts via the getPostBySlug() fallback in
+ * lib/blog.ts, so partial publication is structurally impossible — the
+ * all-or-nothing property is enforced by
+ * tests/regressions/p1-content-library-license-guides.test.ts (one
+ * guide per STATE_PRACTICE_AUTHORITY jurisdiction, and this flag may
+ * only be true while that holds).
+ *
+ * The same suite also gates the DATA these pages assert: the number of
+ * jurisdictions classified 'full' in lib/state-practice-authority.ts
+ * must equal the figure the series publishes on its own pages
+ * (STAT_SOURCES.fullPracticeStates, "27 states + DC"). Flipping this
+ * flag while those disagree ships a self-contradiction — a state's guide
+ * telling readers a collaborative agreement is required while the same
+ * page's FPA count says otherwise — so the flag and the classification
+ * set move together.
  */
-export const LICENSE_GUIDE_SERIES_PUBLISHED = false;
+export const LICENSE_GUIDE_SERIES_PUBLISHED = true;
 
 /** Build the license-guide slug for a state slug (e.g. 'california'). */
 export function licenseGuideSlug(stateSlug: string): string {
@@ -121,9 +138,45 @@ export interface FeaturedBlogPost {
  * components/HomepageBlogSection.tsx. hrefs must point at published
  * posts in content/blog/.
  *
- * NP HIRING: EMPTY — no NP posts authored yet. The component returns
- * null for an empty list, so the homepage simply skips the section (no
- * dead links, no empty chrome). Populate with six NP posts once the
- * initial content batch ships.
+ * NP HIRING: populated with the six-post seed batch (P1 #3). These are
+ * direct <Link> hrefs — run `npx tsx scripts/sync-blog-to-db.ts` against
+ * prod before deploying, or these become live internal 404s.
  */
-export const HOMEPAGE_FEATURED_POSTS: FeaturedBlogPost[] = [];
+export const HOMEPAGE_FEATURED_POSTS: FeaturedBlogPost[] = [
+    {
+        category: 'Salary',
+        title: 'Nurse Practitioner Salary Guide: How NP Pay Really Works',
+        description: 'The national median, the ranges behind it, and the five factors that move NP pay most.',
+        href: '/blog/np-salary-guide',
+    },
+    {
+        category: 'Remote Work',
+        title: 'Remote and Telehealth NP Careers',
+        description: 'Licensure across state lines, the Nurse Licensure Compact, and what virtual roles pay.',
+        href: '/blog/remote-telehealth-np-jobs-guide',
+    },
+    {
+        category: 'New Grad',
+        title: 'How to Land Your First NP Job as a New Grad',
+        description: 'Where new-grad-friendly jobs are, what they pay, and how to evaluate onboarding support.',
+        href: '/blog/new-grad-np-first-job',
+    },
+    {
+        category: 'Salary',
+        title: 'The Highest-Paying NP Specialties, Compared',
+        description: 'CRNA, acute care, emergency, and behavioral health — and the reasons behind every premium.',
+        href: '/blog/highest-paying-np-specialties',
+    },
+    {
+        category: 'Career Paths',
+        title: 'FNP vs PMHNP vs AGACNP: Choosing Your NP Specialty',
+        description: 'Patient populations, settings, certification paths, and pay for the three biggest NP tracks.',
+        href: '/blog/fnp-vs-pmhnp-vs-agacnp',
+    },
+    {
+        category: 'Contracts',
+        title: '1099 vs W-2 for Nurse Practitioners',
+        description: 'The real take-home math once taxes, malpractice, benefits, and retirement are priced in.',
+        href: '/blog/np-1099-vs-w2',
+    },
+];

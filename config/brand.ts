@@ -9,6 +9,30 @@
  * Fork procedure: docs/fork-checklist.md · launch: docs/pilot-fork-runbook.md
  */
 
+/**
+ * Named clinical reviewer for E-E-A-T bylines + Person schema
+ * (consumed by components/EditorialByline.tsx and /editorial-policy).
+ *
+ * TRUTH RULE: populate ONLY with a real, contracted, credentialed
+ * clinician who has actually reviewed the content. Shipping an invented
+ * reviewer on YMYL healthcare pages is a manual-action risk — the whole
+ * point of this config is that the visible byline and the schema.org
+ * Person derive from the SAME object, so neither can be fabricated
+ * independently.
+ */
+export interface EditorialReviewer {
+    /** Full display name, e.g. 'Jane Doe'. */
+    name: string;
+    /** Post-nominal credentials, e.g. 'DNP, APRN, FNP-BC'. */
+    credentials: string;
+    /** Optional role label rendered with the byline, e.g. 'Clinical Reviewer'. */
+    title?: string;
+    /** Public profile URL (personal site / professional profile) for Person.url. */
+    profileUrl?: string;
+    /** NPI number — emitted as a verifiable Person.identifier when present. */
+    npi?: string;
+}
+
 export const brand = {
     /** Display name used in copy, OG titles, email subjects. */
     name: 'NP Hiring',
@@ -111,8 +135,28 @@ export const brand = {
         storageBase: 'https://ytpmrlpnpbdylujbtgij.supabase.co',
         /** CDN base for email images (logo, hero, step icons). Env override: EMAIL_ASSETS_URL. */
         emailAssetsBase: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/email-assets',
-        /** Lead-magnet PDF for the salary-guide email. Env override: SALARY_GUIDE_URL. */
-        salaryGuidePdf: 'https://ytpmrlpnpbdylujbtgij.supabase.co/storage/v1/object/public/resources/NP_Salary_Guide.pdf',
+        /** Lead-magnet PDF for the salary-guide email — served from this app's
+         *  own public/downloads (regenerate: scripts/generate-salary-pdf.ts).
+         *  Env override: SALARY_GUIDE_URL. */
+        salaryGuidePdf: 'https://nphiring.com/downloads/np-salary-guide-2026.pdf',
+    },
+
+    /**
+     * Editorial / clinical-review configuration (E-E-A-T, P1 #8).
+     * Read by components/EditorialByline.tsx, app/blog/[slug]/page.tsx
+     * (schema wiring), and app/editorial-policy/page.tsx.
+     */
+    editorial: {
+        /** Public route of the editorial-policy page. */
+        policyPath: '/editorial-policy',
+        /**
+         * DEFAULTS TO NULL. While null, bylines render "Reviewed by the
+         * {brand} editorial team" linking to the editorial policy, and
+         * article schema stays Organization-only (the honest current
+         * state). Set this ONLY when a real credentialed reviewer is
+         * contracted — never invent a person (see EditorialReviewer).
+         */
+        reviewer: null as EditorialReviewer | null,
     },
 
     /**

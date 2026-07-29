@@ -1,6 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 import sanitizeHtml from 'sanitize-html';
 import { brand } from '@/config/brand';
+import {
+    LICENSE_GUIDE_SERIES_PUBLISHED,
+    LICENSE_GUIDE_SLUG_PREFIX,
+    LICENSE_GUIDE_SLUG_REGEX,
+} from '@/config/niche/content-map';
+import type { BlogCategory } from '@/lib/blog-categories';
+import {
+    getAllLicenseGuideSlugs,
+    getLicenseGuidePost,
+    LICENSE_GUIDE_REVIEWED_AT,
+} from '@/lib/blog-license-guides';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -30,36 +41,13 @@ export interface BlogPost {
     updated_at: string;
 }
 
-export type BlogCategory =
-    | 'job_seeker_attraction'
-    | 'salary_negotiation'
-    | 'career_myths'
-    | 'state_spotlight'
-    | 'employer_facing'
-    | 'community_lifestyle'
-    | 'industry_awareness'
-    | 'product_lead_gen'
-    | 'success_stories'
-    | 'mental_health_trends'
-    | 'policy_industry'
-    | 'career_opportunities'
-    | 'tech_tools';
-
-export const BLOG_CATEGORIES: { id: BlogCategory; label: string }[] = [
-    { id: 'job_seeker_attraction', label: 'Job Seeker Tips' },
-    { id: 'salary_negotiation', label: 'Salary Negotiation' },
-    { id: 'career_myths', label: 'Career Myths' },
-    { id: 'state_spotlight', label: 'State Spotlight' },
-    { id: 'employer_facing', label: 'For Employers' },
-    { id: 'community_lifestyle', label: 'Community & Lifestyle' },
-    { id: 'industry_awareness', label: 'Industry Awareness' },
-    { id: 'product_lead_gen', label: 'Product & Resources' },
-    { id: 'success_stories', label: 'Success Stories' },
-    { id: 'mental_health_trends', label: 'Mental Health Trends' },
-    { id: 'policy_industry', label: 'Policy & Industry' },
-    { id: 'career_opportunities', label: 'Career Opportunities' },
-    { id: 'tech_tools', label: 'Tech & Tools' },
-];
+// The taxonomy itself lives in lib/blog-categories.ts — a dependency-free
+// module — so 'use client' surfaces (the admin editor) can consume it
+// without pulling supabase + sanitize-html into the browser bundle. It is
+// re-exported here so every existing server-side importer is unchanged and
+// there is still exactly one definition.
+export { BLOG_CATEGORIES } from '@/lib/blog-categories';
+export type { BlogCategory } from '@/lib/blog-categories';
 
 // ─── Supabase Client ─────────────────────────────────────────────────────────
 
@@ -139,9 +127,48 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
         .single();
 
     if (error || !data) {
+        // License-guide series fallback: 'np-license-<state>' slugs resolve
+        // deterministically from lib/blog-license-guides.ts when no DB row
+        // exists, so the all-or-nothing gate (LICENSE_GUIDE_SERIES_PUBLISHED)
+        // can never 404 a subset of the 51 states — rendering does not
+        // depend on the sync script having run. A published DB row for the
+        // same slug (editorial override via admin) takes precedence above.
+        const licenseMatch = slug.match(LICENSE_GUIDE_SLUG_REGEX);
+        if (licenseMatch && LICENSE_GUIDE_SERIES_PUBLISHED) {
+            return (await hasSuppressedLicenseRow(slug))
+                ? null
+                : getLicenseGuidePost(licenseMatch[1]);
+        }
         return null;
     }
     return data as BlogPost;
+}
+
+/**
+ * True when blog_posts holds a row for `slug` that is NOT published.
+ *
+ * The generator fallback above must not resurrect a guide an editor
+ * deliberately took down: without this check the admin publish/unpublish
+ * toggle (and any editorial retraction) is a silent no-op on all 51
+ * license slugs, because the unpublished row simply fails the
+ * status='published' filter and the code fallback serves the post anyway.
+ * A YMYL correction that can't be taken down is worse than no CMS at all.
+ *
+ * Only runs on the miss path for license slugs, so the extra round-trip
+ * never touches the normal published-post render.
+ */
+async function hasSuppressedLicenseRow(slug: string): Promise<boolean> {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+        .from('blog_posts')
+        .select('id')
+        .eq('slug', slug)
+        .maybeSingle();
+
+    // On a query error, fail OPEN (serve the generated guide) — an outage in
+    // this secondary lookup should not 404 a page that would otherwise render.
+    if (error) return false;
+    return Boolean(data);
 }
 
 export async function getRelatedPosts(
@@ -166,7 +193,7 @@ export async function getRelatedPosts(
         return [];
     }
 
-    let related = (data ?? []) as BlogPost[];
+    const related = (data ?? []) as BlogPost[];
 
     // Top up from any-category if the same-category query is short of `limit`.
     // Thin categories (1-2 posts) would otherwise leave the "Read Next" block
@@ -210,7 +237,30 @@ export async function getAllPublishedSlugs(): Promise<
         console.error('Error fetching blog slugs:', error);
         return [];
     }
-    return data ?? [];
+    const rows = data ?? [];
+
+    // Append the 51 code-generated license-guide slugs (sitemap + listing
+    // coverage) once the series is published. Deduped against DB rows so
+    // states already synced into blog_posts aren't listed twice, and
+    // suppressed for slugs an editor unpublished — otherwise the sitemap
+    // would keep advertising a URL that getPostBySlug() now 404s.
+    if (LICENSE_GUIDE_SERIES_PUBLISHED) {
+        const seen = new Set(rows.map((r) => r.slug));
+        const { data: suppressedRows } = await supabase
+            .from('blog_posts')
+            .select('slug')
+            .neq('status', 'published')
+            .like('slug', `${LICENSE_GUIDE_SLUG_PREFIX}%`);
+        const suppressed = new Set(
+            (suppressedRows ?? []).map((r: { slug: string }) => r.slug),
+        );
+        for (const slug of getAllLicenseGuideSlugs()) {
+            if (!seen.has(slug) && !suppressed.has(slug)) {
+                rows.push({ slug, updated_at: LICENSE_GUIDE_REVIEWED_AT });
+            }
+        }
+    }
+    return rows;
 }
 
 // ─── Write Functions (service role) ──────────────────────────────────────────

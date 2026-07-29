@@ -6,6 +6,16 @@ import { getAllPublishedSlugs } from '@/lib/blog'
 import { METRO_CITIES } from '@/lib/metro-data'
 import { activeIndexableJobWhere } from '@/lib/active-job-filter'
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry'
+// P1 #7: by-specialty salary pages — slugs derive from the same config
+// array that renders the pages, so the sitemap can never advertise a
+// specialty the route would 404. Plain-data import (no components).
+import { SALARY_SPECIALTY_SLUGS } from '@/app/salary-guide/specialty/specialty-config'
+// P1 #18: employer JD-template detail pages. Same drift-proof pattern as the
+// specialty slugs above — ids come from the frozen registry that
+// generateStaticParams() renders from, so the sitemap can never advertise a
+// template id the route would notFound() on. Plain-data module (its only
+// import is config/brand), so this is safe to pull into the sitemap route.
+import { JD_TEMPLATES } from '@/lib/jd-templates'
 
 // GSC Fix: Cache sitemap for 1 hour. Without this, every Googlebot request to
 // /sitemap.xml triggers a full DB scan across jobs, companies, and blog tables.
@@ -100,6 +110,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/for-employers`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${baseUrl}/for-job-seekers`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${baseUrl}/about`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.5 },
+    // P1 #8 (E-E-A-T): /editorial-policy is the trust page every stat-bearing
+    // article and salary page cites via brand.editorial.policyPath. It is
+    // explicitly `robots: { index: true, follow: true }` and is the target of
+    // sitewide byline links, so it must be advertised — an authorship/sourcing
+    // policy Google never crawls does nothing for E-E-A-T.
+    { url: `${baseUrl}/editorial-policy`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/faq`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/contact`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.4 },
     // /job-alerts removed from sitemap (audit 15 thin-pages CRITICAL):
@@ -159,6 +175,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/resources/fpa-guide`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${baseUrl}/resources/private-practice-guide`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${baseUrl}/resources/1099-vs-w2`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
+  ]
+
+  // Salary-guide specialty pages (P1 #7). NOT DB-gated on purpose: unlike
+  // the state pages (which notFound() with zero inventory), a specialty
+  // page's premium-band content is config-derived and always renders, so
+  // there is no soft-404 risk when a category has no salary-bearing jobs.
+  // Live sections gate themselves at render time.
+  const salarySpecialtyPages: MetadataRoute.Sitemap = [
+    { url: `${baseUrl}/salary-guide/specialty`, lastModified: latestJobDate, changeFrequency: 'weekly', priority: 0.7 },
+    ...SALARY_SPECIALTY_SLUGS.map(slug => ({
+      url: `${baseUrl}/salary-guide/specialty/${slug}`,
+      lastModified: latestJobDate,
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    })),
+  ]
+
+  // Employer content hub (P1 #18) — /for-employers/resources, its three
+  // editorial guides, and one detail page per JD-template skeleton.
+  // NOT DB-gated: every page here is repo-authored static content that
+  // always renders in full, so there is no soft-404 risk (unlike the
+  // inventory-driven state/metro/city pages gated in the try block).
+  const employerResourcePages: MetadataRoute.Sitemap = [
+    { url: `${baseUrl}/for-employers/resources`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${baseUrl}/for-employers/resources/how-to-hire`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${baseUrl}/for-employers/resources/job-description-guide`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${baseUrl}/for-employers/resources/job-description-templates`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.7 },
+    ...JD_TEMPLATES.map(t => ({
+      url: `${baseUrl}/for-employers/resources/job-description-templates/${t.id}`,
+      lastModified: STATIC_CONTENT_DATE,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
   ]
 
   // State pages — DB-gated below in the try block so empty states never
@@ -370,8 +419,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...metroPages,
       ...categoryLandingPages,
       ...landingPages,
+      ...employerResourcePages,
       ...statePages,
       ...salaryGuideStatePages,
+      ...salarySpecialtyPages,
       ...categoryStatePages,
       ...cityPages,
       ...companyPages,
@@ -405,8 +456,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...metroPages,
       ...categoryLandingPages,
       ...landingPages,
+      ...employerResourcePages,
       ...statePages,
       ...salaryGuideStatePages,
+      ...salarySpecialtyPages,
       ...categoryStatePages,
     ]
   }

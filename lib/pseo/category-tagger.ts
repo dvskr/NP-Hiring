@@ -23,7 +23,7 @@
  *
  * ── NP HIRING (2026-07) ──────────────────────────────────────────────
  * Rules migrated from the donor PMHNP tag set (29 slugs) to this board's
- * 42-slug all-NP taxonomy (lib/pseo/taxonomy-registry.ts). Carried-over
+ * 45-slug all-NP taxonomy (lib/pseo/taxonomy-registry.ts). Carried-over
  * slugs (settings, job types, experience, employer types, populations)
  * keep their donor-proven rules; the 14 NP specialties + 3 APRN roles
  * are new, title-anchored rules built from the config/niche/relevance.ts
@@ -39,6 +39,8 @@
  * "CNS depressants") — always anchor it on at least one side.
  */
 
+import { CATEGORY_AXES } from './taxonomy-registry';
+
 export interface ClassifiableJob {
     title: string;
     description?: string | null;
@@ -47,10 +49,17 @@ export interface ClassifiableJob {
     isRemote?: boolean | null;
     setting?: string | null;        // populated for employer-posted jobs
     population?: string | null;     // populated for employer-posted jobs
+    /**
+     * Explicit NP specialty slug picked by the employer on /post-job
+     * (a CATEGORY_AXES.specialty or CATEGORY_AXES.aprn slug). When
+     * present and valid, the classifier trusts it INSTEAD of substring-
+     * guessing the specialty from title/description — see classifyJobTags.
+     */
+    specialty?: string | null;
 }
 
 /**
- * All canonical category slugs the classifier can emit — the 42-slug NP
+ * All canonical category slugs the classifier can emit — the 45-slug NP
  * taxonomy, in axis order (must stay in sync with CATEGORY_AXES in
  * lib/pseo/taxonomy-registry.ts; tests/pseo/category-tagger.test.ts
  * enforces set-equality). Order matters twice: returned tags are stored
@@ -68,6 +77,7 @@ export const CANONICAL_CATEGORY_SLUGS = [
     'women-health', 'acute-care', 'emergency', 'psychiatric-mental-health',
     'oncology', 'cardiology', 'primary-care', 'hospitalist',
     'dermatology', 'orthopedic',
+    'aesthetics', 'pain-management', 'palliative-hospice',
     // APRN cohort (CRNA / CNM / CNS)
     'anesthesia', 'midwifery', 'clinical-nurse-specialist',
     // Experience
@@ -284,9 +294,39 @@ const RULES: Partial<Record<CategoryTag, CategoryRule>> = {
     dermatology: {
         keywords: ['dermatology', 'dermatologic', ' derm '],
         matchDescription: false,
+        // "Aesthetic Dermatology NP" / injector-at-derm-practice titles are
+        // aesthetics jobs first — the more specific sibling wins (P9 lesson,
+        // same shape as primary-care deferring to family-practice).
+        excludeIfAlsoTagged: ['aesthetics'],
     },
     orthopedic: {
         keywords: ['orthopedic', 'orthopaedic', ' ortho '],
+        matchDescription: false,
+    },
+    // ── 2026-07 P1 #15 verticals (title-anchored, precision over recall) ──
+    aesthetics: {
+        // 'aesthetic' must stay boundary-anchored: bare 'aesthetic' is a
+        // substring of the British spelling 'anaesthetic'/'anaesthetist',
+        // which belongs to the anesthesia (CRNA) page.
+        keywords: [
+            ' aesthetic', '(aesthetic', '/aesthetic', '-aesthetic',
+            'med spa', 'med-spa', 'medspa', 'medical spa',
+            'botox', 'cosmetic injector', 'nurse injector', 'injectables',
+            'dermal filler',
+        ],
+        matchDescription: false,
+    },
+    'pain-management': {
+        keywords: [
+            'pain management', 'interventional pain', 'pain medicine',
+            'pain clinic', 'chronic pain',
+        ],
+        matchDescription: false,
+    },
+    'palliative-hospice': {
+        keywords: [
+            'palliative', 'hospice', 'end-of-life', 'end of life',
+        ],
         matchDescription: false,
     },
 
@@ -351,6 +391,101 @@ function matchesKeyword(haystack: string, keyword: string): boolean {
     return haystack.toLowerCase().includes(keyword.toLowerCase());
 }
 
+// ── Explicit employer-declared fields (2026-07 P1 #20) ──────────────────────
+//
+// The /post-job form collects three structured signals — specialty, clinical
+// setting, patient population — that are far higher-quality than substring
+// guessing. These maps are the single source of truth for BOTH sides:
+//   - app/post-job/page.tsx derives its <select> option lists from the keys,
+//   - classifyJobTags() maps a stored value straight to its canonical tag.
+// A `null` tag means "honest option with no taxonomy page" (e.g. Academic).
+// Keys are the exact display strings persisted on Job.setting / .population.
+
+/** Slugs the /post-job specialty picker may submit (specialty + APRN axes). */
+export const EMPLOYER_SPECIALTY_SLUGS: readonly string[] = [
+    ...CATEGORY_AXES.specialty,
+    ...CATEGORY_AXES.aprn,
+];
+
+const EMPLOYER_SPECIALTY_SLUG_SET: ReadonlySet<string> = new Set(EMPLOYER_SPECIALTY_SLUGS);
+
+/** Clinical-setting options offered on /post-job → canonical tag (or null). */
+export const EMPLOYER_SETTING_TAGS: Readonly<Record<string, CategoryTag | null>> = {
+    'Outpatient': 'outpatient',
+    'Inpatient': 'inpatient',
+    'Hospital': 'hospital',
+    'Private Practice': 'private-practice',
+    'Community Health / FQHC': 'community-health',
+    'Urgent Care': 'urgent-care',
+    'Home Health': 'home-health',
+    'Telehealth': 'telehealth',
+    'Skilled Nursing / Long-Term Care': 'geriatric',
+    'VA / Military': 'va',
+    'Correctional': 'correctional',
+    'Academic / University': null,
+};
+
+/** Patient-population options offered on /post-job → canonical tag (or null). */
+export const EMPLOYER_POPULATION_TAGS: Readonly<Record<string, CategoryTag | null>> = {
+    'Adults': null,
+    'Pediatric & Adolescent': 'pediatric',
+    'Geriatric / Older Adults': 'geriatric',
+    "Women's Health": 'women-health',
+    'Veterans': 'veterans',
+    'LGBTQ+': 'lgbtq',
+    'All Ages': null,
+};
+
+// Values already stored on Job rows that the form no longer offers.
+// Resolution-only — two sources feed them:
+//   1. the pre-P1-#20 /post-job option strings (employer-posted rows), and
+//   2. the LLM enrichment vocabulary that writes Job.setting /
+//      Job.population for scraped rows (lib/llm-enrichment.ts:57-58).
+// Mapping them here means a backfill re-run keeps the signal instead of
+// dropping it. Values with no NP taxonomy page (Residential, Forensic,
+// "Substance Use / Dual Diagnosis", Academic) are deliberately absent —
+// unmapped resolves to null, which is the honest answer.
+const LEGACY_SETTING_ALIASES: Readonly<Record<string, CategoryTag>> = {
+    'Community Health': 'community-health',
+    'Corrections': 'correctional',
+    // LLM clinical_setting vocabulary — an ED posting belongs on the
+    // emergency category page.
+    'Emergency': 'emergency',
+};
+
+const LEGACY_POPULATION_ALIASES: Readonly<Record<string, CategoryTag>> = {
+    // Pre-P1-#20 form option.
+    'Child & Adolescent': 'pediatric',
+    'Geriatric': 'geriatric',
+    // LLM patient_population vocabulary.
+    'Children': 'pediatric',
+    'Adolescents': 'pediatric',
+};
+
+/**
+ * Resolve the employer-declared fields to canonical tags. The specialty is
+ * only honored when it is a real specialty/APRN-axis slug — free-text or
+ * stale values are ignored rather than trusted.
+ */
+function explicitTags(job: ClassifiableJob): {
+    specialty: CategoryTag | null;
+    others: CategoryTag[];
+} {
+    const specialty = job.specialty && EMPLOYER_SPECIALTY_SLUG_SET.has(job.specialty)
+        ? (job.specialty as CategoryTag)
+        : null;
+    const others: CategoryTag[] = [];
+    const settingTag = job.setting
+        ? (EMPLOYER_SETTING_TAGS[job.setting] ?? LEGACY_SETTING_ALIASES[job.setting] ?? null)
+        : null;
+    if (settingTag) others.push(settingTag);
+    const populationTag = job.population
+        ? (EMPLOYER_POPULATION_TAGS[job.population] ?? LEGACY_POPULATION_ALIASES[job.population] ?? null)
+        : null;
+    if (populationTag) others.push(populationTag);
+    return { specialty, others };
+}
+
 /**
  * Classify a job into the set of category tags it qualifies for.
  *
@@ -370,8 +505,25 @@ export function classifyJobTags(job: ClassifiableJob): CategoryTag[] {
 
     const tagged = new Set<CategoryTag>();
 
+    // Explicit employer-declared fields (P1 #20). An explicit specialty
+    // REPLACES substring guessing across the whole specialty/APRN axis —
+    // the employer's structured answer beats keyword heuristics, so no
+    // other specialty-axis slug is keyword-scanned and the explicit tag
+    // is exempt from the mutual-exclusion pass.
+    const explicit = explicitTags(job);
+    const explicitSet = new Set<CategoryTag>(explicit.others);
+    if (explicit.specialty) explicitSet.add(explicit.specialty);
+    for (const tag of explicitSet) tagged.add(tag);
+
     // First pass: structural + keyword rules, no exclusion logic yet.
     for (const slug of CANONICAL_CATEGORY_SLUGS) {
+        // Explicit specialty present → skip keyword guessing for every
+        // OTHER specialty/APRN-axis slug (the explicit one already won).
+        if (explicit.specialty && slug !== explicit.specialty
+            && EMPLOYER_SPECIALTY_SLUG_SET.has(slug)) {
+            continue;
+        }
+
         const rule = RULES[slug];
         if (!rule) continue;
 
@@ -396,9 +548,11 @@ export function classifyJobTags(job: ClassifiableJob): CategoryTag[] {
     }
 
     // Second pass: apply mutual-exclusion rules. Iterate in slug order so
-    // earlier-priority categories win.
+    // earlier-priority categories win. Explicit employer-declared tags are
+    // never deleted — the employer said so.
     for (const slug of CANONICAL_CATEGORY_SLUGS) {
         if (!tagged.has(slug)) continue;
+        if (explicitSet.has(slug)) continue;
         const rule = RULES[slug];
         if (!rule?.excludeIfAlsoTagged) continue;
         if (rule.excludeIfAlsoTagged.some((other) => tagged.has(other))) {

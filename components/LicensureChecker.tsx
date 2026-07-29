@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
+import {
+  Award, CalendarClock, CalendarDays, ClipboardCheck, DollarSign, FileText,
+  GraduationCap, Handshake, Hash, Map, Pill, ShieldAlert, ShieldCheck,
+  ShieldX, Wallet, type LucideIcon,
+} from 'lucide-react';
 import StateImage from './StateImage';
 import CopyCitation from '@/components/CopyCitation';
 import { brand } from '@/config/brand';
-
-const STORAGE_BASE = brand.assets.storageBase;
 
 interface StateGuide {
   name: string;
@@ -29,13 +31,15 @@ interface Props {
 }
 
 /* ─── Requirements per state (common baseline + state-specific) ─── */
-const COMMON_REQUIREMENTS = [
-  { step: 1, text: 'MSN or DNP from accredited program', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-star.webp` },
-  { step: 2, text: `National ${brand.niche.short} board certification (ANCC or AANP)`, img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp` },
-  { step: 3, text: 'State APRN license application', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-briefcase.webp` },
-  { step: 4, text: 'NPI number registration', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-people.webp` },
-  { step: 5, text: 'DEA registration for prescribing', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp` },
-  { step: 6, text: 'State-specific CE requirements', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp` },
+/* Dead-asset purge (2026-07): step art moved off the retired Supabase
+   bucket onto lucide icons (local-asset pattern, b371b37). */
+const COMMON_REQUIREMENTS: { step: number; text: string; icon: LucideIcon }[] = [
+  { step: 1, text: 'MSN or DNP from accredited program', icon: GraduationCap },
+  { step: 2, text: `National ${brand.niche.short} board certification (ANCC or AANP)`, icon: Award },
+  { step: 3, text: 'State APRN license application', icon: FileText },
+  { step: 4, text: 'NPI number registration', icon: Hash },
+  { step: 5, text: 'DEA registration for prescribing', icon: Pill },
+  { step: 6, text: 'State-specific CE requirements', icon: CalendarDays },
 ];
 
 const TIMELINE_MAP: Record<string, string> = {
@@ -44,28 +48,33 @@ const TIMELINE_MAP: Record<string, string> = {
   restricted: '8-16 weeks',
 };
 
-const AUTHORITY_CONFIG = {
+const AUTHORITY_CONFIG: Record<'full' | 'reduced' | 'restricted', { label: string; color: string; bg: string; border: string; icon: LucideIcon }> = {
   full: {
     label: 'Full Practice Authority',
     color: '#10B981',
     bg: '#D1FAE5',
     border: '#6EE7B7',
-    img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-chart.webp`,
+    icon: ShieldCheck,
   },
   reduced: {
     label: 'Reduced Practice',
     color: '#F59E0B',
     bg: '#FEF3C7',
     border: '#FCD34D',
-    img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp`,
+    icon: ShieldAlert,
   },
   restricted: {
     label: 'Restricted Practice',
     color: '#EF4444',
     bg: '#FEE2E2',
     border: '#FCA5A5',
-    img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp`,
+    icon: ShieldX,
   },
+};
+
+/* Rounded tile behind each lucide icon */
+const iconTile: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
 };
 
 const clayCard: React.CSSProperties = {
@@ -111,9 +120,9 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
     const timeline = TIMELINE_MAP[auth.authority];
 
     // Extra requirement for non-FPA states
-    const extraReqs = auth.authority === 'full' ? [] :
-      auth.authority === 'reduced' ? [{ step: 7, text: 'Secure collaborative physician agreement', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/clay-icon-connect.webp` }] :
-      [{ step: 7, text: 'Secure supervising physician agreement', img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/clay-icon-connect.webp` }];
+    const extraReqs: { step: number; text: string; icon: LucideIcon }[] = auth.authority === 'full' ? [] :
+      auth.authority === 'reduced' ? [{ step: 7, text: 'Secure collaborative physician agreement', icon: Handshake }] :
+      [{ step: 7, text: 'Secure supervising physician agreement', icon: Handshake }];
 
     return { auth, salary, guide, config, timeline, extraReqs };
   }, [selectedState, practiceAuthority, stateSalaries, stateGuides]);
@@ -139,10 +148,13 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
             <StateImage slug={stateSlug} alt="" width={200} height={200} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         )}
-        <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-chart.webp`} alt="Licensure Checker" width={52} height={52} style={{
-          width: '52px', height: '52px', borderRadius: '16px',
+        <div style={{
+          ...iconTile, width: '52px', height: '52px', borderRadius: '16px',
+          background: 'rgba(255,255,255,0.15)', color: '#fff',
           boxShadow: '4px 4px 12px rgba(0,0,0,0.15)', position: 'relative', zIndex: 1,
-        }} />
+        }}>
+          <ClipboardCheck size={26} />
+        </div>
         <div style={{ position: 'relative', zIndex: 1 }}>
           <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2 }}>
             {selectedState ? `${selectedState} Licensure` : `${brand.niche.short} Licensure Checker`}
@@ -185,7 +197,9 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
       {/* ─── Results ─── */}
       {!result ? (
         <div style={{ padding: '48px 32px', textAlign: 'center' }}>
-          <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/clay-icon-match.webp`} alt="Select a state" width={72} height={72} style={{ width: '72px', height: '72px', margin: '0 auto 16px', opacity: 0.4 }} />
+          <div style={{ ...iconTile, width: '72px', height: '72px', borderRadius: '20px', background: '#F1F5F9', color: '#94A3B8', margin: '0 auto 16px' }} aria-hidden="true">
+            <Map size={34} />
+          </div>
           <p style={{ fontSize: '16px', fontWeight: 600, color: '#94A3B8', margin: '0 0 4px' }}>Select a state above</p>
           <p style={{ fontSize: '13px', color: '#CBD5E1', margin: 0 }}>to see licensure requirements, practice authority, salary, and timeline</p>
         </div>
@@ -217,7 +231,9 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
               marginBottom: '24px',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                <Image src={result.config.img} alt={result.config.label} width={28} height={28} style={{ width: '28px', height: '28px', borderRadius: '8px' }} />
+                <span style={{ ...iconTile, width: '28px', height: '28px', color: result.config.color }} aria-hidden="true">
+                  <result.config.icon size={24} />
+                </span>
                 <span style={{ fontSize: '15px', fontWeight: 800, color: result.config.color }}>{result.config.label}</span>
               </div>
               <p style={{ fontSize: '12.5px', color: '#5A4A42', margin: 0, lineHeight: 1.5 }}>
@@ -236,7 +252,9 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
                   padding: '10px 14px', borderRadius: '12px',
                   background: 'rgba(0,0,0,0.015)', border: '1px solid rgba(0,0,0,0.04)',
                 }}>
-                  <Image src={req.img} alt={`Step ${req.step}`} width={28} height={28} style={{ width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0, marginTop: '2px' }} />
+                  <span style={{ ...iconTile, width: '28px', height: '28px', borderRadius: '8px', background: '#FDF2F8', color: '#BE185D', marginTop: '2px' }} aria-hidden="true">
+                    <req.icon size={16} />
+                  </span>
                   <div>
                     <span style={{ fontSize: '11px', fontWeight: 700, color: '#BE185D' }}>STEP {req.step}</span>
                     <p style={{ fontSize: '13px', color: '#1A2E35', margin: '2px 0 0', fontWeight: 500 }}>{req.text}</p>
@@ -255,7 +273,9 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
               border: '1.5px solid rgba(190,24,93,0.12)',
               display: 'flex', alignItems: 'center', gap: '16px',
             }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-calendar.webp`} alt="Timeline" width={44} height={44} style={{ width: '44px', height: '44px', borderRadius: '14px' }} />
+              <div style={{ ...iconTile, width: '44px', height: '44px', borderRadius: '14px', background: 'rgba(190,24,93,0.10)', color: '#BE185D' }} aria-hidden="true">
+                <CalendarClock size={22} />
+              </div>
               <div>
                 <p style={{ fontSize: '11px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 2px' }}>
                   Estimated Timeline
@@ -276,7 +296,9 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
                 background: '#FAFAFA', border: '1px solid rgba(0,0,0,0.06)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                  <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`} alt="Salary" width={36} height={36} style={{ width: '36px', height: '36px', borderRadius: '10px' }} />
+                  <div style={{ ...iconTile, width: '36px', height: '36px', borderRadius: '10px', background: '#D1FAE5', color: '#10B981' }} aria-hidden="true">
+                    <DollarSign size={18} />
+                  </div>
                   <div>
                     <p style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>
                       Average Salary in {selectedState}
@@ -311,7 +333,9 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
               background: 'rgba(0,0,0,0.015)', border: '1px solid rgba(0,0,0,0.04)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-star.webp`} alt="Info" width={24} height={24} style={{ width: '24px', height: '24px', borderRadius: '6px' }} />
+                <span style={{ ...iconTile, width: '24px', height: '24px', borderRadius: '6px', background: '#EEF2FF', color: '#6366F1' }} aria-hidden="true">
+                  <Wallet size={14} />
+                </span>
                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#1A2E35', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Key Costs</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

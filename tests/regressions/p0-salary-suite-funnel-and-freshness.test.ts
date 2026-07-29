@@ -48,12 +48,15 @@ describe('P0 #6 — salary-guide email funnel is honest and brand-tokenized', ()
         expect(routeSrc).toContain('${brand.niche.short} Salary Guide');
     });
 
-    it('the availability flag defaults OFF until the PDF is actually uploaded', () => {
-        // Deliberate friction: flip the flag ONLY in the same change that
-        // uploads the PDF to the bucket behind brand.assets.salaryGuidePdf,
-        // and update this assertion there. Until then the funnel must not
-        // capture emails for a dead link.
-        expect(SALARY_GUIDE_PDF_AVAILABLE).toBe(false);
+    it('the availability flag matches the deliverable actually existing', () => {
+        // P1 #4 authored the real PDF (public/downloads via
+        // scripts/generate-salary-pdf.ts), so the flag is now ON — flipped
+        // in the same change that produced the file, exactly as this test
+        // demanded. tests/regressions/p1-salary-pdf-deliverable.test.ts
+        // asserts the file behind brand.assets.salaryGuidePdf exists while
+        // the flag is true; if the PDF is ever removed, flip this back to
+        // false in the same change (and update that test).
+        expect(SALARY_GUIDE_PDF_AVAILABLE).toBe(true);
     });
 
     it('the API refuses before any lead capture when the PDF is unavailable', () => {

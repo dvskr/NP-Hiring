@@ -45,7 +45,10 @@ const clayCard: React.CSSProperties = {
 
 /* ─── Category colors ─── */
 const CATEGORY_COLORS: Record<string, { color: string; bg: string }> = {
-    job_seeker_tips: { color: '#BE185D', bg: '#FDF2F8' },
+    // Keyed by BlogCategory id (was 'job_seeker_tips', a key that exists in
+    // no category taxonomy — Job Seeker Tips posts fell through to the
+    // gray fallback style).
+    job_seeker_attraction: { color: '#BE185D', bg: '#FDF2F8' },
     career_opportunities: { color: '#6366F1', bg: '#EEF2FF' },
     salary_negotiation: { color: '#F59E0B', bg: '#FFFBEB' },
     career_myths: { color: '#A855F7', bg: '#FAF5FF' },

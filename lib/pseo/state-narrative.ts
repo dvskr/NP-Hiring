@@ -12,6 +12,9 @@
  * was stat interpolation (counts, COL, shortage count) wrapped in a shared
  * template. Two cats (e.g. remote/CA vs telehealth/CA) read 95% identical
  * to GoogleBot. This file fixes that.
+ *
+ * Also exports buildPlainStateNarrative — the same idea for the 51 plain
+ * /jobs/state/[state] hubs (see the section at the bottom of this file).
  */
 import { brand } from '@/config/brand';
 import { PSYCH_SPECIALTY_SLUG } from './taxonomy-registry';
@@ -124,6 +127,17 @@ const SETTING_LEADS: Record<string, SettingLeadFn> = {
     'emergency': (c) => `Emergency ${brand.niche.short} roles across ${c.stateName} staff emergency departments and fast-track units. Employers typically expect prior emergency or acute-care experience plus procedural competency.`,
     'anesthesia': (c) => `CRNA positions across ${c.stateName} carry the highest APRN pay bands — typically $180K–$250K+. Compensation varies with call burden and with whether the practice runs a supervision-based or independent CRNA model.`,
     'midwifery': (c) => `Certified nurse midwife (CNM) roles in ${c.stateName} cover hospital labor-and-delivery services, birth centers, and OB/GYN practices; call frequency and delivery volume drive most compensation differences.`,
+    // ── 2026-07 P1 #14 [state] tier extension ──
+    // One lead per config added in setting-state-config.ts's P1 #14 block.
+    // Salary bands mirror those configs' salaryRange values exactly so the
+    // narrative and hero stats never disagree on the same page.
+    'primary-care': (c) => `Primary care ${brand.niche.short} positions across ${c.stateName} span internal-medicine groups, FQHCs, and value-based-care organizations, typically paying $100K–$140K. Panel size, documentation time, and quality-incentive structure drive most of the practical differences between offers in the state.`,
+    'oncology': (c) => `Oncology ${brand.niche.short} roles in ${c.stateName} concentrate around the state's cancer centers and hematology-oncology groups, typically paying $110K–$150K. ${brand.niche.short}-led survivorship programs are an expanding share of the state's oncology hiring as survivor populations grow.`,
+    'cardiology': (c) => `Cardiology ${brand.niche.short} openings across ${c.stateName} split between heart-failure and device clinics and inpatient consult services, typically paying $110K–$150K. Hybrid clinic-plus-hospital roles usually add call stipends and weekend differentials on top of base pay.`,
+    'hospitalist': (c) => `Hospitalist ${brand.niche.short} positions in ${c.stateName} run on block schedules — commonly seven-on/seven-off — covering admissions, rounding, and cross-cover, typically paying $110K–$150K. Acute care certification (AGACNP) is the preferred credential at most of the state's hospital medicine programs.`,
+    'dermatology': (c) => `Dermatology ${brand.niche.short} roles in ${c.stateName} pair medical dermatology with procedural clinic work, typically paying $110K–$155K on weekday schedules without inpatient call. Appointment demand outstrips supply in most ${c.stateName} markets, making productivity bonuses a common negotiation lever.`,
+    'urgent-care': (c) => `Urgent care ${brand.niche.short} roles across ${c.stateName} run on defined shift schedules with no after-hours panel obligations, typically paying $105K–$140K. Statewide clinic expansion keeps hiring continuous, and employers screen for episodic acute-care skills across the lifespan.`,
+    'home-health': (c) => `Home health ${brand.niche.short} roles in ${c.stateName} put clinicians on the road for house calls, transitional-care visits, and annual wellness assessments, typically paying $100K–$135K. Territory size, daily visit expectations, and mileage terms vary widely between programs and materially change effective pay.`,
     // Keyed via the registry-derived constant so the specialty slug literal
     // stays confined to taxonomy-registry.ts (niche-copy debt ratchet).
     ...(PSYCH_SPECIALTY_SLUG
@@ -176,6 +190,96 @@ export function buildSettingStateNarrative(
             `Top metros in ${stateName} are not currently federally designated health professional shortage areas, but regional demand for ${brand.niche.short}s and reimbursement structure shape compensation. The ${totalJobs} active postings reflect ${demandPhrase} for ${brand.niche.short}s in the state.`,
         );
     }
+
+    return parts.join(' ');
+}
+
+// ─── Plain state-hub narrative ──────────────────────────────────────────────
+// /jobs/state/[state] — the 51 plain state hubs previously shared one
+// templated sentence, so every hub read near-identical to GoogleBot (the same
+// thin-content failure mode the setting-state narrative above exists to
+// defeat). This variant composes practice-authority context, the live salary
+// aggregate, live category/city inventory, and the NLC membership note into a
+// deterministic per-state paragraph. Every figure is caller-supplied from
+// live DB aggregation or repo regulatory data — nothing here invents numbers.
+
+/** Authority-tier consequence clauses for the plain state hubs. */
+const AUTHORITY_IMPLICATIONS: Record<PracticeAuthority, string> = {
+    full: 'which supports independent practice models and widens the range of roles employers can offer',
+    reduced: 'so collaborative-agreement logistics appear in many job requirements',
+    restricted: 'so most roles are structured around physician-supervised care teams',
+};
+
+export interface PlainStateNarrativeInput {
+    stateName: string;
+    stateCode: string;
+    /** Live count of published jobs in the state. */
+    totalJobs: number;
+    /** Live average of disclosed salary bounds, in $K; 0 = insufficient data. */
+    avgSalaryK: number;
+    /** Live distinct-employer count for the state. */
+    uniqueEmployerCount: number;
+    /** Display labels of the top live-inventory categories, best-first. */
+    topCategoryLabels: readonly string[];
+    /** Names of the top cities by live job count, best-first. */
+    topCityNames: readonly string[];
+}
+
+function joinWithAnd(items: readonly string[]): string {
+    if (items.length <= 1) return items[0] ?? '';
+    if (items.length === 2) return `${items[0]} and ${items[1]}`;
+    return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+}
+
+export function buildPlainStateNarrative(input: PlainStateNarrativeInput): string {
+    const {
+        stateName, stateCode, totalJobs, avgSalaryK,
+        uniqueEmployerCount, topCategoryLabels, topCityNames,
+    } = input;
+    const parts: string[] = [];
+
+    // Sentence 1: live inventory + geography (DB aggregates only).
+    const employerClause = uniqueEmployerCount > 0
+        ? ` from ${uniqueEmployerCount} ${uniqueEmployerCount === 1 ? 'employer' : 'employers'}`
+        : '';
+    const cityClause = topCityNames.length > 0
+        ? `, with hiring concentrated in ${joinWithAnd(topCityNames.slice(0, 3))}`
+        : '';
+    parts.push(
+        `${stateName} currently has ${totalJobs} active ${brand.niche.descriptor} ${totalJobs === 1 ? 'posting' : 'postings'}${employerClause}${cityClause} — reflecting ${DEMAND_PHRASES[demandTier(totalJobs)]} for ${brand.niche.short}s statewide.`,
+    );
+
+    // Sentence 2: top live-inventory categories (pseoStats setting-state rows).
+    if (topCategoryLabels.length > 0) {
+        const labels = topCategoryLabels.slice(0, 3);
+        parts.push(
+            labels.length === 1
+                ? `By posting volume, ${labels[0]} roles carry the deepest live inventory in the state.`
+                : `By posting volume, the most active categories right now are ${joinWithAnd(labels)}.`,
+        );
+    }
+
+    // Sentence 3: practice authority (lib/state-practice-authority data).
+    const auth = getStatePracticeAuthority(stateName);
+    parts.push(
+        auth
+            ? `On the regulatory side, ${stateName} grants ${AUTHORITY_PHRASES[auth.authority]}, ${AUTHORITY_IMPLICATIONS[auth.authority]}.`
+            : `On the regulatory side, ${stateName} applies state-specific practice rules — confirm current requirements with the ${stateCode} board of nursing before applying.`,
+    );
+
+    // Sentence 4: salary — the live state aggregate only, never an invented band.
+    parts.push(
+        avgSalaryK > 0
+            ? `Postings that disclose pay currently average $${avgSalaryK}K per year across settings and experience levels.`
+            : `Not enough ${stateName} postings disclose pay to compute a live average, so compare compensation posting by posting.`,
+    );
+
+    // Sentence 5: NLC membership (NCSBN-sourced set above).
+    parts.push(
+        isNlcMember(stateName)
+            ? `${stateName}'s Nurse Licensure Compact membership shortens licensing lead time for multistate-licensed clinicians picking up ${stateCode} roles.`
+            : `${stateName} is not a Nurse Licensure Compact member, so clinicians licensed elsewhere should budget extra time for a separate ${stateCode} license through the state board of nursing.`,
+    );
 
     return parts.join(' ');
 }

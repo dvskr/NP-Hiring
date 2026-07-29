@@ -1,9 +1,11 @@
 import { brand } from '@/config/brand';
 import { Metadata } from 'next';
+import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { buildWhereClause, parseFiltersFromParams } from '@/lib/filters';
 import { buildJobsOrderBy, type JobSort } from '@/lib/utils/job-sort';
 import { slugify } from '@/lib/utils';
+import { STAT_SOURCES } from '@/lib/stats-sources';
 import JobsPageClient from './JobsPageClient';
 import { Job } from '@/lib/types';
 
@@ -15,6 +17,43 @@ const NAV_ONLY_PARAMS = new Set(['page', 'sort']);
 
 // ISR: Revalidate every 60 seconds
 export const revalidate = 60;
+
+// ─── /jobs hub editorial + citable FAQ (P1 #17) ─────────────────────────────
+// TRUTH RULE: every figure below derives from lib/stats-sources.ts or the
+// live DB count passed in — never an invented statistic. The FAQPage schema
+// serializes the SAME array the visible accordion renders.
+
+interface HubFaq { question: string; answer: string; }
+
+function buildJobsHubFaqs(totalJobs: number): HubFaq[] {
+  const median = `${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source})`;
+  return [
+    {
+      question: `How many ${brand.niche.descriptor} jobs are listed right now?`,
+      answer: `There are currently ${totalJobs.toLocaleString()} ${brand.niche.descriptor} and APRN jobs listed, spanning states, specialties, and work settings. Listings are refreshed daily as new roles are ingested and stale postings are retired.`,
+    },
+    {
+      question: `What is the average ${brand.niche.descriptor} salary?`,
+      answer: `${brand.niche.long}s earn a median annual wage of ${median}. Actual pay varies with specialty, practice setting, experience, and state — many listings include posted salary ranges, and the salary guide breaks pay down state by state.`,
+    },
+    {
+      question: `How fast is demand for ${brand.niche.descriptor}s growing?`,
+      answer: `The BLS projects ${STAT_SOURCES.blsGrowth2032.formatted} employment growth for ${brand.niche.descriptor}s from 2022 to 2032 (${STAT_SOURCES.blsGrowth2032.source}) — among the fastest-growing occupations in the United States.`,
+    },
+    {
+      question: `Where can ${brand.niche.descriptor}s practice independently?`,
+      answer: `${STAT_SOURCES.fullPracticeStates.formatted} grant ${brand.niche.descriptor}s Full Practice Authority (${STAT_SOURCES.fullPracticeStates.source}), meaning they can evaluate, diagnose, and prescribe without physician oversight. The remaining states require a collaborative or supervisory agreement — browse jobs by state to see local practice environments.`,
+    },
+    {
+      question: `Which specialties and job types can I browse?`,
+      answer: `Dedicated hubs cover the major NP specialties — family practice, adult-gerontology, pediatric, acute care, emergency, and more — plus APRN roles (CRNA, CNM, CNS), work settings such as remote, telehealth, and travel, and job types from full-time to per-diem, contract, and 1099.`,
+    },
+    {
+      question: `Can I get new ${brand.niche.descriptor} jobs by email?`,
+      answer: `Yes — free job alerts deliver new ${brand.niche.descriptor} roles matching your preferences to your inbox. Alerts can be changed or unsubscribed at any time.`,
+    },
+  ];
+}
 
 interface JobsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -222,6 +261,21 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
     );
   }
 
+  // Hub editorial + FAQ render only on the canonical unfiltered first page —
+  // filtered and paginated views are noindexed and stay listing-only.
+  const userFilterKeys = Object.keys(params).filter((k) => !NAV_ONLY_PARAMS.has(k));
+  const showHubEditorial = userFilterKeys.length === 0 && page === 1 && total > 0;
+  const hubFaqs = showHubEditorial ? buildJobsHubFaqs(total) : [];
+  const hubFaqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: hubFaqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+    })),
+  };
+
   // Build ItemList schema for job carousel rich results
   const jobListSchema = {
     '@context': 'https://schema.org',
@@ -257,6 +311,75 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
         initialPage={page}
         initialTotalPages={Math.ceil(total / limit)}
       />
+      {showHubEditorial && (
+        <div style={{ backgroundColor: '#FDFBF7' }}>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(hubFaqSchema).replace(/</g, '\\u003c').replace(/>/g, '\\u003e') }}
+          />
+
+          {/* Editorial block — internal-linking mesh into the category hubs */}
+          <section aria-labelledby="jobs-hub-editorial" style={{ maxWidth: '1000px', margin: '0 auto', padding: '56px 20px 8px' }}>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
+              About This Board
+            </p>
+            <h2 id="jobs-hub-editorial" className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 32px)', fontWeight: 700, color: '#1A2E35', marginBottom: '18px' }}>
+              Explore {brand.niche.descriptor} jobs by specialty, setting, and state
+            </h2>
+            <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.75, margin: '0 0 14px' }}>
+              {brand.legal.brandDisplayName} lists {brand.niche.descriptor} and APRN roles across every major
+              specialty — from <Link href="/jobs/family-practice" style={{ color: '#BE185D', fontWeight: 600 }}>family practice</Link> and{' '}
+              <Link href="/jobs/acute-care" style={{ color: '#BE185D', fontWeight: 600 }}>acute care</Link> to{' '}
+              <Link href="/jobs/anesthesia" style={{ color: '#BE185D', fontWeight: 600 }}>nurse anesthesia (CRNA)</Link> and{' '}
+              <Link href="/jobs/midwifery" style={{ color: '#BE185D', fontWeight: 600 }}>nurse midwifery (CNM)</Link> — plus dedicated
+              hubs for <Link href="/jobs/remote" style={{ color: '#BE185D', fontWeight: 600 }}>remote</Link>,{' '}
+              <Link href="/jobs/telehealth" style={{ color: '#BE185D', fontWeight: 600 }}>telehealth</Link>, and{' '}
+              <Link href="/jobs/travel" style={{ color: '#BE185D', fontWeight: 600 }}>travel</Link> work.
+            </p>
+            <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.75, margin: '0 0 14px' }}>
+              Salary transparency matters here: listings surface posted pay ranges wherever the employer provides
+              them, and the <Link href="/salary-guide" style={{ color: '#BE185D', fontWeight: 600 }}>salary guide</Link> tracks
+              state-by-state figures. Nationally, {brand.niche.descriptor}s earn a median annual wage of{' '}
+              {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}).
+            </p>
+            <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.75, margin: 0 }}>
+              Where you practice shapes how you practice — {STAT_SOURCES.fullPracticeStates.formatted} grant Full
+              Practice Authority ({STAT_SOURCES.fullPracticeStates.source}). Browse{' '}
+              <Link href="/jobs/locations" style={{ color: '#BE185D', fontWeight: 600 }}>jobs by location</Link> to see
+              local inventory, or set a free <Link href="/job-alerts" style={{ color: '#BE185D', fontWeight: 600 }}>job alert</Link>{' '}
+              to get new roles by email.
+            </p>
+          </section>
+
+          {/* Citable FAQ — same array feeds the FAQPage schema above */}
+          <section aria-labelledby="jobs-hub-faq" style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 20px 64px' }}>
+            <h2 id="jobs-hub-faq" className="font-lora" style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 700, color: '#1A2E35', marginBottom: '20px' }}>
+              {brand.niche.long} jobs — frequently asked questions
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {hubFaqs.map((faq, index) => (
+                <details
+                  key={index}
+                  style={{
+                    background: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(0,0,0,0.05)',
+                    boxShadow: '4px 4px 12px rgba(0,0,0,0.04), -2px -2px 8px rgba(255,255,255,0.8)',
+                    padding: '18px 22px',
+                  }}
+                >
+                  <summary style={{ fontSize: '15px', fontWeight: 600, color: '#1A2E35', cursor: 'pointer', lineHeight: 1.4 }}>
+                    {faq.question}
+                  </summary>
+                  <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '12px 0 0' }}>
+                    {faq.answer}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
     </>
   );
 }

@@ -3,26 +3,46 @@ import { prisma } from '@/lib/prisma';
 import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert, sendDiscordMessage } from '@/lib/discord-notifier';
 import { withCronTracking } from '@/lib/cron/track';
-import { createSign } from 'node:crypto';
-import { brand } from '@/config/brand';
+import {
+    getGscConfig,
+    getGscAccessToken,
+    fetchSearchAnalyticsAggregate,
+    fetchSearchAnalyticsByDimension,
+    fetchSitemapsList,
+    buildSitemapAlerts,
+    GSC_DIMENSION_ROW_LIMIT,
+    type GscDimensionRow,
+    type GscSitemapEntry,
+} from '@/lib/gsc-client';
 
 export const maxDuration = 60;
 
 /**
- * P4.2: daily GSC Coverage snapshot + regression alert.
+ * P4.2 + P1 gsc-ops: daily GSC snapshot, regression alert, sitemap status.
  *
  * What it does:
- *   1. Pulls Search Analytics (last 1 day, no dimensions) to record
- *      total impressions for the day → goes into `raw` JSON
- *   2. Pulls each error category total via the URL Inspection API is NOT
- *      bulk-queryable, so for the full-coverage breakdown we currently rely
- *      on the user uploading GSC bulk exports (see seed-deindex-queue.ts).
- *      THIS CRON only tracks the Search Analytics aggregate signal:
- *        - Total impressions / clicks / CTR (proxies for search visibility)
- *      and stores those in gsc_snapshots.raw.
- *   3. Compares today vs 7 days ago. Alerts via Discord if:
+ *   1. Pulls Search Analytics aggregates (yesterday vs 7 days ago) →
+ *      `raw.searchAnalytics`, alerts on week-over-week regressions:
  *        - clicks drop > 20% week-over-week
  *        - impressions drop > 15% week-over-week
+ *   2. Pulls the top GSC_DIMENSION_ROW_LIMIT query and page dimension rows
+ *      for two 7-day windows (current: yesterday-6…yesterday; previous: the
+ *      7 days before) → `raw.dimensions`. The admin dashboard computes
+ *      week-over-week "top movers" from this via lib/gsc-movers.ts. Depth
+ *      matters for correctness there: both windows are top-N-by-clicks, so
+ *      a shallow cut makes rank churn look like traffic appearing and
+ *      vanishing. See the constant's doc comment in lib/gsc-client.ts.
+ *   3. Pulls per-sitemap submission status via sitemaps.list (same
+ *      webmasters.readonly scope) → `raw.sitemaps`, and alerts to Discord
+ *      when Google reports errors on any submitted sitemap.
+ *
+ * Steps 2 and 3 degrade independently: a dimension or sitemaps failure is
+ * recorded in metrics but never blocks the core snapshot (step 1).
+ *
+ * NOTE: the GSC coverage BREAKDOWN (crawled-not-indexed etc.) has no public
+ * API — that still comes from UI bulk exports (seed-deindex-queue.ts).
+ * Renderable/indexable coverage in admin/seo-health is computed from our
+ * own pseoStats instead (lib/gsc-coverage.ts).
  *
  * Auth required:
  *   GSC_SERVICE_ACCOUNT_KEY env var = JSON-stringified service account JSON
@@ -47,14 +67,10 @@ export async function GET(request: NextRequest) {
 
     try {
         return await withCronTracking('gsc-health-check', async () => {
-        // Prefer GSC_SERVICE_ACCOUNT_KEY; fall back to GOOGLE_INDEXING_CREDENTIALS
-        // since the same service account JSON works for both APIs.
-        const keyJsonRaw = process.env.GSC_SERVICE_ACCOUNT_KEY ?? process.env.GOOGLE_INDEXING_CREDENTIALS;
-        const siteUrl = process.env.GSC_SITE_URL || `sc-domain:${brand.domain}`;
-
         // Record the skip as a real (skipped) run so cron_runs shows the cron is
         // firing — an unconfigured GSC key shouldn't make it look like it never ran.
-        if (!keyJsonRaw) {
+        const config = getGscConfig();
+        if (!config) {
             console.log('[CRON:gsc-health-check] Skipped — neither GSC_SERVICE_ACCOUNT_KEY nor GOOGLE_INDEXING_CREDENTIALS configured.');
             return {
                 response: NextResponse.json({
@@ -66,33 +82,76 @@ export async function GET(request: NextRequest) {
                 metrics: { skipped: true },
             };
         }
-        // Decode if base64-encoded (matches the existing pattern in lib/search-indexing.ts).
-        let keyJson: string;
-        try {
-            JSON.parse(keyJsonRaw);
-            keyJson = keyJsonRaw;
-        } catch {
-            keyJson = Buffer.from(keyJsonRaw, 'base64').toString('utf-8');
-        }
 
-        const accessToken = await getAccessToken(keyJson);
+        const accessToken = await getGscAccessToken(config.keyJson);
+        const { siteUrl } = config;
 
-        // Today's totals (yesterday is the latest fully-processed day)
+        // ── 1. Aggregate snapshot (yesterday is the latest fully-processed day)
         const yesterday = isoDate(daysAgo(1));
         const last7DaysAgo = isoDate(daysAgo(7));
 
-        const todayRow = await fetchSearchAnalytics(accessToken, siteUrl, yesterday, yesterday);
-        const weekAgoRow = await fetchSearchAnalytics(accessToken, siteUrl, last7DaysAgo, last7DaysAgo);
+        const todayRow = await fetchSearchAnalyticsAggregate(accessToken, siteUrl, yesterday, yesterday);
+        const weekAgoRow = await fetchSearchAnalyticsAggregate(accessToken, siteUrl, last7DaysAgo, last7DaysAgo);
 
         const todayClicks = todayRow?.clicks ?? 0;
         const todayImpressions = todayRow?.impressions ?? 0;
         const weekAgoClicks = weekAgoRow?.clicks ?? 0;
         const weekAgoImpressions = weekAgoRow?.impressions ?? 0;
 
+        // ── 2. Dimension windows for week-over-week movers (best-effort).
+        // current: yesterday-6 … yesterday; previous: the 7 days before that.
+        const window = { startDate: isoDate(daysAgo(7)), endDate: yesterday };
+        const prevWindow = { startDate: isoDate(daysAgo(14)), endDate: isoDate(daysAgo(8)) };
+
+        let dimensions: {
+            window: typeof window;
+            prevWindow: typeof prevWindow;
+            queries: { current: GscDimensionRow[]; previous: GscDimensionRow[] };
+            pages: { current: GscDimensionRow[]; previous: GscDimensionRow[] };
+        } | null = null;
+        let dimensionError: string | null = null;
+        try {
+            // Depth is passed explicitly (not left to the client default)
+            // because movers math reads absence from a window as a signal —
+            // a shallow cut turns ordinary rank churn into phantom movers.
+            const rowLimit = GSC_DIMENSION_ROW_LIMIT;
+            const [queriesCurrent, queriesPrevious, pagesCurrent, pagesPrevious] = await Promise.all([
+                fetchSearchAnalyticsByDimension(accessToken, siteUrl, { ...window, dimension: 'query', rowLimit }),
+                fetchSearchAnalyticsByDimension(accessToken, siteUrl, { ...prevWindow, dimension: 'query', rowLimit }),
+                fetchSearchAnalyticsByDimension(accessToken, siteUrl, { ...window, dimension: 'page', rowLimit }),
+                fetchSearchAnalyticsByDimension(accessToken, siteUrl, { ...prevWindow, dimension: 'page', rowLimit }),
+            ]);
+            dimensions = {
+                window,
+                prevWindow,
+                queries: { current: queriesCurrent, previous: queriesPrevious },
+                pages: { current: pagesCurrent, previous: pagesPrevious },
+            };
+        } catch (err) {
+            dimensionError = err instanceof Error ? err.message : String(err);
+            console.error('[CRON:gsc-health-check] Dimension fetch failed (snapshot continues):', err);
+        }
+
+        // ── 3. Per-sitemap submission status (best-effort).
+        let sitemaps: GscSitemapEntry[] | null = null;
+        let sitemapError: string | null = null;
+        let sitemapAlerts: string[] = [];
+        try {
+            sitemaps = await fetchSitemapsList(accessToken, siteUrl);
+            sitemapAlerts = buildSitemapAlerts(sitemaps);
+        } catch (err) {
+            sitemapError = err instanceof Error ? err.message : String(err);
+            console.error('[CRON:gsc-health-check] Sitemaps list failed (snapshot continues):', err);
+        }
+
         // Persist a snapshot row. Stringify+parse to coerce the typed
-        // SearchAnalyticsAggregate into Prisma's structural InputJsonValue.
+        // payload into Prisma's structural InputJsonValue.
         const rawPayload = JSON.parse(
-            JSON.stringify({ searchAnalytics: { today: todayRow, weekAgo: weekAgoRow } })
+            JSON.stringify({
+                searchAnalytics: { today: todayRow, weekAgo: weekAgoRow },
+                ...(dimensions ? { dimensions } : {}),
+                ...(sitemaps ? { sitemaps } : {}),
+            })
         );
         await prisma.gscSnapshot.upsert({
             where: { capturedOn: new Date(yesterday) },
@@ -126,6 +185,19 @@ export async function GET(request: NextRequest) {
             ]);
         }
 
+        // Sitemap errors get their own (red) embed — a broken sitemap on a
+        // 165K-URL surface is an incident, not a trend.
+        if (sitemapAlerts.length > 0) {
+            await sendDiscordMessage('', [
+                {
+                    title: '🚨 GSC Health Check — Sitemap Errors',
+                    description: sitemapAlerts.join('\n').slice(0, 1900),
+                    color: 0xFF0000,
+                    timestamp: new Date().toISOString(),
+                },
+            ]);
+        }
+
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
         return {
             response: NextResponse.json({
@@ -133,6 +205,18 @@ export async function GET(request: NextRequest) {
                 today: { clicks: todayClicks, impressions: todayImpressions },
                 weekAgo: { clicks: weekAgoClicks, impressions: weekAgoImpressions },
                 alerts,
+                sitemaps: sitemaps
+                    ? {
+                        count: sitemaps.length,
+                        errors: sitemaps.reduce((sum, s) => sum + s.errors, 0),
+                        warnings: sitemaps.reduce((sum, s) => sum + s.warnings, 0),
+                        pending: sitemaps.filter((s) => s.isPending).length,
+                    }
+                    : null,
+                sitemapAlerts,
+                dimensionsCaptured: dimensions !== null,
+                ...(dimensionError ? { dimensionError } : {}),
+                ...(sitemapError ? { sitemapError } : {}),
                 duration: `${duration}s`,
                 timestamp: new Date().toISOString(),
             }),
@@ -142,6 +226,13 @@ export async function GET(request: NextRequest) {
                 weekAgoClicks,
                 weekAgoImpressions,
                 alertCount: alerts.length,
+                sitemapCount: sitemaps?.length ?? 0,
+                sitemapErrorCount: sitemaps?.reduce((sum, s) => sum + s.errors, 0) ?? 0,
+                sitemapAlertCount: sitemapAlerts.length,
+                queryRows: dimensions?.queries.current.length ?? 0,
+                pageRows: dimensions?.pages.current.length ?? 0,
+                ...(dimensionError ? { dimensionError } : {}),
+                ...(sitemapError ? { sitemapError } : {}),
             },
         };
         });
@@ -170,77 +261,4 @@ function daysAgo(n: number): Date {
 
 function isoDate(d: Date): string {
     return d.toISOString().slice(0, 10);
-}
-
-async function getAccessToken(serviceAccountKey: string): Promise<string> {
-    const key = JSON.parse(serviceAccountKey) as {
-        client_email: string;
-        private_key: string;
-    };
-    const now = Math.floor(Date.now() / 1000);
-    const claim = {
-        iss: key.client_email,
-        scope: 'https://www.googleapis.com/auth/webmasters.readonly',
-        aud: 'https://oauth2.googleapis.com/token',
-        iat: now,
-        exp: now + 3600,
-    };
-    const header = { alg: 'RS256', typ: 'JWT' };
-    const b64 = (obj: object) => Buffer.from(JSON.stringify(obj)).toString('base64url');
-    const unsignedJwt = `${b64(header)}.${b64(claim)}`;
-    const sign = createSign('RSA-SHA256');
-    sign.update(unsignedJwt);
-    const signature = sign.sign(key.private_key, 'base64url');
-    const jwt = `${unsignedJwt}.${signature}`;
-
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-            grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-            assertion: jwt,
-        }),
-    });
-    if (!tokenRes.ok) {
-        throw new Error(`OAuth failed: ${await tokenRes.text()}`);
-    }
-    const { access_token } = (await tokenRes.json()) as { access_token: string };
-    return access_token;
-}
-
-interface SearchAnalyticsAggregate {
-    clicks: number;
-    impressions: number;
-    ctr: number;
-    position: number;
-}
-
-async function fetchSearchAnalytics(
-    token: string,
-    siteUrl: string,
-    startDate: string,
-    endDate: string,
-): Promise<SearchAnalyticsAggregate | null> {
-    const res = await fetch(
-        `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
-        {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                startDate,
-                endDate,
-                rowLimit: 1,
-                // No dimensions = aggregate over all queries / pages.
-            }),
-        }
-    );
-    if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`Search Analytics ${startDate}: ${res.status} ${txt}`);
-    }
-    const data = (await res.json()) as { rows?: SearchAnalyticsAggregate[] };
-    return data.rows?.[0] ?? null;
 }

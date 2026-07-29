@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
+import { parseFaqJson, parseReviewedAt } from '@/app/api/admin/blog/validate';
 
 /**
  * GET /api/admin/blog/:id
@@ -52,6 +54,25 @@ export async function PUT(
             if (field in body) {
                 data[field] = body[field];
             }
+        }
+
+        // Editorially-authored schema fields — validated, never copied raw
+        // (they feed FAQPage JSON-LD + BlogPosting.dateModified on the
+        // public post page).
+        if ('faqJson' in body) {
+            const faqResult = parseFaqJson(body.faqJson);
+            if (!faqResult.ok) {
+                return NextResponse.json({ success: false, error: faqResult.error }, { status: 400 });
+            }
+            // Prisma nullable-Json semantics: DbNull clears the column.
+            data.faqJson = faqResult.value === null ? Prisma.DbNull : faqResult.value;
+        }
+        if ('reviewedAt' in body) {
+            const reviewedResult = parseReviewedAt(body.reviewedAt);
+            if (!reviewedResult.ok) {
+                return NextResponse.json({ success: false, error: reviewedResult.error }, { status: 400 });
+            }
+            data.reviewedAt = reviewedResult.value;
         }
 
         // Auto-set publishDate when publishing

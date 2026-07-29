@@ -14,6 +14,12 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import ScreeningQuestionsBuilder from '@/components/ScreeningQuestionsBuilder';
 import { Building2, MapPin, FileText, DollarSign, Rocket, ChevronRight, ChevronLeft, Check, Loader2, Trash2, Upload } from 'lucide-react';
 import { EXPERIENCE_BUCKETS, deriveExperienceLabel } from '@/lib/experience-label';
+import {
+  EMPLOYER_SPECIALTY_SLUGS,
+  EMPLOYER_SETTING_TAGS,
+  EMPLOYER_POPULATION_TAGS,
+} from '@/lib/pseo/category-tagger';
+import { categoryFilterLabel } from '@/lib/filters';
 import JdStarterPanel from '@/components/post-job/JdStarterPanel';
 import ConfirmDialog, { type ConfirmConfig } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -60,6 +66,7 @@ const jobPostingSchema = z.object({
   applyOnPlatform: z.boolean().optional(),
   pricingTier: z.enum(['pro']),
   benefits: z.array(z.string()).optional(),
+  specialty: z.string().optional(),
   setting: z.string().optional(),
   population: z.string().optional(),
   companyLogoUrl: z.string().optional(),
@@ -119,16 +126,16 @@ const BENEFIT_OPTIONS = [
   'Relocation Assistance', 'Tuition Reimbursement', 'Life Insurance',
 ] as const;
 
-const SETTING_OPTIONS = [
-  'Outpatient', 'Inpatient', 'Community Health', 'Telehealth',
-  'Private Practice', 'Corrections', 'VA / Military', 'Academic',
-  'Emergency / Crisis', 'Residential',
-] as const;
+// P1 #20: the specialty picker and the SETTING/POPULATION selects are
+// driven by the taxonomy registry via lib/pseo/category-tagger.ts — the
+// same maps the classifier consumes, so an employer's structured answers
+// land the post on the right /jobs/<slug> pages without substring guessing.
+const SPECIALTY_OPTIONS: ReadonlyArray<{ value: string; label: string }> =
+  EMPLOYER_SPECIALTY_SLUGS.map((slug) => ({ value: slug, label: categoryFilterLabel(slug) }));
 
-const POPULATION_OPTIONS = [
-  'Adults', 'Child & Adolescent', 'Geriatric', 'All Ages',
-  'Substance Use / Dual Diagnosis', 'Forensic',
-] as const;
+const SETTING_OPTIONS: readonly string[] = Object.keys(EMPLOYER_SETTING_TAGS);
+
+const POPULATION_OPTIONS: readonly string[] = Object.keys(EMPLOYER_POPULATION_TAGS);
 
 /* ═══ Clay Design Tokens ═══ */
 const cardBase: React.CSSProperties = {
@@ -1223,6 +1230,46 @@ function PostJobContent() {
                       </span>
                     </div>
                   </div>
+                </div>
+
+                {/* NP Specialty — registry-driven (P1 #20). The value is the
+                    canonical taxonomy slug, so the classifier can trust it
+                    directly instead of substring-guessing from the title.
+
+                    ⚠️ PENDING API WIRING — do not add a placement promise to
+                    the helper copy until this is closed. Neither job-create
+                    route forwards this field, and neither writes
+                    Job.categoryTags for employer posts, so the value is
+                    captured on the draft and then dropped:
+                      - app/api/jobs/post-free/route.ts  (destructures a fixed
+                        field list; `specialty` is not in it)
+                      - app/api/create-checkout/route.ts (same shape)
+                    Fix is one call in each, no migration needed — the tags
+                    land in the existing Job.categoryTags column:
+                      categoryTags: classifyJobTags({ title, description,
+                        jobType, isRemote, setting, population, specialty })
+                    The classifier side is already done and tested here:
+                    EMPLOYER_SPECIALTY_SLUGS / EMPLOYER_SETTING_TAGS /
+                    EMPLOYER_POPULATION_TAGS in lib/pseo/category-tagger.ts.
+
+                    No backfill can cover for this.
+                    scripts/backfill-category-tags.ts IS the live caller of
+                    the explicit-field path, but it can only read columns that
+                    exist: it passes Job.setting and Job.population (so the
+                    legacy + LLM vocabulary does get resolved on a
+                    `--force --apply` run) while there is
+                    no Job.specialty column to read at all.
+                    The value below is only ever resolvable at insert time,
+                    by the two routes above. */}
+                <div>
+                  <Label htmlFor="specialty">NP Specialty <span style={{ fontWeight: 400, color: '#B0BEC5' }}>(optional)</span></Label>
+                  <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '-4px 0 8px' }}>
+                    Choose the closest match from the NP specialty taxonomy
+                  </p>
+                  <select id="specialty" {...register('specialty')} style={clayInput} defaultValue="">
+                    <option value="">Select a specialty...</option>
+                    {SPECIALTY_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
                 </div>
 
                 {/* Clinical Setting */}

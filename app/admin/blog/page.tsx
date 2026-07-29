@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatCT } from '@/lib/format-ct';
+import { BLOG_CATEGORIES } from '@/lib/blog-categories';
 import {
     FileText, Plus, Pencil, Trash2, Eye, Globe, GlobeLock,
     X, ChevronDown, Tag, Calendar,
@@ -13,20 +14,21 @@ interface BlogPost {
     status: string; metaDescription: string | null; targetKeyword: string | null;
     imageUrl: string | null; publishDate: string | null;
     createdAt: string; updatedAt: string;
-    content?: string; // only loaded when editing
+    // Only loaded when editing (the list endpoint selects a lighter row).
+    content?: string;
+    reviewedAt?: string | null;
+    faqJson?: Array<{ name: string; text: string }> | null;
 }
 
-const CATEGORIES = [
-    { value: 'job_seeker_attraction', label: 'Job Seeker Attraction' },
-    { value: 'salary_negotiation', label: 'Salary Negotiation' },
-    { value: 'career_myths', label: 'Career Myths' },
-    { value: 'state_spotlight', label: 'State Spotlight' },
-    { value: 'employer_facing', label: 'Employer Facing' },
-    { value: 'community_lifestyle', label: 'Community & Lifestyle' },
-    { value: 'industry_awareness', label: 'Industry Awareness' },
-    { value: 'product_lead_gen', label: 'Product & Lead Gen' },
-    { value: 'success_stories', label: 'Success Stories' },
-];
+// Derive from the public taxonomy so the editor can never drift from the
+// categories /blog actually filters and renders (the old local list was
+// missing 4 of the 13 public categories, making them unauthorable from the
+// admin panel). Imported from lib/blog-categories.ts, NOT lib/blog.ts:
+// this is a 'use client' component, and lib/blog.ts's graph pulls in
+// @supabase/supabase-js + sanitize-html (its top-level sanitize config
+// dereferences sanitizeHtml.defaults, so the sanitizer stays reachable) —
+// importing it here shipped that entire server graph to the browser.
+const CATEGORIES = BLOG_CATEGORIES.map((c) => ({ value: c.id, label: c.label }));
 
 /* ─── Styles ─── */
 const card: React.CSSProperties = { backgroundColor: '#FAFBF9', border: '1px solid rgba(255,255,255,0.7)', borderRadius: '18px', boxShadow: '8px 8px 20px rgba(0,0,0,0.05), -6px -6px 16px rgba(255,255,255,0.9), inset 3px 3px 6px rgba(255,255,255,0.7), inset -2px -2px 4px rgba(0,0,0,0.02)', overflow: 'hidden' };
@@ -48,6 +50,7 @@ export default function AdminBlogPage() {
     const [form, setForm] = useState({
         title: '', content: '', category: 'job_seeker_attraction', status: 'draft',
         metaDescription: '', targetKeyword: '', imageUrl: '',
+        reviewedAt: '', faqJson: '',
     });
     const [saving, setSaving] = useState(false);
 
@@ -74,7 +77,7 @@ export default function AdminBlogPage() {
 
     const openNew = () => {
         setEditingPost(null);
-        setForm({ title: '', content: '', category: 'job_seeker_attraction', status: 'draft', metaDescription: '', targetKeyword: '', imageUrl: '' });
+        setForm({ title: '', content: '', category: 'job_seeker_attraction', status: 'draft', metaDescription: '', targetKeyword: '', imageUrl: '', reviewedAt: '', faqJson: '' });
         setEditorOpen(true);
     };
 
@@ -92,6 +95,8 @@ export default function AdminBlogPage() {
                     metaDescription: data.post.metaDescription || '',
                     targetKeyword: data.post.targetKeyword || '',
                     imageUrl: data.post.imageUrl || '',
+                    reviewedAt: data.post.reviewedAt ? String(data.post.reviewedAt).slice(0, 10) : '',
+                    faqJson: data.post.faqJson ? JSON.stringify(data.post.faqJson, null, 2) : '',
                 });
                 setEditorOpen(true);
             }
@@ -103,6 +108,25 @@ export default function AdminBlogPage() {
             showMsg('Title, content, and category are required', true);
             return;
         }
+        // FAQ JSON is authored as text — validate the shape client-side so a
+        // typo surfaces immediately instead of silently dropping schema data.
+        let faqJson: Array<{ name: string; text: string }> | null = null;
+        if (form.faqJson.trim()) {
+            try {
+                const parsed = JSON.parse(form.faqJson);
+                const valid = Array.isArray(parsed) && parsed.every(
+                    (q) => q && typeof q.name === 'string' && typeof q.text === 'string',
+                );
+                if (!valid) {
+                    showMsg('FAQ JSON must be an array of { "name", "text" } objects', true);
+                    return;
+                }
+                faqJson = parsed;
+            } catch {
+                showMsg('FAQ JSON is not valid JSON', true);
+                return;
+            }
+        }
         try {
             setSaving(true);
             const url = editingPost ? `/api/admin/blog/${editingPost.id}` : '/api/admin/blog';
@@ -110,7 +134,11 @@ export default function AdminBlogPage() {
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form),
+                body: JSON.stringify({
+                    ...form,
+                    faqJson,
+                    reviewedAt: form.reviewedAt || null,
+                }),
             });
             const data = await res.json();
             if (data.success) {
@@ -321,6 +349,29 @@ export default function AdminBlogPage() {
                             <div>
                                 <label style={{ ...muted, fontWeight: 600, display: 'block', marginBottom: 6 }}>Image URL</label>
                                 <input type="text" value={form.imageUrl} onChange={e => setForm(p => ({ ...p, imageUrl: e.target.value }))} style={inputStyle} placeholder="https://..." />
+                            </div>
+
+                            {/* Editorial review date — feeds BlogPosting.dateModified
+                                and the visible "Last Reviewed" line on the post page.
+                                Only set it when a real review pass happened. */}
+                            <div>
+                                <label style={{ ...muted, fontWeight: 600, display: 'block', marginBottom: 6 }}>Reviewed At (editorial review date)</label>
+                                <input type="date" value={form.reviewedAt} onChange={e => setForm(p => ({ ...p, reviewedAt: e.target.value }))} style={inputStyle} />
+                            </div>
+
+                            {/* FAQ JSON — emitted as FAQPage JSON-LD by the post page.
+                                Must mirror the post's visible FAQ section. */}
+                            <div>
+                                <label style={{ ...muted, fontWeight: 600, display: 'block', marginBottom: 6 }}>FAQ JSON (FAQPage schema — must match the post&apos;s visible FAQ)</label>
+                                <textarea
+                                    value={form.faqJson}
+                                    onChange={e => setForm(p => ({ ...p, faqJson: e.target.value }))}
+                                    style={{
+                                        ...inputStyle, minHeight: 120, fontFamily: 'monospace', fontSize: '12px',
+                                        lineHeight: '1.6', resize: 'vertical',
+                                    }}
+                                    placeholder='[{"name": "Question?", "text": "Answer."}]'
+                                />
                             </div>
 
                             {/* Content */}

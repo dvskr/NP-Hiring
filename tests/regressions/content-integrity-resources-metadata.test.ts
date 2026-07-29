@@ -50,7 +50,11 @@ describe('F12 — salary-guide PDF fallback derives from config/brand.ts', () =>
 
   it('brand.assets.salaryGuidePdf points at this board\'s own asset', () => {
     const src = read('config/brand.ts');
-    expect(src).toMatch(/salaryGuidePdf:\s*'[^']*NP_Salary_Guide\.pdf'/);
+    // P1 #4: the deliverable is now authored locally
+    // (public/downloads, scripts/generate-salary-pdf.ts) and served from
+    // this app — not from a storage bucket, and never the donor's asset.
+    expect(src).not.toContain('PMHNP_Salary_Guide');
+    expect(src).toMatch(/salaryGuidePdf:\s*'https:\/\/nphiring\.com\/downloads\/np-salary-guide-\d{4}\.pdf'/);
   });
 });
 

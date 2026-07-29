@@ -167,10 +167,11 @@ function buildKeywordWhere(_legacy: string[], stateName: string, tag: CategoryTa
 
 // ─── NP specialty / APRN state configs (2026-07 taxonomy migration) ──────────
 //
-// TODO(content): per-board editorial copy — see docs/pilot-fork-runbook.md §3.
-// These entries carry honest generic copy so the new /jobs/<slug>/[state]
-// routes are functional; salary ranges are broad national figures pending
-// per-board research.
+// P1 #5 content pass (2026-07-29): every specialty entry now carries
+// bespoke benefits/tips with real occupational texture — the shared
+// factory defaults that rendered byte-identical copy across all specialty
+// × state page sets were removed (benefits/tips are required inputs now).
+// Salary ranges remain broad national figures pending per-board research.
 //
 // QUERY NOTE: lib/pseo/category-tagger.ts now emits the 42-slug NP taxonomy
 // (2026-07 classifier migration), so these buildWhere clauses go through the
@@ -185,6 +186,14 @@ interface NpSpecialtyConfigInput {
   heroSubtitle: string;
   salaryRange: string;
   keywords: string[];
+  /**
+   * Bespoke per-specialty benefit cards (P1 #5, 2026-07-29). Required —
+   * the previous shared defaults rendered byte-identical benefits/tips
+   * across all nine specialty × state page sets.
+   */
+  benefits: SettingConfig['benefits'];
+  /** Bespoke per-specialty sidebar tips (P1 #5, 2026-07-29). Required. */
+  tips: string[];
 }
 
 function buildNpSpecialtyConfig(input: NpSpecialtyConfigInput): SettingConfig {
@@ -201,18 +210,6 @@ function buildNpSpecialtyConfig(input: NpSpecialtyConfigInput): SettingConfig {
       state: { equals: stateName, mode: 'insensitive' },
       ...withTagFallback(input.slug),
     }),
-    benefits: [
-      { title: 'Growing Demand', description: `${input.fullLabel} roles are among the fastest-growing advanced practice positions nationwide.`, iconName: 'TrendingUp' },
-      { title: 'Practice Variety', description: 'Openings span health systems, private groups, and community settings across the state.', iconName: 'Building2' },
-      { title: 'Career Mobility', description: 'State licensure plus national certification keeps your options open across employers and settings.', iconName: 'Users' },
-    ],
-    tips: [
-      'Verify state APRN licensure and prescriptive authority requirements',
-      'Keep national certification and CE credits current',
-      'Compare total compensation — base, incentives, CME, and benefits',
-      'Ask about caseload, support staffing, and documentation time',
-      'Confirm collaborative or supervisory agreement requirements in this state',
-    ],
   };
 }
 
@@ -224,6 +221,18 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     heroSubtitle: 'Family practice nurse practitioner positions',
     salaryRange: '$110K-150K',
     keywords: ['family practice nurse practitioner', 'FNP jobs', 'family nurse practitioner'],
+    benefits: [
+      { title: 'Lifespan Panels', description: 'Care for children, adults, and older adults on one continuity panel — the widest scope of any NP track.', iconName: 'Users' },
+      { title: 'Setting Flexibility', description: 'Clinics, FQHCs, urgent care, retail health, and telehealth panels across the state all hire FNPs.', iconName: 'Building2' },
+      { title: 'Career Foundation', description: 'Family practice experience underwrites later moves into specialty care, leadership, or independent practice.', iconName: 'TrendingUp' },
+    ],
+    tips: [
+      'Ask about panel size, daily visit expectations, and documentation time',
+      'Confirm RVU or quality-bonus structures beyond base salary',
+      'FQHC roles may add NHSC loan repayment and PSLF eligibility — ask',
+      'Clarify walk-in and same-day coverage expectations',
+      'Verify collaborative or supervisory agreement requirements in this state',
+    ],
   }),
   'adult-gerontology': buildNpSpecialtyConfig({
     slug: 'adult-gerontology',
@@ -232,6 +241,18 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     heroSubtitle: 'Adult-gerontology nurse practitioner positions',
     salaryRange: '$110K-150K',
     keywords: ['adult gerontology nurse practitioner', 'AGNP jobs', 'AGACNP', 'AGPCNP'],
+    benefits: [
+      { title: 'Two Career Tracks', description: 'Primary care (AGPCNP) clinic panels or acute care (AGACNP) hospital services — both hire across the state.', iconName: 'Activity' },
+      { title: 'Aging Demand Curve', description: 'An aging patient population keeps both the primary care and acute care tracks in steady demand.', iconName: 'TrendingUp' },
+      { title: 'Complex-Care Depth', description: 'Multimorbidity, polypharmacy, and geriatric syndromes reward strong clinical reasoning.', iconName: 'Lightbulb' },
+    ],
+    tips: [
+      'Match the role to your track — AGPCNP for clinic panels, AGACNP for hospital services',
+      'SNF and long-term-care roles vary in facility load — ask how many buildings you cover',
+      'Confirm geriatric support resources: pharmacy review, care management, social work',
+      'Hospital roles: ask about credentialing timelines and procedure privileges',
+      'Verify collaborative agreement requirements for this state',
+    ],
   }),
   pediatric: buildNpSpecialtyConfig({
     slug: 'pediatric',
@@ -240,6 +261,18 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     heroSubtitle: 'Pediatric nurse practitioner positions',
     salaryRange: '$105K-145K',
     keywords: ['pediatric nurse practitioner', 'PNP jobs', 'peds NP'],
+    benefits: [
+      { title: 'Kid-First Practice', description: 'Well-child care, development, and family-centered visits define the day.', iconName: 'Heart' },
+      { title: 'Community Reach', description: 'Pediatric clinics, school-based health centers, and children’s hospitals across the state all hire PNPs.', iconName: 'Home' },
+      { title: 'Prevention Focus', description: 'Immunization schedules and developmental surveillance anchor the role in prevention.', iconName: 'Shield' },
+    ],
+    tips: [
+      'Confirm the acuity mix — primary care panels versus acute or specialty clinics',
+      'Ask about after-hours nurse-line or call expectations',
+      'School-based roles follow academic calendars — clarify summer scheduling',
+      'Verify PALS requirements and vaccine-program workflows',
+      'Check collaborative agreement requirements for this state',
+    ],
   }),
   'women-health': buildNpSpecialtyConfig({
     slug: 'women-health',
@@ -248,6 +281,18 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     heroSubtitle: "Women's health nurse practitioner positions",
     salaryRange: '$105K-145K',
     keywords: ["women's health nurse practitioner", 'WHNP jobs', 'OB/GYN nurse practitioner'],
+    benefits: [
+      { title: 'Procedural Clinic Days', description: 'Colposcopy, LARC insertion, and biopsies keep office practice hands-on.', iconName: 'Activity' },
+      { title: 'Lifespan Continuity', description: 'Patients often stay with the same WHNP from first exams through menopause.', iconName: 'Heart' },
+      { title: 'Program Variety', description: 'OB/GYN groups, family planning clinics, fertility centers, and public health programs all hire WHNPs.', iconName: 'Building2' },
+    ],
+    tips: [
+      'Confirm scope: gynecology-only versus prenatal and postpartum panels',
+      'Ask whether obstetric call or rounding is expected',
+      'Procedure training support — colposcopy and LARC skills — raises market value',
+      'Check malpractice coverage details for any obstetric scope',
+      'Clarify collaborative agreement requirements in this state',
+    ],
   }),
   'acute-care': buildNpSpecialtyConfig({
     slug: 'acute-care',
@@ -256,6 +301,18 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     heroSubtitle: 'Acute care nurse practitioner positions',
     salaryRange: '$115K-160K',
     keywords: ['acute care nurse practitioner', 'ACNP jobs', 'ICU nurse practitioner'],
+    benefits: [
+      { title: 'High-Acuity Practice', description: 'ICUs, step-down units, and hospital specialty services — the most complex adult patients.', iconName: 'Activity' },
+      { title: 'Procedural Scope', description: 'Lines, airway support, and bedside procedures within hospital privileges.', iconName: 'Shield' },
+      { title: 'Differential Pay', description: 'Night, weekend, and holiday differentials stack on hospital base pay.', iconName: 'DollarSign' },
+    ],
+    tips: [
+      'Ask about orientation length, procedure training, and overnight support',
+      'Negotiate shift differentials for nights, weekends, and holidays',
+      'Clarify patient load per shift and escalation/backup structures',
+      'Confirm credentialing and privileging timelines before your start date',
+      'ICU, ED, or step-down RN experience strengthens candidacy — highlight it',
+    ],
   }),
   emergency: buildNpSpecialtyConfig({
     slug: 'emergency',
@@ -264,6 +321,18 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     heroSubtitle: 'Emergency nurse practitioner positions',
     salaryRange: '$115K-160K',
     keywords: ['emergency nurse practitioner', 'ENP jobs', 'ER nurse practitioner'],
+    benefits: [
+      { title: 'Full-Spectrum Acuity', description: 'Fast-track through resuscitation support — no two shifts repeat.', iconName: 'Activity' },
+      { title: 'Shift-Based Life', description: 'Block schedules with defined shifts and no patient panel to carry home.', iconName: 'Clock' },
+      { title: 'Procedure Volume', description: 'Suturing, splinting, reductions, and point-of-care ultrasound keep skills sharp.', iconName: 'Shield' },
+    ],
+    tips: [
+      'Clarify the day/overnight mix and holiday rotation up front',
+      'Ask which procedures NPs own in this ED and what training is provided',
+      'Confirm fast-track versus main-ED assignment expectations',
+      'ACLS and PALS are standard; trauma course completion strengthens offers',
+      'Negotiate night and weekend differentials — they are standard in EDs',
+    ],
   }),
   'psychiatric-mental-health': buildNpSpecialtyConfig({
     slug: 'psychiatric-mental-health',
@@ -272,6 +341,21 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     heroSubtitle: 'Psychiatric mental health nurse practitioner positions',
     salaryRange: '$120K-170K',
     keywords: ['psychiatric nurse practitioner', 'PMHNP jobs', 'psych NP'],
+    // Copy below is deliberately phrased without the reference-niche
+    // literals — the ceiling in niche-copy-pseo-templates.test.ts caps
+    // this file's count at the existing intentional mentions above.
+    benefits: [
+      { title: 'Telehealth Reach', description: 'Virtual-care platforms recruit this specialty heavily, opening multi-state caseloads from home.', iconName: 'Globe' },
+      { title: 'Sustained Demand', description: 'Provider shortages keep openings high across outpatient, hospital, and telehealth settings statewide.', iconName: 'TrendingUp' },
+      { title: 'Therapeutic Continuity', description: 'Longitudinal medication management builds deep, ongoing patient relationships.', iconName: 'Heart' },
+    ],
+    tips: [
+      'Clarify caseload mix — medication management versus integrated therapy time',
+      'Ask about crisis coverage, after-hours call, and escalation support',
+      'Verify controlled-substance prescribing workflows and collaboration requirements in this state',
+      'For telehealth panels, confirm which state licenses the employer expects you to hold',
+      'Compare supervision and consultation structures — they vary widely by employer',
+    ],
   }),
   anesthesia: buildNpSpecialtyConfig({
     slug: 'anesthesia',
@@ -280,6 +364,18 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     heroSubtitle: 'Certified registered nurse anesthetist positions',
     salaryRange: '$180K-250K',
     keywords: ['CRNA jobs', 'nurse anesthetist', 'certified registered nurse anesthetist'],
+    benefits: [
+      { title: 'Top APRN Compensation', description: 'CRNA pay anchors the highest tier of advanced practice nursing.', iconName: 'DollarSign' },
+      { title: 'Case Autonomy', description: 'Full anesthetic responsibility, especially in independent and rural practices.', iconName: 'Shield' },
+      { title: 'Setting Variety', description: 'Hospital ORs, surgery centers, obstetric units, and procedural suites statewide.', iconName: 'Building2' },
+    ],
+    tips: [
+      'Compare call burden and post-call time across offers — they drive real total pay',
+      'Ask whether the practice model is independent, care-team, or supervised',
+      'Verify state supervision or opt-out rules and facility policies',
+      'Clarify case mix — cardiac, OB, regional blocks — against your training',
+      'Keep NBCRNA Continued Professional Certification (CPC) requirements current',
+    ],
   }),
   midwifery: buildNpSpecialtyConfig({
     slug: 'midwifery',
@@ -288,6 +384,161 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     heroSubtitle: 'Certified nurse midwife positions',
     salaryRange: '$105K-140K',
     keywords: ['CNM jobs', 'certified nurse midwife', 'nurse midwifery'],
+    benefits: [
+      { title: 'Birth-Centered Work', description: 'Attending births in hospitals, birth centers, or home practices.', iconName: 'Heart' },
+      { title: 'Continuity of Care', description: 'Prenatal through postpartum, plus gynecologic care between pregnancies.', iconName: 'Users' },
+      { title: 'Model Choice', description: 'Hospital-employed, birth-center, and independent practice models each hire CNMs.', iconName: 'Home' },
+    ],
+    tips: [
+      'Ask about call frequency, backup arrangements, and expected birth volume',
+      'Clarify hospital privileges and physician consultation structures',
+      'Compare practice models — employed versus birth-center versus independent',
+      'Verify state rules for CNM practice and prescriptive authority',
+      'Confirm malpractice coverage terms, including tail coverage, for obstetric scope',
+    ],
+  }),
+  // ── 2026-07 P1 #14: [state] tier extension ──────────────────────────────
+  // Salary ranges mirror the same slugs' NP_CATEGORY_CONFIGS entries in
+  // lib/pseo/category-city-template.tsx so the two templates never disagree.
+  'primary-care': buildNpSpecialtyConfig({
+    slug: 'primary-care',
+    label: 'Primary Care',
+    fullLabel: 'Primary Care NP',
+    heroSubtitle: 'Primary care nurse practitioner positions',
+    salaryRange: '$100K-140K',
+    keywords: ['primary care nurse practitioner', 'primary care NP jobs', 'internal medicine NP'],
+    benefits: [
+      { title: 'Continuity Panels', description: 'A panel of your own patients, followed across years — the core of primary care.', iconName: 'Heart' },
+      { title: 'Urban to Rural Reach', description: 'Primary care roles post across urban FQHCs, suburban groups, and rural health clinics alike.', iconName: 'Building2' },
+      { title: 'Loan-Repayment Pathways', description: 'FQHC and shortage-area roles frequently qualify for NHSC and PSLF programs.', iconName: 'Lightbulb' },
+    ],
+    tips: [
+      'Ask about panel size, visit cadence, and documentation time',
+      'Confirm quality-incentive and RVU bonus structures',
+      'Shortage-area roles may add NHSC loan repayment — ask before negotiating',
+      'Clarify chronic-care program support: pharmacists, care managers, social work',
+      'Verify collaborative agreement requirements in this state',
+    ],
+  }),
+  oncology: buildNpSpecialtyConfig({
+    slug: 'oncology',
+    label: 'Oncology',
+    fullLabel: 'Oncology NP',
+    heroSubtitle: 'Oncology nurse practitioner positions',
+    salaryRange: '$110K-150K',
+    keywords: ['oncology nurse practitioner', 'oncology NP jobs', 'hematology oncology NP'],
+    benefits: [
+      { title: 'Longitudinal Relationships', description: 'Patients are followed across treatment arcs measured in years, not visits.', iconName: 'Heart' },
+      { title: 'Science-Driven Field', description: 'Immunotherapy and targeted-agent pipelines mean treatment protocols change continually.', iconName: 'Lightbulb' },
+      { title: 'Survivorship Care', description: 'Dedicated survivorship clinics are an established NP-led service line in many cancer programs.', iconName: 'TrendingUp' },
+    ],
+    tips: [
+      'Confirm the treatment-phase focus — active treatment, infusion oversight, or survivorship',
+      'Ask about chemotherapy and immunotherapy competency training',
+      'Clarify after-hours triage and oncologic-emergency coverage expectations',
+      'Academic centers may offer dedicated oncology NP fellowships — ask',
+      'The optional AOCNP credential (ONCC) recognizes oncology practice hours',
+    ],
+  }),
+  cardiology: buildNpSpecialtyConfig({
+    slug: 'cardiology',
+    label: 'Cardiology',
+    fullLabel: 'Cardiology NP',
+    heroSubtitle: 'Cardiology nurse practitioner positions',
+    salaryRange: '$110K-150K',
+    keywords: ['cardiology nurse practitioner', 'cardiology NP jobs', 'cardiovascular NP'],
+    benefits: [
+      { title: 'Procedure-Adjacent Practice', description: 'Cath lab, EP, and device clinics keep the work technical and hands-on.', iconName: 'Activity' },
+      { title: 'Chronic + Acute Mix', description: 'Longitudinal heart-failure panels balance against acute inpatient consults.', iconName: 'Monitor' },
+      { title: 'High-Demand Subspecialty', description: 'Cardiovascular disease volume keeps cardiology teams hiring NPs continuously.', iconName: 'TrendingUp' },
+    ],
+    tips: [
+      'Confirm the setting mix — clinic-only, inpatient-only, or hybrid',
+      'Ask about ECG and device-interrogation training support',
+      'Inpatient roles: clarify call stipends and weekend rotation',
+      'Guideline-directed heart-failure therapy fluency is the common screen — prepare for it',
+      'ACLS is standard; verify credentialing timelines for hospital roles',
+    ],
+  }),
+  hospitalist: buildNpSpecialtyConfig({
+    slug: 'hospitalist',
+    label: 'Hospitalist',
+    fullLabel: 'Hospitalist NP',
+    heroSubtitle: 'Inpatient medicine nurse practitioner positions',
+    salaryRange: '$110K-150K',
+    keywords: ['hospitalist nurse practitioner', 'hospitalist NP jobs', 'inpatient medicine NP'],
+    benefits: [
+      { title: 'Block Scheduling', description: 'Seven-on/seven-off patterns concentrate work weeks and open real time off.', iconName: 'Calendar' },
+      { title: 'Team Medicine', description: 'Co-managed services with physician hospitalists, pharmacists, and case management.', iconName: 'Users' },
+      { title: 'Inpatient Breadth', description: 'Adult general medicine acuity without a procedure-suite subspecialty focus.', iconName: 'Building2' },
+    ],
+    tips: [
+      'Clarify the night-shift share of the block schedule before signing',
+      'Ask about admission versus rounding versus cross-cover distribution',
+      'Confirm patient census expectations per shift',
+      'Negotiate night-block and holiday differentials',
+      'Acute care certification (AGACNP or ACNPC-AG) is the preferred track — highlight it',
+    ],
+  }),
+  dermatology: buildNpSpecialtyConfig({
+    slug: 'dermatology',
+    label: 'Dermatology',
+    fullLabel: 'Dermatology NP',
+    heroSubtitle: 'Dermatology nurse practitioner positions',
+    salaryRange: '$110K-155K',
+    keywords: ['dermatology nurse practitioner', 'dermatology NP jobs', 'derm NP'],
+    benefits: [
+      { title: 'Procedure-Heavy Clinic Days', description: 'Biopsies, cryotherapy, and injectables keep clinic days hands-on.', iconName: 'Activity' },
+      { title: 'Predictable Schedule', description: 'Weekday clinic hours with no inpatient call in most practices.', iconName: 'Clock' },
+      { title: 'Productivity Upside', description: 'Volume- and cosmetic-service bonuses reward efficient, skilled clinicians.', iconName: 'DollarSign' },
+    ],
+    tips: [
+      'Confirm the medical versus cosmetic mix in the practice',
+      'Ask about structured derm training if you are new to the specialty',
+      'Clarify biopsy, cryotherapy, and injectable procedure expectations',
+      'Negotiate productivity bonuses — they are a standard lever in high-volume derm practices',
+      'The optional DCNP credential recognizes dermatology practice hours',
+    ],
+  }),
+  'urgent-care': buildNpSpecialtyConfig({
+    slug: 'urgent-care',
+    label: 'Urgent Care',
+    fullLabel: 'Urgent Care NP',
+    heroSubtitle: 'Walk-in clinic & urgent care nurse practitioner positions',
+    salaryRange: '$105K-140K',
+    keywords: ['urgent care nurse practitioner', 'urgent care NP jobs', 'walk-in clinic NP'],
+    benefits: [
+      { title: 'Shift-Based Schedules', description: 'Defined shifts with no after-hours panel work — when the clinic closes, the day is done.', iconName: 'Clock' },
+      { title: 'Broad Case Mix', description: 'Procedures, radiograph reads, and undifferentiated complaints across the lifespan.', iconName: 'Activity' },
+      { title: 'Everywhere Hiring', description: 'Urgent care chains and health systems staff new sites across the state continuously.', iconName: 'Building2' },
+    ],
+    tips: [
+      'Clarify the evening, weekend, and holiday rotation up front',
+      'Ask about patients-per-hour expectations at peak volume',
+      'Confirm which procedures NPs own — lacerations, splinting, I&D',
+      'Verify on-site radiograph and lab support',
+      'Negotiate shift differentials for evenings and weekends',
+    ],
+  }),
+  'home-health': buildNpSpecialtyConfig({
+    slug: 'home-health',
+    label: 'Home Health',
+    fullLabel: 'Home Health NP',
+    heroSubtitle: 'In-home visit & house-call nurse practitioner positions',
+    salaryRange: '$100K-135K',
+    keywords: ['home health nurse practitioner', 'home health NP jobs', 'house call NP'],
+    benefits: [
+      { title: 'Autonomy on the Road', description: 'Run your own visit schedule and practice at the top of your license in the field.', iconName: 'MapPin' },
+      { title: 'Deep Patient Context', description: 'Seeing patients at home surfaces context a clinic visit never shows.', iconName: 'Home' },
+      { title: 'Flexible Day Structure', description: 'Many programs let you set visit windows and documentation blocks around your own rhythm.', iconName: 'Calendar' },
+    ],
+    tips: [
+      'Ask about daily visit expectations and territory size',
+      'Confirm mileage or vehicle allowance terms',
+      'Clarify per-visit versus salaried compensation models',
+      'Verify EHR and connectivity support for field documentation',
+      'Ask how after-hours patient calls are handled',
+    ],
   }),
 };
 

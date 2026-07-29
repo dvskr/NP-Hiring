@@ -8,6 +8,7 @@ import FeaturedTestimonials from '@/components/FeaturedTestimonials';
 import { config } from '@/lib/config';
 import {
   Check, ArrowRight, X, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign, HelpCircle,
+  BookOpen, PenLine, ClipboardList,
 } from 'lucide-react';
 
 const STORAGE_BASE = brand.assets.storageBase;
@@ -509,6 +510,62 @@ export default async function ForEmployersPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════
+          SECTION 4.5: HIRING RESOURCES (P1 #18 employer content hub —
+          links only; the hub + guides live at /for-employers/resources)
+          ═══════════════════════════════════════════════════════════════ */}
+      <section style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 100%)', padding: '72px 20px' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+            Free Hiring Resources
+          </p>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
+            Guides for Hiring Teams
+          </h2>
+          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 40px', lineHeight: 1.6 }}>
+            The hiring process, the job description, and ready-to-customize templates — free whether you post here or not.
+          </p>
+
+          <div className="emp-resources-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            {[
+              {
+                href: '/for-employers/resources/how-to-hire',
+                icon: <BookOpen size={22} />,
+                title: `How to Hire a ${brand.niche.long}`,
+                blurb: 'Process, credentialing checklist, salary benchmarking, and timeline expectations.',
+              },
+              {
+                href: '/for-employers/resources/job-description-guide',
+                icon: <PenLine size={22} />,
+                title: `Writing a ${brand.niche.short} Job Description`,
+                blurb: 'The section-by-section structure qualified clinicians respond to.',
+              },
+              {
+                href: '/for-employers/resources/job-description-templates',
+                icon: <ClipboardList size={22} />,
+                title: 'Job Description Templates',
+                blurb: `Setting-specific skeletons for outpatient, inpatient, telehealth, and specialty roles.`,
+              },
+            ].map((r) => (
+              <Link key={r.href} href={r.href} className="emp-bento-card" style={{ ...clayCard, padding: '24px 22px', textDecoration: 'none', display: 'block' }}>
+                <div style={iconBg}>{r.icon}</div>
+                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>{r.title}</h3>
+                <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: '0 0 12px', lineHeight: 1.55 }}>{r.blurb}</p>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#BE185D' }}>
+                  Read the guide <ArrowRight size={13} />
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          <p style={{ textAlign: 'center', marginTop: '24px' }}>
+            <Link href="/for-employers/resources" style={{ fontSize: '13px', fontWeight: 600, color: '#7A1C2B', textDecoration: 'underline' }}>
+              Browse all employer resources
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════
           SECTION 5: FAQ (renders from employerFaqs — the same array that
           feeds the FAQPage JSON-LD above; markup matches /pricing)
           ═══════════════════════════════════════════════════════════════ */}
@@ -588,6 +645,7 @@ export default async function ForEmployersPage() {
         @media (max-width: 768px) {
           .emp-hero-grid { grid-template-columns: 1fr !important; }
           .emp-compare-grid { grid-template-columns: 1fr !important; }
+          .emp-resources-grid { grid-template-columns: 1fr !important; }
           .emp-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .bento-grid { grid-template-columns: 1fr !important; }
           .bento-hero-1, .bento-hero-2, .bento-hero-3, .bento-pricing {

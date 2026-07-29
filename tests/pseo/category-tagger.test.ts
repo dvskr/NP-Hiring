@@ -27,8 +27,10 @@ function tags(job: Partial<ClassifiableJob> & { title: string }): string[] {
 }
 
 describe('canonical slug list — registry sync', () => {
-    it('matches lib/pseo/taxonomy-registry.ts exactly (42 slugs)', () => {
-        expect(CANONICAL_CATEGORY_SLUGS).toHaveLength(42);
+    it('matches lib/pseo/taxonomy-registry.ts exactly (45 slugs)', () => {
+        // 42 from the 2026-07 migration + aesthetics / pain-management /
+        // palliative-hospice (P1 #15).
+        expect(CANONICAL_CATEGORY_SLUGS).toHaveLength(45);
         expect([...CANONICAL_CATEGORY_SLUGS].sort()).toEqual([...ALL_CATEGORY_SLUGS].sort());
     });
 

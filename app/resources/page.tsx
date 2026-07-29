@@ -2,17 +2,19 @@ import { brand } from '@/config/brand';
 import { LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
 import { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowRight, ArrowUpRight } from 'lucide-react';
+import {
+  ArrowRight, Briefcase, Building2, Calculator, DollarSign,
+  FileDown, Globe, GraduationCap, Rocket, Search, ShieldCheck, Star,
+  TrendingUp, Users, type LucideIcon,
+} from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import ResourceDownloadGate from '@/components/ResourceDownloadGate';
+import { SALARY_GUIDE_EDITION_YEAR } from '@/app/api/salary-guide/pdf-availability';
 import LicensureChecker from '@/components/LicensureChecker';
 import StateImage from '@/components/StateImage';
 import { prisma } from '@/lib/prisma';
 import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
-
-const STORAGE_BASE = brand.assets.storageBase;
 
 export const revalidate = 86400;
 
@@ -56,16 +58,23 @@ const clayCard: React.CSSProperties = {
   boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
 };
 
+/* Rounded tile behind each lucide icon (local-asset pattern, b371b37) */
+const iconTile: React.CSSProperties = {
+  width: '48px', height: '48px', borderRadius: '14px',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  flexShrink: 0,
+};
+
 /* ─── Category config ─── */
-const CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  career_opportunities: { label: 'Career', color: '#6366F1', bg: '#EEF2FF', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp` },
-  salary_negotiation: { label: 'Salary', color: '#BE185D', bg: '#FDF2F8', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp` },
-  job_seeker_attraction: { label: 'Job Search', color: '#3B82F6', bg: '#EFF6FF', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/blog/icon-job-search.webp` },
-  career_myths: { label: 'Education', color: '#A855F7', bg: '#FAF5FF', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/blog/icon-education.webp` },
-  community_lifestyle: { label: 'Lifestyle', color: '#F59E0B', bg: '#FFFBEB', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-people.webp` },
-  employer_facing: { label: 'Employers', color: '#EF4444', bg: '#FEF2F2', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/blog/icon-employers.webp` },
-  product_lead_gen: { label: 'Product', color: '#BE185D', bg: '#FDF2F8', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/blog/icon-product.webp` },
-  industry_awareness: { label: 'Industry', color: '#8B5CF6', bg: '#F5F3FF', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/blog/icon-industry.webp` },
+const CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string; icon: LucideIcon }> = {
+  career_opportunities: { label: 'Career', color: '#6366F1', bg: '#EEF2FF', icon: TrendingUp },
+  salary_negotiation: { label: 'Salary', color: '#BE185D', bg: '#FDF2F8', icon: DollarSign },
+  job_seeker_attraction: { label: 'Job Search', color: '#3B82F6', bg: '#EFF6FF', icon: Search },
+  career_myths: { label: 'Education', color: '#A855F7', bg: '#FAF5FF', icon: GraduationCap },
+  community_lifestyle: { label: 'Lifestyle', color: '#F59E0B', bg: '#FFFBEB', icon: Users },
+  employer_facing: { label: 'Employers', color: '#EF4444', bg: '#FEF2F2', icon: Briefcase },
+  product_lead_gen: { label: 'Product', color: '#BE185D', bg: '#FDF2F8', icon: Rocket },
+  industry_awareness: { label: 'Industry', color: '#8B5CF6', bg: '#F5F3FF', icon: Globe },
 };
 
 /* ─── Featured guides data ─── */
@@ -74,7 +83,7 @@ const featuredGuides = [
     href: '/salary-guide',
     title: 'Salary Calculator & Guide',
     desc: 'Interactive salary tool with state, experience, and setting selectors. Complete 2026 data.',
-    img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`,
+    icon: Calculator,
     badge: 'Interactive Tool',
     badgeColor: '#BE185D',
   },
@@ -82,7 +91,7 @@ const featuredGuides = [
     href: '/resources/fpa-guide',
     title: 'Full Practice Authority Guide',
     desc: 'All 50 states classified. See which states allow independent practice and how FPA impacts pay.',
-    img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-chart.webp`,
+    icon: ShieldCheck,
     badge: '50 States',
     badgeColor: '#6366F1',
   },
@@ -90,7 +99,7 @@ const featuredGuides = [
     href: '/resources/private-practice-guide',
     title: 'Private Practice Startup',
     desc: 'LLC formation, credentialing, EHR, malpractice insurance, and income projections.',
-    img: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-trending.webp`,
+    icon: Building2,
     badge: 'Step-by-Step',
     badgeColor: '#F59E0B',
   },
@@ -234,7 +243,9 @@ export default async function ResourcesPage() {
                   display: 'flex', flexDirection: 'column', gap: '14px',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Image src={g.img} alt={g.title} width={48} height={48} style={{ width: '48px', height: '48px', borderRadius: '14px' }} />
+                    <div style={{ ...iconTile, background: `${g.badgeColor}15`, color: g.badgeColor }}>
+                      <g.icon size={24} />
+                    </div>
                     <span style={{
                       fontSize: '11px', fontWeight: 700, color: g.badgeColor,
                       background: `${g.badgeColor}15`, padding: '4px 10px', borderRadius: '20px',
@@ -262,7 +273,9 @@ export default async function ResourcesPage() {
                 </p>
               </div>
               <div style={{ padding: '24px 28px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`} alt="1099 vs W2" width={56} height={56} style={{ width: '56px', height: '56px', borderRadius: '16px' }} />
+                <div style={{ ...iconTile, width: '56px', height: '56px', borderRadius: '16px', background: '#FEF3C7', color: '#F59E0B' }}>
+                  <DollarSign size={26} />
+                </div>
               </div>
             </Link>
           </div>
@@ -370,12 +383,14 @@ export default async function ResourcesPage() {
           </h2>
 
           {Object.entries(grouped).map(([category, posts]) => {
-            const cfg = CATEGORY_CONFIG[category] || { label: category, color: '#64748B', bg: '#F1F5F9', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-star.webp` };
+            const cfg = CATEGORY_CONFIG[category] || { label: category, color: '#64748B', bg: '#F1F5F9', icon: Star };
             return (
               <div key={category} style={{ marginBottom: '48px' }}>
                 {/* Category header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                  <Image src={cfg.icon} alt={cfg.label} width={36} height={36} style={{ width: '36px', height: '36px', borderRadius: '10px' }} />
+                  <div style={{ ...iconTile, width: '36px', height: '36px', borderRadius: '10px', background: cfg.bg, color: cfg.color }}>
+                    <cfg.icon size={20} />
+                  </div>
                   <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>{cfg.label}</h3>
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#94A3B8', marginLeft: '4px' }}>({posts.length})</span>
                 </div>
@@ -439,7 +454,9 @@ export default async function ResourcesPage() {
               background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
               border: '2px solid rgba(190,24,93,0.12)',
             }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-dollar.webp`} alt="Salary Calculator" width={48} height={48} style={{ width: '48px', height: '48px', borderRadius: '14px', marginBottom: '12px' }} />
+              <div style={{ ...iconTile, background: 'rgba(190,24,93,0.10)', color: '#BE185D', marginBottom: '12px' }}>
+                <Calculator size={24} />
+              </div>
               <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#831843', margin: '0 0 6px' }}>Salary Calculator</h3>
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.5, margin: '0 0 14px' }}>
                 Get a personalized salary estimate based on your state, experience, setting, and specialty.
@@ -451,10 +468,19 @@ export default async function ResourcesPage() {
 
             {/* PDF Download */}
             <div className="emp-bento-card" style={{ ...clayCard, padding: '28px 24px' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/employers/clay-envelope.webp`} alt="PDF Guide" width={48} height={48} style={{ width: '48px', height: '48px', borderRadius: '14px', marginBottom: '12px' }} />
+              <div style={{ ...iconTile, background: '#EEF2FF', color: '#6366F1', marginBottom: '12px' }}>
+                <FileDown size={24} />
+              </div>
               <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Free Salary Guide PDF</h3>
+              {/* Edition year comes from the artifact on disk, never from the
+                  clock: `currentYear` would advertise a 2027 guide on 1 Jan
+                  while the funnel still delivers np-salary-guide-2026.pdf.
+                  Contents mirror the PDF's own cover lede — it prints no
+                  state-by-state table by design (that data lives on
+                  /salary-guide and updates daily). */}
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.5, margin: '0 0 14px' }}>
-                Download the complete {currentYear} salary guide with state-by-state data and negotiation tips.
+                Download the {SALARY_GUIDE_EDITION_YEAR} salary guide: national wage benchmarks, pay by experience,
+                setting and specialty, plus what to check before you negotiate.
               </p>
               <ResourceDownloadGate resourceUrl={SALARY_GUIDE_URL} resourceTitle="Salary Guide PDF" />
             </div>
@@ -472,7 +498,9 @@ export default async function ResourcesPage() {
             border: '2px solid rgba(190,24,93,0.10)',
           }}>
             <div style={{ background: 'linear-gradient(145deg, #BE185D, #9D174D)', padding: '40px 32px', color: '#fff' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/clay-icon-match.webp`} alt="Jobs" width={56} height={56} style={{ width: '56px', height: '56px', margin: '0 auto 16px', borderRadius: '16px' }} />
+              <div style={{ ...iconTile, width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(255,255,255,0.15)', color: '#fff', margin: '0 auto 16px' }}>
+                <Briefcase size={26} />
+              </div>
               <h2 className="font-lora" style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px' }}>Ready to Find Your Next {brand.niche.short} Role?</h2>
               <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.8)', margin: '0 0 24px' }}>
                 Browse hundreds of {brand.niche.descriptor} positions updated daily.

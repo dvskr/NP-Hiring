@@ -44,6 +44,7 @@ import {
 } from '@/lib/state-practice-authority';
 import { PseoPageViewTracker } from '@/components/analytics/ViewTrackers';
 import { buildCityFacts, buildTaxonomyCityNarrative } from './city-narrative';
+import { getTopCityEmployers } from './city-employers';
 import { STATE_ELIGIBLE_CATEGORY_SLUGS } from './taxonomy-registry';
 
 // Categories with a real /jobs/<category>/[state] route. City-only categories
@@ -736,6 +737,33 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     salaryRange: '$95K-130K',
     keywords: ['clinical nurse specialist', 'CNS jobs', 'CNS nurse jobs'],
   }),
+  // ── 2026-07 P1 #15 verticals. salaryRange uses the board-wide typical
+  // NP comparison band (config/niche/salary.ts normalizer.typical) until
+  // per-specialty market data lands — never an invented per-slug figure.
+  aesthetics: buildNpCategoryConfig({
+    slug: 'aesthetics',
+    label: 'Aesthetics',
+    fullLabel: 'Aesthetic NP',
+    heroSubtitle: 'Med spa & aesthetic medicine nurse practitioner positions',
+    salaryRange: '$110K-170K',
+    keywords: ['aesthetic nurse practitioner', 'aesthetics NP jobs', 'med spa NP', 'nurse injector'],
+  }),
+  'pain-management': buildNpCategoryConfig({
+    slug: 'pain-management',
+    label: 'Pain Management',
+    fullLabel: 'Pain Management NP',
+    heroSubtitle: 'Interventional pain & pain medicine nurse practitioner positions',
+    salaryRange: '$110K-170K',
+    keywords: ['pain management nurse practitioner', 'pain management NP jobs', 'interventional pain NP'],
+  }),
+  'palliative-hospice': buildNpCategoryConfig({
+    slug: 'palliative-hospice',
+    label: 'Palliative & Hospice',
+    fullLabel: 'Palliative Care & Hospice NP',
+    heroSubtitle: 'Palliative care & hospice nurse practitioner positions',
+    salaryRange: '$110K-170K',
+    keywords: ['palliative care nurse practitioner', 'hospice nurse practitioner', 'palliative NP jobs'],
+  }),
 };
 
 export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
@@ -1180,6 +1208,13 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
   const totalPages = Math.ceil(stats.totalJobs / limit);
   const demand = getMarketDemandScore(city!, stats.totalJobs);
   const basePath = `/jobs/${config.slug}/city/${citySlug}`;
+
+  // #13: employers actually hiring in this city, grouped from live postings.
+  // 87.6% of cities carry an empty static `healthcareSystems` list (and the
+  // cross-state repair emptied more), so the "Healthcare" block was mostly a
+  // bare negative. Returns [] below MIN_CITY_EMPLOYERS so the block is omitted
+  // rather than padded — see lib/pseo/city-employers.ts.
+  const topEmployers = await getTopCityEmployers(city!.name, city!.state);
 
   // Practice authority for this state
   let practiceAuthority: StatePracticeInfo | null = null;
@@ -1728,23 +1763,44 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
               )}
             </div>
 
-            {/* Healthcare Systems */}
-            <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px' }}>
-              <h2 className="font-lora" style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <Building2 size={18} style={{ color: '#BE185D' }} /> Healthcare
-              </h2>
-              {city!.healthcareSystems.length > 0 ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {city!.healthcareSystems.map((system, i) => (
-                    <span key={i} style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '8px', background: 'rgba(190,24,93,0.08)', color: '#1A2E35', fontWeight: 500 }}>
-                      {system}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0 }}>No major healthcare systems listed for this area.</p>
-              )}
-            </div>
+            {/* Top employers hiring now (#13).
+                Live employer names + open-role counts from the job table when
+                the city clears the 2-employer floor; the static healthcare
+                system list only as a fallback; and the whole card omitted when
+                we have neither. Nothing here is ever padded to fill space. */}
+            {(topEmployers.length > 0 || city!.healthcareSystems.length > 0) && (
+              <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px' }}>
+                <h2 className="font-lora" style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                  <Building2 size={18} style={{ color: '#BE185D' }} />
+                  {topEmployers.length > 0 ? 'Top Employers Hiring Now' : 'Healthcare'}
+                </h2>
+                {topEmployers.length > 0 ? (
+                  <>
+                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                      {topEmployers.map((emp, i) => (
+                        <li key={emp.name} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '6px 0', borderBottom: i < topEmployers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
+                          <span style={{ fontSize: '13px', color: '#5A4A42' }}>{emp.name}</span>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', whiteSpace: 'nowrap' }}>
+                            {emp.openRoles} {emp.openRoles === 1 ? 'role' : 'roles'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p style={{ fontSize: '11px', color: '#7A6A62', margin: '10px 0 0', lineHeight: 1.5 }}>
+                      Employers with open {brand.niche.short} roles in {city!.name}, {city!.stateCode} right now — counted across every specialty on this board.
+                    </p>
+                  </>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {city!.healthcareSystems.map((system, i) => (
+                      <span key={i} style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '8px', background: 'rgba(190,24,93,0.08)', color: '#1A2E35', fontWeight: 500 }}>
+                        {system}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>

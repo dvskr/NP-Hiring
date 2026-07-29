@@ -105,7 +105,7 @@
   "lib/ai/prompts/talent_search_rerank/v1.json": 1,
   "lib/ai/vector-search.ts": 1,
   "lib/autoLink.ts": 22,
-  "lib/blog.ts": 1,
+  "lib/blog-categories.ts": 1,
   "lib/consent.ts": 8,
   "lib/deduplicator.ts": 4,
   "lib/description-cleaner.ts": 1,

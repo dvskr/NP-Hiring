@@ -196,6 +196,10 @@ const TAXONOMY_LEADS: Record<string, TaxonomyLeadFn> = {
     'anesthesia': (f) => `CRNA positions in ${f.city.name} carry the highest APRN compensation — typically $180K–$250K+ — across hospital ORs, ambulatory surgery centers, and office-based practices. Call structure and supervision model materially affect total pay.`,
     'midwifery': (f) => `Certified nurse midwife (CNM) roles in ${f.city.name} span hospital labor-and-delivery units, birth centers, and OB/GYN practices. Call frequency and delivery volume drive most compensation differences.`,
     'clinical-nurse-specialist': (f) => `Clinical nurse specialist (CNS) positions in ${f.city.name} focus on quality improvement, staff education, and specialty consultation within health systems — program-level impact rather than a personal patient panel.`,
+    // ── 2026-07 P1 #15 verticals ──
+    'aesthetics': (f) => `Aesthetic ${brand.niche.short} roles in ${f.city.name} center on medical spas, cosmetic practices, and plastic-surgery groups, with neuromodulator and dermal-filler injection as core procedures. Compensation frequently pairs a base rate with per-service commission, and employers typically expect hands-on injectables training.`,
+    'pain-management': (f) => `Pain management ${brand.niche.short} positions in ${f.city.name} support interventional pain practices, spine centers, and rehabilitation clinics. The work combines medication management with procedure support, and controlled-substance prescribing under ${f.city.state} rules is central to the role.`,
+    'palliative-hospice': (f) => `Palliative care and hospice ${brand.niche.short} roles in ${f.city.name} span hospital consult services, home hospice agencies, and long-term-care settings. Positions emphasize symptom management, goals-of-care conversations, and interdisciplinary team collaboration, with per-visit or mileage components common in community-based roles.`,
     // Keyed via the registry-derived constant so the specialty slug literal
     // stays confined to taxonomy-registry.ts (niche-copy debt ratchet).
     ...(PSYCH_SPECIALTY_SLUG

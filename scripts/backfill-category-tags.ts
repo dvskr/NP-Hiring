@@ -8,6 +8,25 @@
  * Default target: prod (.env.prod). Pass --env=local to target the
  * local DATABASE_URL instead.
  *
+ * SCOPE OF THE EXPLICIT-FIELD PATH (P1 #20)
+ * This script is the ONLY live caller that feeds the classifier's
+ * employer-declared fields, so a `--force --apply` run is what actually
+ * activates EMPLOYER_SETTING_TAGS / EMPLOYER_POPULATION_TAGS and the
+ * LEGACY_SETTING_ALIASES / LEGACY_POPULATION_ALIASES maps in
+ * lib/pseo/category-tagger.ts. What it can and cannot rescue:
+ *   ✔ Job.setting / Job.population — read from the row, so both the
+ *     pre-P1-#20 /post-job option strings and the LLM enrichment
+ *     vocabulary (lib/llm-enrichment.ts:57-58) resolve to canonical tags.
+ *   ✘ specialty — Job has NO specialty column. The /post-job picker's
+ *     value is dropped by both create routes AND unstorable, so it can
+ *     never be recovered here. Only wiring classifyJobTags() into
+ *     app/api/jobs/post-free/route.ts + app/api/create-checkout/route.ts
+ *     (which compute tags at insert, where the submitted value is still
+ *     in hand) closes that gap. See the PENDING API WIRING block in
+ *     app/post-job/page.tsx.
+ * Neither create route writes Job.categoryTags either, so employer posts
+ * made between backfill runs stay untagged until the next run.
+ *
  * Usage:
  *   npx tsx scripts/backfill-category-tags.ts            # prod, dry-run preview first
  *   npx tsx scripts/backfill-category-tags.ts --apply    # prod, actually write
@@ -57,6 +76,8 @@ async function main() {
             descriptionSummary: string | null;
             jobType: string | null;
             isRemote: boolean;
+            setting: string | null;
+            population: string | null;
             categoryTags: string[];
         }> = await prisma.job.findMany({
             where: force ? {} : { OR: [{ categoryTags: { isEmpty: true } }] },
@@ -67,6 +88,17 @@ async function main() {
                 descriptionSummary: true,
                 jobType: true,
                 isRemote: true,
+                // Employer-declared / LLM-enriched structured signals. These
+                // are the ONLY inputs that reach the classifier's explicit-
+                // field path (EMPLOYER_SETTING_TAGS / EMPLOYER_POPULATION_TAGS
+                // + the LEGACY_* alias maps) — selecting them here is what
+                // makes this backfill the activation step for that path.
+                // There is deliberately no `specialty` here: Job has no such
+                // column (see prisma/schema.prisma `model Job`), so the
+                // /post-job specialty picker can only ever be resolved at
+                // insert time by the create routes, never retroactively.
+                setting: true,
+                population: true,
                 categoryTags: true,
             },
             orderBy: { id: 'asc' },
@@ -83,6 +115,10 @@ async function main() {
                 descriptionSummary: row.descriptionSummary,
                 jobType: row.jobType,
                 isRemote: row.isRemote,
+                // Explicit employer/LLM fields beat substring guessing and are
+                // exempt from the mutual-exclusion pass — see classifyJobTags.
+                setting: row.setting,
+                population: row.population,
             });
 
             // Tag-frequency stats (works in dry-run too)

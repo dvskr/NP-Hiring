@@ -15,6 +15,7 @@ const ReactQuill = lazy(() => import('react-quill-new'));
 import 'react-quill-new/dist/quill.snow.css';
 import ScreeningQuestionsBuilder from '@/components/ScreeningQuestionsBuilder';
 import { useToast } from '@/components/ui/ToastProvider';
+import { EMPLOYER_SETTING_TAGS, EMPLOYER_POPULATION_TAGS } from '@/lib/pseo/category-tagger';
 
 const editJobSchema = z.object({
   title: z.string().min(10, 'Job title must be at least 10 characters'),
@@ -48,16 +49,35 @@ const editJobSchema = z.object({
 
 type EditJobFormData = z.infer<typeof editJobSchema>;
 
-const SETTING_OPTIONS = [
-  'Outpatient', 'Inpatient', 'Community Health', 'Telehealth',
-  'Private Practice', 'Corrections', 'VA / Military', 'Academic',
-  'Emergency / Crisis', 'Residential',
-] as const;
+// P1 #20: the same map-derived vocabulary /post-job uses. Both forms write
+// the same Job.setting / Job.population columns (app/api/jobs/update writes
+// `rawJobData.setting || null`), so a hand-written array here would (a) keep
+// the donor board's psych-era option strings alive on an employer-facing
+// surface and (b) make every new-only value unselectable — the select would
+// fall back to "Select a setting..." and persist null on save.
+const SETTING_OPTIONS: readonly string[] = Object.keys(EMPLOYER_SETTING_TAGS);
 
-const POPULATION_OPTIONS = [
-  'Adults', 'Child & Adolescent', 'Geriatric', 'All Ages',
-  'Substance Use / Dual Diagnosis', 'Forensic',
-] as const;
+const POPULATION_OPTIONS: readonly string[] = Object.keys(EMPLOYER_POPULATION_TAGS);
+
+/**
+ * Options to render for a stored value, preserving anything the canonical
+ * list no longer offers.
+ *
+ * Rows already carry values the current vocabulary dropped — the psych-era
+ * form strings this package deleted, plus the LLM enrichment vocabulary that
+ * writes these same columns for scraped jobs (lib/llm-enrichment.ts:57-58).
+ * Without this, opening the edit form on such a job shows a blank select and
+ * silently rewrites a real value to null on the next save — a data-loss bug,
+ * not just a display one. The stale value stays selectable (so it round-trips
+ * untouched) but is never offered to a job that doesn't already have it.
+ */
+function optionsWithStoredValue(
+  options: readonly string[],
+  stored: string | null | undefined,
+): readonly string[] {
+  if (!stored || options.includes(stored)) return options;
+  return [...options, stored];
+}
 
 const BENEFIT_OPTIONS = [
   'Health Insurance', 'Dental & Vision', 'PTO / Vacation',
@@ -267,6 +287,10 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
   const applyOnPlatform = watch('applyOnPlatform');
   const salaryPeriod = watch('salaryPeriod');
   const benefits = watch('benefits') || [];
+  // Keep a value the current vocabulary dropped selectable so editing an
+  // unrelated field can't silently null it out — see optionsWithStoredValue.
+  const settingOptions = optionsWithStoredValue(SETTING_OPTIONS, watch('setting'));
+  const populationOptions = optionsWithStoredValue(POPULATION_OPTIONS, watch('population'));
 
   // Per-step validation — only validate the fields owned by the current step
   // when the user clicks Continue. Final step validates everything via the
@@ -728,7 +752,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 </label>
                 <select id="setting" {...register('setting')} style={clayInput} defaultValue="">
                   <option value="">Select a setting...</option>
-                  {SETTING_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {settingOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
 
@@ -739,7 +763,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 </label>
                 <select id="population" {...register('population')} style={clayInput} defaultValue="">
                   <option value="">Select a population...</option>
-                  {POPULATION_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+                  {populationOptions.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
             </div>

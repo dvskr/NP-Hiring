@@ -1,17 +1,25 @@
 /**
- * P4: SEO health dashboard.
+ * P4 + P1 gsc-ops: SEO health dashboard.
  *
  * Single-page admin view that surfaces every monitoring signal we built
  * during the GSC indexing crisis remediation:
  *   1. GSC snapshot trail (clicks/impressions over time, regression flag)
- *   2. Cron runs — last execution per cron + recent run history
- *   3. Deindex queue burn-down (P2.1 progress)
- *   4. Layer 2 snippet review queue (P3.4)
+ *   2. Per-sitemap submission status (sitemaps.list via gsc-health-check)
+ *   3. Week-over-week top movers by query/page (from snapshot dimensions)
+ *   4. pSEO coverage — renderable vs indexable per category (pure DB math)
+ *   5. Cron runs — last execution per cron + recent run history
+ *   6. Deindex queue burn-down (P2.1 progress)
+ *   7. Layer 2 snippet review queue (P3.4)
  *
  * Server component — pulls everything in one round-trip via prisma.
  */
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
+import { CITIES } from '@/lib/pseo/city-data/cities';
+import { GSC_DIMENSION_ROW_LIMIT, type GscSitemapEntry } from '@/lib/gsc-client';
+import { extractSnapshotDimensions, computeMovers, type Movers, type SnapshotDimensions } from '@/lib/gsc-movers';
+import { computeCategoryCityCoverage, computeSettingStateCoverage } from '@/lib/gsc-coverage';
+import { MIN_JOBS_FOR_CATEGORY_CITY } from '@/lib/pseo/render-gate';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 60;
@@ -28,6 +36,73 @@ function asAnalytics(value: unknown): SearchAnalyticsRow {
     return value as SearchAnalyticsRow;
 }
 
+/**
+ * Stored `raw.sitemaps` was serialized from GscSitemapEntry[] by the cron —
+ * re-validate the shape instead of trusting persisted JSON blindly.
+ */
+function asStoredSitemaps(raw: unknown): GscSitemapEntry[] {
+    if (!raw || typeof raw !== 'object') return [];
+    const list = (raw as { sitemaps?: unknown }).sitemaps;
+    if (!Array.isArray(list)) return [];
+    return list
+        .filter((e): e is GscSitemapEntry => Boolean(e) && typeof e === 'object' && typeof (e as GscSitemapEntry).path === 'string')
+        .map((e) => ({
+            path: e.path,
+            lastSubmitted: typeof e.lastSubmitted === 'string' ? e.lastSubmitted : null,
+            lastDownloaded: typeof e.lastDownloaded === 'string' ? e.lastDownloaded : null,
+            isPending: e.isPending === true,
+            isSitemapsIndex: e.isSitemapsIndex === true,
+            errors: typeof e.errors === 'number' ? e.errors : 0,
+            warnings: typeof e.warnings === 'number' ? e.warnings : 0,
+            submittedUrls: typeof e.submittedUrls === 'number' ? e.submittedUrls : 0,
+        }));
+}
+
+/** Strip the origin from page-dimension URLs so tables stay readable. */
+function stripOrigin(url: string): string {
+    return url.replace(/^https?:\/\/[^/]+/, '') || '/';
+}
+
+/**
+ * Movers cells. A null side means the key fell outside GSC's top-N-by-clicks
+ * cut for that window, so we genuinely don't know its number — say so rather
+ * than printing a 0 that reads as "this query got no traffic".
+ */
+function formatMoverClicks(prevClicks: number | null, clicks: number | null): string {
+    const side = (v: number | null) => (v === null ? 'unranked' : v.toLocaleString('en-US'));
+    return `${side(prevClicks)} → ${side(clicks)}`;
+}
+
+/**
+ * Deltas measured against a truncated window are bounds, not figures: a gain
+ * of at least 42 renders "≥ +42", a loss of at least 42 renders "≤ -42".
+ */
+function formatMoverDelta(delta: number, estimated: boolean): string {
+    const signed = `${delta >= 0 ? '+' : ''}${delta.toLocaleString('en-US')}`;
+    return estimated ? `${delta >= 0 ? '≥' : '≤'} ${signed}` : signed;
+}
+
+/**
+ * Per-panel caveat, shown only when that panel's counterpart window was
+ * actually cut short. A rising row is absent from the PRIOR window; a falling
+ * row is absent from the CURRENT one — so each table cites its own floor.
+ * Floor 0 means the window reached the zero-click tail and its deltas are exact.
+ */
+function moversFootnote(movers: Movers | null | undefined, isFalling: boolean): string | null {
+    if (!movers) return null;
+    const floor = isFalling ? movers.currentFloor : movers.previousFloor;
+    if (floor === 0) return null;
+    const which = isFalling ? 'current' : 'prior';
+    return `The ${which} window cut off at ${floor.toLocaleString('en-US')} clicks — rows past that cut show as “unranked” with a bounded delta, not a zero.`;
+}
+
+function formatGscDate(value: string | null): string {
+    if (!value) return '—';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '—';
+    return formatRelativeTime(parsed);
+}
+
 async function getData() {
     const [
         snapshots,
@@ -39,6 +114,9 @@ async function getData() {
         snippetCity,
         snippetCategoryCity,
         recentSnippets,
+        categoryCityTotals,
+        renderableCategoryCityRows,
+        settingStateRows,
     ] = await Promise.all([
         prisma.gscSnapshot.findMany({
             orderBy: { capturedOn: 'desc' },
@@ -81,12 +159,59 @@ async function getData() {
             take: 10,
             select: { citySlug: true, sourceModel: true, generatedAt: true, approvedAt: true },
         }),
+        // Coverage panel (P1 gsc-ops): full combo count per category is a
+        // cheap groupBy; the renderable subset (totalJobs ≥ render gate) is
+        // fetched pre-filtered so we never load the full ~165K-row surface.
+        prisma.pseoStats.groupBy({
+            by: ['categorySlug'],
+            where: { type: 'category-city' },
+            _count: { _all: true },
+        }),
+        prisma.pseoStats.findMany({
+            where: { type: 'category-city', totalJobs: { gte: MIN_JOBS_FOR_CATEGORY_CITY } },
+            select: { categorySlug: true, locationSlug: true, totalJobs: true, updatedAt: true },
+        }),
+        prisma.pseoStats.findMany({
+            where: { type: 'setting-state' },
+            select: { totalJobs: true, updatedAt: true },
+        }),
     ]);
 
     const pendingApproval = await prisma.citySnippet.count({ where: { approvedAt: null } })
         + await prisma.categoryCitySnippet.count({ where: { approvedAt: null } });
     const approvedTotal = await prisma.citySnippet.count({ where: { approvedAt: { not: null } } })
         + await prisma.categoryCitySnippet.count({ where: { approvedAt: { not: null } } });
+
+    // ── Coverage (pure math over the pre-filtered rows) ──────────────────
+    const categoryCityCoverage = computeCategoryCityCoverage({
+        totalsByCategory: new Map(categoryCityTotals.map((r) => [r.categorySlug, r._count._all])),
+        renderableRows: renderableCategoryCityRows,
+        populationBySlug: new Map(CITIES.map((c) => [c.slug, c.population])),
+    });
+    const settingStateCoverage = computeSettingStateCoverage(settingStateRows);
+
+    // ── Sitemap status + movers from the newest snapshot carrying them ──
+    const latestSitemaps = snapshots
+        .map((s) => ({ capturedOn: s.capturedOn, entries: asStoredSitemaps(s.raw) }))
+        .find((s) => s.entries.length > 0) ?? null;
+
+    let latestDimensions: { capturedOn: Date; dims: SnapshotDimensions } | null = null;
+    for (const s of snapshots) {
+        const dims = extractSnapshotDimensions(s.raw);
+        if (dims) {
+            latestDimensions = { capturedOn: s.capturedOn, dims };
+            break;
+        }
+    }
+    const queryMovers: Movers | null = latestDimensions?.dims.queries
+        ? computeMovers(latestDimensions.dims.queries.current, latestDimensions.dims.queries.previous)
+        : null;
+    const pageMovers: Movers | null = latestDimensions?.dims.pages
+        ? computeMovers(latestDimensions.dims.pages.current, latestDimensions.dims.pages.previous)
+        : null;
+    // Rows the row-limit cut leaves genuinely undecidable across both
+    // dimensions — disclosed rather than silently dropped.
+    const indeterminateMovers = (queryMovers?.indeterminate ?? 0) + (pageMovers?.indeterminate ?? 0);
 
     return {
         snapshots,
@@ -100,6 +225,13 @@ async function getData() {
         recentSnippets,
         pendingApproval,
         approvedTotal,
+        categoryCityCoverage,
+        settingStateCoverage,
+        latestSitemaps,
+        latestDimensions,
+        queryMovers,
+        pageMovers,
+        indeterminateMovers,
     };
 }
 
@@ -269,9 +401,214 @@ export default async function SeoHealthPage() {
                 )}
             </div>
 
-            {/* ─── 2. CRON RUNS ─────────────────────────────────────────────── */}
+            {/* ─── 2. SITEMAP SUBMISSION STATUS ─────────────────────────────── */}
             <div style={card}>
-                <h2 style={h2}>2. Cron run log</h2>
+                <h2 style={h2}>2. Sitemap submission status</h2>
+                {!data.latestSitemaps ? (
+                    <p style={{ fontSize: '13px', color: '#7A6A62' }}>
+                        No sitemap status captured yet. The <code>gsc-health-check</code> cron pulls{' '}
+                        <code>sitemaps.list</code> on each run (same read-only GSC credentials) and
+                        alerts Discord when Google reports sitemap errors. Data appears after the
+                        next run with GSC credentials configured.
+                    </p>
+                ) : (
+                    <>
+                        <div style={{ fontSize: '12px', color: '#7A6A62', marginBottom: '8px' }}>
+                            As of {data.latestSitemaps.capturedOn.toISOString().slice(0, 10)} —{' '}
+                            {data.latestSitemaps.entries.length} sitemap{data.latestSitemaps.entries.length === 1 ? '' : 's'} submitted.
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                            <thead>
+                                <tr>
+                                    <th style={th}>Sitemap</th>
+                                    <th style={th}>URLs submitted</th>
+                                    <th style={th}>Errors</th>
+                                    <th style={th}>Warnings</th>
+                                    <th style={th}>Last submitted</th>
+                                    <th style={th}>Last downloaded</th>
+                                    <th style={th}>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.latestSitemaps.entries.map((s) => (
+                                    <tr key={s.path}>
+                                        <td style={{ ...td, fontFamily: 'monospace', fontSize: '11px', maxWidth: '360px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {stripOrigin(s.path)}{s.isSitemapsIndex ? ' (index)' : ''}
+                                        </td>
+                                        <td style={td}>{s.submittedUrls.toLocaleString('en-US')}</td>
+                                        <td style={{ ...td, color: s.errors > 0 ? '#EF4444' : '#10B981', fontWeight: 600 }}>{s.errors}</td>
+                                        <td style={{ ...td, color: s.warnings > 0 ? '#F59E0B' : '#7A6A62' }}>{s.warnings}</td>
+                                        <td style={td}>{formatGscDate(s.lastSubmitted)}</td>
+                                        <td style={td}>{formatGscDate(s.lastDownloaded)}</td>
+                                        <td style={{ ...td, color: s.errors > 0 ? '#EF4444' : s.isPending ? '#F59E0B' : '#10B981', fontWeight: 600 }}>
+                                            {s.errors > 0 ? '✗ errors' : s.isPending ? '○ pending' : '✓ ok'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </>
+                )}
+            </div>
+
+            {/* ─── 3. TOP MOVERS (WoW) ──────────────────────────────────────── */}
+            <div style={card}>
+                <h2 style={h2}>3. Top movers — 7 days vs prior 7 days</h2>
+                {!data.latestDimensions ? (
+                    <p style={{ fontSize: '13px', color: '#7A6A62' }}>
+                        No query/page dimension data captured yet. The <code>gsc-health-check</code>{' '}
+                        cron records the top {GSC_DIMENSION_ROW_LIMIT.toLocaleString('en-US')} queries and pages
+                        for two 7-day windows on each run; movers appear after its next run with GSC
+                        credentials configured.
+                    </p>
+                ) : (
+                    <>
+                        <div style={{ fontSize: '12px', color: '#7A6A62', marginBottom: '12px' }}>
+                            Window: {data.latestDimensions.dims.window?.startDate ?? '—'} → {data.latestDimensions.dims.window?.endDate ?? '—'}{' '}
+                            vs {data.latestDimensions.dims.prevWindow?.startDate ?? '—'} → {data.latestDimensions.dims.prevWindow?.endDate ?? '—'}.
+                            Ranked by click delta. Each window is GSC&apos;s top{' '}
+                            {GSC_DIMENSION_ROW_LIMIT.toLocaleString('en-US')} rows by clicks, so a key can leave one
+                            window by crossing that cut rather than by losing traffic — those rows read{' '}
+                            <em>unranked</em> with a bounded (≥ / ≤) delta instead of a fabricated 0.
+                            {data.indeterminateMovers > 0 && (
+                                <> {data.indeterminateMovers.toLocaleString('en-US')} row
+                                    {data.indeterminateMovers === 1 ? ' is' : 's are'} omitted entirely because the
+                                    cut leaves their direction unknowable.</>
+                            )}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px' }}>
+                            {([
+                                ['Queries — rising', data.queryMovers?.gainers ?? [], false, data.queryMovers, false],
+                                ['Queries — falling', data.queryMovers?.losers ?? [], false, data.queryMovers, true],
+                                ['Pages — rising', data.pageMovers?.gainers ?? [], true, data.pageMovers, false],
+                                ['Pages — falling', data.pageMovers?.losers ?? [], true, data.pageMovers, true],
+                            ] as const).map(([label, rows, isPage, movers, isFalling]) => {
+                                const footnote = moversFootnote(movers, isFalling);
+                                return (
+                                <div key={label}>
+                                    <div style={{ fontSize: '12px', color: '#7A6A62', marginBottom: '8px', fontWeight: 600 }}>{label}</div>
+                                    {rows.length === 0 ? (
+                                        <p style={{ fontSize: '12px', color: '#7A6A62' }}>No movement recorded.</p>
+                                    ) : (
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                                            <thead>
+                                                <tr>
+                                                    <th style={th}>{isPage ? 'Page' : 'Query'}</th>
+                                                    <th style={th}>Clicks</th>
+                                                    <th style={th}>Δ clicks</th>
+                                                    <th style={th}>Δ impr.</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {rows.map((r) => (
+                                                    <tr key={r.key}>
+                                                        <td style={{ ...td, fontFamily: isPage ? 'monospace' : undefined, fontSize: isPage ? '11px' : '13px', maxWidth: '260px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                            {isPage ? stripOrigin(r.key) : r.key}
+                                                        </td>
+                                                        <td style={{ ...td, fontStyle: r.estimated ? 'italic' : undefined }}>
+                                                            {formatMoverClicks(r.prevClicks, r.clicks)}
+                                                        </td>
+                                                        <td style={{ ...td, color: r.clicksDelta >= 0 ? '#10B981' : '#EF4444', fontWeight: 600 }}>
+                                                            {formatMoverDelta(r.clicksDelta, r.estimated)}
+                                                        </td>
+                                                        <td style={{ ...td, color: r.impressionsDelta === null ? '#7A6A62' : r.impressionsDelta >= 0 ? '#10B981' : '#EF4444' }}>
+                                                            {r.impressionsDelta === null ? '—' : formatMoverDelta(r.impressionsDelta, false)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                    {footnote && (
+                                        <p style={{ fontSize: '11px', color: '#7A6A62', marginTop: '6px', lineHeight: 1.5 }}>
+                                            {footnote}
+                                        </p>
+                                    )}
+                                </div>
+                                );
+                            })}
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* ─── 4. pSEO COVERAGE ─────────────────────────────────────────── */}
+            <div style={card}>
+                <h2 style={h2}>4. pSEO coverage — renderable vs indexable</h2>
+                <p style={{ fontSize: '12px', color: '#7A6A62', marginBottom: '12px' }}>
+                    Computed from <code>pseoStats</code> + the render/sitemap gates (no GSC API —
+                    Google&apos;s coverage breakdown has no public API). <strong>Renderable</strong> =
+                    category×city combos passing the render gate (≥{MIN_JOBS_FOR_CATEGORY_CITY} jobs, page serves 200).{' '}
+                    <strong>Indexable</strong> = renderable combos the sitemap advertises (fresh stats,
+                    state-eligible category, city population floor). A wide gap means we publish pages
+                    the sitemap never tells Google about.
+                </p>
+                {data.categoryCityCoverage.categories.length === 0 && data.settingStateCoverage.total === 0 ? (
+                    <p style={{ fontSize: '13px', color: '#7A6A62' }}>
+                        No <code>pseoStats</code> rows yet — the <code>aggregate-pseo</code> cron
+                        populates them.
+                    </p>
+                ) : (
+                    <>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                            <div style={{ background: '#FAFAFA', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '11px', color: '#7A6A62', textTransform: 'uppercase' }}>Category×city combos</div>
+                                <div style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>{data.categoryCityCoverage.totals.total.toLocaleString('en-US')}</div>
+                            </div>
+                            <div style={{ background: '#FAFAFA', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '11px', color: '#7A6A62', textTransform: 'uppercase' }}>Renderable</div>
+                                <div style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>{data.categoryCityCoverage.totals.renderable.toLocaleString('en-US')}</div>
+                            </div>
+                            <div style={{ background: '#FAFAFA', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '11px', color: '#7A6A62', textTransform: 'uppercase' }}>Indexable (in sitemap)</div>
+                                <div style={{ fontSize: '20px', fontWeight: 700, color: '#10B981' }}>{data.categoryCityCoverage.totals.indexable.toLocaleString('en-US')}</div>
+                            </div>
+                            <div style={{ background: '#FAFAFA', padding: '12px', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '11px', color: '#7A6A62', textTransform: 'uppercase' }}>Setting×state (render / index)</div>
+                                <div style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>
+                                    {data.settingStateCoverage.renderable.toLocaleString('en-US')} / {data.settingStateCoverage.indexable.toLocaleString('en-US')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                            <thead>
+                                <tr>
+                                    <th style={th}>Category</th>
+                                    <th style={th}>Combos</th>
+                                    <th style={th}>Renderable</th>
+                                    <th style={th}>Indexable</th>
+                                    <th style={th}>Indexable %</th>
+                                    <th style={th}>Sitemap-eligible</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.categoryCityCoverage.categories.map((c) => {
+                                    const pct = c.renderable > 0 ? Math.round((c.indexable / c.renderable) * 100) : 0;
+                                    return (
+                                        <tr key={c.categorySlug}>
+                                            <td style={td}><code>{c.categorySlug}</code></td>
+                                            <td style={td}>{c.total.toLocaleString('en-US')}</td>
+                                            <td style={td}>{c.renderable.toLocaleString('en-US')}</td>
+                                            <td style={td}>{c.indexable.toLocaleString('en-US')}</td>
+                                            <td style={{ ...td, color: !c.sitemapEligible ? '#7A6A62' : pct >= 80 ? '#10B981' : pct >= 40 ? '#F59E0B' : '#EF4444', fontWeight: 600 }}>
+                                                {c.renderable > 0 ? `${pct}%` : '—'}
+                                            </td>
+                                            <td style={{ ...td, color: c.sitemapEligible ? '#10B981' : '#7A6A62' }}>
+                                                {c.sitemapEligible ? '✓' : '— state-ineligible'}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </>
+                )}
+            </div>
+
+            {/* ─── 5. CRON RUNS ─────────────────────────────────────────────── */}
+            <div style={card}>
+                <h2 style={h2}>5. Cron run log</h2>
                 {data.cronSummary.length === 0 ? (
                     <p style={{ fontSize: '13px', color: '#7A6A62' }}>
                         No cron runs tracked yet. Crons opt into tracking via{' '}
@@ -334,9 +671,9 @@ export default async function SeoHealthPage() {
                 )}
             </div>
 
-            {/* ─── 3. DEINDEX QUEUE ─────────────────────────────────────────── */}
+            {/* ─── 6. DEINDEX QUEUE ─────────────────────────────────────────── */}
             <div style={card}>
-                <h2 style={h2}>3. Deindex queue burn-down</h2>
+                <h2 style={h2}>6. Deindex queue burn-down</h2>
                 {queueTotal === 0 ? (
                     <p style={{ fontSize: '13px', color: '#7A6A62' }}>
                         Queue is empty. After the <code>deindex_queue</code> migration deploys, run{' '}
@@ -388,9 +725,9 @@ export default async function SeoHealthPage() {
                 )}
             </div>
 
-            {/* ─── 4. LAYER 2 SNIPPETS ──────────────────────────────────────── */}
+            {/* ─── 7. LAYER 2 SNIPPETS ──────────────────────────────────────── */}
             <div style={card}>
-                <h2 style={h2}>4. Layer 2 snippet review queue</h2>
+                <h2 style={h2}>7. Layer 2 snippet review queue</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '16px' }}>
                     <div style={{ background: '#FAFAFA', padding: '12px', borderRadius: '8px' }}>
                         <div style={{ fontSize: '11px', color: '#7A6A62', textTransform: 'uppercase' }}>Approved (live)</div>
