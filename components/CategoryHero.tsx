@@ -42,16 +42,58 @@ interface CategoryHeroProps {
   secondaryCtaHref?: string;
 }
 
+// (An `isDark(hex)` luminance helper used to sit here with no call site —
+// removed alongside the dead-prop fix below. bgColor now only ever feeds the
+// --cat-color custom property, and nothing branches on its luminance.)
+
 /**
- * Determines if a hex color is "dark" (luminance < 0.5).
+ * Trailing "· updated <something>" segment of a badge string.
+ * `[^·]*$` so only the last segment is considered — the count segment ahead of
+ * it is never touched.
  */
-function isDark(hex: string): boolean {
-  const c = hex.replace('#', '');
-  const r = parseInt(c.substring(0, 2), 16) / 255;
-  const g = parseInt(c.substring(2, 4), 16) / 255;
-  const b = parseInt(c.substring(4, 6), 16) / 255;
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.5;
+const FRESHNESS_SEGMENT = /\s*·\s*updated\s+([^·]*?)\s*$/i;
+
+/**
+ * A freshness claim anchored to a calendar date, e.g. "Jul 12" — the form
+ * formatStatsBadge() emits for a stats row it did NOT recompute today. A date
+ * stays true no matter how long the HTML is cached.
+ */
+const DATED_FRESHNESS = /^[A-Za-z]{3,9}\.?\s+\d{1,2}(,\s*\d{4})?$/;
+
+/**
+ * Drop a freshness claim this component cannot stand behind.
+ *
+ * WHY (P2 #15's hole): rendering `badgeText` made ~30 previously-dead strings
+ * visible, and only the two pSEO templates derive theirs through
+ * formatStatsBadge(); 26 app/ routes hardcode "· updated today" and
+ * category-landing-template hardcodes "· updated daily". Every one of those
+ * routes is `revalidate = 3600` ISR, so on the long tail (/jobs/city/[slug]
+ * alone is 4,135 pages) Next serves stale-while-revalidate HTML baked days or
+ * weeks earlier — HTML that would assert it was updated today. That is the
+ * precise false-freshness claim formatStatsBadge exists to prevent, and a
+ * relative claim cannot survive HTML caching even when the caller DID derive
+ * it, because the render date is baked in with it.
+ *
+ * So the rule is a whitelist, not a blacklist: a freshness segment survives
+ * only when it names a date. Anything relative ("today", "daily", "4 min ago")
+ * is dropped and the count — the informative half — still renders. Fixing this
+ * inside the component keeps it out of 27 foreign files that were not handed
+ * over, and it holds for call sites added later.
+ */
+export function stripUnverifiableFreshness(badgeText: string): string {
+  const match = badgeText.match(FRESHNESS_SEGMENT);
+  if (!match) return badgeText;
+  if (DATED_FRESHNESS.test(match[1])) return badgeText;
+  return badgeText.slice(0, match.index).trimEnd();
 }
+
+/**
+ * The pulsing dot reads as a live-inventory indicator, so it is gated on the
+ * badge actually making one. `badgeText="Nationwide"` (/jobs/locations) and
+ * `badgeText="Job Alerts"` (/job-alerts) state no inventory and get the pill
+ * without the dot.
+ */
+const claimsLiveInventory = (badgeText: string): boolean => /\blive\b/i.test(badgeText);
 
 export default function CategoryHero({
   bgColor,
@@ -79,33 +121,58 @@ export default function CategoryHero({
   const teal      = '#BE185D';
   const tealDeep  = '#9D174D';
 
+  // See stripUnverifiableFreshness above: the count survives, an unverifiable
+  // freshness claim does not.
+  const badge = stripUnverifiableFreshness(badgeText ?? '');
+
   return (
     <section className="cath5" style={{ background: '#faf6ef', padding: '48px 56px 0', position: 'relative', overflow: 'hidden' }}>
       {/* ── Decorative swatch circles ── */}
       <div className="cath5-swatch" />
 
       <div style={{ position: 'relative' }}>
-        {/* ── Visible breadcrumb trail.
-            BreadcrumbSchema emits the JSON-LD for SEO; this renders the
-            same hierarchy in the DOM so users can orient themselves
-            (WCAG 2.4.8). The existing prop is `string[]` of labels only,
-            so we render spans here -- not clickable links yet. Last item
-            is marked aria-current="page". */}
-        {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav aria-label="Breadcrumb" className="cath5-row1" style={{ marginBottom: 16 }}>
-            <ol className="cath5-crumbs" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap' }}>
-              {breadcrumbs.map((label, i) => {
-                const isLast = i === breadcrumbs.length - 1;
-                return (
-                  <li key={`${label}-${i}`} style={{ display: 'inline' }}>
-                    <span aria-current={isLast ? 'page' : undefined} className={isLast ? 'cath5-crumb-now' : undefined}>
-                      {label}
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
+        {/* ── Row 1: live-inventory pill · breadcrumb trail · index label ──
+            `badgeText` (required) and `indexLabel` were destructured but never
+            rendered, so all ~30 call sites built a badge string and the
+            component silently discarded it. The .cath5-row1 row, the
+            .cath5-badge pill and the .cath5-dot indicator below were authored
+            for exactly this slot. Everything here is server-rendered from
+            props, so restoring it costs no layout shift. Only the two pSEO
+            templates derive freshness (formatStatsBadge); the rest hardcode it,
+            hence the stripUnverifiableFreshness() guard above.
+
+            The breadcrumb trail keeps its own contract: BreadcrumbSchema emits
+            the JSON-LD, this renders the same hierarchy in the DOM so users can
+            orient themselves (WCAG 2.4.8). The prop is `string[]` of labels
+            only, so these are spans, not links; the last item carries
+            aria-current="page". Callers that render their own linked breadcrumb
+            band pass [] and only the pill shows. */}
+        {(badge || indexLabel || (breadcrumbs && breadcrumbs.length > 0)) && (
+          <div className="cath5-row1">
+            {badge && (
+              <span className="cath5-badge">
+                {claimsLiveInventory(badge) && <span className="cath5-dot" aria-hidden="true" />}
+                {badge}
+              </span>
+            )}
+            {breadcrumbs && breadcrumbs.length > 0 && (
+              <nav aria-label="Breadcrumb" className="cath5-crumbs-slot">
+                <ol className="cath5-crumbs" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap' }}>
+                  {breadcrumbs.map((label, i) => {
+                    const isLast = i === breadcrumbs.length - 1;
+                    return (
+                      <li key={`${label}-${i}`}>
+                        <span aria-current={isLast ? 'page' : undefined} className={isLast ? 'cath5-crumb-now' : undefined}>
+                          {label}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </nav>
+            )}
+            {indexLabel && <span className="cath5-index">{indexLabel}</span>}
+          </div>
         )}
         {/* ── STAGE: Oversized type + photo ── */}
         <div className="cath5-stage">
@@ -125,6 +192,16 @@ export default function CategoryHero({
               priority
               style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center bottom', display: 'block' }}
             />
+            {/* Same defect as the badge: both photo-tag props were
+                destructured and dropped while .cath5-photo-tag sat unused in
+                the stylesheet. No caller passes them today, so this renders
+                nothing until one does. */}
+            {(photoTagTitle || photoTagBody) && (
+              <div className="cath5-photo-tag">
+                {photoTagTitle && <b>{photoTagTitle}</b>}
+                {photoTagBody}
+              </div>
+            )}
           </div>
         </div>
 
@@ -175,6 +252,13 @@ export default function CategoryHero({
           --teal: ${teal};
           --teal-deep: ${tealDeep};
           --cat-color: ${bgColor};
+          /* .cath5-badge referenced --pill-bg / --pill-border, which nothing
+             ever defined — an unresolved custom property is invalid at
+             computed-value time, so the pill would have rendered with no
+             background and an inherited border colour. Defined here against
+             the cream stage so the glass pill reads as intended. */
+          --pill-bg: rgba(255, 255, 255, .72);
+          --pill-border: rgba(31, 26, 23, .12);
         }
 
         /* ── Decorative swatch ── */
@@ -198,16 +282,27 @@ export default function CategoryHero({
           opacity: 0.35;
         }
 
-        /* ── Row 1 ── */
+        /* ── Row 1 ──
+           Flex rather than a 3-column grid: the three slots are all
+           conditional (pSEO templates pass breadcrumbs={[]} and no
+           indexLabel), and with a fixed \`auto 1fr auto\` template an omitted
+           slot silently shifted the next one into the wrong column. */
         .cath5-row1 {
-          display: grid;
-          grid-template-columns: auto 1fr auto;
+          display: flex;
           align-items: center;
+          flex-wrap: wrap;
+          gap: 12px 16px;
           margin-bottom: 24px;
           font: 500 12px/1 'Inter', var(--font-inter), system-ui, sans-serif;
           letter-spacing: .14em;
           text-transform: uppercase;
           color: var(--ink-soft);
+        }
+        .cath5-crumbs-slot {
+          flex: 1 1 auto;
+          display: flex;
+          justify-content: center;
+          min-width: 0;
         }
         .cath5-badge {
           display: inline-flex; align-items: center; gap: 8px;
@@ -229,13 +324,23 @@ export default function CategoryHero({
           0%, 100% { opacity: .4; transform: scale(1); }
           50% { opacity: 1; transform: scale(1.2); }
         }
+        /* The pulse is decorative and runs indefinitely, and it now ships on
+           ~30 route families. app/globals.css's reduced-motion block is a
+           class ALLOWLIST (.animate-*, .reveal-*, .animate-shimmer,
+           .hero-gradient-text), not a universal selector, so it cannot reach
+           this component-scoped class — gate it here. */
+        @media (prefers-reduced-motion: reduce) {
+          .cath5-dot { animation: none; opacity: 1; }
+        }
         .cath5-crumbs {
-          justify-self: center;
           display: flex; gap: 14px;
           color: var(--ink-soft);
           opacity: 0.7;
         }
-        .cath5-crumbs span:not(:last-child)::after {
+        /* Separator was \`span:not(:last-child)\`, but every span is the only
+           child of its own <li>, so :last-child matched all of them and no
+           separator ever rendered. Hang it off the <li> instead. */
+        .cath5-crumbs li:not(:last-child)::after {
           content: "·"; margin-left: 14px;
         }
         .cath5-crumb-now { color: var(--ink) !important; opacity: 1; }
@@ -369,8 +474,8 @@ export default function CategoryHero({
         /* ── Responsive ── */
         @media (max-width: 900px) {
           .cath5 { padding: 32px 24px 0 !important; }
-          .cath5-row1 { grid-template-columns: 1fr; gap: 12px; }
-          .cath5-crumbs { justify-self: start; }
+          .cath5-row1 { gap: 10px 12px; }
+          .cath5-crumbs-slot { flex-basis: 100%; justify-content: flex-start; }
           .cath5-index { display: none; }
           .cath5-stage { grid-template-columns: 1fr; gap: 16px; }
           .cath5-h1 { font-size: clamp(56px, 15vw, 96px); }

@@ -70,7 +70,17 @@ export default function CategoryFAQAccordion({ faqs, categoryLabel }: CategoryFA
                             </button>
                             {openIndex === index && (
                                 <div style={{ padding: '0 24px 20px', borderTop: '1px solid rgba(0,0,0,0.04)' }}>
-                                    <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '16px 0 0' }}>{faq.answer}</p>
+                                    {/* `faq-answer` is the Speakable hook. Every other FAQ surface on
+                                        the board (category×city, salary-guide state + specialty) marks
+                                        its answer <p> with this class and lists it in
+                                        SpeakableSpecification.cssSelector; this accordion had no such
+                                        class, so lib/pseo/setting-state-template.tsx had to declare
+                                        '#answer-summary' alone and leave its FAQ unspeakable. The class
+                                        exists now — that template's cssSelector array can be widened to
+                                        ['#answer-summary', '.faq-answer'] (its guard in
+                                        tests/regressions/p2-pseo-parity-templates.test.ts asserts the
+                                        selector is absent and must be updated in the same change). */}
+                                    <p className="faq-answer" style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '16px 0 0' }}>{faq.answer}</p>
                                 </div>
                             )}
                         </div>

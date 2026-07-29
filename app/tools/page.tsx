@@ -1,21 +1,35 @@
 /**
- * /tools — hub for the free tools (P2 #4, #5, #6, #17).
+ * /tools — hub for the free tools (P2 #4, #5, #6, #17; P3 #2, #6a, #6b).
  *
  * Cards render from TOOLS in ./tools-registry.ts, the same array the
  * /resources tools band reads, so the hub can never advertise a tool that
- * does not exist.
+ * does not exist. Counts and the tool list in the metadata description derive
+ * from that array too — a hand-typed "four tools" went stale the moment the
+ * fifth shipped.
  */
 import { brand } from '@/config/brand';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, BarChart3, Calculator, ClipboardCheck, Scale, type LucideIcon } from 'lucide-react';
+import {
+  ArrowRight,
+  BarChart3,
+  Briefcase,
+  Building2,
+  Calculator,
+  ClipboardCheck,
+  Compass,
+  Scale,
+  type LucideIcon,
+} from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, clayCard, iconTile } from '@/components/tools/tool-theme';
 import { TOOLS, TOOLS_HUB_PATH, type ToolAudience, type ToolIconKey } from './tools-registry';
 
 const PAGE_URL = `${brand.baseUrl}${TOOLS_HUB_PATH}`;
 const PAGE_TITLE = `Free ${brand.niche.short} Career Tools — Calculators, Comparisons & Benchmarks`;
-const PAGE_DESCRIPTION = `Free interactive tools for ${brand.niche.descriptor}s and the teams hiring them: a 1099 vs W-2 take-home calculator, a cost-of-living salary comparison, a state licensure checker with multi-state planner, and a salary benchmark by state.`;
+/** Enumerated from the registry so the description cannot omit a live tool. */
+const TOOL_TITLE_LIST = TOOLS.map((tool) => tool.title.toLowerCase()).join('; ');
+const PAGE_DESCRIPTION = `${TOOLS.length} free interactive tools for ${brand.niche.descriptor}s and the teams hiring them: ${TOOL_TITLE_LIST}.`;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Free ${brand.niche.short} Career Tools`)}&type=page`;
 
 export const metadata: Metadata = {
@@ -27,6 +41,9 @@ export const metadata: Metadata = {
     `${brand.niche.short.toLowerCase()} licensure checker`,
     `${brand.niche.short.toLowerCase()} cost of living comparison`,
     `${brand.niche.short.toLowerCase()} salary benchmark`,
+    `${brand.niche.short.toLowerCase()} specialty finder`,
+    'private practice revenue calculator',
+    'cost per hire calculator',
   ],
   openGraph: {
     title: PAGE_TITLE,
@@ -44,6 +61,9 @@ const ICONS: Record<ToolIconKey, LucideIcon> = {
   scale: Scale,
   clipboard: ClipboardCheck,
   chart: BarChart3,
+  compass: Compass,
+  building: Building2,
+  briefcase: Briefcase,
 };
 
 const AUDIENCE_META: Record<ToolAudience, { label: string; color: string; bg: string }> = {
@@ -93,9 +113,10 @@ export default function ToolsHubPage() {
               {brand.niche.short} career tools
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
-              Four calculators built on the same data as the rest of this site — live postings, published
-              federal tax figures, and sourced regulatory data. Every one shows its working: what it assumes,
-              what it excludes, and where the numbers came from.
+              {TOOLS.length} tools built on the same data as the rest of this site — live postings, published
+              federal tax figures, sourced regulatory data, and our own published prices. Every one shows its
+              working: what it assumes, what it excludes, and where the numbers came from. Where we have no
+              defensible figure, the field starts empty and says so rather than guessing.
             </p>
           </div>
 

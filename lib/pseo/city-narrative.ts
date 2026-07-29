@@ -95,11 +95,55 @@ const AUTHORITY_PHRASES: Record<PracticeAuthority, string> = {
     restricted: 'restricted practice authority requiring physician supervision',
 };
 
+// ─── Shortage-claim gate (P3 donor follow-up, extends P2 #7) ────────────────
+
+/**
+ * Does the donor shortage column describe THIS page's specialty at all?
+ *
+ * `CityData.mentalHealthShortage` is the donor board's BEHAVIORAL-HEALTH
+ * -discipline HRSA HPSA column (see ./city-data/types.ts) — not an all-NP or
+ * primary-care signal. Naming the discipline in the copy is necessary but not
+ * sufficient: 2,650 of the 4,135 cities carry the flag, so an ungated
+ * sentence publishes a behavioral-health designation on every category from
+ * dermatology to anesthesia. Both polarities have to be gated, because
+ * "not designated" is equally a behavioral-health statement.
+ *
+ * This mirrors `categoryOwnsShortageData` in ./category-city-template.tsx,
+ * which cannot be imported here: that module imports THIS one, and routing
+ * the narrative through a React template would also drag Next/Prisma into
+ * the plain-node snippet scripts (scripts/preview-narrative.ts,
+ * scripts/diff-snippets.ts). The two predicates are pinned in agreement for
+ * every registered category slug by
+ * tests/regressions/p3-donor-followups-narrative-truth.test.ts.
+ */
+export function shortageColumnAppliesTo(categorySlug: string | undefined): boolean {
+    return PSYCH_SPECIALTY_SLUG !== undefined && categorySlug === PSYCH_SPECIALTY_SLUG;
+}
+
+/**
+ * The one sentence allowed to state the designation, for the one category it
+ * describes. Explains the MECHANICS of NHSC Loan Repayment rather than
+ * promising eligibility: the program matches the applicant's discipline to
+ * the designation type and pays only for service at an NHSC-approved site,
+ * so a city's HPSA status alone never establishes that a given posting
+ * qualifies. Wording mirrors the corrected FAQ answer in
+ * category-city-template.tsx so the two surfaces cannot drift.
+ */
+function behavioralHealthShortageSentence(cityName: string): string {
+    return `HRSA designates ${cityName} a federal behavioral-health Health Professional Shortage Area (HPSA), which is what puts National Health Service Corps Loan Repayment within reach for behavioral-health clinicians at NHSC-approved sites in the area — awards follow the site's approval and the applicant's discipline, not the city alone.`;
+}
+
 // ─── Base city narrative (used by /jobs/city/{slug}) ────────────────────────
 
 export function buildCityNarrative(
     facts: CityNarrativeFacts,
     totalJobs: number,
+    /**
+     * Category slug when this narrative is composed for a category×city page.
+     * Omitted on the all-specialty /jobs/city/{slug} hub, where the donor
+     * behavioral-health shortage column is by definition off topic.
+     */
+    categorySlug?: string,
 ): string {
     const { city, populationTier: pt, costTier: ct, practiceAuthority, shortage, topEmployers } = facts;
     const parts: string[] = [];
@@ -111,16 +155,28 @@ export function buildCityNarrative(
         `Demand for ${brand.niche.descriptor}s in ${city.name}, ${city.stateCode} reflects the area's status as a ${popPhrase} within ${city.state}, where ${brand.niche.short}s operate under ${authPhrase}.`,
     );
 
-    // Sentence 2: economic + shortage context — drives the salary-comp framing.
+    // Sentence 2: economic context. Unconditional and designation-free.
+    //
+    // WAS: a two-branch sentence, both branches false. The affirmative branch
+    // called the city "a Health Professional Shortage Area" (unqualified — the
+    // repo holds only the behavioral-health column) and said positions there
+    // "are typically eligible for NHSC Loan Repayment", which is not how the
+    // program works: NHSC LRP is discipline-matched and paid per
+    // NHSC-approved SITE, so no city-level fact makes a posting eligible. The
+    // negative branch asserted the city "is not currently a federally
+    // designated health professional shortage area" — a claim about ALL HRSA
+    // disciplines derived from a behavioral-health-only column, i.e. the same
+    // falsehood inverted. Neither polarity belongs in prose that ships on all
+    // 42 categories, so the economic framing stands alone here and the
+    // designation moved to the gated sentence below.
     const colPhrase = COST_PHRASES[ct];
-    if (shortage) {
-        parts.push(
-            `The federal HRSA designates ${city.name} as a Health Professional Shortage Area, so positions here are typically eligible for NHSC Loan Repayment and federal loan forgiveness programs. The local ${colPhrase} (index ${city.costOfLivingIndex}) factors directly into compensation expectations.`,
-        );
-    } else {
-        parts.push(
-            `${city.name} is not currently a federally designated health professional shortage area, but regional demand for ${brand.niche.short}s and the local ${colPhrase} (index ${city.costOfLivingIndex}) shape ${brand.niche.short} compensation in the market.`,
-        );
+    parts.push(
+        `Regional demand for ${brand.niche.short}s and the local ${colPhrase} (index ${city.costOfLivingIndex}) shape ${brand.niche.short} compensation in the ${city.name} market.`,
+    );
+
+    // Sentence 2b: the designation — only where it is both true and on topic.
+    if (shortage && shortageColumnAppliesTo(categorySlug)) {
+        parts.push(behavioralHealthShortageSentence(city.name));
     }
 
     // Sentence 3: employer landscape + counts (only when we have a non-empty list).
@@ -160,8 +216,15 @@ const TAXONOMY_LEADS: Record<string, TaxonomyLeadFn> = {
     'contract': (f) => `Contract ${brand.niche.short} positions in ${f.city.name} are typically 1099 engagements paying $70–$130 per hour. Contractors handle their own self-employment tax, malpractice insurance, and quarterly estimated payments — but retain higher take-home than equivalent W-2 roles.`,
     'new-grad': (f) => `New-graduate ${brand.niche.short} openings in ${f.city.name} typically include 6–12 months of structured supervision, dedicated preceptor time, and a slower initial caseload ramp. Most employers in ${f.city.state} accept applicants within 6 months of board certification.`,
     '1099': (f) => `1099 / independent-contractor ${brand.niche.short} arrangements in ${f.city.name} pay $60–$150+ per hour with no benefits but full schedule autonomy. Contractors must carry their own tail-coverage malpractice and budget ~30% for self-employment tax.`,
-    'correctional': (f) => `Correctional ${brand.niche.short} roles serving facilities in or near ${f.city.name} often offer state-employee benefits, robust pension plans, and forgiveness of educational debt through state-specific programs in addition to NHSC.`,
-    'community-health': (f) => `Community-health ${brand.niche.short} roles in ${f.city.name} are based at FQHCs and similar safety-net providers. Most positions qualify for NHSC Loan Repayment ($50,000+ over a 2-year commitment) and 340B drug-pricing infrastructure expands medication access for patients.`,
+    // NHSC framing in the two leads below explains the program's MECHANICS
+    // instead of promising eligibility or quoting an award. The prior copy
+    // asserted "$50,000+ over a 2-year commitment" (and the state file quoted
+    // a different figure for the same program) — neither traces to
+    // lib/stats-sources.ts, and HRSA resets award tiers and eligible
+    // disciplines each cycle. Eligibility runs through the specific site's
+    // active NHSC approval, so that is what the copy points at.
+    'correctional': (f) => `Correctional ${brand.niche.short} roles serving facilities in or near ${f.city.name} often offer state-employee benefits and pension eligibility, plus loan-repayment help through state-run programs. Correctional facilities are one of HRSA's eligible NHSC site types, so federal loan repayment depends on whether the individual facility holds an active NHSC site approval.`,
+    'community-health': (f) => `Community-health ${brand.niche.short} roles in ${f.city.name} are based at FQHCs and similar safety-net providers, where 340B drug-pricing infrastructure widens medication access for patients. FQHCs are among the site types HRSA treats as automatically eligible for NHSC approval, so ask any prospective employer for its current NHSC site status — loan repayment follows the approved site and the applicant's discipline, and HRSA sets the award tiers each cycle.`,
     'entry-level': (f) => `Entry-level ${brand.niche.short} openings in ${f.city.name} usually accept applicants within 1–2 years of board certification and include structured onboarding plus access to senior ${brand.niche.short} mentorship for the first year.`,
     'geriatric': (f) => `Geriatric ${brand.niche.short} roles in ${f.city.name} commonly serve long-term care facilities, memory-care units, and home-based primary care. Reimbursement leans on Medicare structures and often includes per-visit RVU bonuses.`,
     'hospital': (f) => `Hospital-based ${brand.niche.short} positions in ${f.city.name} include hospitalist, specialty service, and emergency department roles. Most carry shift differentials, on-call stipends, and CME funding.`,
@@ -204,7 +267,12 @@ const TAXONOMY_LEADS: Record<string, TaxonomyLeadFn> = {
     // stays confined to taxonomy-registry.ts (niche-copy debt ratchet).
     ...(PSYCH_SPECIALTY_SLUG
         ? {
-            [PSYCH_SPECIALTY_SLUG]: ((f) => `Behavioral-health ${brand.niche.short} roles in ${f.city.name} span outpatient clinics, telehealth platforms, and integrated care settings, typically paying $120K–$170K. ${f.shortage ? `Federal shortage-area designation keeps demand for prescribing behavioral-health clinicians in ${f.city.name} especially strong.` : 'Demand for prescribing behavioral-health clinicians remains strong nationwide.'}`) as TaxonomyLeadFn,
+            // The shortage clause names its DISCIPLINE: the flag behind it is
+            // the behavioral-health HPSA column, and an unqualified "federal
+            // shortage-area designation" reads as an all-NP claim the repo
+            // cannot source. This lead only ever renders on the category the
+            // column describes, which is what makes the claim on topic here.
+            [PSYCH_SPECIALTY_SLUG]: ((f) => `Behavioral-health ${brand.niche.short} roles in ${f.city.name} span outpatient clinics, telehealth platforms, and integrated care settings, typically paying $120K–$170K. ${f.shortage ? `Federal behavioral-health shortage-area designation keeps demand for prescribing clinicians in ${f.city.name} especially strong.` : 'Demand for prescribing behavioral-health clinicians remains strong nationwide.'}`) as TaxonomyLeadFn,
         }
         : {}),
 };
@@ -223,7 +291,9 @@ export function buildTaxonomyCityNarrative(
     totalJobs: number,
 ): string {
     const lead = getTaxonomyLead(taxonomy, facts);
-    const cityCtx = buildCityNarrative(facts, totalJobs);
+    // Pass the taxonomy through: it is what lets the base narrative decide
+    // whether the donor behavioral-health shortage column is on topic.
+    const cityCtx = buildCityNarrative(facts, totalJobs, taxonomy);
     if (!lead) return cityCtx;
     return `${lead} ${cityCtx}`;
 }

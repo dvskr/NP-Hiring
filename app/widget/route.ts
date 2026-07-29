@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { brand } from '@/config/brand'
 import { WORDMARK } from '@/config/niche/copy'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { ATS_HOST_SUBSTRINGS, classifyJob, HEALTH_DEAD_THRESHOLD } from '@/lib/ai/job-classifier'
+import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry'
+import { withTagFallback, type CategoryTag } from '@/lib/pseo/category-tagger'
+import { categoryFilterLabel } from '@/lib/filters'
 
 /**
  * Embeddable jobs widget for the Program Directors campaign.
@@ -14,6 +18,32 @@ import { ATS_HOST_SUBSTRINGS, classifyJob, HEALTH_DEAD_THRESHOLD } from '@/lib/a
  * Visually mirrors components/JobCard.tsx (viewMode='list') so a PD's
  * career-services page shows the same clay-pill job rows students will
  * see on the main site. Server-rendered HTML, no React on the client.
+ *
+ * ── PARAMS / EMBED SNIPPET ───────────────────────────────────────────
+ *   state    (required) 2-letter US state/territory code. Invalid → 400
+ *                       with the branded "widget request issue" shell.
+ *   program  (optional) program name, ≤80 chars of [A-Za-z0-9 .'&-].
+ *                       Drives the subheading + utm_campaign.
+ *   limit    (optional) 3–12 job rows, default 6. Out of range → 400.
+ *   category (optional) one of the taxonomy slugs in
+ *                       lib/pseo/taxonomy-registry.ts (ALL_CATEGORY_SLUGS),
+ *                       e.g. `family-practice`, `telehealth`, `new-grad`.
+ *                       Restricts the listing to that specialty/setting so
+ *                       a program embeds roles its own students train for.
+ *                       UNKNOWN OR MISSPELLED VALUES ARE IGNORED (the
+ *                       widget renders all-category listings) — never a
+ *                       400, because a typo in a snippet pasted on a .edu
+ *                       page must not break the iframe.
+ *
+ * Copy-paste embed (a family-practice program in California, 6 rows):
+ *
+ *   <iframe
+ *     src="https://<domain>/widget?state=CA&program=Your%20Program&category=family-practice"
+ *     width="100%" height="1260" style="border:0;border-radius:14px"
+ *     loading="lazy"></iframe>
+ *
+ * Height rule of thumb (matches components/ProgramEmbedBuilder.tsx):
+ * 240px of chrome + 170px per row. Drop `&category=` for all specialties.
  *
  * Inclusion rule (mirrors lib/ai/job-classifier.isPlatformRevenueJob):
  *   - employer-submitted (sourceType='employer') → highest weight
@@ -57,6 +87,28 @@ const STATE_NAMES: Readonly<Record<string, string>> = Object.freeze({
 const LIMIT_MIN = 3
 const LIMIT_MAX = 12
 const LIMIT_DEFAULT = 6
+
+// Category filter. Membership is checked against the taxonomy registry —
+// the same 45-slug source of truth the /jobs/<category> landing pages and
+// the /jobs ?category= filter use — so a widget can only ever request a
+// category that actually has inventory semantics behind it.
+const CATEGORY_SLUG_SET: ReadonlySet<string> = new Set(ALL_CATEGORY_SLUGS)
+
+/**
+ * Resolve ?category= to a canonical taxonomy slug, or undefined.
+ *
+ * Deliberately NOT part of QUERY_SCHEMA: a bad `state` is worth a 400
+ * (there is no honest listing to render), but a bad `category` is not.
+ * The widget lives in an iframe on somebody else's career-services page;
+ * a typo'd or stale slug degrades to the unfiltered state listing instead
+ * of replacing their embed with an error card. Returns undefined for
+ * missing, empty, and unknown values alike.
+ */
+function resolveCategory(raw: string | null): CategoryTag | undefined {
+  if (!raw) return undefined
+  const slug = raw.trim().toLowerCase()
+  return CATEGORY_SLUG_SET.has(slug) ? (slug as CategoryTag) : undefined
+}
 
 const QUERY_SCHEMA = z.object({
   // State must (a) be a 2-letter code and (b) actually be a real US
@@ -289,23 +341,38 @@ function renderJobCard(job: RenderedJob, program: string | undefined): string {
 function renderHtml(args: {
   state: string
   program: string | undefined
+  category: CategoryTag | undefined
   jobs: readonly RenderedJob[]
 }): string {
-  const { state, program, jobs } = args
-  const heading = `Latest ${brand.niche.short} Jobs in ${escape(state)}`
-  const subheading = program
-    ? `Curated for ${escape(program)} students`
-    : 'Updated daily'
+  const { state, program, category, jobs } = args
+  // Label derives from the registry slug via the shared label helper, so
+  // the widget carries no specialty vocabulary of its own.
+  const categoryLabel = category ? escape(categoryFilterLabel(category)) : null
+  const heading = categoryLabel
+    ? `Latest ${categoryLabel} ${brand.niche.short} Jobs in ${escape(state)}`
+    : `Latest ${brand.niche.short} Jobs in ${escape(state)}`
+  const subheading = [
+    program ? `Curated for ${escape(program)} students` : 'Updated daily',
+    categoryLabel ? `${categoryLabel} roles only` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 
   const utmCampaign = program ? `pd-${slugifyProgram(program)}` : 'pd-generic'
+  // Thread the category through to /jobs so "see all" / "browse all" land
+  // on the same filtered listing the iframe showed (lib/filters.ts reads
+  // ?category= and gates on the precomputed categoryTags column).
+  const categoryQuery = category
+    ? `&category=${encodeURIComponent(category)}`
+    : ''
 
   const cards = jobs.map((j) => renderJobCard(j, program)).join('')
 
   const emptyState =
     jobs.length === 0
       ? `<div class="pd-empty">
-          <p>No ${brand.niche.short} roles currently listed in <strong>${escape(state)}</strong>.</p>
-          <p>New jobs are added daily — <a href="${escape(baseUrl())}/jobs?utm_source=widget&amp;utm_medium=embed&amp;utm_campaign=${utmCampaign}" target="_blank" rel="noopener">browse all ${brand.niche.short} jobs →</a></p>
+          <p>No ${categoryLabel ? `${categoryLabel} ` : ''}${brand.niche.short} roles currently listed in <strong>${escape(state)}</strong>.</p>
+          <p>New jobs are added daily — <a href="${escape(baseUrl())}/jobs?utm_source=widget&amp;utm_medium=embed&amp;utm_campaign=${utmCampaign}${escape(categoryQuery)}" target="_blank" rel="noopener">browse all ${brand.niche.short} jobs →</a></p>
         </div>`
       : ''
 
@@ -316,7 +383,7 @@ function renderHtml(args: {
   // state field is "California". Pure ?stateCode= would filter but
   // leave the sidebar UI blank.
   const stateFullName = STATE_NAMES[state] ?? state
-  const seeAllUrl = `${baseUrl()}/jobs?location=${encodeURIComponent(stateFullName)}&utm_source=widget&utm_medium=embed&utm_campaign=${utmCampaign}`
+  const seeAllUrl = `${baseUrl()}/jobs?location=${encodeURIComponent(stateFullName)}${categoryQuery}&utm_source=widget&utm_medium=embed&utm_campaign=${utmCampaign}`
   const brandUrl = `${baseUrl()}?utm_source=widget&utm_medium=embed&utm_campaign=${utmCampaign}`
 
   return `<!doctype html>
@@ -967,6 +1034,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   const { state, program } = parsed.data
   const limit = parsed.data.limit ?? LIMIT_DEFAULT
+  // Resolved AFTER the schema gate on purpose — an unknown category is not
+  // a request error (see resolveCategory).
+  const category = resolveCategory(req.nextUrl.searchParams.get('category'))
 
   try {
     const rows = await prisma.job.findMany({
@@ -1011,6 +1081,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
               })),
             ],
           },
+          // Category filter (?category=). withTagFallback matches the
+          // precomputed Job.categoryTags column, with the same
+          // not-yet-backfilled keyword fallback the /jobs/<category>
+          // landing pages and the /jobs ?category= filter use — so the
+          // widget and the page it links to agree on what "in category"
+          // means. Omitted entirely when no valid category was requested.
+          ...(category
+            ? [withTagFallback(category) as Prisma.JobWhereInput]
+            : []),
         ],
       },
       orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
@@ -1052,14 +1131,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const jobs = selectJobs(candidates, limit)
 
     return withWidgetHeaders(
-      new NextResponse(renderHtml({ state, program, jobs }), { status: 200 }),
+      new NextResponse(renderHtml({ state, program, category, jobs }), { status: 200 }),
     )
   } catch (err) {
-    logger.error('[widget] query failed', err, { state, program })
+    logger.error('[widget] query failed', err, { state, program, category })
     // Render the shell with zero jobs rather than 500 — a broken iframe
     // looks worse on the partner's site than an empty one.
     return withWidgetHeaders(
-      new NextResponse(renderHtml({ state, program, jobs: [] }), { status: 200 }),
+      new NextResponse(renderHtml({ state, program, category, jobs: [] }), { status: 200 }),
     )
   }
 }

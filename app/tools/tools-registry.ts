@@ -1,5 +1,6 @@
 /**
- * Registry of the free tools shipped under /tools (P2 #4, #5, #6, #17).
+ * Registry of the free tools shipped under /tools (P2 #4, #5, #6, #17;
+ * P3 #2, #6a, #6b).
  *
  * PLAIN DATA MODULE — its only import is config/brand. Keep it that way: the
  * sitemap, the /tools hub, and the /resources tools band all read from here,
@@ -14,8 +15,22 @@ import { brand } from '@/config/brand';
 
 export type ToolAudience = 'seeker' | 'employer';
 
-/** Icon is resolved to a lucide component by the rendering surface. */
-export type ToolIconKey = 'calculator' | 'scale' | 'clipboard' | 'chart';
+/**
+ * Icon is resolved to a lucide component by the rendering surface.
+ *
+ * Adding a key requires a matching entry in the ICONS record in
+ * app/tools/page.tsx — that Record is keyed by this type, so TypeScript fails
+ * the build until it is added. (The /resources tools band renders one shared
+ * icon for every tool and does not read this field.)
+ */
+export type ToolIconKey =
+  | 'calculator'
+  | 'scale'
+  | 'clipboard'
+  | 'chart'
+  | 'compass'
+  | 'building'
+  | 'briefcase';
 
 export interface ToolEntry {
   /** Route path, always rooted at /tools. */
@@ -66,6 +81,33 @@ export const TOOLS: readonly ToolEntry[] = [
     badge: 'For employers',
     audience: 'employer',
     icon: 'chart',
+  },
+  {
+    path: '/tools/specialty-finder',
+    title: `${brand.niche.short} specialty finder`,
+    blurb:
+      'Eight questions on population, acuity, setting, autonomy, procedures, and schedule — then the specialties that match what you said you want, with live roles and pay for each.',
+    badge: 'Preference sort',
+    audience: 'seeker',
+    icon: 'compass',
+  },
+  {
+    path: '/tools/private-practice-revenue-calculator',
+    title: 'Private practice revenue projector',
+    blurb:
+      'Visits, collections per visit, and overhead worked through to net before tax — plus a sensitivity table showing what a wrong assumption costs you.',
+    badge: 'Illustration',
+    audience: 'seeker',
+    icon: 'building',
+  },
+  {
+    path: '/tools/cost-per-hire-calculator',
+    title: 'Cost-per-hire calculator',
+    blurb:
+      'A flat-fee posting against sponsored ads and an agency fee, on your own applicant volume and time-to-fill. Our prices are real; every other figure is yours.',
+    badge: 'For employers',
+    audience: 'employer',
+    icon: 'briefcase',
   },
 ];
 

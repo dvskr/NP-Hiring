@@ -1,7 +1,26 @@
 import { getPageVideoSEO } from '@/lib/video-seo';
 import { brand } from '@/config/brand';
 
-const STORAGE_BASE = brand.assets.storageBase;
+/**
+ * Publisher logo for VideoObject.publisher.
+ *
+ * P3 #1: this used to point at a donor-era `.webp` logo in the retired
+ * remote asset bucket (the one P1 #1 purged everywhere else), addressed on
+ * THIS board's Supabase project — where that object was never uploaded. A
+ * guaranteed 404 in the one field Google fetches to render the publisher
+ * mark. Every other publisher/Organization schema on the board already
+ * derives from the local `public/logo.png` (app/layout.tsx,
+ * app/blog/[slug], app/salary-guide, app/press); this now matches, so
+ * there is a single logo asset to keep alive.
+ *
+ * Dimensions are the real intrinsic size of public/logo.png (1024×1024) —
+ * pinned by the P3 regression test, which reads them out of the PNG header.
+ */
+const PUBLISHER_LOGO = {
+    path: '/logo.png',
+    width: 1024,
+    height: 1024,
+} as const;
 
 interface VideoJsonLdProps {
     pathname: string;
@@ -34,6 +53,18 @@ function toIsoDatetime(value: string): string {
 }
 
 /**
+ * Serialize JSON-LD for dangerouslySetInnerHTML using the repo's standard
+ * escape chain (same as app/blog/[slug], app/salary-guide, components/
+ * JobStructuredData) so a `</script>` sequence in any mapped title or
+ * description can never break out of the script element.
+ */
+function serializeJsonLd(obj: unknown): string {
+    return JSON.stringify(obj)
+        .replace(/</g, '\\u003c')
+        .replace(/>/g, '\\u003e');
+}
+
+/**
  * Renders a VideoObject JSON-LD script tag for the given page.
  * Returns null if no video is mapped for the route.
  */
@@ -60,9 +91,12 @@ export default function VideoJsonLd({ pathname }: VideoJsonLdProps) {
         publisher: {
             '@type': 'Organization',
             name: brand.name,
+            url: brand.baseUrl,
             logo: {
                 '@type': 'ImageObject',
-                url: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/pmhnp-hiring-logo.webp`,
+                url: absUrl(PUBLISHER_LOGO.path),
+                width: PUBLISHER_LOGO.width,
+                height: PUBLISHER_LOGO.height,
             },
         },
     };
@@ -70,7 +104,7 @@ export default function VideoJsonLd({ pathname }: VideoJsonLdProps) {
     return (
         <script
             type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
         />
     );
 }

@@ -18,6 +18,9 @@
  */
 import { brand } from '@/config/brand';
 import { PSYCH_SPECIALTY_SLUG } from './taxonomy-registry';
+// One shortage-claim gate for both narrative modules — defined in the city
+// narrative because that is the leaf module both templates already import.
+import { shortageColumnAppliesTo } from './city-narrative';
 import {
     getStatePracticeAuthority,
     PracticeAuthority,
@@ -106,10 +109,18 @@ const SETTING_LEADS: Record<string, SettingLeadFn> = {
     'outpatient': (c) => `Outpatient ${brand.niche.short} roles in ${c.stateName} span community health centers, group practices, and integrated primary-care settings. Caseloads typically run 12–18 patients per day with documentation time built in.`,
     'travel': (c) => `Travel ${brand.niche.short} assignments in ${c.stateName} are usually 8–26 weeks with tax-free housing stipends, completion bonuses, and 20–50% premium pay over permanent equivalents. Most agencies handle multi-state licensure logistics.`,
     'contract': (c) => `Contract ${brand.niche.short} positions in ${c.stateName} are typically defined-term W-2 engagements (90 days to 24 months) booked through staffing agencies, paying $70–$130 per hour with agency-provided malpractice. Distinct from 1099 independent contracting, contract roles preserve employer payroll-tax handling and often include short-term health coverage.`,
-    'correctional': (c) => `Correctional ${brand.niche.short} roles in ${c.stateName} facilities often offer state-employee benefits, robust pension plans, and educational debt forgiveness through state-specific programs alongside NHSC eligibility.`,
+    // NHSC framing here and in 'new-grad' below explains the program's
+    // MECHANICS instead of asserting eligibility or quoting an award. The
+    // prior copy claimed blanket "NHSC eligibility" for correctional roles
+    // and "up to $75K for a two-year commitment" for FQHC new-grad roles —
+    // a figure that traces to nothing in lib/stats-sources.ts and disagreed
+    // with the different amount the city narrative used to quote for the same
+    // program. HRSA resets award tiers and eligible disciplines each cycle,
+    // and eligibility runs through a specific site's active NHSC approval.
+    'correctional': (c) => `Correctional ${brand.niche.short} roles in ${c.stateName} facilities often offer state-employee benefits, robust pension plans, and loan-repayment help through state-run programs. Correctional facilities are one of HRSA's eligible NHSC site types, so federal loan repayment turns on whether the individual facility holds an active NHSC site approval.`,
     'full-time': (c) => `Full-time ${brand.niche.short} positions in ${c.stateName} typically bundle employer-sponsored health insurance, 401(k) match, CME allowance, malpractice coverage, and 3–4 weeks of PTO into a $110K–$170K base. Total-comp comparisons against contract or per-diem rates should net out the benefits self-funded employers don't have to cover.`,
     'part-time': (c) => `Part-time ${brand.niche.short} roles in ${c.stateName} generally pay $60–$100 per hour and run 16–32 scheduled hours weekly, with prorated benefits at larger health systems and none at smaller practices. The structure is popular for clinicians maintaining a private practice on the side or stepping down from a full caseload.`,
-    'new-grad': (c) => `New-grad ${brand.niche.short} positions in ${c.stateName} typically start at $95K–$140K and emphasize structured onboarding — formal preceptorship, gradual caseload ramp over 3–6 months, and protected supervision time. Community health centers and FQHCs broadly qualify for NHSC loan repayment up to $75K for a two-year commitment.`,
+    'new-grad': (c) => `New-grad ${brand.niche.short} positions in ${c.stateName} typically start at $95K–$140K and emphasize structured onboarding — formal preceptorship, gradual caseload ramp over 3–6 months, and protected supervision time. Community health centers and FQHCs are among the site types HRSA treats as automatically eligible for NHSC approval, so ask a prospective employer for its current NHSC site status: loan repayment follows the approved site and the applicant's discipline, on award tiers HRSA sets each cycle.`,
     '1099': (c) => `Independent-contractor (1099) ${brand.niche.short} roles in ${c.stateName} pay $60–$150+ per hour without benefits or employer-paid malpractice. Clinicians self-fund quarterly estimated taxes, occurrence-based malpractice, and any LLC or PLLC structure — net take-home depends heavily on those offsets and ${c.stateCode} self-employment tax exposure.`,
     // ── 2026-07 NP taxonomy state pages (job types + specialties + APRN) ──
     // Covers the remaining SETTING_CONFIGS keys so every /jobs/{setting}/{state}
@@ -179,15 +190,35 @@ export function buildSettingStateNarrative(
         `${stateName} grants ${authPhrase}, and the state's ${COST_PHRASES[colTier(avgCOL)]} (index ${avgCOL}) directly shapes ${brand.niche.short} compensation expectations.`,
     );
 
-    // Sentence 3: demand + shortage signal — drives federal-loan framing.
+    // Sentence 3: live demand. Unconditional and designation-free.
+    //
+    // WAS: a two-branch sentence in which BOTH branches published something
+    // false. The affirmative branch called the metros' designation "federal
+    // Health Professional Shortage Area designation" with no discipline named
+    // — `shortageCityCount` is computed from `CityData.mentalHealthShortage`,
+    // the donor board's BEHAVIORAL-HEALTH HPSA column (see
+    // ./city-data/types.ts) — and then concluded that "positions in those
+    // areas typically qualify for NHSC Loan Repayment". They do not: NHSC LRP
+    // matches the applicant's discipline to the designation type and pays
+    // only for service at an NHSC-approved site, so a metro's HPSA status
+    // establishes nothing about a given posting. The negative branch inverted
+    // the same error, asserting the metros are "not currently federally
+    // designated health professional shortage areas" across ALL disciplines
+    // on the strength of one discipline's column. Passing 0 therefore only
+    // swapped one false claim for the other, so the fix is here in the
+    // sentence rather than in the caller's input.
     const demandPhrase = DEMAND_PHRASES[demandTier(totalJobs)];
-    if (shortageCityCount > 0) {
+    parts.push(
+        `The ${totalJobs} active ${totalJobs === 1 ? 'posting reflects' : 'postings reflect'} ${demandPhrase} for ${brand.niche.descriptor}s across ${stateName}, alongside the state's reimbursement structure and employer mix.`,
+    );
+
+    // Sentence 3b: the designation — named by discipline, scoped to the one
+    // category whose specialty that discipline describes (the same gate the
+    // city template applies to its own shortage surfaces, P2 #7), and framed
+    // as the program's mechanics rather than a promise of eligibility.
+    if (shortageCityCount > 0 && shortageColumnAppliesTo(settingKey)) {
         parts.push(
-            `${shortageCityCount} of the state's top metros carry federal Health Professional Shortage Area designation, so positions in those areas typically qualify for NHSC Loan Repayment. The current ${totalJobs} active postings reflect ${demandPhrase} for ${brand.niche.descriptor}s across ${stateName}.`,
-        );
-    } else {
-        parts.push(
-            `Top metros in ${stateName} are not currently federally designated health professional shortage areas, but regional demand for ${brand.niche.short}s and reimbursement structure shape compensation. The ${totalJobs} active postings reflect ${demandPhrase} for ${brand.niche.short}s in the state.`,
+            `${shortageCityCount} of the state's top metros carry a federal HRSA behavioral-health Health Professional Shortage Area (HPSA) designation, which is what puts National Health Service Corps Loan Repayment within reach for behavioral-health clinicians at NHSC-approved sites in those areas — awards follow the site's approval and the applicant's discipline, not the metro alone.`,
         );
     }
 

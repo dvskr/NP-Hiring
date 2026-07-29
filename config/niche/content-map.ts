@@ -4,7 +4,7 @@
  * This file is DATA ONLY; the selection and rendering logic stays in
  * the consuming components.
  *
- * ── NP HIRING CONTENT STATUS (2026-07-29, P1 #2/#3 · P2 pillars) ─────
+ * ── NP HIRING CONTENT STATUS (2026-07-30, P1 #2/#3 · P2 · P3 #5) ─────
  * The launch content batch is authored:
  *   - Six evergreen NP posts live as .mdx in content/blog/ and are
  *     wired into every slug list below. They serve from the blog_posts
@@ -17,6 +17,12 @@
  *     lib/blog-ceu-guide.ts). They ship through the SAME sync script;
  *     the same "sync before deploy" rule applies to the sidebar slots
  *     below.
+ *   - P3 #5 closed the content worklist with two regulated-adjacent
+ *     guides in the same mechanism: np-malpractice-insurance-guide and
+ *     np-credentialing-checklist. Both are MECHANICS-ONLY by design (no
+ *     premiums, no carrier names, no invented processing times or
+ *     per-state requirements) and both are pinned to that contract by
+ *     tests/regressions/p3-guides-round-2-malpractice-credentialing.test.ts.
  *   - The 51-post licensure series is generated deterministically from
  *     lib/blog-license-guides.ts and served by lib/blog.ts as a code
  *     fallback (DB rows, synced via `npx tsx scripts/sync-blog-to-db.ts
@@ -95,6 +101,15 @@ export const RELATED_BLOG_SLUGS: {
         'highest-paying-np-specialties',
         'fnp-vs-pmhnp-vs-agacnp',
         'np-1099-vs-w2',
+        // P3 #5 remainder. Deliberately at the TAIL: the sidebar caps at 3
+        // and spends one slot on `always`, so these never displace interview
+        // prep or the resume guide on a plain job page. They are wired here
+        // (rather than left unlinked) so fork-preflight and the P2 wiring
+        // test cover them, and so the sidebar can reach them once a reader
+        // is deeper in the funnel — credentialing and coverage are
+        // post-offer questions, not first-click ones.
+        'np-credentialing-checklist',
+        'np-malpractice-insurance-guide',
     ],
 };
 

@@ -6,12 +6,32 @@ import Image from 'next/image';
  * Puerto Rico), 1024x1024, no CDN/Supabase dependency.
  *
  * ASSET NOTE: the shipped files carry a `.png` extension but the bytes are
- * baseline JPEG (opaque, 3 channels, ~630 KB each / 32 MB for the set).
- * next/image re-encodes them to AVIF/WebP at the requested width, so what
- * users download is small — the 32 MB only costs repo + deploy bundle
- * weight. Re-exporting the sources to real WebP is tracked separately
- * (measured: 32.03 MB -> 4.56 MB at q82/1024, an 85.8% cut); do NOT
- * convert them here.
+ * JPEG (opaque, 3 channels). They used to be ~630 KB baseline exports —
+ * 32.03 MB for the set. P3 #10 re-encoded all 52 in place at q88/mozjpeg,
+ * unchanged at 1024 square: 32.03 MB -> 6.05 MB (-25.97 MB, -81.1%), with
+ * every artwork's sampled backdrop holding to within 1.0 RGB unit so the map
+ * below and the panels painted from it stay correct. Re-run or audit with
+ * `node scripts/optimize-state-images.mjs --check | --apply` — `--apply`
+ * only touches BASELINE JPEGs, so it can never stack a second generation of
+ * loss onto the artwork.
+ *
+ * The extension still lies, and deliberately so for now: `stateDioramaSrc`'s
+ * `.png` return value is pinned by literal assertions in four regression
+ * suites — tests/regressions/p2-state-imagery-diorama-wiring.test.ts (6
+ * literals), p2-metro-editorial-depth.test.ts (2),
+ * p2-seo-ops-indexnow-sitemap.test.ts (1) and
+ * p3-image-optimization-state-dioramas.test.ts (2) — plus ALL FIVE keys of
+ * scripts/image-manifest.json, every one of which is a diorama path under
+ * /images/states (it is legacy migration output pointing at a retired Supabase
+ * bucket, so deleting it may beat renaming its keys; either way do not leave
+ * 4 of 5 behind). And 102 of these exact URLs are already
+ * advertised to Google Images from app/image-sitemap.xml. Renaming to the
+ * truthful `.webp` is one coordinated change across those files, not a
+ * component-local edit; `node scripts/optimize-state-images.mjs
+ * --measure-webp` prices it (a further ~1.3 MB) and prints the current
+ * per-file counts. Until then do NOT swap the bytes to WebP under the `.png` name:
+ * it would put a third format behind an extension the crawler has indexed,
+ * for less than the rename saves.
  *
  * SERVER COMPONENT (deliberate). This used to be a `'use client'`
  * component whose only client behaviour was an `onError` fallback for

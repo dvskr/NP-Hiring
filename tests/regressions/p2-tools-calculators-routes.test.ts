@@ -1,9 +1,8 @@
 /**
  * P2 #4 / #5 / #6 / #17 — structural guards for the /tools package.
  *
- * The four tools are indexable SEO surfaces as much as they are widgets, so
- * these tests pin the properties that make them worth indexing and safe to
- * publish:
+ * The tools are indexable SEO surfaces as much as they are widgets, so these
+ * tests pin the properties that make them worth indexing and safe to publish:
  *
  *   - every registry path has a real route (the drift rule that governs
  *     SALARY_SPECIALTY_SLUGS and JD_TEMPLATES);
@@ -68,6 +67,23 @@ function stripJsonLd(src: string): string {
   return out;
 }
 
+/**
+ * The tools this P2 suite was written for. Asserted by PATH, not by count: the
+ * registry is append-only and later packages (P3 #2 / #6a / #6b) add entries,
+ * so a hardcoded TOOLS.length goes red every time a tool ships while telling us
+ * nothing a path check does not. What actually matters here is that none of the
+ * four original tools silently disappears from the registry — and the drift rule
+ * (every registered path resolves to a route) is enforced below over ALL of
+ * TOOL_PATHS, new entries included. The P3 suite owns the newer tools' own
+ * guarantees and deliberately hardcodes no count either.
+ */
+const P2_TOOL_PATHS = [
+  '/tools/1099-vs-w2-calculator',
+  '/tools/cost-of-living-comparison',
+  '/tools/licensure-checker',
+  '/tools/salary-benchmark',
+] as const;
+
 const TOOL_COMPONENT_DIR = 'components/tools';
 
 function toolComponentFiles(): string[] {
@@ -78,8 +94,11 @@ function toolComponentFiles(): string[] {
 }
 
 describe('tools registry ↔ routes', () => {
-  it('advertises four tools plus a hub', () => {
-    expect(TOOLS.length).toBe(4);
+  it('still advertises every P2 tool, plus a hub', () => {
+    for (const toolPath of P2_TOOL_PATHS) {
+      expect(TOOL_PATHS).toContain(toolPath);
+    }
+    expect(TOOLS.length).toBeGreaterThanOrEqual(P2_TOOL_PATHS.length);
     expect(TOOL_PATHS.length).toBe(TOOLS.length);
     expect(new Set(TOOL_PATHS).size).toBe(TOOL_PATHS.length);
     expect(exists(`app${TOOLS_HUB_PATH}/page.tsx`)).toBe(true);
