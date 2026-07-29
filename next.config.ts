@@ -207,10 +207,14 @@ const nextConfig: NextConfig = {
         destination: '/job-alerts',
         permanent: true,
       },
-      // Consolidate duplicate interview question articles — keyword cannibalization fix
+      // Donor-era interview article → this board's interview pillar.
+      // The old destination ('...-2026') was a donor slug that exists
+      // nowhere in this board's content, so this permanent redirect
+      // landed on a 404 and threw away the legacy URL's equity. Guarded
+      // by tests/regressions/p2-content-pillars-guides.test.ts.
       {
         source: '/blog/pmhnp-interview-questions',
-        destination: '/blog/pmhnp-interview-questions-2026',
+        destination: '/blog/np-interview-questions',
         permanent: true,
       },
     ];

@@ -282,10 +282,12 @@ describe('P1 #12 — /companies hub links point at pages that actually render', 
     const hub = read('app/companies/page.tsx');
 
     it('cards emit the canonical kebab href, matching the sitemap (B30)', () => {
-        expect(hub).toContain(
-            "href={`/companies/${company.normalizedName.replace(/ /g, '-')}`}",
-        );
-        expect(hub).not.toContain('href={`/companies/${company.normalizedName}`}');
+        // Asserted on the URL expression rather than the JSX prop: P2 #11 moved
+        // href construction out of the card markup and into the entry mappers
+        // (the A–Z slice and the spotlight strip both build it), so pinning
+        // `href={...}` pinned a location, not the behaviour.
+        expect(hub).toContain("`/companies/${company.normalizedName.replace(/ /g, '-')}`");
+        expect(hub).not.toContain('`/companies/${company.normalizedName}`');
     });
 
     it('the card set uses the same active predicate as the profile 404 gate', () => {

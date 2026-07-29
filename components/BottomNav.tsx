@@ -2,13 +2,30 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, Briefcase, Bookmark, Mail, LayoutDashboard, Users, FileText } from 'lucide-react';
+import { Home, Briefcase, Bookmark, Mail, LayoutDashboard, Users, FileText, Send } from 'lucide-react';
 
-// Job-seeker / marketing default — Home + Jobs + Saved + Messages
-const seekerNavItems = [
+// Marketing / logged-out default — Home + Jobs + Saved + Messages
+const marketingNavItems = [
   { label: 'Home', href: '/', icon: Home },
   { label: 'Jobs', href: '/jobs', icon: Briefcase },
   { label: 'Saved', href: '/saved', icon: Bookmark },
+  { label: 'Messages', href: '/messages', icon: Mail },
+];
+
+// Signed-in job-seeker surfaces. Two bugs this variant fixes:
+//   1. "Home" pointed at `/` on every route, so a seeker deep in the app shell
+//      had NO way back to /dashboard from the bottom nav — the only mobile
+//      dashboard entry point was the header user menu.
+//   2. /my-applications was reachable from nothing but the post-apply toast
+//      and transactional email. It is the seeker's return-visit surface, so it
+//      belongs in the nav.
+// Labelled "Applications" (not "Applied") on purpose: /saved already owns an
+// "Applied" tab for jobs the visitor marked as applied locally. Distinct nouns
+// for distinct things.
+const seekerAppNavItems = [
+  { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Jobs', href: '/jobs', icon: Briefcase },
+  { label: 'Applications', href: '/my-applications', icon: Send },
   { label: 'Messages', href: '/messages', icon: Mail },
 ];
 
@@ -30,21 +47,46 @@ const employerNavItems = [
 // swap to the employer nav. Same set as MobileHideOnAppRoutes uses.
 const EMPLOYER_PREFIXES = ['/employer', '/admin'];
 
+// Seeker app-shell surfaces. Deliberately narrower than
+// MobileHideOnAppRoutes' APP_SHELL_PREFIXES, because BottomNav renders for
+// signed-out visitors too and has no session of its own:
+//   - /saved and /job-alerts are reachable while logged out (pSEO CTAs link
+//     straight to /job-alerts), so they keep the marketing nav — which is also
+//     the only nav that contains "Saved", so /saved stays self-highlighting.
+//   - /messages is shared with employers, and BottomNav can't tell the two
+//     roles apart here; the employer prefixes above are the only role signal.
+const SEEKER_APP_PREFIXES = [
+  '/dashboard',
+  '/my-applications',
+  '/settings',
+];
+
+/**
+ * Prefix match on a path-segment boundary. Plain `startsWith` would light up
+ * "Saved" on a hypothetical /saved-searches route and "Jobs" on /jobs-report.
+ */
+function matchesPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
 export default function BottomNav() {
   const pathname = usePathname();
 
-  const isEmployerShell = EMPLOYER_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
-  const navItems = isEmployerShell ? employerNavItems : seekerNavItems;
+  const isEmployerShell = EMPLOYER_PREFIXES.some((p) => matchesPrefix(pathname, p));
+  const isSeekerAppShell = SEEKER_APP_PREFIXES.some((p) => matchesPrefix(pathname, p));
+
+  const navItems = isEmployerShell
+    ? employerNavItems
+    : isSeekerAppShell
+      ? seekerAppNavItems
+      : marketingNavItems;
 
   const isActive = (href: string) => {
     if (href === '/') {
       // Exact match for home
       return pathname === '/';
     }
-    // Prefix match for other routes
-    return pathname.startsWith(href);
+    return matchesPrefix(pathname, href);
   };
 
   return (
@@ -83,7 +125,10 @@ export default function BottomNav() {
                   strokeWidth={active ? 2.5 : 2}
                 />
                 <span
-                  className="text-xs font-medium transition-colors"
+                  // Longest seeker label ("Applications") must not clip on a
+                  // 360px viewport: 4 columns ≈ 84px each, so the label is
+                  // allowed to shrink one step and truncate rather than wrap.
+                  className="text-[11px] sm:text-xs font-medium transition-colors max-w-full truncate"
                   style={{
                     color: active ? 'var(--color-primary)' : 'var(--text-secondary)',
                   }}

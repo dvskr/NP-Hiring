@@ -3,11 +3,133 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { Building2, DollarSign, FileText, CheckCircle, Shield, Users, BookOpen, Landmark } from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import { getStatesByAuthority } from '@/lib/state-practice-authority';
+import { STAT_SOURCES } from '@/lib/stats-sources';
 
 // Editorial review constants — bump LAST_REVIEWED on each pass so Article
 // dateModified reflects real freshness, not the original publish date.
 const PUBLISHED_AT = '2026-03-19';
-const LAST_REVIEWED = '2026-03-19';
+const LAST_REVIEWED = '2026-07-29';
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * P2 #22 — FACTUAL FIXES ON THIS PAGE
+ * ─────────────────────────────────────────────────────────────────────────
+ * 1. Step 1 overstated the number of Full Practice Authority states by
+ *    seven. The repo's own AANP-sourced dataset says 27 + DC, and a
+ *    regression test already bans that same wrong count on /salary-guide
+ *    for exactly this reason. It is now DERIVED from
+ *    lib/state-practice-authority.ts and cannot drift again.
+ * 2. The income-projection table published four gross/net bands with no
+ *    stated basis — they were not computed from anything and not sourced
+ *    to anything. They are now COMPUTED from the visit-volume and
+ *    per-visit assumptions declared in PRACTICE_MODEL below, and those
+ *    assumptions are rendered above the table. It is a transparent model,
+ *    labelled as a model, rather than a claim about what practices earn.
+ */
+
+/**
+ * JSON-LD serializer matching the repo convention (see app/companies/page.tsx
+ * and app/for-employers/resources/how-to-hire/page.tsx): angle brackets are
+ * escaped so no serialized value can terminate the surrounding script element.
+ */
+const ldJson = (obj: unknown): string =>
+  JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+
+/**
+ * Full Practice Authority state count, derived so it can never disagree
+ * with /resources/fpa-guide or STAT_SOURCES.fullPracticeStates. D.C. is a
+ * jurisdiction in the dataset, not a state, so it is excluded from the
+ * count and named separately in copy.
+ */
+const FULL_PRACTICE_STATE_COUNT = getStatesByAuthority('full').filter(
+  (jurisdiction) => jurisdiction !== 'District of Columbia',
+).length;
+
+
+/**
+ * Revenue model inputs. Every figure in the income table is computed from
+ * these, and the assumptions are shown to the reader above the table —
+ * they are illustrative planning inputs, not survey data.
+ */
+const PRACTICE_MODEL = {
+  /** 52 weeks less roughly six for holidays, vacation, and admin days. */
+  workingWeeksPerYear: 46,
+  /** Blended amount COLLECTED per visit on an insurance-based panel. */
+  insuranceCollectedPerVisit: 175,
+  /** Blended amount collected per visit on a cash-pay panel. */
+  cashCollectedPerVisit: 250,
+} as const;
+
+interface PracticeScenario {
+  label: string;
+  visitsPerWeek: { min: number; max: number };
+  collectedPerVisit: number;
+  /** Overhead as a share of collections. */
+  overhead: { min: number; max: number };
+}
+
+const PRACTICE_SCENARIOS: readonly PracticeScenario[] = [
+  {
+    label: 'Part-time telehealth',
+    visitsPerWeek: { min: 12, max: 15 },
+    collectedPerVisit: PRACTICE_MODEL.insuranceCollectedPerVisit,
+    overhead: { min: 0.15, max: 0.20 },
+  },
+  {
+    label: 'Full-time telehealth',
+    visitsPerWeek: { min: 22, max: 28 },
+    collectedPerVisit: PRACTICE_MODEL.insuranceCollectedPerVisit,
+    overhead: { min: 0.15, max: 0.25 },
+  },
+  {
+    label: 'Full-time office',
+    visitsPerWeek: { min: 22, max: 28 },
+    collectedPerVisit: PRACTICE_MODEL.insuranceCollectedPerVisit,
+    overhead: { min: 0.30, max: 0.40 },
+  },
+  {
+    label: 'Cash-pay panel',
+    visitsPerWeek: { min: 18, max: 25 },
+    collectedPerVisit: PRACTICE_MODEL.cashCollectedPerVisit,
+    overhead: { min: 0.15, max: 0.25 },
+  },
+];
+
+const grossFor = (visitsPerWeek: number, collectedPerVisit: number): number =>
+  visitsPerWeek * PRACTICE_MODEL.workingWeeksPerYear * collectedPerVisit;
+
+/** "$177K" from 177,100 — the table reads in thousands, not to the dollar. */
+const asK = (n: number): string => `$${Math.round(n / 1000)}K`;
+
+interface ScenarioRow {
+  label: string;
+  visits: string;
+  gross: string;
+  overhead: string;
+  net: string;
+}
+
+function projectScenario(s: PracticeScenario): ScenarioRow {
+  const grossLow = grossFor(s.visitsPerWeek.min, s.collectedPerVisit);
+  const grossHigh = grossFor(s.visitsPerWeek.max, s.collectedPerVisit);
+  // Worst case pairs the lowest volume with the highest overhead, and
+  // vice versa — so the net band brackets the realistic outcomes rather
+  // than quietly mixing best-case inputs.
+  const netLow = grossLow * (1 - s.overhead.max);
+  const netHigh = grossHigh * (1 - s.overhead.min);
+  return {
+    label: s.label,
+    visits: `${s.visitsPerWeek.min}–${s.visitsPerWeek.max}`,
+    gross: `${asK(grossLow)}–${asK(grossHigh)}`,
+    overhead: `${Math.round(s.overhead.min * 100)}–${Math.round(s.overhead.max * 100)}%`,
+    net: `${asK(netLow)}–${asK(netHigh)}`,
+  };
+}
+
+const SCENARIO_ROWS: readonly ScenarioRow[] = PRACTICE_SCENARIOS.map(projectScenario);
+
+/** Full-time telehealth gross band — the headline the hero renders. */
+const HEADLINE_GROSS = SCENARIO_ROWS[1].gross;
 // P0 OG sweep: edge-generated card via /api/og — the previous Supabase
 // page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
 // Absolute URL because it also feeds Article JSON-LD `image`.
@@ -15,7 +137,7 @@ const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`How to S
 
 export const metadata: Metadata = {
   title: `How to Start an ${brand.niche.short} Private Practice — Step-by-Step Guide 2026`,
-  description: `Complete guide to starting your own ${brand.niche.short} private practice. LLC formation, insurance credentialing (CAQH, NPI), EHR setup, malpractice insurance, billing, overhead costs, and income projections ($200K-$300K+).`,
+  description: `Complete guide to starting your own ${brand.niche.short} private practice: PLLC formation, insurance credentialing (CAQH, NPI), EHR setup, malpractice coverage, billing, overhead, and a transparent revenue model you can re-run with your own numbers.`,
   keywords: [`${brand.niche.short} private practice`, `how to start an ${brand.niche.short} private practice`, `${brand.niche.short} private practice income`, `${brand.niche.descriptor} own practice`, `${brand.niche.short} business startup`, `independent ${brand.niche.descriptor} practice`],
   openGraph: {
     title: `How to Start an ${brand.niche.short} Private Practice — 2026 Guide`,
@@ -37,19 +159,19 @@ export default function PrivatePracticeGuidePage() {
       number: 1,
       title: 'Verify Your State Requirements',
       icon: Shield,
-      content: 'Check your state\'s practice authority laws. In 34 Full Practice Authority states + DC, you can practice independently. In reduced/restricted states, you\'ll need a collaborative agreement with a physician. See our Full Practice Authority Guide for details.',
+      content: `Check your state's practice authority laws before anything else — they decide whether an independent practice is even available to you. ${FULL_PRACTICE_STATE_COUNT} states plus Washington D.C. grant Full Practice Authority (${STAT_SOURCES.fullPracticeStates.source}), where you can practice without a physician agreement. In reduced and restricted states you must have a collaborating or supervising physician in place first, and that relationship is usually a paid one. Several full-practice states also apply a transition-to-practice period before autonomy begins.`,
       link: { href: '/resources/fpa-guide', text: 'View FPA Guide →' },
     },
     {
       number: 2,
       title: 'Form Your Business Entity',
       icon: Landmark,
-      content: `Most ${brand.niche.short}s choose a Professional Limited Liability Company (PLLC) for liability protection and tax flexibility. Key steps: choose a business name, file with your Secretary of State ($100-$500), get an EIN from the IRS (free), and open a business bank account.`,
+      content: `Most ${brand.niche.short}s choose a Professional Limited Liability Company (PLLC) for liability protection and tax flexibility. Key steps: choose a business name, file with your Secretary of State, get an EIN from the IRS (free), and open a business bank account before any patient revenue lands.`,
       details: [
-        'LLC/PLLC: Best for most solo practitioners ($100-$500 to form)',
-        'S-Corp election: Consider when income exceeds $80K+ for tax savings',
-        'Professional liability: PLLC protects personal assets from business debts',
-        'Consult a healthcare attorney for state-specific requirements',
+        'LLC/PLLC: the usual choice for solo practitioners — formation fees are set per state, so check your Secretary of State fee schedule rather than budgeting a national average',
+        'S-Corp election: worth modelling with a CPA once net profit is high enough that the payroll-tax saving clearly exceeds the added payroll and compliance cost — it is a threshold specific to your numbers, not a fixed income figure',
+        'Professional liability: a PLLC shields personal assets from business debts, but it does not shield you from your own clinical liability — you still need malpractice coverage',
+        'Consult a healthcare attorney for state-specific requirements; several states restrict who may own a professional entity',
       ],
     },
     {
@@ -71,10 +193,11 @@ export default function PrivatePracticeGuidePage() {
       icon: BookOpen,
       content: `Choose an EHR (Electronic Health Records) system with integrated billing. Popular options for ${brand.niche.short} private practices include:`,
       details: [
-        'SimplePractice: $69-$99/month — Popular for solo and telehealth practices',
-        'DrChrono: $200+/month — Full-featured, good for larger practices',
-        'Tebra (formerly Kareo): Custom pricing — Built for independent medical practices',
-        'Consider outsourcing billing ($500-$1,500/month or 6-8% of collections)',
+        'SimplePractice — popular for solo and telehealth practices',
+        'DrChrono — full-featured, better suited to larger practices',
+        'Tebra (formerly Kareo) — built for independent medical practices',
+        'Outsourced billing is usually priced either as a monthly retainer or as a percentage of collections — get both quoted and compare against your modelled volume',
+        'Vendor pricing changes often and is not reproduced here; get a current quote directly, and confirm the plan tier includes the billing and telehealth modules you need',
       ],
     },
     {
@@ -83,24 +206,24 @@ export default function PrivatePracticeGuidePage() {
       icon: Shield,
       content: `Individual malpractice (professional liability) insurance is essential. Most private practice ${brand.niche.short}s need:`,
       details: [
-        'Occurrence-based policy (preferred): $1,500-$3,000/year',
-        'Coverage: Minimum $1M per occurrence / $3M aggregate',
-        'Popular carriers: NSO, HPSO, CM&F, Berxi',
-        'Consider cyber liability insurance if using telehealth',
-        'General liability insurance: $300-$800/year for office space',
+        'Prefer an occurrence-based policy over claims-made: it covers incidents that happened during the policy period even after you cancel, so you do not need to buy tail coverage later',
+        'A commonly requested limit structure is $1M per occurrence / $3M aggregate — confirm what your payers and any collaborating physician require',
+        'Get quotes from several carriers (NSO, HPSO, CM&F, and Berxi all write individual APRN policies); premiums vary by state, specialty, and limits, so a quote is the only reliable number',
+        'Add cyber liability if you deliver telehealth or store records electronically',
+        'Add general liability separately if you lease office space — it covers premises claims that malpractice does not',
       ],
     },
     {
       number: 6,
       title: 'Launch & Build Your Caseload',
       icon: Users,
-      content: `Plan for 3-6 months to build a full caseload. A typical full-time private practice ${brand.niche.short} sees 20-30 patients per week.`,
+      content: `Plan on several months to fill a schedule. The revenue model below assumes ${PRACTICE_SCENARIOS[1].visitsPerWeek.min}-${PRACTICE_SCENARIOS[1].visitsPerWeek.max} visits a week at full-time capacity — that is the number every projection hangs on, so track it weekly from day one.`,
       details: [
         'Create a professional website with online scheduling',
         'Register on provider directories like Zocdoc and Healthgrades',
         'Network with local physicians, specialists, and community organizations for referrals',
         'Consider contract work initially to maintain income while building',
-        'Set competitive rates: $150-$300 for initial evaluations, $100-$200 for follow-ups',
+        'Set your fee schedule from your contracted payer rates and local cash-pay market, then track what you actually COLLECT per visit — collections, not charges, are what the revenue model runs on',
       ],
     },
   ];
@@ -108,11 +231,11 @@ export default function PrivatePracticeGuidePage() {
   const ppFaqs = [
     {
       question: `How much does it cost to start an ${brand.niche.short} private practice?`,
-      answer: `Startup costs range from $5,000-$20,000 for a lean telehealth practice to $30,000-$75,000 for a brick-and-mortar office. Core costs include PLLC formation ($100-500), EHR ($50-200/month), malpractice insurance ($1,500-3,000/year), credentialing fees, and marketing. Many ${brand.niche.short}s start with a virtual practice to minimize overhead.`
+      answer: `Build the number from your own quotes rather than a headline range. The line items are consistent: state filing fees for a PLLC, an EHR subscription, individual malpractice coverage, credentialing and application fees, a website and scheduling, and initial marketing. A telehealth-first practice skips the largest cost — a lease and its fit-out — which is why most ${brand.niche.short}s start virtual and add space later if demand justifies it. Filing fees vary by state and vendor pricing changes, so this guide points you at live quotes instead of printing figures that expire.`
     },
     {
       question: `How much can an ${brand.niche.short} private practice owner earn?`,
-      answer: `After building a full caseload (20-30 patients/week), private practice ${brand.niche.short}s typically earn $200,000-$300,000+ gross revenue. After overhead (25-40%), net income is $120,000-$225,000+. Top earners seeing 30+ patients/week with efficient overhead can net $250,000+. Telehealth practices generally have lower overhead (15-25%).`
+      answer: `It is a volume-times-collections calculation, so model it rather than trusting a headline number. The table on this page works it through: at ${PRACTICE_SCENARIOS[1].visitsPerWeek.min}–${PRACTICE_SCENARIOS[1].visitsPerWeek.max} visits a week over ${PRACTICE_MODEL.workingWeeksPerYear} working weeks, collecting about $${PRACTICE_MODEL.insuranceCollectedPerVisit} per visit on an insurance panel, a full-time telehealth practice models ${HEADLINE_GROSS} of gross collections, and ${SCENARIO_ROWS[1].net} net after ${SCENARIO_ROWS[1].overhead} overhead. An office-based practice models the same gross with materially higher overhead, and a cash-pay panel models higher collections per visit at lower volume. Change any input — your real reimbursement rate, your no-show rate, your weeks worked — and the answer changes with it. The national median annual wage for employed ${brand.niche.descriptor}s, for comparison, is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`
     },
     {
       question: "How long does it take to build a full private practice caseload?",
@@ -120,7 +243,7 @@ export default function PrivatePracticeGuidePage() {
     },
     {
       question: "Should I accept insurance or go cash-pay only?",
-      answer: "Insurance-based practices fill caseloads faster and serve more patients, but involve lower reimbursement rates ($100-$200/visit) and administrative burden. Cash-pay practices offer higher rates ($200-$400/visit) and less paperwork, but take longer to fill. Many successful practices accept a mix of both."
+      answer: `Insurance panels fill faster and reach more patients, at a lower collected amount per visit and with real billing and credentialing overhead. Cash-pay collects more per visit with far less paperwork, but fills slowly and is sensitive to your local market. Many practices run a mix. The model on this page uses $${PRACTICE_MODEL.insuranceCollectedPerVisit} collected per insurance visit and $${PRACTICE_MODEL.cashCollectedPerVisit} per cash-pay visit as planning inputs — replace both with the contracted rates you are actually offered before you commit to a model, since payer contracts vary widely by state and specialty.`
     },
     {
       question: `Can new grad ${brand.niche.short}s open a private practice?`,
@@ -138,7 +261,7 @@ export default function PrivatePracticeGuidePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: ldJson({
             '@context': 'https://schema.org',
             '@type': 'FAQPage',
             mainEntity: ppFaqs.map((faq) => ({
@@ -155,7 +278,7 @@ export default function PrivatePracticeGuidePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: ldJson({
             '@context': 'https://schema.org',
             '@type': 'Article',
             headline: `How to Start an ${brand.niche.short} Private Practice — 2026 Step-by-Step Guide`,
@@ -172,7 +295,7 @@ export default function PrivatePracticeGuidePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: ldJson({
             '@context': 'https://schema.org',
             '@type': 'HowTo',
             name: `How to Start an ${brand.niche.short} Private Practice`,
@@ -207,17 +330,19 @@ export default function PrivatePracticeGuidePage() {
               From LLC formation to full caseload — everything you need to launch your {brand.niche.short} practice
             </p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-8 mt-8">
+              {/* Headline figure is the MODELLED full-time telehealth gross
+                  band, computed from PRACTICE_MODEL — not an earnings claim. */}
               <div className="text-center">
-                <div className="text-3xl font-bold">$200-300K+</div>
-                <div className="text-sm text-pink-100">Annual Revenue Potential</div>
+                <div className="text-3xl font-bold">{HEADLINE_GROSS}</div>
+                <div className="text-sm text-pink-100">Modelled full-time gross</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold">6-12 mo</div>
-                <div className="text-sm text-pink-100">Time to Full Caseload</div>
+                <div className="text-sm text-pink-100">Typical ramp to a full caseload</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold">$5-20K</div>
-                <div className="text-sm text-pink-100">Lean Startup Cost</div>
+                <div className="text-3xl font-bold">{FULL_PRACTICE_STATE_COUNT} + DC</div>
+                <div className="text-sm text-pink-100">Full Practice Authority states</div>
               </div>
             </div>
           </div>
@@ -268,53 +393,51 @@ export default function PrivatePracticeGuidePage() {
             <div className="rounded-xl p-6 md:p-8" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <div className="flex items-center gap-3 mb-4">
                 <DollarSign className="h-6 w-6" style={{ color: 'var(--color-primary)' }} />
-                <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Income Projections</h2>
+                <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Revenue Model</h2>
               </div>
+
+              {/* Assumptions render ABOVE the table because every number in
+                  it is computed from them (P2 #22). */}
+              <div className="rounded-lg p-4 mb-5" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>What this model assumes</h3>
+                <ul className="text-xs space-y-1" style={{ color: 'var(--text-secondary)' }}>
+                  <li><strong>Gross collections = visits per week × {PRACTICE_MODEL.workingWeeksPerYear} working weeks × amount collected per visit.</strong> {PRACTICE_MODEL.workingWeeksPerYear} weeks leaves roughly six for holidays, vacation, and admin days.</li>
+                  <li>Collections of <strong>${PRACTICE_MODEL.insuranceCollectedPerVisit} per visit</strong> on an insurance panel and <strong>${PRACTICE_MODEL.cashCollectedPerVisit} per visit</strong> cash-pay — planning inputs, not contracted rates. Replace them with your own payer contracts.</li>
+                  <li>Net is collections less overhead. Each net band pairs the <em>lowest</em> volume with the <em>highest</em> overhead and vice versa, so it brackets outcomes rather than stacking best cases.</li>
+                  <li>Net is <strong>before</strong> self-employment tax and income tax. A practice owner is a contractor for tax purposes — see the <Link href="/resources/1099-vs-w2" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</Link> for what comes off next.</li>
+                  <li>This is a model you can re-run with your own inputs, not a survey of what practices earn.</li>
+                </ul>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
+                  <caption className="sr-only">
+                    Modelled gross collections and net income by practice scenario, computed from the stated visit-volume, per-visit collection, and overhead assumptions.
+                  </caption>
                   <thead>
                     <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
-                      <th className="text-left py-3 pr-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Scenario</th>
-                      <th className="text-right py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Patients/Week</th>
-                      <th className="text-right py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Gross Revenue</th>
-                      <th className="text-right py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Overhead</th>
-                      <th className="text-right py-3 pl-4 font-semibold" style={{ color: 'var(--color-primary)' }}>Net Income</th>
+                      <th scope="col" className="text-left py-3 pr-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Scenario</th>
+                      <th scope="col" className="text-right py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Visits/week</th>
+                      <th scope="col" className="text-right py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Gross collections</th>
+                      <th scope="col" className="text-right py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Overhead</th>
+                      <th scope="col" className="text-right py-3 pl-4 font-semibold" style={{ color: 'var(--color-primary)' }}>Net before tax</th>
                     </tr>
                   </thead>
                   <tbody style={{ color: 'var(--text-secondary)' }}>
-                    <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                      <td className="py-3 pr-4 font-medium" style={{ color: 'var(--text-primary)' }}>Part-Time (Telehealth)</td>
-                      <td className="py-3 px-4 text-right">12-15</td>
-                      <td className="py-3 px-4 text-right">$100,000-$130,000</td>
-                      <td className="py-3 px-4 text-right">15-20%</td>
-                      <td className="py-3 pl-4 text-right font-semibold" style={{ color: 'var(--color-primary)' }}>$80,000-$110,000</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                      <td className="py-3 pr-4 font-medium" style={{ color: 'var(--text-primary)' }}>Full-Time (Telehealth)</td>
-                      <td className="py-3 px-4 text-right">22-28</td>
-                      <td className="py-3 px-4 text-right">$200,000-$280,000</td>
-                      <td className="py-3 px-4 text-right">15-25%</td>
-                      <td className="py-3 pl-4 text-right font-semibold" style={{ color: 'var(--color-primary)' }}>$150,000-$240,000</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                      <td className="py-3 pr-4 font-medium" style={{ color: 'var(--text-primary)' }}>Full-Time (Office)</td>
-                      <td className="py-3 px-4 text-right">22-28</td>
-                      <td className="py-3 px-4 text-right">$220,000-$300,000</td>
-                      <td className="py-3 px-4 text-right">30-40%</td>
-                      <td className="py-3 pl-4 text-right font-semibold" style={{ color: 'var(--color-primary)' }}>$130,000-$210,000</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3 pr-4 font-medium" style={{ color: 'var(--text-primary)' }}>Cash-Pay Premium</td>
-                      <td className="py-3 px-4 text-right">18-25</td>
-                      <td className="py-3 px-4 text-right">$250,000-$400,000</td>
-                      <td className="py-3 px-4 text-right">15-25%</td>
-                      <td className="py-3 pl-4 text-right font-semibold" style={{ color: 'var(--color-primary)' }}>$190,000-$340,000</td>
-                    </tr>
+                    {SCENARIO_ROWS.map((row, idx) => (
+                      <tr key={row.label} style={idx < SCENARIO_ROWS.length - 1 ? { borderBottom: '1px solid var(--border-color)' } : undefined}>
+                        <th scope="row" className="py-3 pr-4 font-medium text-left" style={{ color: 'var(--text-primary)' }}>{row.label}</th>
+                        <td className="py-3 px-4 text-right">{row.visits}</td>
+                        <td className="py-3 px-4 text-right">{row.gross}</td>
+                        <td className="py-3 px-4 text-right">{row.overhead}</td>
+                        <td className="py-3 pl-4 text-right font-semibold" style={{ color: 'var(--color-primary)' }}>{row.net}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
               <p className="text-xs mt-4" style={{ color: 'var(--text-tertiary)' }}>
-                *Income projections based on industry averages. Actual results vary by location, payer mix, and specialty. See our <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>salary guide</Link> for regional data.
+                For comparison, the national median annual wage for employed {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}) — with malpractice, health coverage, and payroll taxes largely handled by an employer. Our <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>salary guide</Link> computes state-level averages from live postings.
               </p>
             </div>
           </div>
@@ -332,18 +455,23 @@ export default function PrivatePracticeGuidePage() {
             </div>
           </div>
 
-          {/* Related Resources */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {/* Related Resources — P2 #22: full cross-linking across the
+              /resources guide cluster plus the salary guide. */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <Link href="/resources/fpa-guide" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>🛡️ Full Practice Authority</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Check if your state allows independent practice.</p>
+              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Full Practice Authority guide</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Whether your state allows an independent practice at all — check before anything else.</p>
             </Link>
             <Link href="/resources/1099-vs-w2" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>📊 1099 vs W2 Guide</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Compare compensation models for your practice.</p>
+              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Self-employment tax, deductions, and retirement capacity — what comes off your net.</p>
+            </Link>
+            <Link href="/salary-guide" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>{brand.niche.short} salary guide</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>What employed roles pay in your state — the opportunity cost of going independent.</p>
             </Link>
             <Link href="/jobs/private-practice" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>💼 Private Practice Jobs</h3>
+              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Private practice jobs</h3>
               <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Browse private practice {brand.niche.short} positions.</p>
             </Link>
           </div>

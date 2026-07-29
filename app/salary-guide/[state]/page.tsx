@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import StateImage, { hasStateDiorama } from '@/components/StateImage';
 import {
     DollarSign,
     MapPin,
@@ -273,8 +274,45 @@ export default async function StateSalaryPage({ params }: PageProps) {
             : []),
     ];
 
+    // Only 51 jurisdictions route here and all 51 ship a diorama, but keep
+    // the guard so a future slug without artwork degrades to the original
+    // centred text hero instead of an empty framed box.
+    const showHeroDiorama = hasStateDiorama(stateSlug);
+
     return (
         <div style={{ backgroundColor: 'var(--bg-primary)', minHeight: '100vh' }}>
+            {/* Hero layout. Deliberately a static block: a template
+                interpolation inside a style block deadlocks the route
+                compile under Turbopack, so every value here is literal. */}
+            <style>{`
+                .sg-hero-inner { max-width: 800px; margin: 0 auto; text-align: center; }
+                .sg-hero-inner p { margin-left: auto; margin-right: auto; }
+                .sg-hero-inner--art { max-width: 980px; }
+                .sg-hero-art {
+                    position: relative;
+                    width: 200px;
+                    aspect-ratio: 1 / 1;
+                    margin: 32px auto 0;
+                    border-radius: 28px;
+                    overflow: hidden;
+                    flex: 0 0 auto;
+                    box-shadow: inset 4px 4px 10px rgba(255,255,255,0.3),
+                                inset -3px -3px 8px rgba(0,0,0,0.08),
+                                0 10px 30px rgba(0,0,0,0.12);
+                }
+                .sg-hero-art-img { object-fit: cover; }
+                @media (min-width: 860px) {
+                    .sg-hero-inner--art {
+                        display: flex;
+                        align-items: center;
+                        gap: 48px;
+                        text-align: left;
+                    }
+                    .sg-hero-inner--art .sg-hero-copy { flex: 1 1 auto; min-width: 0; }
+                    .sg-hero-inner--art p { margin-left: 0; margin-right: 0; }
+                    .sg-hero-inner--art .sg-hero-art { width: 260px; margin: 0; }
+                }
+            `}</style>
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', url: brand.baseUrl },
@@ -328,53 +366,72 @@ export default async function StateSalaryPage({ params }: PageProps) {
                 }) }}
             />
 
-            {/* Hero */}
-            <section style={{ padding: '72px 16px 48px', textAlign: 'center' }}>
-                <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                    <div
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            backgroundColor: 'rgba(244,114,182,0.1)',
-                            border: '1px solid rgba(244,114,182,0.2)',
-                            borderRadius: '999px',
-                            padding: '6px 16px',
-                            marginBottom: '20px',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color: '#F472B6',
-                        }}
-                    >
-                        <MapPin size={14} /> {stateCode} Salary Data · Updated Daily
+            {/* Hero — P2 #1: pairs the copy with this state's own diorama
+                (public/images/states/<slug>.png). Every slug this route can
+                reach ships one; a jurisdiction without artwork falls back to
+                the original centred text-only hero rather than a placeholder
+                or a dead URL. The art sits in a fixed aspect-ratio box so its
+                space is reserved before it decodes — no layout shift. */}
+            <section style={{ padding: '72px 16px 48px' }}>
+                <div className={showHeroDiorama ? 'sg-hero-inner sg-hero-inner--art' : 'sg-hero-inner'}>
+                    <div className="sg-hero-copy">
+                        <div
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                backgroundColor: 'rgba(244,114,182,0.1)',
+                                border: '1px solid rgba(244,114,182,0.2)',
+                                borderRadius: '999px',
+                                padding: '6px 16px',
+                                marginBottom: '20px',
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                color: '#F472B6',
+                            }}
+                        >
+                            <MapPin size={14} /> {stateCode} Salary Data · Updated Daily
+                        </div>
+
+                        <h1
+                            style={{
+                                fontSize: 'clamp(1.75rem, 4.5vw, 2.75rem)',
+                                fontWeight: 800,
+                                color: 'var(--text-primary)',
+                                lineHeight: 1.15,
+                                marginBottom: '14px',
+                            }}
+                        >
+                            {brand.niche.short} Salary in {stateName}
+                        </h1>
+
+                        <p
+                            id="state-salary-summary"
+                            data-speakable="true"
+                            style={{
+                                fontSize: '16px',
+                                color: 'var(--text-secondary)',
+                                maxWidth: '600px',
+                                lineHeight: 1.6,
+                            }}
+                        >
+                            Average {brand.niche.descriptor} compensation in {stateName}, broken down by
+                            practice setting, top employers, and cities.
+                        </p>
                     </div>
 
-                    <h1
-                        style={{
-                            fontSize: 'clamp(1.75rem, 4.5vw, 2.75rem)',
-                            fontWeight: 800,
-                            color: 'var(--text-primary)',
-                            lineHeight: 1.15,
-                            marginBottom: '14px',
-                        }}
-                    >
-                        {brand.niche.short} Salary in {stateName}
-                    </h1>
-
-                    <p
-                        id="state-salary-summary"
-                        data-speakable="true"
-                        style={{
-                            fontSize: '16px',
-                            color: 'var(--text-secondary)',
-                            maxWidth: '600px',
-                            margin: '0 auto',
-                            lineHeight: 1.6,
-                        }}
-                    >
-                        Average {brand.niche.descriptor} compensation in {stateName}, broken down by
-                        practice setting, top employers, and cities.
-                    </p>
+                    {showHeroDiorama && (
+                        <div className="sg-hero-art">
+                            <StateImage
+                                slug={stateSlug}
+                                alt={`Illustrated diorama representing ${stateName}`}
+                                fill
+                                className="sg-hero-art-img"
+                                sizes="(max-width: 859px) 200px, 260px"
+                                priority
+                            />
+                        </div>
+                    )}
                 </div>
             </section>
 

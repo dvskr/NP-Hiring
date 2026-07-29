@@ -1,25 +1,140 @@
-'use client';
-
 import Image from 'next/image';
-import { useState } from 'react';
 
 /**
  * Renders a state diorama from the local `public/images/states/{slug}.png`
- * set (50 states, organic rounded bases on the #F8B4A6 rose background —
- * generated 2026-07, no Supabase/CDN dependency).
+ * set — 52 shipped jurisdictions (50 states + District of Columbia +
+ * Puerto Rico), 1024x1024, no CDN/Supabase dependency.
  *
- * Fallback: slugs without a local asset (notably `district-of-columbia`,
- * which is in the sitemap/licensure lists but has no diorama) degrade to a
- * plain rose tile instead of a broken-image icon or a wrong state's art.
+ * ASSET NOTE: the shipped files carry a `.png` extension but the bytes are
+ * baseline JPEG (opaque, 3 channels, ~630 KB each / 32 MB for the set).
+ * next/image re-encodes them to AVIF/WebP at the requested width, so what
+ * users download is small — the 32 MB only costs repo + deploy bundle
+ * weight. Re-exporting the sources to real WebP is tracked separately
+ * (measured: 32.03 MB -> 4.56 MB at q82/1024, an 85.8% cut); do NOT
+ * convert them here.
  *
- * Used in: app/jobs/locations/page.tsx, app/resources/page.tsx,
+ * SERVER COMPONENT (deliberate). This used to be a `'use client'`
+ * component whose only client behaviour was an `onError` fallback for
+ * missing assets. That guard is now a build-time one instead: every slug
+ * the site can render is in STATE_DIORAMA_BG below, and
+ * tests/regressions/p2-state-imagery-diorama-wiring.test.ts pins that map
+ * against the actual directory listing. Resolving the fallback on the
+ * server is strictly better — no broken-image flash while the failed
+ * request round-trips, no JS shipped, and server pages
+ * (app/jobs/state/[state], app/salary-guide/[state], /jobs/locations,
+ * /resources) can read the slug/colour helpers directly instead of
+ * crossing a client boundary.
+ *
+ * Used in: app/jobs/state/[state]/page.tsx, app/salary-guide/[state]/page.tsx,
+ * app/jobs/locations/page.tsx, app/resources/page.tsx,
  * components/TopStatesList.tsx, components/LicensureChecker.tsx.
  */
 
 const STATE_IMAGE_BASE = '/images/states';
-/* Mid-tone measured from the shipped artwork's corners (the generator did
-   not hit the requested #F8B4A6; actual backgrounds range #D38E8A–#EBB2A9). */
-const TILE_FALLBACK_BG = '#DC9E97';
+
+/** Intrinsic pixel dimensions of every shipped diorama (they are square). */
+export const STATE_DIORAMA_INTRINSIC = 1024;
+
+/**
+ * slug → the artwork's own baked backdrop colour, sampled as the mean of
+ * the four 48x48 corner patches of the shipped file. The generator did not
+ * hit a single requested rose, so backdrops vary per state (#CF837D to
+ * #EBB0A8). Surfaces that letterbox the square art — the `object-fit:
+ * contain` hero panel in components/CategoryHero.tsx — paint the panel
+ * this colour so the art blends instead of sitting in coloured bars.
+ *
+ * SAMPLING CONTRACT (this map was once wrong for exactly this reason):
+ * sharp's `.stats()` re-reads the INPUT and ignores queued pipeline ops, so
+ * `sharp(file).extract(patch).stats()` silently returns the whole image's
+ * mean — every corner identical, and ~29 RGB units darker than the real
+ * backdrop here (worst: arkansas, 60). The extract must be materialised
+ * first:
+ *   const buf = await sharp(file).extract({left, top, width: 48, height: 48}).toBuffer();
+ *   const { channels } = await sharp(buf).stats();
+ *
+ * Regenerate after any artwork swap using that two-step form (see
+ * tests/regressions/p2-state-imagery-diorama-wiring.test.ts, which
+ * re-samples every file the same way and fails if this map drifts).
+ */
+const STATE_DIORAMA_BG: Readonly<Record<string, string>> = {
+    'alabama': '#E3A39A',
+    'alaska': '#DD9F9B',
+    'arizona': '#D39189',
+    'arkansas': '#E4A29A',
+    'california': '#E0A4A1',
+    'colorado': '#E0A19A',
+    'connecticut': '#E39D96',
+    'delaware': '#E1A69E',
+    'district-of-columbia': '#E0ABA1',
+    'florida': '#DE9B95',
+    'georgia': '#CF837D',
+    'hawaii': '#E9ACA4',
+    'idaho': '#D38C83',
+    'illinois': '#D68E89',
+    'indiana': '#E2A19C',
+    'iowa': '#DD8F8A',
+    'kansas': '#DB9D97',
+    'kentucky': '#DA9A93',
+    'louisiana': '#E5A49B',
+    'maine': '#E4A29B',
+    'maryland': '#E1A19A',
+    'massachusetts': '#DE9B95',
+    'michigan': '#E5A9A1',
+    'minnesota': '#D9948F',
+    'mississippi': '#D78E87',
+    'missouri': '#D5938D',
+    'montana': '#DE9E94',
+    'nebraska': '#DC918B',
+    'nevada': '#E1A299',
+    'new-hampshire': '#EAA9A5',
+    'new-jersey': '#D88A86',
+    'new-mexico': '#DC9F99',
+    'new-york': '#DB9990',
+    'north-carolina': '#D48C85',
+    'north-dakota': '#E7AEA5',
+    'ohio': '#E6A9A1',
+    'oklahoma': '#D99D94',
+    'oregon': '#DC9A94',
+    'pennsylvania': '#E5AAA3',
+    'puerto-rico': '#D8A292',
+    'rhode-island': '#D18B86',
+    'south-carolina': '#D69391',
+    'south-dakota': '#DD948E',
+    'tennessee': '#E7A79E',
+    'texas': '#D6988D',
+    'utah': '#DA9D95',
+    'vermont': '#DA9B90',
+    'virginia': '#EBB0A8',
+    'washington': '#D48F88',
+    'west-virginia': '#D49893',
+    'wisconsin': '#E6ABA3',
+    'wyoming': '#DB9289',
+};
+
+/** Mean of the 52 sampled backdrops — used when a slug has no artwork. */
+const TILE_FALLBACK_BG = '#DD9C95';
+
+/** Every jurisdiction slug that has a diorama on disk. */
+export const STATE_DIORAMA_SLUGS: readonly string[] = Object.keys(STATE_DIORAMA_BG);
+
+/** True when `public/images/states/{slug}.png` ships with the build. */
+export function hasStateDiorama(slug: string): boolean {
+    return Object.prototype.hasOwnProperty.call(STATE_DIORAMA_BG, slug);
+}
+
+/** Public path to a state's diorama, or null when none ships for that slug. */
+export function stateDioramaSrc(slug: string): string | null {
+    return hasStateDiorama(slug) ? `${STATE_IMAGE_BASE}/${slug}.png` : null;
+}
+
+/**
+ * The artwork's baked backdrop colour for `slug`, or the set-wide mean when
+ * no artwork ships — so a caller painting a panel behind the image never
+ * has to branch.
+ */
+export function stateDioramaBg(slug: string): string {
+    return STATE_DIORAMA_BG[slug] ?? TILE_FALLBACK_BG;
+}
 
 type FillProps = {
     fill: true;
@@ -44,19 +159,16 @@ type StateImageProps = (FillProps | FixedProps) & {
 
 export default function StateImage(props: StateImageProps) {
     const { slug, alt, className, style, sizes, loading, priority } = props;
-    const [errored, setErrored] = useState(false);
+    const src = stateDioramaSrc(slug);
 
-    if (errored) {
-        // Plain rose tile — same hue as the diorama backgrounds, so a
-        // missing asset reads as an intentional solid card, not a hole.
+    if (!src) {
+        // Plain tile in the set's mean hue — a slug with no artwork reads as
+        // an intentional solid card, not a hole or a wrong state's art.
         if (props.fill) {
             return <div aria-hidden="true" className={className} style={{ position: 'absolute', inset: 0, background: TILE_FALLBACK_BG, ...style }} />;
         }
         return <div aria-hidden="true" className={className} style={{ width: props.width, height: props.height, background: TILE_FALLBACK_BG, ...style }} />;
     }
-
-    const src = `${STATE_IMAGE_BASE}/${slug}.png`;
-    const handleError = () => setErrored(true);
 
     if (props.fill) {
         return (
@@ -69,7 +181,6 @@ export default function StateImage(props: StateImageProps) {
                 sizes={sizes}
                 loading={loading}
                 priority={priority}
-                onError={handleError}
             />
         );
     }
@@ -85,7 +196,6 @@ export default function StateImage(props: StateImageProps) {
             sizes={sizes}
             loading={loading}
             priority={priority}
-            onError={handleError}
         />
     );
 }

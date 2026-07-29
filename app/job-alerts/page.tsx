@@ -6,8 +6,48 @@ import Link from 'next/link';
 import { Bell, MapPin, Briefcase, Zap, CheckCircle, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import CategoryHero from '@/components/CategoryHero';
 import { brand } from '@/config/brand';
+import { SALARY_FILTER_BUCKETS } from '@/config/niche/stats';
+import { ALERT_KEYWORD_SUGGESTIONS, ALERT_KEYWORD_PLACEHOLDER } from '@/config/niche/alert-keywords';
 
 const STORAGE_BASE = brand.assets.storageBase;
+
+/**
+ * P2 #3 — query params this page accepts as prefill, so any surface that
+ * already knows the searcher's intent (pSEO category-city pages, category
+ * hubs, the /jobs filter bar) can hand it straight to the alert form.
+ *
+ *   ?location=  US state name or "Remote"   → JobAlert.location
+ *   ?mode=      Remote | Hybrid | In-Person → JobAlert.mode
+ *   ?jobType=   Full-Time | ... | Per Diem  → JobAlert.jobType
+ *   ?keyword= / ?specialty= / ?q=           → JobAlert.keyword
+ *   ?minSalary= / ?salaryMin= (annual USD)  → JobAlert.minSalary
+ *
+ * `specialty` and `q` are aliases so a category page (which thinks in
+ * specialties) and the jobs search bar (which uses `q`) can both link here
+ * without translating. `salaryMin` mirrors the /jobs filter param name.
+ */
+const KEYWORD_PARAM_ALIASES = ['keyword', 'specialty', 'q'] as const;
+const MIN_SALARY_PARAM_ALIASES = ['minSalary', 'salaryMin'] as const;
+
+/** Minimal shape so both URLSearchParams and Next's ReadonlyURLSearchParams fit. */
+interface ParamReader {
+  get(name: string): string | null;
+}
+
+function readParam(params: ParamReader, aliases: readonly string[]): string {
+  for (const alias of aliases) {
+    const value = params.get(alias);
+    if (value) return value;
+  }
+  return '';
+}
+
+/** Only accept a prefilled salary that matches an offered bucket. */
+function readMinSalaryParam(params: ParamReader): string {
+  const raw = readParam(params, MIN_SALARY_PARAM_ALIASES);
+  if (!raw) return '';
+  return SALARY_FILTER_BUCKETS.some((b) => String(b.value) === raw) ? raw : '';
+}
 
 // US States array for dropdown
 const US_STATES = [
@@ -74,6 +114,8 @@ function JobAlertsContent() {
   const [location, setLocation] = useState(searchParams.get('location') || '');
   const [mode, setMode] = useState(searchParams.get('mode') || '');
   const [jobType, setJobType] = useState(searchParams.get('jobType') || '');
+  const [keyword, setKeyword] = useState(() => readParam(searchParams, KEYWORD_PARAM_ALIASES));
+  const [minSalary, setMinSalary] = useState(() => readMinSalaryParam(searchParams));
   const [frequency, setFrequency] = useState('daily');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | ''; text: string }>({ type: '', text: '' });
@@ -92,6 +134,8 @@ function JobAlertsContent() {
     setLocation(searchParams.get('location') || '');
     setMode(searchParams.get('mode') || '');
     setJobType(searchParams.get('jobType') || '');
+    setKeyword(readParam(searchParams, KEYWORD_PARAM_ALIASES));
+    setMinSalary(readMinSalaryParam(searchParams));
   }, [searchParams]);
 
   // Email validation
@@ -124,9 +168,12 @@ function JobAlertsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
+          keyword: keyword.trim() || undefined,
           location: location || undefined,
           mode: mode || undefined,
           jobType: jobType || undefined,
+          // Sent as a number — the API rejects non-numeric minSalary.
+          minSalary: minSalary ? Number(minSalary) : undefined,
           frequency,
         }),
       });
@@ -137,9 +184,11 @@ function JobAlertsContent() {
         setMessage({ type: 'success', text: 'Job alert created! Check your email to confirm.' });
         // Reset form
         setEmail('');
+        setKeyword('');
         setLocation('');
         setMode('');
         setJobType('');
+        setMinSalary('');
         setFrequency('daily');
       } else {
         setMessage({ type: 'error', text: data.error || 'Something went wrong. Please try again.' });
@@ -151,12 +200,20 @@ function JobAlertsContent() {
     }
   };
 
+  // A prefilled location that isn't one of the built-in options (a city, a
+  // "City, ST" pair) still needs to be selectable — see the optgroup below.
+  const isCustomLocation =
+    location !== '' && location !== 'Remote' && !US_STATES.includes(location);
+
   // Build criteria summary for display
   const buildCriteriaSummary = (): string => {
     const parts: string[] = [];
+    if (keyword.trim()) parts.push(`"${keyword.trim()}"`);
     if (mode) parts.push(mode);
     if (jobType) parts.push(jobType);
     if (location) parts.push(`in ${location}`);
+    const salaryBucket = SALARY_FILTER_BUCKETS.find((b) => String(b.value) === minSalary);
+    if (salaryBucket) parts.push(salaryBucket.label);
     return parts.length > 0 ? parts.join(' · ') : `All ${brand.niche.short} jobs`;
   };
 
@@ -234,35 +291,86 @@ function JobAlertsContent() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                   {/* Email */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '6px' }}>
+                    <label htmlFor="alert-email" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '6px' }}>
                       Email Address <span style={{ color: '#EF4444' }}>*</span>
                     </label>
                     <input
+                      id="alert-email"
                       type="email"
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(''); }}
                       placeholder="you@example.com"
+                      aria-invalid={emailError ? true : undefined}
+                      aria-describedby={emailError ? 'alert-email-error' : undefined}
                       style={{
                         ...clayInput,
                         borderColor: emailError ? '#EF4444' : '#D5E8E0',
                       }}
                     />
                     {emailError && (
-                      <p style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>{emailError}</p>
+                      <p id="alert-email-error" role="alert" style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>{emailError}</p>
                     )}
+                  </div>
+
+                  {/* Specialty / keyword — matched by the digest cron as a
+                      literal case-insensitive substring of the job title or
+                      employer name (lib/job-alerts-service.ts), so the
+                      suggestions have to be strings that actually occur in
+                      titles. They come from config/niche/alert-keywords.ts,
+                      NOT from
+                      SPECIALTY_PRESETS: that list is a structured profile
+                      vocabulary whose entries carry a parenthetical credential
+                      ("Family Practice (FNP)") that no job title contains
+                      verbatim — picking one produced an alert that matched
+                      nothing on every run and never sent. Free text is still
+                      accepted; the datalist only suggests. */}
+                  <div>
+                    <label htmlFor="alert-keyword" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '6px' }}>
+                      Specialty or keyword <span style={{ fontWeight: 400, color: '#B0C4BC' }}>(optional)</span>
+                    </label>
+                    <input
+                      id="alert-keyword"
+                      type="text"
+                      list="alert-specialty-options"
+                      value={keyword}
+                      onChange={(e) => setKeyword(e.target.value)}
+                      maxLength={100}
+                      placeholder={ALERT_KEYWORD_PLACEHOLDER}
+                      style={clayInput}
+                    />
+                    <datalist id="alert-specialty-options">
+                      {ALERT_KEYWORD_SUGGESTIONS.map((suggestion) => (
+                        <option key={suggestion} value={suggestion} />
+                      ))}
+                    </datalist>
+                    <p style={{ fontSize: '11px', color: '#B0C4BC', marginTop: '4px' }}>
+                      Matched against the job title and employer name.
+                    </p>
                   </div>
 
                   {/* Location */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '6px' }}>
+                    <label htmlFor="alert-location" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '6px' }}>
                       Location <span style={{ fontWeight: 400, color: '#B0C4BC' }}>(optional)</span>
                     </label>
                     <select
+                      id="alert-location"
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                       style={clayInput}
                     >
                       <option value="">Any Location</option>
+                      {/* City-level pages link here with `?location=Sacramento, CA`,
+                          which the alert matcher supports (it falls back to a
+                          city/location contains-match) but this state dropdown
+                          can't express. Without its own option the controlled
+                          select rendered blank and the visitor silently lost the
+                          location they arrived with. */}
+                      {isCustomLocation && (
+                        <optgroup label="From the page you came from">
+                          <option value={location}>{location}</option>
+                        </optgroup>
+                      )}
                       <optgroup label="Work Arrangement">
                         <option value="Remote">Remote Only</option>
                       </optgroup>
@@ -276,10 +384,11 @@ function JobAlertsContent() {
 
                   {/* Work Mode */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '6px' }}>
+                    <label htmlFor="alert-mode" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '6px' }}>
                       Work Mode <span style={{ fontWeight: 400, color: '#B0C4BC' }}>(optional)</span>
                     </label>
                     <select
+                      id="alert-mode"
                       value={mode}
                       onChange={(e) => setMode(e.target.value)}
                       style={clayInput}
@@ -293,10 +402,11 @@ function JobAlertsContent() {
 
                   {/* Job Type */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '6px' }}>
+                    <label htmlFor="alert-job-type" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '6px' }}>
                       Job Type <span style={{ fontWeight: 400, color: '#B0C4BC' }}>(optional)</span>
                     </label>
                     <select
+                      id="alert-job-type"
                       value={jobType}
                       onChange={(e) => setJobType(e.target.value)}
                       style={clayInput}
@@ -308,17 +418,77 @@ function JobAlertsContent() {
                     </select>
                   </div>
 
+                  {/* Minimum salary — the BUCKETS are shared with the /jobs
+                      salary filter (config/niche/stats.ts), but the two
+                      MATCHERS are different rules and this page must not
+                      claim otherwise:
+
+                        /jobs   lib/filters.ts, `filters.salaryMin` clause:
+                                normalizedMinSalary >= X OR normalizedMaxSalary >= X
+                                → salary-less jobs EXCLUDED,
+                                  floor-only jobs INCLUDED.
+
+                        digest  lib/job-alerts-service.ts, `alert.minSalary`:
+                                normalizedMaxSalary >= X
+                                OR (normalizedMinSalary IS NULL AND normalizedMaxSalary IS NULL)
+                                → salary-less jobs INCLUDED,
+                                  floor-only jobs EXCLUDED.
+
+                      Because buildFilteredJobsUrl() points the digest's
+                      "View All Matching Jobs" button at /jobs?salaryMin=,
+                      the email and the page it links to can return different
+                      sets. Aligning them means changing the digest matcher,
+                      which lives outside this package; until that happens the
+                      note below states the alert's REAL rule rather than
+                      promising parity.
+
+                      NB: neither rule is uniformly "stricter" — they diverge
+                      in BOTH directions. The board drops salary-less jobs the
+                      digest keeps; the digest drops floor-only jobs the board
+                      keeps. Floor-only is not an edge case: job-normalizer.ts
+                      returns {min, max: null} for any single-figure salary
+                      text ("$130,000/yr" hits the ANNUAL branch with no
+                      second capture), so those postings are invisible to a
+                      $100k+ alert. Do not simplify this copy back to
+                      "the board is stricter" — that is backwards here. */}
+                  <div>
+                    <label htmlFor="alert-min-salary" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '6px' }}>
+                      Minimum Salary <span style={{ fontWeight: 400, color: '#B0C4BC' }}>(optional)</span>
+                    </label>
+                    <select
+                      id="alert-min-salary"
+                      value={minSalary}
+                      onChange={(e) => setMinSalary(e.target.value)}
+                      aria-describedby="alert-min-salary-note"
+                      style={clayInput}
+                    >
+                      <option value="">Any Salary</option>
+                      {SALARY_FILTER_BUCKETS.map((bucket) => (
+                        <option key={bucket.value} value={String(bucket.value)}>{bucket.label}</option>
+                      ))}
+                    </select>
+                    <p id="alert-min-salary-note" style={{ fontSize: '11px', color: '#B0C4BC', marginTop: '4px' }}>
+                      Your alert matches a job when the top of its posted range reaches
+                      this figure, and it keeps jobs that don&apos;t publish a salary at
+                      all — filtering those out would hide most postings. Jobs
+                      advertising a single figure rather than a range (&ldquo;$130,000/yr&rdquo;)
+                      are missed even when that figure clears your minimum, and the jobs
+                      board does show those — so the two lists won&apos;t be identical.
+                    </p>
+                  </div>
+
                   {/* Frequency */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '8px' }}>
+                    <span id="alert-frequency-label" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '8px' }}>
                       How often would you like to receive alerts?
-                    </label>
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                    </span>
+                    <div role="group" aria-labelledby="alert-frequency-label" style={{ display: 'flex', gap: '10px' }}>
                       {['daily', 'weekly'].map((f) => (
                         <button
                           key={f}
                           type="button"
                           onClick={() => setFrequency(f)}
+                          aria-pressed={frequency === f}
                           style={{
                             padding: '8px 18px', borderRadius: '12px',
                             fontSize: '13px', fontWeight: 600,

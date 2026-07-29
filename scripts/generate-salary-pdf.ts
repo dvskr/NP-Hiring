@@ -66,6 +66,17 @@ const OUTPUT_PATH = path.join(
 // ── Cited figures (all from lib/stats-sources.ts — never hardcoded) ─────
 const NATIONAL_SALARY = STAT_SOURCES.averageSalary;
 const NP_GROWTH = STAT_SOURCES.blsGrowth2032;
+// P2 #22 follow-up: the Full Practice Authority card in buildHtml() used to
+// assert a "+12-15%" FPA salary premium in its prose and again as a bullet.
+// It was cited to nothing here or in lib/stats-sources.ts, the repo's own
+// p0 suite already lists that figure as an unsourced invention, and it had
+// already been deleted from /resources/fpa-guide — so the same claim was
+// still shipping in the downloadable PDF. It is replaced with what practice
+// authority actually controls. This card mirrors app/salary-guide/page.tsx;
+// edit both together, and note that a NOTE LIKE THIS ONE MUST STAY A JS
+// COMMENT — an HTML comment inside the template literal is emitted into the
+// generated document. tests/regressions/p1-salary-pdf-deliverable.test.ts
+// enforces the hub/PDF parity.
 const FPA_STATES = STAT_SOURCES.fullPracticeStates;
 const SHORTAGE_POP = STAT_SOURCES.hrsaShortagePopulation;
 
@@ -487,22 +498,22 @@ function buildHtml(live: LiveInventory | null): string {
     <div class="card">
       <h3>Full Practice Authority</h3>
       <p><strong>${FPA_STATES.formatted}</strong> grant FPA (${escapeHtml(FPA_STATES.source)}).
-        ${brand.niche.short}s in FPA states earn <strong>12-15% more</strong> on average.</p>
+        Practice authority is a legal classification, not a pay scale — it decides which ways of earning are open to you in that state.</p>
       <div class="fpa-grid">
         <div class="fpa-panel yes">
           <h4>&#10003; Full Practice Authority</h4>
           <ul>
-            <li>+12-15% salary premium</li>
-            <li>Can own practice independently</li>
+            <li>Own and bill under your own practice</li>
+            <li>Independent 1099 and telehealth work</li>
             <li>Full clinical independence</li>
           </ul>
         </div>
         <div class="fpa-panel no">
           <h4>Restricted / Reduced</h4>
           <ul>
-            <li>Baseline salary</li>
-            <li>Requires physician collaboration</li>
-            <li>Physician oversight required</li>
+            <li>Collaborating physician required first</li>
+            <li>That agreement is usually a paid one</li>
+            <li>Physician oversight where restricted</li>
           </ul>
         </div>
       </div>

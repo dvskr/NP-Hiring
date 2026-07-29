@@ -4,12 +4,19 @@
  * This file is DATA ONLY; the selection and rendering logic stays in
  * the consuming components.
  *
- * ── NP HIRING CONTENT STATUS (2026-07-29, P1 #2/#3) ──────────────────
+ * ── NP HIRING CONTENT STATUS (2026-07-29, P1 #2/#3 · P2 pillars) ─────
  * The launch content batch is authored:
  *   - Six evergreen NP posts live as .mdx in content/blog/ and are
  *     wired into every slug list below. They serve from the blog_posts
  *     table — run `npx tsx scripts/sync-blog-to-db.ts` against prod
  *     BEFORE deploying this file so the homepage links resolve.
+ *   - P2 added five application-funnel pillars as .mdx in the same
+ *     directory (np-interview-questions, np-resume-guide,
+ *     np-cover-letter-guide, np-salary-negotiation-guide, and the
+ *     code-generated np-ceu-requirements-by-state — see
+ *     lib/blog-ceu-guide.ts). They ship through the SAME sync script;
+ *     the same "sync before deploy" rule applies to the sidebar slots
+ *     below.
  *   - The 51-post licensure series is generated deterministically from
  *     lib/blog-license-guides.ts and served by lib/blog.ts as a code
  *     fallback (DB rows, synced via `npx tsx scripts/sync-blog-to-db.ts
@@ -48,9 +55,19 @@
  * components/RelatedBlogPosts.tsx.
  *
  * NP HIRING: populated with the six-post seed batch in content/blog/
- * (P1 #3). Slugs resolve through getPostBySlug(), so until the sync
- * script has run against prod a missing post silently drops out of the
- * sidebar rather than 404ing.
+ * (P1 #3), extended with the application-funnel pillars in P2
+ * (interview / resume / cover letter / negotiation / CE). Slugs resolve
+ * through getPostBySlug(), so until the sync script has run against prod
+ * a missing post silently drops out of the sidebar rather than 404ing.
+ *
+ * ORDER MATTERS MORE THAN LENGTH HERE. getRelevantBlogSlugs()
+ * (components/RelatedBlogPosts.tsx) caps the sidebar at 3 and always
+ * spends one slot on `always`, so on a plain job page only the FIRST TWO
+ * entries of generalFallback can render. They are ordered for a reader
+ * who is looking at a specific posting right now — interview prep and
+ * resume, not specialty comparison — with the rest of the list kept as
+ * the complete inventory the fork-preflight check and the P2 wiring test
+ * validate.
  */
 export const RELATED_BLOG_SLUGS: {
     /** Always included on every job page. */
@@ -64,8 +81,17 @@ export const RELATED_BLOG_SLUGS: {
 } = {
     always: ['np-salary-guide'],
     remoteOrTelehealth: ['remote-telehealth-np-jobs-guide'],
-    newGrad: ['new-grad-np-first-job'],
+    // New grads fill all three slots deterministically (salary → first
+    // job → resume): the resume guide is the highest-leverage asset for a
+    // candidate whose experience section is rotations, so it is wired
+    // here rather than left to the generalFallback tail.
+    newGrad: ['new-grad-np-first-job', 'np-resume-guide'],
     generalFallback: [
+        'np-interview-questions',
+        'np-resume-guide',
+        'np-salary-negotiation-guide',
+        'np-cover-letter-guide',
+        'np-ceu-requirements-by-state',
         'highest-paying-np-specialties',
         'fnp-vs-pmhnp-vs-agacnp',
         'np-1099-vs-w2',

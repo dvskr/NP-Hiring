@@ -640,11 +640,19 @@ export default function DashboardContent() {
         return 'years of experience'
     }
 
+    // P2 #23: 'applications sent' pointed at href: null — the one card that
+    // maps to a real destination (/my-applications) was the dead one, and
+    // /my-applications had no inbound link anywhere in the signed-in UI.
+    // 'profile views' stays unlinked: there is no per-view detail page to
+    // send anyone to, and a card that navigates nowhere useful is worse than
+    // one that plainly doesn't navigate.
     const statCards = [
         { label: 'jobs saved', value: stats.savedJobs, icon: Bookmark, color: '#818CF8', href: '/saved', illustration: '/illustrations/clay-stat-saved.png' },
-        { label: 'applications sent', value: stats.applied, icon: Send, color: '#BE185D', href: null, illustration: '/illustrations/clay-stat-applied.png' },
+        { label: 'applications sent', value: stats.applied, icon: Send, color: '#BE185D', href: '/my-applications', illustration: '/illustrations/clay-stat-applied.png' },
         { label: 'profile views', value: stats.profileViews, icon: Eye, color: '#F59E0B', href: null, illustration: '/illustrations/clay-stat-views.png' },
-        { label: 'active alert', value: stats.activeAlerts, icon: Bell, color: '#E879A8', href: '/job-alerts/manage', illustration: '/illustrations/clay-stat-alerts.png' },
+        // Pluralize against the real count — "1 active alerts" / "3 active
+        // alert" both used to be reachable.
+        { label: `active alert${stats.activeAlerts === 1 ? '' : 's'}`, value: stats.activeAlerts, icon: Bell, color: '#E879A8', href: '/job-alerts/manage', illustration: '/illustrations/clay-stat-alerts.png' },
     ]
 
     return (
@@ -940,6 +948,9 @@ export default function DashboardContent() {
                         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Clock size={16} style={{ color: '#BE185D' }} /> Recent Applications
                         </span>
+                        {applications.length > 0 && (
+                            <Link href="/my-applications" style={viewAllLink}>View All <ArrowRight size={13} /></Link>
+                        )}
                     </div>
 
                     {applications.length === 0 ? (

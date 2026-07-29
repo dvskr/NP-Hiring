@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Clock, ChevronRight, AlertCircle, Trash2, Loader2, ArrowRight, FileCheck, MapPin, RefreshCw } from 'lucide-react';
+import { Clock, ChevronRight, AlertCircle, Trash2, Loader2, ArrowRight, Bookmark, MapPin, RefreshCw } from 'lucide-react';
 import { brand } from '@/config/brand';
+import ConfirmDialog, { type ConfirmConfig } from '@/components/ui/ConfirmDialog';
 
 interface Application {
     id: string;
@@ -82,6 +83,7 @@ export default function MyApplicationsPage() {
     const [errorKind, setErrorKind] = useState<'auth' | 'load' | null>(null);
     const [withdrawing, setWithdrawing] = useState<string | null>(null);
     const [withdrawError, setWithdrawError] = useState<string | null>(null);
+    const [confirm, setConfirm] = useState<ConfirmConfig | null>(null);
 
     const loadApplications = useCallback(async () => {
         setLoading(true);
@@ -112,7 +114,6 @@ export default function MyApplicationsPage() {
     }, [loadApplications]);
 
     const handleWithdraw = async (applicationId: string) => {
-        if (!confirm('Are you sure you want to withdraw this application? Your personal data will be removed.')) return;
         setWithdrawing(applicationId);
         setWithdrawError(null);
         try {
@@ -141,6 +142,34 @@ export default function MyApplicationsPage() {
         }
     };
 
+    /** Route the destructive confirm through the shared dialog (the repo
+     *  standard) instead of window.confirm — same guard, styled + accessible.
+     *
+     *  The description must describe what the system ACTUALLY does, because
+     *  this is the last screen before an irreversible action:
+     *    - The row is NOT hidden from the employer. DELETE
+     *      /api/applications/withdraw only sets status:'withdrawn'; GET
+     *      /api/employer/applicants builds its `where` from jobId (plus an
+     *      optional status filter) with no exclusion, and ApplicantsTab
+     *      renders a "Withdrawn" chip with a count — so the employer keeps
+     *      seeing the entry, with the applicant's name and profile on it.
+     *    - The scrub is partial. The endpoint nulls coverLetter, resumeUrl
+     *      and notes, but NOT coverLetterUrl — which ApplicantsTab still
+     *      renders as a live download link. Promising "your personal data is
+     *      removed" would be a consent-defeating overstatement. */
+    const requestWithdraw = (applicationId: string, jobTitle: string) => {
+        setConfirm({
+            title: 'Withdraw this application?',
+            description: `${jobTitle} — the employer still sees this application, marked “Withdrawn”, with your name on it. Your cover letter text and résumé are removed from it; a cover letter you uploaded as a file stays attached. This cannot be undone.`,
+            confirmLabel: 'Withdraw',
+            variant: 'danger',
+            onConfirm: () => {
+                setConfirm(null);
+                void handleWithdraw(applicationId);
+            },
+        });
+    };
+
     // Pipeline counts
     const pipelineCounts = PIPELINE_STEPS.reduce((acc, step) => {
         acc[step] = applications.filter(a => a.status === step).length;
@@ -160,9 +189,30 @@ export default function MyApplicationsPage() {
                     }}>
                         My Applications
                     </h1>
-                    <p style={{ fontSize: '14px', color: '#6B7F8A', margin: 0 }}>
-                        Track and manage your job applications
+                    <p style={{ fontSize: '14px', color: '#6B7F8A', margin: '0 0 12px' }}>
+                        Applications you submitted through {brand.name} — with the status the
+                        employer has set.
                     </p>
+                    {/* P2 #23: /saved carries an "Applied" tab listing jobs the
+                        visitor marked as applied themselves (including
+                        click-throughs to external sites). Two different things
+                        with near-identical names, so name the difference out
+                        loud and link across instead of leaving people to guess
+                        which list is which. */}
+                    <Link
+                        href="/saved"
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            fontSize: '12px', fontWeight: 600, color: '#6B7F8A',
+                            textDecoration: 'none',
+                            padding: '6px 12px', borderRadius: '10px',
+                            ...cardRecessed,
+                        }}
+                    >
+                        <Bookmark size={12} style={{ color: '#BE185D' }} />
+                        Jobs you saved or marked applied yourself live under My Jobs
+                        <ArrowRight size={12} />
+                    </Link>
                 </div>
 
                 {/* ═══ Loading — Skeleton Shimmer ═══ */}
@@ -257,17 +307,31 @@ export default function MyApplicationsPage() {
                         }}>
                             Find your next {brand.niche.short} role and apply today.
                         </p>
-                        <Link href="/jobs" style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '8px',
-                            padding: '10px 20px', borderRadius: '12px',
-                            background: 'linear-gradient(145deg, #9D174D, #BE185D)',
-                            color: '#fff', fontSize: '13px', fontWeight: 600,
-                            textDecoration: 'none',
-                            boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
-                        }}>
-                            Browse Jobs
-                            <ArrowRight size={14} />
-                        </Link>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <Link href="/jobs" style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                padding: '10px 20px', borderRadius: '12px',
+                                background: 'linear-gradient(145deg, #9D174D, #BE185D)',
+                                color: '#fff', fontSize: '13px', fontWeight: 600,
+                                textDecoration: 'none',
+                                boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                            }}>
+                                Browse Jobs
+                                <ArrowRight size={14} />
+                            </Link>
+                            {/* Retention: an empty tracker is the moment an alert
+                                is worth most — it brings the visitor back
+                                without them having to remember to return. */}
+                            <Link href="/job-alerts" style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                padding: '10px 20px', borderRadius: '12px',
+                                border: '1px solid #D5E8E0', background: '#EDF5F0',
+                                color: '#2A4A5A', fontSize: '13px', fontWeight: 600,
+                                textDecoration: 'none',
+                            }}>
+                                Get new roles emailed to me
+                            </Link>
+                        </div>
                     </div>
                 )}
 
@@ -430,10 +494,11 @@ export default function MyApplicationsPage() {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 {!isWithdrawn && (
                                                     <button
-                                                        onClick={() => handleWithdraw(app.id)}
+                                                        onClick={() => requestWithdraw(app.id, app.job.title)}
                                                         disabled={withdrawing === app.id}
                                                         className="app-action-btn"
                                                         title="Withdraw application"
+                                                        aria-label={`Withdraw application for ${app.job.title}`}
                                                         style={{
                                                             width: '28px', height: '28px',
                                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -493,6 +558,14 @@ export default function MyApplicationsPage() {
                     </>
                 )}
             </div>
+
+            {/* ═══ Shared confirm modal (withdraw) ═══ */}
+            {confirm && (
+                <ConfirmDialog
+                    {...confirm}
+                    onCancel={() => setConfirm(null)}
+                />
+            )}
 
             {/* ═══ Hover styles ═══ */}
             <style>{`

@@ -5,6 +5,10 @@ import Image from 'next/image';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import EmployerHowItWorks from '@/components/EmployerHowItWorks';
 import FeaturedTestimonials from '@/components/FeaturedTestimonials';
+// P2 #17 — public, aggregate-only salary benchmark. The widget owns its own
+// query and its public-safety thresholds (components/tools/benchmark-model.ts);
+// this page only decides where it sits.
+import EmployerBenchmarkWidget from '@/components/tools/EmployerBenchmarkWidget';
 import { config } from '@/lib/config';
 import {
   Check, ArrowRight, X, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign, HelpCircle,
@@ -55,16 +59,50 @@ const iconBgCentered: React.CSSProperties = {
 
 
 
+/**
+ * Comparison table (content audit P2 #16 — "make the comparison-table cells
+ * honest"). Each cell was re-audited against what this product actually
+ * does and what the named competitors publicly offer. Changes from the
+ * pre-audit version, and why:
+ *
+ *   - "100% NP Audience" → "NP-Only Job Inventory". We can verify what we
+ *     list; we cannot verify who is reading.
+ *   - "No Unqualified Applicants" — DELETED. Anyone can click Apply here
+ *     too. It was an unenforceable guarantee sitting on a page whose own
+ *     subhead promises "no cherry-picking", and it was replaced with a row
+ *     where all three products score true.
+ *   - "First Post Free" — competitors moved false → partial. Both Indeed
+ *     and LinkedIn do offer free listings; claiming otherwise was simply
+ *     wrong. What is distinctive is that our free post carries the full
+ *     feature set, and that now lives in the note.
+ *   - Messaging / profile unlocks — Indeed moved false → partial: those
+ *     capabilities exist there as paid products.
+ *   - Listing duration — the competitor cells no longer assert "Others: 30
+ *     days" (unverifiable and plan-dependent), and the note now carries
+ *     the disclosure that matters to the buyer in front of us: the FREE
+ *     first post runs config.freeDurationDays, not the headline duration.
+ *   - "Built-In Screening Questions" — LinkedIn moved false → true.
+ *
+ * Rule for future edits: the {brand.name} column must describe behaviour
+ * that ships (with its limits in the note); competitor columns must not
+ * assert anything more specific than "offered / limited or paid / not
+ * offered", because their packaging changes without notice — see the
+ * dated footnote rendered under the table.
+ */
 const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: true | false | 'partial'; linkedin: true | false | 'partial'; note?: string }[] = [
-  { feature: `100% ${brand.niche.medium} Audience`, us: true, indeed: false, linkedin: false },
-  { feature: 'No Unqualified Applicants', us: true, indeed: false, linkedin: false },
-  { feature: `First Post Free (No Card)`, us: true, indeed: false, linkedin: false },
-  { feature: `Flat $${config.postingPrice}/Post — No Bidding`, us: true, indeed: false, linkedin: false, note: 'Indeed is pay-per-click' },
-  { feature: `${config.durationDays}-Day Listing Duration`, us: true, indeed: false, linkedin: false, note: 'Others: 30 days' },
-  { feature: 'Direct Candidate Messaging', us: true, indeed: false, linkedin: 'partial', note: 'LinkedIn: paid add-on' },
-  { feature: 'Candidate Profile Unlocks', us: true, indeed: false, linkedin: 'partial', note: 'LinkedIn: paid add-on' },
-  { feature: 'Built-In Screening Questions', us: true, indeed: true, linkedin: false },
-  { feature: 'Daily Niche Job Alerts', us: true, indeed: 'partial', linkedin: 'partial', note: 'Others: generic alerts' },
+  // Note copy must never hand-write an English article ("a"/"an") in front
+  // of a brand.niche.* token: brand.niche.long is 'Nurse Practitioner' here,
+  // so `an ${brand.niche.long}` shipped as "an Nurse Practitioner". Phrase
+  // around the article so the row survives a niche-token change.
+  { feature: `${brand.niche.medium}-Only Job Inventory`, us: true, indeed: false, linkedin: false, note: `We only list ${brand.niche.long} and ${brand.niche.adjective} nursing roles` },
+  { feature: `First Post Free (No Card)`, us: true, indeed: 'partial', linkedin: 'partial', note: 'Others offer limited free listings; ours includes every paid feature' },
+  { feature: `Flat $${config.postingPrice}/Post — No Bidding`, us: true, indeed: false, linkedin: false, note: 'Others bill per click or per day' },
+  { feature: `${config.durationDays}-Day Listing Duration`, us: true, indeed: 'partial', linkedin: 'partial', note: `Paid posts run ${config.durationDays} days; the free first post runs ${config.freeDurationDays} days. Competitor durations vary by plan` },
+  { feature: 'Direct Candidate Messaging', us: true, indeed: 'partial', linkedin: 'partial', note: `${config.limits.inmailsPerPosting} InMails included per posting; a paid add-on elsewhere` },
+  { feature: 'Candidate Profile Unlocks', us: true, indeed: 'partial', linkedin: 'partial', note: `${config.limits.candidateUnlocksPerPosting} included per posting; a paid add-on elsewhere` },
+  { feature: 'Built-In Screening Questions', us: true, indeed: true, linkedin: true, note: 'Up to 5 questions, with knockout answers' },
+  { feature: 'Daily Niche Job Alerts', us: true, indeed: 'partial', linkedin: 'partial', note: 'Others send broader cross-industry alerts' },
+  { feature: 'Applications in a Built-In Dashboard', us: true, indeed: true, linkedin: true },
   { feature: 'Instant Apply Notifications', us: true, indeed: true, linkedin: true },
 ];
 
@@ -83,8 +121,12 @@ const employerFaqs = [
     a: `Every post — free or paid — includes the full package: a ${config.durationDays}-day listing (${config.freeDurationDays} days for free posts), Featured badge, top search placement, ${config.limits.candidateUnlocksPerPosting} candidate profile unlocks, ${config.limits.inmailsPerPosting} InMails, up to 5 screening questions, and a live analytics dashboard.`,
   },
   {
+    // P2 #16: this answer asserted "a 100% NP audience" — the same
+    // unverifiable audience claim the comparison table deleted, and it feeds
+    // the FAQPage JSON-LD, so it was being served to Google as a fact too.
+    // Restated as what we can actually verify: distribution, not readership.
     q: 'Who sees my job posting?',
-    a: `Your listing reaches a 100% ${brand.niche.medium} audience — candidates actively searching on ${brand.name}. It's also highlighted in daily job-alert emails to subscribed candidates and gets its own indexed SEO page on Google.`,
+    a: `Your listing goes live on a board that only carries ${brand.niche.long} and ${brand.niche.adjective} nursing roles, so it sits alongside relevant work rather than competing with unrelated listings. It's also highlighted in daily job-alert emails to subscribed candidates and gets its own indexed SEO page on Google.`,
   },
   {
     q: 'How do candidates apply?',
@@ -95,8 +137,11 @@ const employerFaqs = [
     a: 'Yes. Open your employer dashboard from the link in your confirmation email and click Edit on any posting — changes to salary, requirements, or the description go live immediately.',
   },
   {
+    // P2 #16: this answer now states the ACTUAL policy from Terms §8 rather
+    // than implying a guarantee. Posting fees are generally non-refundable;
+    // a request inside 7 days is reviewed, not automatically granted.
     q: 'Do you offer refunds or volume discounts?',
-    a: `If you're unsatisfied, contact us at ${brand.email.support} within 7 days of posting and we'll work with you. Posting 5+ positions? Email us for volume pricing.`,
+    a: `Posting fees are generally non-refundable, but if you're unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we'll review the request case by case. Postings removed for a Terms violation aren't refunded, and free posts involve no payment to refund. Posting 5+ positions? Email us for volume pricing.`,
   },
 ];
 
@@ -158,7 +203,20 @@ export default async function ForEmployersPage() {
                 fontSize: '16px', color: '#5f4a50', lineHeight: 1.7, fontWeight: 600,
                 margin: '0 0 28px', maxWidth: '460px',
               }}>
-                No bidding wars, no per-click billing, no surprise invoices. Every candidate here is a {brand.niche.descriptor} — post once, reach the whole market.
+                {/* P2 #16: the hero used to assert "Every candidate here is a
+                    nurse practitioner", the same unverifiable audience claim the
+                    comparison table below deleted — we can verify what we list,
+                    not who reads it. Restated as an inventory claim.
+                    The scope must match the comparison-row note above and
+                    config/brand.ts: the board covers every NP specialty PLUS the
+                    APRN cohort (CRNA, CNM, CNS), which config/niche/relevance.ts
+                    matches and config/niche/credentials.ts offers as categories.
+                    A CRNA or CNM is an APRN, not a nurse practitioner, so
+                    "every job is an NP role" would be false for part of the
+                    inventory. Both halves of the scope are named. */}
+                No bidding wars, no per-click billing, no surprise invoices. Every job on this board is a{' '}
+                {brand.niche.long} or {brand.niche.adjective} nursing role, so your posting is never buried under
+                unrelated listings.
               </p>
 
               {/* CTA Buttons — No Sugar */}
@@ -205,8 +263,10 @@ export default async function ForEmployersPage() {
                 {[
                   `${config.durationDays}-day listing`,
                   'Featured badge',
-                  '25 candidate unlocks',
-                  '25 InMails',
+                  // Derived from lib/config, not typed in — a limit change
+                  // must never leave a stale number on the receipt (P2 #16).
+                  `${config.limits.candidateUnlocksPerPosting} candidate unlocks`,
+                  `${config.limits.inmailsPerPosting} InMails`,
                   'Live analytics',
                   'Daily alert placement',
                 ].map((item) => (
@@ -227,6 +287,13 @@ export default async function ForEmployersPage() {
                 }}>
                   First post: FREE
                 </div>
+                {/* 30-day free-post disclosure (P2 #16). The headline duration
+                    above is the PAID duration; the free first post is shorter,
+                    and a buyer should not discover that after posting. */}
+                <p style={{ fontSize: '10px', color: '#7a6470', margin: '10px 0 0', lineHeight: 1.5, textAlign: 'center', letterSpacing: '0.01em' }}>
+                  Free post runs {config.freeDurationDays} days with every feature above. Paid posts run{' '}
+                  {config.durationDays} days. One free post per organization.
+                </p>
               </div>
             </div>
           </div>
@@ -270,9 +337,10 @@ export default async function ForEmployersPage() {
                 <div style={iconBg}>
                   <Calendar size={24} />
                 </div>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>60-Day Listing</h3>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>{config.durationDays}-Day Listing</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Double the industry standard. Your job stays visible for 2 full months — no daily budget, no bidding.
+                  Your paid job stays visible for two full months — no daily budget, no bidding. The free first post
+                  runs {config.freeDurationDays} days with the same features.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
@@ -361,7 +429,8 @@ export default async function ForEmployersPage() {
               </div>
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Simple Pricing</h3>
               <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                First post free. Then ${config.postingPrice}/post.<br />
+                First post free for {config.freeDurationDays} days. Then ${config.postingPrice}/post for{' '}
+                {config.durationDays} days.<br />
                 Renewals just ${config.renewalPrice}. No hidden fees.
               </p>
               <Link href="/post-job" className="emp-cta-primary" style={{
@@ -403,30 +472,48 @@ export default async function ForEmployersPage() {
           {/* Split: Table (left) + CTA Card (right) */}
           <div className="emp-compare-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '24px', alignItems: 'start' }}>
 
-            {/* LEFT — Comparison Table */}
+            {/* LEFT — Comparison Table. Header cells carry scope so screen
+                readers can tie a ✓/✗ back to its column (the icons alone are
+                decorative, so each cell also renders sr-only text). */}
             <div className="emp-compare-table" style={{ ...clayCard, padding: '0', overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
+                <caption className="sr-only">
+                  Feature comparison between {brand.name}, Indeed, and LinkedIn for employers posting{' '}
+                  {brand.niche.long} roles. &quot;Limited&quot; means the capability exists but is restricted, costs
+                  extra, or varies by plan.
+                </caption>
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(190,24,93,0.02))' }}>
-                    <th style={{ width: '40%', padding: '16px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Feature</th>
-                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#BE185D', borderBottom: '2px solid rgba(190,24,93,0.2)', fontSize: '12px' }}>{brand.name}</th>
-                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>Indeed</th>
-                    <th style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#94A3B8', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>LinkedIn</th>
+                    <th scope="col" style={{ width: '40%', padding: '16px 24px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Feature</th>
+                    <th scope="col" style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 800, color: '#BE185D', borderBottom: '2px solid rgba(190,24,93,0.2)', fontSize: '12px' }}>{brand.name}</th>
+                    <th scope="col" style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>Indeed</th>
+                    <th scope="col" style={{ width: '20%', padding: '16px 16px', textAlign: 'center', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '12px' }}>LinkedIn</th>
                   </tr>
                 </thead>
                 <tbody>
                   {comparisonRows.map((row, i) => {
                     const renderCell = (val: true | false | 'partial', isUs: boolean) => {
-                      if (val === true) return <Check size={16} style={{ color: isUs ? '#BE185D' : '#94A3B8', display: 'block', margin: '0 auto' }} />;
-                      if (val === 'partial') return <span style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 600 }}>Partial</span>;
-                      return <X size={16} style={{ color: '#D1D5DB', display: 'block', margin: '0 auto' }} />;
+                      if (val === true) return (
+                        <>
+                          <Check size={16} aria-hidden="true" style={{ color: isUs ? '#BE185D' : '#64748B', display: 'block', margin: '0 auto' }} />
+                          <span className="sr-only">Included</span>
+                        </>
+                      );
+                      if (val === 'partial') return <span style={{ fontSize: '11px', color: '#B45309', fontWeight: 600 }}>Limited</span>;
+                      return (
+                        <>
+                          <X size={16} aria-hidden="true" style={{ color: '#9CA3AF', display: 'block', margin: '0 auto' }} />
+                          <span className="sr-only">Not offered</span>
+                        </>
+                      );
                     };
                     return (
                       <tr key={row.feature} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
-                        <td style={{ padding: '12px 24px', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                        <th scope="row" style={{ padding: '12px 24px', borderBottom: '1px solid rgba(0,0,0,0.04)', textAlign: 'left', fontWeight: 500 }}>
                           <span style={{ color: '#1A2E35', fontWeight: 500 }}>{row.feature}</span>
-                          {row.note && <span style={{ display: 'block', fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>{row.note}</span>}
-                        </td>
+                          {row.note && <span style={{ display: 'block', fontSize: '11px', color: '#64748B', marginTop: '2px', fontWeight: 400 }}>{row.note}</span>}
+                        </th>
                         <td style={{ padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.04)', background: 'rgba(190,24,93,0.03)' }}>
                           {renderCell(row.us, true)}
                         </td>
@@ -441,6 +528,19 @@ export default async function ForEmployersPage() {
                   })}
                 </tbody>
               </table>
+              </div>
+              {/* Honesty footnote — competitor packaging changes constantly and
+                  we do not want a stale cell here read as a factual claim. */}
+              <p style={{ fontSize: '11.5px', color: '#64748B', lineHeight: 1.6, margin: 0, padding: '14px 24px 18px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+                <strong style={{ color: '#475569' }}>Limited</strong> means the capability exists but is restricted,
+                costs extra, or varies by plan. The {brand.name} column describes what this product does today, with
+                its limits stated. The Indeed and LinkedIn columns describe their publicly documented standard
+                offerings — those change often, so check their sites before deciding. Spot something out of date?{' '}
+                <a href={`mailto:${brand.email.contact}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>
+                  Tell us
+                </a>{' '}
+                and we will correct it.
+              </p>
             </div>
 
             {/* RIGHT — Vertical CTA Card (image top, content bottom) */}
@@ -536,7 +636,9 @@ export default async function ForEmployersPage() {
               {
                 href: '/for-employers/resources/job-description-guide',
                 icon: <PenLine size={22} />,
-                title: `Writing a ${brand.niche.short} Job Description`,
+                // Pre-existing article bug: brand.niche.short is 'NP', so
+                // `a ${...}` rendered "Writing a NP Job Description".
+                title: `Writing ${brand.niche.short} Job Descriptions`,
                 blurb: 'The section-by-section structure qualified clinicians respond to.',
               },
               {
@@ -560,6 +662,36 @@ export default async function ForEmployersPage() {
           <p style={{ textAlign: 'center', marginTop: '24px' }}>
             <Link href="/for-employers/resources" style={{ fontSize: '13px', fontWeight: 600, color: '#7A1C2B', textDecoration: 'underline' }}>
               Browse all employer resources
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          SECTION 4.6: SALARY BENCHMARK (P2 #17 — "what should I pay?"
+          answered from live postings. Aggregates only: a state publishes
+          only above the postings AND distinct-employer thresholds in
+          components/tools/benchmark-model.ts, and inferred-pay rows are
+          excluded. The standalone route is /tools/salary-benchmark.)
+          ═══════════════════════════════════════════════════════════════ */}
+      <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '72px 20px' }}>
+        <div style={{ maxWidth: '820px', margin: '0 auto' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+            Free Benchmark
+          </p>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
+            What should you pay a {brand.niche.long}?
+          </h2>
+          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '520px', margin: '0 auto 32px', lineHeight: 1.6 }}>
+            Median and 25th–75th percentile posted pay by state, from live listings. Set your range before you
+            write the posting, not after the first week of silence.
+          </p>
+
+          <EmployerBenchmarkWidget compact />
+
+          <p style={{ textAlign: 'center', marginTop: '20px' }}>
+            <Link href="/tools/salary-benchmark" style={{ fontSize: '13px', fontWeight: 600, color: '#7A1C2B', textDecoration: 'underline' }}>
+              Open the full benchmark tool
             </Link>
           </p>
         </div>

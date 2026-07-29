@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { MapPin, Briefcase, Monitor, ExternalLink, ChevronLeft, ChevronRight, Loader2, Check, CheckCircle } from 'lucide-react';
 import { formatSalary } from '@/lib/utils';
 import { sanitizeHtmlContent } from '@/lib/sanitize';
@@ -306,6 +307,27 @@ export default function PreviewPage() {
       : `Live for ${config.durationDays} days`;
   const packageDetails = `Featured badge · Top placement · ${config.limits.candidateUnlocksPerPosting} candidate unlocks · ${config.limits.inmailsPerPosting} InMails · Applicant analytics`;
 
+  // ─── Price disclosure (content audit P2 #16) ────────────────────────────
+  // The quota API is the authority on whether THIS post is free; until it
+  // answers, `willBePaid` stays false and the neutral copy below shows no
+  // price rather than guessing one. Nobody should discover the $199 for the
+  // first time on the Stripe page — the primary button label carries it.
+  const quotaKnown = quotaStatus?.eligible === true;
+  const willBePaid = quotaKnown && quotaStatus?.willBeFree === false;
+  const priceLabel = willBeFree
+    ? 'Free'
+    : willBePaid
+      ? `$${config.postingPrice}`
+      : null;
+  const priceCaption = willBeFree
+    ? `$0 today — your organization's free post`
+    : willBePaid
+      ? 'One-time charge · secure Stripe checkout'
+      : null;
+  const primaryCtaLabel = willBePaid
+    ? `Continue to Payment — $${config.postingPrice}`
+    : 'Looks Good — Post Job';
+
   return (
     <div style={{ background: '#F5F0EB', minHeight: '100vh', padding: '0 16px 80px' }}>
       <div style={{ maxWidth: '780px', margin: '0 auto' }}>
@@ -535,7 +557,9 @@ export default function PreviewPage() {
           </div>
         </div>
 
-        {/* Section 3: Features Summary */}
+        {/* Section 3: Features Summary + price. The price is disclosed HERE,
+            on the step before checkout — employers used to reach the Stripe
+            page without ever having seen a number on this board (P2 #16). */}
         <div style={{ ...cardBase, padding: '20px', marginBottom: '24px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
@@ -543,10 +567,11 @@ export default function PreviewPage() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'linear-gradient(145deg, #BE185D, #9D174D)',
               boxShadow: '3px 3px 8px rgba(190,24,93,0.2)',
+              flexShrink: 0,
             }}>
               <Check size={18} color="#fff" />
             </div>
-            <div>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <p style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>{packageHeadline}</p>
               <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '2px 0 0' }}>{packageDetails}</p>
               {willBeFree && typeof quotaStatus?.remaining === 'number' && (
@@ -555,7 +580,28 @@ export default function PreviewPage() {
                 </p>
               )}
             </div>
+            {priceLabel && (
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <p style={{ fontSize: '22px', fontWeight: 800, color: '#9D174D', margin: 0, lineHeight: 1.1 }}>
+                  {priceLabel}
+                </p>
+                <p style={{ fontSize: '11px', color: '#6B7F8A', margin: '2px 0 0' }}>
+                  {willBeFree ? 'today' : 'one-time'}
+                </p>
+              </div>
+            )}
           </div>
+          {priceCaption && (
+            <p style={{ fontSize: '11.5px', color: '#6B7F8A', margin: '10px 0 0', lineHeight: 1.5 }}>
+              {priceCaption}
+              {willBePaid && (
+                <>
+                  {' · '}Posting fees are generally non-refundable; refund requests inside 7 days are reviewed case
+                  by case (<Link href="/terms" style={{ color: '#BE185D', textDecoration: 'underline' }}>Terms §8</Link>).
+                </>
+              )}
+            </p>
+          )}
         </div>
 
         {/* F3: upfront warning — this employer's next post requires payment
@@ -599,7 +645,7 @@ export default function PreviewPage() {
             {isLoading ? (
               <><Loader2 size={16} className="animate-spin" /> Processing...</>
             ) : (
-              <>Looks Good — Post Job <ChevronRight size={16} /></>
+              <>{primaryCtaLabel} <ChevronRight size={16} /></>
             )}
           </button>
         </div>

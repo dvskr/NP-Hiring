@@ -1149,55 +1149,12 @@ export default async function JobPage({ params }: JobPageProps) {
               </div>
 
 
-              {/* About Employer — separate card */}
-              <div className="hidden lg:block mt-4">
-                <AboutEmployer
-                  employerName={job.employer}
-                  company={companyInfo}
-                  otherJobsCount={employerJobCount}
-                  companyWebsite={job.companyWebsite ?? undefined}
-                />
-              </div>
-
-              {/* 3D Visual Cards */}
-              <div className="hidden lg:block mt-4">
-                <ApplicationTipsCard
-                  isRemote={job.isRemote ?? false}
-                  isTelehealth={job.mode?.toLowerCase().includes('telehealth')}
-                  jobType={job.jobType}
-                  mode={job.mode}
-                />
-              </div>
-
-              <div className="hidden lg:block mt-4">
-                <CareerPulseCard />
-              </div>
-
-              {/* Career Resources — separate card */}
-              {relevantBlogPosts.length > 0 && (
-                <div className="hidden lg:block mt-4">
-                  <RelatedBlogPosts
-                    posts={relevantBlogPosts}
-                    title="Career Resources"
-                    context="job"
-                  />
-                </div>
-              )}
-
-              {/* Explore More — separate card */}
-              <div className="hidden lg:block mt-4">
-                <InternalLinks
-                  state={job.state}
-                  stateCode={job.stateCode}
-                  city={job.city}
-                  isRemote={job.isRemote}
-                  isTelehealth={isTelehealth}
-                  jobType={job.jobType}
-                  mode={job.mode}
-                />
-              </div>
-
-              {/* Mobile-only share section below content */}
+              {/* Mobile-only share section. Lives FIRST in the sidebar column
+                  so the mobile reading order stays description → share →
+                  employer context → resources → internal links. On lg+ this is
+                  hidden and the share block inside the sticky apply card is
+                  used instead — same links, but only one of the two is ever
+                  rendered at a given breakpoint, so there is no duplicate DOM. */}
               <div className="lg:hidden rounded-2xl p-5 mb-4" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
                 <p className="text-sm mb-3" style={{ color: 'var(--text-tertiary)' }}>Share this job:</p>
                 <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
@@ -1207,6 +1164,60 @@ export default async function JobPage({ params }: JobPageProps) {
                     company={job.employer}
                   />
                 </div>
+              </div>
+
+              {/* About Employer — separate card.
+                  P2 #2: the employer-context / resources / internal-link cards
+                  below used to carry `hidden lg:block`, so on mobile (the
+                  majority of job-detail traffic) the employer context and every
+                  internal link simply never rendered. They are now part of the
+                  normal flow at every breakpoint — the column stacks under the
+                  description below `lg` because the parent grid is `lg:grid`. */}
+              <div className="mt-4">
+                <AboutEmployer
+                  employerName={job.employer}
+                  company={companyInfo}
+                  otherJobsCount={employerJobCount}
+                  companyWebsite={job.companyWebsite ?? undefined}
+                />
+              </div>
+
+              {/* 3D Visual Cards */}
+              <div className="mt-4">
+                <ApplicationTipsCard
+                  isRemote={job.isRemote ?? false}
+                  isTelehealth={job.mode?.toLowerCase().includes('telehealth')}
+                  jobType={job.jobType}
+                  mode={job.mode}
+                />
+              </div>
+
+              <div className="mt-4">
+                <CareerPulseCard />
+              </div>
+
+              {/* Career Resources — separate card */}
+              {relevantBlogPosts.length > 0 && (
+                <div className="mt-4">
+                  <RelatedBlogPosts
+                    posts={relevantBlogPosts}
+                    title="Career Resources"
+                    context="job"
+                  />
+                </div>
+              )}
+
+              {/* Explore More — separate card */}
+              <div className="mt-4">
+                <InternalLinks
+                  state={job.state}
+                  stateCode={job.stateCode}
+                  city={job.city}
+                  isRemote={job.isRemote}
+                  isTelehealth={isTelehealth}
+                  jobType={job.jobType}
+                  mode={job.mode}
+                />
               </div>
             </div>
           </AnimatedContainer>

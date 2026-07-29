@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { brand } from '@/config/brand';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Bell, Plus, Trash2, Pause, Play, Clock, Calendar, MapPin, Briefcase, ChevronDown, ChevronUp, Loader2, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Bell, Plus, Trash2, Pause, Play, Clock, Calendar, MapPin, Briefcase, DollarSign, Search, ChevronUp, Loader2, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
+import { SALARY_FILTER_BUCKETS } from '@/config/niche/stats';
+import { ALERT_KEYWORD_SUGGESTIONS } from '@/config/niche/alert-keywords';
 
 /* ═══════════════════════════════════════════
    TYPES
@@ -116,70 +118,81 @@ function ManageAlertsContent() {
 
   // Create form state
   const [showCreate, setShowCreate] = useState(false);
+  const [newKeyword, setNewKeyword] = useState('');
   const [newLocation, setNewLocation] = useState('');
   const [newMode, setNewMode] = useState('');
   const [newJobType, setNewJobType] = useState('');
+  const [newMinSalary, setNewMinSalary] = useState('');
   const [newFrequency, setNewFrequency] = useState('daily');
   const [creating, setCreating] = useState(false);
   const [createMsg, setCreateMsg] = useState<{ type: 'success' | 'error' | ''; text: string }>({ type: '', text: '' });
 
-  useEffect(() => {
-    async function fetchAlerts() {
-      try {
-        setLoading(true);
-        setError(null);
+  /**
+   * Single source of truth for loading the list — used on mount AND after a
+   * successful create. The create endpoint only returns `{ id, token }`, so
+   * pushing its response straight into the list rendered a row with no
+   * criteria, no createdAt ("Invalid Date") and isActive undefined (badge
+   * read "Paused" for an alert that was in fact active). Re-reading the list
+   * keeps what's on screen equal to what's in the database.
+   */
+  const loadAlerts = useCallback(async (options?: { silent?: boolean }) => {
+    try {
+      if (!options?.silent) setLoading(true);
+      setError(null);
 
-        let response;
-        let resolvedEmail = emailParam || '';
+      let response;
+      let resolvedEmail = emailParam || '';
 
-        if (token) {
-          response = await fetch(`/api/job-alerts?token=${encodeURIComponent(token)}`);
-        } else if (emailParam) {
-          response = await fetch(`/api/job-alerts/by-email?email=${encodeURIComponent(emailParam)}`);
-          resolvedEmail = emailParam;
-        } else {
-          // Auto-detect from logged-in user
-          try {
-            const meRes = await fetch('/api/auth/me');
-            if (meRes.ok) {
-              const meData = await meRes.json();
-              if (meData?.email) {
-                resolvedEmail = meData.email;
-                response = await fetch(`/api/job-alerts/by-email?email=${encodeURIComponent(meData.email)}`);
-              }
+      if (token) {
+        response = await fetch(`/api/job-alerts?token=${encodeURIComponent(token)}`);
+      } else if (emailParam) {
+        response = await fetch(`/api/job-alerts/by-email?email=${encodeURIComponent(emailParam)}`);
+        resolvedEmail = emailParam;
+      } else {
+        // Auto-detect from logged-in user
+        try {
+          const meRes = await fetch('/api/auth/me');
+          if (meRes.ok) {
+            const meData = await meRes.json();
+            if (meData?.email) {
+              resolvedEmail = meData.email;
+              response = await fetch(`/api/job-alerts/by-email?email=${encodeURIComponent(meData.email)}`);
             }
-          } catch {
-            // Not logged in
           }
-          if (!response) {
-            setError('Please sign in to manage your alerts.');
-            setLoading(false);
-            return;
-          }
+        } catch {
+          // Not logged in
         }
-
-        setUserEmail(resolvedEmail);
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || 'Failed to fetch alerts');
+        if (!response) {
+          setError('Please sign in to manage your alerts.');
+          setLoading(false);
+          return;
         }
-
-        if (data.alert) {
-          setAlerts([data.alert]);
-          if (data.alert.email) setUserEmail(data.alert.email);
-        } else if (data.alerts) {
-          setAlerts(data.alerts);
-          if (data.alerts.length > 0 && data.alerts[0].email) setUserEmail(data.alerts[0].email);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Something went wrong');
-      } finally {
-        setLoading(false);
       }
+
+      setUserEmail(resolvedEmail);
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to fetch alerts');
+      }
+
+      if (data.alert) {
+        setAlerts([data.alert]);
+        if (data.alert.email) setUserEmail(data.alert.email);
+      } else if (data.alerts) {
+        setAlerts(data.alerts);
+        if (data.alerts.length > 0 && data.alerts[0].email) setUserEmail(data.alerts[0].email);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setLoading(false);
     }
-    fetchAlerts();
   }, [token, emailParam]);
+
+  useEffect(() => {
+    void loadAlerts();
+  }, [loadAlerts]);
 
   const handleToggleActive = async (alert: JobAlert) => {
     setActionLoading(alert.id);
@@ -244,28 +257,26 @@ function ManageAlertsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: userEmail,
+          keyword: newKeyword.trim() || undefined,
           location: newLocation || undefined,
           mode: newMode || undefined,
           jobType: newJobType || undefined,
+          minSalary: newMinSalary ? Number(newMinSalary) : undefined,
           frequency: newFrequency,
         }),
       });
       const data = await response.json();
       if (response.ok && data.success) {
         setCreateMsg({ type: 'success', text: 'Alert created!' });
-        // Add to list immediately
-        if (data.alert) {
-          setAlerts(prev => [data.alert, ...prev]);
-        } else {
-          // Refetch
-          const refetch = await fetch(`/api/job-alerts/by-email?email=${encodeURIComponent(userEmail)}`);
-          const refetchData = await refetch.json();
-          if (refetchData.alerts) setAlerts(refetchData.alerts);
-        }
+        // Re-read the list from the API rather than trusting the create
+        // response, which only carries { id, token }.
+        await loadAlerts({ silent: true });
         // Reset form
+        setNewKeyword('');
         setNewLocation('');
         setNewMode('');
         setNewJobType('');
+        setNewMinSalary('');
         setNewFrequency('daily');
         setShowCreate(false);
         setTimeout(() => setCreateMsg({ type: '', text: '' }), 3000);
@@ -341,17 +352,52 @@ function ManageAlertsContent() {
             <h3 style={{
               fontSize: '15px', fontWeight: 700,
               fontFamily: 'var(--font-lora), Georgia, serif',
-              color: '#1A2E35', marginBottom: '16px',
+              color: '#1A2E35', marginBottom: '6px',
             }}>Create New Alert</h3>
+            {/* Honest limitation: the update endpoint only accepts frequency
+                and active/paused, so criteria are set at creation time. Say so
+                rather than shipping an Edit button that silently no-ops. */}
+            <p style={{ fontSize: '12px', color: '#8A9BA6', marginBottom: '16px', lineHeight: 1.5 }}>
+              Frequency and pause/resume can be changed anytime. To change an
+              alert&apos;s criteria, create a new alert and delete the old one.
+            </p>
 
             <form onSubmit={handleCreate}>
+              {/* Specialty / keyword — full width. The digest cron matches
+                  this as a literal case-insensitive substring of the job
+                  title or employer name, so the suggestions must be strings
+                  that occur in titles (config/niche/alert-keywords.ts). They are
+                  deliberately NOT SPECIALTY_PRESETS — see that file for why
+                  the parenthetical-credential presets produced permanently
+                  empty alerts. */}
+              <div style={{ marginBottom: '12px' }}>
+                <label htmlFor="new-alert-keyword" style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7F8A', marginBottom: '5px' }}>
+                  <Search size={10} style={{ display: 'inline', marginRight: '3px' }} />Specialty or keyword
+                </label>
+                <input
+                  id="new-alert-keyword"
+                  type="text"
+                  list="new-alert-specialty-options"
+                  value={newKeyword}
+                  onChange={e => setNewKeyword(e.target.value)}
+                  maxLength={100}
+                  placeholder={`Any ${brand.niche.short} role`}
+                  style={clayInput}
+                />
+                <datalist id="new-alert-specialty-options">
+                  {ALERT_KEYWORD_SUGGESTIONS.map(suggestion => (
+                    <option key={suggestion} value={suggestion} />
+                  ))}
+                </datalist>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 {/* Location */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7F8A', marginBottom: '5px' }}>
+                  <label htmlFor="new-alert-location" style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7F8A', marginBottom: '5px' }}>
                     <MapPin size={10} style={{ display: 'inline', marginRight: '3px' }} />Location
                   </label>
-                  <select value={newLocation} onChange={e => setNewLocation(e.target.value)} style={clayInput}>
+                  <select id="new-alert-location" value={newLocation} onChange={e => setNewLocation(e.target.value)} style={clayInput}>
                     <option value="">Any Location</option>
                     <optgroup label="Work Arrangement">
                       <option value="Remote">Remote Only</option>
@@ -364,10 +410,10 @@ function ManageAlertsContent() {
 
                 {/* Work Mode */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7F8A', marginBottom: '5px' }}>
+                  <label htmlFor="new-alert-mode" style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7F8A', marginBottom: '5px' }}>
                     Work Mode
                   </label>
-                  <select value={newMode} onChange={e => setNewMode(e.target.value)} style={clayInput}>
+                  <select id="new-alert-mode" value={newMode} onChange={e => setNewMode(e.target.value)} style={clayInput}>
                     <option value="">Any Mode</option>
                     {WORK_MODES.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
@@ -375,26 +421,62 @@ function ManageAlertsContent() {
 
                 {/* Job Type */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7F8A', marginBottom: '5px' }}>
+                  <label htmlFor="new-alert-job-type" style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7F8A', marginBottom: '5px' }}>
                     <Briefcase size={10} style={{ display: 'inline', marginRight: '3px' }} />Job Type
                   </label>
-                  <select value={newJobType} onChange={e => setNewJobType(e.target.value)} style={clayInput}>
+                  <select id="new-alert-job-type" value={newJobType} onChange={e => setNewJobType(e.target.value)} style={clayInput}>
                     <option value="">Any Type</option>
                     {JOB_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
 
-                {/* Frequency */}
+                {/* Minimum salary — the BUCKETS are shared with the /jobs
+                    salary filter (config/niche/stats.ts); the MATCHERS are
+                    not the same rule:
+                      /jobs  (lib/filters.ts)  min >= X OR max >= X
+                             → salary-less EXCLUDED, floor-only INCLUDED
+                      digest (lib/job-alerts-service.ts)
+                             max >= X OR (min IS NULL AND max IS NULL)
+                             → salary-less INCLUDED, floor-only EXCLUDED
+                    So the digest and the /jobs?salaryMin= link it carries can
+                    return different sets. The hint below states the alert's
+                    real rule instead of implying parity. */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7F8A', marginBottom: '5px' }}>
-                    <Clock size={10} style={{ display: 'inline', marginRight: '3px' }} />Frequency
+                  <label htmlFor="new-alert-min-salary" style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7F8A', marginBottom: '5px' }}>
+                    <DollarSign size={10} style={{ display: 'inline', marginRight: '3px' }} />Minimum Salary
                   </label>
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                  <select
+                    id="new-alert-min-salary"
+                    value={newMinSalary}
+                    onChange={e => setNewMinSalary(e.target.value)}
+                    aria-describedby="new-alert-min-salary-note"
+                    style={clayInput}
+                  >
+                    <option value="">Any Salary</option>
+                    {SALARY_FILTER_BUCKETS.map(bucket => (
+                      <option key={bucket.value} value={String(bucket.value)}>{bucket.label}</option>
+                    ))}
+                  </select>
+                  <p id="new-alert-min-salary-note" style={{ fontSize: '10px', color: '#B0C4BC', marginTop: '4px', lineHeight: 1.4 }}>
+                    Matches when the top of a posted range reaches this figure; jobs with
+                    no published salary are kept. Jobs advertising a single figure rather
+                    than a range are missed even when it clears your minimum, and the
+                    jobs board does show those — so the two lists won&apos;t be identical.
+                  </p>
+                </div>
+
+                {/* Frequency */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <span id="new-alert-frequency-label" style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7F8A', marginBottom: '5px' }}>
+                    <Clock size={10} style={{ display: 'inline', marginRight: '3px' }} />Frequency
+                  </span>
+                  <div role="group" aria-labelledby="new-alert-frequency-label" style={{ display: 'flex', gap: '6px' }}>
                     {['daily', 'weekly'].map(f => (
                       <button
                         key={f}
                         type="button"
                         onClick={() => setNewFrequency(f)}
+                        aria-pressed={newFrequency === f}
                         style={{
                           flex: 1, padding: '9px', borderRadius: '10px',
                           fontSize: '12px', fontWeight: 600, cursor: 'pointer',

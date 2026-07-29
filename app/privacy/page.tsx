@@ -26,11 +26,43 @@ const clayCard: React.CSSProperties = {
   background: '#FFFFFF', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.06)',
   boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)',
 };
-const h2Style: React.CSSProperties = { fontSize: '20px', fontWeight: 700, color: '#1A2E35', marginBottom: '16px', marginTop: '40px' };
+// scrollMarginTop keeps a TOC jump from parking the heading under the
+// sticky site header.
+const h2Style: React.CSSProperties = { fontSize: '20px', fontWeight: 700, color: '#1A2E35', marginBottom: '16px', marginTop: '40px', scrollMarginTop: '96px' };
 const h3Style: React.CSSProperties = { fontSize: '16px', fontWeight: 600, color: '#1A2E35', marginBottom: '10px', marginTop: '20px' };
 const pStyle: React.CSSProperties = { fontSize: '14px', color: '#4A5568', lineHeight: 1.75, marginBottom: '14px' };
 const ulStyle: React.CSSProperties = { listStyleType: 'disc', paddingLeft: '24px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '8px' };
 const liStyle: React.CSSProperties = { fontSize: '14px', color: '#4A5568', lineHeight: 1.65 };
+
+/**
+ * P3 #13: a 16-section policy with no table of contents. Every entry's `id`
+ * matches the `id` on the corresponding <h2> below — the drift guard in
+ * tests/regressions/p2-polish-batch-legal-toc.test.ts fails if a section is
+ * renamed, reordered, or added on one side only.
+ */
+const PRIVACY_SECTIONS: ReadonlyArray<{ id: string; title: string }> = [
+  { id: 'information-we-collect', title: '1. Information We Collect' },
+  { id: 'how-we-use-your-information', title: '2. How We Use Your Information' },
+  { id: 'information-sharing', title: '3. Information Sharing and Disclosure' },
+  { id: 'cookies-and-tracking', title: '4. Cookies and Tracking Technologies' },
+  { id: 'data-security', title: '5. Data Security' },
+  { id: 'your-privacy-rights', title: '6. Your Privacy Rights' },
+  { id: 'third-party-links', title: '7. Third-Party Links' },
+  { id: 'childrens-privacy', title: "8. Children's Privacy" },
+  { id: 'policy-changes', title: '9. Changes to This Privacy Policy' },
+  { id: 'contact-us', title: '10. Contact Us' },
+  { id: 'data-retention', title: '11. Data Retention' },
+  { id: 'automated-decisions-and-ai', title: '12. Automated Decision-Making and AI' },
+  { id: 'sensitive-information', title: '13. Sensitive Information' },
+  { id: 'california-privacy-rights', title: '14. California Privacy Rights (CCPA / CPRA)' },
+  { id: 'european-privacy-rights', title: '15. European Privacy Rights (GDPR / UK GDPR)' },
+  { id: 'cross-border-transfers', title: '16. Cross-Border Transfers' },
+];
+
+const tocLinkStyle: React.CSSProperties = {
+  fontSize: '13.5px', color: '#4A5568', textDecoration: 'none',
+  lineHeight: 1.5, display: 'block', padding: '3px 0',
+};
 
 const clayIconWrap: React.CSSProperties = {
   width: '48px', height: '48px', borderRadius: '16px',
@@ -66,11 +98,28 @@ export default function PrivacyPage() {
           </div>
         </header>
 
+        {/* Table of contents */}
+        <nav aria-labelledby="privacy-toc-heading" style={{
+          background: '#F8FAFC', borderRadius: '16px',
+          border: '1px solid rgba(0,0,0,0.06)', padding: '20px 24px', marginBottom: '36px',
+        }}>
+          <h2 id="privacy-toc-heading" style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+            On this page
+          </h2>
+          <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', columnGap: '24px' }}>
+            {PRIVACY_SECTIONS.map((s) => (
+              <li key={s.id}>
+                <a href={`#${s.id}`} style={tocLinkStyle}>{s.title}</a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+
         <div>
           <p style={pStyle}>{brand.name} (the &quot;Service&quot;) is operated by <strong>{brand.legal.entityName}</strong>, a {brand.legal.jurisdiction.split(',')[0]} limited liability company with its registered office at {brand.legal.address} (&quot;{brand.legal.entityName}&quot;, &quot;we&quot;, &quot;us&quot;, &quot;our&quot;). For purposes of EU/UK GDPR and similar privacy laws, {brand.legal.entityName} is the data controller for personal data processed through {brand.name}.</p>
           <p style={pStyle}>This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our services. Please read it carefully. If you do not agree with this policy, please do not access the Service.</p>
 
-          <h2 style={h2Style}>1. Information We Collect</h2>
+          <h2 id="information-we-collect" style={h2Style}>1. Information We Collect</h2>
           <p style={pStyle}>We may collect information about you in a variety of ways:</p>
           <h3 style={h3Style}>Personal Data</h3>
           <ul style={ulStyle}>
@@ -85,7 +134,7 @@ export default function PrivacyPage() {
             <li style={liStyle}><strong>Cookies and local storage:</strong> We use cookies and browser local storage to remember your preferences and saved jobs</li>
           </ul>
 
-          <h2 style={h2Style}>2. How We Use Your Information</h2>
+          <h2 id="how-we-use-your-information" style={h2Style}>2. How We Use Your Information</h2>
           <ul style={ulStyle}>
             <li style={liStyle}><strong>To send job alerts:</strong> Email notifications about jobs matching your criteria (only if you&apos;ve subscribed)</li>
             <li style={liStyle}><strong>To process job postings:</strong> Publish and manage job listings from employers</li>
@@ -95,7 +144,7 @@ export default function PrivacyPage() {
             <li style={liStyle}><strong>To prevent fraud:</strong> Monitor and prevent fraudulent or suspicious activity</li>
           </ul>
 
-          <h2 style={h2Style}>3. Information Sharing and Disclosure</h2>
+          <h2 id="information-sharing" style={h2Style}>3. Information Sharing and Disclosure</h2>
           <p style={{ ...pStyle, fontWeight: 700, color: '#1A2E35' }}>We do not sell, trade, or rent your personal information to third parties.</p>
           <h3 style={h3Style}>Service Providers (sub-processors)</h3>
           <p style={pStyle}>We use the following sub-processors to operate the service. Each receives only the data necessary for its specific function and is bound by a Data Processing Agreement. The complete current list with processing locations and DPA links is maintained at our <Link href="/sub-processors" style={{ color: '#BE185D', textDecoration: 'underline' }}>sub-processors page</Link>.</p>
@@ -112,7 +161,7 @@ export default function PrivacyPage() {
           <h3 style={h3Style}>Business Transfers</h3>
           <p style={pStyle}>If we are involved in a merger, acquisition, or sale of assets, your information may be transferred. We will notify you before your information becomes subject to a different privacy policy.</p>
 
-          <h2 style={h2Style}>4. Cookies and Tracking Technologies</h2>
+          <h2 id="cookies-and-tracking" style={h2Style}>4. Cookies and Tracking Technologies</h2>
           <p style={pStyle}>We use cookies and similar tracking technologies to track activity on our service.</p>
           <h3 style={h3Style}>What Are Cookies?</h3>
           <ul style={ulStyle}>
@@ -128,7 +177,7 @@ export default function PrivacyPage() {
           </ul>
           <p style={pStyle}>You can control cookies through your browser settings. Disabling cookies may limit some features.</p>
 
-          <h2 style={h2Style}>5. Data Security</h2>
+          <h2 id="data-security" style={h2Style}>5. Data Security</h2>
           <ul style={ulStyle}>
             <li style={liStyle}><strong>Encryption:</strong> All data is encrypted using HTTPS/TLS</li>
             <li style={liStyle}><strong>Secure storage:</strong> Personal data stored in secure, access-controlled databases</li>
@@ -137,7 +186,7 @@ export default function PrivacyPage() {
           </ul>
           <p style={pStyle}>No method of transmission over the Internet is 100% secure. While we strive to protect your personal information, we cannot guarantee its absolute security.</p>
 
-          <h2 style={h2Style}>6. Your Privacy Rights</h2>
+          <h2 id="your-privacy-rights" style={h2Style}>6. Your Privacy Rights</h2>
           <h3 style={h3Style}>Access and Portability</h3>
           <p style={pStyle}>You can request a copy of the personal information we hold about you.</p>
           <h3 style={h3Style}>Correction</h3>
@@ -151,16 +200,16 @@ export default function PrivacyPage() {
           </ul>
           <p style={pStyle}>To exercise any of these rights, contact us at {brand.email.support}. We will respond within 30 days.</p>
 
-          <h2 style={h2Style}>7. Third-Party Links</h2>
+          <h2 id="third-party-links" style={h2Style}>7. Third-Party Links</h2>
           <p style={pStyle}>Our Service may contain links to third-party websites. We are not responsible for their privacy practices. When you click &quot;Apply Now&quot;, you may be directed to the employer&apos;s website, governed by their privacy policy.</p>
 
-          <h2 style={h2Style}>8. Children&apos;s Privacy</h2>
+          <h2 id="childrens-privacy" style={h2Style}>8. Children&apos;s Privacy</h2>
           <p style={pStyle}>Our Service is not intended for individuals under the age of 18. We do not knowingly collect personal information from children under 18.</p>
 
-          <h2 style={h2Style}>9. Changes to This Privacy Policy</h2>
+          <h2 id="policy-changes" style={h2Style}>9. Changes to This Privacy Policy</h2>
           <p style={pStyle}>We may update our Privacy Policy from time to time. We will notify you by updating the &quot;Last updated&quot; date, sending email notifications, and posting a notice on our homepage.</p>
 
-          <h2 style={h2Style}>10. Contact Us</h2>
+          <h2 id="contact-us" style={h2Style}>10. Contact Us</h2>
           <p style={pStyle}>If you have questions about this Privacy Policy or wish to exercise your privacy rights, please contact us:</p>
           <ul style={{ ...ulStyle, listStyleType: 'none', paddingLeft: 0 }}>
             <li style={liStyle}><strong>Data controller:</strong> {brand.legal.entityName}</li>
@@ -170,7 +219,7 @@ export default function PrivacyPage() {
           </ul>
           <p style={pStyle}>For general questions, visit our <Link href="/faq" style={{ color: '#BE185D', textDecoration: 'none' }}>FAQ page</Link> or <Link href="/contact" style={{ color: '#BE185D', textDecoration: 'none' }}>Contact page</Link>.</p>
 
-          <h2 style={h2Style}>11. Data Retention</h2>
+          <h2 id="data-retention" style={h2Style}>11. Data Retention</h2>
           <p style={pStyle}>We keep personal data only as long as necessary for the purpose for which it was collected, plus any retention required by law:</p>
           <ul style={ulStyle}>
             <li style={liStyle}><strong>Active job seeker profile:</strong> retained while your account is active. Inactive accounts (no login for 24 months) are anonymized and resumes purged.</li>
@@ -181,11 +230,11 @@ export default function PrivacyPage() {
             <li style={liStyle}><strong>Account deletion:</strong> on request, we soft-delete immediately and hard-purge after a 30-day grace period during which the deletion can be reversed.</li>
           </ul>
 
-          <h2 style={h2Style}>12. Automated Decision-Making and AI</h2>
+          <h2 id="automated-decisions-and-ai" style={h2Style}>12. Automated Decision-Making and AI</h2>
           <p style={pStyle}>We use a candidate-matching algorithm (an AI model) to suggest jobs that may be a good fit and to surface relevant applicants to employers. The output is a non-binding score; a human (the employer) makes the final hiring decision.</p>
           <p style={pStyle}>Under GDPR Article 22 you have the right to obtain human review of any decision that is based solely on automated processing. Because our matching is decision-support, not decision-making, this rarely applies — but if you believe the algorithm has produced an unfair outcome, contact <a href={`mailto:${brand.email.privacy}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>{brand.email.privacy}</a> and we will review.</p>
 
-          <h2 style={h2Style}>13. Sensitive Information</h2>
+          <h2 id="sensitive-information" style={h2Style}>13. Sensitive Information</h2>
           <p style={pStyle}>Some fields in your profile are sensitive under GDPR Article 9 or treated as &quot;sensitive personal information&quot; under CPRA. We collect them only when you choose to provide them and only for the specific purpose described:</p>
           <ul style={ulStyle}>
             <li style={liStyle}><strong>Race / ethnicity, gender, disability status, veteran status (EEO data):</strong> entirely optional; provided to help employers meet voluntary diversity-reporting goals. Hidden from employer-facing views by default. You can clear these fields at any time from your profile.</li>
@@ -194,7 +243,7 @@ export default function PrivacyPage() {
           </ul>
           <p style={pStyle}>We never use sensitive fields for advertising or to train AI models, and we never share them with sub-processors beyond what is required to display them in the application form.</p>
 
-          <h2 style={h2Style}>14. California Privacy Rights (CCPA / CPRA)</h2>
+          <h2 id="california-privacy-rights" style={h2Style}>14. California Privacy Rights (CCPA / CPRA)</h2>
           <ul style={ulStyle}>
             <li style={liStyle}>The right to know what personal information we collect, use, and disclose.</li>
             <li style={liStyle}>The right to delete personal information.</li>
@@ -211,7 +260,7 @@ export default function PrivacyPage() {
           </p>
           <p style={pStyle}>To exercise any other CCPA right, file a request through our <Link href="/data-request" style={{ color: '#BE185D', textDecoration: 'underline' }}>Data Request form</Link> or email <a href={`mailto:${brand.email.privacy}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>{brand.email.privacy}</a> with &quot;CCPA Request&quot; in the subject. We respond within 45 days.</p>
 
-          <h2 style={h2Style}>15. European Privacy Rights (GDPR / UK GDPR)</h2>
+          <h2 id="european-privacy-rights" style={h2Style}>15. European Privacy Rights (GDPR / UK GDPR)</h2>
           <ul style={ulStyle}>
             <li style={liStyle}>Access, rectification, erasure, restriction, data portability, and objection.</li>
             <li style={liStyle}>Withdrawal of consent at any time without affecting the lawfulness of processing carried out before withdrawal.</li>
@@ -219,7 +268,7 @@ export default function PrivacyPage() {
           </ul>
           <p style={pStyle}>File requests through our <Link href="/data-request" style={{ color: '#BE185D', textDecoration: 'underline' }}>Data Request form</Link>. We respond within 30 days.</p>
 
-          <h2 style={h2Style}>16. Cross-Border Transfers</h2>
+          <h2 id="cross-border-transfers" style={h2Style}>16. Cross-Border Transfers</h2>
           <p style={pStyle}>Most of our sub-processors are based in the United States. Where personal data of EEA, UK, or Swiss residents is transferred outside its country of origin, the transfer relies on Standard Contractual Clauses (SCCs) included in each sub-processor&apos;s DPA, supplemented by encryption in transit and at rest.</p>
         </div>
 
