@@ -2,12 +2,20 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, Wifi, TrendingUp, Globe, Video, Plane, GraduationCap, Calendar } from 'lucide-react';
+import { MapPin, MapPinned, Wifi, TrendingUp, Globe, Video, Plane, GraduationCap, Calendar } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { METRO_CITIES } from '@/lib/metro-data';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CategoryHero from '@/components/CategoryHero';
 import StateImage from '@/components/StateImage';
+import { activeIndexableJobWhere } from '@/lib/active-job-filter';
+import { STATE_CODES } from '@/lib/pseo/setting-state-config';
+import {
+  buildStateCityDirectory,
+  cityLinkResolves,
+  shouldRenderStateCityDirectory,
+  MIN_CITY_JOBS_FOR_LINK,
+} from './[state]/directory';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -43,6 +51,16 @@ interface ProcessedCity {
   stateCode: string;
   count: number;
   slug: string;
+}
+
+/** A state that earns its own /jobs/locations/<state> city directory. */
+interface StateCityDirectoryLink {
+  name: string;
+  slug: string;
+  /** Cities in that state with ≥ MIN_CITY_JOBS_FOR_LINK active roles. */
+  linkableCities: number;
+  /** Distinct cities in that state carrying at least one active role. */
+  trackedCities: number;
 }
 
 /**
@@ -98,6 +116,27 @@ async function getLocationStats() {
     where: { isPublished: true },
   });
 
+  // P2 #12: which states earn a /jobs/locations/<state> city directory.
+  //
+  // Grouped by (city, state) with the SAME active-indexable predicate the
+  // directory page uses. The page matches `state = name OR stateCode = code`,
+  // a superset of this grouping, so a state that qualifies here always
+  // qualifies there — the hub can never link a directory that 404s.
+  const directoryCityRows = await prisma.job.groupBy({
+    by: ['city', 'state'],
+    where: { ...activeIndexableJobWhere(), city: { not: null }, state: { not: null } },
+    _count: { city: true },
+  });
+
+  const cityRowsByState = new Map<string, { city: string; count: number }[]>();
+  for (const row of directoryCityRows) {
+    if (!row.city || !row.state) continue;
+    const bucket = cityRowsByState.get(row.state);
+    const entry = { city: row.city, count: row._count.city };
+    if (bucket) bucket.push(entry);
+    else cityRowsByState.set(row.state, [entry]);
+  }
+
   // Valid US states + DC (whitelist to exclude non-US locations like British Columbia)
   const US_STATES = new Set([
     'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut',
@@ -131,11 +170,42 @@ async function getLocationStats() {
       slug: `${c.city!.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}-${(c.stateCode || '').toLowerCase()}`,
     }));
 
+  const cityDirectories: StateCityDirectoryLink[] = processedStates
+    .map((s) => {
+      // STATE_CODES first: the directory page resolves its own code the same
+      // way, and the DB `stateCode` column can be null/blank on a state whose
+      // rows predate the normalizer. Same input → same verdict on both sides.
+      const stateCode = STATE_CODES[s.name] || s.code || '';
+      const directory = buildStateCityDirectory(cityRowsByState.get(s.name) ?? [], {
+        // Identical veto to the directory page's own build. Without it a state
+        // whose only ≥3 city is something like "St. Louis" would pass here and
+        // 404 there — the hub would link its own dead end.
+        canLink: (row) => cityLinkResolves(row.city, stateCode),
+      });
+      if (!shouldRenderStateCityDirectory(directory)) return null;
+      return {
+        name: s.name,
+        slug: s.slug,
+        linkableCities: directory.linkable.length,
+        trackedCities: directory.trackedCities,
+      };
+    })
+    .filter((s): s is StateCityDirectoryLink => s !== null)
+    .sort((a, b) => b.linkableCities - a.linkableCities || a.name.localeCompare(b.name));
+
   return {
     states: processedStates,
     remoteCount,
     topCities: processedCities,
     totalJobs,
+    cityDirectories,
+    /**
+     * Distinct US cities carrying at least one active, indexable role. Counted
+     * off the same US_STATES whitelist the state grid uses — the raw groupBy
+     * also carries non-US locations ("British Columbia"), which this hero stat
+     * previously folded into a headline "Cities Hiring" number.
+     */
+    citiesHiring: directoryCityRows.filter((r) => r.city && r.state && US_STATES.has(r.state)).length,
   };
 }
 
@@ -223,7 +293,7 @@ export default async function LocationsPage() {
         stats={[
           { value: stats.totalJobs.toLocaleString(), label: 'Jobs' },
           { value: '50', label: 'States' },
-          { value: `${stats.topCities.length}+`, label: 'Cities' },
+          { value: stats.citiesHiring.toLocaleString(), label: 'Cities Hiring' },
           { value: stats.remoteCount.toString(), label: 'Remote' },
         ]}
         description={`Explore ${stats.totalJobs.toLocaleString()} ${brand.niche.adjective} nurse practitioner positions across the United States. Find opportunities in all 50 states, top metropolitan areas, and remote positions.`}
@@ -446,6 +516,47 @@ export default async function LocationsPage() {
               </>
             )}
           </div>
+
+          {/* ═══ City directories by state (P2 #12) ═══
+              The hub used to link exactly 12 city pages sitewide while the
+              sitemap submitted every city page with ≥3 active roles. These
+              per-state directories are the missing tier: each one lists that
+              state's cities with live counts, so the long tail is reachable by
+              a crawler and by a human. Only states that pass the same gate the
+              directory page enforces are listed — no links to 404s. */}
+          {stats.cityDirectories.length > 0 && (
+            <div className="mb-12">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                <MapPinned className="h-6 w-6" style={{ color: '#BE185D' }} aria-hidden="true" />
+                <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 800, fontFamily: 'var(--font-lora, Georgia, serif)', color: '#1A2E35', margin: 0 }}>
+                  Browse Cities State by State
+                </h2>
+              </div>
+              <p style={{ fontSize: '14px', color: '#7A6A62', marginBottom: '20px', lineHeight: 1.5 }}>
+                Every city in these states with live {brand.niche.short} openings, with the count next to each
+                one. Cities carrying {MIN_CITY_JOBS_FOR_LINK} or more roles get their own page.
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {stats.cityDirectories.map((entry: StateCityDirectoryLink) => (
+                  <Link key={entry.slug} href={`/jobs/locations/${entry.slug}`} className="group" style={{ textDecoration: 'none' }}>
+                    <div className="h-full rounded-xl p-4 transition-all duration-200 group-hover:-translate-y-1" style={clayCard}>
+                      <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 4px', lineHeight: 1.3 }}>
+                        {entry.name}
+                      </h3>
+                      <p style={{ fontSize: '12px', color: '#7A6A62', margin: '0 0 10px' }}>
+                        {entry.trackedCities} {entry.trackedCities === 1 ? 'city' : 'cities'} hiring
+                      </p>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        City directory
+                        <span className="group-hover:translate-x-1 transition-transform">→</span>
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ═══ Metro Guides — editorial metro landing pages ═══ */}
           {METRO_CITIES.length > 0 && (

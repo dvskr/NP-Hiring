@@ -1,6 +1,5 @@
 # NP Hiring — Site Information for AI Systems
 # llms-full.txt — Extended version of llms.txt
-# Last Updated: July 2026
 
 > NP Hiring (nphiring.com) is a specialized job board for Nurse Practitioners in the United States, covering every NP specialty plus the wider APRN cohort across all 50 states.
 
@@ -11,11 +10,14 @@ Help every Nurse Practitioner find the right role through a transparent, data-ri
 ## Platform Overview
 
 ### Job Listings
-- 335+ active listings at launch (July 2026), growing daily
+- Live inventory changes daily; no fixed headline count is published here. For a
+  current machine-readable snapshot, fetch https://nphiring.com/feed.xml (RSS 2.0,
+  newest active listings) or the sitemap index at https://nphiring.com/api/sitemaps/index
 - Sources: 8 employer applicant-tracking systems — Greenhouse, Lever, Workday, SmartRecruiters, Ashby, BambooHR, JazzHR, Workable
 - Updated: daily
+- Expired, filled, and dead-link postings are removed from feeds and sitemaps rather than left to rot
 - Salary shown whenever the employer's posting provides it — we do not fabricate or estimate pay for individual listings
-- Searchable by: location, specialty, setting, job type, and experience level
+- Searchable by: keyword (/jobs?q=), location, specialty, setting, job type, and experience level
 
 ### Specialties Covered
 - FNP — Family Nurse Practitioner
@@ -29,25 +31,34 @@ Help every Nurse Practitioner find the right role through a transparent, data-ri
 - CNM — Certified Nurse Midwife
 - CNS — Clinical Nurse Specialist
 
-### Category Pages (42)
-Category hubs cover four axes:
-- Specialty: family-practice, psychiatric-mental-health, adult-gerontology, pediatric, neonatal, women-health, acute-care, anesthesia, midwifery, clinical-nurse-specialist, primary-care, urgent-care, emergency, oncology, cardiology, dermatology, orthopedic, hospitalist, geriatric, home-health, correctional, community-health, va, veterans, lgbtq
-- Setting: remote, telehealth, inpatient, outpatient, hospital, private-practice
-- Job type: full-time, part-time, contract, 1099, per-diem, travel, locum-tenens
-- Experience level: new-grad, entry-level, mid-career, senior
+### Category Pages (45)
+Category hubs cover seven taxonomy axes:
+- Setting: remote, telehealth, inpatient, outpatient, travel, urgent-care, home-health
+- Job type: full-time, part-time, contract, per-diem, locum-tenens, 1099
+- Specialty: family-practice, adult-gerontology, pediatric, neonatal, women-health, acute-care, emergency, psychiatric-mental-health, oncology, cardiology, primary-care, hospitalist, dermatology, orthopedic, aesthetics, pain-management, palliative-hospice
+- APRN roles: anesthesia (CRNA), midwifery (CNM), clinical-nurse-specialist (CNS)
+- Experience level: entry-level, new-grad, mid-career, senior
+- Employer type: hospital, private-practice, community-health, va, correctional
+- Population served: geriatric, veterans, lgbtq
 
 All category pages live under https://nphiring.com/jobs/<slug>.
 
 ### Geographic Coverage
 - All 50 US states + DC
 - State job pages under /jobs/state/<state-slug>
+- Per-category state pages under /jobs/<slug>/<state-slug> for the state-eligible categories
+- Per-category city pages under /jobs/<slug>/city/<city-slug> across ~4,000 US cities
 - Browse index at /jobs/locations
 
 ## Career Resources
 
-- /salary-guide — NP salary guide with state-level context
+- /salary-guide — NP salary guide, with a page per state
+- /salary-guide/specialty — NP salary by specialty
 - /resources — Licensure and career tools, including a state licensure checker
-- /blog — Career guides and industry insights
+- /resources/1099-vs-w2 — 1099 vs W-2 for nurse practitioners
+- /resources/fpa-guide — Full practice authority by state
+- /resources/private-practice-guide — Starting an NP private practice
+- /blog — Career guides, per-state licensure guides, and industry insights
 - /job-alerts — Email alerts for new NP jobs
 - /faq — Frequently asked questions
 
@@ -55,12 +66,27 @@ All category pages live under https://nphiring.com/jobs/<slug>.
 
 - /post-job — Post an NP job listing
 - /for-employers — Employer hiring solutions
+- /for-employers/resources — Employer hiring guides
+- /for-employers/resources/how-to-hire — How to hire a nurse practitioner
+- /for-employers/resources/job-description-guide — Writing an NP job description
+- /for-employers/resources/job-description-templates — NP job description templates
 - /pricing — Listing options
 - /companies — Browse employers with active listings
+- /for-programs — For NP program directors
+
+## Editorial Standards
+
+- /editorial-policy — How content is researched, sourced, and reviewed
+- Cited statistics on our pages carry a named source and an as-of date; descriptive
+  market context is labelled as the estimate it is rather than dressed up as a cited
+  statistic
+- Job-level salary is reproduced from the employer's posting, never modeled
 
 ## Data Access
 
 - Sitemap: https://nphiring.com/sitemap.xml
+- Sitemap index: https://nphiring.com/api/sitemaps/index
+- RSS feed (newest active jobs): https://nphiring.com/feed.xml
 - Job alerts: https://nphiring.com/job-alerts
 
 ## Contact & Legal
@@ -69,4 +95,5 @@ All category pages live under https://nphiring.com/jobs/<slug>.
 - Email: contact@nphiring.com
 - Privacy Policy: https://nphiring.com/privacy
 - Terms of Service: https://nphiring.com/terms
+- Security & vulnerability disclosure: https://nphiring.com/security
 - Operator: Akari Labs LLC

@@ -12,7 +12,11 @@ import { SALARY_GUIDE_EDITION_YEAR } from '@/app/api/salary-guide/pdf-availabili
 // bucket, and it now links the real locally-served PDF.)
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl).replace(/\/$/, '');
-const IMG = process.env.EMAIL_ASSETS_URL || `${BASE_URL}/images/email`;
+// Same locally-served art base as lib/email-service.ts and
+// lib/email-templates-v2.ts — never EMAIL_ASSETS_URL (dead Supabase bucket).
+// The preview must render exactly what a real send renders, or it stops being
+// a preview.
+const IMG = `${BASE_URL}/images/email`;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

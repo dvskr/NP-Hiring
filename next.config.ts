@@ -207,11 +207,28 @@ const nextConfig: NextConfig = {
         destination: '/job-alerts',
         permanent: true,
       },
-      // Consolidate duplicate interview question articles — keyword cannibalization fix
+      // Donor-era interview article → this board's interview pillar.
+      // The old destination ('...-2026') was a donor slug that exists
+      // nowhere in this board's content, so this redirect landed on a 404
+      // and threw away the legacy URL's equity.
+      //
+      // TEMPORARY (307) ON PURPOSE — do not "tidy" this to permanent:true.
+      // The destination is an authored .mdx that only renders once
+      // `npx tsx scripts/sync-blog-to-db.ts` has run against prod:
+      // getPostBySlug() (lib/blog.ts) reads blog_posts and has a code
+      // fallback for the np-license-* series ONLY, so np-interview-questions
+      // 404s between deploying this file and running the sync. next.config
+      // ships with the app, so that window always exists. A 301 through it
+      // is the one irreversible version of the mistake: Google records the
+      // permanent target as a 404 and browsers cache the binding, whereas a
+      // 307 leaves the legacy URL indexed until the destination is live.
+      // FLIP TO permanent:true once /blog/np-interview-questions returns 200
+      // in prod (and update the assertion in the suite below).
+      // Guarded by tests/regressions/p2-content-pillars-guides.test.ts.
       {
         source: '/blog/pmhnp-interview-questions',
-        destination: '/blog/pmhnp-interview-questions-2026',
-        permanent: true,
+        destination: '/blog/np-interview-questions',
+        permanent: false,
       },
     ];
   },

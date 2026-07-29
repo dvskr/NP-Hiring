@@ -31,10 +31,45 @@ const clayCard: React.CSSProperties = {
   background: '#FFFFFF', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.06)',
   boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)',
 };
-const h2Style: React.CSSProperties = { fontSize: '20px', fontWeight: 700, color: '#1A2E35', marginBottom: '16px', marginTop: '40px' };
+// scrollMarginTop keeps a TOC jump from parking the heading under the
+// sticky site header.
+const h2Style: React.CSSProperties = { fontSize: '20px', fontWeight: 700, color: '#1A2E35', marginBottom: '16px', marginTop: '40px', scrollMarginTop: '96px' };
 const pStyle: React.CSSProperties = { fontSize: '14px', color: '#4A5568', lineHeight: 1.75, marginBottom: '14px' };
 const ulStyle: React.CSSProperties = { listStyleType: 'disc', paddingLeft: '24px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '8px' };
 const liStyle: React.CSSProperties = { fontSize: '14px', color: '#4A5568', lineHeight: 1.65 };
+
+/**
+ * P3 #13: an 18-section agreement with no table of contents — users had to
+ * scroll blind to find the refund or dispute-resolution clause. Every entry's
+ * `id` matches the `id` on the corresponding <h2> below; the drift guard in
+ * tests/regressions/p2-polish-batch-legal-toc.test.ts fails if a section is
+ * renamed, reordered, or added on one side only.
+ */
+const TERMS_SECTIONS: ReadonlyArray<{ id: string; title: string }> = [
+  { id: 'introduction', title: '1. Introduction & Operating Entity' },
+  { id: 'acceptance-of-terms', title: '2. Acceptance of Terms' },
+  { id: 'description-of-service', title: '3. Description of Service' },
+  { id: 'eligibility-and-accounts', title: '4. Eligibility & Accounts' },
+  { id: 'user-responsibilities', title: '5. User Responsibilities' },
+  { id: 'job-postings', title: '6. Job Postings' },
+  { id: 'pricing-and-payments', title: '7. Pricing, Free Postings & Payments' },
+  { id: 'refund-policy', title: '8. Refund Policy' },
+  { id: 'candidate-data', title: '9. Candidate Data, Unlocks & Privacy' },
+  { id: 'intellectual-property', title: '10. Intellectual Property' },
+  { id: 'disclaimer-of-warranties', title: '11. Disclaimer of Warranties' },
+  { id: 'limitation-of-liability', title: '12. Limitation of Liability' },
+  { id: 'indemnification', title: '13. Indemnification' },
+  { id: 'termination', title: '14. Termination' },
+  { id: 'governing-law', title: '15. Governing Law, Venue & Dispute Resolution' },
+  { id: 'changes-to-terms', title: '16. Changes to These Terms' },
+  { id: 'miscellaneous', title: '17. Miscellaneous' },
+  { id: 'contact', title: '18. Contact' },
+];
+
+const tocLinkStyle: React.CSSProperties = {
+  fontSize: '13.5px', color: '#4A5568', textDecoration: 'none',
+  lineHeight: 1.5, display: 'block', padding: '3px 0',
+};
 
 export default function TermsPage() {
   return (
@@ -63,17 +98,34 @@ export default function TermsPage() {
           </div>
         </header>
 
+        {/* Table of contents */}
+        <nav aria-labelledby="terms-toc-heading" style={{
+          background: '#F8FAFC', borderRadius: '16px',
+          border: '1px solid rgba(0,0,0,0.06)', padding: '20px 24px', marginBottom: '36px',
+        }}>
+          <h2 id="terms-toc-heading" style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+            On this page
+          </h2>
+          <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', columnGap: '24px' }}>
+            {TERMS_SECTIONS.map((s) => (
+              <li key={s.id}>
+                <a href={`#${s.id}`} style={tocLinkStyle}>{s.title}</a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+
         <div>
-          <h2 style={h2Style}>1. Introduction & Operating Entity</h2>
+          <h2 id="introduction" style={h2Style}>1. Introduction & Operating Entity</h2>
           <p style={pStyle}>{brand.name} (the &quot;Service&quot;, &quot;our Service&quot;, &quot;the Platform&quot;) is operated by <strong>{ENTITY}</strong>, a {brand.legal.governingState} limited liability company with its registered office at {brand.legal.address} (&quot;{ENTITY_SHORT}&quot;, &quot;we&quot;, &quot;us&quot;, &quot;our&quot;).</p>
           <p style={pStyle}>These Terms of Service (&quot;Terms&quot;, &quot;Agreement&quot;) form a legally binding agreement between you (&quot;you&quot;, &quot;User&quot;) and {ENTITY} governing your access to and use of {brand.name} at {brand.domain} and any related services, features, applications, and content.</p>
 
-          <h2 style={h2Style}>2. Acceptance of Terms</h2>
+          <h2 id="acceptance-of-terms" style={h2Style}>2. Acceptance of Terms</h2>
           <p style={pStyle}>By accessing, registering for, or using {brand.name}, you accept and agree to be bound by these Terms. If you do not agree, you must not use the Service.</p>
           <p style={pStyle}>These Terms apply to all visitors, registered users, and others who access or use the Service, including job seekers ({brand.niche.long}s and other candidates), employers, recruiters, and any third parties acting on their behalf.</p>
           <p style={pStyle}>If you are using the Service on behalf of an organization, you represent and warrant that you have the authority to bind that organization to these Terms, and references to &quot;you&quot; in this Agreement include both you individually and the organization.</p>
 
-          <h2 style={h2Style}>3. Description of Service</h2>
+          <h2 id="description-of-service" style={h2Style}>3. Description of Service</h2>
           <p style={pStyle}>{brand.name} is a job board platform connecting {brand.niche.long}s (&quot;{brand.niche.short}s&quot;) with employers seeking to hire them. The Service includes:</p>
           <ul style={ulStyle}>
             <li style={liStyle}>Aggregation of job listings from third-party sources</li>
@@ -85,12 +137,12 @@ export default function TermsPage() {
           </ul>
           <p style={pStyle}>We reserve the right to modify, add, suspend, or discontinue any feature of the Service at any time, with or without notice. We are not liable to you or to any third party for any modification, suspension, or discontinuation of the Service.</p>
 
-          <h2 style={h2Style}>4. Eligibility & Accounts</h2>
+          <h2 id="eligibility-and-accounts" style={h2Style}>4. Eligibility & Accounts</h2>
           <p style={pStyle}>You must be at least 18 years old and able to form a legally binding contract to use the Service. By creating an account, you represent that you meet these requirements.</p>
           <p style={pStyle}>Employer accounts must be created using a legitimate company email address. Free email providers (such as Gmail, Yahoo, Outlook, iCloud) are not accepted for employer registrations to help us verify employer identity. Job seekers may use any valid email.</p>
           <p style={pStyle}>You are responsible for maintaining the confidentiality of your account credentials, dashboard tokens, and edit tokens. You must immediately notify us of any unauthorized use of your account. We are not liable for losses arising from your failure to safeguard your credentials.</p>
 
-          <h2 style={h2Style}>5. User Responsibilities</h2>
+          <h2 id="user-responsibilities" style={h2Style}>5. User Responsibilities</h2>
           <p style={pStyle}>By using the Service, you agree to:</p>
           <ul style={ulStyle}>
             <li style={liStyle}>Provide accurate, current, and complete information</li>
@@ -105,7 +157,7 @@ export default function TermsPage() {
           </ul>
           <p style={pStyle}>Violation of any of these obligations may result in immediate suspension or termination of your account, removal of content, and legal action where appropriate.</p>
 
-          <h2 style={h2Style}>6. Job Postings</h2>
+          <h2 id="job-postings" style={h2Style}>6. Job Postings</h2>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Employer responsibilities:</p>
           <ul style={ulStyle}>
             <li style={liStyle}>Employers are solely responsible for the accuracy, legality, and content of their job listings</li>
@@ -124,7 +176,7 @@ export default function TermsPage() {
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Listing duration & renewals:</p>
           <p style={pStyle}>All job postings — free or paid — are active for 60 days from the date of publication. After 60 days, postings expire automatically. Employers may renew paid postings through the employer dashboard. Renewals add 60 days to the current expiration date; renewing early does not forfeit any remaining time on the existing posting.</p>
 
-          <h2 style={h2Style}>7. Pricing, Free Postings & Payments</h2>
+          <h2 id="pricing-and-payments" style={h2Style}>7. Pricing, Free Postings & Payments</h2>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Pricing schedule (current as of the &quot;Last updated&quot; date above):</p>
           <ul style={ulStyle}>
             <li style={liStyle}>Each verified employer email domain is allowed one free job posting (the first), lifetime, with no credit card required</li>
@@ -144,7 +196,7 @@ export default function TermsPage() {
             <li style={liStyle}>Invoices for paid postings and renewals are available from your employer dashboard</li>
           </ul>
 
-          <h2 style={h2Style}>8. Refund Policy</h2>
+          <h2 id="refund-policy" style={h2Style}>8. Refund Policy</h2>
           <ul style={ulStyle}>
             <li style={liStyle}>Job posting and renewal fees are generally non-refundable</li>
             <li style={liStyle}>Refund requests may be considered within 7 days of purchase on a case-by-case basis</li>
@@ -155,7 +207,7 @@ export default function TermsPage() {
             <li style={liStyle}>Refunds, if granted, will be issued to the original payment method through Stripe and may take 5-10 business days to appear on your statement</li>
           </ul>
 
-          <h2 style={h2Style}>9. Candidate Data, Unlocks & Privacy</h2>
+          <h2 id="candidate-data" style={h2Style}>9. Candidate Data, Unlocks & Privacy</h2>
           <p style={pStyle}>When an employer with an active paid or free posting uses an unlock to view a candidate&apos;s full profile, that candidate&apos;s information (including name, email, resume, and other contact details) becomes accessible to the employer&apos;s account. This access is retained indefinitely, even after the underlying posting expires.</p>
           <p style={pStyle}>Employers receiving candidate data agree to:</p>
           <ul style={ulStyle}>
@@ -167,12 +219,12 @@ export default function TermsPage() {
           </ul>
           <p style={pStyle}>Candidates agree that, when they make their profile visible and indicate openness to opportunities, their profile may be discoverable by employers using the Service. Candidates may at any time make their profile non-visible or close their account. See our <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'none' }}>Privacy Policy</Link> for full details on how candidate data is collected, used, shared, and protected.</p>
 
-          <h2 style={h2Style}>10. Intellectual Property</h2>
+          <h2 id="intellectual-property" style={h2Style}>10. Intellectual Property</h2>
           <p style={pStyle}>All content provided by {ENTITY} on {brand.name} — including text, graphics, logos, icons, images, audio clips, data compilations, software, design, and the &quot;{brand.name}&quot; brand — is the property of {ENTITY} or its licensors and is protected by United States and international copyright, trademark, and other intellectual property laws.</p>
           <p style={pStyle}>You may not reproduce, distribute, modify, create derivative works of, publicly display, or otherwise exploit any content from the Service without our prior written permission, except for your personal, non-commercial use within the Service.</p>
           <p style={pStyle}>By submitting content to the Service (including job postings, candidate profiles, resumes, and messages), you grant {ENTITY} a worldwide, non-exclusive, royalty-free license to host, store, display, transmit, and use that content as necessary to operate, improve, and promote the Service. This license terminates when you delete the content, except where reasonably required for our backups, audit logs, or legal compliance.</p>
 
-          <h2 style={h2Style}>11. Disclaimer of Warranties</h2>
+          <h2 id="disclaimer-of-warranties" style={h2Style}>11. Disclaimer of Warranties</h2>
           <p style={{ ...pStyle, fontWeight: 700, color: '#1A2E35' }}>THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.</p>
           <ul style={ulStyle}>
             <li style={liStyle}>We do not guarantee job placement, interviews, hires, or any specific outcome from using the Service</li>
@@ -184,12 +236,12 @@ export default function TermsPage() {
           </ul>
           <p style={pStyle}>Job seekers and employers use the Service at their own risk. We strongly encourage all users to conduct their own due diligence — including license verification, reference checks, and background checks where appropriate — before extending or accepting any offer.</p>
 
-          <h2 style={h2Style}>12. Limitation of Liability</h2>
+          <h2 id="limitation-of-liability" style={h2Style}>12. Limitation of Liability</h2>
           <p style={pStyle}>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, {ENTITY.toUpperCase()}, ITS OFFICERS, DIRECTORS, EMPLOYEES, CONTRACTORS, AGENTS, LICENSORS, AND SUPPLIERS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, REVENUE, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, ARISING OUT OF OR RELATING TO YOUR USE OF — OR INABILITY TO USE — THE SERVICE.</p>
           <p style={pStyle}>OUR TOTAL CUMULATIVE LIABILITY TO YOU FOR ALL CLAIMS ARISING FROM OR RELATED TO THE SERVICE SHALL NOT EXCEED THE GREATER OF: (A) THE TOTAL AMOUNT YOU PAID TO US IN THE TWELVE (12) MONTHS PRECEDING THE EVENT GIVING RISE TO THE CLAIM, OR (B) ONE HUNDRED US DOLLARS ($100).</p>
           <p style={pStyle}>SOME JURISDICTIONS DO NOT ALLOW THE EXCLUSION OF CERTAIN WARRANTIES OR THE LIMITATION OR EXCLUSION OF LIABILITY FOR INCIDENTAL OR CONSEQUENTIAL DAMAGES. ACCORDINGLY, SOME OF THE ABOVE LIMITATIONS MAY NOT APPLY TO YOU.</p>
 
-          <h2 style={h2Style}>13. Indemnification</h2>
+          <h2 id="indemnification" style={h2Style}>13. Indemnification</h2>
           <p style={pStyle}>You agree to indemnify, defend, and hold harmless {ENTITY} and its officers, directors, employees, contractors, agents, licensors, and suppliers from and against any and all claims, liabilities, damages, losses, costs, expenses, and fees (including reasonable attorneys&apos; fees) arising out of or related to:</p>
           <ul style={ulStyle}>
             <li style={liStyle}>Your use of, or inability to use, the Service</li>
@@ -199,22 +251,22 @@ export default function TermsPage() {
             <li style={liStyle}>Any dispute between you and any other user, including disputes between employers and candidates</li>
           </ul>
 
-          <h2 style={h2Style}>14. Termination</h2>
+          <h2 id="termination" style={h2Style}>14. Termination</h2>
           <p style={pStyle}>You may terminate your account at any time by following the account-deletion flow in your dashboard or by emailing <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a>. Account deletion is subject to a 30-day grace period during which the account may be restored, after which it is permanently purged.</p>
           <p style={pStyle}>We may suspend or terminate your access to the Service, or any portion of it, at any time, with or without notice, for any reason — including violation of these Terms, suspected fraud, or any other conduct we determine is harmful to the Service or other users.</p>
           <p style={pStyle}>Upon termination, your right to use the Service immediately ceases. Provisions that by their nature should survive termination — including intellectual property, disclaimers, limitation of liability, indemnification, and dispute resolution — shall survive.</p>
 
-          <h2 style={h2Style}>15. Governing Law, Venue & Dispute Resolution</h2>
+          <h2 id="governing-law" style={h2Style}>15. Governing Law, Venue & Dispute Resolution</h2>
           <p style={pStyle}>These Terms and any dispute arising out of or related to them or the Service are governed by the laws of the State of {brand.legal.governingState}, United States, without regard to its conflict-of-laws principles. The United Nations Convention on Contracts for the International Sale of Goods does not apply.</p>
           <p style={pStyle}>You and {ENTITY} agree that any dispute, claim, or controversy arising out of or relating to these Terms or the Service shall be resolved exclusively by binding individual arbitration administered by the American Arbitration Association (AAA) under its Commercial Arbitration Rules, except that either party may seek injunctive or other equitable relief in any court of competent jurisdiction to protect intellectual property or confidential information. The arbitration shall be conducted in English in {brand.legal.arbitrationCity}, or by remote means as the parties may agree. The arbitrator&apos;s decision shall be final and binding.</p>
           <p style={{ ...pStyle, fontWeight: 700, color: '#1A2E35' }}>YOU AND {ENTITY.toUpperCase()} EACH WAIVE THE RIGHT TO PARTICIPATE IN A CLASS ACTION OR CLASS ARBITRATION. CLAIMS MAY ONLY BE BROUGHT IN AN INDIVIDUAL CAPACITY.</p>
           <p style={pStyle}>If for any reason a claim proceeds in court rather than in arbitration, you and {ENTITY} each consent to the exclusive personal jurisdiction and venue of the state and federal courts located in {brand.legal.venue}, and waive any objection to jurisdiction or venue in those courts.</p>
 
-          <h2 style={h2Style}>16. Changes to These Terms</h2>
+          <h2 id="changes-to-terms" style={h2Style}>16. Changes to These Terms</h2>
           <p style={pStyle}>We may modify these Terms at any time. The &quot;Last updated&quot; date at the top of this document will reflect the date of the most recent change. For material changes, we will use reasonable efforts to notify users by email or through prominent notice on the Service before the change takes effect.</p>
           <p style={pStyle}>Your continued use of the Service after changes become effective constitutes your acceptance of the updated Terms. If you do not agree to the updated Terms, you must stop using the Service.</p>
 
-          <h2 style={h2Style}>17. Miscellaneous</h2>
+          <h2 id="miscellaneous" style={h2Style}>17. Miscellaneous</h2>
           <p style={pStyle}><strong>Entire agreement.</strong> These Terms, together with our <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'none' }}>Privacy Policy</Link> and any other policies referenced here, constitute the entire agreement between you and {ENTITY} concerning the Service and supersede all prior agreements.</p>
           <p style={pStyle}><strong>Severability.</strong> If any provision of these Terms is held to be invalid or unenforceable, the remaining provisions will remain in full force and effect.</p>
           <p style={pStyle}><strong>No waiver.</strong> Our failure to enforce any right or provision of these Terms is not a waiver of that right or provision.</p>
@@ -222,7 +274,7 @@ export default function TermsPage() {
           <p style={pStyle}><strong>Force majeure.</strong> We are not liable for any failure or delay in performance caused by events beyond our reasonable control, including acts of God, natural disasters, war, terrorism, civil unrest, governmental action, labor disputes, or failures of the internet or third-party services.</p>
           <p style={pStyle}><strong>Notices.</strong> Notices to {ENTITY} must be sent to <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a> or by mail to {brand.legal.addressLine}, {brand.legal.addressCity}, {brand.legal.addressRegion} {brand.legal.addressPostalCode}. Notices to you may be sent by email to the address associated with your account or by posting on the Service.</p>
 
-          <h2 style={h2Style}>18. Contact</h2>
+          <h2 id="contact" style={h2Style}>18. Contact</h2>
           <p style={pStyle}>If you have questions about these Terms, please contact us:</p>
           <ul style={{ ...ulStyle, listStyleType: 'none', paddingLeft: 0 }}>
             <li style={liStyle}><strong>Operator:</strong> {ENTITY}</li>

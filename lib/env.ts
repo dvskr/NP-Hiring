@@ -28,7 +28,14 @@ const envSchema = z.object({
     EMAIL_FROM: z.string().optional().default(brand.email.transactionalFrom),
     EMAIL_FROM_MARKETING: z.string().optional().default(brand.email.marketingFrom),
     EMAIL_REPLY_TO: z.string().optional().default(brand.email.replyTo),
-    EMAIL_ASSETS_URL: z.string().url().optional().default(brand.assets.emailAssetsBase),
+    // EMAIL_ASSETS_URL removed (P2 #24). It defaulted to the Supabase
+    // `email-assets` bucket, which was never created — every object 400s — so
+    // wherever it was set (it was set in .env) every email image rendered as a
+    // broken box. Email art now ships with the deploy under
+    // public/images/email/ and is referenced directly by
+    // lib/email-templates-v2.ts, lib/email-service.ts, and the preview route.
+    // Do not reintroduce it: an env-overridable art base is what let a dead
+    // bucket silently outrank the assets that are actually in the repo.
     SALARY_GUIDE_URL: z.string().url().optional().default(brand.assets.salaryGuidePdf),
     // Required so the Resend webhook can verify Svix signatures. Webhook returns 500 at
     // runtime if missing — better to fail at startup so misconfiguration is loud.

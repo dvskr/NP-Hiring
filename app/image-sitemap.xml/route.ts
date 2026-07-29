@@ -15,6 +15,14 @@ export const revalidate = 86400; // daily
  * renderer) — never a remote storage bucket. Image locs are XML-escaped
  * because /api/og URLs carry `&`-joined query params.
  *
+ * P2 #21: that map is no longer purely hand-maintained. getAllPageImages()
+ * appends the state-diorama entries derived from the same helpers the state
+ * and salary-guide pages render (components/StateImage), so the shipped
+ * artwork set is advertised without a second list to keep in sync. This
+ * handler stays a pure synchronous serializer — no DB, no fs — so it renders
+ * identically at build time and on ISR revalidation inside a lambda, where
+ * `public/` is not on the filesystem.
+ *
  * @see https://developers.google.com/search/docs/crawling-indexing/sitemaps/image-sitemaps
  */
 export function GET() {

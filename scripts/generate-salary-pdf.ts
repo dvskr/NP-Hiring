@@ -66,6 +66,17 @@ const OUTPUT_PATH = path.join(
 // ── Cited figures (all from lib/stats-sources.ts — never hardcoded) ─────
 const NATIONAL_SALARY = STAT_SOURCES.averageSalary;
 const NP_GROWTH = STAT_SOURCES.blsGrowth2032;
+// P2 #22 follow-up: the Full Practice Authority card in buildHtml() used to
+// assert a "+12-15%" FPA salary premium in its prose and again as a bullet.
+// It was cited to nothing here or in lib/stats-sources.ts, the repo's own
+// p0 suite already lists that figure as an unsourced invention, and it had
+// already been deleted from /resources/fpa-guide — so the same claim was
+// still shipping in the downloadable PDF. It is replaced with what practice
+// authority actually controls. This card mirrors app/salary-guide/page.tsx;
+// edit both together, and note that a NOTE LIKE THIS ONE MUST STAY A JS
+// COMMENT — an HTML comment inside the template literal is emitted into the
+// generated document. tests/regressions/p1-salary-pdf-deliverable.test.ts
+// enforces the hub/PDF parity.
 const FPA_STATES = STAT_SOURCES.fullPracticeStates;
 const SHORTAGE_POP = STAT_SOURCES.hrsaShortagePopulation;
 
@@ -74,6 +85,15 @@ const SHORTAGE_POP = STAT_SOURCES.hrsaShortagePopulation;
 // fabrication sweep). Do not edit these strings here — edit the page,
 // then regenerate. The p1-salary-pdf drift test asserts both files carry
 // identical literals.
+//
+// P2 #22 follow-up (second pass): "survived the P0 fabrication sweep" is
+// NOT the same as "is sourced". Every range and premium in the three tables
+// and the factor cards below is an uncited editorial estimate. A PDF is the
+// worse of the two surfaces for that, because it gets saved and cited for
+// years with no way to correct it in place — so the label below is printed
+// in the document itself, mirroring app/salary-guide/page.tsx verbatim.
+const SALARY_FIGURE_PROVENANCE = `Every salary range and percentage premium in this guide other than the cited national median is ${brand.name}'s own editorial estimate, compiled from the roles posted on ${brand.domain}. Treat them as a starting point for negotiation, not as survey data.`;
+
 const experienceData = [
     { exp: 'New Grad (0-1 yr)', range: '$95,000 - $115,000', roles: `Staff ${brand.niche.short}, Outpatient Clinic` },
     { exp: 'Early Career (1-3 yrs)', range: '$110,000 - $130,000', roles: `Staff ${brand.niche.short}, Telehealth Provider` },
@@ -442,6 +462,7 @@ function buildHtml(live: LiveInventory | null): string {
       ${brand.niche.short}s (7-15 years) earn $150,000-$180,000. Private practice owners can earn
       $180,000-$300,000+. Pay runs highest in West Coast and Northeast markets, with California, Washington,
       and New Jersey near the top in federal wage data.</p>
+    <p class="fine">${escapeHtml(SALARY_FIGURE_PROVENANCE)}</p>
   </div>
 
   <div class="card">
@@ -449,9 +470,10 @@ function buildHtml(live: LiveInventory | null): string {
     <p>Every national figure in this guide traces to a named public source; every posting-derived figure
       traces to live listings on ${brand.name}. ${postingsLine}</p>
     <ul class="sources">${methodologySources}</ul>
-    <p class="fine" style="margin-top:6px;">Experience, setting, and specialty ranges reflect the published
-      market bands on ${brand.domain}/salary-guide. Individual offers vary by employer, location, credentials,
-      and experience &mdash; treat every range here as a starting point for negotiation, not a guarantee.</p>
+    <p class="fine" style="margin-top:6px;">${escapeHtml(SALARY_FIGURE_PROVENANCE)} Individual offers vary by
+      employer, location, credentials, and experience. The previous wording here said these ranges &ldquo;reflect
+      the published market bands on ${brand.domain}/salary-guide&rdquo;, which pointed at the page that prints the
+      same numbers rather than at a source &mdash; circular, and it read as a citation.</p>
   </div>
 
   ${buildPayByLocationSection(live)}
@@ -459,6 +481,7 @@ function buildHtml(live: LiveInventory | null): string {
   <section class="page-break">
     <p class="kicker">Salary Breakdown</p>
     <h2>What Impacts Your Earnings</h2>
+    <p class="fine">${escapeHtml(SALARY_FIGURE_PROVENANCE)}</p>
 
     <h3 style="font-size:13px;margin-bottom:6px;">By Experience Level</h3>
     <table class="data-table" style="margin-bottom:14px;">
@@ -487,22 +510,22 @@ function buildHtml(live: LiveInventory | null): string {
     <div class="card">
       <h3>Full Practice Authority</h3>
       <p><strong>${FPA_STATES.formatted}</strong> grant FPA (${escapeHtml(FPA_STATES.source)}).
-        ${brand.niche.short}s in FPA states earn <strong>12-15% more</strong> on average.</p>
+        Practice authority is a legal classification, not a pay scale — it decides which ways of earning are open to you in that state.</p>
       <div class="fpa-grid">
         <div class="fpa-panel yes">
           <h4>&#10003; Full Practice Authority</h4>
           <ul>
-            <li>+12-15% salary premium</li>
-            <li>Can own practice independently</li>
+            <li>Own and bill under your own practice</li>
+            <li>Independent 1099 and telehealth work</li>
             <li>Full clinical independence</li>
           </ul>
         </div>
         <div class="fpa-panel no">
           <h4>Restricted / Reduced</h4>
           <ul>
-            <li>Baseline salary</li>
-            <li>Requires physician collaboration</li>
-            <li>Physician oversight required</li>
+            <li>Collaborating physician required first</li>
+            <li>That agreement is usually a paid one</li>
+            <li>Physician oversight where restricted</li>
           </ul>
         </div>
       </div>

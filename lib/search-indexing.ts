@@ -9,6 +9,9 @@
 
 import * as crypto from 'crypto';
 import { brand } from '@/config/brand';
+// P2 #20: the single IndexNow client. Aliased because this module exports its
+// own `pingIndexNow` (a per-URL-result adapter over this call).
+import { pingIndexNow as submitToIndexNow } from '@/lib/indexnow';
 
 // Env override first so preview/staging deployments never submit the
 // canonical domain's URLs; brand.baseUrl keeps prod correct per board.
@@ -177,42 +180,49 @@ export async function pingBingBatch(urls: string[]): Promise<IndexResult[]> {
 
 // ─── IndexNow (Bing, Yandex, Seznam, Naver) ─────────────────────────────────
 
+/**
+ * P2 #20: thin adapter over lib/indexnow.ts — the single IndexNow client.
+ *
+ * This module used to carry its own copy of the protocol, and the two drifted:
+ * this one read INDEXNOW_API_KEY (the other INDEXNOW_KEY), skipped the
+ * same-host filter and the 10,000-URL cap, logged nothing, and reported every
+ * URL as submitted even when the engine had silently dropped the off-host
+ * ones. Everything below is now shape-mapping: the caller-visible
+ * `IndexResult[]` contract is unchanged, but the request itself — key
+ * resolution, host filtering, cap, logging, error handling — happens in one
+ * place for every caller.
+ */
 export async function pingIndexNow(urls: string | string[]): Promise<IndexResult[]> {
-    // Accept either env name (own name first) — lib/indexnow.ts historically
-    // read INDEXNOW_KEY while this module read INDEXNOW_API_KEY, and a
-    // half-configured deployment silently no-oped part of the pipeline.
-    const apiKey = process.env.INDEXNOW_API_KEY || process.env.INDEXNOW_KEY;
-    if (!apiKey) {
-        const urlList = Array.isArray(urls) ? urls : [urls];
-        return urlList.map(url => ({ engine: 'IndexNow', url, success: false, error: 'INDEXNOW_API_KEY not set' }));
-    }
-
     const urlList = Array.isArray(urls) ? urls : [urls];
+    if (urlList.length === 0) return [];
 
-    // IndexNow supports batch submission to multiple engines
-    // Submitting to one engine shares with all IndexNow participants
-    const indexNowEndpoint = 'https://api.indexnow.org/indexnow';
+    const result = await submitToIndexNow(urlList);
 
-    try {
-        const response = await fetch(indexNowEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                host: INDEXNOW_HOST,
-                key: apiKey,
-                keyLocation: `${BASE_URL}/${apiKey}.txt`,
-                urlList,
-            }),
-        });
+    // Only URLs that were actually accepted into the submission can be
+    // reported as successful — the rest were filtered out client-side.
+    const accepted = new Set(result.accepted);
+    const error = result.ok
+        ? 'not submitted (off-host or over the 10,000-URL cap)'
+        : indexNowFailureMessage(result.reason);
 
-        // IndexNow returns 200 or 202 for success
-        if (response.ok || response.status === 202) {
-            return urlList.map(url => ({ engine: 'IndexNow', url, success: true }));
-        }
-        const errorText = await response.text();
-        return urlList.map(url => ({ engine: 'IndexNow', url, success: false, error: `${response.status}: ${errorText}` }));
-    } catch (error) {
-        return urlList.map(url => ({ engine: 'IndexNow', url, success: false, error: String(error) }));
+    return urlList.map(url =>
+        result.ok && accepted.has(url)
+            ? { engine: 'IndexNow', url, success: true }
+            : { engine: 'IndexNow', url, success: false, error }
+    );
+}
+
+/** Human-readable text for the shared client's machine-readable reason code. */
+function indexNowFailureMessage(reason?: string): string {
+    switch (reason) {
+        case 'no_key':
+            return 'INDEXNOW_KEY / INDEXNOW_API_KEY not set';
+        case 'no_same_host_urls':
+            return `no URLs on ${INDEXNOW_HOST}`;
+        case 'network_error':
+            return 'network error reaching IndexNow';
+        default:
+            return reason ? `IndexNow rejected the batch (${reason})` : 'IndexNow rejected the batch';
     }
 }
 

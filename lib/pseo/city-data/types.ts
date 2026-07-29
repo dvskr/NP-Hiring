@@ -33,7 +33,44 @@ export interface CityData {
    * line rather than substitute anything.
    */
   metroArea: string | null;
-  /** Whether this area has a Health Professional Shortage Area designation */
+  /**
+   * Whether this area carries the donor board's BEHAVIORAL-HEALTH-discipline
+   * HRSA Health Professional Shortage Area designation.
+   *
+   * ⚠ NOT an all-NP or primary-care shortage signal (P2 #7). HRSA designates
+   * HPSAs per discipline; this column was generated for the behavioral-health
+   * niche, and the generator plus its source dataset are gone (see the header
+   * of ./cities.ts), so neither the vintage nor the exact designation type can
+   * be re-verified from this repo. Consequences for renderers:
+   *
+   *   - LABEL IT. Never surface it as a bare "shortage area" / "HPSA" claim.
+   *     Every visible label, meta description, FAQ answer, OG param and schema
+   *     string must name the DISCIPLINE (see lib/pseo/category-city-template
+   *     .tsx and lib/pseo/setting-state-template.tsx for the corrected copy).
+   *   - GATE IT. Labelling alone is NOT sufficient, and this is the rule that
+   *     is easy to miss: 2,650 of the 4,135 cities carry the flag, so a
+   *     correctly-labelled but ungated surface still publishes a
+   *     behavioral-health designation across all 42 categories — a
+   *     behavioral-health HPSA in the SERP snippet of
+   *     /jobs/dermatology/city/houston-tx is the donor niche on an all-NP URL,
+   *     which is exactly what tests/regressions/niche-copy-debt.test.ts
+   *     exists to suppress. Route every such surface through
+   *     `shortageIsOnTopic` (affirmative claims) or `categoryOwnsShortageData`
+   *     (surfaces that report both polarities), both exported from
+   *     lib/pseo/category-city-template.tsx. Reading the raw boolean is only
+   *     legitimate for internal signals that publish nothing — the page
+   *     quality and market-demand scores.
+   *   - NHSC Loan Repayment eligibility follows the designation's discipline
+   *     at NHSC-approved sites — it does not generalise to every NP specialty.
+   *   - The national-level shortage stat lives in lib/stats-sources.ts
+   *     (`hrsaShortagePopulation`, re-sourced to PRIMARY CARE). This per-city
+   *     column has NOT been re-sourced and the two must not be conflated.
+   *
+   * TO FIX PROPERLY: add a separate `primaryCareShortage` column sourced from
+   * HRSA's "Designated Health Professional Shortage Areas — Primary Care" file
+   * (data.hrsa.gov), keyed by (city, state) rather than city name alone, and
+   * migrate the all-NP surfaces onto it. Do not repurpose this field.
+   */
   mentalHealthShortage: boolean;
   /**
    * Major healthcare systems / behavioral health employers in the area.
@@ -48,7 +85,13 @@ export interface CityData {
    * derived from coordinates that turned out to belong to another state.
    */
   nearbyCities: string[];
-  /** Estimated psychiatrist-to-population ratio category */
+  /**
+   * Estimated psychiatrist-to-population ratio category — another donor
+   * behavioral-health column with no surviving generator or source (same
+   * caveat as `mentalHealthShortage`). It currently feeds only the composite
+   * market-demand index in category-city-template.tsx; do not render it as a
+   * standalone, sourced statistic about NP supply.
+   */
   providerRatio: 'critical' | 'low' | 'moderate' | 'adequate';
   /** Median household income */
   medianIncome: number;

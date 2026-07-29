@@ -19,8 +19,13 @@ import {
   DollarSign, Users, ArrowRight,
 } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { STAT_SOURCES } from '@/lib/stats-sources';
 import JobCard from '@/components/JobCard';
-import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+// P2 #19: Breadcrumbs renders the VISIBLE trail *and* the BreadcrumbList
+// JSON-LD from one items array, replacing the schema-only BreadcrumbSchema
+// that used to sit here. Never render both — that emits two BreadcrumbList
+// graphs for the same page.
+import Breadcrumbs from '@/components/Breadcrumbs';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryFAQ from '@/components/CategoryFAQ';
 import type { CategorySlug } from './category-faq-data';
@@ -38,6 +43,10 @@ import {
 import { CATEGORY_ASSET_REGISTRY } from './category-asset-registry';
 import { getStatePracticeAuthority, getAuthorityLabel } from '@/lib/state-practice-authority';
 import { buildSettingStateNarrative } from './state-narrative';
+// P2 #15: ONE freshness formatter for both pSEO templates — a local copy is
+// how the city and state surfaces drift apart. P2 #7: same reasoning for the
+// behavioral-health-HPSA gate, which must agree across both surfaces.
+import { formatStatsBadge, categoryOwnsShortageData } from './category-city-template';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -57,7 +66,26 @@ interface Stats {
   totalJobs: number;
   avgSalary: number;
   topEmployers: ProcessedEmployer[];
+  /**
+   * When the counts were actually computed: pseoStats.updatedAt for fresh
+   * cached rows, "now" for live-count fallbacks, null when no data exists
+   * (the page 404s before rendering in that case). Mirrors CityStats in
+   * category-city-template.tsx — the hero badge derives its freshness claim
+   * from this instead of asserting "updated today" unconditionally.
+   */
+  statsAsOf: Date | null;
 }
+
+// Staleness window for cached pseoStats rows. Matches STATS_STALENESS_HOURS in
+// category-city-template.tsx and the sitemap/aggregator probes — 3x the cron
+// cadence. Rows older than this are treated as unreliable: a stale positive
+// count would otherwise render frozen job counts (soft-404 pattern) and a
+// false "updated today" badge. Used for BOTH the stats read below and the
+// cross-link freshness gates in the page component.
+const PSEO_STALENESS_HOURS = 36;
+const PSEO_STALENESS_MS = PSEO_STALENESS_HOURS * 60 * 60 * 1000;
+
+const EMPTY_STATS: Stats = { totalJobs: 0, avgSalary: 0, topEmployers: [], statsAsOf: null };
 
 // â”€â”€â”€ Data Fetching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -76,59 +104,101 @@ async function getJobs(config: SettingConfig, stateName: string, skip = 0, take 
 // Perf2: cache() dedupes the duplicate call within a render (generateMetadata +
 // the page component both call getStats with the same module-level config ref).
 const getStats = cache(async function getStats(config: SettingConfig, stateName: string, stateSlug: string): Promise<Stats> {
-  const pseo = await prisma.pseoStats.findUnique({
-    where: {
-      type_categorySlug_locationSlug: {
-        type: 'setting-state',
-        categorySlug: config.slug,
-        locationSlug: stateSlug,
-      }
-    }
-  });
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where = config.buildWhere(stateName) as any;
 
-  // Use cached stats if available
-  let totalJobs = pseo?.totalJobs ?? 0;
-  let avgSalary = pseo?.rawAvgSalary ?? 0;
+  let totalJobs = 0;
+  let avgSalary = 0;
+  let statsAsOf: Date | null = null;
+  let cachedRow: { totalJobs: number; rawAvgSalary: number; updatedAt: Date } | null = null;
 
-  // Fallback: live count when pseoStats cache is empty/stale
-  if (totalJobs === 0) {
-    const liveCount = await prisma.job.count({ where });
-    if (liveCount > 0) {
-      totalJobs = liveCount;
-      // Quick salary estimate from live data
-      const salaryData = await prisma.job.aggregate({
-        where: { ...where, minSalary: { gt: 0 } },
-        _avg: { minSalary: true, maxSalary: true },
-      });
-      const rawAvg = salaryData._avg?.maxSalary || salaryData._avg?.minSalary || 0;
-      avgSalary = rawAvg > 1000 ? Math.round(rawAvg / 1000) : Math.round(rawAvg);
+  try {
+    const pseo = await prisma.pseoStats.findUnique({
+      where: {
+        type_categorySlug_locationSlug: {
+          type: 'setting-state',
+          categorySlug: config.slug,
+          locationSlug: stateSlug,
+        }
+      }
+    });
+
+    // SEO Fix #15 (ported from the city template): a cached row is only
+    // trusted while fresh. A stale positive row is NOT used — if the live
+    // recount is 0 the page 404s below instead of rendering frozen counts
+    // under an "updated today" badge.
+    if (pseo && pseo.totalJobs > 0) {
+      cachedRow = pseo;
+      if (Date.now() - pseo.updatedAt.getTime() <= PSEO_STALENESS_MS) {
+        totalJobs = pseo.totalJobs;
+        avgSalary = pseo.rawAvgSalary;
+        statsAsOf = pseo.updatedAt;
+      }
+    }
+
+    // Fallback: live count when the pseoStats cache is empty, zero, or stale.
+    if (statsAsOf === null) {
+      const liveCount = await prisma.job.count({ where });
+      if (liveCount > 0) {
+        totalJobs = liveCount;
+        // Quick salary estimate from live data
+        const salaryData = await prisma.job.aggregate({
+          where: { ...where, minSalary: { gt: 0 } },
+          _avg: { minSalary: true, maxSalary: true },
+        });
+        const rawAvg = salaryData._avg?.maxSalary || salaryData._avg?.minSalary || 0;
+        avgSalary = rawAvg > 1000 ? Math.round(rawAvg / 1000) : Math.round(rawAvg);
+        statsAsOf = new Date();
+      }
+    }
+  } catch (error) {
+    console.error(`[setting-state] Failed to fetch stats for ${config.slug}/${stateSlug}:`, error);
+    // If the live recount failed but we hold a (possibly stale) positive row,
+    // prefer it — with its REAL date — over 404ing a page that likely still
+    // has jobs. Transient DB errors must not remove live pages.
+    if (cachedRow) {
+      totalJobs = cachedRow.totalJobs;
+      avgSalary = cachedRow.rawAvgSalary;
+      statsAsOf = cachedRow.updatedAt;
+    } else {
+      // No trusted row to fall back on. `cachedRow` is only ever assigned
+      // INSIDE the try after a successful findUnique returning a positive
+      // row, so reaching this branch means the FIRST query failed and we hold
+      // zero evidence that this combo is empty. Returning EMPTY_STATS here
+      // would make the caller notFound() (line ~272), and every setting×state
+      // route sets `revalidate = 3600`, so that 404 is written into the full
+      // route cache for up to an hour across ~663 indexed URLs — a DB blip
+      // would deindex the surface. Rethrow instead: a 5xx is retried by
+      // crawlers and never removes a URL. Absence of data is not evidence of
+      // an empty page.
+      throw error;
     }
   }
 
   if (totalJobs === 0) {
-    return { totalJobs: 0, avgSalary: 0, topEmployers: [] };
+    return EMPTY_STATS;
   }
 
-  // Only run the heavy groupBy query if we know jobs exist
-  const topEmployers = await prisma.job.groupBy({
-    by: ['employer'],
-    where,
-    _count: { employer: true },
-    orderBy: { _count: { employer: 'desc' } },
-    take: 8,
-  });
-
-  return {
-    totalJobs,
-    avgSalary,
-    topEmployers: topEmployers.map((e: EmployerGroupResult) => ({
+  // Only run the heavy groupBy query if we know jobs exist. A failure here
+  // omits the employer block rather than taking down the whole page.
+  let topEmployers: ProcessedEmployer[] = [];
+  try {
+    const employerRows = await prisma.job.groupBy({
+      by: ['employer'],
+      where,
+      _count: { employer: true },
+      orderBy: { _count: { employer: 'desc' } },
+      take: 8,
+    });
+    topEmployers = employerRows.map((e: EmployerGroupResult) => ({
       name: e.employer,
       count: e._count.employer,
-    })),
-  };
+    }));
+  } catch (error) {
+    console.error(`[setting-state] Failed to group employers for ${config.slug}/${stateSlug}:`, error);
+  }
+
+  return { totalJobs, avgSalary, topEmployers, statsAsOf };
 });
 
 // â”€â”€â”€ Metadata Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -230,9 +300,8 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
   // SEO Fix #18: also gate on pseoStats freshness (36h, 3x the 12h aggregator
   // cadence). If the aggregator silently fails, stale rows can advertise
   // pages whose underlying jobs already expired — same root cause as the
-  // sitemap freshness gate.
-  const PSEO_STALENESS_HOURS = 36;
-  const pseoFreshnessThreshold = new Date(Date.now() - PSEO_STALENESS_HOURS * 60 * 60 * 1000);
+  // sitemap freshness gate. Same window as the stats read (module constant).
+  const pseoFreshnessThreshold = new Date(Date.now() - PSEO_STALENESS_MS);
 
   // Other-settings for THIS state with ≥1 job
   const otherSettingRows = await prisma.pseoStats.findMany({
@@ -298,7 +367,29 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
   const avgCOL = topCities.length > 0
     ? Math.round(topCities.reduce((sum, c) => sum + c.costOfLivingIndex, 0) / topCities.length)
     : 100;
+  // P2 #7: `mentalHealthShortage` is the donor board's BEHAVIORAL-HEALTH
+  // discipline HPSA flag — city-data/types.ts holds no primary-care HPSA
+  // column — so every surface below names the discipline rather than
+  // implying an all-NP shortage figure this board cannot source.
   const shortageCount = topCities.filter(c => c.mentalHealthShortage).length;
+  // …and naming it is not enough. This template renders the specialty state
+  // pages as well as the setting ones, so an ungated card published a
+  // behavioral-health statistic on the cardiology, dermatology and aesthetics
+  // state pages too. Gated on the category that owns the column, using the
+  // same registry-derived predicate as the city template so the two surfaces
+  // cannot drift. (`shortageCount` itself still feeds the narrative below,
+  // which is prose owned by lib/pseo/state-narrative.ts.)
+  const shortageMatchesCategory = categoryOwnsShortageData(config.slug);
+
+  // P2 #19: ONE breadcrumb array drives the visible <nav> and the
+  // BreadcrumbList JSON-LD (Breadcrumbs renders both); hrefs are relative
+  // because the component prefixes the canonical origin itself.
+  const breadcrumbItems = [
+    { label: 'Home', href: '/' },
+    { label: 'Jobs', href: '/jobs' },
+    { label: config.label, href: `/jobs/${config.slug}` },
+    { label: stateName! },
+  ];
 
   /* Design Tokens — matched to category-city-template */
   const clayCard: React.CSSProperties = {
@@ -317,15 +408,18 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
         .pseo-resource { transition: transform 0.25s ease, box-shadow 0.25s ease; cursor: pointer; }
         .pseo-resource:hover { transform: translateY(-4px) !important; box-shadow: 8px 8px 20px rgba(0,0,0,0.1), -4px -4px 12px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
         .pseo-resource:active { transform: translateY(-1px) !important; }
+        /* Breadcrumb band — horizontal padding tracks CategoryHero's own
+           (48px 56px 0, dropping to 32px 24px 0 under 900px). */
+        .pseo-crumb-band { background: #faf6ef; padding: 24px 56px 0; }
+        .pseo-crumb-band nav { margin-bottom: 0; }
+        @media (max-width: 900px) {
+          .pseo-crumb-band { padding: 16px 24px 0; }
+        }
       `}} />
       {/* Schemas */}
-      <BreadcrumbSchema items={[
-        { name: 'Home', url: brand.baseUrl },
-        { name: 'Jobs', url: `${brand.baseUrl}/jobs` },
-        { name: config.label, url: `${brand.baseUrl}/jobs/${config.slug}` },
-        { name: stateName!, url: `${brand.baseUrl}${basePath}` },
-      ]} />
-      {/* ItemList schema */}
+      {/* ItemList schema.
+          B29: job titles are aggregator-sourced — escape < and > so a literal
+          "</script>" in a title can never terminate this element early. */}
       {jobs.length > 0 && (
         <script
           type="application/ld+json"
@@ -341,10 +435,58 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 name: job.title,
                 url: `${brand.baseUrl}/jobs/${job.slug || job.id}`,
               })),
-            }),
+            })
+              .replace(/</g, '\\u003c')
+              .replace(/>/g, '\\u003e'),
           }}
         />
       )}
+      {/* P2 #15: State (Place subtype) schema — the state-page counterpart of
+          the city template's Place graph, so the page names the geography it
+          is about in machine-readable form. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'State',
+            name: stateName!,
+            address: {
+              '@type': 'PostalAddress',
+              addressRegion: stateCode || stateName!,
+              addressCountry: 'US',
+            },
+          })
+            .replace(/</g, '\\u003c')
+            .replace(/>/g, '\\u003e'),
+        }}
+      />
+      {/* P2 #15: Speakable schema — marks the answer summary for voice/AI
+          consumption, matching the city template's contract.
+          Only selectors that ACTUALLY exist in the rendered markup are
+          declared: #answer-summary is the State Insights section below. The
+          city template also lists '.faq-answer', but this page's FAQ comes
+          from components/CategoryFAQAccordion, whose answer <p> carries no
+          such class — declaring a selector that matches nothing would be a
+          false claim about the page. Add the class there and extend this
+          array together. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebPage',
+            name: `${config.label} ${brand.niche.short} Jobs in ${stateName}`,
+            speakable: {
+              '@type': 'SpeakableSpecification',
+              cssSelector: ['#answer-summary'],
+            },
+            url: `${brand.baseUrl}${basePath}`,
+          })
+            .replace(/</g, '\\u003c')
+            .replace(/>/g, '\\u003e'),
+        }}
+      />
       {/* Analytics */}
       <PseoPageViewTracker
         pageType="setting_state"
@@ -353,19 +495,40 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
         jobCount={stats.totalJobs}
       />
 
+      {/* P2 #19: visible, linked breadcrumb trail.
+          CategoryHero's own `breadcrumbs` prop is deliberately empty below:
+          it renders unlinked <span>s whose labels ('Careers …') did not match
+          the BreadcrumbList schema, and two Breadcrumb navs on one page is
+          both a duplicate landmark and a duplicate-schema signal. */}
+      <div className="pseo-crumb-band">
+        <Breadcrumbs items={breadcrumbItems} />
+      </div>
+
       {/* Hero */}
       <CategoryHero
         bgColor={assets?.bgColor || '#BE185D'}
         heroImage={assets?.heroImage || `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
         heroAlt={`${config.label} ${brand.niche.short} jobs in ${stateName}`}
-        badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', config.label, stateName!]}
+        // P2 #15: freshness comes from when the counts were actually computed
+        // (shared formatter with the city template) — this used to assert
+        // "updated today" on every render, including pages served from a
+        // pseoStats row the aggregator last touched days ago.
+        badgeText={formatStatsBadge(stats.totalJobs, stats.statsAsOf)}
+        breadcrumbs={[]}
         headlineLine1={config.label}
         headlineLine2={brand.niche.short}
         headlineSub={`jobs in ${stateName}.`}
         stats={[
           { value: `${stats.totalJobs}`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : config.salaryRange.split('–')[0] || '$130K+', label: 'avg salary' },
+          // P3 #13: this used to be `salaryRange.split('–')[0]` — an EN DASH,
+          // while every salaryRange literal is written with an ASCII hyphen.
+          // The split never matched, so the fallback rendered the whole range
+          // ("$110K-150K") under an "avg salary" label. Splitting correctly
+          // would be worse: the low end of an estimated band is not an
+          // average. Show the band, and label it as a band.
+          stats.avgSalary > 0
+            ? { value: `$${stats.avgSalary}k`, label: 'avg salary' }
+            : { value: config.salaryRange, label: 'typical range' },
           { value: `${stats.topEmployers.length}`, label: 'employers' },
         ]}
         description={`${config.label} ${brand.niche.short} positions in ${stateName}. ${config.heroSubtitle}.`}
@@ -605,7 +768,9 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
 
       {/* State Market Insights — Practice Authority + COL + Shortage */}
       <section style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FDFBF7 100%)', padding: '40px 0', marginTop: '8px' }}>
-        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 20px' }}>
+        {/* P2 #15: the answer-summary block the Speakable schema above points
+            at — same id/data-speakable contract as the city template. */}
+        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 20px' }} id="answer-summary" data-speakable="true">
           <p className="font-lora" style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '6px' }}>State Insights</p>
           <h2 className="font-lora" style={{ fontSize: '22px', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '24px' }}>{stateName} at a Glance</h2>
 
@@ -622,7 +787,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
               lineHeight: 1.7,
               color: '#3A4A53',
               maxWidth: '760px',
-              margin: '0 auto 28px',
+              margin: '0 auto 12px',
               textAlign: 'center',
             }}
           >
@@ -634,6 +799,12 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
               shortageCount,
               stats.totalJobs,
             )}
+          </p>
+
+          {/* P2 #15: sources line, matching the city template's answer block.
+              Only what this page actually renders is claimed. */}
+          <p style={{ fontSize: '11px', color: '#A09080', textAlign: 'center', maxWidth: '760px', margin: '0 auto 28px' }}>
+            Sources: {STAT_SOURCES.fullPracticeStates.source} (practice authority), HRSA behavioral-health HPSA designations, U.S. Census Bureau population data. Job counts and salary averages are computed from live listings on this board{stats.statsAsOf ? `, last recounted ${stats.statsAsOf.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}` : ''}.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
@@ -656,14 +827,27 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 {avgCOL > 110 ? 'Above national avg' : avgCOL > 100 ? 'Near national avg' : 'Below national avg'} (100 = US avg)
               </div>
             </div>
-            {/* Shortage Areas */}
-            <div className="pseo-pill" style={{ ...clayCard, padding: '20px', textAlign: 'center' }}>
-              <div style={{ fontSize: '11px', color: '#7A6A62', marginBottom: '6px' }}>MH Shortage Areas</div>
-              <div style={{ fontSize: '28px', fontWeight: 800, color: shortageCount > 0 ? '#ef4444' : '#22c55e' }}>{shortageCount}/{topCities.length}</div>
-              <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '4px' }}>
-                top cities with HPSA designation
+            {/* Shortage designations — P2 #7.
+                Was "MH Shortage Areas … top cities with HPSA designation": an
+                unexplained abbreviation over a discipline-specific count, read
+                on an all-{niche} page as an all-{niche} shortage figure. The
+                dataset holds only the behavioral-health HPSA flag, so the card
+                names that discipline outright — and, because labelling alone
+                still hands a behavioral-health statistic to every one of the
+                28 setting/category state pages, it renders ONLY on the
+                category that discipline describes. Both polarities are useful
+                there (a low count is a real NHSC-eligibility signal), so the
+                gate is the category, not the count. Still omitted when there
+                are no gated top cities — "0/0" is not a statistic. */}
+            {shortageMatchesCategory && topCities.length > 0 && (
+              <div className="pseo-pill" style={{ ...clayCard, padding: '20px', textAlign: 'center' }}>
+                <div style={{ fontSize: '11px', color: '#7A6A62', marginBottom: '6px' }}>Behavioral-Health HPSA</div>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: '#1A2E35' }}>{shortageCount}/{topCities.length}</div>
+                <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '4px' }}>
+                  top cities below with an HRSA behavioral-health shortage designation
+                </div>
               </div>
-            </div>
+            )}
             {/* Salary */}
             {stats.avgSalary > 0 && (
               <div className="pseo-pill" style={{ ...clayCard, padding: '20px', textAlign: 'center' }}>

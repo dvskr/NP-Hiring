@@ -91,6 +91,9 @@ const linkColumns = [
       { label: 'Resources', href: '/resources' },
       { label: 'About', href: '/about' },
       { label: 'Contact', href: '/contact' },
+      // Content audit P2 #9: /press is `robots: index` but had no inbound link
+      // anywhere on the site. Same orphan class as /for-programs above.
+      { label: 'Press & Data Room', href: '/press' },
     ],
   },
 ];
@@ -228,6 +231,13 @@ export default function Footer() {
               onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
             >Security</Link>
+            {/* Content audit P2 #9: the accessibility statement belongs in the
+                legal/compliance row, and it was previously reachable from no
+                page on the site despite being `robots: index`. */}
+            <Link href="/accessibility" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
+            >Accessibility</Link>
             <Link href="/sub-processors" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}

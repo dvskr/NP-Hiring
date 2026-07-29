@@ -21,7 +21,22 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Use env var for email links (falls back to the brand's canonical URL)
 const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl).replace(/\/$/, '');
 const SITE_URL = BASE_URL; // alias for backward compatibility
-const IMG = process.env.EMAIL_ASSETS_URL || `${BASE_URL}/images/email`;
+/**
+ * Email art base — ALWAYS this app's own `public/images/email/`, prefixed with
+ * the absolute BASE_URL because mail clients cannot resolve root-relative
+ * paths (P2 #24).
+ *
+ * Deliberately does NOT read EMAIL_ASSETS_URL — same reasoning as
+ * lib/email-templates-v2.ts. That var pointed at a Supabase `email-assets`
+ * bucket that was never created (every object 400s), and because `.env` set
+ * it, the fallback below never ran: the six step icons in the employer and
+ * seeker welcome emails rendered as broken boxes in every real send even
+ * after the header logo was fixed.
+ *
+ * Every file referenced by stepBlock()/heroBlock() below exists on disk —
+ * pinned by tests/regressions/p2-seo-ops-email-assets.test.ts.
+ */
+const IMG = `${BASE_URL}/images/email`;
 
 /** Body text block — keeps the iconFile param for API compat but renders text only.
  *  The heading → text → CTA pattern is cleaner without a sandwiched image. */

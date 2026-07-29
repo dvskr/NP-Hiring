@@ -3,8 +3,9 @@ import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, TrendingUp, Building2, Bell, Navigation, Shield, MapPinned, DollarSign, Users, ArrowRight } from 'lucide-react';
+import { MapPin, TrendingUp, Building2, Bell, DollarSign, Users, ArrowRight, Video, Stethoscope, Hospital, Briefcase } from 'lucide-react';
 import CategoryHero from '@/components/CategoryHero';
+import { stateDioramaSrc, stateDioramaBg } from '@/components/StateImage';
 import { prisma } from '@/lib/prisma';
 import { JOB_LISTING_OMIT } from '@/lib/pseo/job-listing-omit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
@@ -24,7 +25,16 @@ import {
   PracticeAuthority
 } from '@/lib/state-practice-authority';
 
-const STORAGE_BASE = brand.assets.storageBase;
+/* Local illustration set (public/images/**). This page used to pull eight
+   images from the retired remote asset bucket — every one of them returned
+   HTTP 400, so the hero, three bento illustrations and four icon tiles were
+   broken on all 51 state hubs. Same purge P1 #1 applied to the other
+   surfaces; the hero now shows the state's own diorama and the icon tiles
+   use lucide glyphs (no local clay-icon artwork exists). */
+const STATE_HERO_FALLBACK = { src: '/images/job-seekers/clinical-inperson.webp', bg: '#bfd4c2' };
+const ART_PRACTICE = '/images/job-seekers/bento-guides.webp';
+const ART_SALARY = '/images/job-seekers/bento-salary.webp';
+const ART_GROWTH = '/images/employers/bento-analytics.webp';
 
 // Force dynamic rendering - don't try to statically generate during build
 // force-dynamic removed: it overrides revalidate and defeats ISR caching
@@ -510,6 +520,18 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
   const stateSlug = stateToSlug(stateName);
   const basePath = `/jobs/state/${stateSlug}`;
 
+  // P2 #1: the page most about this state now leads with the state's own
+  // 1024x1024 diorama (public/images/states/<slug>.png) instead of one
+  // generic map illustration shared by all 51 hubs. CategoryHero renders it
+  // `object-fit: contain` over a panel painted `bgColor`, so the panel takes
+  // the artwork's own sampled backdrop and the square art blends into it
+  // rather than sitting in coloured bars. Every slug this route can reach has
+  // a file (pinned by the regression test); the fallback keeps a state
+  // without artwork on a real local image instead of a dead URL.
+  const dioramaSrc = stateDioramaSrc(stateSlug);
+  const heroImage = dioramaSrc ?? STATE_HERO_FALLBACK.src;
+  const heroBgColor = dioramaSrc ? stateDioramaBg(stateSlug) : STATE_HERO_FALLBACK.bg;
+
   // Metro guides in this state (editorial pages at /jobs/metro/[slug]) —
   // linked from the Explore section so the metro pages are not orphans.
   const stateMetros = METRO_CITIES.filter((m) => m.state === stateName);
@@ -573,9 +595,11 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
 
       {/* ═══ HERO ═══ */}
       <CategoryHero
-        bgColor="#BE185D"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp`}
-        heroAlt={`${brand.niche.short} Jobs in ${stateName}`}
+        bgColor={heroBgColor}
+        heroImage={heroImage}
+        heroAlt={dioramaSrc
+          ? `Illustrated diorama representing ${stateName}`
+          : `${brand.niche.short} jobs across the United States`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
         breadcrumbs={['Careers', 'By State', stateName]}
         headlineLine1={brand.niche.short}
@@ -721,13 +745,13 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                 )}
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_practice.webp`} alt={`${brand.niche.short} practice in ${stateName}`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src={ART_PRACTICE} alt="" width={280} height={280} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_salary.webp`} alt="Salary data" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
+                <Image src={ART_SALARY} alt="" width={280} height={280} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
               </div>
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Salary & Compensation</h3>
@@ -743,16 +767,23 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
             </div>
 
             {/* ROW 2: Job type icon cards */}
+            {/* Setting tiles. The four clay icons that used to sit here were
+                remote-bucket URLs returning 400; no local clay-icon artwork
+                exists, so these are lucide glyphs on the same rose chip the
+                rest of the page uses (decorative — the heading carries the
+                meaning, so the glyphs are aria-hidden). */}
             {[
-              { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp`, title: 'Telehealth', desc: `Virtual ${brand.niche.adjective} care from anywhere in the state` },
-              { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp`, title: 'Outpatient', desc: 'Clinic-based roles with standard weekday hours' },
-              { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp`, title: 'Inpatient', desc: 'Hospital and residential facility positions' },
-              { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_privatepractice.webp`, title: 'Private Practice', desc: 'Independent practice and group opportunities' },
-            ].map((b, i) => (
-              <div key={i} className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-                <Image src={b.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
-                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{b.title}</h3>
-                <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>{b.desc}</p>
+              { Icon: Video, title: 'Telehealth', desc: `Virtual ${brand.niche.adjective} care from anywhere in the state` },
+              { Icon: Stethoscope, title: 'Outpatient', desc: 'Clinic-based roles with standard weekday hours' },
+              { Icon: Hospital, title: 'Inpatient', desc: 'Hospital and residential facility positions' },
+              { Icon: Briefcase, title: 'Private Practice', desc: 'Independent practice and group opportunities' },
+            ].map(({ Icon, title, desc }) => (
+              <div key={title} className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
+                <span aria-hidden="true" style={{ width: '48px', height: '48px', borderRadius: '14px', margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)' }}>
+                  <Icon size={22} style={{ color: '#BE185D' }} />
+                </span>
+                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{title}</h3>
+                <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>{desc}</p>
               </div>
             ))}
 
@@ -765,7 +796,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_growth.webp`} alt="Career growth" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                <Image src={ART_GROWTH} alt="" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
               </div>
             </div>
 

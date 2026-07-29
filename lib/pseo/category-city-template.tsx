@@ -27,9 +27,14 @@ import { JOB_LISTING_OMIT } from './job-listing-omit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { brand } from '@/config/brand';
 import { licenseGuideSlug, LICENSE_GUIDE_SERIES_PUBLISHED } from '@/config/niche/content-map';
+import { STAT_SOURCES } from '@/lib/stats-sources';
 import { prisma } from '@/lib/prisma';
 import JobCard from '@/components/JobCard';
-import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+// P2 #19: Breadcrumbs renders the VISIBLE trail *and* the BreadcrumbList
+// JSON-LD from one items array, so schema can never drift from what users
+// see. It replaces the schema-only BreadcrumbSchema that used to sit here —
+// do not add both, or the page emits two BreadcrumbList graphs.
+import Breadcrumbs from '@/components/Breadcrumbs';
 import CategoryHero from '@/components/CategoryHero';
 import { Job } from '@/lib/types';
 import { CityData } from './city-data/types';
@@ -38,14 +43,16 @@ import { SETTING_CONFIGS, SettingConfig, stateToSlug } from './setting-state-con
 import { CATEGORY_ASSET_REGISTRY } from './category-asset-registry';
 import {
   getStatePracticeAuthority,
-  getAuthorityColor,
+  getAuthorityLabel,
   StatePracticeInfo,
-  PracticeAuthority,
 } from '@/lib/state-practice-authority';
 import { PseoPageViewTracker } from '@/components/analytics/ViewTrackers';
 import { buildCityFacts, buildTaxonomyCityNarrative } from './city-narrative';
 import { getTopCityEmployers } from './city-employers';
 import { STATE_ELIGIBLE_CATEGORY_SLUGS } from './taxonomy-registry';
+// Kept as its own statement: tests/regressions/pseo-consistency-integrity.test.ts
+// (B36) pins the exact single-specifier import line above.
+import { PSYCH_SPECIALTY_SLUG } from './taxonomy-registry';
 
 // Categories with a real /jobs/<category>/[state] route. City-only categories
 // (the other 21) 410 at the middleware for state-shaped URLs, so every
@@ -977,7 +984,16 @@ const getCityStats = cache(async function getCityStats(config: CategoryConfig, c
         statsAsOf: cachedRow.updatedAt,
       };
     }
-    return EMPTY_STATS;
+    // No trusted row to fall back on. `cachedRow` is only ever assigned INSIDE
+    // the try after a successful findUnique returning a positive row, so
+    // reaching here means the FIRST query failed and we hold zero evidence
+    // that this combo is empty. Returning EMPTY_STATS would make the caller
+    // permanentRedirect() (line ~1319) — a 308 is a PERMANENT signal, cached
+    // by the route's `revalidate = 3600` and consolidated by Google — so a DB
+    // blip would fold the whole category×city surface into its parents.
+    // Rethrow: a 5xx is retried and never moves a URL. Absence of data is not
+    // evidence of an empty page.
+    throw error;
   }
 });
 
@@ -986,14 +1002,158 @@ const getCityStats = cache(async function getCityStats(config: CategoryConfig, c
  * was actually computed today (UTC). Fresh-cache rows carry pseoStats
  * .updatedAt; live fallback counts are "now". Anything older shows the real
  * date so stale-positive rows can't render a false freshness claim.
+ *
+ * Exported (P2 #15) so lib/pseo/setting-state-template.tsx renders the same
+ * freshness contract on the ~663 state pages instead of hardcoding "updated
+ * today". ONE implementation — a copy is how the two surfaces drift.
  */
-function formatStatsBadge(totalJobs: number, statsAsOf: Date | null): string {
+export function formatStatsBadge(totalJobs: number, statsAsOf: Date | null): string {
   const asOf = statsAsOf ?? new Date();
   const isToday = asOf.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10);
   const freshness = isToday
     ? 'updated today'
     : `updated ${asOf.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}`;
   return `${totalJobs} live roles · ${freshness}`;
+}
+
+// ─── Qualification facts per category (P2 #8) ─────────────────────────────────
+
+/**
+ * Certification/licensure facts for the "what qualifications do I need" FAQ.
+ * ONE builder feeds both the visible accordion answer and the FAQPage
+ * JSON-LD (B52 rule), so a wrong body here is wrong in both places.
+ *
+ * WHY THIS EXISTS: the template asserted "National board certification (ANCC
+ * or AANP)" for EVERY one of the 42 categories. That is factually wrong for
+ * the APRN cohort this board carries — CRNAs certify through the NBCRNA and
+ * CNMs through the AMCB, neither of which administers an AANP/ANCC exam —
+ * and wrong for the population-specific NP tracks (PNCB for pediatrics, NCC
+ * for neonatal and women's health, ANCC/AACN for acute care and CNS).
+ *
+ * TRUTH RULE: every entry below must agree with the per-specialty
+ * certification answers in lib/pseo/category-faq-data.ts. Change both or
+ * neither.
+ */
+interface CategoryCredentialFacts {
+  /** Role noun used in the answer body, e.g. 'CRNA'. */
+  role: string;
+  /** Indefinite article for `role` as SPOKEN ("an NP", "a CRNA"). */
+  article: 'a' | 'an';
+  /** True when config.label alone already reads as the full role noun. */
+  standaloneLabel: boolean;
+  /** Degree / programme clause. */
+  degree: string;
+  /** Certification clause naming the correct certifying body. */
+  certification: string;
+  /** Controlled-substance clause. */
+  dea: string;
+}
+
+const DEFAULT_CREDENTIALS: CategoryCredentialFacts = {
+  role: brand.niche.short,
+  article: 'an',
+  standaloneLabel: false,
+  degree: `a master's or doctoral degree from an accredited ${brand.niche.descriptor} program`,
+  certification: 'national board certification through AANP or ANCC on the population track that matches the role',
+  dea: 'DEA registration for prescribing controlled substances',
+};
+
+/** Categories whose certifying body is NOT AANP/ANCC (or is track-specific). */
+const CATEGORY_CREDENTIALS: Record<string, CategoryCredentialFacts> = {
+  anesthesia: {
+    role: 'CRNA',
+    article: 'a',
+    standaloneLabel: true,
+    degree: 'a graduate degree from a nurse anesthesia program accredited by the Council on Accreditation (COA) — admission requires critical-care RN experience, and entry-level programs now award a doctorate',
+    certification: 'national certification through the NBCRNA (National Board of Certification and Recertification of Nurse Anesthetists), maintained through its Continued Professional Certification program',
+    dea: 'DEA registration where the role includes ordering or prescribing controlled substances',
+  },
+  midwifery: {
+    role: 'CNM',
+    article: 'a',
+    standaloneLabel: true,
+    degree: 'a graduate degree from a midwifery program accredited by the Accreditation Commission for Midwifery Education (ACME)',
+    certification: 'national certification through the American Midwifery Certification Board (AMCB)',
+    dea: 'DEA registration for prescribing controlled substances',
+  },
+  'clinical-nurse-specialist': {
+    role: 'CNS',
+    article: 'a',
+    standaloneLabel: true,
+    degree: 'a graduate CNS program in a defined specialty population',
+    certification: 'national certification for that population — for example AGCNS-BC through ANCC, or an ACCNS credential through the American Association of Critical-Care Nurses (AACN)',
+    dea: 'DEA registration where the state grants CNS prescriptive authority',
+  },
+  pediatric: {
+    role: 'PNP',
+    article: 'a',
+    standaloneLabel: false,
+    degree: `a master's or doctoral degree from a pediatric ${brand.niche.descriptor} program`,
+    certification: 'national certification through the Pediatric Nursing Certification Board (PNCB) — CPNP-PC for primary care or CPNP-AC for acute care',
+    dea: 'DEA registration for prescribing controlled substances',
+  },
+  neonatal: {
+    role: 'NNP',
+    article: 'an',
+    standaloneLabel: false,
+    degree: `a master's or doctoral degree from a neonatal ${brand.niche.descriptor} program`,
+    certification: 'NNP-BC certification through the National Certification Corporation (NCC)',
+    dea: 'DEA registration for prescribing controlled substances',
+  },
+  'women-health': {
+    role: 'WHNP',
+    article: 'a',
+    standaloneLabel: false,
+    degree: `a master's or doctoral degree from a women's health ${brand.niche.descriptor} program`,
+    certification: 'WHNP-BC certification through the National Certification Corporation (NCC)',
+    dea: 'DEA registration for prescribing controlled substances',
+  },
+  'acute-care': {
+    role: `acute care ${brand.niche.short}`,
+    article: 'an',
+    standaloneLabel: false,
+    degree: `a master's or doctoral degree from an acute-care-focused ${brand.niche.descriptor} program`,
+    certification: 'national certification on the acute care track — AGACNP-BC through ANCC or ACNPC-AG through the American Association of Critical-Care Nurses (AACN)',
+    dea: 'DEA registration for prescribing controlled substances',
+  },
+};
+
+export function getCategoryCredentials(categorySlug: string): CategoryCredentialFacts {
+  return CATEGORY_CREDENTIALS[categorySlug] ?? DEFAULT_CREDENTIALS;
+}
+
+// ─── Shortage-claim gate (P2 #7) ───────────────────────────────────────────────
+
+/**
+ * Does the donor shortage column describe THIS category's specialty at all?
+ *
+ * `CityData.mentalHealthShortage` is the donor board's BEHAVIORAL-HEALTH
+ * -discipline HRSA HPSA column (see ./city-data/types.ts). Naming the
+ * discipline in the copy is necessary but NOT sufficient: a behavioral-health
+ * designation is still the donor niche when it is published on
+ * /jobs/dermatology/city/houston-tx, and 2,650 of the 4,135 cities carry the
+ * flag — so an ungated surface reaches most of a 42-category × 4.1K-city
+ * corpus, which is exactly what the niche-copy ratchets exist to prevent.
+ *
+ * Use this for surfaces that report BOTH polarities (the Community Profile
+ * tile renders "Not designated" too, which is a real and useful fact for a
+ * behavioral-health job seeker weighing NHSC eligibility). Use
+ * `shortageIsOnTopic` for surfaces that only ever make the AFFIRMATIVE claim.
+ */
+export function categoryOwnsShortageData(categorySlug: string): boolean {
+  return PSYCH_SPECIALTY_SLUG !== undefined && categorySlug === PSYCH_SPECIALTY_SLUG;
+}
+
+/**
+ * Is this city's designation an on-topic AFFIRMATIVE claim for this category?
+ *
+ * Every surface that STATES the designation routes through this one predicate
+ * — OG param, meta description, careers FAQ answer — so they cannot drift
+ * apart again. The scoring functions below deliberately do NOT use it: they
+ * consume the flag as an internal demand signal and publish nothing.
+ */
+export function shortageIsOnTopic(city: CityData, categorySlug: string): boolean {
+  return city.mentalHealthShortage && categoryOwnsShortageData(categorySlug);
 }
 
 // ─── Market Demand Score ───────────────────────────────────────────────────────
@@ -1007,7 +1167,15 @@ function getMarketDemandScore(city: CityData, totalJobs: number): { score: numbe
   else if (totalJobs >= 5) score += 20;
   else if (totalJobs >= 1) score += 10;
 
-  // MH shortage (0-25 points)
+  // Shortage designation (0-25 points).
+  // CAVEAT (P2 #7): `mentalHealthShortage` is the donor board's
+  // behavioral-health-discipline HPSA flag — the dataset carries no
+  // primary-care HPSA column, so this is a proxy, not an all-NP shortage
+  // measure. It stays in the composite because the visible "Demand" readout
+  // is an explicitly-labelled index, not a cited statistic; the score is NOT
+  // re-weighted here because that would shift the label on ~100K indexed
+  // pages. Replace the input, not the weight, once primary-care HPSA data
+  // lands in city-data/types.ts.
   if (city.mentalHealthShortage) score += 25;
   else if (city.providerRatio === 'low') score += 20;
   else if (city.providerRatio === 'moderate') score += 10;
@@ -1060,7 +1228,7 @@ function getPageQualityScore(city: CityData, totalJobs: number): number {
   if (city.metroArea) score += 10;                       // Metro area = higher demand
   if (city.population >= 25000) score += 15;             // Major city
   else if (city.population >= 10000) score += 5;         // Mid-size city
-  if (city.mentalHealthShortage) score += 10;            // HPSA designation
+  if (city.mentalHealthShortage) score += 10;            // behavioral-health HPSA designation
 
   return score; // Pages with score >= 25 get indexed
 }
@@ -1076,7 +1244,9 @@ export async function buildCategoryCityMetadata(
   const city = getCityBySlug(citySlug);
   if (!config || !city) return { title: 'Not Found' };
 
-  // getCityStats is already try-catch protected — returns EMPTY_STATS on failure
+  // getCityStats falls back to a stale-but-positive cached row on failure, and
+  // rethrows when it has none — a DB outage must surface as 5xx, never as a
+  // cacheable 308 to the parent category.
   const stats = await getCityStats(config, city);
 
   // SEO: 308 permanent redirect for 0-job pages (metadata phase)
@@ -1110,17 +1280,33 @@ export async function buildCategoryCityMetadata(
     ? `$${stats.rawAvgSalary}K`
     : '';
 
+  // P2 #7: /api/og/city renders this flag as a bare "⚕ Shortage Area" badge,
+  // and the description below states the designation in the SERP snippet.
+  // Both are gated on shortageIsOnTopic — the OG badge cannot be labelled from
+  // here at all, and a labelled snippet is still the donor niche on a
+  // dermatology URL.
+  const shortageMatchesCategory = shortageIsOnTopic(city, config.slug);
+
   const ogParams = new URLSearchParams({
     category: config.label,
     city: `${city.name}, ${city.stateCode}`,
     jobs: String(stats.totalJobs),
     ...(salaryDisplay && { salary: salaryDisplay }),
-    ...(city.mentalHealthShortage && { shortage: 'true' }),
+    ...(shortageMatchesCategory && { shortage: 'true' }),
   });
 
   return {
     title: `${config.label} ${brand.niche.short} Jobs in ${city.name}, ${city.stateCode} (${stats.totalJobs} Open)`,
-    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${city.name}, ${city.stateCode}. ${config.heroSubtitle}. Population: ${city.population.toLocaleString()}. COL index: ${city.costOfLivingIndex}. ${city.mentalHealthShortage ? 'Health professional shortage area.' : ''}`,
+    // P2 #7: the shortage sentence names the designation's DISCIPLINE *and*
+    // only ships on the category that discipline describes. The dataset holds
+    // only the behavioral-health HPSA flag, so an unqualified "health
+    // professional shortage area" reads as an all-NP shortage claim this board
+    // cannot source — and a correctly-labelled one still puts a
+    // behavioral-health designation in the SERP snippet of every dermatology,
+    // cardiology and aesthetics city page. Gated, not just labelled.
+    // The leading space lives INSIDE the conditional so a withheld claim
+    // leaves no trailing whitespace on the ~1,485 unflagged cities either.
+    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${city.name}, ${city.stateCode}. ${config.heroSubtitle}. Population: ${city.population.toLocaleString()}. COL index: ${city.costOfLivingIndex}.${shortageMatchesCategory ? ' Federally designated behavioral-health HPSA.' : ''}`,
     keywords: [
       `${config.label.toLowerCase()} ${brand.niche.short.toLowerCase()} jobs ${city.name}`,
       `${city.name} ${config.label.toLowerCase()} ${brand.niche.descriptor}`,
@@ -1319,6 +1505,21 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
     ? dbCatCityOverride.body
     : buildTaxonomyCityNarrative(buildCityFacts(city!), config.slug, stats.totalJobs);
 
+  // P2 #8: correct certifying body for THIS category (CRNA → NBCRNA, CNM →
+  // AMCB, …) — feeds the qualification FAQ answer and its FAQPage schema.
+  const credentials = getCategoryCredentials(config.slug);
+
+  // P2 #7 — two gates, one rule: the donor board's behavioral-health HPSA
+  // column may only surface on the category whose specialty it describes.
+  //   • shortageMatchesCategory gates the AFFIRMATIVE claim in the careers FAQ
+  //     answer (which also feeds the FAQPage schema). Same predicate the
+  //     metadata builder uses, so the page and its SERP snippet can never
+  //     disagree about whether the designation is on topic.
+  //   • categoryOwnsShortage gates the Community Profile tile, which reports
+  //     both polarities and so is category-scoped rather than flag-scoped.
+  const shortageMatchesCategory = shortageIsOnTopic(city!, config.slug);
+  const categoryOwnsShortage = categoryOwnsShortageData(config.slug);
+
   /* ═══ Design Tokens — matched to category pages ═══ */
   const clayCard: React.CSSProperties = {
     background: '#FFFFFF', borderRadius: '20px',
@@ -1346,37 +1547,71 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
     },
     {
       q: `Does ${city!.state} allow ${brand.niche.short}s full practice authority?`,
-      a: practiceAuthority ? `${city!.state} has ${practiceAuthority.authority.toLowerCase()} practice authority for nurse practitioners. ${String(practiceAuthority.authority).includes('Full') ? `${brand.niche.short}s can practice independently, prescribe medications, and diagnose without physician oversight.` : String(practiceAuthority.authority).includes('Reduced') ? `${brand.niche.short}s require a collaborative agreement with a physician but can prescribe and diagnose with that arrangement.` : `${brand.niche.short}s must practice under physician supervision for prescribing and some clinical decisions.`}` : `Contact the ${city!.state} Board of Nursing for current practice authority information.`,
+      // FIX: this branched on `String(authority).includes('Full')`, but
+      // StatePracticeInfo.authority is the lowercase union 'full' | 'reduced'
+      // | 'restricted' — so BOTH tests were permanently false and every
+      // full-practice state was told its NPs "must practice under physician
+      // supervision", in the visible answer AND the FAQPage schema. Switch on
+      // the union so the compiler catches a new member.
+      a: practiceAuthority
+        ? `${city!.state} has ${getAuthorityLabel(practiceAuthority.authority).toLowerCase()} for ${brand.niche.descriptor}s. ${
+            practiceAuthority.authority === 'full'
+              ? `${brand.niche.short}s can evaluate, diagnose, and prescribe without physician oversight.`
+              : practiceAuthority.authority === 'reduced'
+                ? `${brand.niche.short}s require a collaborative agreement with a physician, but can diagnose and prescribe under that arrangement.`
+                : `${brand.niche.short}s practice under physician supervision for prescribing and some clinical decisions.`
+          } Source: ${STAT_SOURCES.fullPracticeStates.source}. Verify current rules with the ${city!.state} Board of Nursing before accepting a role.`
+        : `Contact the ${city!.state} Board of Nursing for current practice authority information.`,
     },
     {
       q: `Is ${city!.name} a good place for ${brand.niche.short} careers?`,
-      a: `${city!.name} ${city!.mentalHealthShortage ? `is a federally designated Health Professional Shortage Area (HPSA), meaning there is high demand and often sign-on bonuses, loan repayment programs, and competitive salaries for ${brand.niche.short}s.` : `has growing demand for ${brand.niche.descriptor}s.`} With a population of ${city!.population.toLocaleString('en-US')}${city!.metroArea ? ` and part of the ${city!.metroArea} metro area` : ''}, ${city!.name} offers ${city!.healthcareSystems.length > 0 ? `access to major health systems including ${city!.healthcareSystems.slice(0, 3).join(', ')}` : 'a variety of practice settings'}.`,
+      // P2 #7: the dataset's only shortage column is the donor board's
+      // BEHAVIORAL-HEALTH HPSA flag — there is no primary-care HPSA field —
+      // so an unqualified "designated Health Professional Shortage Area,
+      // meaning high demand … for NPs" was an all-NP shortage claim this
+      // board cannot source. The designation is now named with its discipline
+      // and only carried on the page whose specialty it actually describes;
+      // every other category gets the market facts without it.
+      a: `${city!.name} ${
+        shortageMatchesCategory
+          ? 'carries a federal HRSA behavioral-health Health Professional Shortage Area (HPSA) designation, which is what makes NHSC Loan Repayment available to behavioral-health clinicians at approved sites in the area.'
+          : `has growing demand for ${brand.niche.descriptor}s.`
+      } With a population of ${city!.population.toLocaleString('en-US')}${city!.metroArea ? ` and part of the ${city!.metroArea} metro area` : ''}, ${city!.name} offers ${city!.healthcareSystems.length > 0 ? `access to major health systems including ${city!.healthcareSystems.slice(0, 3).join(', ')}` : 'a variety of practice settings'}.`,
     },
     {
-      q: `What qualifications do I need for ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${city!.name}?`,
-      a: `To work as an ${brand.niche.short} in ${city!.name}, ${city!.stateCode}, you need: (1) A Master's or Doctoral degree in nursing with ${brand.niche.short} specialization, (2) National board certification (ANCC or AANP), (3) An active RN and APRN license in ${city!.state}, and (4) DEA registration for prescribing controlled substances. ${config.label === 'Entry-Level' ? 'Many entry-level positions accept new graduates and provide structured mentorship.' : config.label === 'Senior' ? 'Senior positions typically require 7+ years of experience and may require subspecialty certifications.' : `${config.label} positions may have additional requirements specific to the employer and setting.`}`,
+      // P2 #8: certifying body comes from the per-category credential facts —
+      // "ANCC or AANP" was wrong for CRNA (NBCRNA), CNM (AMCB), CNS
+      // (ANCC/AACN), PNP (PNCB), NNP/WHNP (NCC) and acute care (ANCC/AACN).
+      q: `What qualifications do I need for ${credentials.standaloneLabel ? config.label.toLowerCase() : `${config.label.toLowerCase()} ${brand.niche.short}`} jobs in ${city!.name}?`,
+      a: `To work as ${credentials.article} ${credentials.role} in ${city!.name}, ${city!.stateCode}, you need: (1) ${credentials.degree}, (2) ${credentials.certification}, (3) an active RN and APRN license in ${city!.state}, and (4) ${credentials.dea}. ${config.label === 'Entry-Level' ? 'Many entry-level positions accept new graduates and provide structured mentorship.' : config.label === 'Senior' ? 'Senior positions typically require 7+ years of experience and may require subspecialty certifications.' : `${config.label} positions may have additional requirements specific to the employer and setting.`}`,
     },
+  ];
+
+  // P2 #19: ONE breadcrumb array drives the visible <nav> and the
+  // BreadcrumbList JSON-LD (Breadcrumbs renders both) — hrefs are relative
+  // because the component prefixes the canonical origin itself.
+  // State crumb: city-only categories have no /jobs/{cat}/{state} route
+  // (middleware 410s that shape), so their state crumb points at the
+  // /jobs/state/{slug} hub instead — never a 410 URL in schema or in the DOM.
+  const breadcrumbItems = [
+    { label: 'Home', href: '/' },
+    { label: 'Jobs', href: '/jobs' },
+    { label: config.label, href: `/jobs/${config.slug}` },
+    {
+      label: city!.state,
+      href: STATE_ELIGIBLE_SET.has(config.slug)
+        ? `/jobs/${config.slug}/${stateToSlug(city!.state)}`
+        : `/jobs/state/${stateToSlug(city!.state)}`,
+    },
+    { label: `${city!.name}, ${city!.stateCode}` },
   ];
 
   return (
     <div style={{ backgroundColor: '#FDFBF7' }}>
       {/* ═══ SCHEMAS ═══ */}
-      {/* State crumb: city-only categories have no /jobs/{cat}/{state} route
-          (middleware 410s that shape), so their state crumb points at the
-          /jobs/state/{slug} hub instead — never a 410 URL in schema. */}
-      <BreadcrumbSchema items={[
-        { name: 'Home', url: brand.baseUrl },
-        { name: 'Jobs', url: `${brand.baseUrl}/jobs` },
-        { name: config.label, url: `${brand.baseUrl}/jobs/${config.slug}` },
-        {
-          name: city!.state,
-          url: STATE_ELIGIBLE_SET.has(config.slug)
-            ? `${brand.baseUrl}/jobs/${config.slug}/${stateToSlug(city!.state)}`
-            : `${brand.baseUrl}/jobs/state/${stateToSlug(city!.state)}`,
-        },
-        { name: city!.name, url: `${brand.baseUrl}${basePath}` },
-      ]} />
-      {/* D9: ItemList schema */}
+      {/* D9: ItemList schema.
+          B29: job titles are aggregator-sourced — escape < and > so a literal
+          "</script>" in a title can never terminate this element early. */}
       {jobs.length > 0 && (
         <script
           type="application/ld+json"
@@ -1392,7 +1627,9 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                 name: job.title,
                 url: `${brand.baseUrl}/jobs/${job.slug || job.id}`,
               })),
-            }),
+            })
+              .replace(/</g, '\\u003c')
+              .replace(/>/g, '\\u003e'),
           }}
         />
       )}
@@ -1423,19 +1660,37 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
         jobCount={stats.totalJobs}
       />
 
+      {/* ═══ P2 #19: visible, linked breadcrumb trail ═══
+          Sits in the hero's cream band so it reads as part of the header.
+          CategoryHero's own `breadcrumbs` prop is deliberately empty: it
+          renders unlinked <span>s whose labels ('Careers …') did not match
+          the BreadcrumbList schema, and two Breadcrumb navs on one page is
+          both a duplicate landmark and a duplicate-schema signal. */}
+      <div className="pseo-crumb-band">
+        <Breadcrumbs items={breadcrumbItems} />
+      </div>
+
       {/* ═══ D2: HERO — CategoryHero with category's watercolor ═══ */}
       <CategoryHero
         bgColor={assets?.bgColor || '#BE185D'}
         heroImage={assets?.heroImage || `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
         heroAlt={`${config.label} ${brand.niche.short} working in ${city!.name}, ${city!.stateCode}`}
         badgeText={formatStatsBadge(stats.totalJobs, stats.statsAsOf)}
-        breadcrumbs={['Careers', config.label, city!.name]}
+        breadcrumbs={[]}
         headlineLine1={config.label}
         headlineLine2={brand.niche.short}
         headlineSub={`jobs in ${city!.name}, ${city!.stateCode}.`}
         stats={[
           { value: `${stats.totalJobs}`, label: 'positions' },
-          { value: stats.rawAvgSalary > 0 ? `$${stats.rawAvgSalary}k` : config.salaryRange.split('–')[0] || '$130K+', label: 'avg salary' },
+          // P3 #13: this used to be `salaryRange.split('–')[0]` — an EN DASH,
+          // while every salaryRange literal is written with an ASCII hyphen.
+          // The split never matched, so the fallback rendered the whole range
+          // ("$110K-150K") under an "avg salary" label. Splitting correctly
+          // would be worse: the low end of an estimated band is not an
+          // average. Show the band, and label it as a band.
+          stats.rawAvgSalary > 0
+            ? { value: `$${stats.rawAvgSalary}k`, label: 'avg salary' }
+            : { value: config.salaryRange, label: 'typical range' },
           { value: demand.label, label: 'demand' },
         ]}
         description={`${config.label} ${brand.niche.short} positions in ${city!.name}. ${config.heroSubtitle}.`}
@@ -1623,7 +1878,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                       Practice Authority
                     </h3>
                     <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                      {practiceAuthority ? `${city!.state} has ${practiceAuthority.authority.toLowerCase()} practice authority for NPs.` : config.tips[1] || `Advance your ${config.label.toLowerCase()} career in ${city!.name}.`}
+                      {practiceAuthority ? `${city!.state} has ${practiceAuthority.authority} practice authority for ${brand.niche.short}s.` : config.tips[1] || `Advance your ${config.label.toLowerCase()} career in ${city!.name}.`}
                     </p>
                   </div>
                 </div>
@@ -1706,12 +1961,27 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                   <div style={{ fontSize: '11px', color: '#7A6A62' }}>Median Income</div>
                   <div style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35' }}>${(city!.medianIncome / 1000).toFixed(0)}k</div>
                 </div>
-                <div>
-                  <div style={{ fontSize: '11px', color: '#7A6A62' }}>Shortage</div>
-                  <div style={{ fontSize: '16px', fontWeight: 700, color: city!.mentalHealthShortage ? '#ef4444' : '#34D399' }}>
-                    {city!.mentalHealthShortage ? '⚠ Yes' : '✓ No'}
+                {/* P2 #7: labelled with the designation's DISCIPLINE *and*
+                    gated to the category that discipline describes. The
+                    dataset carries only the donor board's behavioral-health
+                    HPSA column, so a bare "Shortage: Yes" read as an all-NP
+                    shortage claim — but the label alone still puts a
+                    behavioral-health stat in the "… at a Glance" card of every
+                    dermatology, cardiology and aesthetics city page. Gated on
+                    the CATEGORY rather than on the flag, because "Not
+                    designated" is genuinely useful to a behavioral-health
+                    seeker weighing NHSC eligibility; it is only the 41 other
+                    categories that have no business reading either polarity.
+                    Neutral colouring — a designation is context for
+                    loan-repayment eligibility, not a verdict. */}
+                {categoryOwnsShortage && (
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#7A6A62' }}>Behavioral-Health HPSA</div>
+                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35' }}>
+                      {city!.mentalHealthShortage ? 'Designated' : 'Not designated'}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               {city!.metroArea && (
                 <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.05)', fontSize: '12px', color: '#7A6A62' }}>
@@ -1747,7 +2017,9 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                 <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                     <Shield size={14} style={{ color: '#BE185D' }} />
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#1A2E35' }}>{practiceAuthority.authority}</span>
+                    {/* getAuthorityLabel, not the raw union member — this
+                        rendered the bare string "full" / "restricted". */}
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#1A2E35' }}>{getAuthorityLabel(practiceAuthority.authority)}</span>
                   </div>
                   {/* Rendered only once the license-guide blog series is
                       published — this template links from ~100K+ pages, so
@@ -1898,8 +2170,10 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             <p style={{ fontSize: '14px', lineHeight: 1.7, color: '#5A4A42', margin: 0 }}>
               {taxonomyCityNarrative}
             </p>
+            {/* P2 #7: the HPSA line names the designation's discipline — this
+                board holds no primary-care HPSA data (see city-data/types.ts). */}
             <p style={{ fontSize: '11px', marginTop: '8px', color: '#A09080' }}>
-              Sources: U.S. Census Bureau, Bureau of Labor Statistics, HRSA HPSA data, AANP State Practice Environment.
+              Sources: U.S. Census Bureau, Bureau of Labor Statistics, HRSA behavioral-health HPSA designations, {STAT_SOURCES.fullPracticeStates.source}. Job counts and salary averages are computed from live listings on this board.
             </p>
           </section>
 
@@ -1981,6 +2255,14 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
 
       {/* D11: Responsive + Hover CSS */}
       <style>{`
+        /* Breadcrumb band — horizontal padding tracks CategoryHero's own
+           (48px 56px 0, dropping to 32px 24px 0 under 900px) so the trail
+           lines up with the H1 below it. */
+        .pseo-crumb-band { background: #faf6ef; padding: 24px 56px 0; }
+        .pseo-crumb-band nav { margin-bottom: 0; }
+        @media (max-width: 900px) {
+          .pseo-crumb-band { padding: 16px 24px 0; }
+        }
         .pseo-cta-primary { transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease; }
         .pseo-cta-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(190,24,93,0.35) !important; filter: brightness(1.05); }
         .pseo-bento-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }

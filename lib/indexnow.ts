@@ -1,5 +1,12 @@
 /**
- * IndexNow client.
+ * IndexNow client — the board's ONLY IndexNow implementation.
+ *
+ * P2 #20: there used to be two. lib/search-indexing.ts carried a second,
+ * divergent client (different endpoint casing, no same-host filter, no 10k
+ * cap, no logging, and it read a different env var), so which behaviour a
+ * caller got depended on which module it happened to import. That module now
+ * delegates here and only maps the result into its own per-URL
+ * `IndexResult[]` shape; all protocol handling lives in this file.
  *
  * IndexNow is a free protocol supported by Bing, Yandex, Seznam, and
  * Naver (and indirectly Google via Bing's API surface) that lets a
@@ -39,6 +46,9 @@ function getKey(): string | null {
   return key;
 }
 
+/** Engines cap a submission at 10,000 URLs per host per day. */
+const MAX_URLS_PER_SUBMISSION = 10_000;
+
 function sameHost(urls: string[]): string[] {
   const host = new URL(HOST).host;
   return urls.filter((u) => {
@@ -50,24 +60,45 @@ function sameHost(urls: string[]): string[] {
   });
 }
 
+export interface IndexNowSubmission {
+  /** True when the engine accepted the batch (HTTP 200/202). */
+  ok: boolean;
+  /** How many URLs were actually sent. */
+  submitted: number;
+  /** Machine-readable failure cause; absent on success. */
+  reason?: string;
+  /** The URLs that were sent — same-host, capped. */
+  accepted: string[];
+  /**
+   * URLs dropped before the request: wrong host, unparseable, or past the
+   * per-submission cap. Callers that report per-URL outcomes (see
+   * lib/search-indexing.ts) need this to avoid claiming success for a URL
+   * that was never submitted.
+   */
+  rejected: string[];
+}
+
 /**
  * Submit a list of URLs to IndexNow. Async + fire-and-forget-safe — the
  * caller can await for telemetry or ignore the promise. Throws only on
  * programmer error (no key when expected); network failures resolve
  * with `{ ok: false }` so the caller doesn't crash a cron.
  */
-export async function pingIndexNow(urls: string[]): Promise<{ ok: boolean; submitted: number; reason?: string }> {
-  if (urls.length === 0) return { ok: true, submitted: 0 };
+export async function pingIndexNow(urls: string[]): Promise<IndexNowSubmission> {
+  if (urls.length === 0) return { ok: true, submitted: 0, accepted: [], rejected: [] };
 
-  const filtered = sameHost(urls).slice(0, 10_000);
+  const filtered = sameHost(urls).slice(0, MAX_URLS_PER_SUBMISSION);
+  const sent = new Set(filtered);
+  const rejected = urls.filter((u) => !sent.has(u));
+
   if (filtered.length === 0) {
-    return { ok: false, submitted: 0, reason: 'no_same_host_urls' };
+    return { ok: false, submitted: 0, reason: 'no_same_host_urls', accepted: [], rejected };
   }
 
   const key = getKey();
   if (!key) {
     logger.info('IndexNow ping skipped — INDEXNOW_KEY not set', { count: filtered.length });
-    return { ok: false, submitted: 0, reason: 'no_key' };
+    return { ok: false, submitted: 0, reason: 'no_key', accepted: [], rejected: urls };
   }
 
   const host = new URL(HOST).host;
@@ -88,11 +119,11 @@ export async function pingIndexNow(urls: string[]): Promise<{ ok: boolean; submi
       // IndexNow returns 200/202 on accept, 4xx on host mismatch / key error.
       const text = await res.text().catch(() => '');
       logger.warn('IndexNow rejected', { status: res.status, body: text.slice(0, 200) });
-      return { ok: false, submitted: 0, reason: `http_${res.status}` };
+      return { ok: false, submitted: 0, reason: `http_${res.status}`, accepted: [], rejected: urls };
     }
-    return { ok: true, submitted: filtered.length };
+    return { ok: true, submitted: filtered.length, accepted: filtered, rejected };
   } catch (err) {
     logger.warn('IndexNow network error', { error: err instanceof Error ? err.message : String(err) });
-    return { ok: false, submitted: 0, reason: 'network_error' };
+    return { ok: false, submitted: 0, reason: 'network_error', accepted: [], rejected: urls };
   }
 }

@@ -3,14 +3,66 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { Shield, MapPin, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
-import { STATE_PRACTICE_AUTHORITY, getStatesByAuthority, getAuthorityColor, type PracticeAuthority } from '@/lib/state-practice-authority';
+import { STATE_PRACTICE_AUTHORITY, getStatesByAuthority, getAuthorityColor } from '@/lib/state-practice-authority';
+import { STAT_SOURCES } from '@/lib/stats-sources';
 
 // Bump on each editorial review pass — Article.dateModified should reflect
 // real freshness, not be permanently frozen at the original publish date.
 // Update at least quarterly; sooner if NLC membership or state authority
 // classifications change.
 const PUBLISHED_AT = '2026-03-19';
-const LAST_REVIEWED = '2026-03-19';
+const LAST_REVIEWED = '2026-07-29';
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * P2 #22 — UNSOURCED CLAIMS REMOVED FROM THIS PAGE
+ * ─────────────────────────────────────────────────────────────────────────
+ * Four claims were asserted as fact with nothing behind them:
+ *   1. A double-digit percentage salary premium for full-practice states —
+ *      rendered as a hero stat card, an FAQ answer, AND the meta
+ *      description. No survey, dataset, or citation anywhere in the repo
+ *      supports it.
+ *   2. A multiple claiming full-practice states have several times more
+ *      private practice owners — same problem.
+ *   3. A claim that full-practice states have more openings per capita —
+ *      same problem.
+ *   4. An NLC member count that contradicted the repo's own compact
+ *      dataset, which yields 38 member states.
+ * Claims 1-3 are gone; the salary section now explains the MECHANISMS
+ * practice authority actually controls (all readable off
+ * lib/state-practice-authority.ts) and links to live per-state pay data
+ * rather than inventing a premium.
+ *
+ * CLAIM 4 — SECOND PASS. The first fix replaced the typed "41 states" with
+ * a count DERIVED from LICENSE_GUIDE_NLC_NON_MEMBERS (which yields 38).
+ * That made the claim self-consistent with the licensure series without
+ * making it TRUE, and a derived number reads more authoritative than a
+ * typed one. Checked against the NLC's own site and the public roster on
+ * 2026-07-29: NCSBN publishes 43 member JURISDICTIONS (41 states plus
+ * territories), and the repo's non-member set is wrong in five places — it
+ * omits Alaska (a genuine non-member with only pending legislation) and
+ * lists Connecticut, Massachusetts, Rhode Island, and Washington as
+ * non-members when all four have joined.
+ *
+ * That set is a mirror of the canonical one in lib/pseo/state-narrative.ts
+ * and drives 51 licensure guides, the state hubs, and the licensure
+ * checker, so correcting it is a separate change with its own blast radius
+ * — not something to smuggle in behind an FPA-guide edit. Until then this
+ * page publishes NO membership count and no membership list: it explains
+ * what the compact does and sends the reader to the live NCSBN map, the
+ * same rule /resources/1099-vs-w2 applies to annually indexed IRS figures.
+ */
+
+/**
+ * JSON-LD serializer matching the repo convention (see app/companies/page.tsx
+ * and app/for-employers/resources/how-to-hire/page.tsx): angle brackets are
+ * escaped so no serialized value can terminate the surrounding script element.
+ */
+const ldJson = (obj: unknown): string =>
+  JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+
+/** Live NLC roster — the only place this page will point for membership. */
+const NLC_MAP_URL = 'https://www.nursecompact.com/';
+
 // P0 OG sweep: edge-generated card via /api/og — the previous Supabase
 // page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
 // Absolute URL because it also feeds Article JSON-LD `image`.
@@ -18,7 +70,7 @@ const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.
 
 export const metadata: Metadata = {
   title: `${brand.niche.short} Full Practice Authority Guide 2026 — All 50 States`,
-  description: `Complete state-by-state Full Practice Authority (FPA) guide for ${brand.niche.descriptor}s. See which states allow independent ${brand.niche.short} practice, prescriptive authority rules, Nurse Licensure Compact states, and how FPA impacts salary (+12-15% premium).`,
+  description: `Complete state-by-state Full Practice Authority (FPA) guide for ${brand.niche.descriptor}s. See which states allow independent ${brand.niche.short} practice, prescriptive authority rules, Nurse Licensure Compact membership, and what practice authority changes about how you can work and get paid.`,
   keywords: [`${brand.niche.short} full practice authority`, 'nurse practitioner independent practice states', 'FPA states 2026', `${brand.niche.short} prescriptive authority by state`, `${brand.niche.short} scope of practice`, 'NLC compact states for NP'],
   openGraph: {
     title: `Full Practice Authority Guide for ${brand.niche.short}s — 2026`,
@@ -55,11 +107,11 @@ export default function FPAGuidePage() {
     },
     {
       question: "How many states have Full Practice Authority for nurse practitioners?",
-      answer: `As of 2026, ${fullStateCount} states (plus Washington D.C.) grant Full Practice Authority to ${brand.niche.short}s. ${reducedStates.length} states have Reduced Practice (requiring collaborative agreements), and ${restrictedStates.length} states have Restricted Practice (requiring physician supervision).`
+      answer: `${fullStateCount} states plus Washington D.C. grant Full Practice Authority to ${brand.niche.short}s (${STAT_SOURCES.fullPracticeStates.source}, ${STAT_SOURCES.fullPracticeStates.asOf}). ${reducedStates.length} states have Reduced Practice, requiring a collaborative agreement with a physician, and ${restrictedStates.length} states have Restricted Practice, requiring physician supervision. Classifications change as state legislatures act, so confirm against the AANP State Practice Environment map before relying on one.`
     },
     {
-      question: `Does Full Practice Authority affect ${brand.niche.short} salary?`,
-      answer: `Yes. ${brand.niche.short}s in Full Practice Authority states earn 12-15% more on average than those in restricted states, due to increased autonomy, private practice opportunities, and higher demand. FPA states also have more job openings per capita.`
+      question: `Does Full Practice Authority affect ${brand.niche.short} pay?`,
+      answer: `It changes what you are able to do, which in turn shapes what you can be paid for — but this board does not publish a national premium figure, because no verifiable one exists in our data. What practice authority concretely controls: whether you can open and bill under your own practice without a physician agreement, whether you can take independent contract or telehealth work in that state without arranging supervision, and whether a collaborating physician's fee comes out of your revenue. Pay itself varies far more by setting, specialty, experience, and local market than by classification alone. For real numbers, use the state pages in our salary guide, which compute averages from live postings in that state.`
     },
     {
       question: `Can ${brand.niche.short}s prescribe controlled substances in all states?`,
@@ -67,7 +119,7 @@ export default function FPAGuidePage() {
     },
     {
       question: `What is the Nurse Licensure Compact (NLC) and how does it help ${brand.niche.short}s?`,
-      answer: `The NLC allows registered nurses to hold one multistate license and practice in all member states. While the NLC covers RN licensure, ${brand.niche.short}s still need individual state APRN licenses. However, having an NLC RN license simplifies the APRN application process in many compact states. As of 2026, 41 states are NLC members.`
+      answer: `The NLC lets a registered nurse hold one multistate RN license that is recognized across member states. It covers the RN license underpinning your credential, not the APRN license itself — ${brand.niche.short}s still apply for APRN licensure state by state — but it removes the RN endorsement step, which is often the slowest part of adding a state. Most states have joined and Washington D.C. has not, but membership moves as legislatures act and several jurisdictions sit between enactment and implementation, so we do not publish a count here: check the current roster on the NCSBN compact map at ${NLC_MAP_URL} for each state you plan to cover, and plan extra lead time wherever the compact does not reach.`
     },
   ];
 
@@ -81,7 +133,7 @@ export default function FPAGuidePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: ldJson({
             '@context': 'https://schema.org',
             '@type': 'FAQPage',
             mainEntity: fpaFaqs.map((faq) => ({
@@ -95,7 +147,7 @@ export default function FPAGuidePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: ldJson({
             '@context': 'https://schema.org',
             '@type': 'Article',
             headline: `${brand.niche.short} Full Practice Authority Guide 2026 — All 50 States`,
@@ -129,9 +181,13 @@ export default function FPAGuidePage() {
               State-by-state practice authority classifications for {brand.niche.descriptor}s
             </p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-8 mt-8">
+              {/* fullStates includes D.C. as a jurisdiction; the hero used
+                  its raw length (28) while the section below read "27 states
+                  + DC". Both now render fullStateCount so the page cannot
+                  contradict itself or STAT_SOURCES.fullPracticeStates. */}
               <div className="text-center">
-                <div className="text-3xl font-bold">{fullStates.length}</div>
-                <div className="text-sm text-pink-100">Full Practice Authority</div>
+                <div className="text-3xl font-bold">{fullStateCount}</div>
+                <div className="text-sm text-pink-100">Full Practice states (+ DC)</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold">{reducedStates.length}</div>
@@ -240,25 +296,19 @@ export default function FPAGuidePage() {
           <div className="mb-8 md:mb-12">
             <div className="rounded-xl p-6 md:p-8" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
-                How Practice Authority Impacts {brand.niche.short} Salary
+                What Practice Authority Changes About Your Earning Options
               </h2>
               <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                Practice authority directly impacts earning potential. {brand.niche.short}s in Full Practice Authority states benefit from:
+                Practice authority is a legal classification, not a pay scale. It does not set your salary — it sets which ways of earning are open to you in that state. The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}); what changes state to state is the structure around that number:
               </p>
-              <div className="grid md:grid-cols-2 gap-4 mb-6">
-                <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                  <div className="text-2xl font-bold mb-1" style={{ color: 'var(--color-primary)' }}>+12-15%</div>
-                  <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Salary Premium</div>
-                  <div className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>FPA states pay more due to higher demand and independent practice opportunities</div>
-                </div>
-                <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                  <div className="text-2xl font-bold mb-1" style={{ color: 'var(--color-primary)' }}>2-3x</div>
-                  <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>More Private Practice Owners</div>
-                  <div className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>FPA states enable easier private practice startup without physician partnership</div>
-                </div>
-              </div>
+              <ul className="space-y-3 text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether you can own the practice.</strong> In a full-practice state you can open and bill under your own practice without a physician agreement. In reduced and restricted states you need a collaborating or supervising physician in place first, which is a real barrier to independent ownership.</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether a collaboration fee comes out of your revenue.</strong> Where an agreement is required, the collaborating physician is typically compensated for it — an ongoing cost against your income that a full-practice colleague does not carry. Fees are negotiated privately and vary widely, so treat any quoted figure with suspicion.</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>How easily you can take contract and telehealth work.</strong> Independent 1099 and telehealth arrangements are simplest where no supervisory relationship has to be arranged and maintained in each state you cover.</span></li>
+                <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Transition-to-practice periods still apply in several full-practice states.</strong> Check the Details column in the table above before assuming day-one autonomy.</span></li>
+              </ul>
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                See our full <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>2026 {brand.niche.short} Salary Guide</Link> for state-by-state salary data and our <Link href="/resources/private-practice-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>Private Practice Startup Guide</Link> for step-by-step instructions.
+                For actual pay rather than classification, the <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>{brand.niche.short} salary guide</Link> computes state-level averages from live postings. If independent practice is the goal, the <Link href="/resources/private-practice-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>private practice startup guide</Link> covers entity formation, credentialing, and a revenue model, and the <Link href="/resources/1099-vs-w2" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</Link> shows what a contract has to pay to beat a salaried package.
               </p>
             </div>
           </div>
@@ -281,6 +331,7 @@ export default function FPAGuidePage() {
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>Some telehealth companies handle multi-state licensing and credentialing for you</span></li>
                 <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span>Restricted practice states may require a collaborative physician in that specific state</span></li>
                 <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span>Pandemic-era telehealth waivers have mostly expired — verify current requirements</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>The Nurse Licensure Compact can remove the RN endorsement step in member states, but not the APRN application. Membership and implementation dates change, so confirm each state against the <a href={NLC_MAP_URL} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>NCSBN compact map</a> rather than a count published on a jobs board</span></li>
               </ul>
               <p className="text-sm mt-4" style={{ color: 'var(--text-secondary)' }}>
                 Browse <Link href="/jobs/remote" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>remote {brand.niche.short} jobs</Link> or <Link href="/jobs/telehealth" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>telehealth positions</Link> that handle multi-state licensing.
@@ -299,6 +350,23 @@ export default function FPAGuidePage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Related Resources — P2 #22: the /resources guide cluster now
+              cross-links in all directions from every member page. */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <Link href="/resources/1099-vs-w2" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>How self-employment tax works and what a contract must pay to match a salary.</p>
+            </Link>
+            <Link href="/resources/private-practice-guide" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Private practice startup guide</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Entity formation, credentialing, EHR, and a transparent revenue model.</p>
+            </Link>
+            <Link href="/salary-guide" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>{brand.niche.short} salary guide</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>State-by-state pay computed from live postings.</p>
+            </Link>
           </div>
 
           {/* CTA */}

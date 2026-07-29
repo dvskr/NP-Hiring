@@ -5,8 +5,11 @@ import Link from 'next/link';
 import {
   ArrowRight, Briefcase, Building2, Calculator, DollarSign,
   FileDown, Globe, GraduationCap, Rocket, Search, ShieldCheck, Star,
-  TrendingUp, Users, type LucideIcon,
+  TrendingUp, Users, Wrench, type LucideIcon,
 } from 'lucide-react';
+// P2 tools band — paths come from the registry that renders /tools, so this
+// page can never advertise a tool route the app would 404 on.
+import { TOOLS } from '@/app/tools/tools-registry';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import ResourceDownloadGate from '@/components/ResourceDownloadGate';
@@ -446,6 +449,38 @@ export default async function ResourcesPage() {
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '32px' }}>
             Tools & Downloads
           </h2>
+
+          {/* P2 #4/#5/#6/#17 — the four interactive tools each have their own
+              route under /tools. Cards render from the TOOLS registry so this
+              band can never link a tool path that does not exist. */}
+          <div className="res-tools-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', marginBottom: '14px' }}>
+            {TOOLS.map(t => (
+              <Link key={t.path} href={t.path} className="emp-bento-card" style={{
+                ...clayCard, padding: '24px 22px', textDecoration: 'none',
+                display: 'flex', flexDirection: 'column', gap: '10px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                  <div style={{ ...iconTile, width: '40px', height: '40px', borderRadius: '12px', background: '#FDF2F8', color: '#BE185D' }}>
+                    <Wrench size={20} />
+                  </div>
+                  <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#BE185D', background: '#FDF2F8', padding: '3px 10px', borderRadius: '20px' }}>
+                    {t.badge}
+                  </span>
+                </div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: 0, lineHeight: 1.35 }}>{t.title}</h3>
+                <p style={{ fontSize: '12.5px', color: '#5A4A42', lineHeight: 1.55, margin: 0, flex: 1 }}>{t.blurb}</p>
+                <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  Open the tool <ArrowRight size={13} />
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          <p style={{ textAlign: 'center', marginBottom: '28px' }}>
+            <Link href="/tools" style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textDecoration: 'underline' }}>
+              Browse all free tools
+            </Link>
+          </p>
 
           <div className="res-tools-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
             {/* Salary Calculator */}

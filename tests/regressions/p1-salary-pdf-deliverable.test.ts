@@ -173,8 +173,43 @@ describe('P1 #4 — generator copy mirrors the published /salary-guide page (dri
         });
     }
 
-    it('FPA premium copy matches the page (12-15% more)', () => {
-        expect(hubSrc).toContain('12-15% more');
-        expect(generatorSrc).toContain('12-15% more');
+    /**
+     * P2 #22 follow-up — this assertion used to REQUIRE the fabricated
+     * "+12-15% FPA salary premium" in both files, which pinned the claim in
+     * place: the same figure is listed as an unsourced invention by
+     * p0-faq-pricing-funnel-stats-heroes-schema.test.ts, and it had already
+     * been deleted from /resources/fpa-guide. A parity test must enforce
+     * that the hub and the PDF AGREE — not that they agree on a specific
+     * false number. It now enforces both directions: the fabrication is
+     * absent from both, and the replacement copy is present in both.
+     */
+    it('the fabricated FPA salary premium is gone from BOTH the hub and the PDF', () => {
+        // Comments are stripped first: each file carries a note NAMING the
+        // figure it removed, which is what stops the next editor putting it
+        // back. Only code and copy count as "published".
+        const stripComments = (s: string) =>
+            s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+        for (const [label, src] of [['hub', hubSrc], ['generator', generatorSrc]] as const) {
+            expect(
+                stripComments(src),
+                `${label} still publishes the unsourced FPA premium`,
+            ).not.toContain('12-15%');
+        }
+    });
+
+    it('the replacement FPA copy is mirrored between the hub and the PDF', () => {
+        const replacement =
+            'Practice authority is a legal classification, not a pay scale — it decides which ways of earning are open to you in that state.';
+        expect(hubSrc).toContain(replacement);
+        expect(generatorSrc).toContain(replacement);
+        for (const bullet of [
+            'Own and bill under your own practice',
+            'Independent 1099 and telehealth work',
+            'Collaborating physician required first',
+            'That agreement is usually a paid one',
+        ]) {
+            expect(hubSrc, `hub missing FPA bullet: ${bullet}`).toContain(bullet);
+            expect(generatorSrc, `generator missing FPA bullet: ${bullet}`).toContain(bullet);
+        }
     });
 });

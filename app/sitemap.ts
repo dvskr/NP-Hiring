@@ -16,6 +16,29 @@ import { SALARY_SPECIALTY_SLUGS } from '@/app/salary-guide/specialty/specialty-c
 // template id the route would notFound() on. Plain-data module (its only
 // import is config/brand), so this is safe to pull into the sitemap route.
 import { JD_TEMPLATES } from '@/lib/jd-templates'
+// P2 #4/#5/#6/#17: the free-tools cluster. Same drift-proof pattern as the
+// specialty slugs and JD-template ids above — paths come from the registry the
+// /tools hub and the /resources tools band render from, so the sitemap can
+// never advertise a tool path the app would 404 on. Plain-data module (its
+// only import is config/brand), so this is safe to pull into the sitemap route.
+import { TOOL_PATHS, TOOLS_HUB_PATH } from '@/app/tools/tools-registry'
+// P2 #12: per-state city directories (/jobs/locations/<state>). These helpers
+// ARE the render gate — app/jobs/locations/[state]/page.tsx notFound()s on
+// !shouldRenderStateCityDirectory, and app/jobs/locations/page.tsx decides
+// which states to link with the identical call. Reading the same functions here
+// is what keeps the sitemap from submitting a directory that 404s.
+import {
+  buildStateCityDirectory,
+  cityLinkResolves,
+  shouldRenderStateCityDirectory,
+} from '@/app/jobs/locations/[state]/directory'
+// Name→code map used by BOTH the directory page and the locations hub when
+// resolving a state's code. Using the same source here means same input →
+// same verdict on all three surfaces.
+import { STATE_CODES } from '@/lib/pseo/setting-state-config'
+// P2 #21: the sitemap budget guard below pages the team channel instead of
+// only writing a log line nobody reads.
+import { sendDiscordMessage } from '@/lib/discord-notifier'
 
 // GSC Fix: Cache sitemap for 1 hour. Without this, every Googlebot request to
 // /sitemap.xml triggers a full DB scan across jobs, companies, and blog tables.
@@ -26,6 +49,43 @@ export const revalidate = 3600;
 // serverless instance kept comparing expiresAt against its cold-start time —
 // jobs that expired since then stayed in the sitemap while middleware served
 // their URLs as 410. It is now computed per-request inside sitemap().
+
+// ── Sitemap budget guard (P2 #21) ────────────────────────────────────────────
+// Google rejects a sitemap over 50,000 URLs — the WHOLE file, not the excess —
+// so crossing the cap silently stops recrawls sitewide. Thresholds are named
+// here because the alert copy quotes them.
+const SITEMAP_BUDGET_WARN = 40000;
+const SITEMAP_BUDGET_CRITICAL = 48000;
+
+/** One budget alert per severity per hour, per warm instance. */
+const sitemapBudgetAlertSeen = new Map<string, number>();
+const SITEMAP_ALERT_COOLDOWN_MS = 60 * 60 * 1000;
+
+/**
+ * Page the team channel when the primary sitemap approaches (or crosses) the
+ * 50k cap. Fire-and-forget: a Discord outage must never break /sitemap.xml,
+ * so the promise is voided and its rejection swallowed into a log line.
+ * sendDiscordMessage() already no-ops (with a console warning) when
+ * DISCORD_WEBHOOK_URL is unset, so dev and preview stay silent.
+ */
+function notifySitemapBudget(severity: 'warn' | 'critical', entryCount: number): void {
+  const last = sitemapBudgetAlertSeen.get(severity) ?? 0
+  if (Date.now() - last < SITEMAP_ALERT_COOLDOWN_MS) return
+  sitemapBudgetAlertSeen.set(severity, Date.now())
+
+  const critical = severity === 'critical'
+  void sendDiscordMessage('', [
+    {
+      title: critical ? '🚨 Sitemap over budget' : '⚠️ Sitemap approaching budget',
+      description: critical
+        ? `Primary sitemap is ${entryCount.toLocaleString()} entries (cap 50,000). Google may reject the whole file — split job pages into /api/sitemaps/jobs/[batch] now.`
+        : `Primary sitemap is ${entryCount.toLocaleString()} entries (cap 50,000). Plan the split into /api/sitemaps/jobs/[batch] before ${SITEMAP_BUDGET_CRITICAL.toLocaleString()}.`,
+      color: critical ? 0xff0000 : 0xffaa00,
+    },
+  ]).catch((err) =>
+    logger.warn('[sitemap] budget Discord alert failed', { error: err instanceof Error ? err.message : String(err) }),
+  )
+}
 
 // B33: metro-page adjacency sets — MUST mirror getMetroStats in
 // app/jobs/metro/[slug]/page.tsx, which widens these three metros to
@@ -137,6 +197,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/for-programs`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${baseUrl}/security`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${baseUrl}/sub-processors`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'yearly', priority: 0.3 },
+    // Content audit P2 #9 (trust cluster): /accessibility and /press are both
+    // `robots: { index: true, follow: true }`. Declaring a page indexable and
+    // then advertising it nowhere — no sitemap entry, no inbound link — is the
+    // same orphan defect P0 #7 fixed for /for-programs. Footer links added in
+    // components/Footer.tsx alongside these entries.
+    //
+    // /testimonials is deliberately NOT listed: it notFound()s until an
+    // employer testimonial has been consented to AND featured, so a sitemap
+    // entry would submit a URL that 404s on an empty board.
+    { url: `${baseUrl}/accessibility`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${baseUrl}/press`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.4 },
     // Content hub pages
     // /jobs/new-grad is NOT listed here: 'new-grad' is a registry category
     // slug, so categoryLandingPages below already emits it (daily, 0.9).
@@ -175,6 +246,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/resources/fpa-guide`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${baseUrl}/resources/private-practice-guide`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${baseUrl}/resources/1099-vs-w2`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
+  ]
+
+  // Free-tools cluster (P2 #4, #5, #6, #17) — the /tools hub plus one page per
+  // registry entry. NOT DB-gated, for the same reason as the specialty and
+  // employer-resource pages: every tool is a repo-authored page whose shell
+  // always renders in full (the live-pay sections gate themselves at render
+  // time), so there is no soft-404 risk. All five set an explicit self-canonical
+  // and none carry `robots: { index: false }`, so declaring them indexable and
+  // advertising them nowhere would be the orphan defect P0 #7 fixed.
+  const toolPages: MetadataRoute.Sitemap = [
+    { url: `${baseUrl}${TOOLS_HUB_PATH}`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
+    ...TOOL_PATHS.map(path => ({
+      url: `${baseUrl}${path}`,
+      lastModified: STATIC_CONTENT_DATE,
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    })),
   ]
 
   // Salary-guide specialty pages (P1 #7). NOT DB-gated on purpose: unlike
@@ -227,6 +315,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: 'weekly',
     priority: 0.8,
   }))
+
+  // Per-state city directories (P2 #12) — DB-gated below in the try block.
+  //
+  // Unlike statePages/metroPages above, the degraded-mode default here is
+  // EMPTY, not "all of them": whether /jobs/locations/<state> renders at all is
+  // a pure function of live inventory (≥1 linkable city AND ≥3 tracked cities),
+  // and roughly half the states fail it. With the DB down we cannot tell which,
+  // and the page hard-404s on the ones that fail — so the safe fallback is to
+  // advertise none rather than submit ~25 URLs that 404.
+  let stateCityDirectoryPages: MetadataRoute.Sitemap = []
 
   // Category × State pages — handled by /api/sitemaps/cities/[batch] (which
   // emits both category×city AND setting×state URLs via pseoStats with
@@ -327,6 +425,62 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })
       .filter((m): m is NonNullable<typeof m> => m !== null);
 
+    // P2 #12: which states earn a /jobs/locations/<state> city directory.
+    //
+    // Deliberately a SEPARATE groupBy from `topCities` below: that one carries
+    // `take: 2000` and a volume ordering, and a truncated tail would understate
+    // `trackedCities` — the exact input to the ≥3 gate — so a qualifying state
+    // could silently drop out of the sitemap as the dataset grows.
+    //
+    // Grouped and gated identically to app/jobs/locations/page.tsx: same
+    // active-indexable predicate, same STATE_CODES lookup, same cityLinkResolves
+    // veto, same shouldRenderStateCityDirectory verdict. The directory page
+    // matches `state = name OR stateCode = code`, a superset of this grouping,
+    // so a state that qualifies here always qualifies there — the sitemap can
+    // never submit a directory that 404s, and never advertises one the hub
+    // itself declines to link.
+    const directoryCityRows = await prisma.job.groupBy({
+      by: ['city', 'state'],
+      where: { ...ACTIVE_JOB_WHERE, city: { not: null }, state: { not: null } },
+      _count: { city: true },
+      _max: { updatedAt: true },
+    });
+    const directoryRowsByState = new Map<string, { city: string; count: number }[]>();
+    const directoryLastmod = new Map<string, Date>();
+    for (const row of directoryCityRows) {
+      if (!row.city || !row.state) continue;
+      const stateName = row.state.trim();
+      const bucket = directoryRowsByState.get(stateName);
+      const entry = { city: row.city, count: row._count.city };
+      if (bucket) bucket.push(entry);
+      else directoryRowsByState.set(stateName, [entry]);
+      // B27-style real per-page freshness: newest job anywhere in that state.
+      const seen = directoryLastmod.get(stateName);
+      if (row._max.updatedAt && (!seen || row._max.updatedAt > seen)) {
+        directoryLastmod.set(stateName, row._max.updatedAt);
+      }
+    }
+    // US_STATES is the sitemap's existing US-only slug whitelist — it keeps
+    // non-US groupings ("British Columbia") out, the same job the hub's inline
+    // set does for its links.
+    const usStateSlugs = new Set(US_STATES);
+    stateCityDirectoryPages = Object.entries(STATE_CODES)
+      .map(([stateName, stateCode]) => {
+        const slug = slugify(stateName);
+        if (!usStateSlugs.has(slug)) return null;
+        const directory = buildStateCityDirectory(directoryRowsByState.get(stateName) ?? [], {
+          canLink: (row) => cityLinkResolves(row.city, stateCode),
+        });
+        if (!shouldRenderStateCityDirectory(directory)) return null;
+        return {
+          url: `${baseUrl}/jobs/locations/${slug}`,
+          lastModified: directoryLastmod.get(stateName) ?? latestJobDate,
+          changeFrequency: 'weekly' as const,
+          priority: 0.7,
+        };
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+
     // Top city pages (DB-driven, only active non-expired jobs).
     //
     // Bounded with `take: 2000` so cold-cache sitemap regeneration can't
@@ -419,11 +573,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...metroPages,
       ...categoryLandingPages,
       ...landingPages,
+      ...toolPages,
       ...employerResourcePages,
       ...statePages,
       ...salaryGuideStatePages,
       ...salarySpecialtyPages,
       ...categoryStatePages,
+      ...stateCityDirectoryPages,
       ...cityPages,
       ...companyPages,
       ...blogPages,
@@ -434,11 +590,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // 50,000 URLs. We exceed it silently, the entire sitemap is rejected and
     // ALL pages stop being recrawled. Log loudly when we approach the cap so
     // ops can split into batches before that happens.
-    if (all.length > 40000) {
-      logger.warn(`[sitemap] Primary sitemap is ${all.length} entries — approaching Google's 50k limit. Plan to split job pages into /api/sitemaps/jobs/[batch] before exceeding 48000.`);
+    //
+    // P2 #21: the log lines alone were invisible — nobody reads Vercel
+    // function logs for a route that renders once an hour, and by the time
+    // anyone noticed the cap had been crossed the whole sitemap would already
+    // be rejected. Both thresholds now also page the team channel.
+    if (all.length > SITEMAP_BUDGET_WARN) {
+      logger.warn(`[sitemap] Primary sitemap is ${all.length} entries — approaching Google's 50k limit. Plan to split job pages into /api/sitemaps/jobs/[batch] before exceeding ${SITEMAP_BUDGET_CRITICAL}.`);
+      notifySitemapBudget('warn', all.length);
     }
-    if (all.length > 48000) {
+    if (all.length > SITEMAP_BUDGET_CRITICAL) {
       logger.error(`[sitemap] Primary sitemap is ${all.length} entries — Google may reject the whole sitemap (50k cap). Splitting job pages into batches is now mandatory.`);
+      notifySitemapBudget('critical', all.length);
     }
     // Per-section sanity floors — if any of these collapse to 0 unexpectedly,
     // the DB query likely silently failed and we'd be poisoning Google with
@@ -456,11 +619,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...metroPages,
       ...categoryLandingPages,
       ...landingPages,
+      ...toolPages,
       ...employerResourcePages,
       ...statePages,
       ...salaryGuideStatePages,
       ...salarySpecialtyPages,
       ...categoryStatePages,
+      // stateCityDirectoryPages intentionally omitted — see its declaration:
+      // it is empty in degraded mode by design.
     ]
   }
 }

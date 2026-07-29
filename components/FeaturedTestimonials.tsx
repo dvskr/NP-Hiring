@@ -1,15 +1,16 @@
+import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
-import { Star } from 'lucide-react';
+import { Star, ArrowRight } from 'lucide-react';
 
 /**
  * FeaturedTestimonials — public display half of the employer-testimonial
- * read path (backlog B8).
+ * read path (backlog B8; extended by content audit P2 #16/#18).
  *
  * Server component: queries admin-approved testimonials directly and
- * renders a social-proof section on /for-employers. Renders nothing at
- * all when no testimonial has been approved — no fabricated content,
- * no empty-state placeholder on a marketing page.
+ * renders a social-proof section. Renders nothing at all when no
+ * testimonial has been approved — no fabricated content, no empty-state
+ * placeholder on a marketing page, and never a seeded example.
  *
  * Consent semantics (must match the write path in
  * app/api/employer/testimonials/route.ts and the admin review route):
@@ -19,9 +20,24 @@ import { Star } from 'lucide-react';
  *     generic label;
  *   - the write path can fall back to the account email for employerName,
  *     so anything containing '@' is never rendered, whatever displayAs says.
+ *
+ * Two variants, one query:
+ *   - 'section' (default) — the full band used on /for-employers. Links to
+ *     /testimonials when more approved testimonials exist than fit here.
+ *   - 'compact' — a narrow point-of-sale panel used on the checkout step.
+ * Both read the same rows, so social proof shown at checkout can never be
+ * a different (or looser) set than the one shown on the marketing page.
  */
 
 const MAX_FEATURED = 6;
+/** Point-of-sale panel stays short so it can't push the Pay button down. */
+const MAX_COMPACT = 2;
+
+export type FeaturedTestimonialsVariant = 'section' | 'compact';
+
+interface FeaturedTestimonialsProps {
+    variant?: FeaturedTestimonialsVariant;
+}
 
 interface FeaturedTestimonial {
     id: string;
@@ -43,6 +59,18 @@ export function formatAttribution(employerName: string, displayAs: string): stri
     return `${words[0]} ${words[1][0].toUpperCase()}.`;
 }
 
+/**
+ * Muted label/footnote colour. The 'compact' variant renders inside the
+ * checkout trust rail, which paints no background of its own and therefore
+ * inherits body { background-color: #F5F0EB } from app/globals.css. The
+ * site's usual #6B7280 measures 4.269:1 there — under the 4.5:1 AA minimum
+ * for normal-size text, and neither the 13px uppercase heading nor the
+ * 11.5px footnote qualifies as large text. #5A6E7A measures 4.700:1 on
+ * #F5F0EB and 5.322:1 on #FFFFFF, matching the token the trust pages use.
+ * Ratios are sRGB relative luminance per WCAG 2.x; recompute before changing.
+ */
+const MUTED_TEXT = '#5A6E7A';
+
 /* Clay card treatment matched to the /for-employers bento sections. */
 const clayCard: React.CSSProperties = {
     background: '#FFFFFF', borderRadius: '20px',
@@ -50,8 +78,26 @@ const clayCard: React.CSSProperties = {
     boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
 };
 
-export default async function FeaturedTestimonials() {
+/** Star row. Extracted so both variants render ratings identically. */
+export function RatingStars({ rating, size = 15 }: { rating: number; size?: number }) {
+    return (
+        <div role="img" aria-label={`Rated ${rating} out of 5 stars`} style={{ display: 'flex', gap: '3px' }}>
+            {[1, 2, 3, 4, 5].map((i) => (
+                <Star
+                    key={i}
+                    size={size}
+                    aria-hidden="true"
+                    fill={i <= rating ? '#F59E0B' : 'none'}
+                    style={{ color: i <= rating ? '#F59E0B' : '#D1D5DB' }}
+                />
+            ))}
+        </div>
+    );
+}
+
+export default async function FeaturedTestimonials({ variant = 'section' }: FeaturedTestimonialsProps = {}) {
     let testimonials: FeaturedTestimonial[];
+    let approvedTotal = 0;
     try {
         testimonials = await prisma.employerTestimonial.findMany({
             where: { consent: true, featuredAt: { not: null } },
@@ -65,6 +111,12 @@ export default async function FeaturedTestimonials() {
                 displayAs: true,
             },
         });
+        // Drives the "read them all" link only. Counted with the same consent
+        // gate as the rows themselves so the link can never promise more than
+        // /testimonials will actually render.
+        approvedTotal = await prisma.employerTestimonial.count({
+            where: { consent: true, featuredAt: { not: null } },
+        });
     } catch (error) {
         // A marketing page must never 500 over its social-proof section.
         logger.error('[FeaturedTestimonials] failed to load featured testimonials', error);
@@ -72,6 +124,41 @@ export default async function FeaturedTestimonials() {
     }
 
     if (testimonials.length === 0) return null;
+
+    if (variant === 'compact') {
+        const shown = testimonials.slice(0, MAX_COMPACT);
+        return (
+            <section aria-labelledby="checkout-testimonials-heading" style={{ marginTop: '24px' }}>
+                <h2
+                    id="checkout-testimonials-heading"
+                    style={{ fontSize: '13px', fontWeight: 700, color: MUTED_TEXT, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}
+                >
+                    From hiring teams who posted here
+                </h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {shown.map((t) => (
+                        <figure key={t.id} style={{ ...clayCard, margin: 0, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {t.rating !== null && <RatingStars rating={t.rating} size={13} />}
+                            <blockquote style={{ margin: 0, fontSize: '13.5px', color: '#4A3A40', lineHeight: 1.6 }}>
+                                &ldquo;{t.content}&rdquo;
+                            </blockquote>
+                            <figcaption style={{ fontSize: '12px', fontWeight: 700, color: '#7A1C2B' }}>
+                                — {formatAttribution(t.employerName, t.displayAs)}
+                            </figcaption>
+                        </figure>
+                    ))}
+                </div>
+                <p style={{ fontSize: '11.5px', color: MUTED_TEXT, margin: '10px 0 0', lineHeight: 1.5 }}>
+                    Posted by real employers on this board and published with their permission.{' '}
+                    {approvedTotal > shown.length && (
+                        <Link href="/testimonials" style={{ color: '#BE185D', textDecoration: 'underline' }}>
+                            Read all {approvedTotal}
+                        </Link>
+                    )}
+                </p>
+            </section>
+        );
+    }
 
     return (
         <section aria-labelledby="employer-testimonials-heading" style={{ background: '#FDFBF7', padding: '72px 20px' }}>
@@ -89,19 +176,7 @@ export default async function FeaturedTestimonials() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
                     {testimonials.map((t) => (
                         <figure key={t.id} style={{ ...clayCard, margin: 0, padding: '26px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                            {t.rating !== null && (
-                                <div role="img" aria-label={`Rated ${t.rating} out of 5 stars`} style={{ display: 'flex', gap: '3px' }}>
-                                    {[1, 2, 3, 4, 5].map((i) => (
-                                        <Star
-                                            key={i}
-                                            size={15}
-                                            aria-hidden="true"
-                                            fill={i <= (t.rating as number) ? '#F59E0B' : 'none'}
-                                            style={{ color: i <= (t.rating as number) ? '#F59E0B' : '#D1D5DB' }}
-                                        />
-                                    ))}
-                                </div>
-                            )}
+                            {t.rating !== null && <RatingStars rating={t.rating} />}
                             <blockquote style={{ margin: 0, fontSize: '14.5px', color: '#4A3A40', lineHeight: 1.7 }}>
                                 &ldquo;{t.content}&rdquo;
                             </blockquote>
@@ -111,6 +186,17 @@ export default async function FeaturedTestimonials() {
                         </figure>
                     ))}
                 </div>
+
+                {approvedTotal > testimonials.length && (
+                    <p style={{ textAlign: 'center', marginTop: '28px' }}>
+                        <Link
+                            href="/testimonials"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: '#BE185D', textDecoration: 'underline' }}
+                        >
+                            Read all {approvedTotal} employer testimonials <ArrowRight size={14} aria-hidden="true" />
+                        </Link>
+                    </p>
+                )}
             </div>
         </section>
     );

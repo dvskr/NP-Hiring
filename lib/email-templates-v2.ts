@@ -21,7 +21,24 @@ import { EMAIL_DEFAULT_PREHEADER, EMAIL_HEADER_TAGLINE } from '@/config/niche/co
 import { logger } from '@/lib/logger';
 
 const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl).replace(/\/$/, '');
-const IMG = process.env.EMAIL_ASSETS_URL || `${BASE_URL}/images/email`;
+
+/**
+ * Email art base — ALWAYS this app's own `public/images/email/`, prefixed with
+ * the absolute BASE_URL because mail clients cannot resolve root-relative
+ * paths (P2 #24).
+ *
+ * Deliberately does NOT read EMAIL_ASSETS_URL. That var points at a Supabase
+ * `email-assets` bucket that was never created — every object 400s — so every
+ * image in every retention email rendered as a broken box wherever the var was
+ * set, and 404'd wherever it wasn't (there was no local asset folder either).
+ * The assets now ship with the deploy, which is also the only form that
+ * survives a fork: `public/images/email/` is versioned, the bucket is not.
+ *
+ * Every file referenced here (and by the step/hero blocks in
+ * lib/email-service.ts) exists on disk — pinned by
+ * tests/regressions/p2-seo-ops-email-assets.test.ts.
+ */
+const IMG = `${BASE_URL}/images/email`;
 
 // ── Font stacks ──────────────────────────────────────────────────────────────
 export const SERIF = "'Lora', Georgia, 'Times New Roman', serif";
@@ -166,7 +183,7 @@ export function emailShellV2(content: string, footerContent: string = '', prehea
 //         [MENTAL HEALTH CAREERS — centered]
 
 export function headerBlockV2(title: string, subtitle: string = ''): string {
-  const logoUrl = process.env.EMAIL_ASSETS_URL ? `${IMG}/logo-cropped.png` : `${BASE_URL}/logo-cropped.png`;
+  const logoUrl = `${IMG}/logo-cropped.png`;
   return `<tr><td class="header-bg" align="center" bgcolor="${V2.bgPeach}" style="background-color:${V2.bgPeach};padding:24px 0 16px;text-align:center;">
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;">
       <tr>
@@ -202,7 +219,7 @@ export function amberHeaderV2(title: string, subtitle: string = ''): string {
               <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto;">
                 <tr>
                   <td valign="middle">
-                    <img src="${BASE_URL}/logo.png" alt="${brand.name}" width="100" height="100" style="display:block;width:100px;height:100px;object-fit:contain;border:0;background-color:${V2.bgAmberWarn};color:${V2.amber};font-family:${SERIF};font-size:14px;font-weight:700;text-align:center;line-height:100px;" />
+                    <img src="${IMG}/logo.png" alt="${brand.name}" width="100" height="100" style="display:block;width:100px;height:100px;object-fit:contain;border:0;background-color:${V2.bgAmberWarn};color:${V2.amber};font-family:${SERIF};font-size:14px;font-weight:700;text-align:center;line-height:100px;" />
                   </td>
                   <td valign="bottom" style="padding-bottom:24px;">
                     <span style="font-family:${SERIF};font-size:28px;font-weight:700;color:${V2.textPrimary};letter-spacing:-0.02em;display:block;line-height:1;margin-left:-24px;">${brand.name}</span>

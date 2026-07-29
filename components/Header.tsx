@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Menu, X, LayoutDashboard, Briefcase, MessageSquare, Settings, DollarSign, Building2, BookOpen, Search, HelpCircle, Info, Mail, PenSquare, GraduationCap, UserCheck, Users, Bookmark, FileText, Activity, Workflow, Plus } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Briefcase, MessageSquare, Settings, Calculator, DollarSign, Building2, BookOpen, Search, HelpCircle, Info, Mail, MapPin, PenSquare, GraduationCap, UserCheck, Users, Bookmark, FileText, Activity, Workflow, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 // SEO Fix H5: use LazyMotion + the lightweight `m` namespace instead of the
 // full `motion` import. Header renders on every page, so importing the full
@@ -110,8 +110,18 @@ export default function Header() {
     { href: '/admin/pipeline', label: 'Pipeline', icon: Workflow },
   ];
 
-  // Mobile-only extra links for public users (pages not in top nav)
+  // Mobile-only extra links for public users (pages not in top nav).
+  //
+  // P2 #11/#12: the employer directory and the location hub were footer-only —
+  // no entry point at all on mobile, where the footer is a long scroll away.
+  // They are promoted here rather than into the top nav on purpose: the desktop
+  // pill row already carries an "Employers" item pointing at /for-employers
+  // (the B2B post-a-job surface), and a second employer-shaped pill next to it
+  // reads as a duplicate to a job seeker. This slot is the honest promotion.
   const mobileExtraLinks = [
+    { href: '/tools', label: 'Free Tools', icon: Calculator },
+    { href: '/companies', label: 'Browse Companies', icon: Building2 },
+    { href: '/jobs/locations', label: 'Jobs by Location', icon: MapPin },
     { href: '/for-job-seekers', label: 'For Job Seekers', icon: UserCheck },
     { href: '/new-grad', label: 'New Grad Guide', icon: GraduationCap },
     { href: '/blog', label: 'Blog', icon: PenSquare },
@@ -340,7 +350,15 @@ export default function Header() {
               style={{ backgroundColor: '#F5F0EB' }}
               onClick={() => setIsMenuOpen(false)}
             />
-            <div className="relative px-6 pt-4 pb-8">
+            {/* Scroll container. The overlay itself is `position: fixed` and
+                the [isMenuOpen] effect locks BOTH html.overflow and
+                body.overflow, so anything taller than the fixed box paints
+                outside it and is unreachable — no page scroll to chase it
+                with. Promoting three links into `mobileExtraLinks` pushed the
+                signed-out Login / Sign up block past the bottom edge at
+                375x812. `.mobile-menu-scroll` caps this container at the
+                overlay's own height and lets it scroll instead. */}
+            <div className="relative px-6 pt-4 pb-8 mobile-menu-scroll">
               <nav className="flex flex-col">
                 {navLinks.map((link) => {
                   const MobileIcon = link.icon;
@@ -426,6 +444,19 @@ export default function Header() {
       <style>{`
         .nav-pill-floating:active {
           transform: translateY(0) scale(0.98) !important;
+        }
+        /* Mobile menu scroll container. 100px == the fixed overlay's top
+           offset (the nav footprint), so the cap matches the visible box.
+           The vh line is the fallback for engines without dvh; the dvh line
+           wins where supported and is the one that matters on iOS Safari,
+           whose visible viewport shrinks under the URL bar. overscroll-behavior
+           keeps the rubber-band from chaining to the locked page behind. */
+        .mobile-menu-scroll {
+          max-height: calc(100vh - 100px);
+          max-height: calc(100dvh - 100px);
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior: contain;
         }
       `}</style>
     </LazyMotion>

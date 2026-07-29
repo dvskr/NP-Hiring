@@ -19,7 +19,25 @@
  *
  * Maps site routes to their representative image, alt text, and caption
  * for use in the image sitemap (app/image-sitemap.xml).
+ *
+ * Two tiers:
+ *   1. PAGE_IMAGE_SEO — the hand-authored static-page map below (OG cards).
+ *   2. Derived entries — built from the SAME sources the pages render from, so
+ *      the sitemap cannot drift into advertising art a page does not show or a
+ *      file the build does not ship. Today that is the state diorama set
+ *      (P2 #21); see getStateDioramaImages().
  */
+
+import { brand } from '@/config/brand';
+// The diorama helpers come from the component the two state surfaces actually
+// render (app/jobs/state/[state], app/salary-guide/[state]). That module owns
+// the slug→artwork contract and is pinned against the real directory listing
+// by tests/regressions/p2-state-imagery-diorama-wiring.test.ts, so reading it
+// here is what makes these sitemap entries provably resolvable.
+import { hasStateDiorama, stateDioramaSrc } from '@/components/StateImage';
+// Slug→state-name map for the jurisdictions those routes serve. Plain-data
+// module (its transitive imports are taxonomy data only).
+import { URL_TO_STATE } from '@/lib/pseo/setting-state-config';
 
 export interface PageImageSEO {
     /**
@@ -170,6 +188,62 @@ export const PAGE_IMAGE_SEO: Record<string, PageImageSEO> = {
 };
 
 /**
+ * Every jurisdiction slug that BOTH routes as a state page and ships a
+ * diorama, in stable alphabetical order. `URL_TO_STATE` is the slug set the
+ * state routes resolve; `hasStateDiorama` is the artwork set on disk. Only the
+ * intersection is emitted, so art can never be advertised against a URL that
+ * 404s, nor a slug advertised with art the build does not carry.
+ */
+function dioramaStateSlugs(): string[] {
+    return Object.keys(URL_TO_STATE).filter(hasStateDiorama).sort();
+}
+
+/**
+ * Image-sitemap entries for the two surfaces that render the state diorama:
+ * /jobs/state/<slug> and /salary-guide/<slug>. These are the only
+ * illustration-weight images on the site (1024x1024 each), so they carry the
+ * actual Google Images value here — the rest of the map is OG cards.
+ *
+ * KNOWN GAP (deliberate, documented rather than hidden): both routes
+ * notFound() when a jurisdiction has zero active jobs / zero salaried jobs, and
+ * that verdict is a DB read. The image sitemap cannot make it — the handler in
+ * app/image-sitemap.xml/route.ts is synchronous by contract (its P0 pin calls
+ * GET() without awaiting, and an ISR revalidation runs in a lambda), so a
+ * state that empties out is advertised here until inventory returns. Google
+ * drops image entries whose page does not resolve, so the cost is a line in
+ * the GSC image-sitemap report, not a ranking effect. Closing it properly
+ * means making the route async — which needs the P0 pin updated in the same
+ * change.
+ */
+export function getStateDioramaImages(): Array<{ url: string } & PageImageSEO> {
+    const entries: Array<{ url: string } & PageImageSEO> = [];
+    const role = brand.niche.descriptor;
+
+    for (const slug of dioramaStateSlugs()) {
+        const state = URL_TO_STATE[slug];
+        const image = stateDioramaSrc(slug);
+        if (!image) continue;
+
+        entries.push({
+            url: `/jobs/state/${slug}`,
+            image,
+            alt: `Illustrated ${state} scene marking ${state} ${role} job listings on ${brand.name}`,
+            caption: `${brand.niche.short} jobs in ${state}`,
+            title: `${state} ${brand.niche.short} Jobs`,
+        });
+        entries.push({
+            url: `/salary-guide/${slug}`,
+            image,
+            alt: `Illustrated ${state} scene marking the ${state} ${role} salary guide on ${brand.name}`,
+            caption: `${brand.niche.short} salary data for ${state}`,
+            title: `${state} ${brand.niche.short} Salary Guide`,
+        });
+    }
+
+    return entries;
+}
+
+/**
  * Get SEO image config for a given pathname.
  * Falls back to homepage config if no match.
  */
@@ -178,8 +252,12 @@ export function getPageImageSEO(pathname: string): PageImageSEO {
 }
 
 /**
- * Get all page image entries for building the image sitemap.
+ * Get all page image entries for building the image sitemap — the static map
+ * plus every derived entry.
  */
 export function getAllPageImages(): Array<{ url: string } & PageImageSEO> {
-    return Object.entries(PAGE_IMAGE_SEO).map(([url, seo]) => ({ url, ...seo }));
+    return [
+        ...Object.entries(PAGE_IMAGE_SEO).map(([url, seo]) => ({ url, ...seo })),
+        ...getStateDioramaImages(),
+    ];
 }

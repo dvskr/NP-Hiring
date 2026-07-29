@@ -157,6 +157,41 @@ const clayCard: React.CSSProperties = {
   boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
 };
 
+/* ═══════════════════════════════════════════════════════════════════════
+ * PROVENANCE OF EVERY NON-CITED NUMBER ON THIS PAGE
+ * ═══════════════════════════════════════════════════════════════════════
+ * Review finding (P2 #22 follow-up, second pass): the first pass deleted a
+ * fabricated "+12-15% Full Practice Authority premium" from the FAQ and the
+ * FPA card and left four figures of exactly the same kind sitting beside it
+ * — "+10-25%" for specialization in the SAME SENTENCE, "20-50% more" for
+ * travel/locum, "$95,000-$115,000" for new grads, "$150,000-$180,000+" for
+ * experienced NPs. Removing one invention and leaving its neighbours is
+ * worse than leaving all of them, because a reader (and a crawler) reads
+ * the page as audited when it is not.
+ *
+ * WHY THEY ARE NOT ALL SIMPLY DELETED: the experience/setting/specialty
+ * tables and the factor cards are pinned BYTE-IDENTICAL to
+ * scripts/generate-salary-pdf.ts by a pre-existing P1 parity guard
+ * (tests/regressions/p1-salary-pdf-deliverable.test.ts, 24 mirrored
+ * literals), their annual bands are already enumerated as known debt in the
+ * P2 #10 ratchet (UNMIGRATED_SALARY_BAND_SURFACES lists this file and the
+ * generator), and rewriting the page's whole content model belongs to the
+ * package that owns /salary-guide — not to a follow-up on a resources-page
+ * data-accuracy fix.
+ *
+ * WHAT IS DONE INSTEAD, so the treatment is consistent rather than partial:
+ *   1. No FAQ answer states an uncited figure as fact. FAQ answers are what
+ *      FAQPage JSON-LD emits and what search engines extract standalone, so
+ *      they are the surface where an unlabelled estimate does real damage.
+ *   2. Every remaining range and premium is labelled in place, on the page
+ *      and in the PDF, by SALARY_FIGURE_PROVENANCE below.
+ *   3. The label is pinned by tests/regressions/p2-data-accuracy-stats-and-guides.ts
+ *      so it cannot be dropped while the figures stay.
+ * The honest end state is: exactly one number on this page is a cited
+ * source (STAT_SOURCES.averageSalary); every other one says so.
+ * ═══════════════════════════════════════════════════════════════════════ */
+const SALARY_FIGURE_PROVENANCE = `Every salary range and percentage premium on this page other than the cited national median is ${brand.name}'s own editorial estimate, compiled from the roles posted here. Treat them as a starting point for negotiation, not as survey data.`;
+
 /* ═══ Experience / Setting / Specialty data ═══ */
 const experienceData = [
   { exp: 'New Grad (0-1 yr)', range: '$95,000 - $115,000', roles: `Staff ${brand.niche.short}, Outpatient Clinic` },
@@ -210,11 +245,39 @@ const factorCards = [
 ];
 
 const faqData = [
-  { q: `How much do ${brand.niche.short}s make in 2026?`, a: `The national median ${brand.niche.short} salary is ${NATIONAL_SALARY.formatted} per year (${NATIONAL_SALARY.source}). New graduates typically start at $95,000-$115,000, while experienced ${brand.niche.short}s earn $150,000-$180,000+ depending on setting, specialty, and location.` },
+  // Review follow-up: the "$95,000-$115,000" / "$150,000-$180,000+" pair is
+  // the same class of uncited figure as the "+12-15%" FPA premium the first
+  // pass deleted. It is not deleted here (it mirrors the experience table,
+  // which the P1 PDF parity guard pins byte-identically) — it is attributed,
+  // so the answer no longer presents it alongside a cited BLS median as
+  // though both carry the same weight. See SALARY_FIGURE_PROVENANCE above.
+  { q: `How much do ${brand.niche.short}s make in 2026?`, a: `The national median ${brand.niche.short} salary is ${NATIONAL_SALARY.formatted} per year (${NATIONAL_SALARY.source}) — that is the one figure on this page taken from a public dataset. The experience ranges shown alongside it, roughly $95,000-$115,000 for new graduates and $150,000-$180,000+ for experienced ${brand.niche.short}s, are ${brand.name}'s own editorial estimates from the roles posted here rather than survey results, and individual offers move well outside them with setting, specialty, and location.` },
   { q: `Which state pays ${brand.niche.short}s the most?`, a: `${brand.niche.short} pay is consistently highest in West Coast and Northeast markets — California, Washington, Oregon, Nevada, and New Jersey rank near the top in federal wage data. When adjusted for cost of living, several Midwest and Southern states offer stronger real purchasing power.` },
-  { q: `Do telehealth ${brand.niche.short}s make less than in-person?`, a: `Telehealth ${brand.niche.short}s typically earn $120,000 to $170,000 — broadly comparable to in-person roles, which vary more by setting and acuity. Telehealth offers excellent flexibility, and some national telehealth platforms pay $180,000+ for experienced ${brand.niche.short}s with multi-state licenses.` },
-  { q: `How can I increase my ${brand.niche.short} salary?`, a: 'Top strategies include: specializing in high-demand areas like acute care, emergency, or psychiatric-mental health (+10-25% premium), practicing in Full Practice Authority states (+12-15% premium), considering private practice ownership ($180,000-$300,000+), working in rural/underserved areas for loan repayment incentives, and always negotiating total compensation.' },
-  { q: `How much do travel ${brand.niche.short}s make?`, a: `Travel and locum tenens ${brand.niche.short}s typically earn 20-50% more than permanent positions, with compensation ranging from $150,000 to $250,000+ including housing stipends and travel allowances.` },
+  // SECOND PASS: attributed for the same reason as the two answers above.
+  // It is the fourth uncited range in this array; leaving it bare while
+  // labelling its neighbours would repeat the exact defect this pass exists
+  // to fix. No FAQ answer in faqData may state a figure as fact unless it
+  // is a cited STAT_SOURCES entry.
+  { q: `Do telehealth ${brand.niche.short}s make less than in-person?`, a: `Broadly comparable — telehealth pay is not systematically lower, and in-person roles vary more by setting and acuity than telehealth does. The $120,000 to $170,000 range we see for telehealth roles, and the $180,000+ some national platforms pay experienced ${brand.niche.short}s with multi-state licenses, are ${brand.name}'s own estimates from the roles posted here rather than survey figures. Telehealth also trades differently on flexibility, licensure cost across states, and patient volume expectations, so compare specific offers rather than the ranges.` },
+  // P2 #22 follow-up: this answer previously asserted a "+12-15%" Full
+  // Practice Authority premium and a "$180,000-$300,000+" private-practice
+  // ownership range. Neither has a source anywhere in this repo, the FPA
+  // premium was already removed from /resources/fpa-guide as fabricated,
+  // and the ownership range contradicted the computed model now published
+  // on /resources/private-practice-guide. Both are replaced with the
+  // mechanism, plus a pointer at the page that actually models it.
+  //
+  // SECOND PASS: the same sentence still carried "(+10-25% premium)" for
+  // specialization — an equally uncited figure left standing next to the
+  // one that was deleted. The parenthetical is gone from the answer; the
+  // table it came from is still on the page and is now labelled.
+  { q: `How can I increase my ${brand.niche.short} salary?`, a: 'Top strategies include: specializing in high-demand areas like acute care, emergency, or psychiatric-mental health, practicing in a Full Practice Authority state so independent contract, telehealth, and practice-ownership work are open to you at all, modelling private practice against your own visit volume and overhead rather than a headline range, working in rural/underserved areas for loan repayment incentives, and always negotiating total compensation. The specialty premiums shown on this page are our own estimates from posted roles, so treat them as a hypothesis to test against real offers rather than a number to expect.' },
+  // SECOND PASS: "typically earn 20-50% more than permanent positions" and
+  // "$150,000 to $250,000+" were both uncited. A locum rate is also not
+  // comparable to a salary without pricing the benefits, malpractice, and
+  // unpaid downtime the permanent job absorbs — /resources/1099-vs-w2 works
+  // that arithmetic, so the answer points there instead of asserting a gap.
+  { q: `How much do travel ${brand.niche.short}s make?`, a: `Travel and locum tenens work is quoted as an hourly or weekly rate plus stipends rather than a salary, so it is not directly comparable to a permanent offer: the rate has to cover the health coverage, malpractice, retirement, and unpaid downtime a permanent job absorbs. The $150,000-$250,000 figure in the setting table on this page is ${brand.name}'s own estimate from posted travel and locum roles, not a survey figure. To see what a contract rate actually has to clear to match a salaried package, work through the 1099 vs W2 comparison, which computes the break-even instead of assuming one.` },
 ];
 
 export default async function SalaryGuidePage() {
@@ -383,6 +446,13 @@ export default async function SalaryGuidePage() {
                     Private practice owners can earn $180,000-$300,000+. Pay runs highest in West Coast and Northeast
                     markets, with California, Washington, and New Jersey near the top in federal wage data.
                   </p>
+                  {/* Review follow-up: the median above is cited; the three
+                      ranges beside it are not, and were reading as though
+                      they were. Mirrored in scripts/generate-salary-pdf.ts,
+                      which prints the identical paragraph. */}
+                  <p style={{ fontSize: '12px', color: '#8A7A72', lineHeight: 1.6, margin: '10px 0 0' }}>
+                    {SALARY_FIGURE_PROVENANCE}
+                  </p>
                 </div>
               </div>
               <div style={{
@@ -507,9 +577,18 @@ export default async function SalaryGuidePage() {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
             Salary Breakdown
           </p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '36px' }}>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '12px' }}>
             What Impacts Your Earnings
           </h2>
+          {/* Review follow-up: this section renders every uncited figure on
+              the page at once — the experience bands, the setting bands, the
+              specialty premium column, and the factor cards. Labelling it
+              once here is what keeps the treatment consistent with the
+              fabricated FPA premium that was deleted; see
+              SALARY_FIGURE_PROVENANCE. */}
+          <p style={{ fontSize: '12.5px', color: '#7A6A62', lineHeight: 1.6, textAlign: 'center', maxWidth: '640px', margin: '0 auto 36px' }}>
+            {SALARY_FIGURE_PROVENANCE}
+          </p>
 
           <div className="sal-bento" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
 
@@ -621,23 +700,31 @@ export default async function SalaryGuidePage() {
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Full Practice Authority</h3>
               </div>
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 16px' }}>
-                <strong>{FPA_STATES.formatted}</strong> grant FPA ({FPA_STATES.source}). {brand.niche.short}s in FPA states earn <strong style={{ color: '#BE185D' }}>12-15% more</strong> on average.
+                {/* P2 #22 follow-up: the "+12-15% more on average" premium
+                    that used to close this sentence was fabricated — it is
+                    cited to nothing here or in lib/stats-sources.ts, and it
+                    was already deleted from /resources/fpa-guide for that
+                    reason. What replaces it is what practice authority
+                    actually controls, which is readable off
+                    lib/state-practice-authority.ts. scripts/generate-salary-pdf.ts
+                    mirrors this block and must be edited with it. */}
+                <strong>{FPA_STATES.formatted}</strong> grant FPA ({FPA_STATES.source}). Practice authority is a legal classification, not a pay scale — it decides which ways of earning are open to you in that state.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div style={{ padding: '14px 16px', borderRadius: '14px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
                   <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#BE185D', margin: '0 0 8px' }}>✓ Full Practice Authority</h4>
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '11.5px', color: '#5A4A42' }}>
-                    <li style={{ marginBottom: '3px' }}>• +12-15% salary premium</li>
-                    <li style={{ marginBottom: '3px' }}>• Can own practice independently</li>
+                    <li style={{ marginBottom: '3px' }}>• Own and bill under your own practice</li>
+                    <li style={{ marginBottom: '3px' }}>• Independent 1099 and telehealth work</li>
                     <li>• Full clinical independence</li>
                   </ul>
                 </div>
                 <div style={{ padding: '14px 16px', borderRadius: '14px', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)' }}>
                   <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#64748B', margin: '0 0 8px' }}>Restricted / Reduced</h4>
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '11.5px', color: '#5A4A42' }}>
-                    <li style={{ marginBottom: '3px' }}>• Baseline salary</li>
-                    <li style={{ marginBottom: '3px' }}>• Requires physician collaboration</li>
-                    <li>• Physician oversight required</li>
+                    <li style={{ marginBottom: '3px' }}>• Collaborating physician required first</li>
+                    <li style={{ marginBottom: '3px' }}>• That agreement is usually a paid one</li>
+                    <li>• Physician oversight where restricted</li>
                   </ul>
                 </div>
               </div>
