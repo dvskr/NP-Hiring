@@ -10,6 +10,7 @@ import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { categorySlugLabel } from '@/lib/pseo/category-landing-template';
 import { STATE_CODES, CODE_TO_STATE, stateToSlug } from '@/lib/pseo/setting-state-config';
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
+import ClaimProfileCta from './ClaimProfileCta';
 
 // GSC Fix: ISR caching prevents DB pool exhaustion when Googlebot crawls company pages.
 // Previously defaulted to dynamic (no cache) → every crawl hit the DB.
@@ -68,6 +69,24 @@ const MAX_SIMILAR_EMPLOYERS = 6;
  * active count that is actually displayed.
  */
 const SIMILAR_EMPLOYER_CANDIDATE_POOL = MAX_SIMILAR_EMPLOYERS * 5;
+
+/**
+ * Absolute, timezone-pinned date for the claim-approval line.
+ *
+ * `formatDate` (lib/utils) returns a RELATIVE string ("3 days ago"), which is
+ * wrong twice over here: this page is ISR-cached for an hour, so a relative
+ * label bakes in and drifts, and an approval date is a provenance fact that
+ * should read the same to every visitor. UTC is pinned explicitly so the
+ * build server's locale can never shift the rendered day.
+ */
+function formatApprovalDate(date: Date): string {
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'UTC',
+    });
+}
 
 interface SalarySnapshot {
     min: number;
@@ -451,7 +470,10 @@ export default async function CompanyPage({ params }: Props) {
                                         {company.name}
                                     </h1>
                                     {company.isVerified && (
-                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                                        <span
+                                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700"
+                                            title="Directory signal: this employer's name matched our known-employer list when the listing was imported. It is not an employer-confirmed claim."
+                                        >
                                             <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
                                                 <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                             </svg>
@@ -459,6 +481,38 @@ export default async function CompanyPage({ params }: Props) {
                                         </span>
                                     )}
                                 </div>
+
+                                {/* Employer claim (brief #7). DELIBERATELY NOT the
+                                    `isVerified` badge above and deliberately not
+                                    adjacent to it: `isVerified` is an ingest-pipeline
+                                    signal written at row creation by
+                                    lib/company-normalizer.ts ("the scraped name matched
+                                    the known-employer map"), while `claimVerifiedAt` is
+                                    an admin approving a specific employer's request to
+                                    own this profile. Two claims, two columns, two
+                                    labels, two colours, and its own row with its own
+                                    sentence — if they sat side by side as matching
+                                    pills the schema-level separation would just be
+                                    re-conflated in the UI. */}
+                                {company.claimVerifiedAt && (
+                                    <div className="mb-3">
+                                        <span
+                                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-100 text-emerald-800"
+                                        >
+                                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" strokeWidth={2.2} stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+                                            </svg>
+                                            Claimed by employer
+                                        </span>
+                                        <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
+                                            Someone at {company.name} asked to be recognised as this profile&apos;s
+                                            owner and our team approved the request on{' '}
+                                            {formatApprovalDate(company.claimVerifiedAt)}. Claiming does not let an
+                                            employer edit the listings or pay figures below — those stay
+                                            derived from their live postings.
+                                        </p>
+                                    </div>
+                                )}
 
                                 {/* Meta row */}
                                 <div className="flex flex-wrap items-center gap-4 text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
@@ -736,6 +790,29 @@ export default async function CompanyPage({ params }: Props) {
                                 ))}
                             </div>
                         </section>
+                    )}
+
+                    {/* Claim step (brief #7). Rendered only while the profile is
+                        unclaimed — once claimVerifiedAt is set the header badge
+                        above is the surface, and re-offering "claim this" under
+                        it would read as though the badge meant nothing.
+
+                        The component is a client island on purpose: this route
+                        is ISR-cached (`revalidate` at the top of this file) and
+                        that cache is shared with Googlebot, so the viewer's
+                        session is resolved in the browser rather than baked into
+                        the HTML. It posts the resolved company.id — not the URL
+                        slug — so a claim can never bind to the wrong row through
+                        the kebab-vs-legacy-space fallback in
+                        resolveCompanyNormalizedName above. */}
+                    {!company.claimVerifiedAt && (
+                        <div className="mt-10">
+                            <ClaimProfileCta
+                                companyId={company.id}
+                                companyName={company.name}
+                                profilePath={`/companies/${slug}`}
+                            />
+                        </div>
                     )}
 
                     {/* Back Link */}

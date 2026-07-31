@@ -15,7 +15,15 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { stateToSlug, SETTING_CONFIGS } from '@/lib/pseo/setting-state-config';
 // P3 #9: the city-slug builder/guard pair the /jobs/city/[slug] route round-trips
 // against — see cityLinkResolves for why building the slug is not enough.
-import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
+// P4: …and MIN_CITY_JOBS_FOR_LINK, the inventory half of the same question. The
+// two guards fail for different reasons: cityLinkResolves rejects a NAME the
+// route cannot rebuild, MIN_CITY_JOBS_FOR_LINK rejects a city the route WILL
+// resolve and then 404 on for lack of stock. Both are required.
+import {
+  MIN_CITY_JOBS_FOR_LINK,
+  buildCitySlug,
+  cityLinkResolves,
+} from '@/app/jobs/locations/[state]/directory';
 import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { buildPlainStateNarrative } from '@/lib/pseo/state-narrative';
 import { STAT_SOURCES } from '@/lib/stats-sources';
@@ -356,10 +364,23 @@ async function getCitiesWithJobs(stateName: string, stateCode: string): Promise<
       // the way out and returns as a space, so "St. Louis" → st-louis-mo → "St
       // Louis" matches zero rows and the page hard-404s. cityLinkResolves is P2's
       // guard for exactly that round-trip (curated metros exempt: /jobs/city/*
-      // 308s to /jobs/metro/* for those). Rows it rejects keep their real name and
-      // count — the state narrative still names them — but carry an empty slug so
-      // the grid can omit the link instead of pointing at a known 404.
-      const linkable = cityLinkResolves(name, stateCode);
+      // 308s to /jobs/metro/* for those).
+      //
+      // P4: name resolution is only half the gate, and this grid was failing the
+      // other half. /jobs/city/[slug] ALSO notFound()s below its MIN_JOBS render
+      // threshold, so a city whose name round-trips perfectly but carries 1–2
+      // postings is still a guaranteed 404 — and this groupBy takes the top 8 by
+      // volume with no floor, so on a thin state most of the grid was exactly
+      // that. The threshold is not re-typed here: MIN_CITY_JOBS_FOR_LINK is the
+      // shared constant, and tests/regressions/p2-mesh-directories-state-cities
+      // pins the city route's own MIN_JOBS literal equal to it, so the link gate
+      // and the render gate cannot drift apart.
+      //
+      // Rejected rows (either reason) keep their real name and count — the state
+      // narrative and the FAQ still name them — but carry an empty slug so the
+      // grid omits the link instead of pointing at a known 404.
+      const linkable =
+        c._count.city >= MIN_CITY_JOBS_FOR_LINK && cityLinkResolves(name, stateCode);
       return {
         name,
         count: c._count.city,
@@ -523,10 +544,11 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
     topCityNames: citiesWithJobs.slice(0, 3).map((c) => c.name),
   });
 
-  // P3 #9: only cities whose slug survives the /jobs/city/[slug] round-trip are
-  // eligible for the Top Cities grid — see getCitiesWithJobs. The narrative above
-  // deliberately keeps naming the true top three whether they are linkable or not,
-  // so dropping a dead link never silently rewrites a factual claim.
+  // P3 #9 / P4: only cities that survive BOTH gates in getCitiesWithJobs — the
+  // slug round-trip and the MIN_CITY_JOBS_FOR_LINK inventory floor — are eligible
+  // for the Top Cities grid. The narrative above deliberately keeps naming the
+  // true top three whether they are linkable or not, so dropping a dead link
+  // never silently rewrites a factual claim.
   const linkableCities = citiesWithJobs.filter((c) => c.slug.length > 0);
 
   const totalPages = Math.ceil(stats.totalJobs / limit);

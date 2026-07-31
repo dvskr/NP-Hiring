@@ -210,6 +210,35 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     `${metro.heroDescription.slice(0, 70).trim()}.`,
   ].filter(Boolean).join(' ').slice(0, 158);
 
+  // P4 (b): the metro card used to come from the general-purpose /api/og
+  // `type=page` mode — a title plus a prose subtitle. /api/og/city is the
+  // generator built for a place page: identical chrome since P3 #8
+  // (app/api/og/og-theme.tsx), plus the open-positions and salary fact tiles
+  // that a subtitle string can only approximate.
+  //
+  // Only params that route actually reads are passed:
+  //   • `city`     — headline second line ("in {city}, {ST}").
+  //   • `jobs`     — "Open Positions" tile, the live count already in `stats`.
+  //   • `salary`   — "Salary Range" tile, omitted when no metro posting
+  //                  discloses pay so the card drops the tile rather than
+  //                  showing a band this board cannot source.
+  //   • `category` — deliberately NOT passed: a metro guide is all-specialty,
+  //                  so the generator renders the plain "{niche} Jobs"
+  //                  headline with no category chip.
+  //   • `shortage` — deliberately NOT passed. That badge is the
+  //                  behavioral-health HPSA designation, which P3 kept gated to
+  //                  the single category it describes; a category-less metro
+  //                  page can never be on topic for it.
+  // Practice authority and cost of living stay in the description (and on the
+  // page); the card is not the place to compress two regulated claims into a
+  // line of unlabelled text.
+  const ogParams = new URLSearchParams({
+    city: `${metro.city}, ${metro.stateCode}`,
+    jobs: String(stats.totalJobs),
+    ...(stats.avgSalary > 0 && { salary: `$${stats.avgSalary}K` }),
+  });
+  const ogImageUrl = `/api/og/city?${ogParams.toString()}`;
+
   return {
     title,
     description,
@@ -224,10 +253,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       type: 'website',
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${brand.niche.short} Jobs in ${metro.city}`)}&subtitle=${encodeURIComponent(`${metro.practiceAuthority} Practice Authority • ${metro.avgCostOfLiving} cost of living`)}`,
+        url: ogImageUrl,
         width: 1200, height: 630,
         alt: `${brand.niche.short} Jobs in ${metro.city}, ${metro.stateCode}`,
       }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${brand.niche.short} Jobs in ${metro.city}, ${metro.stateCode}`,
+      description,
+      images: [ogImageUrl],
     },
     alternates: {
       canonical: `${brand.baseUrl}/jobs/metro/${slug}`,

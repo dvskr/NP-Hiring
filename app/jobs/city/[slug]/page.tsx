@@ -336,6 +336,42 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
             : baseTitle;
         const description = `Find ${stats.totalJobs} ${brand.niche.short} jobs in ${cityName}, ${stateName}. ${brand.niche.medium} positions with salary transparency. Remote, telehealth, and in-person roles updated daily.`;
 
+        // P4 (b): this card used to come from the general-purpose /api/og
+        // `type=page` mode, which renders a title + subtitle and nothing else.
+        // /api/og/city is the generator built for exactly this page: same shared
+        // chrome since P3 #8 (app/api/og/og-theme.tsx), plus the open-positions
+        // and salary fact tiles the subtitle was crudely spelling out in prose.
+        //
+        // Only params /api/og/city actually reads are passed:
+        //   • `city`     — headline second line ("in {city}").
+        //   • `jobs`     — "Open Positions" tile.
+        //   • `salary`   — "Salary Range" tile; omitted entirely when no posting
+        //                  in this city discloses pay, so the card drops the tile
+        //                  instead of showing a fabricated band (same
+        //                  omit-or-cite rule the page body follows).
+        //   • `category` — deliberately NOT passed. This is the all-specialty
+        //                  city hub; with no category the generator renders the
+        //                  plain "{niche} Jobs" headline and no chip.
+        //   • `shortage` — deliberately NOT passed. The only data behind that
+        //                  badge is the behavioral-health HPSA flag, and P3 kept
+        //                  it gated to the one category that designation
+        //                  describes (shortageIsOnTopic in
+        //                  lib/pseo/category-city-template.tsx). A category-less
+        //                  hub can never be on topic for it.
+        // Salary tile uses the true min–max the page already renders, falling
+        // back to the point average; both are live DB aggregates.
+        const ogSalary = stats.minSalary > 0 && stats.maxSalary > 0
+            ? `$${stats.minSalary}K-$${stats.maxSalary}K`
+            : stats.avgSalary > 0
+                ? `$${stats.avgSalary}K`
+                : '';
+        const ogParams = new URLSearchParams({
+            city: `${cityName}, ${stateCode}`,
+            jobs: String(stats.totalJobs),
+            ...(ogSalary && { salary: ogSalary }),
+        });
+        const ogImageUrl = `/api/og/city?${ogParams.toString()}`;
+
         return {
             title,
             description,
@@ -344,11 +380,17 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
                 description,
                 type: 'website',
                 images: [{
-                    url: `/api/og?type=page&title=${encodeURIComponent(`${brand.niche.short} Jobs in ${cityName}, ${stateCode}`)}&subtitle=${encodeURIComponent(`${stats.totalJobs} ${brand.niche.adjective} NP positions`)}`,
+                    url: ogImageUrl,
                     width: 1200,
                     height: 630,
                     alt: `${brand.niche.short} Jobs in ${cityName}, ${stateCode}`,
                 }],
+            },
+            twitter: {
+                card: 'summary_large_image',
+                title: `${stats.totalJobs} ${brand.niche.short} Jobs in ${cityName}, ${stateCode}${salarySuffix}`,
+                description,
+                images: [ogImageUrl],
             },
             alternates: {
                 canonical: `${brand.baseUrl}/jobs/city/${slug}`,
@@ -407,6 +449,16 @@ export default async function CityJobsPage({ params }: CityPageProps) {
     // with 1-2 jobs were rendering with stub content and getting flagged
     // as soft 404 / thin content in GSC. The threshold matches the saved
     // pSEO policy (MIN_JOBS = 3, see memory seo_threshold_decision.md).
+    //
+    // This literal is DELIBERATE and drift-guarded rather than imported:
+    // tests/regressions/p2-mesh-directories-state-cities.test.ts reads it out
+    // of this file and asserts it equals MIN_CITY_JOBS_FOR_LINK (and, through
+    // that, MIN_JOBS_FOR_CATEGORY_CITY and MIN_RELATED_CITY_JOBS). Every
+    // surface that links here — the state hub's Top Cities grid, the per-state
+    // directories, the related-cities sidebar below — gates on that shared
+    // constant, so a link can never point at a page this gate will 404.
+    // Changing the number here without changing MIN_CITY_JOBS_FOR_LINK fails
+    // that test.
     const MIN_JOBS = 3;
     if (stats.totalJobs < MIN_JOBS) {
         notFound();

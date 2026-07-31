@@ -34,6 +34,8 @@ import {
     ALL_CATEGORY_CONFIGS,
 } from '@/lib/pseo/category-city-template';
 import { getCategoryFaqs, type CategorySlug } from '@/lib/pseo/category-faq-data';
+import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
+import { SETTING_CONFIGS } from '@/lib/pseo/setting-state-config';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -232,10 +234,55 @@ describe('P2 #15 — setting-state template has parity with the city template', 
         expect(src()).toContain("'@type': 'State'");
         expect(src()).toContain('id="answer-summary"');
         // Only declared selectors that are actually rendered on this page.
-        const speakable = src().match(/cssSelector: \[([^\]]*)\]/);
+        // #answer-summary is unconditional, so it is declared unconditionally.
+        const speakable = src().match(/cssSelector: ([\s\S]{0,240}?),\r?\n/);
         expect(speakable).not.toBeNull();
         expect(speakable![1]).toContain('#answer-summary');
-        expect(speakable![1]).not.toContain('.faq-answer');
+
+        // P4: '.faq-answer' was BANNED here through P2 because this page's FAQ
+        // (components/CategoryFAQ → CategoryFAQAccordion) rendered its answer
+        // <p> without the class, so declaring the selector would have pointed
+        // Speakable at nothing. P3 added `className="faq-answer"` to that <p>
+        // (pinned by tests/regressions/p3-donor-followups-narrative-truth.test.ts).
+        //
+        // The class existing is NECESSARY BUT NOT SUFFICIENT, and a first pass
+        // at this inversion missed that: <CategoryFAQ> returns null outright
+        // when getCategoryFaqs() is empty, so on a faqCategory with no
+        // CATEGORY_FAQS entry the accordion — and every .faq-answer in it —
+        // is absent no matter what class the <p> would have carried. Declaring
+        // the selector unconditionally therefore re-created the exact false
+        // claim this test exists to forbid. The rule was never "never declare
+        // .faq-answer"; it is "never declare a selector this page does not
+        // render", and that is what is pinned here.
+        expect(read('components/CategoryFAQAccordion.tsx')).toContain('className="faq-answer"');
+        // The .faq-answer branch must be GATED, not unconditional...
+        expect(speakable![1]).toMatch(/\?[\s\S]*'\.faq-answer'/);
+        // ...on the same getCategoryFaqs() call the renderer makes.
+        expect(src()).toMatch(/getCategoryFaqs\(\{[\s\S]{0,200}?\}\)\.length > 0/);
+    });
+
+    it('the Speakable FAQ gate is load-bearing: >=1 state-eligible category renders no FAQ', () => {
+        // If this ever goes to zero the gate is dead weight and can be dropped
+        // — but while ANY state-eligible category has no CATEGORY_FAQS entry,
+        // an unconditional '.faq-answer' selector is a false claim on 51 URLs
+        // per unmapped category. Asserted behaviourally (not as a hardcoded
+        // slug list) so adding the missing FAQ copy flips this naturally.
+        const unmapped = STATE_ELIGIBLE_CATEGORY_SLUGS.filter((slug) => {
+            const config = SETTING_CONFIGS[slug];
+            if (!config) return false;
+            return (
+                getCategoryFaqs({
+                    category: config.faqCategory as CategorySlug,
+                    totalJobs: 10,
+                }).length === 0
+            );
+        });
+        expect(unmapped.length).toBeGreaterThan(0);
+        // Every state-eligible slug must at least HAVE a config — the template
+        // notFound()s otherwise, which would 404 all 51 of its state pages.
+        for (const slug of STATE_ELIGIBLE_CATEGORY_SLUGS) {
+            expect(SETTING_CONFIGS[slug], slug).toBeDefined();
+        }
     });
 
     it('carries a sources line for the stats it renders', () => {

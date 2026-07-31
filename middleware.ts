@@ -19,8 +19,22 @@ import {
 //
 // Slugs live in lib/pseo/taxonomy-registry.ts (single source of truth,
 // drift-guarded against the physical app/jobs/ route folders):
-//   - state-eligible: app/jobs/{taxonomy}/[state]/page.tsx routes (13 dirs)
-//   - city-eligible:  app/jobs/{taxonomy}/city/[slug]/page.tsx routes (28 dirs)
+//   - state-eligible: app/jobs/{taxonomy}/[state]/page.tsx routes (28 dirs)
+//   - city-eligible:  app/jobs/{taxonomy}/city/[slug]/page.tsx routes (45 dirs)
+//
+// P4: both counts were stale and, between them, wrong in both directions —
+// the comment read "13 dirs" / "28 dirs". Recounted against the working tree
+// rather than trusted from either figure:
+//   `ls -d app/jobs/*/city`              → 45, == ALL_CATEGORY_SLUGS.length,
+//                                          and CITY_ELIGIBLE_CATEGORY_SLUGS is
+//                                          literally ALL_CATEGORY_SLUGS.
+//   `find app/jobs -maxdepth 2 -name '[state]' -type d`
+//                                        → 30, minus the two NAMESPACE routes
+//                                          (jobs/state/[state], jobs/locations/[state])
+//                                        → 28, == STATE_ELIGIBLE_CATEGORY_SLUGS.length.
+// These are load-bearing comments: this file 410s every pSEO URL outside the
+// two sets, so a reader who trusts the counts mis-reads the blast radius of
+// the gate. The registry — not this comment — remains the source of truth.
 const STATE_ELIGIBLE_TAXONOMIES = new Set<string>(STATE_ELIGIBLE_CATEGORY_SLUGS);
 
 const CITY_ELIGIBLE_TAXONOMIES = new Set<string>(CITY_ELIGIBLE_CATEGORY_SLUGS);

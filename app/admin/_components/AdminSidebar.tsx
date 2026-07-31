@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Target, Users, Menu, X, Home, BarChart3, FileText, Settings, Mail, Activity, HeartPulse, Search, GitBranch, GraduationCap, ShieldCheck, Quote } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Target, Users, Menu, X, Home, BarChart3, FileText, Settings, Mail, Activity, HeartPulse, Search, GitBranch, GraduationCap, ShieldCheck, Quote, BadgeCheck } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -18,6 +18,11 @@ const navItems = [
   { name: 'DMARC', href: '/admin/dmarc', icon: ShieldCheck },
   { name: 'Blog', href: '/admin/blog', icon: FileText },
   { name: 'Testimonials', href: '/admin/testimonials', icon: Quote },
+  // The review queue at this href is the ONLY writer of Company.claimVerifiedAt.
+  // Without an entry here the moderation loop never closes: every submitted
+  // claim stays pending and the public "our team reviews claims by hand"
+  // promise on /companies/[slug] goes unmet.
+  { name: 'Profile Claims', href: '/admin/company-claims', icon: BadgeCheck },
   { name: 'Job Health', href: '/admin/health', icon: HeartPulse },
   { name: 'Cron & Triggers', href: '/admin/cron', icon: Activity },
   { name: 'Settings', href: '/admin/settings', icon: Settings },

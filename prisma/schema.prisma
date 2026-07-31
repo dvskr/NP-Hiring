@@ -401,14 +401,110 @@ model Company {
   website        String?
   description    String?
   jobCount       Int      @default(0) @map("job_count")
+  /// INGEST-PIPELINE HYGIENE FLAG — *not* an employer relationship.
+  /// Written once, at row creation, by lib/company-normalizer.ts
+  /// (`isVerified: canonicalName !== null` inside `prisma.company.create()`):
+  /// it means "the scraped employer name matched the KNOWN_COMPANIES map".
+  /// It is never rewritten by any update path, and the parallel creator
+  /// scripts/link-all-jobs.ts never sets it at all. DO NOT overload it with
+  /// employer-claim semantics — see `claimVerifiedAt` below.
   isVerified     Boolean  @default(false) @map("is_verified")
+  /// EMPLOYER-CLAIM APPROVAL TIMESTAMP — the only column the claim flow ever
+  /// asserts publicly. Set by an admin from /admin/company-claims when an
+  /// employer's CompanyClaim is approved; null means "never claimed", which
+  /// is the state of every scraped row. Deliberately a SEPARATE column from
+  /// `isVerified` (which the ingest pipeline owns) so one public badge never
+  /// asserts two unrelated things: `isVerified` = "the scraper recognised
+  /// this name", `claimVerifiedAt` = "a person from this employer asked for
+  /// the profile and an admin approved it". Nullable timestamp rather than a
+  /// boolean, mirroring EmployerTestimonial.featuredAt: it carries the
+  /// approval *time* for free and needs no backfill.
+  claimVerifiedAt DateTime? @map("claim_verified_at")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
   jobs           Job[]
+  claims         CompanyClaim[]
 
   @@index([normalizedName])
   @@index([isVerified])
   @@map("companies")
+}
+
+/// An employer's request to be recognised as the owner of a scraped `Company`
+/// profile. This is the first thing on the board that turns a Company row from
+/// a normalization artifact into an employer relationship — nothing here is
+/// public until an admin approves it, at which point `Company.claimVerifiedAt`
+/// is stamped and the distinct "Claimed by employer" badge appears.
+///
+/// Moderation posture mirrors EmployerTestimonial: the write path is
+/// authenticated and cheap, the row is inert until a human reviews it, and the
+/// public surface reads the admin-set timestamp, never the submission itself.
+///
+/// Domain matching is a SIGNAL FOR THE ADMIN, never an auto-approval: the
+/// `quotaDomain` precedent (EmployerJob.quotaDomain) proves the primitive
+/// works for a real employer on a corporate domain, but it fails for staffing
+/// agencies, MSOs, multi-brand health systems, small practices on free email,
+/// and every Company row whose `website` is null or points at a job board.
+model CompanyClaim {
+  id             String  @id @default(cuid())
+  companyId      String  @map("company_id")
+  /// Supabase auth user id of the claimant (matches UserProfile.supabaseId
+  /// and EmployerJob.userId — the same identity anchor the rest of the
+  /// employer surface uses). Not an FK: EmployerTestimonial.userId sets the
+  /// precedent of storing the auth id loosely so account deletion cannot
+  /// cascade away the moderation trail.
+  claimantUserId String  @map("claimant_user_id")
+  /// Snapshot of the claimant's account email and its domain AT SUBMISSION
+  /// TIME, for the same reason EmployerJob.quotaDomain is immutable: the
+  /// admin must review the evidence that existed when the claim was made,
+  /// not whatever the account looks like later.
+  claimantEmail  String  @map("claimant_email")
+  claimantDomain String  @map("claimant_domain")
+  /// Host of Company.website at submission time (www-stripped), or null when
+  /// the Company row has no website — which is the common case on scraped
+  /// rows. Stored so the admin sees exactly what was compared.
+  companyHost    String? @map("company_host")
+  /// Did claimantDomain match companyHost? Advisory only. False is NOT a
+  /// rejection and true is NOT an approval.
+  domainMatch    Boolean @default(false) @map("domain_match")
+  /// Was the claim sent from a consumer mailbox (gmail/yahoo/…)? Surfaced so
+  /// an admin can weigh a small practice differently from an impersonator.
+  freeEmailDomain Boolean @default(false) @map("free_email_domain")
+  /// Claimant's self-declared role at the employer, and any context they
+  /// added. Free text, shown to admins only — never rendered publicly.
+  claimantRole   String? @map("claimant_role")
+  note           String?
+
+  /// 'pending' | 'approved' | 'rejected'. Text, not an enum, so a future
+  /// state ('needs_more_info') does not require a migration — same reasoning
+  /// as EmployerTestimonial.displayAs.
+  status         String    @default("pending")
+  reviewedAt     DateTime? @map("reviewed_at")
+  /// Supabase auth id of the reviewing admin. Null while pending.
+  reviewedBy     String?   @map("reviewed_by")
+  reviewNote     String?   @map("review_note")
+
+  /// Anti-duplicate anchor. Holds `companyId` while the claim is pending and
+  /// is NULLED the moment an admin approves or rejects it. Postgres treats
+  /// NULLs as distinct in unique indexes — the same property
+  /// `email_sends.dedupe_key` and `program_director_leads_university_director_uq`
+  /// already rely on — so `@@unique([pendingCompanyId, claimantUserId])`
+  /// permits exactly ONE OPEN claim per (company, claimant) while leaving any
+  /// number of resolved rows in place for the audit trail. A plain
+  /// `@@unique([companyId, claimantUserId, status])` would instead make a
+  /// second rejection of the same pair collide with the first.
+  pendingCompanyId String? @map("pending_company_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([pendingCompanyId, claimantUserId], map: "company_claims_pending_company_claimant_uq")
+  @@index([companyId])
+  @@index([claimantUserId])
+  @@index([status, createdAt])
+  @@map("company_claims")
 }
 
 model SourceStats {

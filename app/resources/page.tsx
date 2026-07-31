@@ -80,6 +80,23 @@ const CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string
   industry_awareness: { label: 'Industry', color: '#8B5CF6', bg: '#F5F3FF', icon: Globe },
 };
 
+/* ─── P4 education wedge ───
+   The two decision guides that sit UPSTREAM of the job search: how to
+   evaluate an NP program, and how clinical placement / precepting works.
+   Neither names a school, a program, an hour count, or a fee — the repo
+   holds no program dataset, and inventing one is the highest-harm
+   fabrication available on this board (people pick an education from it).
+
+   Rendered from the blog rows this page ALREADY fetches, never from a
+   hardcoded /blog/<slug> href: .mdx posts only resolve once
+   scripts/sync-blog-to-db.ts has published them (lib/blog.ts
+   getPostBySlug falls back to code for the license series ONLY), so a
+   literal href here would be a live internal 404 in the window between
+   deploying this file and running the sync against prod — the hazard
+   config/niche/content-map.ts documents for HOMEPAGE_FEATURED_POSTS.
+   Missing post → the band simply does not render. */
+const EDUCATION_WEDGE_SLUGS = ['how-to-evaluate-np-programs', 'np-preceptor-guide'] as const;
+
 /* ─── Featured guides data ─── */
 const featuredGuides = [
   {
@@ -139,6 +156,12 @@ export default async function ResourcesPage() {
   // Split state_spotlight from other articles
   const stateGuides = blogPosts.filter(p => p.category === 'state_spotlight');
   const articles = blogPosts.filter(p => p.category !== 'state_spotlight');
+
+  // P4 education wedge — resolved against the published rows above, so a
+  // card can only appear for a post the sync script has actually shipped.
+  const educationWedge = EDUCATION_WEDGE_SLUGS
+    .map(slug => blogPosts.find(p => p.slug === slug))
+    .filter((p): p is (typeof blogPosts)[number] => Boolean(p));
 
   // Group articles by category
   const grouped: Record<string, typeof articles> = {};
@@ -281,6 +304,39 @@ export default async function ResourcesPage() {
                 </div>
               </div>
             </Link>
+
+            {/* ─── P4: Before you apply — the education wedge ───
+                Gated on the DB rows (see EDUCATION_WEDGE_SLUGS above): the
+                band disappears entirely rather than linking a post the sync
+                script has not published yet. */}
+            {educationWedge.length > 0 && (
+              <div style={{ marginTop: '14px' }}>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: '#A855F7', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 10px' }}>
+                  Before you apply
+                </p>
+                <div className="res-tools-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${educationWedge.length}, 1fr)`, gap: '14px' }}>
+                  {educationWedge.map(post => (
+                    <Link key={post.slug} href={`/blog/${post.slug}`} className="emp-bento-card" style={{
+                      ...clayCard, padding: '24px 22px', textDecoration: 'none',
+                      display: 'flex', flexDirection: 'column', gap: '10px',
+                    }}>
+                      <div style={{ ...iconTile, width: '40px', height: '40px', borderRadius: '12px', background: '#FAF5FF', color: '#A855F7' }}>
+                        <GraduationCap size={20} />
+                      </div>
+                      <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: 0, lineHeight: 1.35 }}>{post.title}</h2>
+                      {post.metaDescription && (
+                        <p style={{ fontSize: '12.5px', color: '#5A4A42', lineHeight: 1.55, margin: 0, flex: 1 }}>
+                          {post.metaDescription.length > 140 ? post.metaDescription.slice(0, 140) + '…' : post.metaDescription}
+                        </p>
+                      )}
+                      <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        Read the guide <ArrowRight size={13} />
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </div>

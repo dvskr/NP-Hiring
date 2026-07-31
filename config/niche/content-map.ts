@@ -23,6 +23,17 @@
  *     premiums, no carrier names, no invented processing times or
  *     per-state requirements) and both are pinned to that contract by
  *     tests/regressions/p3-guides-round-2-malpractice-credentialing.test.ts.
+ *   - P4 added the education wedge: how-to-evaluate-np-programs and
+ *     np-preceptor-guide. Both are DELIBERATELY the decision-guide slice
+ *     of a bigger idea the repo has no data for — there is no Program
+ *     model, no accreditation dataset, and no per-state preceptor rules
+ *     anywhere in this codebase, so neither page names a school, a
+ *     program, an hour count, a fee, or a jurisdiction's requirements.
+ *     They teach the verification procedure and link the accreditors,
+ *     boards, and certifying bodies instead. Pinned to that contract by
+ *     tests/regressions/p4-content-wedges-preceptor-schools.test.ts.
+ *     A future program DIRECTORY drops in behind them; it does not
+ *     replace them, and it must not ship before the dataset exists.
  *   - The 51-post licensure series is generated deterministically from
  *     lib/blog-license-guides.ts and served by lib/blog.ts as a code
  *     fallback (DB rows, synced via `npx tsx scripts/sync-blog-to-db.ts
@@ -101,6 +112,16 @@ export const RELATED_BLOG_SLUGS: {
         'highest-paying-np-specialties',
         'fnp-vs-pmhnp-vs-agacnp',
         'np-1099-vs-w2',
+        // P4 education wedge (brief #3 + #4): choosing/verifying a program,
+        // and the preceptor + clinical-placement mechanics. Wired MID-LIST,
+        // not at either end: the head is pinned by the P2 suite (interview
+        // prep + resume must stay first) and the tail is pinned by the P3
+        // suite, so this is the only position that adds them without
+        // rewriting another package's contract. They sit below the
+        // application-funnel pillars because a reader on a job posting is
+        // already past the program decision.
+        'how-to-evaluate-np-programs',
+        'np-preceptor-guide',
         // P3 #5 remainder. Deliberately at the TAIL: the sidebar caps at 3
         // and spends one slot on `always`, so these never displace interview
         // prep or the resume guide on a plain job page. They are wired here

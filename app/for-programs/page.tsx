@@ -68,6 +68,35 @@ const programFaqs = [
   },
 ]
 
+/**
+ * P4 cross-link — the STUDENT-side counterpart of this page.
+ *
+ * This page is the program-director half of the flywheel; the applicant
+ * half is the "how to evaluate an NP program" decision guide (accreditors,
+ * certification eligibility, clinical-placement questions). It names no
+ * schools and ranks no programs, so linking it here cannot read as this
+ * board rating anyone's program — there is no program dataset in this repo
+ * and building one without accreditor-verified data would be a YMYL
+ * fabrication with named victims.
+ *
+ * Looked up in the DB rather than hardcoded as an href: .mdx posts only
+ * resolve once scripts/sync-blog-to-db.ts has published them, so a literal
+ * /blog/<slug> link would 404 in the window between deploying this file
+ * and running the sync. No row → the card is simply not rendered.
+ */
+const PROGRAM_GUIDE_SLUG = 'how-to-evaluate-np-programs'
+
+async function getProgramGuide() {
+  try {
+    return await prisma.blogPost.findFirst({
+      where: { slug: PROGRAM_GUIDE_SLUG, status: 'published' },
+      select: { slug: true, title: true, metaDescription: true },
+    })
+  } catch {
+    return null
+  }
+}
+
 async function getProgramsStats() {
   try {
     const [totalJobs, stateRows, subscribers] = await Promise.all([
@@ -100,7 +129,10 @@ async function getProgramsStats() {
 }
 
 export default async function ForProgramsPage() {
-  const stats = await getProgramsStats()
+  const [stats, programGuide] = await Promise.all([
+    getProgramsStats(),
+    getProgramGuide(),
+  ])
   const fmt = (n: number) =>
     n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${n}`
 
@@ -1352,6 +1384,68 @@ export default async function ForProgramsPage() {
               </p>
             </details>
           ))}
+
+          {/* P4 cross-link — see getProgramGuide() above. Rendered only when
+              the post exists in the DB, so this can never be a live 404. */}
+          {programGuide && (
+            <Link
+              href={`/blog/${programGuide.slug}`}
+              style={{
+                ...clayCard,
+                display: 'block',
+                marginTop: '28px',
+                padding: '22px 24px',
+                textDecoration: 'none',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: '#A855F7',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.12em',
+                }}
+              >
+                Share with your students
+              </span>
+              <h3
+                style={{
+                  fontSize: '17px',
+                  fontWeight: 700,
+                  color: '#1A2E35',
+                  margin: '8px 0 6px',
+                  lineHeight: 1.35,
+                }}
+              >
+                {programGuide.title}
+              </h3>
+              <p
+                style={{
+                  color: '#5A4A42',
+                  fontSize: '13.5px',
+                  lineHeight: 1.6,
+                  margin: '0 0 10px',
+                }}
+              >
+                A vendor-neutral guide to verifying accreditation, checking
+                certification eligibility, and asking the right clinical-placement
+                questions. It names no schools and ranks no programs.
+              </p>
+              <span
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#BE185D',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                }}
+              >
+                Read the guide <ArrowRight size={14} />
+              </span>
+            </Link>
+          )}
         </div>
       </section>
 

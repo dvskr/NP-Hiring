@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Building2, Globe, Briefcase, ExternalLink } from 'lucide-react';
+import { Building2, Globe, Briefcase, ExternalLink, BadgeCheck } from 'lucide-react';
 import { brand } from '@/config/brand';
 
 interface Company {
@@ -11,7 +11,15 @@ interface Company {
     website: string | null;
     logoUrl: string | null;
     jobCount: number;
+    /** Ingest-pipeline signal: the scraped employer name matched the
+     *  known-employer map at row creation (lib/company-normalizer.ts).
+     *  NOT an employer-confirmed relationship — see claimVerifiedAt. */
     isVerified: boolean;
+    /** Admin-approved employer claim on the Company profile. Optional so the
+     *  synthesized, non-Company fallback object that app/jobs/[slug]/page.tsx
+     *  builds from EmployerJob columns still satisfies this shape; real
+     *  Company rows carry the column and render the badge below. */
+    claimVerifiedAt?: Date | string | null;
 }
 
 interface AboutEmployerProps {
@@ -39,6 +47,43 @@ const iconContainer: React.CSSProperties = {
     backgroundColor: '#E0F2F1',
     boxShadow: '2px 2px 5px rgba(0,0,0,0.04), inset 1px 1px 2px rgba(255,255,255,0.7)',
 };
+
+/**
+ * Distinct from the pipeline's "Verified Employer" pill by colour, shape and
+ * wording. `isVerified` is written once by the ingest pipeline and means "we
+ * recognised the scraped name"; `claimVerifiedAt` is an admin approving a
+ * specific employer's claim on the profile. One badge must never carry both
+ * assertions, so these never share a style token.
+ *
+ * WHY IT IS RENDERED FROM BOTH BRANCHES BELOW. The rich branch is gated on
+ * `company.description`, and nothing in this repo ever writes that column —
+ * no `prisma.company.create/update/upsert` call passes `description`, and
+ * lib/company-normalizer.ts (the only row-creating path) writes exactly
+ * name/normalizedName/aliases/jobCount/isVerified. So a real Company row with
+ * an approved claim always falls through to the generic branch. Rendering the
+ * badge only in the rich branch would ship a badge that no production row can
+ * reach on this component.
+ *
+ * `gapLeft` is the 6px separation from the Verified pill when both show; with
+ * no pill to its left it would just be a stray indent.
+ */
+function ClaimedByEmployerBadge({ gapLeft = false }: { gapLeft?: boolean }) {
+    return (
+        <span
+            title="An employer asked to be recognised as the owner of this profile and our team approved the request."
+            style={{
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                padding: '2px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+                backgroundColor: '#D1FAE5', color: '#065F46',
+                boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), 1px 1px 2px rgba(0,0,0,0.03)',
+                marginTop: '4px', marginLeft: gapLeft ? '6px' : 0,
+            }}
+        >
+            <BadgeCheck style={{ width: '12px', height: '12px' }} />
+            Claimed by employer
+        </span>
+    );
+}
 
 export default function AboutEmployer({
     employerName,
@@ -88,15 +133,21 @@ export default function AboutEmployer({
                             About {company.name}
                         </h2>
                         {company.isVerified && (
-                            <span style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 600,
-                                backgroundColor: '#FCE7F3', color: '#9D174D',
-                                boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), 1px 1px 2px rgba(0,0,0,0.03)',
-                                marginTop: '4px',
-                            }}>
+                            <span
+                                title="Directory signal: this employer's name matched our known-employer list when the listing was imported. It is not an employer-confirmed claim."
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                    padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 600,
+                                    backgroundColor: '#FCE7F3', color: '#9D174D',
+                                    boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), 1px 1px 2px rgba(0,0,0,0.03)',
+                                    marginTop: '4px',
+                                }}
+                            >
                                 ✓ Verified Employer
                             </span>
+                        )}
+                        {company.claimVerifiedAt && (
+                            <ClaimedByEmployerBadge gapLeft={company.isVerified} />
                         )}
                         {websiteUrl && (
                             <a
@@ -156,6 +207,20 @@ export default function AboutEmployer({
                     }}>
                         About {employerName}
                     </h2>
+                    {/* The branch a real Company row actually reaches: the rich
+                        branch above needs `company.description`, which has no
+                        writer in this repo. `company` is still in scope here and
+                        is only absent for jobs with no matched row at all; the
+                        synthesized EmployerJob fallback object carries no
+                        claimVerifiedAt, so it can never light this up.
+                        Deliberately NOT also moving the pipeline's isVerified
+                        pill down here — where that pill renders is pre-existing
+                        behaviour this wave does not own. */}
+                    {company?.claimVerifiedAt && (
+                        <div>
+                            <ClaimedByEmployerBadge />
+                        </div>
+                    )}
                     {websiteUrl && (
                         <a
                             href={websiteUrl}

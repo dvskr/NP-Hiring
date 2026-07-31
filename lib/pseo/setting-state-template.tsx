@@ -28,7 +28,7 @@ import JobCard from '@/components/JobCard';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryFAQ from '@/components/CategoryFAQ';
-import type { CategorySlug } from './category-faq-data';
+import { getCategoryFaqs, type CategorySlug } from './category-faq-data';
 import { Job } from '@/lib/types';
 import { PseoPageViewTracker } from '@/components/analytics/ViewTrackers';
 import {
@@ -391,6 +391,22 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
     { label: stateName! },
   ];
 
+  // P4 follow-up: does THIS page actually render an FAQ block?
+  // CATEGORY_FAQS (lib/pseo/category-faq-data.ts) is a Partial<Record<...>>,
+  // and one state-eligible category still has no entry (see the note on
+  // buildNpSpecialtyConfig in setting-state-config.ts). For that key
+  // getCategoryFaqs returns [], <CategoryFAQ> returns null, and NO .faq-answer
+  // element exists in the markup — across all 51 of its state URLs. This call
+  // mirrors the <CategoryFAQ> invocation at the bottom of the render EXACTLY
+  // (same category, same totalJobs, no avgSalary, no customFaqs) so the
+  // Speakable selector below can never outlive the element it points at.
+  // 27 of the 28 state-eligible categories render FAQs; one does not.
+  const rendersFaqAnswers =
+    getCategoryFaqs({
+      category: config.faqCategory as CategorySlug,
+      totalJobs: stats.totalJobs,
+    }).length > 0;
+
   /* Design Tokens — matched to category-city-template */
   const clayCard: React.CSSProperties = {
     background: '#FFFFFF', borderRadius: '20px',
@@ -461,15 +477,26 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
             .replace(/>/g, '\\u003e'),
         }}
       />
-      {/* P2 #15: Speakable schema — marks the answer summary for voice/AI
-          consumption, matching the city template's contract.
+      {/* P2 #15 / P4: Speakable schema — marks the answer summary and the FAQ
+          answers for voice/AI consumption, matching the city template's
+          contract exactly.
           Only selectors that ACTUALLY exist in the rendered markup are
-          declared: #answer-summary is the State Insights section below. The
-          city template also lists '.faq-answer', but this page's FAQ comes
-          from components/CategoryFAQAccordion, whose answer <p> carries no
-          such class — declaring a selector that matches nothing would be a
-          false claim about the page. Add the class there and extend this
-          array together. */}
+          declared. #answer-summary is the State Insights section below, which
+          renders unconditionally.
+          '.faq-answer' was withheld until P3 because this page's FAQ comes
+          from components/CategoryFAQAccordion (via components/CategoryFAQ) and
+          its answer <p> carried no such class — declaring a selector that
+          matches nothing would have been a false claim about the page. P3 added
+          `className="faq-answer"` to that <p>.
+
+          The class existing is necessary but NOT sufficient: <CategoryFAQ>
+          renders nothing at all for a faqCategory with no CATEGORY_FAQS entry,
+          and one state-eligible category is still exactly that key — so
+          widening the array unconditionally re-created the very false claim
+          the rule above forbids, across that category's 51 state URLs. The
+          selector is therefore gated on the same getCategoryFaqs() call the
+          renderer makes: declared for the 27 categories that render answers,
+          omitted for the one that does not. */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -479,7 +506,9 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
             name: `${config.label} ${brand.niche.short} Jobs in ${stateName}`,
             speakable: {
               '@type': 'SpeakableSpecification',
-              cssSelector: ['#answer-summary'],
+              cssSelector: rendersFaqAnswers
+                ? ['#answer-summary', '.faq-answer']
+                : ['#answer-summary'],
             },
             url: `${brand.baseUrl}${basePath}`,
           })

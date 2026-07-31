@@ -75,11 +75,14 @@ export default function CategoryFAQAccordion({ faqs, categoryLabel }: CategoryFA
                                         its answer <p> with this class and lists it in
                                         SpeakableSpecification.cssSelector; this accordion had no such
                                         class, so lib/pseo/setting-state-template.tsx had to declare
-                                        '#answer-summary' alone and leave its FAQ unspeakable. The class
-                                        exists now — that template's cssSelector array can be widened to
-                                        ['#answer-summary', '.faq-answer'] (its guard in
-                                        tests/regressions/p2-pseo-parity-templates.test.ts asserts the
-                                        selector is absent and must be updated in the same change). */}
+                                        '#answer-summary' alone and leave its FAQ unspeakable.
+                                        P3 added the class; P4 widened that template's array to
+                                        ['#answer-summary', '.faq-answer'], so the ~663 setting×state
+                                        pages now reach Speakable parity with the city template.
+                                        DO NOT drop this className: the selector on the other side is
+                                        pinned (tests/regressions/p2-pseo-parity-templates.test.ts now
+                                        asserts BOTH halves), and removing it would leave that schema
+                                        pointing at markup this component no longer renders. */}
                                     <p className="faq-answer" style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '16px 0 0' }}>{faq.answer}</p>
                                 </div>
                             )}

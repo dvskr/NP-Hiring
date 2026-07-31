@@ -56,8 +56,15 @@ describe('B18 — legacy /api/candidate-profile write endpoint stays deleted', (
 
 describe('B23 — orphaned ops endpoints stay deleted', () => {
   it('/api/companies is gone', () => {
+    // The real invariant is the absence of the orphaned COLLECTION endpoint,
+    // not the absence of the directory. `app/api/companies/` was later
+    // repopulated by an unrelated surface (the employer profile-claim
+    // endpoint), so the directory-level proxy that used to sit here was
+    // narrowed away. The full B23 invariant — collection route gone, nothing
+    // referencing the bare `/api/companies` path, and an enumeration of every
+    // route that does live under that directory — is restated in
+    // tests/regressions/p4-company-claim-surfaces.test.ts.
     expect(exists('app/api/companies/route.ts')).toBe(false);
-    expect(exists('app/api/companies')).toBe(false);
   });
 
   it('/api/pseo/health is gone', () => {
