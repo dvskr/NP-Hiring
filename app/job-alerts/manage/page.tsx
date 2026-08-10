@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Bell, Plus, Trash2, Pause, Play, Clock, Calendar, MapPin, Briefcase, DollarSign, Search, ChevronUp, Loader2, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
 import { SALARY_FILTER_BUCKETS } from '@/config/niche/stats';
+import { EXPERIENCE_FILTER_BUCKETS } from '@/lib/filters';
 import { ALERT_KEYWORD_SUGGESTIONS } from '@/config/niche/alert-keywords';
 
 /* ═══════════════════════════════════════════
@@ -22,6 +23,11 @@ interface JobAlert {
   jobType: string | null;
   minSalary: number | null;
   maxSalary: number | null;
+  // Experience criteria (P6 #4). Optional because /api/job-alerts/by-email
+  // predates them — alerts loaded through that path simply omit the fields
+  // (undefined and null both read as "no constraint", which is accurate).
+  newGradFriendly?: boolean | null;
+  minYearsExperience?: number | null;
   frequency: string;
   isActive: boolean;
   lastSentAt: string | null;
@@ -83,6 +89,8 @@ function buildCriteriaSummary(alert: JobAlert): string {
   if (alert.mode) parts.push(alert.mode);
   if (alert.jobType) parts.push(alert.jobType);
   if (alert.location) parts.push(`in ${alert.location}`);
+  if (alert.newGradFriendly === true) parts.push('open to new grads');
+  if (typeof alert.minYearsExperience === 'number') parts.push(`fits ${alert.minYearsExperience}+ yrs experience`);
   if (alert.minSalary || alert.maxSalary) {
     if (alert.minSalary && alert.maxSalary) {
       parts.push(`$${(alert.minSalary / 1000).toFixed(0)}k-$${(alert.maxSalary / 1000).toFixed(0)}k`);
@@ -123,6 +131,10 @@ function ManageAlertsContent() {
   const [newMode, setNewMode] = useState('');
   const [newJobType, setNewJobType] = useState('');
   const [newMinSalary, setNewMinSalary] = useState('');
+  // Experience criteria (P6 #4) — write side for the two JobAlert columns the
+  // digest cron already matches on. Same split as the /jobs Experience facet.
+  const [newNewGradOnly, setNewNewGradOnly] = useState(false);
+  const [newMinYears, setNewMinYears] = useState('');
   const [newFrequency, setNewFrequency] = useState('daily');
   const [creating, setCreating] = useState(false);
   const [createMsg, setCreateMsg] = useState<{ type: 'success' | 'error' | ''; text: string }>({ type: '', text: '' });
@@ -262,6 +274,10 @@ function ManageAlertsContent() {
           mode: newMode || undefined,
           jobType: newJobType || undefined,
           minSalary: newMinSalary ? Number(newMinSalary) : undefined,
+          // Omitted entirely (not false/0) when unset so the stored NULLs
+          // keep their "no constraint" semantics.
+          newGradFriendly: newNewGradOnly || undefined,
+          minYearsExperience: newMinYears ? Number(newMinYears) : undefined,
           frequency: newFrequency,
         }),
       });
@@ -277,6 +293,8 @@ function ManageAlertsContent() {
         setNewMode('');
         setNewJobType('');
         setNewMinSalary('');
+        setNewNewGradOnly(false);
+        setNewMinYears('');
         setNewFrequency('daily');
         setShowCreate(false);
         setTimeout(() => setCreateMsg({ type: '', text: '' }), 3000);
@@ -462,6 +480,51 @@ function ManageAlertsContent() {
                     no published salary are kept. Jobs advertising a single figure rather
                     than a range are missed even when it clears your minimum, and the
                     jobs board does show those — so the two lists won&apos;t be identical.
+                  </p>
+                </div>
+
+                {/* Experience (P6 #4) — mirrors the /jobs Experience facet's
+                    two questions; the digest cron reuses the /jobs new-grad
+                    keyword set and the candidate-qualifies ≤N rule. */}
+                <div>
+                  <label htmlFor="new-alert-min-years" style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7F8A', marginBottom: '5px' }}>
+                    Your experience
+                  </label>
+                  <select
+                    id="new-alert-min-years"
+                    value={newMinYears}
+                    onChange={e => setNewMinYears(e.target.value)}
+                    aria-describedby="new-alert-min-years-note"
+                    style={clayInput}
+                  >
+                    <option value="">Any experience level</option>
+                    {EXPERIENCE_FILTER_BUCKETS.map(years => (
+                      <option key={years} value={String(years)}>I have {years}+ years</option>
+                    ))}
+                  </select>
+                  <p id="new-alert-min-years-note" style={{ fontSize: '10px', color: '#B0C4BC', marginTop: '4px', lineHeight: 1.4 }}>
+                    Only roles you qualify for — jobs asking for at most this many
+                    years, plus jobs that don&apos;t state a minimum.
+                  </p>
+                </div>
+
+                <div>
+                  <span style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#6B7F8A', marginBottom: '5px' }}>
+                    New grads
+                  </span>
+                  <label htmlFor="new-alert-new-grad" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', cursor: 'pointer', padding: '10px 0' }}>
+                    <input
+                      id="new-alert-new-grad"
+                      type="checkbox"
+                      checked={newNewGradOnly}
+                      onChange={e => setNewNewGradOnly(e.target.checked)}
+                      aria-describedby="new-alert-new-grad-note"
+                      style={{ width: '15px', height: '15px', accentColor: '#BE185D' }}
+                    />
+                    Only jobs open to new grads
+                  </label>
+                  <p id="new-alert-new-grad-note" style={{ fontSize: '10px', color: '#B0C4BC', marginTop: '2px', lineHeight: 1.4 }}>
+                    Employers open to candidates with little or no experience.
                   </p>
                 </div>
 

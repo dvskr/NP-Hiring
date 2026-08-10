@@ -36,6 +36,37 @@
 | 3.5 | **Audit-era business items** (from the enterprise audit, unchanged) | Stripe Tax enablement (B113) · Supabase PITR + restore drill (B111) · CI eval-gate enforcement (B93) · GscSnapshot coverage columns — no public API exists, drop or wire manual export (B40) · broadcast `scheduledFor` leg (B74) · employer CSV export placement (B22) · InMail gate semantics — implemented as "new thread = charged"; revisit if per-candidate charging was intended (B1) |
 | 3.6 | **Four briefed product bets** (decision briefs artifact) | Company claim step: **shipped**. Employer reviews: **don't** (triggers: non-thin employer volume + UGC/takedown Terms + named moderator). Schools directory: **blocked on dataset procurement** — wedge shipped; revisit only if you license/hand-verify an accredited-program dataset. Preceptor marketplace/flag: **don't** — pillar shipped; flag only as a self-declared /post-job checkbox once employer-posted volume is material. Full city-slug rename: **don't now** — ride it along free at the next `cities.ts` regeneration. |
 
+### 3.7 Deferred taxonomy verticals (recorded 2026-08-11)
+
+Eight NP verticals from the 2026-07 content-gap synthesis §7 were evaluated and
+**deferred**: endocrinology/diabetes, sleep-medicine, utilization-review, informatics,
+education-faculty, wound-care, iv-infusion, functional-medicine. The synthesis itself was a
+session artifact and is not committed — this entry is its in-repo record. (Synthesis §7's
+shipped remainder: the P1 #14 state-tier promotions and the P1 #15 verticals aesthetics /
+pain-management / palliative-hospice, both live in `lib/pseo/taxonomy-registry.ts`.)
+
+Original deferral rationale: **add after checking live inventory coverage.** A new slug
+launches with zero rows carrying it in `Job.categoryTags` (see the tag-backfill warning in
+the `taxonomy-registry.ts` header), so a vertical without real inventory ships as a
+permanently-noindexed empty shell. Check live job counts for each vertical's keywords
+before promoting any of them.
+
+Adding one of these later is a full tier build — the drift tests fail until every side
+agrees:
+
+1. **Registry entry** — the slug in `CATEGORY_AXES` in `lib/pseo/taxonomy-registry.ts`
+   (plus `STATE_ELIGIBLE_CATEGORY_SLUGS` + a `SETTING_CONFIGS` entry in
+   `lib/pseo/setting-state-config.ts` if promoted to the [state] tier).
+2. **Folder trio** — `app/jobs/<slug>/` with `page.tsx` + `city/[slug]/` (+ `[state]/` if
+   state-eligible); `tests/seo/jobs-segments-drift.test.ts` enforces registry ↔ folder
+   parity in both directions.
+3. **Tagger rules** — `lib/pseo/category-tagger.ts`, then the deploy step
+   `npx tsx scripts/backfill-category-tags.ts --force --apply` (existing rows stay
+   invisible to the new category until the classifier re-runs).
+4. **Asset-registry entry** — `lib/pseo/category-asset-registry.ts` (hero/OG art mapping).
+5. **FAQ content** — `lib/pseo/category-faq-data.ts` (or a documented null, as
+   psychiatric-mental-health does).
+
 ## 4. Data procurement (unblocks specific features)
 
 | # | Dataset | Unblocks |

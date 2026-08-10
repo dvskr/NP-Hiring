@@ -5,6 +5,11 @@ import { Building2, DollarSign, FileText, CheckCircle, Shield, Users, BookOpen, 
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { getStatesByAuthority } from '@/lib/state-practice-authority';
 import { STAT_SOURCES } from '@/lib/stats-sources';
+// P6 #10: this guide carried Article JSON-LD + a review stamp but no
+// E-E-A-T byline. Visible byline and schema both derive from
+// brand.editorial.reviewer (config/brand.ts) so they can never disagree —
+// same wiring as app/blog/[slug]/page.tsx.
+import EditorialByline, { editorialSchemaFields } from '@/components/EditorialByline';
 
 // Editorial review constants — bump LAST_REVIEWED on each pass so Article
 // dateModified reflects real freshness, not the original publish date.
@@ -289,6 +294,9 @@ export default function PrivatePracticeGuidePage() {
             author: { '@type': 'Organization', name: brand.name },
             publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
             mainEntityOfPage: { '@type': 'WebPage', '@id': `${brand.baseUrl}/resources/private-practice-guide` },
+            // {} while brand.editorial.reviewer is null; the real reviewer's
+            // Person record when configured. Never a fabricated name.
+            ...editorialSchemaFields(),
           }),
         }}
       />
@@ -351,6 +359,13 @@ export default function PrivatePracticeGuidePage() {
 
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="max-w-4xl mx-auto">
+
+          {/* P6 #10: visible review-status byline — renders the honest
+              editorial-team state while brand.editorial.reviewer is null,
+              the named credentialed reviewer once contracted. */}
+          <div className="mb-8">
+            <EditorialByline variant="hero" />
+          </div>
 
           {/* Step-by-Step Guide */}
           <div className="space-y-6 mb-12">

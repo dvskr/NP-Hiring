@@ -4,6 +4,11 @@ import Link from 'next/link';
 import { Scale, DollarSign, Calculator, CheckCircle, AlertTriangle, TrendingUp, Building2, Percent } from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { SALARY_BANDS } from '@/lib/stats-sources';
+// P6 #10: this guide carried Article JSON-LD + a review stamp but no
+// E-E-A-T byline. Visible byline and schema both derive from
+// brand.editorial.reviewer (config/brand.ts) so they can never disagree —
+// same wiring as app/blog/[slug]/page.tsx.
+import EditorialByline, { editorialSchemaFields } from '@/components/EditorialByline';
 
 // Bump on each editorial review pass so dateModified isn't permanently
 // frozen at the original publish date. Quarterly cadence is a reasonable
@@ -240,6 +245,9 @@ export default function CompensationGuidePage() {
             image: HERO_IMAGE,
             author: { '@type': 'Organization', name: brand.name },
             publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
+            // {} while brand.editorial.reviewer is null; the real reviewer's
+            // Person record when configured. Never a fabricated name.
+            ...editorialSchemaFields(),
           }),
         }}
       />
@@ -269,6 +277,13 @@ export default function CompensationGuidePage() {
 
       <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="max-w-5xl mx-auto">
+
+          {/* P6 #10: visible review-status byline — renders the honest
+              editorial-team state while brand.editorial.reviewer is null,
+              the named credentialed reviewer once contracted. */}
+          <div className="mb-8">
+            <EditorialByline variant="hero" />
+          </div>
 
           {/* Quick Summary */}
           <div className="mb-8 md:mb-12 grid md:grid-cols-2 gap-6">

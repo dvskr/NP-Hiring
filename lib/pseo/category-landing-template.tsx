@@ -327,11 +327,28 @@ const clayCard: React.CSSProperties = {
     boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
 };
 
-/** Sibling slugs from the same taxonomy axis (for the internal-links grid). */
-function axisSiblings(slug: string, limit = 6): string[] {
+/**
+ * Sibling slugs from the same taxonomy axis (for the internal-links grid).
+ *
+ * Deterministic ROTATION, not a head slice: the band starts just after the
+ * slug's own axis position and wraps around, so each landing shows a stable,
+ * category-seeded window of its axis. Coverage guarantee: every axis slug
+ * appears in the bands of the `limit` slugs preceding it (wrapping), so no
+ * category hub is stranded without a deterministic inbound link. The old
+ * `.filter().slice(0, 6)` head slice left the tail of the 17-slug specialty
+ * axis — oncology, cardiology, orthopedic, aesthetics, pain-management,
+ * palliative-hospice — out of EVERY landing's band (P6 completeness hole
+ * #6). Exported for
+ * tests/regressions/p6-nav-mesh-sibling-band-coverage.test.ts, which proves
+ * the full-coverage invariant against CATEGORY_AXES.
+ */
+export function axisSiblings(slug: string, limit = 6): string[] {
     const axis = Object.values(CATEGORY_AXES).find((slugs) => (slugs as readonly string[]).includes(slug));
     if (!axis) return [];
-    return (axis as readonly string[]).filter((s) => s !== slug).slice(0, limit);
+    const slugs = axis as readonly string[];
+    const start = slugs.indexOf(slug);
+    const rotated = [...slugs.slice(start + 1), ...slugs.slice(0, start)];
+    return rotated.slice(0, limit);
 }
 
 interface CategoryLandingPageProps {

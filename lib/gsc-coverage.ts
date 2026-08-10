@@ -12,8 +12,8 @@
  *
  * per category axis. A category with a big renderable→indexable gap is
  * publishing pages the sitemap never advertises (staleness, population
- * floor, or state-eligibility), which is exactly the visibility this
- * dashboard panel exists to expose.
+ * floor, or a retired category slug), which is exactly the visibility
+ * this dashboard panel exists to expose.
  *
  * Threshold mirrors: MIN_SITEMAP_JOBS / MIN_SITEMAP_POPULATION /
  * PSEO_STALENESS_HOURS mirror app/api/sitemaps/index/route.ts (which in
@@ -22,14 +22,18 @@
  * constants, change these and the test together.
  */
 import { MIN_JOBS_FOR_CATEGORY_CITY } from '@/lib/pseo/render-gate';
-import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
+import { CITY_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 // Mirrors app/api/sitemaps/index/route.ts — see header comment.
 export const MIN_SITEMAP_JOBS = 3;
 export const MIN_SITEMAP_POPULATION = 10000;
 export const PSEO_STALENESS_HOURS = 36;
 
-const SITEMAP_CATEGORY_SET: ReadonlySet<string> = new Set(STATE_ELIGIBLE_CATEGORY_SLUGS);
+// Same CITY_ELIGIBLE_CATEGORY_SLUGS allow-list the sitemap index and
+// cities/[batch] routes filter on (previously the stale 28-slug
+// state-eligible subset — parity pinned by
+// tests/regressions/p6-sitemap-parity-index-batch.test.ts).
+const SITEMAP_CATEGORY_SET: ReadonlySet<string> = new Set(CITY_ELIGIBLE_CATEGORY_SLUGS);
 
 /** Cutoff before which a pseoStats row counts as stale for sitemap purposes. */
 export function pseoFreshnessThreshold(now: Date = new Date()): Date {

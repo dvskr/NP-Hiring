@@ -7,6 +7,7 @@ import { Bell, MapPin, Briefcase, Zap, CheckCircle, AlertCircle, ArrowLeft, Load
 import CategoryHero from '@/components/CategoryHero';
 import { brand } from '@/config/brand';
 import { SALARY_FILTER_BUCKETS } from '@/config/niche/stats';
+import { EXPERIENCE_FILTER_BUCKETS } from '@/lib/filters';
 import { ALERT_KEYWORD_SUGGESTIONS, ALERT_KEYWORD_PLACEHOLDER } from '@/config/niche/alert-keywords';
 
 const STORAGE_BASE = brand.assets.storageBase;
@@ -116,6 +117,13 @@ function JobAlertsContent() {
   const [jobType, setJobType] = useState(searchParams.get('jobType') || '');
   const [keyword, setKeyword] = useState(() => readParam(searchParams, KEYWORD_PARAM_ALIASES));
   const [minSalary, setMinSalary] = useState(() => readMinSalaryParam(searchParams));
+  // Experience criteria (P6 #4) — write side for JobAlert.newGradFriendly /
+  // minYearsExperience, which the digest cron has matched on since Phase 5
+  // but no form could set. Same two-question split as the /jobs Experience
+  // facet: "open to new grads" is an EMPLOYER signal; "your experience" is
+  // CANDIDATE-side (pick your years, get the roles you qualify for).
+  const [newGradOnly, setNewGradOnly] = useState(false);
+  const [minYears, setMinYears] = useState('');
   const [frequency, setFrequency] = useState('daily');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | ''; text: string }>({ type: '', text: '' });
@@ -174,6 +182,10 @@ function JobAlertsContent() {
           jobType: jobType || undefined,
           // Sent as a number — the API rejects non-numeric minSalary.
           minSalary: minSalary ? Number(minSalary) : undefined,
+          // Experience criteria — omitted entirely (not false/0) when unset,
+          // so the stored NULLs keep their "no constraint" semantics.
+          newGradFriendly: newGradOnly || undefined,
+          minYearsExperience: minYears ? Number(minYears) : undefined,
           frequency,
         }),
       });
@@ -189,6 +201,8 @@ function JobAlertsContent() {
         setMode('');
         setJobType('');
         setMinSalary('');
+        setNewGradOnly(false);
+        setMinYears('');
         setFrequency('daily');
       } else {
         setMessage({ type: 'error', text: data.error || 'Something went wrong. Please try again.' });
@@ -212,6 +226,8 @@ function JobAlertsContent() {
     if (mode) parts.push(mode);
     if (jobType) parts.push(jobType);
     if (location) parts.push(`in ${location}`);
+    if (newGradOnly) parts.push('open to new grads');
+    if (minYears) parts.push(`fits ${minYears}+ yrs experience`);
     const salaryBucket = SALARY_FILTER_BUCKETS.find((b) => String(b.value) === minSalary);
     if (salaryBucket) parts.push(salaryBucket.label);
     return parts.length > 0 ? parts.join(' · ') : `All ${brand.niche.short} jobs`;
@@ -416,6 +432,52 @@ function JobAlertsContent() {
                         <option key={type} value={type}>{type}</option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* Experience (P6 #4) — two DISTINCT questions, mirroring
+                      the /jobs Experience facet exactly (same semantics, same
+                      matcher: the digest cron reuses the /jobs new-grad
+                      keyword set and the candidate-qualifies ≤N rule, nulls
+                      included). "Open to new grads" is an EMPLOYER signal;
+                      "Your experience" is CANDIDATE-side. */}
+                  <div>
+                    <label htmlFor="alert-new-grad" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', cursor: 'pointer' }}>
+                      <input
+                        id="alert-new-grad"
+                        type="checkbox"
+                        checked={newGradOnly}
+                        onChange={(e) => setNewGradOnly(e.target.checked)}
+                        aria-describedby="alert-new-grad-note"
+                        style={{ width: '15px', height: '15px', accentColor: '#BE185D' }}
+                      />
+                      Only jobs open to new grads <span style={{ fontWeight: 400, color: '#B0C4BC' }}>(optional)</span>
+                    </label>
+                    <p id="alert-new-grad-note" style={{ fontSize: '11px', color: '#B0C4BC', marginTop: '4px' }}>
+                      Employers open to candidates with little or no experience.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="alert-min-years" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#6B7F8A', marginBottom: '6px' }}>
+                      Your experience <span style={{ fontWeight: 400, color: '#B0C4BC' }}>(optional)</span>
+                    </label>
+                    <select
+                      id="alert-min-years"
+                      value={minYears}
+                      onChange={(e) => setMinYears(e.target.value)}
+                      aria-describedby="alert-min-years-note"
+                      style={clayInput}
+                    >
+                      <option value="">Any experience level</option>
+                      {EXPERIENCE_FILTER_BUCKETS.map((years) => (
+                        <option key={years} value={String(years)}>I have {years}+ years</option>
+                      ))}
+                    </select>
+                    <p id="alert-min-years-note" style={{ fontSize: '11px', color: '#B0C4BC', marginTop: '4px' }}>
+                      Pick your years and we&apos;ll only send roles you qualify for —
+                      jobs asking for at most that much experience, plus jobs that
+                      don&apos;t state a minimum.
+                    </p>
                   </div>
 
                   {/* Minimum salary — the BUCKETS are shared with the /jobs

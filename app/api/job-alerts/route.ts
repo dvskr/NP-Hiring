@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { sanitizeJobAlert } from '@/lib/sanitize';
 import { syncToBeehiiv } from '@/lib/beehiiv';
@@ -17,7 +18,36 @@ interface CreateAlertBody {
   maxSalary?: number;
   frequency?: string;
   newsletterOptIn?: boolean;
+  newGradFriendly?: boolean;
+  minYearsExperience?: number;
 }
+
+/**
+ * Experience criteria (P6 #4) — the first WRITE side for the
+ * JobAlert.newGradFriendly / minYearsExperience columns. The digest cron
+ * (lib/job-alerts-service.ts) has consumed both since Phase 5, but no form
+ * or API accepted them, so they were dead columns no user could set.
+ *
+ * Semantics mirror the /jobs filters exactly:
+ *   newGradFriendly     true → only jobs open to new grads (flag OR title
+ *                       keywords, minus exclusions — same as /jobs?newGrad=1).
+ *   minYearsExperience  N → candidate-qualifies: jobs whose stated minimum is
+ *                       ≤ N or unstated (same as /jobs?minYears=N).
+ *
+ * null = no experience constraint. The cron gates on `=== true` and
+ * `typeof === 'number' && >= 0` respectively, so existing alerts (all-null)
+ * keep their no-op semantics untouched. `false` is normalized to null below —
+ * the schema documents null as "no preference" and the cron treats false and
+ * null identically, so storing false would only create a third, meaningless
+ * state.
+ */
+const experienceCriteriaSchema = z.object({
+  newGradFriendly: z.boolean().optional(),
+  // Integer years, same bounds spirit as the /jobs candidate filter (its live
+  // buckets are 1/2/5; the cap only rejects nonsense payloads, not future
+  // buckets).
+  minYearsExperience: z.number().int().min(0).max(60).optional(),
+});
 
 // POST - Create new job alert
 export async function POST(request: NextRequest) {
@@ -70,6 +100,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Experience criteria — validated with zod (see experienceCriteriaSchema
+    // above). Read from the raw body: sanitizeJobAlert only passes the legacy
+    // string/number fields through, and these two need type validation, not
+    // text sanitization.
+    const expParsed = experienceCriteriaSchema.safeParse({
+      newGradFriendly: body.newGradFriendly,
+      minYearsExperience: body.minYearsExperience,
+    });
+    if (!expParsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid experience criteria' },
+        { status: 400 }
+      );
+    }
+    // Normalize: false → null (null = no preference; the cron treats both as
+    // no-op, so only `true` is worth storing).
+    const newGradFriendly = expParsed.data.newGradFriendly === true ? true : null;
+    const minYearsExperience =
+      typeof expParsed.data.minYearsExperience === 'number'
+        ? expParsed.data.minYearsExperience
+        : null;
+
     const normalizedEmail = email.toLowerCase();
 
     // Upsert EmailLead — create if new, optionally flip newsletterOptIn
@@ -102,6 +154,10 @@ export async function POST(request: NextRequest) {
         jobType: jobType || null,
         minSalary: minSalary || null,
         maxSalary: maxSalary || null,
+        // Experience criteria are part of the alert's identity: the same
+        // search with a different experience constraint is a different alert.
+        newGradFriendly,
+        minYearsExperience,
       },
     });
 
@@ -136,6 +192,8 @@ export async function POST(request: NextRequest) {
           jobType,
           minSalary,
           maxSalary,
+          newGradFriendly,
+          minYearsExperience,
           frequency,
           isActive: true,
           confirmedAt: now,
@@ -211,6 +269,8 @@ export async function GET(request: NextRequest) {
         jobType: a.jobType,
         minSalary: a.minSalary,
         maxSalary: a.maxSalary,
+        newGradFriendly: a.newGradFriendly,
+        minYearsExperience: a.minYearsExperience,
         frequency: a.frequency,
         isActive: a.isActive,
         lastSentAt: a.lastSentAt,

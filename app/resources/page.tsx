@@ -596,6 +596,18 @@ export default async function ResourcesPage() {
               <ResourceDownloadGate resourceUrl={SALARY_GUIDE_URL} resourceTitle="Salary Guide PDF" />
             </div>
           </div>
+
+          {/* P6 completeness hole #5 (nav-mesh): the /compare cluster had no
+              human-navigable inbound links anywhere on the site (orphan rule
+              documented in app/sitemap.ts). The footer carries the sitewide
+              link; this is the in-content mention on the resources hub. Href
+              matches COMPARE_HUB_PATH in lib/compare-data.ts — pinned by
+              tests/regressions/p6-nav-mesh-compare-inbound.test.ts. */}
+          <p style={{ textAlign: 'center', marginTop: '28px', marginBottom: 0 }}>
+            <Link href="/compare" style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textDecoration: 'underline' }}>
+              See how {brand.name} compares to other {brand.niche.short} job boards
+            </Link>
+          </p>
         </div>
       </section>
 

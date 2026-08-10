@@ -15,7 +15,7 @@ import MobileFilterDrawer from '@/components/MobileFilterDrawer';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { Job } from '@/lib/types';
 import { DEFAULT_FILTERS } from '@/types/filters';
-import { parseFiltersFromParams, filtersToParams, type RecruitmentFilterState } from '@/lib/filters';
+import { parseFiltersFromParams, filtersToParams, countActiveFilters, categoryFilterLabel, type RecruitmentFilterState } from '@/lib/filters';
 import { useViewMode } from '@/lib/hooks/useViewMode';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { resolveAiSearchMode } from '@/lib/jobs/resolve-search-mode';
@@ -226,15 +226,14 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
     return qs ? `/jobs?${qs}` : '/jobs';
   };
 
-  // Count active filters (including search)
-  const activeFilterCount =
-    currentFilters.workMode.length +
-    currentFilters.jobType.length +
-    (currentFilters.salaryMin ? 1 : 0) +
-    (currentFilters.postedWithin ? 1 : 0) +
-    (currentFilters.location ? 1 : 0) +
-    (currentFilters.cityExact ? 1 : 0) +
-    (currentFilters.search ? 1 : 0);
+  // Count active filters through the SHARED helper (lib/filters.ts) — the
+  // same rule LinkedInFilters uses for "Clear all (N)", so the mobile
+  // "Filters (N)" button, the create-alert affordance, and the sidebar can
+  // never disagree about what counts as active (P6 #3). The old inline sum
+  // here omitted specialty/category/recruitmentType/stateCode/employer and
+  // more, so those filters narrowed results while this surface claimed no
+  // filter was on.
+  const activeFilterCount = countActiveFilters(currentFilters);
 
   // Handle alert creation success
   const handleAlertSuccess = () => {
@@ -243,14 +242,56 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
     setTimeout(() => setShowToast(false), 3000);
   };
 
-  // Build initial filters for alert form
+  // Build initial filters for the alert form (P6 #4). The JobAlert schema is
+  // narrower than the /jobs filter state, so every active filter is folded
+  // into the alert field that can express it — the old prefill silently
+  // dropped specialty/category/experience, so "Create Alert for This Search"
+  // produced an alert broader than the list on screen:
+  //   • specialty / category → keyword. The digest cron matches keyword as a
+  //     case-insensitive substring of the job title or employer name, so we
+  //     pass the display label (categoryFilterLabel) — the same alias path
+  //     /job-alerts documents for its ?specialty= param. keyword holds ONE
+  //     substring, so the user's typed search wins, then the first checked
+  //     specialty, then the category. The two legacy work-type values
+  //     ('Telehealth' / 'Travel') are already title words — passed as-is.
+  //   • cityExact / stateCode (deep-link params from city/metro CTAs) →
+  //     location as "City, ST" — the form the digest's location matcher
+  //     documents support for (contains-fallback + ", ST" handling).
+  //   • newGradFriendly / minYearsExperience → the alert's own experience
+  //     criteria (accepted by POST /api/job-alerts since P6 #4).
+  //   • recruitmentType is deliberately NOT carried: JobAlert has no
+  //     employer-type column and the digest matcher has no clause for it —
+  //     smuggling it into keyword would fabricate a match rule. The modal's
+  //     criteria summary is the honest statement of what the alert covers.
+  const firstSpecialty = currentFilters.specialty?.[0];
+  const specialtyKeyword = firstSpecialty
+    ? (firstSpecialty === 'Telehealth' || firstSpecialty === 'Travel'
+        ? firstSpecialty
+        : categoryFilterLabel(firstSpecialty))
+    : undefined;
+  const categoryKeyword = currentFilters.category
+    ? categoryFilterLabel(currentFilters.category)
+    : undefined;
+  const alertLocation =
+    currentFilters.location ||
+    (currentFilters.cityExact
+      ? (currentFilters.stateCode
+          ? `${currentFilters.cityExact}, ${currentFilters.stateCode.toUpperCase()}`
+          : currentFilters.cityExact)
+      : currentFilters.stateCode?.toUpperCase()) ||
+    undefined;
   const alertFilters = {
-    keyword: currentFilters.search || undefined,
-    location: currentFilters.location || undefined,
+    keyword: currentFilters.search || specialtyKeyword || categoryKeyword || undefined,
+    location: alertLocation,
     mode: currentFilters.workMode.length > 0 ? currentFilters.workMode[0] : undefined,
     jobType: currentFilters.jobType.length > 0 ? currentFilters.jobType[0] : undefined,
     minSalary: currentFilters.salaryMin || undefined,
     maxSalary: undefined,
+    newGradFriendly: currentFilters.newGradFriendly === true ? true : undefined,
+    minYearsExperience:
+      typeof currentFilters.minYearsExperience === 'number' && currentFilters.minYearsExperience >= 0
+        ? currentFilters.minYearsExperience
+        : undefined,
   };
 
   return (

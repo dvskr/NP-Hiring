@@ -69,7 +69,11 @@ export const CATEGORY_AXES = {
         'women-health', 'acute-care', 'emergency', 'psychiatric-mental-health',
         'oncology', 'cardiology', 'primary-care', 'hospitalist',
         'dermatology', 'orthopedic',
-        // 2026-07 P1 #15: high-volume NP verticals (content-gap synthesis §7).
+        // 2026-07 P1 #15: high-volume NP verticals. The content-gap
+        // synthesis §7 that picked these was a session artifact (never
+        // committed); its in-repo record — including the 8 verticals it
+        // deferred pending live inventory checks — is
+        // docs/PENDING_WORK.md §3.7.
         'aesthetics', 'pain-management', 'palliative-hospice',
     ],
     /** APRN cohort beyond NPs (CRNA / CNM / CNS). */
@@ -103,7 +107,8 @@ export const STATE_ELIGIBLE_CATEGORY_SLUGS: readonly string[] = [
     'family-practice', 'adult-gerontology', 'pediatric', 'women-health',
     'acute-care', 'emergency', 'psychiatric-mental-health',
     // 2026-07 P1 #14: high-demand specialties promoted to the [state] tier
-    // ("primary care NP jobs in Texas" is a head query — synthesis §7).
+    // ("primary care NP jobs in Texas" is a head query — content-gap
+    // synthesis §7, recorded in-repo at docs/PENDING_WORK.md §3.7).
     'primary-care', 'oncology', 'cardiology', 'hospitalist', 'dermatology',
     'anesthesia', 'midwifery',
     'new-grad',

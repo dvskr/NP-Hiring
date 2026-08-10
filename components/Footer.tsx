@@ -89,6 +89,14 @@ const linkColumns = [
     links: [
       { label: 'Blog', href: '/blog' },
       { label: 'Resources', href: '/resources' },
+      // P6 completeness hole #5: the /compare cluster (hub + 3 vs-competitor
+      // pages) had ZERO human-navigable inbound links — reachable only via
+      // sitemap or direct URL, violating the orphan rule app/sitemap.ts
+      // documents. Same orphan class as /for-programs and /press above; this
+      // footer link is the sitewide discovery path (href matches
+      // COMPARE_HUB_PATH in lib/compare-data.ts — pinned by
+      // tests/regressions/p6-nav-mesh-compare-inbound.test.ts).
+      { label: `Compare ${brand.niche.short} Job Boards`, href: '/compare' },
       { label: 'About', href: '/about' },
       { label: 'Contact', href: '/contact' },
       // Content audit P2 #9: /press is `robots: index` but had no inbound link

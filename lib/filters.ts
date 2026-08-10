@@ -694,6 +694,18 @@ export type RecruitmentFilterState = FilterState & {
     recruitmentType?: RecruitmentTypeParam | null;
 };
 
+/**
+ * 'Remote' alias for the /jobs location box (P6 #2). The box's copy offers
+ * "State or 'Remote'"; a remote intent typed as a LOCATION maps to the
+ * isRemote boolean — the same structured signal the Work Mode facet uses —
+ * instead of string-matching the state columns, which returned zero results
+ * by construction (no job has state = 'Remote'). Case-insensitive and
+ * whitespace-tolerant so "remote" / " REMOTE " work too.
+ */
+export function isRemoteLocationAlias(location: string): boolean {
+    return location.trim().toLowerCase() === 'remote';
+}
+
 export function buildWhereClause(filters: RecruitmentFilterState): Prisma.JobWhereInput {
   const where: Prisma.JobWhereInput = {
     isPublished: true,
@@ -805,17 +817,24 @@ export function buildWhereClause(filters: RecruitmentFilterState): Prisma.JobWhe
     }
   }
 
-  // Location. Mirrors /jobs/state/[s] composition: state name OR
-  // state code. Previously this also did `city contains <location>`,
-  // which inflated Kansas counts via "Kansas City, MO" and similar
-  // cross-state name collisions.
+  // Location. Mirrors /jobs/state/[s] composition: state name OR state
+  // code, plus the 'Remote' alias the location box advertises (see
+  // isRemoteLocationAlias — maps to the isRemote boolean rather than a
+  // state-column string match that can never hit). City matching was
+  // DELIBERATELY removed and must stay removed: `city contains <location>`
+  // inflated Kansas counts via "Kansas City, MO" and similar cross-state
+  // name collisions.
   if (filters.location) {
-    andConditions.push({
-      OR: [
-        { state: { equals: filters.location, mode: 'insensitive' } },
-        { stateCode: { equals: filters.location, mode: 'insensitive' } },
-      ],
-    });
+    if (isRemoteLocationAlias(filters.location)) {
+      andConditions.push({ isRemote: true });
+    } else {
+      andConditions.push({
+        OR: [
+          { state: { equals: filters.location, mode: 'insensitive' } },
+          { stateCode: { equals: filters.location, mode: 'insensitive' } },
+        ],
+      });
+    }
   }
 
   // Precise city + state match (from metro/city page CTAs)
@@ -970,5 +989,39 @@ export function filtersToParams(filters: RecruitmentFilterState): URLSearchParam
   if (filters.recruitmentType) params.set('recruitmentType', filters.recruitmentType);
 
   return params;
+}
+
+/**
+ * Number of active filters in a FilterState — the SINGLE counting rule shared
+ * by LinkedInFilters (sidebar "Clear all (N)" + pills row) and JobsPageClient
+ * (mobile "Filters (N)" button + the create-alert affordance), so the two
+ * surfaces can never again disagree about whether a filter is active (P6 #3:
+ * they kept divergent inline sums — the sidebar omitted cityExact/stateCode/
+ * employer, the page omitted specialty/category/recruitmentType and more).
+ *
+ * Counts EVERY field the URL contract can carry — including the deep-link-only
+ * params (cityExact / stateCode / employer, set by city/metro/company CTAs)
+ * that have no facet UI but still narrow results. Each predicate mirrors the
+ * corresponding gate in buildWhereClause, so "counted as active" and
+ * "narrows the query" stay the same statement.
+ */
+export function countActiveFilters(filters: RecruitmentFilterState): number {
+  return (
+    filters.workMode.length +
+    filters.jobType.length +
+    (filters.specialty?.length || 0) +
+    (filters.experienceLevel?.length || 0) +
+    (filters.newGradFriendly === true ? 1 : 0) +
+    (typeof filters.minYearsExperience === 'number' && filters.minYearsExperience >= 0 ? 1 : 0) +
+    (filters.search ? 1 : 0) +
+    (filters.location ? 1 : 0) +
+    (filters.cityExact ? 1 : 0) +
+    (filters.stateCode ? 1 : 0) +
+    (filters.employer ? 1 : 0) +
+    (filters.salaryMin ? 1 : 0) +
+    (filters.postedWithin ? 1 : 0) +
+    (filters.category ? 1 : 0) +
+    (filters.recruitmentType ? 1 : 0)
+  );
 }
 

@@ -8,6 +8,7 @@ import {
   filtersToParams,
   parseFiltersFromParams,
   categoryFilterLabel,
+  countActiveFilters,
   SPECIALTY_FILTER_OPTIONS,
   type RecruitmentFilterState,
 } from '@/lib/filters';
@@ -310,20 +311,12 @@ export default function LinkedInFilters() {
   // fabricate a zero).
   const specialtyCounts = (counts?.specialty ?? {}) as Partial<Record<string, number>>;
 
-  // Count active filters (including category)
-  const activeFilterCount =
-    filters.workMode.length +
-    filters.jobType.length +
-    (filters.specialty?.length || 0) +
-    (filters.experienceLevel?.length || 0) +
-    (filters.newGradFriendly === true ? 1 : 0) +
-    (typeof filters.minYearsExperience === 'number' ? 1 : 0) +
-    (filters.search ? 1 : 0) +
-    (filters.location ? 1 : 0) +
-    (filters.salaryMin ? 1 : 0) +
-    (filters.postedWithin ? 1 : 0) +
-    (filters.category ? 1 : 0) +
-    (filters.recruitmentType ? 1 : 0);
+  // Count active filters through the SHARED helper (lib/filters.ts) — the
+  // same rule JobsPageClient uses, so the sidebar and the page can never
+  // disagree again about what counts as active (P6 #3). Includes the
+  // deep-link-only params (cityExact/stateCode/employer), which also makes
+  // "Clear all" appear when they are the sole filters.
+  const activeFilterCount = countActiveFilters(filters);
 
   // Displayed results total. The filter-counts POST route normalizes its body
   // to the fixed FilterState shape and drops recruitmentType, so counts.total
@@ -357,6 +350,33 @@ export default function LinkedInFilters() {
         key: 'location',
         label: filters.location,
         onRemove: () => setSingleFilter('location', null),
+      });
+    }
+    // Deep-link-only params (P6 #3) — set by city/metro/company CTAs, never
+    // by a facet in this sidebar. They actively narrow results, so each gets
+    // a pill showing its value with an individual remove; without these the
+    // narrowing was invisible (no pill, no count, no clear affordance). The
+    // City:/State: prefixes disambiguate them from the free-text location
+    // pill above and from each other.
+    if (filters.cityExact) {
+      pills.push({
+        key: 'cityExact',
+        label: `City: ${filters.cityExact}`,
+        onRemove: () => setSingleFilter('cityExact', null),
+      });
+    }
+    if (filters.stateCode) {
+      pills.push({
+        key: 'stateCode',
+        label: `State: ${filters.stateCode.toUpperCase()}`,
+        onRemove: () => setSingleFilter('stateCode', null),
+      });
+    }
+    if (filters.employer) {
+      pills.push({
+        key: 'employer',
+        label: `Employer: ${filters.employer}`,
+        onRemove: () => setSingleFilter('employer', null),
       });
     }
     filters.workMode.forEach(mode => {
@@ -554,10 +574,16 @@ export default function LinkedInFilters() {
                   position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
                   width: '15px', height: '15px', color: 'var(--text-tertiary)',
                 }} />
+                {/* Copy states what the matcher actually does (P6 #2): state
+                    name/code equals-match plus the 'Remote' alias
+                    (isRemoteLocationAlias → isRemote in lib/filters.ts).
+                    City matching was DELIBERATELY removed for cross-state
+                    collisions ("Kansas City, MO" inflating Kansas), so the
+                    placeholder must not promise it. */}
                 <input
-                  aria-label="Filter by city, state, or remote"
+                  aria-label="Filter by state or remote"
                   type="text"
-                  placeholder="City, state, or 'Remote'"
+                  placeholder="State or 'Remote'"
                   value={locationInput}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationInput(e.target.value)}
                   className="li-filter-input"

@@ -6,9 +6,9 @@
  * thousands of empty pages to Google (which was the root cause of most GSC
  * coverage issues).
  * 
- * Categories come from the taxonomy registry's CITY-eligible set (all 42
- * slugs — lib/pseo/taxonomy-registry.ts). Also includes state-level URLs
- * for the 21 state-eligible settings.
+ * Categories come from the taxonomy registry's CITY-eligible set
+ * (all 45 slugs — lib/pseo/taxonomy-registry.ts). Also includes
+ * state-level URLs for the 28 state-eligible settings.
  *
  * Routes:
  *   /api/sitemaps/cities/0 → first 10K URLs
@@ -23,9 +23,9 @@ import { brand } from '@/config/brand';
 import { CITY_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 // Category set comes from the drift-guarded registry. The category×city
-// surface is CITY-eligible (all 42 slugs — see taxonomy-registry.ts), not
-// the 21-slug STATE-eligible subset this route previously used, which left
-// half the category×city surface with zero sitemap presence. The pseoStats
+// surface is CITY-eligible (all 45 slugs — see taxonomy-registry.ts), not
+// the 28-slug STATE-eligible subset this route previously used, which left
+// part of the category×city surface with zero sitemap presence. The pseoStats
 // job-count/freshness gates below still prune empty combos, so widening the
 // allow-list only admits pages that genuinely render and index.
 const SITEMAP_CATEGORIES = CITY_ELIGIBLE_CATEGORY_SLUGS;

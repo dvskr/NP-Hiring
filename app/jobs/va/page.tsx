@@ -40,6 +40,46 @@ interface ProcessedEmployer {
 const VA_FILTER = buildCategoryWhereClause('va');
 
 /**
+ * JSON-LD serializer matching the repo convention (see
+ * app/resources/1099-vs-w2/page.tsx and app/companies/page.tsx): angle
+ * brackets are escaped so no serialized value can terminate the
+ * surrounding <script> element.
+ */
+const ldJson = (obj: unknown): string =>
+  JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+
+// P6 #7: /jobs/va was the only 1 of 45 category landings with neither an
+// inline FAQ nor FAQPage schema (sibling /jobs/veterans has both). One
+// array drives BOTH the visible block and the schema so they can never
+// disagree.
+//
+// Truth rules: federal pay / EDRP / Title 38 MECHANICS only — award caps,
+// pay tables, and processing windows change on VA's side, so answers point
+// at VA.gov / USAJobs.gov instead of asserting figures.
+//
+// Keyword scope stays differentiated from /jobs/veterans (see the note in
+// that file): this page is FEDERAL VA EMPLOYMENT; /jobs/veterans is
+// serving veteran patients across all sectors.
+const vaFaqs = [
+  {
+    question: `How does VA pay work for ${brand.niche.short}s — is it the standard GS scale?`,
+    answer: `VA ${brand.niche.short}s are appointed under Title 38 authority, and pay is set from nurse locality pay schedules that vary by facility rather than a single national General Schedule table. Each USAJobs announcement lists the salary range for its facility, and current pay schedules are published on VA.gov.`,
+  },
+  {
+    question: 'What is the Education Debt Reduction Program (EDRP)?',
+    answer: `EDRP reimburses student-loan payments for clinicians hired into eligible, hard-to-fill VA positions. Eligibility is position-specific — the vacancy announcement states whether EDRP is authorized — and you apply after appointment within the program's application window. Current award limits and rules are published on VA.gov.`,
+  },
+  {
+    question: 'Do I need a license in the same state as the VA facility?',
+    answer: `No. One active, unrestricted ${brand.niche.short} license from any U.S. state or territory qualifies you to practice at VA facilities nationwide, and the VA grants ${brand.niche.short}s full practice authority within its system regardless of the state a facility sits in.`,
+  },
+  {
+    question: 'How is applying to the VA different from a private employer?',
+    answer: `Expect a federal process: applications go through USAJobs.gov with a federal-format resume, followed by VetPro credentialing, a background investigation, and a professional standards board review that determines your grade and step. The end-to-end timeline runs longer than private-sector hiring, so gather your licensure and education documents early.`,
+  },
+];
+
+/**
  * Fetch VA jobs with pagination
  */
 async function getVAJobs(skip: number = 0, take: number = 20) {
@@ -346,6 +386,24 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
               </Link>
             ))}
           </div>
+        </section>
+      </div>
+
+      {/* ═══ FAQ ═══ */}
+      <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
+        <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>FAQ</p>
+          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>VA {brand.niche.short} Questions</h2>
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {vaFaqs.map((faq, idx) => (
+              <div key={idx} className="cat-bento-card" style={{ ...clayCard, padding: '28px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>{faq.question}</h3>
+                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+          {/* FAQPage schema from the SAME array the visible block renders. */}
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: vaFaqs.map(f => ({ '@type': 'Question', name: f.question, acceptedAnswer: { '@type': 'Answer', text: f.answer } })) }) }} />
         </section>
       </div>
 

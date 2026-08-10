@@ -11,6 +11,11 @@ interface InitialFilters {
   jobType?: string;
   minSalary?: number;
   maxSalary?: number;
+  // Experience criteria (P6 #4) — typed here so the /jobs prefill's
+  // newGradFriendly/minYearsExperience survive a typed refactor instead of
+  // riding the POST spread invisibly.
+  newGradFriendly?: boolean;
+  minYearsExperience?: number;
 }
 
 interface CreateAlertFormProps {
@@ -30,6 +35,13 @@ function buildCriteriaSummary(filters: InitialFilters): string {
   if (filters.mode) parts.push(filters.mode);
   if (filters.jobType) parts.push(filters.jobType);
   if (filters.location) parts.push(`in ${filters.location}`);
+  // Mirror the /job-alerts and /job-alerts/manage summaries — the modal's
+  // summary is the honest statement of what the alert covers, so every
+  // stored criterion must be visible here.
+  if (filters.newGradFriendly === true) parts.push('open to new grads');
+  if (typeof filters.minYearsExperience === 'number' && filters.minYearsExperience >= 0) {
+    parts.push(`fits ${filters.minYearsExperience}+ yrs experience`);
+  }
   if (filters.minSalary || filters.maxSalary) {
     if (filters.minSalary && filters.maxSalary) {
       parts.push(`$${(filters.minSalary / 1000).toFixed(0)}k-$${(filters.maxSalary / 1000).toFixed(0)}k`);

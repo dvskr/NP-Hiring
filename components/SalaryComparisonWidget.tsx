@@ -1,6 +1,13 @@
 'use client';
 
 import { SALARY_COMPARISON_NATIONAL_AVG_K } from '@/config/niche/stats';
+import { STAT_SOURCES } from '@/lib/stats-sources';
+import { brand } from '@/config/brand';
+// P6 #9 (A4 follow-up): this was the one salary display with no
+// source/vintage stamp. The cited sentence comes from the shared
+// provenance helper — a pure function, safe in this client bundle, same
+// pattern as the SalaryCalculator footnote.
+import { buildProvenanceSentences } from '@/components/SalaryProvenance';
 
 interface SalaryComparisonWidgetProps {
     stateName: string | null;
@@ -11,6 +18,15 @@ interface SalaryComparisonWidgetProps {
 
 // National-average figure ($k) lives in config/niche/stats.ts.
 const NATIONAL_AVG_SALARY = SALARY_COMPARISON_NATIONAL_AVG_K;
+
+// "Source: BLS OEWS, Nurse Practitioners (29-1171) — median annual wage,
+// May 2024." — source + vintage straight from STAT_SOURCES metadata, never
+// re-typed. NATIONAL_AVG_SALARY above derives from this same entry via
+// config/niche/stats.ts, so the stamp can never cite a different figure
+// than the card displays.
+const [NATIONAL_CITED_SENTENCE] = buildProvenanceSentences({
+    cited: [STAT_SOURCES.averageSalary],
+});
 
 export default function SalaryComparisonWidget({
     stateName,
@@ -99,6 +115,19 @@ export default function SalaryComparisonWidget({
                     the {stateName} average.
                 </div>
             )}
+
+            {/* P6 #9: provenance for both figures. The national card renders
+                the BLS-derived config figure (cited above); the state card is
+                the live aggregate the job page computes — no posting count is
+                passed down here, so the line states the basis without
+                fabricating an N (omit, never fabricate). */}
+            <p
+                data-testid="salary-provenance"
+                className="mt-3"
+                style={{ fontSize: '11px', lineHeight: 1.6, color: 'var(--text-muted)', margin: '12px 0 0' }}
+            >
+                {NATIONAL_CITED_SENTENCE} {stateName} average computed from live postings with disclosed salary on {brand.name}.
+            </p>
         </div>
     );
 }

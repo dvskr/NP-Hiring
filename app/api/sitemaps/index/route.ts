@@ -13,11 +13,17 @@ import { prisma } from '@/lib/prisma';
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 import { CITIES } from '@/lib/pseo/city-data/cities';
 import { brand } from '@/config/brand';
-import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
+import { CITY_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
-// Category set comes from the drift-guarded registry — cities/[batch]/route.ts
-// reads the same export, so the index and batches can never disagree.
-const SITEMAP_CATEGORY_SET = new Set(STATE_ELIGIBLE_CATEGORY_SLUGS);
+// Category set comes from the drift-guarded registry and MUST be the same
+// CITY_ELIGIBLE_CATEGORY_SLUGS export that cities/[batch]/route.ts emits
+// against. This route previously imported the 28-slug STATE-eligible subset
+// while the batch route emitted all 45 city-eligible slugs — the index
+// undercounted URLs, so tail batches (carrying the setting×state URLs
+// appended last) existed but were never listed here, and their URLs were
+// never submitted to Google. Import parity is pinned by
+// tests/regressions/p6-sitemap-parity-index-batch.test.ts.
+const SITEMAP_CATEGORY_SET = new Set(CITY_ELIGIBLE_CATEGORY_SLUGS);
 const CITY_POPULATION_LOOKUP = new Map<string, number>(
   CITIES.map(c => [c.slug, c.population])
 );
@@ -90,7 +96,7 @@ export async function GET() {
   } catch {
     // Fallback: conservative estimate. Better to under-list batches than
     // to advertise empty ones.
-    totalUrls = STATE_ELIGIBLE_CATEGORY_SLUGS.length * Math.min(CITIES.length, 500);
+    totalUrls = CITY_ELIGIBLE_CATEGORY_SLUGS.length * Math.min(CITIES.length, 500);
   }
 
   const totalBatches = Math.max(1, Math.ceil(totalUrls / BATCH_SIZE));

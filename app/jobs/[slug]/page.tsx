@@ -1151,7 +1151,7 @@ export default async function JobPage({ params }: JobPageProps) {
               <AnimatedContainer animation="fade-in-up" delay={220}>
                 <SalaryComparisonWidget
                   stateName={job.state}
-                  stateAvgSalary={Math.round(stateAvgSalary / 1000)}
+                  stateAvgSalary={stateAvgSalary}
                   jobMinSalary={job.normalizedMinSalary}
                   jobMaxSalary={job.normalizedMaxSalary}
                 />

@@ -107,7 +107,12 @@ describe('B42: P9 runbook matches the real cron contract', () => {
 describe('B43: taxonomy-registry header reflects the completed migration', () => {
   const src = () => read('lib/pseo/taxonomy-registry.ts');
   it('no longer claims the folder migration is pending or that the drift test fails by design', () => {
-    expect(src()).not.toContain('PENDING');
+    // \bPENDING\b: forbid the standalone status word (the old "⚠️ PENDING:"
+    // header claim) while allowing citations of docs/PENDING_WORK.md — the
+    // underscore is a word character, so the boundary never matches there
+    // (P6 docs-deferral requires that citation; see
+    // tests/regressions/p6-docs-deferral-verticals-record.test.ts).
+    expect(src()).not.toMatch(/\bPENDING\b/);
     expect(src()).not.toContain('FAILS by design');
   });
   it('state-eligible remains a strict subset of the full slug set', () => {
