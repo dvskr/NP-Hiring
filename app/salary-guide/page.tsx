@@ -8,6 +8,7 @@ import SalaryGuideForm from '@/components/SalaryGuideForm';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CopyCitation from '@/components/CopyCitation';
 import SalaryCalculator from '@/components/SalaryCalculator';
+import SalaryProvenance from '@/components/SalaryProvenance';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { SALARY_GUIDE_PDF_AVAILABLE } from '@/app/api/salary-guide/pdf-availability';
 // P1 #7: by-specialty salary pages — the premium table below links each
@@ -453,6 +454,17 @@ export default async function SalaryGuidePage() {
                   <p style={{ fontSize: '12px', color: '#8A7A72', lineHeight: 1.6, margin: '10px 0 0' }}>
                     {SALARY_FIGURE_PROVENANCE}
                   </p>
+                  {/* A4 (teardown parity): the Vivian/Indeed-style
+                      date-stamp, assembled honestly — cited vintage from
+                      STAT_SOURCES, snapshot basis from the aggregate that
+                      already ran, review date a literal (never render
+                      time; P0 #23). */}
+                  <SalaryProvenance
+                    cited={[NATIONAL_SALARY]}
+                    live={{ count: overallStats.jobsWithSalary, minimum: 1 }}
+                    reviewedOn={LAST_REVIEWED_DATE}
+                    style={{ fontSize: '11px', color: '#94A3B8', marginTop: '6px' }}
+                  />
                 </div>
               </div>
               <div style={{
@@ -509,6 +521,14 @@ export default async function SalaryGuidePage() {
                 <strong>Note:</strong> Real-time salary data from active {brand.niche.short} job postings, updated daily.
                 {' '}Each state name links to a detailed page with pay by setting and top employers.
               </p>
+              {/* A4: the table's own snapshot basis — the same national
+                  disclosed-salary count the aggregate above computed. No
+                  review date here: the table is live data, not editorial
+                  copy (B54 — live-data freshness is the query's own basis). */}
+              <SalaryProvenance
+                live={{ count: overallStats.jobsWithSalary, minimum: 1 }}
+                style={{ fontSize: '11px', color: '#831843', opacity: 0.7, marginTop: '6px' }}
+              />
             </div>
 
             {/* Table */}

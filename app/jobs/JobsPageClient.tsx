@@ -14,8 +14,8 @@ import AnimatedContainer from '@/components/ui/AnimatedContainer';
 import MobileFilterDrawer from '@/components/MobileFilterDrawer';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { Job } from '@/lib/types';
-import { FilterState, DEFAULT_FILTERS } from '@/types/filters';
-import { parseFiltersFromParams } from '@/lib/filters';
+import { DEFAULT_FILTERS } from '@/types/filters';
+import { parseFiltersFromParams, filtersToParams, type RecruitmentFilterState } from '@/lib/filters';
 import { useViewMode } from '@/lib/hooks/useViewMode';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { resolveAiSearchMode } from '@/lib/jobs/resolve-search-mode';
@@ -42,7 +42,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
   const [error, setError] = useState<string | null>(null);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
-  const [currentFilters, setCurrentFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [currentFilters, setCurrentFilters] = useState<RecruitmentFilterState>(DEFAULT_FILTERS);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { viewMode, setViewMode } = useViewMode('grid');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -80,78 +80,26 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
     setAiDegraded(false);
   }, []);
 
-  const fetchJobs = useCallback(async (filters: FilterState, page: number = 1, sort: string = 'best') => {
+  const fetchJobs = useCallback(async (filters: RecruitmentFilterState, page: number = 1, sort: string = 'best') => {
     try {
       setLoading(true);
       setError(null);
 
-      // Build query string from filters
-      const params = new URLSearchParams();
+      // Serialize through the SHARED URL contract (filtersToParams in
+      // lib/filters.ts) instead of a hand-enumerated field list. The old
+      // enumeration silently dropped any param it didn't know about —
+      // recruitmentType, newGrad, minYears, employer — so a sort change or
+      // pagination click re-fetched WITHOUT the filter while the URL, the
+      // active pill, and the results total all still claimed it was on.
+      // /api/jobs re-parses its query with parseFiltersFromParams, so the
+      // two sides of the contract can no longer drift.
+      const params = filtersToParams(filters);
 
-      // Add pagination
+      // Pagination + sort ride on top — they are not FilterState fields.
       params.set('page', page.toString());
       params.set('limit', '50'); // Show 50 jobs per page
-
-      // Add sort
       if (sort && sort !== 'best') {
         params.set('sort', sort);
-      }
-
-      // Add search
-      if (filters.search) {
-        params.set('q', filters.search);
-      }
-
-      // Add location
-      if (filters.location) {
-        params.set('location', filters.location);
-      }
-
-      // Add precise city + state (from metro/city page CTAs)
-      if (filters.cityExact) {
-        params.set('cityExact', filters.cityExact);
-      }
-      if (filters.stateCode) {
-        params.set('stateCode', filters.stateCode);
-      }
-
-      // Add work modes (multi-select)
-      filters.workMode.forEach((mode: string) => {
-        params.append('workMode', mode);
-      });
-
-      // Add job types (multi-select)
-      filters.jobType.forEach((type: string) => {
-        params.append('jobType', type);
-      });
-
-      // Add specialty (multi-select)
-      if (filters.specialty) {
-        filters.specialty.forEach((spec: string) => {
-          params.append('specialty', spec);
-        });
-      }
-
-      // Add experience level (multi-select)
-      if (filters.experienceLevel) {
-        filters.experienceLevel.forEach((el: string) => {
-          params.append('experienceLevel', el);
-        });
-      }
-
-      // Add salary
-      if (filters.salaryMin) {
-        params.set('salaryMin', filters.salaryMin.toString());
-      }
-
-      // Add posted within
-      if (filters.postedWithin) {
-        params.set('postedWithin', filters.postedWithin);
-      }
-
-      // Add category (enterprise filter — same as category pages)
-      if (filters.category) {
-        params.set('category', filters.category);
       }
 
       const url = `/api/jobs?${params.toString()}`;

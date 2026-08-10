@@ -15,6 +15,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import SalaryProvenance from '@/components/SalaryProvenance';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { withTagFallback } from '@/lib/pseo/category-tagger';
 import { SALARY_SPECIALTY_PAGES } from './specialty-config';
@@ -110,6 +111,14 @@ export default async function SalarySpecialtyIndexPage() {
                         and nurse midwife guides cover neighbouring APRN roles, which that median does not
                         include.
                     </p>
+                    {/* A4: cited-stat provenance for the median every card
+                        benchmarks against — source + vintage straight from
+                        STAT_SOURCES metadata. Per-card posting counts carry
+                        their own basis inline. */}
+                    <SalaryProvenance
+                        cited={[median]}
+                        style={{ textAlign: 'center', marginTop: '12px' }}
+                    />
                 </div>
             </section>
 

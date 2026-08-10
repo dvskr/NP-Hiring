@@ -25,6 +25,12 @@ import { JobViewTracker } from '@/components/analytics/ViewTrackers';
 import SalaryComparisonWidget from '@/components/SalaryComparisonWidget';
 import RelatedBlogPosts, { getRelevantBlogSlugs } from '@/components/RelatedBlogPosts';
 import InternalLinks from '@/components/InternalLinks';
+// P5 A5: per-job location context (COL index, COL-adjusted pay, practice
+// environment) — renders only when (city, state) matches the city dataset.
+import JobLocationContext, {
+  buildJobLocationContext,
+  resolveJobCityRecord,
+} from '@/components/JobLocationContext';
 import { CareerPulseCard, ApplicationTipsCard } from '@/components/jobs/SidebarVisualCards';
 import { prisma } from '@/lib/prisma';
 // P3 #9: the city breadcrumb is both an internal link and a BreadcrumbList
@@ -733,6 +739,12 @@ export default async function JobPage({ params }: JobPageProps) {
   // whole route out of ISR — making every request a full uncached render.
   // Per-user personalization (auth state, own-job detection) is resolved
   // client-side inside ApplyButton / MessageEmployerButton via /api/auth/me.
+  // P5 A5: (city, state) dataset match for the location-context module. Pure
+  // in-memory lookup — no DB, no Dynamic API, so ISR is unaffected. When it
+  // misses (most small towns), the count below short-circuits to 0 and the
+  // module renders nothing.
+  const locationCityRecord = resolveJobCityRecord(job.city, job.stateCode, job.state);
+
   const [
     relatedJobs,
     companyInfo,
@@ -740,6 +752,7 @@ export default async function JobPage({ params }: JobPageProps) {
     stateAvgSalary,
     relevantBlogPosts,
     internalLinkBuckets,
+    locationCityJobCount,
   ] = await Promise.all([
     getRelatedJobs({
       currentJobId: job.id,
@@ -760,8 +773,39 @@ export default async function JobPage({ params }: JobPageProps) {
       state: job.state,
       newGradFriendly: job.newGradFriendly,
     }),
+    // P5 A5: live inventory behind the module's /jobs/city link. Same
+    // predicate as getCityStats on app/jobs/city/[slug]/page.tsx (isPublished
+    // + insensitive city + state OR stateCode), so this gate counts exactly
+    // what that page's MIN_JOBS render gate counts — a link emitted here can
+    // never land on its notFound().
+    locationCityRecord && job.city
+      ? prisma.job.count({
+          where: {
+            isPublished: true,
+            city: { equals: job.city, mode: 'insensitive' },
+            OR: [
+              { state: locationCityRecord.state },
+              { stateCode: locationCityRecord.stateCode },
+            ],
+          },
+        })
+      : Promise.resolve(0),
   ]);
   const employerUserId = (job as unknown as Record<string, unknown>).employerUserId as string | null | undefined;
+
+  // P5 A5: null when the city has no dataset match — the module (and its
+  // AnimatedContainer wrapper) is skipped entirely, never padded.
+  const locationContext = buildJobLocationContext(
+    {
+      city: job.city,
+      state: job.state,
+      stateCode: job.stateCode,
+      normalizedMinSalary: job.normalizedMinSalary,
+      normalizedMaxSalary: job.normalizedMaxSalary,
+      salaryIsEstimated: job.salaryIsEstimated,
+    },
+    locationCityJobCount,
+  );
 
   const salary = formatSalary(job.minSalary, job.maxSalary, job.salaryPeriod);
   const freshness = getJobFreshness(job.createdAt);
@@ -1111,6 +1155,16 @@ export default async function JobPage({ params }: JobPageProps) {
                   jobMinSalary={job.normalizedMinSalary}
                   jobMaxSalary={job.normalizedMaxSalary}
                 />
+              </AnimatedContainer>
+            )}
+
+            {/* P5 A5: location / cost-of-living context. Lives in the MAIN
+                column, so it renders at every breakpoint — do not move it
+                behind a `hidden lg:` wrapper (P2 #2 established that most
+                job-detail traffic is mobile). */}
+            {locationContext && (
+              <AnimatedContainer animation="fade-in-up" delay={240}>
+                <JobLocationContext model={locationContext} />
               </AnimatedContainer>
             )}
 

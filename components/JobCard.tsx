@@ -16,9 +16,29 @@ import { brand } from '@/config/brand';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 
+// Direct-hire vs staffing-agency badge (teardown A6). The label comes from
+// Company.recruitmentType — a HUMAN admin classification, never inferred — and
+// callers whose query joins the company relation pass it through as
+// `companyRecruitmentType`. Optional on purpose: surfaces that don't fetch it
+// render no badge at all (unclassified and unknown both look like nothing —
+// never a guess). Labels are shared with the /jobs facet and the company
+// profile via lib/filters.ts so the three surfaces can't drift.
+import { RECRUITMENT_TYPE_LABELS, type RecruitmentTypeValue } from '@/lib/filters';
+
+type JobCardJob = Job & {
+  companyRecruitmentType?: RecruitmentTypeValue | null;
+};
+
 interface JobCardProps {
-  job: Job;
+  job: JobCardJob;
   viewMode?: 'grid' | 'list';
+}
+
+/** Neutral badge label for a classified company; null hides the badge. */
+function recruitmentBadgeLabel(job: JobCardJob): string | null {
+  const value = job.companyRecruitmentType;
+  if (value !== 'direct_hire' && value !== 'staffing_agency') return null;
+  return RECRUITMENT_TYPE_LABELS[value];
 }
 
 // Helper to safely strip HTML (works on server and client)
@@ -305,6 +325,9 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
               )}
               {job.jobType && <Badge variant="outline" size="sm">{job.jobType}</Badge>}
               {displayMode && <Badge variant="outline" size="sm">{displayMode}</Badge>}
+              {recruitmentBadgeLabel(job) && (
+                <Badge variant="outline" size="sm">{recruitmentBadgeLabel(job)}</Badge>
+              )}
               {(() => {
                 const label = effectiveExperienceLabel(job);
                 if (!label) return null;
@@ -615,6 +638,9 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
           )}
           {job.jobType && <Badge variant="outline" size="sm">{job.jobType}</Badge>}
           {displayMode && <Badge variant="outline" size="sm">{displayMode}</Badge>}
+          {recruitmentBadgeLabel(job) && (
+            <Badge variant="outline" size="sm">{recruitmentBadgeLabel(job)}</Badge>
+          )}
           {(() => {
             const label = effectiveExperienceLabel(job);
             if (!label) return null;

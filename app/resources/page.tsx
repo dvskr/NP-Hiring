@@ -4,7 +4,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import {
   ArrowRight, Briefcase, Building2, Calculator, DollarSign,
-  FileDown, Globe, GraduationCap, Rocket, Search, ShieldCheck, Star,
+  FileDown, Globe, GraduationCap, MapPin, Rocket, Search, ShieldCheck, Star,
   TrendingUp, Users, Wrench, type LucideIcon,
 } from 'lucide-react';
 // P2 tools band — paths come from the registry that renders /tools, so this
@@ -301,6 +301,26 @@ export default async function ResourcesPage() {
               <div style={{ padding: '24px 28px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ ...iconTile, width: '56px', height: '56px', borderRadius: '16px', background: '#FEF3C7', color: '#F59E0B' }}>
                   <DollarSign size={26} />
+                </div>
+              </div>
+            </Link>
+
+            {/* Scope-of-practice hub — full-width banner (P5 sop-hub:
+                interactive 51-jurisdiction practice-authority explorer). */}
+            <Link href="/scope-of-practice" className="emp-bento-card" style={{
+              ...clayCard, marginTop: '14px', padding: '0', overflow: 'hidden', textDecoration: 'none',
+              display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center',
+            }}>
+              <div style={{ padding: '24px 28px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#10B981', background: '#D1FAE5', padding: '4px 10px', borderRadius: '20px' }}>Interactive</span>
+                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '10px 0 6px' }}>Scope of Practice by State — All 50 States + DC</h2>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.55, margin: 0 }}>
+                  Sortable, filterable practice-authority explorer with board of nursing links, licensure guides, salary data, and open jobs for every state.
+                </p>
+              </div>
+              <div style={{ padding: '24px 28px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ ...iconTile, width: '56px', height: '56px', borderRadius: '16px', background: '#D1FAE5', color: '#10B981' }}>
+                  <MapPin size={26} />
                 </div>
               </div>
             </Link>

@@ -8,6 +8,11 @@ import {
   SALARY_CALC_SPECIALTY_OPTIONS,
 } from '@/config/niche/stats';
 import { brand } from '@/config/brand';
+// A4: the footnote names the BLS vintage from STAT_SOURCES metadata rather
+// than an undated "BLS wage data" — formatStatVintage is the pure helper
+// from the shared provenance component (safe in this client bundle).
+import { STAT_SOURCES } from '@/lib/stats-sources';
+import { formatStatVintage } from '@/components/SalaryProvenance';
 
 interface StateSalary {
   state: string;
@@ -240,7 +245,7 @@ export default function SalaryCalculator({ stateSalaries, nationalAvg }: Props) 
               live postings on this board plus BLS wage data, so say
               exactly that. */}
           <p style={{ fontSize: '10px', color: '#94A3B8', marginTop: '14px', lineHeight: 1.4 }}>
-            * Estimates based on BLS wage data and live job postings on {brand.name}. Actual salary varies by employer.
+            * Estimates based on BLS wage data ({formatStatVintage(STAT_SOURCES.averageSalary.asOf)} release) and live job postings on {brand.name}. Actual salary varies by employer.
           </p>
         </div>
       </div>

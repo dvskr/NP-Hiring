@@ -10,6 +10,7 @@ import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { categorySlugLabel } from '@/lib/pseo/category-landing-template';
 import { STATE_CODES, CODE_TO_STATE, stateToSlug } from '@/lib/pseo/setting-state-config';
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
+import { RECRUITMENT_TYPE_LABELS } from '@/lib/filters';
 import ClaimProfileCta from './ClaimProfileCta';
 
 // GSC Fix: ISR caching prevents DB pool exhaustion when Googlebot crawls company pages.
@@ -494,6 +495,34 @@ export default async function CompanyPage({ params }: Props) {
                                     sentence — if they sat side by side as matching
                                     pills the schema-level separation would just be
                                     re-conflated in the UI. */}
+                                {/* Employer type (teardown A6) — the THIRD member
+                                    of the Company-trust family, and like its two
+                                    siblings it gets its own row, own label, and
+                                    own sentence rather than a matching pill next
+                                    to them: `isVerified` = the scraper recognised
+                                    the name, `claimVerifiedAt` = an employer
+                                    claimed the profile, `recruitmentType` = a
+                                    human on our team classified WHAT KIND of
+                                    hiring organization this is. Renders nothing
+                                    for the unclassified majority (null), and the
+                                    copy stays deliberately neutral — a staffing
+                                    agency is a fact, not a warning. */}
+                                {company.recruitmentType && (
+                                    <div className="mb-3">
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-200 text-slate-700">
+                                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                                            </svg>
+                                            {RECRUITMENT_TYPE_LABELS[company.recruitmentType]}
+                                        </span>
+                                        <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
+                                            {company.recruitmentType === 'direct_hire'
+                                                ? `Our team classified ${company.name} as a direct employer: it hires clinicians onto its own staff rather than recruiting for client organizations.`
+                                                : `Our team classified ${company.name} as a staffing agency: it recruits and places clinicians with client organizations. That is a fact about how it hires, not a quality judgment — agencies and direct employers both post legitimate roles.`}
+                                        </p>
+                                    </div>
+                                )}
+
                                 {company.claimVerifiedAt && (
                                     <div className="mb-3">
                                         <span

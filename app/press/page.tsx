@@ -36,6 +36,10 @@ import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 import { brand } from '@/config/brand';
 import { STAT_SOURCES, STATS_LAST_REVIEWED } from '@/lib/stats-sources';
 import { getStatesByAuthority } from '@/lib/state-practice-authority';
+// P5 A7/A8: the /reports surfaces this page links to. Links render from the
+// same array the /reports hub renders from, so this list can never name a
+// report that has no page.
+import { ALL_REPORTS, REPORTS_HUB_PATH } from '@/lib/reports/editions';
 import {
     Newspaper,
     Database,
@@ -427,6 +431,26 @@ export default async function PressPage() {
                         </p>
                     </Section>
                 )}
+
+                <Section icon={<BarChart3 size={20} />} title="Data reports" id="reports">
+                    <p>
+                        Longer-form analyses of the same data, with sample gates and methodology on
+                        each page — start at the{' '}
+                        <Link href={REPORTS_HUB_PATH} style={linkStyle}>
+                            reports hub
+                        </Link>
+                        :
+                    </p>
+                    <ul style={{ margin: '8px 0 0', paddingLeft: '20px', lineHeight: 1.85 }}>
+                        {ALL_REPORTS.map((report) => (
+                            <li key={report.slug}>
+                                <Link href={report.path} style={linkStyle}>
+                                    {report.title}
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                </Section>
 
                 <Section icon={<FlaskConical size={20} />} title="Methodology, and what these numbers are not">
                     <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: 1.85 }}>

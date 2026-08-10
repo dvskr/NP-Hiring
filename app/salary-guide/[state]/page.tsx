@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import SalaryProvenance from '@/components/SalaryProvenance';
 import StateImage, { hasStateDiorama } from '@/components/StateImage';
 // P3 #9: /jobs/city/[slug] resolves by re-parsing the slug into a city NAME, so a
 // link built from a lossy slug can be a guaranteed 404 — guard before emitting.
@@ -505,6 +506,19 @@ export default async function StateSalaryPage({ params }: PageProps) {
                         </div>
                     ))}
                 </div>
+
+                {/* A4 (teardown parity): honest date-stamp equivalent. The
+                    figures above are a live snapshot, so the provenance line
+                    states the query's own basis (N postings with disclosed
+                    salary) instead of a fabricated "last updated today" —
+                    this page deliberately has no editorial review date
+                    (B54; its Article schema omits dates for the same
+                    reason). jobCount ≥ 1 is guaranteed by the notFound()
+                    empty-state gate above. */}
+                <SalaryProvenance
+                    live={{ count: salaryData.jobCount, minimum: 1 }}
+                    style={{ textAlign: 'center', margin: '-16px 0 32px' }}
+                />
 
                 {/* Salary by Setting */}
                 {bySetting.length > 0 && (

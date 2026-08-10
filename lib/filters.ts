@@ -632,7 +632,69 @@ export function newGradWhereClause(): Prisma.JobWhereInput {
   };
 }
 
-export function buildWhereClause(filters: FilterState): Prisma.JobWhereInput {
+/* ─── Employer type (direct hire vs staffing agency) — teardown A6 ──────────
+ *
+ * Company-level, HUMAN-set classification (Company.recruitmentType, written
+ * only by PATCH /api/admin/companies/:id). NULL = no human has classified the
+ * company yet, and the filter must treat that as its own honest third bucket —
+ * filtering to "Direct employers" must never imply unclassified companies are
+ * agencies, so the facet UI exposes the unclassified count instead of silently
+ * hiding that inventory (components/jobs/LinkedInFilters.tsx).
+ *
+ * `unclassified` is a valid QUERY value (it powers the honest facet count and
+ * keeps deep links expressible) but is not one of the two stored enum values —
+ * the DB can never hold it.
+ */
+export const RECRUITMENT_TYPE_VALUES = ['direct_hire', 'staffing_agency'] as const;
+export type RecruitmentTypeValue = (typeof RECRUITMENT_TYPE_VALUES)[number];
+export type RecruitmentTypeParam = RecruitmentTypeValue | 'unclassified';
+
+/** Candidate-facing labels. Deliberately neutral — neither value is a quality
+ *  judgment, and the copy must never imply one (a staffing agency is a fact
+ *  about who the hiring organization is, not a warning). Shared by the /jobs
+ *  facet, the JobCard badge, and the company-profile badge so the three
+ *  surfaces can never drift. */
+export const RECRUITMENT_TYPE_LABELS: Record<RecruitmentTypeValue, string> = {
+    direct_hire: 'Direct employer',
+    staffing_agency: 'Staffing agency',
+};
+
+export function parseRecruitmentTypeParam(raw: string | null): RecruitmentTypeParam | null {
+    if (raw === 'direct_hire' || raw === 'staffing_agency' || raw === 'unclassified') return raw;
+    return null;
+}
+
+/**
+ * Prisma clause for one employer-type bucket. The two classified buckets
+ * require a linked Company row carrying that exact enum value; `unclassified`
+ * is everything else — a job with no Company link at all OR a Company no human
+ * has classified. The three buckets partition the board exactly, so
+ * direct + staffing + unclassified always sums to the unfiltered total and the
+ * facet arithmetic stays honest.
+ */
+export function recruitmentTypeClause(value: RecruitmentTypeParam): Prisma.JobWhereInput {
+    if (value === 'unclassified') {
+        return {
+            OR: [
+                { company: { is: null } },
+                { company: { is: { recruitmentType: null } } },
+            ],
+        };
+    }
+    return { company: { is: { recruitmentType: value } } };
+}
+
+/**
+ * FilterState + the employer-type param. An EXTENSION type rather than an edit
+ * to types/filters.ts: the field is optional, so every existing call site that
+ * builds a plain FilterState still typechecks, and the two functions below
+ * accept both shapes.
+ */
+export type RecruitmentFilterState = FilterState & {
+    recruitmentType?: RecruitmentTypeParam | null;
+};
+
+export function buildWhereClause(filters: RecruitmentFilterState): Prisma.JobWhereInput {
   const where: Prisma.JobWhereInput = {
     isPublished: true,
   };
@@ -847,6 +909,13 @@ export function buildWhereClause(filters: FilterState): Prisma.JobWhereInput {
     });
   }
 
+  // Employer type (direct hire / staffing agency / unclassified) — company-
+  // level, admin-classified. See recruitmentTypeClause above for why the
+  // three buckets partition the board exactly.
+  if (filters.recruitmentType) {
+    andConditions.push(recruitmentTypeClause(filters.recruitmentType));
+  }
+
   if (andConditions.length > 0) {
     where.AND = andConditions;
   }
@@ -854,8 +923,9 @@ export function buildWhereClause(filters: FilterState): Prisma.JobWhereInput {
   return where;
 }
 
-// Parse URL search params to FilterState
-export function parseFiltersFromParams(searchParams: URLSearchParams): FilterState {
+// Parse URL search params to FilterState (plus the optional employer-type
+// param — see RecruitmentFilterState above).
+export function parseFiltersFromParams(searchParams: URLSearchParams): RecruitmentFilterState {
   const minYearsRaw = searchParams.get('minYears');
   const minYears = minYearsRaw !== null && /^\d+$/.test(minYearsRaw) ? Number(minYearsRaw) : null;
   return {
@@ -873,11 +943,12 @@ export function parseFiltersFromParams(searchParams: URLSearchParams): FilterSta
     stateCode: searchParams.get('stateCode') || null,
     employer: searchParams.get('employer') || null,
     category: searchParams.get('category') || null,
+    recruitmentType: parseRecruitmentTypeParam(searchParams.get('recruitmentType')),
   };
 }
 
 // Convert FilterState to URL search params
-export function filtersToParams(filters: FilterState): URLSearchParams {
+export function filtersToParams(filters: RecruitmentFilterState): URLSearchParams {
   const params = new URLSearchParams();
 
   if (filters.search) params.set('q', filters.search);
@@ -896,6 +967,7 @@ export function filtersToParams(filters: FilterState): URLSearchParams {
   if (filters.stateCode) params.set('stateCode', filters.stateCode);
   if (filters.employer) params.set('employer', filters.employer);
   if (filters.category) params.set('category', filters.category);
+  if (filters.recruitmentType) params.set('recruitmentType', filters.recruitmentType);
 
   return params;
 }

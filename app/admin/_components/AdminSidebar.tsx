@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Target, Users, Menu, X, Home, BarChart3, FileText, Settings, Mail, Activity, HeartPulse, Search, GitBranch, GraduationCap, ShieldCheck, Quote, BadgeCheck } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Target, Users, Menu, X, Home, BarChart3, FileText, Settings, Mail, Activity, HeartPulse, Search, GitBranch, GraduationCap, ShieldCheck, Quote, BadgeCheck, Building2 } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -23,6 +23,11 @@ const navItems = [
   // claim stays pending and the public "our team reviews claims by hand"
   // promise on /companies/[slug] goes unmet.
   { name: 'Profile Claims', href: '/admin/company-claims', icon: BadgeCheck },
+  // The classification queue at this href is the ONLY writer of
+  // Company.recruitmentType (direct hire vs staffing agency, teardown A6).
+  // Without an entry here the human-classification loop never starts and the
+  // candidate-side employer-type filter stays permanently empty.
+  { name: 'Companies', href: '/admin/companies', icon: Building2 },
   { name: 'Job Health', href: '/admin/health', icon: HeartPulse },
   { name: 'Cron & Triggers', href: '/admin/cron', icon: Activity },
   { name: 'Settings', href: '/admin/settings', icon: Settings },

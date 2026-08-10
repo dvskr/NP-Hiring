@@ -27,6 +27,7 @@ import Link from 'next/link';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import SalaryProvenance from '@/components/SalaryProvenance';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { withTagFallback, type CategoryTag } from '@/lib/pseo/category-tagger';
 import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
@@ -430,6 +431,19 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                         </div>
                     ))}
                 </div>
+
+                {/* A4 (teardown parity): provenance line under the stat
+                    cards — cited vintage from STAT_SOURCES metadata, and
+                    the live snapshot basis only when it clears the SAME
+                    MIN_LIVE_JOBS gate the cards use (omit, never
+                    fabricate). No review date: live sections regenerate
+                    daily and this page has no editorial review literal
+                    (B54 — its Article schema omits dates too). */}
+                <SalaryProvenance
+                    cited={[median]}
+                    live={hasLive ? { count: live.jobCount, minimum: MIN_LIVE_JOBS } : undefined}
+                    style={{ textAlign: 'center', margin: '-16px 0 32px' }}
+                />
 
                 {/* Top-paying states (live, gated) */}
                 {topStates.length >= 3 && (

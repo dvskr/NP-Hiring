@@ -34,6 +34,14 @@
  *     tests/regressions/p4-content-wedges-preceptor-schools.test.ts.
  *     A future program DIRECTORY drops in behind them; it does not
  *     replace them, and it must not ship before the dataset exists.
+ *   - P5 (A3) added the four-post certification guide series in the same
+ *     .mdx + sync mechanism: np-certification-overview (the track→body
+ *     router), fnp-certification-aanp-vs-ancc, pmhnp-certification-guide,
+ *     and agacnp-vs-agpcnp. All four are MECHANICS-ONLY (no fees, hour
+ *     counts, question counts, pass rates, or renewal-cycle lengths —
+ *     those live in each certifying body's handbook, which the posts link
+ *     instead) and their body↔credential pairings are pinned by
+ *     tests/regressions/p5-cert-guides-series.test.ts.
  *   - The 51-post licensure series is generated deterministically from
  *     lib/blog-license-guides.ts and served by lib/blog.ts as a code
  *     fallback (DB rows, synced via `npx tsx scripts/sync-blog-to-db.ts
@@ -111,6 +119,23 @@ export const RELATED_BLOG_SLUGS: {
         'np-ceu-requirements-by-state',
         'highest-paying-np-specialties',
         'fnp-vs-pmhnp-vs-agacnp',
+        // P5 certification guide series (A3): the track→body router plus the
+        // three deep-dives (FNP two-body choice, the PMHNP two-body choice,
+        // adult-gero acute/primary split). Wired MID-LIST directly after the
+        // specialty comparison they extend — the head is pinned by the P2
+        // suite, the tail by the P3 suite, and the P4 wedges must also stay
+        // mid-list, so this block slots between the comparison cluster and
+        // np-1099-vs-w2. Certification-body truth (AANPCB/ANCC for FNP,
+        // AGPCNP, and — since AANPCB launched PMHNP-C in 2024 — PMHNP too;
+        // ANCC/AACN for AGACNP; PNCB/NCC/NBCRNA/AMCB for the rest) is
+        // pinned by tests/regressions/p5-cert-guides-series.test.ts
+        // against the same credentials map lib/pseo/category-city-template.tsx
+        // uses, so the sidebar and the pSEO FAQ can never disagree about who
+        // certifies a track.
+        'np-certification-overview',
+        'fnp-certification-aanp-vs-ancc',
+        'pmhnp-certification-guide',
+        'agacnp-vs-agpcnp',
         'np-1099-vs-w2',
         // P4 education wedge (brief #3 + #4): choosing/verifying a program,
         // and the preceptor + clinical-placement mechanics. Wired MID-LIST,

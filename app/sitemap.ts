@@ -39,6 +39,18 @@ import { STATE_CODES } from '@/lib/pseo/setting-state-config'
 // P2 #21: the sitemap budget guard below pages the team channel instead of
 // only writing a log line nobody reads.
 import { sendDiscordMessage } from '@/lib/discord-notifier'
+// P5 A2: vs-competitor comparison pages. Same drift-proof pattern as the
+// tools/specialty/JD-template registries above — COMPARE_PAGE_PATHS maps over
+// the COMPETITOR_PROFILES array the hub's cards render from, and
+// tests/regressions/p5-comparison-pages-routes.test.ts pins a physical route
+// folder per slug in both directions, so the sitemap can never advertise a
+// comparison the app would 404 on. Plain-data module (its imports are the
+// same registries this file already pulls in).
+import { COMPARE_HUB_PATH, COMPARE_PAGE_PATHS, COMPARE_REVIEW_DATE } from '@/lib/compare-data'
+// P5 A7/A8: market reports. Paths come from the edition registry the /reports
+// hub renders from (tests/regressions/p5-market-reports-model.test.ts pins a
+// route folder per edition). Plain-data module (imports config/brand only).
+import { REPORTS_HUB_PATH, ALL_REPORTS } from '@/lib/reports/editions'
 
 // GSC Fix: Cache sitemap for 1 hour. Without this, every Googlebot request to
 // /sitemap.xml triggers a full DB scan across jobs, companies, and blog tables.
@@ -261,6 +273,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${baseUrl}${path}`,
       lastModified: STATIC_CONTENT_DATE,
       changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    })),
+  ]
+
+  // P5 A2/A4/A7/A8: comparison cluster, scope-of-practice hub, and market
+  // reports. NOT DB-gated, same reasoning as the tools cluster above: every
+  // page is repo-authored and always renders in full (the report pages
+  // degrade to their editorial shell when the live snapshot is unavailable —
+  // they never notFound()), so there is no soft-404 risk. All set explicit
+  // self-canonicals and none carry `robots: { index: false }`, so leaving
+  // them out would be the orphan defect P0 #7 fixed. /admin/companies and
+  // /api/admin/* from the same wave are deliberately NOT here.
+  const P5_CONTENT_DATE = new Date(COMPARE_REVIEW_DATE)
+  const comparePages: MetadataRoute.Sitemap = [
+    { url: `${baseUrl}${COMPARE_HUB_PATH}`, lastModified: P5_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.6 },
+    ...COMPARE_PAGE_PATHS.map(path => ({
+      url: `${baseUrl}${path}`,
+      lastModified: P5_CONTENT_DATE,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
+  ]
+  const scopeOfPracticePages: MetadataRoute.Sitemap = [
+    { url: `${baseUrl}/scope-of-practice`, lastModified: P5_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
+  ]
+  // Report bodies recompute from live inventory on each revalidate, so the
+  // newest-job date is the honest lastmod (B27), not the publish date.
+  const reportPages: MetadataRoute.Sitemap = [
+    { url: `${baseUrl}${REPORTS_HUB_PATH}`, lastModified: latestJobDate, changeFrequency: 'weekly', priority: 0.7 },
+    ...ALL_REPORTS.map(report => ({
+      url: `${baseUrl}${report.path}`,
+      lastModified: latestJobDate,
+      changeFrequency: 'weekly' as const,
       priority: 0.7,
     })),
   ]
@@ -574,6 +619,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...categoryLandingPages,
       ...landingPages,
       ...toolPages,
+      ...comparePages,
+      ...scopeOfPracticePages,
+      ...reportPages,
       ...employerResourcePages,
       ...statePages,
       ...salaryGuideStatePages,
@@ -620,6 +668,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...categoryLandingPages,
       ...landingPages,
       ...toolPages,
+      ...comparePages,
+      ...scopeOfPracticePages,
+      ...reportPages,
       ...employerResourcePages,
       ...statePages,
       ...salaryGuideStatePages,

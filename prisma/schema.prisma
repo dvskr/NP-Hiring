@@ -420,6 +420,20 @@ model Company {
   /// boolean, mirroring EmployerTestimonial.featuredAt: it carries the
   /// approval *time* for free and needs no backfill.
   claimVerifiedAt DateTime? @map("claim_verified_at")
+  /// DIRECT-HIRE vs STAFFING-AGENCY CLASSIFICATION (teardown A6) — set ONLY by
+  /// an admin from /admin/companies (PATCH /api/admin/companies/:id, the sole
+  /// writer). Classification is a HUMAN act: no ingest path, backfill script,
+  /// or heuristic may ever write this column — a wrong "Staffing agency" label
+  /// on a real employer (or vice versa) is a public trust failure, and no
+  /// stored signal (name keywords, website host) is reliable evidence either
+  /// way. NULL means exactly "no human has classified this company yet" — the
+  /// state of every existing row (no backfill, no default) — and every
+  /// candidate surface must render NULL as *nothing*, never as either type.
+  /// Neither value is pejorative: "direct_hire" = the company hires clinicians
+  /// onto its own staff; "staffing_agency" = it recruits on behalf of client
+  /// organizations. Third column in the Company-trust family, same separation
+  /// rule as `isVerified` / `claimVerifiedAt` above: one badge, one meaning.
+  recruitmentType RecruitmentType? @map("recruitment_type")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
   jobs           Job[]
@@ -428,6 +442,20 @@ model Company {
   @@index([normalizedName])
   @@index([isVerified])
   @@map("companies")
+}
+
+/// Company-level recruitment relationship (teardown A6 — PracticeMatch's
+/// "Recruitment Type: In-house vs. Agency Jobs" filter, ENP's Direct Hire /
+/// Staffing split). A real Postgres enum rather than the text-column pattern
+/// CompanyClaim.status uses: claim status legitimately grows new workflow
+/// states, but this is a closed two-value fact about what kind of organization
+/// the company is — a third value would be a product decision worth a
+/// migration. "Unclassified" is deliberately NOT a value: it is the NULL state
+/// of Company.recruitmentType, so nothing can ever write "unclassified" as if
+/// it were a positive classification.
+enum RecruitmentType {
+  direct_hire
+  staffing_agency
 }
 
 /// An employer's request to be recognised as the owner of a scraped `Company`
