@@ -14,10 +14,13 @@
  *      no invented fees / CE hours / processing times; certification
  *      bodies are specialty-correct; schema (faq_json, HowTo steps)
  *      derives from the same arrays as the visible markdown.
- *   3. VARIATION: FPA vs reduced vs restricted states (and compact vs
- *      non-compact) read genuinely differently.
- *   4. DRIFT: the NLC membership mirror stays in sync with the canonical
- *      set in lib/pseo/state-narrative.ts.
+ *   3. VARIATION: FPA vs reduced vs restricted states (and member vs
+ *      enacted-pending vs non-compact) read genuinely differently.
+ *   4. DRIFT: the NLC mirrors (non-member AND enacted-pending sets) stay
+ *      in sync with the canonical sets in lib/pseo/state-narrative.ts,
+ *      and both reflect the NCSBN roster verified on
+ *      NLC_ROSTER_VERIFIED_AT (2026-08-11): CT/RI/WA are members, Alaska
+ *      is a non-member, Massachusetts is enacted-pending.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -25,6 +28,8 @@ import path from 'node:path';
 import {
     LICENSE_GUIDE_STATES,
     LICENSE_GUIDE_NLC_NON_MEMBERS,
+    LICENSE_GUIDE_NLC_ENACTED_PENDING,
+    NLC_ROSTER_VERIFIED_AT,
     getAllLicenseGuideSlugs,
     getLicenseGuidePost,
     buildLicenseGuideSteps,
@@ -295,11 +300,49 @@ describe('substantial per-state variation', () => {
         expect(restricted).toContain('supervision');
     });
 
-    it('compact and non-compact states get different NLC narratives', () => {
-        const member = allPosts.find(({ state }) => state.nlcMember)!.post.content;
-        const nonMember = allPosts.find(({ state }) => !state.nlcMember)!.post.content;
+    it('member, enacted-pending, and non-member states get three distinct NLC narratives', () => {
+        const member = allPosts.find(({ state }) => state.nlcStatus === 'member')!.post.content;
+        const pending = allPosts.find(({ state }) => state.nlcStatus === 'pending')!.post.content;
+        const nonMember = allPosts.find(({ state }) => state.nlcStatus === 'non-member')!.post.content;
         expect(member).toContain('participates in the **Nurse Licensure Compact');
         expect(nonMember).toContain('does **not** participate');
+        // The pending narrative must claim NEITHER membership NOR plain
+        // non-membership — only enactment with implementation pending.
+        expect(pending).toContain('enacted the Nurse Licensure Compact but not yet implemented it');
+        expect(pending).toContain('to-be-determined');
+        expect(pending).not.toContain('participates in the **Nurse Licensure Compact');
+        expect(pending).not.toContain('does **not** participate');
+    });
+
+    it('pending states are honest in every compact-claim surface of the guide', () => {
+        for (const { state, post } of allPosts) {
+            if (state.nlcStatus !== 'pending') continue;
+            // nlcMember must be false — pending confers nothing in practice —
+            // and no surface may call the state a compact member.
+            expect(state.nlcMember).toBe(false);
+            expect(post.content).not.toContain(`${state.name} is a Nurse Licensure Compact member`);
+            expect(post.content).not.toContain(`${state.name} is not a Nurse Licensure Compact member`);
+            // Quick answer, steps, and FAQ all carry the pending branch.
+            expect(post.content).toContain('implementation is pending');
+            expect(post.content).toContain('implementation is still pending');
+            const nlcFaq = post.faq_json!.find((f) => f.name.includes('Nurse Licensure Compact'))!;
+            expect(nlcFaq.text).toMatch(/^Not yet\./);
+            expect(nlcFaq.text).toContain('to-be-determined');
+            // No implementation date may be asserted — NCSBN lists TBD.
+            expect(post.content).not.toMatch(/implement(ation|ed|s)?[^.]*\bon (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|\d{4})/);
+        }
+    });
+
+    it('every guide cites the NLC roster verification date beside its compact claim', () => {
+        expect(NLC_ROSTER_VERIFIED_AT).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        const label = new Date(`${NLC_ROSTER_VERIFIED_AT}T00:00:00Z`).toLocaleDateString(
+            'en-US',
+            { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' },
+        );
+        for (const { state, post } of allPosts) {
+            expect(post.content, `${state.name}: missing roster as-of date`).toContain(label);
+            expect(post.content, `${state.name}: missing live roster link`).toContain('https://www.nursecompact.com/');
+        }
     });
 
     it('two same-authority states still differ (state + board interpolation)', () => {
@@ -397,17 +440,58 @@ describe('practice-authority dataset ↔ published FPA count', () => {
     });
 });
 
-describe('NLC membership drift guard', () => {
-    it('mirror set matches the canonical set in lib/pseo/state-narrative.ts', () => {
-        const src = read('lib/pseo/state-narrative.ts');
-        const setLiteral = src.match(
-            /NLC_NON_MEMBER_STATES[\s\S]*?new Set\(\[([\s\S]*?)\]\)/,
+describe('NLC status drift guard', () => {
+    const src = read('lib/pseo/state-narrative.ts');
+    const extractSet = (name: string): Set<string> => {
+        const literal = src.match(
+            new RegExp(`${name}[\\s\\S]*?new Set\\(\\[([\\s\\S]*?)\\]\\)`),
         );
-        expect(setLiteral, 'canonical NLC set not found in state-narrative.ts').toBeTruthy();
-        const canonical = new Set(
-            [...setLiteral![1].matchAll(/'([^']+)'/g)].map((m) => m[1]),
-        );
+        expect(literal, `canonical ${name} set not found in state-narrative.ts`).toBeTruthy();
+        return new Set([...literal![1].matchAll(/'([^']+)'/g)].map((m) => m[1]));
+    };
+
+    it('mirror non-member set matches the canonical set in lib/pseo/state-narrative.ts', () => {
+        const canonical = extractSet('NLC_NON_MEMBER_STATES');
         expect(canonical.size).toBeGreaterThan(0);
         expect(new Set(LICENSE_GUIDE_NLC_NON_MEMBERS)).toEqual(canonical);
+    });
+
+    it('mirror enacted-pending set matches the canonical set in lib/pseo/state-narrative.ts', () => {
+        const canonical = extractSet('NLC_ENACTED_PENDING_STATES');
+        expect(canonical.size).toBeGreaterThan(0);
+        expect(new Set(LICENSE_GUIDE_NLC_ENACTED_PENDING)).toEqual(canonical);
+    });
+
+    it('the two sets are disjoint and name only real jurisdictions', () => {
+        const names = new Set(Object.keys(STATE_PRACTICE_AUTHORITY));
+        for (const s of LICENSE_GUIDE_NLC_NON_MEMBERS) {
+            expect(names.has(s), `${s}: not a known jurisdiction`).toBe(true);
+            expect(LICENSE_GUIDE_NLC_ENACTED_PENDING.has(s), `${s}: in both NLC sets`).toBe(false);
+        }
+        for (const s of LICENSE_GUIDE_NLC_ENACTED_PENDING) {
+            expect(names.has(s), `${s}: not a known jurisdiction`).toBe(true);
+        }
+    });
+
+    /**
+     * Accuracy pin — the defect this guard exists for. Verified against
+     * the live NCSBN roster (nursecompact.com implementation table) on
+     * 2026-08-11: Connecticut implemented 2025-10-01, Rhode Island
+     * 2024-01-08, Washington 2024-01-31 (all three were wrongly carried
+     * as non-members); Alaska has no enacted compact legislation (it was
+     * missing from the set entirely); Massachusetts has enacted the
+     * compact with its implementation date listed as to-be-determined.
+     * If NCSBN's roster moves, re-verify live, update the sets AND
+     * NLC_ROSTER_VERIFIED_AT, then update this pin.
+     */
+    it('reflects the NCSBN roster verified on NLC_ROSTER_VERIFIED_AT', () => {
+        expect(NLC_ROSTER_VERIFIED_AT).toBe('2026-08-11');
+        for (const member of ['Connecticut', 'Rhode Island', 'Washington']) {
+            expect(LICENSE_GUIDE_NLC_NON_MEMBERS.has(member), `${member} is an implemented member`).toBe(false);
+            expect(LICENSE_GUIDE_NLC_ENACTED_PENDING.has(member), `${member} is past pending`).toBe(false);
+        }
+        expect(LICENSE_GUIDE_NLC_NON_MEMBERS.has('Alaska'), 'Alaska is a non-member').toBe(true);
+        expect(LICENSE_GUIDE_NLC_ENACTED_PENDING.has('Massachusetts'), 'Massachusetts is enacted-pending').toBe(true);
+        expect(LICENSE_GUIDE_NLC_NON_MEMBERS.has('Massachusetts')).toBe(false);
     });
 });

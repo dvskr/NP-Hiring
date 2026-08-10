@@ -9,15 +9,16 @@
  *      lib/blog-license-guides.ts (verified NCSBN board names/URLs), and
  *      the tier counts agree with STAT_SOURCES.fullPracticeStates — the
  *      "27 states + DC" figure cited on /jobs, /faq, and /salary-guide.
- *   2. TRUTH GUARDS — the hub must NOT render NLC membership booleans
- *      (the repo's canonical non-member set is documented stale in
- *      app/resources/fpa-guide/page.tsx — verified against NCSBN
- *      2026-07-29 and re-verified 2026-08-06: CT/MA/RI/WA have enacted
- *      the compact, Alaska is missing). Until that set is corrected at
- *      its source, the hub links the live NCSBN roster instead. It must
- *      also not hardcode any external URL beyond schema.org (board/AANP/
- *      roster links flow from the data module), and must not fabricate
- *      freshness with render-time dates.
+ *   2. TRUTH GUARDS — NLC status renders from the CORRECTED canonical
+ *      sets in lib/blog-license-guides.ts (verified against the live
+ *      NCSBN roster on NLC_ROSTER_VERIFIED_AT, 2026-08-11 — the prior
+ *      staleness where CT/RI/WA sat in the non-member set and Alaska was
+ *      missing is fixed at the source). The tri-state status must never
+ *      collapse enacted-pending states (Massachusetts) into member or
+ *      non-member, the column's as-of date must be cited, the page must
+ *      still link the live roster, must not hardcode any external URL
+ *      beyond schema.org (board/AANP/roster links flow from the data
+ *      module), and must not fabricate freshness with render-time dates.
  *   3. SCHEMA PARITY — FAQPage JSON-LD derives from the SAME array as the
  *      visible FAQ, with angle-bracket escaping.
  *   4. ACCESSIBILITY — the interactive explorer keeps its labelled search
@@ -35,6 +36,8 @@ import path from 'node:path';
 import {
     AANP_STATE_PRACTICE_URL,
     NLC_LIVE_ROSTER_URL,
+    NLC_SOURCE_LINE,
+    NLC_STATUS_LABELS,
     SOP_COUNTS,
     SOP_LAST_REVIEWED,
     SOP_PUBLISHED_AT,
@@ -42,7 +45,10 @@ import {
     buildSopFaqs,
 } from '@/components/ScopeOfPracticeData';
 import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
-import { LICENSE_GUIDE_STATES } from '@/lib/blog-license-guides';
+import {
+    LICENSE_GUIDE_STATES,
+    NLC_ROSTER_VERIFIED_AT,
+} from '@/lib/blog-license-guides';
 import { LICENSE_GUIDE_SERIES_PUBLISHED, licenseGuideSlug } from '@/config/niche/content-map';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 
@@ -57,9 +63,8 @@ const fpaGuideSrc = read('app/resources/fpa-guide/page.tsx');
 
 /**
  * Strip comments before "must NOT contain" checks — the files' own doc
- * comments name the tokens whose absence they explain (nlcMember, the
- * stale non-member set), and a comment must not trip the guard that keeps
- * the token banned from code.
+ * comments may name tokens or URLs whose absence they explain, and a
+ * comment must not trip the guard that keeps the token banned from code.
  */
 const code = (src: string) =>
     src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
@@ -128,7 +133,7 @@ describe('truth guards — no stale NLC booleans, no unsourced externals, no fab
         ['components/ScopeOfPracticeExplorer.tsx', explorerSrc],
     ];
 
-    it('no surface consumes the stale NLC membership set (comments excluded)', () => {
+    it('surfaces consume the tri-state nlcStatus — never the boolean or the raw sets (comments excluded)', () => {
         for (const [name, src] of surfaces) {
             const stripped = code(src);
             expect(stripped, `${name} must not read nlcMember`).not.toMatch(/nlcMember/);
@@ -170,6 +175,71 @@ describe('truth guards — no stale NLC booleans, no unsourced externals, no fab
         for (const faq of buildSopFaqs()) {
             expect(faq.answer, faq.question).not.toMatch(/\$\d/);
         }
+    });
+});
+
+describe('NLC column — tri-state compact status from the corrected canonical sets', () => {
+    it('every row carries its license-guide state\'s nlcStatus verbatim', () => {
+        for (const row of SOP_STATE_ROWS) {
+            const guide = LICENSE_GUIDE_STATES.find((s) => s.name === row.name)!;
+            expect(row.nlcStatus, row.name).toBe(guide.nlcStatus);
+        }
+    });
+
+    /**
+     * Accuracy pin — the staleness this hub previously embargoed, now
+     * fixed at the source. Verified against the live NCSBN roster
+     * (nursecompact.com implementation table) on NLC_ROSTER_VERIFIED_AT:
+     * CT (implemented 2025-10-01), RI (2024-01-08), and WA (2024-01-31)
+     * are members; Alaska has no enacted legislation; Massachusetts is
+     * enacted with implementation to-be-determined.
+     */
+    it('statuses reflect the NCSBN roster verified on NLC_ROSTER_VERIFIED_AT', () => {
+        expect(NLC_ROSTER_VERIFIED_AT).toBe('2026-08-11');
+        const statusOf = (name: string) =>
+            SOP_STATE_ROWS.find((r) => r.name === name)!.nlcStatus;
+        for (const member of ['Connecticut', 'Rhode Island', 'Washington', 'Texas']) {
+            expect(statusOf(member), member).toBe('member');
+        }
+        for (const nonMember of ['Alaska', 'California', 'Oregon', 'Nevada']) {
+            expect(statusOf(nonMember), nonMember).toBe('non-member');
+        }
+        expect(statusOf('Massachusetts')).toBe('pending');
+    });
+
+    it('the pending label never collapses into member or non-member wording', () => {
+        expect(NLC_STATUS_LABELS['pending']).toMatch(/implementation pending/i);
+        expect(NLC_STATUS_LABELS['pending']).toMatch(/enacted/i);
+        // Three pairwise-distinct labels — the tri-state can't be flattened.
+        expect(new Set(Object.values(NLC_STATUS_LABELS)).size).toBe(3);
+        expect(NLC_STATUS_LABELS['member']).not.toMatch(/pending|not a member/i);
+        expect(NLC_STATUS_LABELS['non-member']).not.toMatch(/pending/i);
+    });
+
+    it('the explorer renders the column from the shared labels, one badge per status', () => {
+        expect(explorerSrc).toContain('Compact (NLC)');
+        expect(explorerSrc).toContain('NLC_STATUS_LABELS[row.nlcStatus]');
+        expect(explorerSrc).toContain('NLC_BADGE_CLASSES[row.nlcStatus]');
+    });
+
+    it('the page cites the source line, which carries the real verification date', () => {
+        expect(NLC_SOURCE_LINE).toContain(NLC_ROSTER_VERIFIED_AT);
+        expect(NLC_SOURCE_LINE).toMatch(/NCSBN/);
+        expect(pageSrc).toContain('NLC_SOURCE_LINE');
+        // The page's compact section names the pending state honestly.
+        expect(pageSrc).toContain('enacted, implementation');
+    });
+
+    it('the FAQ answers the pending case honestly — no date, board referral', () => {
+        const nlcFaq = buildSopFaqs().find((f) =>
+            f.question.includes('Nurse Licensure Compact'),
+        )!;
+        expect(nlcFaq).toBeDefined();
+        expect(nlcFaq.answer).toContain('implementation pending');
+        expect(nlcFaq.answer).toContain(NLC_ROSTER_VERIFIED_AT);
+        expect(nlcFaq.answer).toContain('verify the current status with the state board');
+        // No implementation date may be asserted for pending states.
+        expect(nlcFaq.answer).not.toMatch(/implement[^.]*\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/);
     });
 });
 

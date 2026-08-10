@@ -11,9 +11,11 @@
  *
  * DATA SOURCES (truth rules — nothing else is stated as fact):
  *   - Practice authority level: lib/state-practice-authority.ts (AANP).
- *   - NLC membership: NLC_NON_MEMBER_STATES below — mirrors the canonical
- *     set in lib/pseo/state-narrative.ts (kept in sync by the drift test
- *     in tests/regressions/p1-content-library-license-guides.test.ts).
+ *   - NLC status: LICENSE_GUIDE_NLC_NON_MEMBERS +
+ *     LICENSE_GUIDE_NLC_ENACTED_PENDING below — mirror the canonical sets
+ *     in lib/pseo/state-narrative.ts (kept in sync by the drift test in
+ *     tests/regressions/p1-content-library-license-guides.test.ts),
+ *     verified against the live NCSBN roster on NLC_ROSTER_VERIFIED_AT.
  *   - Salary / growth figures: lib/stats-sources.ts, cited inline. Live
  *     state-level numbers are LINKED (/salary-guide/<state>), never
  *     restated here.
@@ -68,17 +70,63 @@ const STATE_CODES: Record<string, string> = {
 };
 
 /**
- * NLC (Nurse Licensure Compact) NON-member jurisdictions.
+ * Date the two NLC sets below were verified against the live NCSBN
+ * roster (the implementation table linked from NLC_LIVE_ROSTER_URL).
+ * Real literal — bump it ONLY on an actual re-verification pass.
+ */
+export const NLC_ROSTER_VERIFIED_AT = '2026-08-11';
+
+/** Live NCSBN compact roster — where every membership claim points. */
+export const NLC_LIVE_ROSTER_URL = 'https://www.nursecompact.com/';
+
+/** Human-readable form of NLC_ROSTER_VERIFIED_AT for prose. */
+const NLC_VERIFIED_LABEL = new Date(
+    `${NLC_ROSTER_VERIFIED_AT}T00:00:00Z`,
+).toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC',
+});
+
+/**
+ * NLC (Nurse Licensure Compact) NON-member jurisdictions — states with no
+ * enacted compact legislation ("currently no action" on the NCSBN map).
  * MIRROR of the canonical (non-exported) set in lib/pseo/state-narrative.ts
  * — that file belongs to the state-hub surface, so the set is duplicated
- * here and guarded by a source-level drift test. Source: NCSBN compact
- * page, as of 2026-05. Update both copies together when membership shifts.
+ * here and guarded by a source-level drift test. Source: NCSBN NLC roster
+ * (nursecompact.com implementation table), verified live on
+ * NLC_ROSTER_VERIFIED_AT. Update both copies together when membership
+ * shifts. History: the pre-2026-08 revision wrongly listed Connecticut
+ * (implemented 2025-10-01), Rhode Island (2024-01-08), and Washington
+ * (2024-01-31) as non-members, omitted Alaska (a genuine non-member), and
+ * carried Massachusetts here when it belongs in the pending set below.
  */
 export const LICENSE_GUIDE_NLC_NON_MEMBERS: ReadonlySet<string> = new Set([
-    'California', 'Connecticut', 'Hawaii', 'Illinois', 'Massachusetts',
+    'Alaska', 'California', 'District of Columbia', 'Hawaii', 'Illinois',
     'Michigan', 'Minnesota', 'Nevada', 'New York', 'Oregon',
-    'Rhode Island', 'Washington', 'District of Columbia',
 ]);
+
+/**
+ * Jurisdictions that have ENACTED the NLC but not yet IMPLEMENTED it.
+ * NCSBN lists their implementation date as to-be-determined: until the
+ * state board completes implementation, a multistate license is neither
+ * issued to residents nor honored for practice there — so a member/
+ * non-member boolean cannot represent them honestly, and every consumer
+ * renders a distinct "enacted, implementation pending — verify with the
+ * board" branch instead. (Guam and the U.S. Virgin Islands share this
+ * status on the NCSBN roster but are outside this repo's 51
+ * jurisdictions.) Same source, verification date, and drift guard as the
+ * non-member set above.
+ */
+export const LICENSE_GUIDE_NLC_ENACTED_PENDING: ReadonlySet<string> = new Set([
+    'Massachusetts',
+]);
+
+/** Tri-state compact status — 'pending' = enacted, awaiting implementation. */
+export type NlcStatus = 'member' | 'pending' | 'non-member';
+
+function nlcStatusOf(name: string): NlcStatus {
+    if (LICENSE_GUIDE_NLC_ENACTED_PENDING.has(name)) return 'pending';
+    return LICENSE_GUIDE_NLC_NON_MEMBERS.has(name) ? 'non-member' : 'member';
+}
 
 /**
  * Official board display names that don't follow the default
@@ -140,8 +188,14 @@ export interface LicenseGuideState {
     slug: string;
     /** AANP practice-authority classification. */
     authority: PracticeAuthority;
-    /** Whether the state participates in the Nurse Licensure Compact. */
+    /**
+     * Whether the state is a fully implemented Nurse Licensure Compact
+     * member. False for BOTH non-members and enacted-pending states —
+     * branch on `nlcStatus` wherever the difference must be rendered.
+     */
     nlcMember: boolean;
+    /** Compact status: member / enacted-pending-implementation / non-member. */
+    nlcStatus: NlcStatus;
     /** Board of nursing display name (NCSBN directory naming). */
     boardName: string;
     /** NCSBN member-board directory page (board site, phone, address). */
@@ -194,7 +248,8 @@ export const LICENSE_GUIDE_STATES: ReadonlyArray<LicenseGuideState> =
             stateSlug: stateSlugOf(name),
             slug: licenseGuideSlug(stateSlugOf(name)),
             authority: STATE_PRACTICE_AUTHORITY[name].authority,
-            nlcMember: !LICENSE_GUIDE_NLC_NON_MEMBERS.has(name),
+            nlcMember: nlcStatusOf(name) === 'member',
+            nlcStatus: nlcStatusOf(name),
             boardName: BOARD_NAME_OVERRIDES[name] ?? `${name} Board of Nursing`,
             boardUrl: ncsbnBoardUrl(name),
         }));
@@ -247,16 +302,29 @@ function authoritySection(s: LicenseGuideState): string {
     }
 }
 
+/**
+ * Source line appended to every compact claim — the as-of date is the
+ * real verification date of the two sets above, and the link hands the
+ * reader the live roster those sets were checked against.
+ */
+const NLC_SOURCE_SENTENCE = `Compact status verified against the [live NCSBN roster](${NLC_LIVE_ROSTER_URL}) on ${NLC_VERIFIED_LABEL}; membership shifts as legislatures act, so re-check the roster before relying on it.`;
+
 function nlcSection(s: LicenseGuideState): string {
-    if (s.nlcMember) {
+    if (s.nlcStatus === 'member') {
         return [
             `${s.name} participates in the **Nurse Licensure Compact (NLC)**. The compact applies to the RN license that underpins your APRN credential: if ${s.name} is your primary state of residence, you can hold a multistate RN license that's recognized across compact member states without separate RN endorsements.`,
-            `Your APRN license itself is still issued state-by-state — compact RN privileges don't substitute for ${s.code} APRN licensure, and practicing as an ${NP} in another state still requires that state's APRN credential. Where the compact pays off is mobility: travel and telehealth roles, and any future multi-state practice, start from a simpler RN foundation. Verify your compact eligibility and primary-state-of-residence rules with the [${s.boardName}](${s.boardUrl}).`,
+            `Your APRN license itself is still issued state-by-state — compact RN privileges don't substitute for ${s.code} APRN licensure, and practicing as an ${NP} in another state still requires that state's APRN credential. Where the compact pays off is mobility: travel and telehealth roles, and any future multi-state practice, start from a simpler RN foundation. Verify your compact eligibility and primary-state-of-residence rules with the [${s.boardName}](${s.boardUrl}). ${NLC_SOURCE_SENTENCE}`,
+        ].join('\n\n');
+    }
+    if (s.nlcStatus === 'pending') {
+        return [
+            `${s.name} has **enacted the Nurse Licensure Compact but not yet implemented it** — NCSBN lists the implementation date as to-be-determined. Until the ${s.boardName} completes implementation, the compact changes nothing in practice: multistate RN licenses are neither issued to ${s.name} residents nor honored for practice in ${s.code}, so plan on a ${s.name}-issued RN license (typically by endorsement) beneath your APRN application, exactly as in a non-compact state.`,
+            `Implementation timing is set by the board and NCSBN, not by this guide — verify the current status with the [${s.boardName}](${s.boardUrl}) before planning a relocation or telehealth caseload around compact privileges. ${NLC_SOURCE_SENTENCE}`,
         ].join('\n\n');
     }
     return [
         `${s.name} does **not** participate in the Nurse Licensure Compact. Even if you already hold a multistate RN license issued by a compact state, you'll need a ${s.name}-issued RN license (typically by endorsement) before or alongside your ${s.code} APRN application — budget extra lead time for that step if you're relocating or picking up a telehealth caseload covering ${s.code} patients.`,
-        `The upside of planning for this early: RN endorsement and APRN licensure can usually be worked in parallel, and employers hiring into ${s.code} are used to the sequence. The [${s.boardName}](${s.boardUrl}) lists the endorsement requirements and current application checklists.`,
+        `The upside of planning for this early: RN endorsement and APRN licensure can usually be worked in parallel, and employers hiring into ${s.code} are used to the sequence. The [${s.boardName}](${s.boardUrl}) lists the endorsement requirements and current application checklists. ${NLC_SOURCE_SENTENCE}`,
     ].join('\n\n');
 }
 
@@ -271,9 +339,11 @@ export interface LicenseGuideStep {
  * visible content and structured data can never diverge.
  */
 export function buildLicenseGuideSteps(s: LicenseGuideState): LicenseGuideStep[] {
-    const rnStep = s.nlcMember
+    const rnStep = s.nlcStatus === 'member'
         ? `Hold an active, unencumbered RN license. Because ${s.name} is a compact state, a multistate RN license (with ${s.name} as your primary state of residence) or ${codeArticle(s.code)} ${s.code} single-state RN license both work as the foundation.`
-        : `Hold an active, unencumbered ${s.name} RN license. ${s.name} is not a compact state, so out-of-state RNs first apply for ${s.code} RN licensure by endorsement.`;
+        : s.nlcStatus === 'pending'
+            ? `Hold an active, unencumbered ${s.name} RN license. ${s.name} has enacted the Nurse Licensure Compact but implementation is still pending, so until the board announces an implementation date, out-of-state RNs still apply for ${s.code} RN licensure by endorsement.`
+            : `Hold an active, unencumbered ${s.name} RN license. ${s.name} is not a compact state, so out-of-state RNs first apply for ${s.code} RN licensure by endorsement.`;
     const prescriptiveStep =
         s.authority === 'full'
             ? `Complete any prescriptive-authority or transition-to-practice requirements. In a full-practice state these are handled through the board itself — no collaborative or supervisory agreement is required.`
@@ -319,9 +389,11 @@ export function buildLicenseGuideFaq(s: LicenseGuideState): LicenseGuideFaq[] {
             : s.authority === 'reduced'
                 ? `No. The AANP classifies ${s.name} as a reduced practice state: ${NP_PROSE}s must maintain a collaborative agreement with a physician covering at least one element of practice, most commonly prescribing. The ${s.boardName} defines what the agreement must contain.`
                 : `No. The AANP classifies ${s.name} as a restricted practice state: physician supervision, delegation, or team management is required for ${NP_PROSE} practice. The ${s.boardName} publishes the supervision and practice-agreement requirements.`;
-    const nlcAnswer = s.nlcMember
-        ? `Yes, ${s.name} is a Nurse Licensure Compact member. The compact covers the RN license underpinning your APRN credential — a multistate RN license works across member states — but APRN licensure itself is still issued individually by each state, including ${s.name}.`
-        : `No, ${s.name} is not a Nurse Licensure Compact member. Even with a multistate RN license from a compact state, you need a ${s.name}-issued RN license (by endorsement) plus ${s.code} APRN licensure to practice as an ${NP} there.`;
+    const nlcAnswer = s.nlcStatus === 'member'
+        ? `Yes, ${s.name} is a Nurse Licensure Compact member (verified against the live NCSBN roster, ${NLC_VERIFIED_LABEL}). The compact covers the RN license underpinning your APRN credential — a multistate RN license works across member states — but APRN licensure itself is still issued individually by each state, including ${s.name}.`
+        : s.nlcStatus === 'pending'
+            ? `Not yet. ${s.name} has enacted the Nurse Licensure Compact, but implementation is pending — NCSBN lists the implementation date as to-be-determined (verified against the live NCSBN roster, ${NLC_VERIFIED_LABEL}). Until the ${s.boardName} completes implementation, a multistate RN license is neither issued nor honored in ${s.name}, so you still need a ${s.name}-issued RN license (by endorsement) plus ${s.code} APRN licensure; verify the current status with the board.`
+            : `No, ${s.name} is not a Nurse Licensure Compact member (verified against the live NCSBN roster, ${NLC_VERIFIED_LABEL}). Even with a multistate RN license from a compact state, you need a ${s.name}-issued RN license (by endorsement) plus ${s.code} APRN licensure to practice as an ${NP} there.`;
     const physicianAnswer =
         s.authority === 'full'
             ? `No collaborative or supervising physician is required in ${s.name} — it's a full practice authority state. Confirm any transition-to-practice conditions with the ${s.boardName}.`
@@ -362,7 +434,12 @@ function buildMarkdown(s: LicenseGuideState): string {
         .map((f) => `### ${f.name}\n\n${f.text}`)
         .join('\n\n');
 
-    return `**Quick answer:** ${authorityIntroPhrase(s)}. ${s.nlcMember ? `${s.name} is a Nurse Licensure Compact member, which simplifies the RN layer of your credential.` : `${s.name} sits outside the Nurse Licensure Compact, so out-of-state RNs add an endorsement step.`} Applications, fees, and timelines run through the [${s.boardName}](${s.boardUrl}).
+    const quickNlc = s.nlcStatus === 'member'
+        ? `${s.name} is a Nurse Licensure Compact member, which simplifies the RN layer of your credential.`
+        : s.nlcStatus === 'pending'
+            ? `${s.name} has enacted the Nurse Licensure Compact but implementation is pending, so for now out-of-state RNs still add an endorsement step.`
+            : `${s.name} sits outside the Nurse Licensure Compact, so out-of-state RNs add an endorsement step.`;
+    return `**Quick answer:** ${authorityIntroPhrase(s)}. ${quickNlc} Applications, fees, and timelines run through the [${s.boardName}](${s.boardUrl}).
 
 ---
 

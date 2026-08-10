@@ -20,30 +20,31 @@
  *     never asserted: every state row links its board of nursing and the
  *     AANP state-practice-environment page instead.
  *
- * NLC MEMBERSHIP IS DELIBERATELY NOT RENDERED. The repo's canonical
- * non-member set (LICENSE_GUIDE_NLC_NON_MEMBERS, mirrored from
- * lib/pseo/state-narrative.ts) is documented as stale in
- * app/resources/fpa-guide/page.tsx (P2 #22 second pass, verified against
- * NCSBN 2026-07-29): it lists Connecticut, Massachusetts, Rhode Island,
- * and Washington as non-members when they have since enacted the compact,
- * and omits Alaska, a genuine non-member. Re-verified live 2026-08-06
- * with the same result (and Massachusetts sits between enactment and
- * implementation — a state a boolean cannot represent honestly).
- * Correcting the canonical set has its own blast radius (51 licensure
- * guides, state hubs, licensure checker) and belongs to that surface's
- * owners. Until it is fixed, this hub follows the fpa-guide policy: no
- * membership booleans, no membership counts — the compact section links
- * the live NCSBN roster instead. When the canonical set is corrected,
- * wire `nlcMember` from LICENSE_GUIDE_STATES into SopStateRow and drop
- * the truth-guard assertions in
- * tests/regressions/p5-sop-hub-scope-of-practice.test.ts.
+ *   - NLC status comes from lib/blog-license-guides.ts (`nlcStatus` on
+ *     LICENSE_GUIDE_STATES), whose non-member and enacted-pending sets
+ *     were corrected and verified against the live NCSBN roster on
+ *     NLC_ROSTER_VERIFIED_AT (2026-08-11) — the staleness this hub
+ *     previously embargoed (CT/RI/WA wrongly listed as non-members,
+ *     Alaska missing) is fixed at its source, so the hub now renders the
+ *     tri-state status: member / enacted, implementation pending /
+ *     not a member. Enacted-pending states (Massachusetts) are NEVER
+ *     collapsed into member or non-member — the label says
+ *     implementation is pending and the section copy hands the reader
+ *     the live roster and the state board for the current status. No
+ *     implementation dates are asserted for pending states (NCSBN lists
+ *     them as to-be-determined).
  */
 import { brand } from '@/config/brand';
 import {
     STATE_PRACTICE_AUTHORITY,
     type PracticeAuthority,
 } from '@/lib/state-practice-authority';
-import { LICENSE_GUIDE_STATES } from '@/lib/blog-license-guides';
+import {
+    LICENSE_GUIDE_STATES,
+    NLC_LIVE_ROSTER_URL,
+    NLC_ROSTER_VERIFIED_AT,
+    type NlcStatus,
+} from '@/lib/blog-license-guides';
 import { LICENSE_GUIDE_SERIES_PUBLISHED } from '@/config/niche/content-map';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 
@@ -56,7 +57,7 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
  * Feeds the visible "Last reviewed" line AND Article.dateModified, so the
  * page can never claim freshness its schema contradicts.
  */
-export const SOP_LAST_REVIEWED = '2026-08-06';
+export const SOP_LAST_REVIEWED = '2026-08-11';
 
 /** First publish date of /scope-of-practice (fixed literal). */
 export const SOP_PUBLISHED_AT = '2026-08-06';
@@ -70,10 +71,22 @@ export const AANP_STATE_PRACTICE_URL = STAT_SOURCES.fullPracticeStates.sourceUrl
 export const SOP_SOURCE_LINE = `${STAT_SOURCES.fullPracticeStates.source} (as of ${STAT_SOURCES.fullPracticeStates.asOf})`;
 
 /**
- * Live NLC roster — the only place this hub points for compact
- * membership (same policy and same URL as /resources/fpa-guide).
+ * Live NLC roster — where every compact claim on this hub points (same
+ * URL as /resources/fpa-guide). Canonical constant lives beside the NLC
+ * sets in lib/blog-license-guides.ts; re-exported so the page keeps a
+ * single import surface.
  */
-export const NLC_LIVE_ROSTER_URL = 'https://www.nursecompact.com/';
+export { NLC_LIVE_ROSTER_URL, NLC_ROSTER_VERIFIED_AT, type NlcStatus };
+
+/** Human-readable badge labels for the tri-state compact status. */
+export const NLC_STATUS_LABELS: Record<NlcStatus, string> = {
+    'member': 'Member',
+    'pending': 'Enacted — implementation pending',
+    'non-member': 'Not a member',
+} as const;
+
+/** Source line rendered wherever the hub makes a compact-status claim. */
+export const NLC_SOURCE_LINE = `NCSBN Nurse Licensure Compact roster (nursecompact.com), verified ${NLC_ROSTER_VERIFIED_AT}`;
 
 // ─── Per-state rows ─────────────────────────────────────────────────────────
 
@@ -92,6 +105,12 @@ export interface SopStateRow {
     authorityLabel: string;
     /** The dataset's per-state details sentence, published verbatim. */
     details: string;
+    /**
+     * Nurse Licensure Compact status from the corrected canonical sets
+     * (member / enacted-pending-implementation / non-member) — verified
+     * against the live NCSBN roster on NLC_ROSTER_VERIFIED_AT.
+     */
+    nlcStatus: NlcStatus;
     /** Board of nursing display name (NCSBN directory naming). */
     boardName: string;
     /** NCSBN member-board directory page for the state board. */
@@ -120,6 +139,7 @@ export const SOP_STATE_ROWS: ReadonlyArray<SopStateRow> = LICENSE_GUIDE_STATES.m
             authority: info.authority,
             authorityLabel: info.description,
             details: info.details,
+            nlcStatus: s.nlcStatus,
             boardName: s.boardName,
             boardUrl: s.boardUrl,
             licenseGuideHref: LICENSE_GUIDE_SERIES_PUBLISHED ? `/blog/${s.slug}` : null,
@@ -181,7 +201,7 @@ export function buildSopFaqs(): SopFaq[] {
         },
         {
             question: `Does the Nurse Licensure Compact change an ${NP}'s scope of practice?`,
-            answer: `No. The compact covers the RN license underpinning your APRN credential — a multistate RN license is recognized across member states — but APRN licensure, and with it your scope of practice, is issued state by state. Compact membership also shifts as legislatures act, and some jurisdictions sit between enactment and implementation, so this page does not publish a membership list: check the live NCSBN roster at ${NLC_LIVE_ROSTER_URL} for each state you plan to cover.`,
+            answer: `No. The compact covers the RN license underpinning your APRN credential — a multistate RN license is recognized across member states — but APRN licensure, and with it your scope of practice, is issued state by state. The table on this page marks each jurisdiction's compact status — member, enacted with implementation pending, or not a member — verified against the live NCSBN roster on ${NLC_ROSTER_VERIFIED_AT}. In enacted-pending states the compact confers nothing yet: no implementation date is set, so verify the current status with the state board. Membership shifts as legislatures act, so re-check the live roster at ${NLC_LIVE_ROSTER_URL} for each state you plan to cover.`,
         },
     ];
 }

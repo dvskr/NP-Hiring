@@ -15,6 +15,12 @@
  * Tier colors come from getAuthorityColor in lib/state-practice-authority.ts
  * — the same helper /resources/fpa-guide renders — so the hub can never
  * drift from the board-wide full/reduced/restricted color semantics.
+ *
+ * The Compact (NLC) column renders the tri-state status carried on each
+ * row (member / enacted, implementation pending / not a member) with the
+ * shared NLC_STATUS_LABELS — enacted-pending states are never collapsed
+ * into a member/non-member boolean, and the page's compact section cites
+ * the NCSBN roster verification date for the whole column.
  */
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -22,7 +28,11 @@ import {
     getAuthorityColor,
     type PracticeAuthority,
 } from '@/lib/state-practice-authority';
-import type { SopStateRow } from './ScopeOfPracticeData';
+import {
+    NLC_STATUS_LABELS,
+    type NlcStatus,
+    type SopStateRow,
+} from './ScopeOfPracticeData';
 
 type TierFilter = 'all' | PracticeAuthority;
 type SortKey = 'state' | 'authority';
@@ -41,6 +51,17 @@ const TIER_FILTERS: { value: TierFilter; label: string }[] = [
     { value: 'reduced', label: 'Reduced' },
     { value: 'restricted', label: 'Restricted' },
 ];
+
+/**
+ * Badge classes for the Compact (NLC) column — same badge shape as the
+ * authority tiers; amber deliberately marks the in-between
+ * enacted-pending status so it can't be misread as membership.
+ */
+const NLC_BADGE_CLASSES: Record<NlcStatus, string> = {
+    'member': 'bg-green-50 text-green-800 border-green-200',
+    'pending': 'bg-yellow-50 text-yellow-800 border-yellow-200',
+    'non-member': 'bg-gray-50 text-gray-600 border-gray-200',
+};
 
 interface ScopeOfPracticeExplorerProps {
     rows: ReadonlyArray<SopStateRow>;
@@ -203,6 +224,12 @@ export default function ScopeOfPracticeExplorer({ rows }: ScopeOfPracticeExplore
                                 </button>
                             </th>
                             <th
+                                className="text-left py-3 px-4 font-semibold hidden md:table-cell"
+                                style={{ color: 'var(--text-primary)' }}
+                            >
+                                Compact (NLC)
+                            </th>
+                            <th
                                 className="text-left py-3 pl-4 font-semibold hidden lg:table-cell"
                                 style={{ color: 'var(--text-primary)' }}
                             >
@@ -220,7 +247,7 @@ export default function ScopeOfPracticeExplorer({ rows }: ScopeOfPracticeExplore
                         {visibleRows.length === 0 && (
                             <tr>
                                 <td
-                                    colSpan={4}
+                                    colSpan={5}
                                     className="py-6 text-center"
                                     style={{ color: 'var(--text-secondary)' }}
                                 >
@@ -258,6 +285,13 @@ export default function ScopeOfPracticeExplorer({ rows }: ScopeOfPracticeExplore
                                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text} ${colors.border} border`}
                                         >
                                             {row.authorityLabel}
+                                        </span>
+                                    </td>
+                                    <td className="py-3 px-4 hidden md:table-cell">
+                                        <span
+                                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${NLC_BADGE_CLASSES[row.nlcStatus]}`}
+                                        >
+                                            {NLC_STATUS_LABELS[row.nlcStatus]}
                                         </span>
                                     </td>
                                     <td

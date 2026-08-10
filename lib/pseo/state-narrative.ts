@@ -70,17 +70,39 @@ const DEMAND_PHRASES: Record<DemandTier, string> = {
 };
 
 // ─── NLC (Nurse Licensure Compact) membership ───────────────────────────────
-// Compact lets RNs/APRNs hold one multistate license valid across member states.
-// As of 2026-05 the following are NOT compact members and require a separate
-// state license. Source: NCSBN compact page. Update when membership shifts.
+// Compact lets RNs hold one multistate license valid across member states
+// (RN/LPN layer only — never the APRN license itself). CANONICAL sets —
+// mirrored in lib/blog-license-guides.ts and kept in sync by the drift test
+// in tests/regressions/p1-content-library-license-guides.test.ts; update all
+// copies together when membership shifts.
+//
+// Verified against the live NCSBN roster (nursecompact.com implementation
+// table) on 2026-08-11 — the same date as NLC_ROSTER_VERIFIED_AT in
+// lib/blog-license-guides.ts. The pre-2026-08 revision wrongly listed
+// Connecticut (implemented 2025-10-01), Rhode Island (2024-01-08), and
+// Washington (2024-01-31) as non-members, omitted Alaska, and carried
+// Massachusetts as a plain non-member.
+
+/** No enacted compact legislation — a separate state license is required. */
 const NLC_NON_MEMBER_STATES: ReadonlySet<string> = new Set([
-    'California', 'Connecticut', 'Hawaii', 'Illinois', 'Massachusetts',
+    'Alaska', 'California', 'District of Columbia', 'Hawaii', 'Illinois',
     'Michigan', 'Minnesota', 'Nevada', 'New York', 'Oregon',
-    'Rhode Island', 'Washington', 'District of Columbia',
 ]);
 
-function isNlcMember(stateName: string): boolean {
-    return !NLC_NON_MEMBER_STATES.has(stateName);
+// Enacted the compact but not yet implemented it (NCSBN implementation
+// date: to-be-determined). Until implementation, multistate licenses are
+// neither issued nor honored there — a boolean member/non-member flag
+// cannot represent this, so every narrative renders a distinct
+// "enacted, implementation pending — verify with the board" branch.
+const NLC_ENACTED_PENDING_STATES: ReadonlySet<string> = new Set([
+    'Massachusetts',
+]);
+
+type NlcStatus = 'member' | 'pending' | 'non-member';
+
+function nlcStatusOf(stateName: string): NlcStatus {
+    if (NLC_ENACTED_PENDING_STATES.has(stateName)) return 'pending';
+    return NLC_NON_MEMBER_STATES.has(stateName) ? 'non-member' : 'member';
 }
 
 // ─── Setting-specific lead phrases ──────────────────────────────────────────
@@ -99,12 +121,28 @@ interface StateCtx {
 type SettingLeadFn = (ctx: StateCtx) => string;
 
 const SETTING_LEADS: Record<string, SettingLeadFn> = {
-    'remote': (c) => isNlcMember(c.stateName)
-        ? `Remote ${brand.niche.short} positions covering patients in ${c.stateName} typically pay $110K–$170K and require active ${c.stateCode} state licensure plus a HIPAA-compliant home setup. Most postings welcome multi-state Compact licensure to broaden caseload reach.`
-        : `Remote ${brand.niche.short} positions covering patients in ${c.stateName} typically pay $110K–$170K and require active ${c.stateCode} state licensure plus a HIPAA-compliant home setup. ${c.stateName} is not a Nurse Licensure Compact member, so a separate ${c.stateCode} license is required even if you already hold a multistate license elsewhere.`,
-    'telehealth': (c) => isNlcMember(c.stateName)
-        ? `Telehealth ${brand.niche.short} roles serving the ${c.stateName} market combine asynchronous documentation with scheduled video visits. Employers require HIPAA-compliant equipment and at least a ${c.stateCode} license; multi-state Compact licensure expands earning potential.`
-        : `Telehealth ${brand.niche.short} roles serving the ${c.stateName} market combine asynchronous documentation with scheduled video visits. Employers require HIPAA-compliant equipment and a ${c.stateCode} license — ${c.stateName} is not a Compact member, so multistate-licensed clinicians still need a separate ${c.stateCode} credential.`,
+    'remote': (c) => {
+        const lead = `Remote ${brand.niche.short} positions covering patients in ${c.stateName} typically pay $110K–$170K and require active ${c.stateCode} state licensure plus a HIPAA-compliant home setup.`;
+        switch (nlcStatusOf(c.stateName)) {
+            case 'member':
+                return `${lead} Most postings welcome multi-state Compact licensure to broaden caseload reach.`;
+            case 'pending':
+                return `${lead} ${c.stateName} has enacted the Nurse Licensure Compact but has not yet implemented it, so a separate ${c.stateCode} license is still required until the state board of nursing announces an implementation date.`;
+            case 'non-member':
+                return `${lead} ${c.stateName} is not a Nurse Licensure Compact member, so a separate ${c.stateCode} license is required even if you already hold a multistate license elsewhere.`;
+        }
+    },
+    'telehealth': (c) => {
+        const lead = `Telehealth ${brand.niche.short} roles serving the ${c.stateName} market combine asynchronous documentation with scheduled video visits.`;
+        switch (nlcStatusOf(c.stateName)) {
+            case 'member':
+                return `${lead} Employers require HIPAA-compliant equipment and at least a ${c.stateCode} license; multi-state Compact licensure expands earning potential.`;
+            case 'pending':
+                return `${lead} Employers require HIPAA-compliant equipment and a ${c.stateCode} license — ${c.stateName} has enacted the Nurse Licensure Compact but implementation is pending, so multistate-licensed clinicians still need a separate ${c.stateCode} credential until the board completes implementation.`;
+            case 'non-member':
+                return `${lead} Employers require HIPAA-compliant equipment and a ${c.stateCode} license — ${c.stateName} is not a Compact member, so multistate-licensed clinicians still need a separate ${c.stateCode} credential.`;
+        }
+    },
     'inpatient': (c) => `Inpatient ${brand.niche.short} positions across ${c.stateName} cover acute inpatient units, hospitalist services, and step-down roles. Shift differentials, weekend premiums, and on-call stipends are standard alongside base salary.`,
     'outpatient': (c) => `Outpatient ${brand.niche.short} roles in ${c.stateName} span community health centers, group practices, and integrated primary-care settings. Caseloads typically run 12–18 patients per day with documentation time built in.`,
     'travel': (c) => `Travel ${brand.niche.short} assignments in ${c.stateName} are usually 8–26 weeks with tax-free housing stipends, completion bonuses, and 20–50% premium pay over permanent equivalents. Most agencies handle multi-state licensure logistics.`,
@@ -127,9 +165,17 @@ const SETTING_LEADS: Record<string, SettingLeadFn> = {
     // page type gets a distinct lead instead of only the shared authority/COL
     // sentences (the near-duplicate pattern this file exists to defeat).
     'per-diem': (c) => `Per-diem ${brand.niche.short} shifts across ${c.stateName} pay premium hourly rates in exchange for zero guaranteed hours, and most clinicians credential at two or three facilities to smooth volume. Each site onboards separately, so current licensure and certification paperwork shortens time-to-first-shift.`,
-    'locum-tenens': (c) => isNlcMember(c.stateName)
-        ? `Locum tenens ${brand.niche.short} assignments in ${c.stateName} typically run 4–26 weeks with agency-covered malpractice, travel, and housing. ${c.stateName}'s Nurse Licensure Compact membership lets multistate-licensed clinicians start assignments with minimal licensing lead time.`
-        : `Locum tenens ${brand.niche.short} assignments in ${c.stateName} typically run 4–26 weeks with agency-covered malpractice, travel, and housing. ${c.stateName} is not a Nurse Licensure Compact member, so budget extra lead time for a separate ${c.stateCode} license before your start date.`,
+    'locum-tenens': (c) => {
+        const lead = `Locum tenens ${brand.niche.short} assignments in ${c.stateName} typically run 4–26 weeks with agency-covered malpractice, travel, and housing.`;
+        switch (nlcStatusOf(c.stateName)) {
+            case 'member':
+                return `${lead} ${c.stateName}'s Nurse Licensure Compact membership lets multistate-licensed clinicians start assignments with minimal licensing lead time.`;
+            case 'pending':
+                return `${lead} ${c.stateName} has enacted the Nurse Licensure Compact but implementation is pending, so budget extra lead time for a separate ${c.stateCode} license until the state board announces an implementation date.`;
+            case 'non-member':
+                return `${lead} ${c.stateName} is not a Nurse Licensure Compact member, so budget extra lead time for a separate ${c.stateCode} license before your start date.`;
+        }
+    },
     'family-practice': (c) => `Family practice ${brand.niche.short} (FNP) roles across ${c.stateName} anchor primary-care access, from urban group practices to rural health clinics. FNP is the most widely recognized ${brand.niche.short} certification among ${c.stateName} employers.`,
     'adult-gerontology': (c) => `Adult-gerontology ${brand.niche.short} demand in ${c.stateName} tracks the aging patient base: AGPCNPs staff primary-care and long-term-care settings while AGACNPs cover hospital and specialty services.`,
     'pediatric': (c) => `Pediatric ${brand.niche.short} roles in ${c.stateName} span primary-care pediatrics, children's hospitals, and school-based programs. Acute-care PNP positions cluster around the state's larger children's facilities.`,
@@ -305,11 +351,15 @@ export function buildPlainStateNarrative(input: PlainStateNarrativeInput): strin
             : `Not enough ${stateName} postings disclose pay to compute a live average, so compare compensation posting by posting.`,
     );
 
-    // Sentence 5: NLC membership (NCSBN-sourced set above).
+    // Sentence 5: NLC status (NCSBN-sourced sets above — member, enacted-
+    // pending-implementation, and non-member each get an honest sentence).
+    const nlcStatus = nlcStatusOf(stateName);
     parts.push(
-        isNlcMember(stateName)
+        nlcStatus === 'member'
             ? `${stateName}'s Nurse Licensure Compact membership shortens licensing lead time for multistate-licensed clinicians picking up ${stateCode} roles.`
-            : `${stateName} is not a Nurse Licensure Compact member, so clinicians licensed elsewhere should budget extra time for a separate ${stateCode} license through the state board of nursing.`,
+            : nlcStatus === 'pending'
+                ? `${stateName} has enacted the Nurse Licensure Compact but has not yet implemented it, so until the state board of nursing announces an implementation date, clinicians licensed elsewhere should still budget time for a separate ${stateCode} license.`
+                : `${stateName} is not a Nurse Licensure Compact member, so clinicians licensed elsewhere should budget extra time for a separate ${stateCode} license through the state board of nursing.`,
     );
 
     return parts.join(' ');

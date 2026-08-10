@@ -9,6 +9,7 @@ import ScopeOfPracticeExplorer from '@/components/ScopeOfPracticeExplorer';
 import {
     AANP_STATE_PRACTICE_URL,
     NLC_LIVE_ROSTER_URL,
+    NLC_SOURCE_LINE,
     SOP_COUNTS,
     SOP_LAST_REVIEWED,
     SOP_PUBLISHED_AT,
@@ -24,12 +25,14 @@ import { getAuthorityColor } from '@/lib/state-practice-authority';
  *
  * Everything factual on this page comes from components/ScopeOfPracticeData.ts
  * (which itself renders lib/state-practice-authority.ts and the verified
- * NCSBN board directory in lib/blog-license-guides.ts verbatim). Dimensions
- * the repo does not store — prescribing schedules, agreement contents,
- * fees, renewal rules, NLC membership — are LINKED to their authorities
- * (state board, AANP, live NCSBN roster), never asserted. See the data
- * module's header for the full truth-rule rationale, including why NLC
- * membership booleans are deliberately absent.
+ * NCSBN board directory + corrected NLC status sets in
+ * lib/blog-license-guides.ts verbatim). Dimensions the repo does not
+ * store — prescribing schedules, agreement contents, fees, renewal rules
+ * — are LINKED to their authorities (state board, AANP, live NCSBN
+ * roster), never asserted. Compact status renders as the tri-state
+ * member / enacted-pending / non-member value with its NCSBN
+ * verification date; no implementation dates are asserted for pending
+ * states. See the data module's header for the full truth rules.
  */
 
 /**
@@ -237,9 +240,10 @@ export default function ScopeOfPracticePage() {
                         </div>
                     </div>
 
-                    {/* NLC note — link the live roster, never a stored list (see
-                        components/ScopeOfPracticeData.ts for why membership
-                        booleans are deliberately absent from this page). */}
+                    {/* NLC note — the status column above comes from the
+                        corrected canonical sets in lib/blog-license-guides.ts;
+                        this section cites the verification date and hands the
+                        reader the live roster for anything newer. */}
                     <div className="mb-8 md:mb-12">
                         <div className="rounded-xl p-6 md:p-8" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
                             <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
@@ -253,11 +257,20 @@ export default function ScopeOfPracticePage() {
                                 and the practice environment above is what governs how you
                                 work there.
                             </p>
+                            <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
+                                The Compact (NLC) column in the table above marks each
+                                jurisdiction as a member, not a member, or — the
+                                in-between case — <strong>enacted, implementation
+                                pending</strong>: the state has passed compact legislation
+                                but its board has not completed implementation, so
+                                multistate licenses are neither issued nor honored there
+                                yet and no implementation date is set. Verify the current
+                                status of a pending state with its board of nursing.
+                            </p>
                             <p style={{ color: 'var(--text-secondary)' }}>
-                                Membership shifts as legislatures act, and some
-                                jurisdictions sit between enactment and implementation, so
-                                this page deliberately does not publish a membership list.
-                                Check each state you plan to cover against the{' '}
+                                Source: {NLC_SOURCE_LINE}. Membership shifts as
+                                legislatures act, so check each state you plan to cover
+                                against the{' '}
                                 <a href={NLC_LIVE_ROSTER_URL} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>
                                     live NCSBN compact roster
                                     <ExternalLink className="inline h-3.5 w-3.5 ml-1" aria-hidden="true" />
