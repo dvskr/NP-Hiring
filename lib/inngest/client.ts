@@ -56,8 +56,27 @@ export interface BroadcastRequestedEventData {
     broadcastId: string;
 }
 
+/**
+ * This board's Inngest app id — a DURABLE IDENTITY, not a display string.
+ *
+ * It must be unique per deployed board. Until 2026-08-12 this file carried
+ * the donor template's app id verbatim, inherited when this board was
+ * forked: two deployed apps registered under one id, so Inngest routed both
+ * boards' events and cron registrations into the same app. The donor board
+ * now pins its own id with a CI test; this constant plus
+ * `tests/regressions/inngest-app-id.test.ts` — which names the foreign id
+ * explicitly and fails on it — is the symmetric lock on our side, so a
+ * future fork fails CI instead of silently rerouting production.
+ *
+ * Do NOT derive this from a brand/display token: renaming the board would
+ * then silently change the app id and orphan every in-flight durable run.
+ * Changing this value is a migration, not a rename — in-flight multi-step
+ * runs (fp-recovery sleeps up to 72h) do not carry over.
+ */
+export const INNGEST_APP_ID = 'np-hiring';
+
 export const inngest = new Inngest({
-    id: 'pmhnp-job-board',
+    id: INNGEST_APP_ID,
 });
 
 // B108 (1): unset keys in production means every send() below will fail —

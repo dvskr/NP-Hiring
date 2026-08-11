@@ -96,7 +96,6 @@
   "lib/filters.ts": 13,
   "lib/hooks/useViewedJobs.ts": 1,
   "lib/hooks/useViewMode.ts": 1,
-  "lib/inngest/client.ts": 1,
   "lib/invoice-generator.tsx": 1,
   "lib/jd-guardrails.ts": 8,
   "lib/job-normalizer.ts": 7,
