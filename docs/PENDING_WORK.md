@@ -1,8 +1,14 @@
 # Pending Work
 
-> Status as of 2026-08-11, HEAD `2daa875`. Everything buildable from the enterprise audit (159 items),
-> the content/SEO worklist (P0–P3 + wedges), and the competitive teardown (A1–A8) is **shipped**.
-> Suite: 4210/4211 (the one red is item 3.1 below, a decision not a defect).
+> Status as of 2026-08-16, HEAD `c02c93d` + uncommitted E2E fix tree. Everything buildable from the
+> enterprise audit (159 items), the content/SEO worklist (P0–P3 + wedges), and the competitive
+> teardown (A1–A8) is **shipped**. The first real production build + runtime E2E (2026-08-15/16)
+> then found 1 build blocker + 7 runtime defects (incl. CRITICAL D1: CSP nonce killed hydration on
+> every prerendered page); **all are fixed in the working tree with 77 green regression tests
+> (`tests/regressions/p7-runtime-*`), but NOT yet committed** — committing + deploying that tree,
+> then live-verifying D1 hydration and D3 ISR headers, is now the top deploy action. Full verdict:
+> `docs/audits/2026-08-12-e2e-runtime-verdict.md`.
+> Suite: 4210/4211 pre-E2E (+77 new); the one red is item 3.1 below, a decision not a defect.
 > What remains is listed here: deploy actions, human inputs, product decisions, data procurement,
 > and recurring maintenance. Trackers: content/SEO tracker and competitor teardown artifacts
 > (links in the project README of whoever holds them; both also live in the session scratchpad).

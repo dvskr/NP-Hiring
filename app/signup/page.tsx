@@ -7,7 +7,8 @@ import { safeInternalPath } from '@/lib/auth/safe-redirect'
 import { Suspense } from 'react'
 
 export const metadata = {
-  title: `Create Account | ${brand.name}`,
+  // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
+  title: 'Create Account',
   description: `Create your free ${brand.name} account. Save jobs, set up alerts, and get matched with ${brand.niche.descriptor} positions.`,
   // Page is noindexed via middleware X-Robots-Tag (per app/robots.ts P2.3
   // unblock window). Self-canonical consolidates ?redirectTo=… variants

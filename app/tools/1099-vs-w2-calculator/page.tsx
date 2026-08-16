@@ -39,7 +39,8 @@ const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`1099 vs W2
 const TYPICAL_BAND = `$${Math.round(salaryConfig.normalizer.typical.min / 1000)}K–$${Math.round(salaryConfig.normalizer.typical.max / 1000)}K`;
 
 export const metadata: Metadata = {
-  title: `${PAGE_TITLE} | ${brand.name}`,
+  // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
+  title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   keywords: [
     `1099 vs w2 calculator ${brand.niche.short.toLowerCase()}`,

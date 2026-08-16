@@ -25,7 +25,8 @@ const PAGE_DESCRIPTION =
     `. Every figure is sample-gated and sourced.`;
 
 export const metadata: Metadata = {
-    title: `${PAGE_TITLE} | ${brand.name}`,
+    // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
+    title: PAGE_TITLE,
     description: PAGE_DESCRIPTION,
     alternates: { canonical: PAGE_URL },
     robots: { index: true, follow: true },

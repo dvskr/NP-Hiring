@@ -55,7 +55,8 @@ export const revalidate = 3600;
 const PAGE_URL = `${brand.baseUrl}${PAY_TRANSPARENCY_REPORT.path}`;
 
 export const metadata: Metadata = {
-    title: `${PAY_TRANSPARENCY_REPORT.title} | ${brand.name}`,
+    // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
+    title: PAY_TRANSPARENCY_REPORT.title,
     description: PAY_TRANSPARENCY_REPORT.description,
     alternates: { canonical: PAGE_URL },
     robots: { index: true, follow: true },

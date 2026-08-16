@@ -32,6 +32,17 @@ import '@/app/editorial.css';
 // auto-link processing. revalidate also lets Vercel serve from edge cache.
 export const revalidate = 3600;
 
+// P7 runtime fix D3: without a generateStaticParams export, `revalidate`
+// is a silent no-op — Next renders the dynamic segment fully dynamically
+// on every request (runtime-verified `private, no-cache, no-store`).
+// Returning [] enables on-demand static generation: first hit renders +
+// caches, later hits serve the cache until `revalidate` expires. Full
+// rationale in app/jobs/[slug]/page.tsx; guarded by
+// tests/regressions/p7-runtime-isr-static-params.test.ts.
+export function generateStaticParams(): Array<{ slug: string }> {
+    return [];
+}
+
 interface Props {
     params: Promise<{ slug: string }>;
 }

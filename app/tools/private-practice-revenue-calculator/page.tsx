@@ -55,7 +55,8 @@ const EXAMPLE_OVERHEAD_WRONG = EXAMPLE_OVERHEAD_PCT + WIDEST_STEP_PCT;
 const SCENARIO_LABELS = GUIDE_SCENARIOS.map((scenario) => scenario.label.toLowerCase()).join(', ');
 
 export const metadata: Metadata = {
-  title: `${PAGE_TITLE} | ${brand.name}`,
+  // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
+  title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   keywords: [
     `${brand.niche.short.toLowerCase()} private practice revenue calculator`,

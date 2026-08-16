@@ -28,6 +28,7 @@ import { TOOL_PATHS, TOOLS_HUB_PATH } from '@/app/tools/tools-registry'
 // which states to link with the identical call. Reading the same functions here
 // is what keeps the sitemap from submitting a directory that 404s.
 import {
+  buildCitySlug,
   buildStateCityDirectory,
   cityLinkResolves,
   shouldRenderStateCityDirectory,
@@ -543,25 +544,47 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       take: 2000,
     })
 
-    const cityPages: MetadataRoute.Sitemap = topCities
-      .filter(c => c.city && c.state)
+    // P7 runtime fix D4 — three defects lived in this block:
+    //   1. Metro-consolidated cities: /jobs/city/<slug> permanentRedirect()s
+    //      (308) to /jobs/metro/<slug> when the slug matches a curated metro
+    //      (app/jobs/city/[slug]/page.tsx), and metroPages above already emits
+    //      the metro twin — so 13 sitemap entries were redirecting duplicates.
+    //   2. Slug derivation was a local re-implementation that left a doubled
+    //      hyphen when the DB city value ends in space/punctuation
+    //      ("Boston " → boston--ma → 404). buildCitySlug is the canonical,
+    //      trim-safe form the city route actually parses.
+    //   3. Dirty twins ("Boston" + "Boston ") now collapse to one slug, so
+    //      entries are deduped by slug, keeping the freshest lastModified.
+    // cityLinkResolves additionally drops slugs whose lossy round-trip can
+    // never match their stored city name ("St. Louis" → st-louis → "St Louis"
+    // → 0 rows → hard 404) — same veto the state directories already apply.
+    const metroTwinSlugs = new Set(METRO_CITIES.map(m => m.slug));
+    const cityPageBySlug = new Map<string, { url: string; lastModified: Date; changeFrequency: 'weekly'; priority: number }>();
+    for (const c of topCities) {
+      if (!c.city || !c.state) continue;
       // GSC Fix: Only include cities with ≥3 active jobs to prevent submitting
       // thin city pages that get flagged as soft 404 or crawled-not-indexed.
-      .filter(c => c._count.city >= 3)
-      .map(c => {
-        const stateVal = c.state!.trim();
-        const code = stateVal.length === 2 ? stateVal.toUpperCase() : STATE_NAME_TO_CODE[stateVal] || null;
-        if (!code) return null;
-        const slug = `${c.city!.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${code.toLowerCase()}`;
-        return {
+      if (c._count.city < 3) continue;
+      const stateVal = c.state.trim();
+      const code = stateVal.length === 2 ? stateVal.toUpperCase() : STATE_NAME_TO_CODE[stateVal] || null;
+      if (!code) continue;
+      const slug = buildCitySlug(c.city, code);
+      if (!slug) continue;
+      if (metroTwinSlugs.has(slug)) continue;
+      if (!cityLinkResolves(c.city, code)) continue;
+      // B27: real per-city freshness — newest job in that city.
+      const lastModified = c._max.updatedAt ?? latestJobDate;
+      const existing = cityPageBySlug.get(slug);
+      if (!existing || lastModified > existing.lastModified) {
+        cityPageBySlug.set(slug, {
           url: `${baseUrl}/jobs/city/${slug}`,
-          // B27: real per-city freshness — newest job in that city.
-          lastModified: c._max.updatedAt ?? latestJobDate,
+          lastModified,
           changeFrequency: 'weekly' as const,
           priority: 0.7,
-        };
-      })
-      .filter((c): c is NonNullable<typeof c> => c !== null)
+        });
+      }
+    }
+    const cityPages: MetadataRoute.Sitemap = [...cityPageBySlug.values()]
 
     // Company pages — only include companies that:
     // 1. Actually exist in the Company table (so normalizedName matches what the page uses)

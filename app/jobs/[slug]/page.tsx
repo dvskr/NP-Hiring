@@ -54,6 +54,21 @@ import { notFound } from 'next/navigation';
 // app/layout.tsx). Guarded by tests/regressions/shell-isr-static-layout.test.ts.
 export const revalidate = 3600;
 
+// P7 runtime fix D3: `revalidate` alone does NOT make a dynamic segment
+// ISR — without a generateStaticParams export, Next renders the route
+// fully dynamically on every request (runtime-verified: `private,
+// no-cache, no-store`, no x-nextjs-cache, 0.5–5.6 s of DB work per hit),
+// which is the exact Googlebot-burst → DB-pool-exhaustion scenario the
+// middleware crawler-cache exclusion assumes ISR is preventing. Returning
+// [] prerenders nothing at build time (no build-time DB fan-out over
+// thousands of jobs) but flips the route to on-demand static generation:
+// the first hit renders + caches, subsequent hits serve the cached page
+// until `revalidate` expires. Guarded by
+// tests/regressions/p7-runtime-isr-static-params.test.ts.
+export function generateStaticParams(): Array<{ slug: string }> {
+  return [];
+}
+
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 
 interface JobPageProps {

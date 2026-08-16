@@ -19,7 +19,8 @@ export const revalidate = 3600;
 const SEEKERS_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Find Your Next ${brand.niche.short} Role`)}&type=page`;
 
 export const metadata: Metadata = {
-  title: `For Job Seekers — Find Your Next ${brand.niche.short} Role | ${brand.name}`,
+  // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
+  title: `For Job Seekers — Find Your Next ${brand.niche.short} Role`,
   // Removed the hardcoded "9,000+" job count (audit 09 M-21) — the actual
   // count drifts and a stale figure in metadata that doesn't match the
   // live UI is a credibility hit. Description now describes the platform

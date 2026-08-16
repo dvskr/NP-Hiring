@@ -84,8 +84,16 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
     ? `${(Math.floor(totalJobs / 100) * 100).toLocaleString()}+`
     : totalJobs.toLocaleString();
 
-  // Build dynamic title and description based on filters
-  let title = `Browse ${jobCountDisplay} ${brand.niche.short} & ${brand.niche.medium} Jobs Near Me`;
+  // Build dynamic title and description based on filters.
+  //
+  // P7 runtime fix D6: dedupe the niche pair. The brand data is correct for
+  // this niche (short === medium === 'NP' is a legitimate state — the NP
+  // board has no narrower credential label), so the TEMPLATE must collapse
+  // "X & X" to "X" instead of rendering "Browse 851 NP & NP Jobs Near Me".
+  const nicheTitlePair = brand.niche.short === brand.niche.medium
+    ? brand.niche.short
+    : `${brand.niche.short} & ${brand.niche.medium}`;
+  let title = `Browse ${jobCountDisplay} ${nicheTitlePair} Jobs Near Me`;
   // SEO Fix #7: trim default desc to ≤160 chars (Google SERP cap). Previous
   // 280-char default got truncated and lost the value-prop tail.
   let description = `Search ${jobCountDisplay} ${brand.niche.short} & ${brand.niche.adjective} NP jobs by state, salary, and type — remote, telehealth, in-person, travel, locum & per diem. Updated daily.`;

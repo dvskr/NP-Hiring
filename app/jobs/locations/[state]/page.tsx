@@ -61,10 +61,18 @@ interface StateDirectoryData {
 const jsonLd = (obj: unknown): string =>
   JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 
-// No generateStaticParams: the sibling geo routes (/jobs/state/[state],
-// /jobs/city/[slug]) are all on-demand ISR, and pre-rendering 51 states would
-// run the directory aggregate 51× at build time for ~25 pages that survive the
-// gate.
+// P7 runtime fix D3: an empty generateStaticParams — NOT its absence — is
+// what makes this route on-demand ISR. The previous "No generateStaticParams"
+// comment assumed `revalidate` alone was enough; in reality a dynamic segment
+// without the export renders fully dynamically on every request. Returning []
+// keeps the original goal intact: nothing prerenders at build (the directory
+// aggregate never runs 51× for ~25 surviving pages), while the first hit per
+// state renders + caches until `revalidate` expires. Full rationale in
+// app/jobs/[slug]/page.tsx; guarded by
+// tests/regressions/p7-runtime-isr-static-params.test.ts.
+export function generateStaticParams(): Array<{ state: string }> {
+  return [];
+}
 
 /**
  * `cache` dedupes the three aggregates between generateMetadata and the render

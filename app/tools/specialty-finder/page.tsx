@@ -47,7 +47,8 @@ const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.ni
 const DIMENSION_LIST = QUIZ_QUESTIONS.map((question) => question.dimension.toLowerCase()).join(', ');
 
 export const metadata: Metadata = {
-  title: `${PAGE_TITLE} | ${brand.name}`,
+  // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
+  title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   keywords: [
     `${brand.niche.short.toLowerCase()} specialty finder`,

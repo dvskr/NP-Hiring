@@ -33,7 +33,10 @@ const PAGE_DESCRIPTION = `${TOOLS.length} free interactive tools for ${brand.nic
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Free ${brand.niche.short} Career Tools`)}&type=page`;
 
 export const metadata: Metadata = {
-  title: `${PAGE_TITLE} | ${brand.name}`,
+  // P7 runtime fix D7: no manual brand suffix — the root layout's title
+  // template (`%s | ${brand.name}`) appends it, and doubling it rendered
+  // "… | NP Hiring | NP Hiring".
+  title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   keywords: [
     `free ${brand.niche.short.toLowerCase()} tools`,

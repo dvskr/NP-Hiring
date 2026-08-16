@@ -27,6 +27,17 @@ const STORAGE_BASE = brand.assets.storageBase;
 // force-dynamic removed: it overrides revalidate and defeats ISR caching
 export const revalidate = 3600; // Revalidate every hour
 
+// P7 runtime fix D3: without a generateStaticParams export, `revalidate`
+// is a silent no-op — Next renders the dynamic segment fully dynamically
+// on every request (runtime-verified `private, no-cache, no-store` on
+// /jobs/city/austin-tx). Returning [] enables on-demand static
+// generation without build-time DB fan-out over 4,135 city records. Full
+// rationale in app/jobs/[slug]/page.tsx; guarded by
+// tests/regressions/p7-runtime-isr-static-params.test.ts.
+export function generateStaticParams(): Array<{ slug: string }> {
+    return [];
+}
+
 // ─── State mappings ──────────────────────────────────────────────────────────
 
 const STATE_CODES: Record<string, string> = {

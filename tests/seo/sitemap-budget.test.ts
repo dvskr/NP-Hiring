@@ -10,6 +10,16 @@
  * Mocked Prisma — runs against in-memory fixtures, no DB required.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// This file executes the REAL production sitemap over a 2000-city fixture,
+// importing the full sitemap module graph (tools/compare/reports registries,
+// the metro dataset, and the state-directory slug machinery). That run sat
+// just under vitest's 5s default; the P7-D4 correctness pass (per-city slug
+// canonicalization + metro-twin dedup + round-trip veto) pushed it over.
+// The cost is per-invocation module + fixture work, not a hang — prod
+// generates the sitemap once per revalidate, where ~hundreds of ms for
+// no-404/no-redirect submissions is the right trade.
+vi.setConfig({ testTimeout: 30_000 });
 import { prisma } from '@/lib/prisma';
 import sitemapHandler from '@/app/sitemap';
 import robotsHandler from '@/app/robots';

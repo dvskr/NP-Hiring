@@ -17,6 +17,16 @@ import ClaimProfileCta from './ClaimProfileCta';
 // Previously defaulted to dynamic (no cache) → every crawl hit the DB.
 export const revalidate = 3600;
 
+// P7 runtime fix D3: without a generateStaticParams export, `revalidate`
+// is a silent no-op — Next renders the dynamic segment fully dynamically
+// on every request (runtime-verified: /companies/life-stance took 5.1 s
+// of uncached DB work per hit). Returning [] enables on-demand static
+// generation. Full rationale in app/jobs/[slug]/page.tsx; guarded by
+// tests/regressions/p7-runtime-isr-static-params.test.ts.
+export function generateStaticParams(): Array<{ slug: string }> {
+    return [];
+}
+
 interface Props {
     params: Promise<{ slug: string }>;
 }

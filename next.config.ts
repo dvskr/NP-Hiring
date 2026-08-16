@@ -80,6 +80,20 @@ const nextConfig: NextConfig = {
   // Experimental features for better performance
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
+
+    // Build-time prerender F6: `next build` spawns ~cpu-count export workers,
+    // and each worker prerenders up to `staticGenerationMaxConcurrency`
+    // (default 8) pages at once. Every page render borrows from lib/prisma.ts's
+    // pg Pool, which is deliberately capped at max=2 per process for the
+    // Vercel-serverless/PgBouncer EMAXCONN reasons documented there. 8 in-flight
+    // pages × several parallel queries each, queued on 2 connections with a 10s
+    // connectionTimeoutMillis, starves the pool — the first prod build died with
+    // "timeout exceeded when trying to connect" on /salary-guide/[state] after
+    // ~200 pages. Cap in-flight pages per worker at the pool size so the queue
+    // can't outrun the connections, and retry a failed page before failing the
+    // whole build (remote pooler latency spikes are transient).
+    staticGenerationMaxConcurrency: 2,
+    staticGenerationRetryCount: 3,
   },
 
   // Headers for caching and security

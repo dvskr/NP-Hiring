@@ -7,7 +7,8 @@ import AuthLayout from '@/components/auth/AuthLayout'
 import { Suspense } from 'react'
 
 export const metadata = {
-  title: `Sign In | ${brand.name}`,
+  // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
+  title: 'Sign In',
   description: `Sign in to your ${brand.name} account to manage saved jobs, job alerts, and applications.`,
   // Page is noindexed via middleware X-Robots-Tag (per app/robots.ts P2.3
   // unblock window). Self-canonical still emitted so any inbound link

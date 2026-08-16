@@ -64,7 +64,8 @@ const EDITION: ReportEdition = EDITION_LOOKUP;
 const PAGE_URL = `${brand.baseUrl}${EDITION.path}`;
 
 export const metadata: Metadata = {
-    title: `${EDITION.title} | ${brand.name}`,
+    // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
+    title: EDITION.title,
     description: EDITION.description,
     alternates: { canonical: PAGE_URL },
     robots: { index: true, follow: true },

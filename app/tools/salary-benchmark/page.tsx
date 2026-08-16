@@ -26,7 +26,8 @@ const PAGE_DESCRIPTION = `Free salary benchmark for employers hiring ${brand.nic
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`What should I pay a ${brand.niche.long}?`)}&type=page`;
 
 export const metadata: Metadata = {
-  title: `${PAGE_TITLE} | ${brand.name}`,
+  // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
+  title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   keywords: [
     `what should i pay a ${brand.niche.descriptor}`,

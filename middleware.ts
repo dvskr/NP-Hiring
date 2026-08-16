@@ -737,7 +737,17 @@ export async function middleware(request: NextRequest) {
             }
         }
         // /jobs/{cat}/{x} — category × state (only some taxonomies have state pages)
-        else if (segs.length === 3 && segs[1] !== 'city' && segs[1] !== 'metro' && segs[1] !== 'edit') {
+        //
+        // P7 runtime fix D2: 'locations' is a NAMESPACE segment
+        // (/jobs/locations/[state] is the per-state city directory this
+        // file's own header comment promises to exclude — see
+        // JOBS_NAMESPACE_SEGMENTS in lib/pseo/taxonomy-registry.ts), but
+        // it was missing from this exclusion list, so all 51 state
+        // directories fell through to the "unknown taxonomy" gone410()
+        // below while the live /jobs/locations hub linked straight to
+        // them. 'state' never reaches this branch (handled above);
+        // 'city'/'metro'/'edit'/'locations' must all be skipped here.
+        else if (segs.length === 3 && segs[1] !== 'city' && segs[1] !== 'metro' && segs[1] !== 'edit' && segs[1] !== 'locations') {
             const cat = segs[1];
             const tail = segs[2];
             // Skip job-detail pages (slug ends in UUID) — handled by job-detail 410 block above
@@ -774,17 +784,35 @@ export async function middleware(request: NextRequest) {
         // 404 stays at page level for now; legacy 404s will be drained via P2 cron.
     }
 
-    // ── CSP Nonce Generation ──────────────────────────────────────────
-    // Generate a unique nonce per request for Content-Security-Policy
-    const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
-
+    // ── Content-Security-Policy ───────────────────────────────────────
     const isLocalhost = request.headers.get('host')?.includes('localhost');
 
-    // Build CSP with nonce.
+    // P7 runtime fix D1: the per-request CSP nonce is GONE — it could
+    // never work on this app. ~164 routes are prerendered/ISR: their HTML
+    // is generated at build/revalidate time and served from cache, and
+    // Next.js bakes nonce-less inline RSC flight scripts
+    // (`self.__next_f.push(...)`) into that HTML. A fresh per-request
+    // nonce in the header can never match scripts inside cached static
+    // HTML — and per the CSP spec, the mere PRESENCE of a nonce makes
+    // browsers ignore 'unsafe-inline'. Result (runtime-verified): every
+    // prerendered page threw dozens of "Refused to execute inline script"
+    // violations, an uncaught "Error: Connection closed." pageerror, and
+    // never hydrated — every client component (1099 calculator, specialty
+    // quiz, all interactivity) was inert. Nonce CSPs are only viable when
+    // every page is dynamically rendered (the Next.js CSP docs say
+    // exactly this), and this board deliberately keeps its pSEO surface
+    // static/ISR for DB-pool survival. Do NOT reintroduce a nonce (or a
+    // hash — the flight payload differs per page and per revalidation,
+    // and middleware never sees the HTML) without moving the whole app to
+    // dynamic rendering first.
     //
-    // Scripts: nonce + explicit hosts. We do NOT use 'strict-dynamic' —
-    // we still want the host whitelist to block third-party scripts a
-    // successful XSS might try to inject.
+    // Scripts: 'self' + 'unsafe-inline' + explicit hosts. 'unsafe-inline'
+    // is what lets the framework's inline flight/hydration scripts run.
+    // We still do NOT use 'strict-dynamic' — the host whitelist keeps
+    // blocking third-party script SOURCES an XSS might inject. Residual,
+    // consciously accepted gap: CSP no longer blocks injected *inline*
+    // scripts; React's output escaping + lib/sanitize.ts remain the
+    // primary XSS defenses (documented in docs/compliance-audit.md #20).
     //
     // Styles: 'unsafe-inline' is kept because Next.js (App Router +
     // Turbopack) injects runtime style elements that cannot be nonced.
@@ -795,8 +823,8 @@ export async function middleware(request: NextRequest) {
     // differently for inline vs external resources.
     const cspDirectives = [
         "default-src 'self'",
-        `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com`,
-        `script-src-elem 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com`,
+        "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com",
+        "script-src-elem 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "style-src-attr 'unsafe-inline'",
@@ -934,16 +962,16 @@ export async function middleware(request: NextRequest) {
     //   /widget            — iframe-embeddable jobs widget; needs
     //                        `frame-ancestors *.edu` instead of `'none'`
     //
-    // ISR fix F5: the nonce is NO LONGER forwarded to the app via an
-    // x-nonce header — the root layout used to read it with headers(),
-    // which opted every route into dynamic rendering and silently
-    // disabled all ISR. Nothing in the layout tree renders an inline
-    // executable <script> anymore (GA runs from bundled module code +
-    // a host-allowlisted external loader; JSON-LD data blocks are not
-    // executed so CSP does not apply to them). The per-request nonce
-    // stays in the CSP header purely to keep the strict no-inline-script
-    // posture: any future inline script must be a client-side concern or
-    // this decision must be consciously revisited.
+    // ISR fix F5 → P7 runtime fix D1: there is no nonce at all anymore.
+    // F5 stopped forwarding it via an x-nonce header (the root layout
+    // used to read it with headers(), which opted every route into
+    // dynamic rendering and silently disabled all ISR). D1 then removed
+    // the nonce from the CSP header itself, because a per-request nonce
+    // can never match the nonce-less inline RSC flight scripts baked into
+    // prerendered/ISR HTML — it blocked hydration on every static page
+    // (see the CSP comment block above). The header is now identical for
+    // every request, which also makes it safe to cache alongside the
+    // static HTML it protects.
     const skipCsp =
       request.nextUrl.pathname.startsWith('/api/email-preview') ||
       request.nextUrl.pathname.startsWith('/widget');
@@ -1147,15 +1175,21 @@ export async function middleware(request: NextRequest) {
     //
     // Job-detail pages are excluded because they are covered by ISR
     // (`export const revalidate = 3600` in app/jobs/[slug]/page.tsx).
-    // That ISR is only REAL while the root layout stays free of Dynamic
-    // APIs — a single headers()/cookies() read in app/layout.tsx opts
-    // every route into dynamic rendering and silently turns this
-    // exclusion into "no caching at all for job-detail crawls" (the exact
-    // DB-pool-exhaustion scenario this block exists to prevent). See the
-    // ISR fix F5 comment in app/layout.tsx; if a Dynamic API ever has to
-    // return to the layout, extend this crawler cache to job-detail URLs
-    // instead. NOTE: confirm in prod by checking the response headers /
-    // `x-vercel-cache` on a pSEO URL with a crawler UA.
+    // That ISR is only REAL while TWO conditions hold:
+    //   1. the root layout stays free of Dynamic APIs — a single
+    //      headers()/cookies() read in app/layout.tsx opts every route
+    //      into dynamic rendering (ISR fix F5, see app/layout.tsx);
+    //   2. the page EXPORTS generateStaticParams — P7 runtime fix D3:
+    //      `revalidate` alone on a dynamic segment without a
+    //      generateStaticParams export does NOT enable ISR; Next renders
+    //      every hit fully dynamically (`private, no-cache, no-store`,
+    //      0.5–5.6 s of DB work per request — runtime-verified). The
+    //      detail pages now export `generateStaticParams() { return [] }`
+    //      to opt into on-demand static generation, guarded by
+    //      tests/regressions/p7-runtime-isr-static-params.test.ts.
+    // If either condition ever has to break, extend this crawler cache to
+    // job-detail URLs instead. NOTE: confirm in prod by checking the
+    // response headers / `x-vercel-cache` on a pSEO URL with a crawler UA.
     const isJobDetailUrl =
         /\/jobs\/[^/]*[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(pathname);
     if (
