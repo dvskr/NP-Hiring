@@ -41,7 +41,7 @@ async function auditSlug(slug: string) {
     // Random 15 sample: order by id desc-skipped pseudo-random; use a simple
     // OFFSET-based scatter rather than ORDER BY random() to stay portable.
     const sampleSize = Math.min(15, total);
-    let sample: { title: string; city: string | null; state: string | null; experienceLevel: string | null }[] = [];
+    const sample: { title: string; city: string | null; state: string | null; experienceLevel: string | null }[] = [];
     if (sampleSize > 0) {
         // Pull a generous slice then pick spread indices.
         const all = await prisma.job.findMany({

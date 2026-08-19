@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
     Activity, AlertTriangle, ArrowRight, CheckCircle2, Database,
     ExternalLink, HeartPulse, Layers, Radio, Search, ShieldAlert, TrendingDown,
@@ -443,7 +444,7 @@ export default function JobHealthDashboard() {
                     Generated {fmtRelativeTime(data.generatedAt)}.
                     Source-presence baseline-tuning ramped 2026-04-29.
                 </span>
-                <a
+                <Link
                     href="/admin/cron"
                     style={{
                         display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -452,7 +453,7 @@ export default function JobHealthDashboard() {
                     }}
                 >
                     Cron schedule & manual triggers <ArrowRight size={14} />
-                </a>
+                </Link>
             </div>
         </div>
     );

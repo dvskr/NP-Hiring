@@ -372,8 +372,8 @@ async function main() {
             );
             console.log(`  ✅  UPDATED  ${slug} — ${description} (+${delta} chars)`);
             updated++;
-        } catch (err: any) {
-            console.error(`  ❌  ERROR  ${slug}: ${err.message}`);
+        } catch (err) {
+            console.error(`  ❌  ERROR  ${slug}: ${err instanceof Error ? err.message : String(err)}`);
             errors++;
         }
     }

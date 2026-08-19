@@ -33,6 +33,11 @@ export default function ScrollIndicator() {
     const [trackHeight, setTrackHeight] = useState(0);
     const [visible, setVisible] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    // Dragging lives in BOTH a ref and state: the ref gives the window-level
+    // mousemove/mouseup listeners (registered once) a synchronous read, while
+    // the state mirror is what render reads for the thumb's transition style —
+    // refs must not be read during render (react-hooks/refs).
+    const [isDragging, setIsDragging] = useState(false);
     const draggingRef = useRef(false);
     const dragStartRef = useRef<{ y: number; scrollY: number } | null>(null);
     const trackRef = useRef<HTMLDivElement>(null);
@@ -123,6 +128,7 @@ export default function ScrollIndicator() {
         e.preventDefault();
         e.stopPropagation();
         draggingRef.current = true;
+        setIsDragging(true);
         dragStartRef.current = { y: e.clientY, scrollY: window.scrollY };
         document.body.style.userSelect = 'none';
     };
@@ -144,6 +150,7 @@ export default function ScrollIndicator() {
         const onUp = () => {
             if (draggingRef.current) {
                 draggingRef.current = false;
+                setIsDragging(false);
                 dragStartRef.current = null;
                 document.body.style.userSelect = '';
             }
@@ -199,7 +206,7 @@ export default function ScrollIndicator() {
                         '0 1px 3px rgba(190,24,93, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
                     cursor: 'grab',
                     transition:
-                        draggingRef.current
+                        isDragging
                             ? 'none'
                             : 'background 0.15s ease',
                 }}

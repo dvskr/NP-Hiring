@@ -15,12 +15,13 @@
 // not PROD_DATABASE_URL — running a read-only audit against the dev
 // snapshot is sufficient for filter-quality analysis.
 import { config as dotenvConfig } from 'dotenv';
+import type { Prisma } from '@prisma/client';
 dotenvConfig({ path: '.env.local' });
 if (!process.env.DATABASE_URL) dotenvConfig({ path: '.env' });
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { prisma } = require('../../lib/prisma') as typeof import('../../lib/prisma');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { buildCategoryWhereClause, freshnessClause } = require('../../lib/filters') as typeof import('../../lib/filters');
 
 type Classification = 'TRUE_POSITIVE' | 'FALSE_POSITIVE';
@@ -201,7 +202,7 @@ async function probeLatentRisk() {
   // of whether the global exclusions currently mask them.
   const now = new Date();
   const fresh = freshnessClause(now, '30d');
-  const probes: Array<{ slug: string; keyword: string; clause: any }> = [
+  const probes: Array<{ slug: string; keyword: string; clause: Prisma.JobWhereInput }> = [
     { slug: 'community-health', keyword: 'community', clause: { title: { contains: 'community', mode: 'insensitive' as const } } },
     { slug: 'correctional', keyword: 'forensic', clause: { title: { contains: 'forensic', mode: 'insensitive' as const } } },
     { slug: 'child-adolescent', keyword: 'pediatric mental', clause: { title: { contains: 'pediatric mental', mode: 'insensitive' as const } } },

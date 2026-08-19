@@ -85,7 +85,7 @@ async function main() {
   console.log();
 
   // 5. Spot-check fuzzy classifications: are they real?
-  const fuzzyDupSample = await prisma.$queryRawUnsafe<Array<{ id: string; title: string; employer: string; location: string; raw_data: any }>>(`
+  const fuzzyDupSample = await prisma.$queryRawUnsafe<Array<{ id: string; title: string; employer: string; location: string; raw_data: { matchedJobId?: string | null } | null }>>(`
     SELECT id, title, employer, location, raw_data
     FROM rejected_jobs
     WHERE rejection_reason = 'duplicate_fuzzy_title'

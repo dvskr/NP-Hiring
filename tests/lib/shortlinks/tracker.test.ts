@@ -47,9 +47,21 @@ describe('hashIp', () => {
   })
 
   it('does not include the raw IP in the hash output', () => {
-    const h = hashIp('203.0.113.42', new Date('2026-05-12T10:00:00Z'))!
-    expect(h.includes('203')).toBe(false)
-    expect(h.includes('113')).toBe(false)
+    // FLAKE FIX (seen 2026-08-05 and 2026-08-17): the old assertions checked
+    // that the hex digest doesn't contain the substrings '203'/'113' — but
+    // those are valid hex sequences, each appearing by chance in ~1.5% of
+    // 64-char digests, and the salt carries per-run entropy, so the test
+    // rolled new dice every run. Assert the real privacy invariants instead:
+    // the output is a pure hex digest (so it cannot embed the dotted IP),
+    // and it is not the raw input.
+    const ip = '203.0.113.42'
+    const h = hashIp(ip, new Date('2026-05-12T10:00:00Z'))!
+    expect(h).toMatch(/^[0-9a-f]{64}$/)
+    expect(h).not.toContain(ip)
+    expect(h).not.toBe(ip)
+    // Distinct IPs must not collide into the same digest.
+    const other = hashIp('198.51.100.7', new Date('2026-05-12T10:00:00Z'))!
+    expect(other).not.toBe(h)
   })
 })
 

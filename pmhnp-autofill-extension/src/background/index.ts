@@ -275,6 +275,7 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
             // Fetch the user's resume and return as base64
             try {
                 const profile = await fetchProfile();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- profile is dynamic JSON from the job-board API; shape is not typed
                 const resumeUrl = (profile as any)?.meta?.resumeUrl;
 
                 if (!resumeUrl) {

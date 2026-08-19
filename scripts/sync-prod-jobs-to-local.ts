@@ -33,7 +33,7 @@
  */
 
 import { Pool } from 'pg';
-import { promises as fs } from 'fs';
+import { promises as fs, readFileSync } from 'fs';
 import path from 'path';
 
 interface SyncStats {
@@ -107,7 +107,7 @@ const SYNC_ORDER: ReadonlyArray<SyncEntry> = [
 ];
 
 function parseEnvFile(filePath: string): Record<string, string> {
-    const text = require('fs').readFileSync(filePath, 'utf-8') as string;
+    const text = readFileSync(filePath, 'utf-8');
     const out: Record<string, string> = {};
     for (const line of text.split('\n')) {
         const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/i);

@@ -715,7 +715,7 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
         const savedJob = await prisma.job.create({
           data: {
             id: newId,
-            ...(normalizedJob as any),
+            ...normalizedJob,
             slug,
             companyId,
             qualityScore,

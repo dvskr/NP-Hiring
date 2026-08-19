@@ -275,7 +275,7 @@ async function main(): Promise<void> {
     // ═══ 11. NON-PMHNP TITLES IN PUBLISHED CATALOG ═══════════════════════
     header('11. Hard-flagged non-PMHNP titles in published catalog');
     const knownNonPmhnp = ['peer specialist', 'medical assistant', 'rn ', 'registered nurse', 'lpn', 'cna ', 'pharmacy', 'phlebotomist', 'security officer', 'janitor', 'food service', 'plumber'];
-    let flaggedNonPmhnp: { title: string; employer: string }[] = [];
+    const flaggedNonPmhnp: { title: string; employer: string }[] = [];
     for (const term of knownNonPmhnp) {
         const rows = await prisma.job.findMany({
             where: { isPublished: true, title: { contains: term, mode: 'insensitive' } },

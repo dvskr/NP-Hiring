@@ -74,6 +74,7 @@ async function run() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sample = (await prisma.job.findMany({
         where,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         select: { id: true, title: true, state: true, stateCode: true, categoryTags: true } as any,
         take: 25,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

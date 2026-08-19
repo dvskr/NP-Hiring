@@ -102,7 +102,7 @@ export default function HowItWorksSidebar(): React.JSX.Element {
                     <ExternalLink size={14} strokeWidth={2.5} />
                 </span>
                 <p style={{ margin: 0, fontSize: '12px', color: '#6B7F8A', lineHeight: 1.5 }}>
-                    Your <strong style={{ color: '#1A2E35' }}>Recommended for you</strong> feed prioritizes Easy Apply and Direct Apply first — they convert faster and won't send you on a wild goose chase.
+                    Your <strong style={{ color: '#1A2E35' }}>Recommended for you</strong> feed prioritizes Easy Apply and Direct Apply first — they convert faster and won&apos;t send you on a wild goose chase.
                 </p>
             </div>
         </aside>

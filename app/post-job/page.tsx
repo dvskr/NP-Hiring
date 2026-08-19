@@ -224,20 +224,29 @@ function SavedIndicator({
   status: 'idle' | 'saving' | 'saved' | 'error';
   lastSavedAt: Date | null;
 }) {
-  // Re-render every 30s so "Saved 5s ago" rolls forward to "Saved 35s
-  // ago" etc. without manual intervention. The interval is cheap.
-  const [, forceTick] = useState(0);
+  // Clock lives in state so render stays pure (no Date.now() during render).
+  // Seeded one macrotask after commit (established deferred set-state-in-
+  // effect pattern), then rolled forward every 30s so "Saved 5s ago" becomes
+  // "Saved 35s ago" etc. without manual intervention. The interval is cheap.
+  const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
     if (status !== 'saved' || !lastSavedAt) return;
-    const id = setInterval(() => forceTick((n) => n + 1), 30_000);
-    return () => clearInterval(id);
+    const seed = setTimeout(() => setNow(Date.now()), 0);
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => {
+      clearTimeout(seed);
+      clearInterval(id);
+    };
   }, [status, lastSavedAt]);
 
   const label = (() => {
     if (status === 'saving') return 'Saving…';
     if (status === 'error') return "Couldn't save — will retry";
     if (status === 'saved' && lastSavedAt) {
-      const seconds = Math.floor((Date.now() - lastSavedAt.getTime()) / 1000);
+      // Until the deferred seed resolves (or when a fresh save makes the
+      // stored clock older than lastSavedAt), elapsed clamps into the
+      // "just now" branch — matching what the live clock would have shown.
+      const seconds = now === null ? 0 : Math.floor((now - lastSavedAt.getTime()) / 1000);
       if (seconds < 5) return 'Saved just now';
       if (seconds < 60) return `Saved ${seconds}s ago`;
       const minutes = Math.floor(seconds / 60);
@@ -867,18 +876,18 @@ function PostJobContent() {
             You must be logged in as an employer to post jobs. Create an account to manage listings and track applicants.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <a href="/signup?role=employer" style={{
+            <Link href="/signup?role=employer" style={{
               ...clayBtn, justifyContent: 'center',
               background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
               boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
             }}>
               Sign Up as Employer
-            </a>
-            <a href="/login?next=/post-job" style={{
+            </Link>
+            <Link href="/login?next=/post-job" style={{
               ...clayBtn, justifyContent: 'center', background: '#F5F6F8', color: '#6B7F8A',
             }}>
               Log In
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -906,9 +915,9 @@ function PostJobContent() {
             You are logged in as <strong>{roleLabel}</strong>. Posting a job requires an Employer account.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <a href="/jobs" style={{ ...clayBtn, justifyContent: 'center', background: '#FDF2F8', color: '#BE185D', border: '1px solid rgba(190,24,93,0.2)' }}>
+            <Link href="/jobs" style={{ ...clayBtn, justifyContent: 'center', background: '#FDF2F8', color: '#BE185D', border: '1px solid rgba(190,24,93,0.2)' }}>
               Browse jobs instead
-            </a>
+            </Link>
             <button
               type="button"
               onClick={async () => {

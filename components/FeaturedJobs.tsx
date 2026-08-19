@@ -283,7 +283,14 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
     // hydration error #418 (same class JobCard already mount-guards). Render an
     // empty label on the server pass, swap to the live value after mount.
     const [mounted, setMounted] = useState(false);
-    useEffect(() => { setMounted(true); }, []);
+    useEffect(() => {
+        // Deferred a tick: swapping in the live relative-time label one
+        // macrotask after mount avoids a cascading synchronous re-render
+        // while keeping the SSR/first-render markup (empty label)
+        // hydration-safe.
+        const arm = setTimeout(() => setMounted(true), 0);
+        return () => clearTimeout(arm);
+    }, []);
 
     // B60: honor prefers-reduced-motion for the JS-driven framer entrance
     // animations (the global CSS gate in globals.css cannot reach inline

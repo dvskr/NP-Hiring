@@ -83,7 +83,7 @@ async function main() {
         { kind: 'apply_url', reason: 'duplicate_apply_url' },
     ];
     for (const t of targets) {
-        const samples = await prisma.$queryRawUnsafe<Array<{ id: string; title: string; employer: string; location: string; apply_link: string | null; raw_data: any }>>(`
+        const samples = await prisma.$queryRawUnsafe<Array<{ id: string; title: string; employer: string; location: string; apply_link: string | null; raw_data: { matchedJobId?: string | null } | null }>>(`
       SELECT id, title, employer, location, apply_link, raw_data
       FROM rejected_jobs
       WHERE rejection_reason = '${t.reason}'

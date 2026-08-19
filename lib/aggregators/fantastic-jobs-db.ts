@@ -550,7 +550,7 @@ async function runPass(
     let offset = 0;
     let hasMore = true;
     let pageCalls = 0;
-    let initialOut = out.length;
+    const initialOut = out.length;
     let aborted = false;
 
     while (

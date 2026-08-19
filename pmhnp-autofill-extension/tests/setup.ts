@@ -54,11 +54,12 @@ Object.defineProperty(globalThis, 'chrome', {
 });
 
 // Polyfill CSS.escape for jsdom (not implemented natively)
-if (typeof globalThis.CSS === 'undefined') {
-    (globalThis as any).CSS = {};
+const globalWithCss = globalThis as { CSS?: { escape?: (value: string) => string } };
+if (typeof globalWithCss.CSS === 'undefined') {
+    globalWithCss.CSS = {};
 }
-if (typeof (globalThis as any).CSS.escape !== 'function') {
-    (globalThis as any).CSS.escape = (value: string): string => {
+if (typeof globalWithCss.CSS.escape !== 'function') {
+    globalWithCss.CSS.escape = (value: string): string => {
         // Simple polyfill — escape special CSS selector characters
         return value.replace(/([^\w-])/g, '\\$1');
     };

@@ -43,7 +43,12 @@ export default function EmployerAnalyticsClient() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    // Deferred a tick: on first mount the initial state already covers
+    // loading=true, and on `days` changes flipping the spinner one macrotask
+    // later avoids a cascading synchronous re-render. The fetch below always
+    // outlasts a 0ms timer, and `finally` clears it defensively so a fast
+    // resolution can never leave the spinner stuck on.
+    const arm = setTimeout(() => setLoading(true), 0);
     fetch(`/api/employer/analytics?days=${days}`, { cache: 'no-store' })
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -59,10 +64,12 @@ export default function EmployerAnalyticsClient() {
         if (!cancelled) setError(err instanceof Error ? err.message : 'load failed');
       })
       .finally(() => {
+        clearTimeout(arm);
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
+      clearTimeout(arm);
     };
   }, [days]);
 

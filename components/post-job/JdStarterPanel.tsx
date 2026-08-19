@@ -1095,7 +1095,7 @@ function TemplatePicker({
                 background: '#FAFAFA', fontSize: 12, color: '#64748B', textAlign: 'center',
               }}>
                 {canSaveCurrent ? (
-                  <>You haven't saved any templates yet. Click <strong>Save current draft to my templates</strong> above to reuse your current JD across postings.</>
+                  <>You haven&apos;t saved any templates yet. Click <strong>Save current draft to my templates</strong> above to reuse your current JD across postings.</>
                 ) : (
                   <>Once you have a JD draft (50+ characters), click <strong>Save current draft to my templates</strong> above to keep a reusable copy.</>
                 )}
@@ -1491,7 +1491,7 @@ function AiDialog({
                 </span>
               </div>
               <p style={{ fontSize: 12, color: '#64748B', marginBottom: '8px', lineHeight: 1.4 }}>
-                Tell the AI what specifics you have so it doesn't invent them. Patient mix, schedule, EHR, comp range, team size, anything distinctive about your practice. Bullet points are fine.
+                Tell the AI what specifics you have so it doesn&apos;t invent them. Patient mix, schedule, EHR, comp range, team size, anything distinctive about your practice. Bullet points are fine.
               </p>
               <textarea
                 value={factsSummary}

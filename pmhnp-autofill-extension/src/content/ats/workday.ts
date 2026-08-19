@@ -16,8 +16,10 @@ import { sleep } from '../filler';
 
 // ─── Raw profile storage (set by performAutofill before filling) ───
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- raw profile is dynamic JSON from the job-board API; shape is not typed
 let _rawProfile: any = null;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- raw profile is dynamic JSON from the job-board API; shape is not typed
 export function setWorkdayRawProfile(rawProfile: any): void {
     _rawProfile = rawProfile;
     log(`[PMHNP-Workday] Raw profile set: ${(_rawProfile?.workExperience || []).length} WE, ${(_rawProfile?.education || []).length} EDU`);

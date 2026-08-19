@@ -156,7 +156,7 @@ function isFillTargetVisible(el: HTMLElement): boolean {
 // Track whether we're on a subsequent page (skip SmartRecruiters sections)
 let _isSubsequentPage = false;
 // Track multi-page recursion depth to prevent infinite loops
-let _pageRecursionDepth = 0;
+const _pageRecursionDepth = 0;
 const MAX_PAGE_RECURSION = 10;
 
 /**
@@ -289,6 +289,7 @@ async function performAutofill(): Promise<{ success: boolean; fieldsFilled: numb
         // Step 1: Fetch profile from background
         sm.transition('CHECKING_USAGE');
         log('[PMHNP] Fetching profile...');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- chrome.runtime message payloads are untyped at this boundary
         const profileResponse = await chrome.runtime.sendMessage({ type: 'GET_PROFILE' }) as any;
         if (!profileResponse || profileResponse.error) {
             sm.error('Failed to load profile');
@@ -1164,6 +1165,7 @@ function init() {
 
         // Store frame info for the background script
         try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- chrome.runtime message payloads are untyped at this boundary
             const frameId = (window as any).__pmhnp_frameId ?? 0;
             chrome.storage.local.set({
                 _autofillFrameId: frameId,

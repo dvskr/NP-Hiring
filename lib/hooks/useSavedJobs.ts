@@ -49,6 +49,21 @@ function notify() {
   for (const cb of subscribers) cb();
 }
 
+/**
+ * Hydrate the module cache from localStorage on first access. Lives at
+ * module scope on purpose: the cache is external-store state shared by every
+ * hook instance, so its lazy initialization belongs to the store, not to any
+ * one component render (reassigning it inside the hook body is a render side
+ * effect — react-hooks/globals). Idempotent: exactly one localStorage read
+ * per page load, after which the cached reference is stable until applyMap
+ * replaces it.
+ */
+function ensureCacheHydrated(): void {
+  if (cachedMap === null && typeof window !== 'undefined') {
+    cachedMap = getStoredSavedJobs();
+  }
+}
+
 function applyMap(next: SavedJobsMap, persistLocal = true) {
   cachedMap = next;
   if (persistLocal) setStoredSavedJobs(next);
@@ -130,9 +145,7 @@ async function syncFromServer(force = false): Promise<void> {
  */
 export default function useSavedJobs(): UseSavedJobsReturn {
   // Hydrate the module cache from localStorage on the first call across the page.
-  if (cachedMap === null && typeof window !== 'undefined') {
-    cachedMap = getStoredSavedJobs();
-  }
+  ensureCacheHydrated();
 
   const [, bump] = useState(0);
   const isMountedRef = useRef(true);

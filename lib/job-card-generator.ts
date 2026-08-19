@@ -7,6 +7,7 @@
  */
 
 import satori from 'satori';
+import type { ReactNode } from 'react';
 import { Resvg } from '@resvg/resvg-js';
 import { brand } from '@/config/brand';
 
@@ -280,7 +281,9 @@ export async function generateJobCardPng(
         },
     };
 
-    const svg = await satori(element as any, {
+    // Satori walks plain `{ type, props }` element-like objects at runtime,
+    // but its signature is typed as ReactNode — bridge via the real param type.
+    const svg = await satori(element as unknown as ReactNode, {
         width: 1080,
         height: 1080,
         fonts: [
@@ -548,7 +551,8 @@ export async function generateFBSummaryPng(
         },
     };
 
-    const svg = await satori(element as any, {
+    // See note on the 1080×1080 renderer: satori accepts element-like objects.
+    const svg = await satori(element as unknown as ReactNode, {
         width: 1200,
         height: 630,
         fonts: [

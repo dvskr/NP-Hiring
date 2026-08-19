@@ -45,6 +45,24 @@ export interface SmartRecruitersJobRaw {
     jobType?: string;
 }
 
+/** Shape of the detail endpoint response — only the fields we read. */
+interface SmartRecruitersPostingDetail {
+    jobAd?: {
+        sections?: {
+            jobDescription?: { text?: string };
+            qualifications?: { text?: string };
+            additionalInformation?: { text?: string };
+            companyDescription?: { text?: string };
+        };
+    };
+}
+
+/** Shape of the postings list endpoint response — only the fields we read. */
+interface SmartRecruitersListResponse {
+    totalFound?: number;
+    content?: SmartRecruitersPosting[];
+}
+
 
 function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -61,7 +79,7 @@ async function fetchJobDescription(companySlug: string, postingId: string): Prom
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(timeout);
         if (!res.ok) return '';
-        const data = await res.json() as any;
+        const data = await res.json() as SmartRecruitersPostingDetail;
         // The detail endpoint returns jobAd.sections with HTML content
         const sections = data.jobAd?.sections || {};
         const parts: string[] = [];
@@ -99,7 +117,7 @@ async function fetchCompanyJobs(company: { slug: string; name: string }): Promis
                 break;
             }
 
-            const data = await res.json() as any;
+            const data = await res.json() as SmartRecruitersListResponse;
             totalFound = data.totalFound || 0;
             const postings: SmartRecruitersPosting[] = data.content || [];
 

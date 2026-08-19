@@ -38,14 +38,21 @@ export default function ScreeningQuestionsBuilder() {
 
   // Load from localStorage on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('jobScreeningQuestions');
-      if (stored) {
-        setQuestions(JSON.parse(stored));
+    // Deferred a tick: the stored draft is stable for the life of the page
+    // load, so hydrating it one macrotask after mount avoids a cascading
+    // synchronous re-render while keeping the SSR/first-render markup
+    // (empty list) hydration-safe.
+    const hydrate = setTimeout(() => {
+      try {
+        const stored = localStorage.getItem('jobScreeningQuestions');
+        if (stored) {
+          setQuestions(JSON.parse(stored));
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
+    }, 0);
+    return () => clearTimeout(hydrate);
   }, []);
 
   // Save to localStorage when questions change

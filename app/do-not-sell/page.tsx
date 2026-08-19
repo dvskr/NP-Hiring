@@ -36,7 +36,12 @@ export default function DoNotSellPage() {
     const [gpcActive, setGpcActive] = useState(false);
 
     useEffect(() => {
-        setGpcActive(getPrivacySignal() !== null);
+        // Deferred a tick: the GPC signal is stable for the life of the page
+        // load, so resolving one macrotask after mount avoids a cascading
+        // synchronous re-render while keeping the SSR/first-render markup
+        // (GPC not detected yet) hydration-safe.
+        const arm = setTimeout(() => setGpcActive(getPrivacySignal() !== null), 0);
+        return () => clearTimeout(arm);
     }, []);
 
     const handleOptOut = async () => {

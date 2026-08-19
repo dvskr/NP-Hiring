@@ -20,7 +20,12 @@ export default function SaveJobButton({ jobId }: SaveJobButtonProps) {
   // so the first client paint must match it to avoid a hydration mismatch.
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    setMounted(true);
+    // Deferred a tick: the saved-state read is stable for the life of the
+    // page load, so resolving one macrotask after mount avoids a cascading
+    // synchronous re-render while keeping the SSR/first-render markup
+    // ("unsaved") hydration-safe.
+    const arm = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(arm);
   }, []);
   const isSaved = mounted && isJobSaved(jobId);
 

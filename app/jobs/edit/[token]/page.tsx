@@ -2,6 +2,7 @@
 
 import { brand } from '@/config/brand';
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import Link from 'next/link';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -1177,14 +1178,14 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <a href="/post-job" style={{
+              <Link href="/post-job" style={{
                 ...clayBtn, justifyContent: 'center',
                 background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                 border: 'none', padding: '12px 16px', fontWeight: 700,
                 boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
               }}>
                 Post a New Job — ${config.postingPrice}
-              </a>
+              </Link>
               <button
                 onClick={() => setShowRenewModal(false)}
                 style={{

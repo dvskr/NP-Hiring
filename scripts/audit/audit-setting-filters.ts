@@ -46,8 +46,7 @@ import type { Prisma } from '@prisma/client';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { prisma } = require('@/lib/prisma') as typeof import('@/lib/prisma');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { buildCategoryWhereClause, GLOBAL_EXCLUSIONS } =
-  require('@/lib/filters') as typeof import('@/lib/filters');
+const { buildCategoryWhereClause, GLOBAL_EXCLUSIONS } = require('@/lib/filters') as typeof import('@/lib/filters');
 
 type FilterDef = {
   slug: 'outpatient' | 'inpatient' | 'telehealth' | 'remote';

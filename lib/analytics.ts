@@ -81,6 +81,10 @@ function gtag(...args: unknown[]) {
     window.dataLayer = window.dataLayer || [];
     // eslint-disable-next-line prefer-spread
     Function.prototype.apply.call(
+      // GA4 only processes REAL Arguments objects pushed to dataLayer —
+      // plain arrays (what rest params would produce) are silently ignored,
+      // so `arguments` is load-bearing here.
+      // eslint-disable-next-line prefer-rest-params
       function() { window.dataLayer.push(arguments); },
       null,
       args

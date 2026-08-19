@@ -4,6 +4,7 @@
  * Usage:  npx tsx scripts/_audit-location.ts
  */
 import { config as dotenvConfig } from 'dotenv';
+import type { Prisma } from '@prisma/client';
 dotenvConfig({ path: '.env.prod' });
 if (process.env.PROD_DATABASE_URL && !process.env.DATABASE_URL) {
   process.env.DATABASE_URL = process.env.PROD_DATABASE_URL;
@@ -16,9 +17,9 @@ if (!process.env.DATABASE_URL) {
 }
 
 // Use require AFTER env setup so prisma.ts boot check passes.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { prisma } = require('../lib/prisma') as typeof import('../lib/prisma');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { GLOBAL_EXCLUSIONS } = require('../lib/filters') as typeof import('../lib/filters');
 
 const STATE_CODES: Record<string, string> = {
@@ -72,7 +73,7 @@ function descSuggestsRemote(desc: string): { remote: boolean; hybrid: boolean } 
 
 async function auditRemote() {
   console.log('\n========== 1. REMOTE FILTER ==========');
-  const REMOTE_FILTER: any = {
+  const REMOTE_FILTER: Prisma.JobWhereInput = {
     isPublished: true,
     isRemote: true,
     AND: GLOBAL_EXCLUSIONS.map(e => ({ NOT: e })),
@@ -112,7 +113,7 @@ async function auditRemote() {
 }
 
 async function auditState(stateName: string, stateCode: string) {
-  const where: any = {
+  const where: Prisma.JobWhereInput = {
     isPublished: true,
     OR: [{ state: stateName }, { stateCode: stateCode }],
   };

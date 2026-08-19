@@ -43,31 +43,42 @@ export function useLocalStorage<T>(
 
   // Mark as hydrated after mount
   useEffect(() => {
-    setIsHydrated(true);
+    // Deferred a tick: hydration status is stable for the life of the page
+    // load, so resolving one macrotask after mount avoids a cascading
+    // synchronous re-render while keeping the SSR/first-render markup
+    // (isHydrated=false) hydration-safe.
+    const arm = setTimeout(() => setIsHydrated(true), 0);
+    return () => clearTimeout(arm);
   }, []);
+
+  // Destructured so the callback closes over exactly the primitive it
+  // depends on — closing over the `options` object while listing
+  // `options?.expiryDays` in deps defeats memoization analysis
+  // (react-hooks/preserve-manual-memoization).
+  const expiryDays = options?.expiryDays;
 
   // Stable setValue function that doesn't depend on storedValue
   const setValue = useCallback((value: T | ((prev: T) => T)) => {
     setStoredValue(prev => {
       const valueToStore = value instanceof Function ? value(prev) : value;
-      
+
       // Save to localStorage
       try {
-        const storageValue = options?.expiryDays
+        const storageValue = expiryDays
           ? {
               value: valueToStore,
-              _expiry: Date.now() + options.expiryDays * 24 * 60 * 60 * 1000,
+              _expiry: Date.now() + expiryDays * 24 * 60 * 60 * 1000,
             }
           : { value: valueToStore };
-        
+
         window.localStorage.setItem(key, JSON.stringify(storageValue));
       } catch (error) {
         console.error(`Error setting localStorage key "${key}":`, error);
       }
-      
+
       return valueToStore;
     });
-  }, [key, options?.expiryDays]);
+  }, [key, expiryDays]);
 
   return [storedValue, setValue, isHydrated];
 }

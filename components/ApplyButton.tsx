@@ -99,12 +99,21 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
     // showed the "Sign in to apply" gate to users who had JUST signed in
     // (every post-auth return now routes back through ?apply=1).
     if (!authResolved) return;
-    autoOpened.current = true;
-    if (!authed) {
-      setShowAuthModal(true);
-    } else {
-      setShowPlatformApply(true);
-    }
+    // Deferred a tick: opening the popup one macrotask after the effect keeps
+    // the gate/apply swap a single async transition instead of a cascading
+    // synchronous re-render. The once-per-mount latch is set inside the
+    // callback — if a dep change (or StrictMode's dev double-invoke) re-runs
+    // the effect before the timer fires, cleanup cancels the stale open and
+    // the re-run re-arms it with fresh auth state, still firing exactly once.
+    const open = setTimeout(() => {
+      autoOpened.current = true;
+      if (!authed) {
+        setShowAuthModal(true);
+      } else {
+        setShowPlatformApply(true);
+      }
+    }, 0);
+    return () => clearTimeout(open);
   }, [searchParams, applyOnPlatform, authed, authResolved]);
 
   // Safety net: if the auth probe resolves to authenticated while the

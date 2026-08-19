@@ -132,7 +132,15 @@ export default function SavedCandidatesTab() {
         setLoading(false);
     }, []);
 
-    useEffect(() => { fetchSaved(); }, [fetchSaved]);
+    useEffect(() => {
+        // Deferred a tick: fetchSaved flips the loading flag synchronously,
+        // which is redundant on mount (initial state is already loading=true)
+        // but meaningful for the unsave-retry path, so the shared function
+        // keeps it. Kicking the mount fetch off one macrotask later avoids a
+        // cascading synchronous re-render without forking fetchSaved.
+        const kickoff = setTimeout(() => { fetchSaved(); }, 0);
+        return () => clearTimeout(kickoff);
+    }, [fetchSaved]);
 
     const handleUnsave = async (candidateId: string, postingId: string | null) => {
         setSaved(prev => prev.filter(s => !(s.candidate.id === candidateId && s.postingId === postingId)));

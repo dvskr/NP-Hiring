@@ -111,7 +111,7 @@ function UnsubscribeContent() {
                             Welcome back!
                         </h2>
                         <p className="text-gray-700 mb-6">
-                            You've been resubscribed to {brand.name} emails.
+                            You&apos;ve been resubscribed to {brand.name} emails.
                         </p>
 
                         <Link href="/">
@@ -129,13 +129,13 @@ function UnsubscribeContent() {
                             <CheckCircle className="w-16 h-16 text-green-500" />
                         </div>
                         <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                            You've been unsubscribed
+                            You&apos;ve been unsubscribed
                         </h2>
                         <p className="text-gray-700 mb-2">
                             You will no longer receive emails from {brand.name}.
                         </p>
                         <p className="text-gray-600 mb-6">
-                            We're sorry to see you go.
+                            We&apos;re sorry to see you go.
                         </p>
 
                         <Link href="/">

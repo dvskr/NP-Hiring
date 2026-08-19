@@ -91,7 +91,7 @@ async function main() {
   return;
 
   // unreachable — kept for future local-DB runs after migration ships
-  // eslint-disable-next-line @typescript-eslint/no-unreachable
+  // eslint-disable-next-line no-unreachable
   await prisma.job.findMany({
     where: {
       OR: [

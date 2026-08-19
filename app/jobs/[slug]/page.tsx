@@ -672,7 +672,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
         {/* Salary Guide CTA */}
         <div style={{ ...clayCard, padding: '28px 32px', textAlign: 'center' }}>
           <p style={{ fontSize: '14px', color: '#7A6A62', marginBottom: '16px' }}>While you&apos;re here, check out the latest {brand.niche.short} salary data:</p>
-          <a href="/salary-guide"
+          <Link href="/salary-guide"
             className="gone-cta"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '8px',
@@ -681,7 +681,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
               background: 'linear-gradient(135deg, #BE185D, #9D174D)',
               boxShadow: '4px 4px 12px rgba(190,24,93,0.2), -2px -2px 6px rgba(255,255,255,0.3), inset 1px 1px 2px rgba(255,255,255,0.2)',
             }}>
-            <DollarSign size={18} aria-hidden="true" />2026 {brand.niche.short} Salary Guide →</a>
+            <DollarSign size={18} aria-hidden="true" />2026 {brand.niche.short} Salary Guide →</Link>
         </div>
 
       </div>

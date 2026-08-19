@@ -129,7 +129,7 @@ async function section2RelevanceBugs(): Promise<void> {
             createdAt: true,
         },
     });
-    let totalChecked = jobs.length;
+    const totalChecked = jobs.length;
     let failed = 0;
     const byReason: Record<string, { count: number; samples: Array<{ slug: string; title: string; employer: string; source: string }> }> = {};
 

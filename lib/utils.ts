@@ -24,12 +24,13 @@ export function formatDate(date: string | Date): string {
   return formatDistanceToNow(dateObj, { addSuffix: true });
 }
 
-function getEffectiveDate(job: { originalPostedAt?: Date | null; createdAt: Date } | Date): Date {
-  if (job instanceof Date || typeof job === 'string') return new Date(job as any);
+function getEffectiveDate(job: { originalPostedAt?: Date | null; createdAt: Date | string } | Date | string): Date {
+  if (job instanceof Date || typeof job === 'string') return new Date(job);
   // Use createdAt (ingestion date) for freshness display — this ensures jobs
   // in the "Past 24 hours" filter show "Posted today" instead of "Posted 2 days ago".
   // originalPostedAt is still used for SEO structured data (JobStructuredData.tsx).
-  return new Date((job as any).createdAt);
+  // createdAt may arrive as an ISO string when the job object was JSON-deserialized.
+  return new Date(job.createdAt);
 }
 
 /**

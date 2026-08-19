@@ -356,9 +356,11 @@ async function syncVisualDisplay(select: HTMLSelectElement, displayText: string,
 
     // ── Strategy 1: Try Vue component's internal API ──
     try {
+        // Host-page Vue internals (`__vue__`) have no published types.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const vueComp = (overlay as any).__vue__;
         if (vueComp && typeof vueComp.select === 'function' && vueComp.options) {
-            const vueOpt = vueComp.options.find((o: any) => {
+            const vueOpt = vueComp.options.find((o: string | { label?: string; name?: string } | null) => {
                 const label = typeof o === 'string' ? o : (o?.label || o?.name || '');
                 return label.toLowerCase().includes(displayText.toLowerCase()) ||
                     displayText.toLowerCase().includes(label.toLowerCase());

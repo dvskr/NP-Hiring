@@ -45,7 +45,7 @@
   "components/employer/EmployerDashboardClient.tsx": 2,
   "components/ExitIntentPopup.tsx": 1,
   "components/Footer.tsx": 1,
-  "components/HomepageHero.tsx": 1,
+  "components/HomepageHero.tsx": 5,
   "components/JobCard.tsx": 1,
   "components/jobs/SidebarVisualCards.tsx": 1,
   "components/PushNotificationPrompt.tsx": 2,

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { X, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import {
     denyAllConsent,
@@ -108,14 +109,21 @@ export default function CookieConsent({ initialConsent }: Props) {
     }, [initialConsent]);
 
     useEffect(() => {
-        evaluate();
+        // Deferred a tick: the decision tree reads signals that are stable
+        // for the life of the page load (GPC/DNT, region, server-rendered
+        // consent), so evaluating one macrotask after mount avoids a
+        // cascading synchronous re-render from its setState calls.
+        const arm = setTimeout(evaluate, 0);
         const onReopen = () => {
             if (savedCats) setCats(savedCats);
             setExpanded(false);
             setShow(true);
         };
         window.addEventListener(CONSENT_REOPEN_EVENT, onReopen);
-        return () => window.removeEventListener(CONSENT_REOPEN_EVENT, onReopen);
+        return () => {
+            clearTimeout(arm);
+            window.removeEventListener(CONSENT_REOPEN_EVENT, onReopen);
+        };
     }, [evaluate, savedCats]);
 
     const acceptAll = () => {
@@ -172,9 +180,9 @@ export default function CookieConsent({ initialConsent }: Props) {
                         <p id="cookie-consent-description">
                             We use cookies for analytics and to improve your experience.
                             By continuing, you agree to our{' '}
-                            <a href="/privacy" className="underline" style={{ color: '#BE185D', fontWeight: 600 }}>
+                            <Link href="/privacy" className="underline" style={{ color: '#BE185D', fontWeight: 600 }}>
                                 Privacy Policy
-                            </a>.
+                            </Link>.
                         </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">

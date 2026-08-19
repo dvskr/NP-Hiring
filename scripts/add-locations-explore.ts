@@ -95,7 +95,8 @@ function patchFile(slug: string, label: string): 'added' | 'skipped' | 'no-faq' 
     return 'added';
 }
 
-let added = 0, skipped = 0, failed: string[] = [];
+let added = 0, skipped = 0;
+const failed: string[] = [];
 for (const [slug, label] of Object.entries(SLUG_TO_LABEL)) {
     const result = patchFile(slug, label);
     if (result === 'added') {

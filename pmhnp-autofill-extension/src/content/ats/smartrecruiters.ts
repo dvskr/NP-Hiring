@@ -113,10 +113,13 @@ export async function runSmartRecruitersSections(profile: Record<string, unknown
     await sleep(500);
 
     // Determine data sources
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic profile/entry JSON (resume-parser output); shape is not typed
     let workEntries = (profile as any)?.workExperience;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic profile/entry JSON (resume-parser output); shape is not typed
     let eduEntries = (profile as any)?.education;
     const hasProfileWork = Array.isArray(workEntries) && workEntries.length > 0;
     const hasProfileEdu = Array.isArray(eduEntries) && eduEntries.length > 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic profile/entry JSON (resume-parser output); shape is not typed
     const hasResume = !!(profile as any)?.meta?.resumeUrl;
 
     // Step 1.5: If either section is missing from profile, extract from resume via AI
@@ -130,6 +133,7 @@ export async function runSmartRecruitersSections(profile: Record<string, unknown
             const extracted = await chrome.runtime.sendMessage({
                 type: 'EXTRACT_RESUME_SECTIONS',
                 payload: { sections: missingSections },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic profile/entry JSON (resume-parser output); shape is not typed
             }) as { education?: any[]; experience?: any[]; error?: string };
 
             if (extracted.error) {
@@ -312,6 +316,7 @@ async function dismissDeleteConfirmation(): Promise<void> {
 export async function fixSmartRecruitersPage1(profile: Record<string, unknown>): Promise<number> {
     log('[PMHNP] === SmartRecruiters Page-1 Fixup ===');
     let fixed = 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic profile/entry JSON (resume-parser output); shape is not typed
     const p = (profile as any)?.personal || profile || {};
     const city = p.address?.city || p.city || '';
     const state = p.address?.state || p.state || '';
@@ -501,6 +506,7 @@ async function handleSectionForEntry(name: string, entry: Record<string, unknown
     );
 
     if (emptyTextareas.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic profile/entry JSON (resume-parser output); shape is not typed
         const entryAny = entry as any;
         // Use description from entry data, or generate a fallback from available fields
         let description = entryAny.description || '';
@@ -743,6 +749,7 @@ function groupByRow(fields: HTMLElement[]): HTMLElement[][] {
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function fillExpFields(rows: HTMLElement[][], entry: Record<string, unknown>): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic profile/entry JSON (resume-parser output); shape is not typed
     const work = entry as any;
     if (!work) { log('[PMHNP] No work experience data'); return; }
 
@@ -798,6 +805,7 @@ async function fillExpFields(rows: HTMLElement[][], entry: Record<string, unknow
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function fillEduFields(rows: HTMLElement[][], entry: Record<string, unknown>): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic profile/entry JSON (resume-parser output); shape is not typed
     const edu = entry as any;
     if (!edu) { log('[PMHNP] No education data'); return; }
 
@@ -1068,6 +1076,7 @@ async function fillMessageTextarea(profile: Record<string, unknown>): Promise<vo
         return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic profile/entry JSON (resume-parser output); shape is not typed
     const p = (profile as any)?.personal;
     const name = p ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : '';
     const msg = buildFallbackCoverLetter(name);
@@ -1085,7 +1094,9 @@ async function tryUploadResume(profile: Record<string, unknown>): Promise<void> 
     log(`[PMHNP] File inputs found: ${fileInputs.length}`);
 
     // Resume URL can be in several places in the profile
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic profile/entry JSON (resume-parser output); shape is not typed
     const meta = (profile as any)?.meta;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic profile/entry JSON (resume-parser output); shape is not typed
     const docs = (profile as any)?.documents;
     const url = meta?.resumeUrl || docs?.resume?.url || docs?.resumeUrl;
     log(`[PMHNP] Resume URL: ${url || '(none)'}`);

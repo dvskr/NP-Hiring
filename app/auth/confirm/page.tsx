@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { safeInternalPath } from '@/lib/auth/safe-redirect'
@@ -354,7 +355,7 @@ export default function AuthConfirmPage() {
             )}
             <p style={{ fontSize: '12px', color: 'var(--text-secondary, #94A3B8)', margin: '12px 0 0', textAlign: 'center' }}>
               Already confirmed?{' '}
-              <a href="/login" style={{ color: '#F472B6', fontWeight: 600 }}>Sign in</a>
+              <Link href="/login" style={{ color: '#F472B6', fontWeight: 600 }}>Sign in</Link>
             </p>
           </div>
         )}

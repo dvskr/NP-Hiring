@@ -68,7 +68,11 @@ export default function Header() {
     // Don't touch body.style.overflow here -- the [isMenuOpen] effect's
     // cleanup handles that, and writing '' here can race with that cleanup
     // if the user navigates during the drawer's exit animation.
-    setIsMenuOpen(false);
+    // Deferred a tick: closing the drawer one macrotask after the route
+    // commit avoids a cascading synchronous re-render; on first mount the
+    // initial state (closed) already matches, so the deferred set is a no-op.
+    const close = setTimeout(() => setIsMenuOpen(false), 0);
+    return () => clearTimeout(close);
   }, [pathname]);
 
   // Public nav — shown when NOT logged in
