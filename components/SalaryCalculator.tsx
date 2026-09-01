@@ -13,18 +13,35 @@ import { brand } from '@/config/brand';
 // from the shared provenance component (safe in this client bundle).
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import { formatStatVintage } from '@/components/SalaryProvenance';
+import { roundSalaryToNearestThousand } from '@/lib/salary-utils';
 
 interface StateSalary {
   state: string;
   stateCode: string;
-  avgSalary: number;
-  minSalary: number;
-  maxSalary: number;
+  /** Gated median of the state's NP-eligible postings (n ≥ 5, ≥ 3 employers). */
+  medianSalary: number;
+  /** Sample size behind that median — rendered in the basis footnote. */
+  jobCount: number;
+}
+
+/**
+ * Review P9 #2f: the base figure's provenance travels WITH the number.
+ *   - 'postings': the gated median of NP-eligible postings on this board
+ *     (jobCount = sample size).
+ *   - 'bls': the cited BLS OEWS national median — used only when the
+ *     board's own pool fails the publishing gate, and the footnote then
+ *     names BLS as the actual base (previously BLS was credited while
+ *     never entering the computation).
+ */
+interface NationalBase {
+  base: number;
+  basis: 'postings' | 'bls';
+  jobCount?: number;
 }
 
 interface Props {
   stateSalaries: StateSalary[];
-  nationalAvg: number;
+  national: NationalBase;
 }
 
 /* Multiplier tables live in config/niche/stats.ts — option `value`
@@ -48,20 +65,25 @@ const selectStyle: React.CSSProperties = {
   transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
 };
 
+/**
+ * Review P9 #2f: every displayed figure rounds to the nearest $1,000 —
+ * "$188,221" claimed a precision no posting median possesses.
+ */
 function formatSalary(n: number): string {
-  return '$' + Math.round(n).toLocaleString('en-US');
+  return '$' + roundSalaryToNearestThousand(n).toLocaleString('en-US');
 }
 
-export default function SalaryCalculator({ stateSalaries, nationalAvg }: Props) {
+export default function SalaryCalculator({ stateSalaries, national }: Props) {
   const [selectedState, setSelectedState] = useState('');
   const [experience, setExperience] = useState('mid');
   const [setting, setSetting] = useState('outpatient');
   const [specialty, setSpecialty] = useState('general');
 
   const result = useMemo(() => {
-    // Base salary: state avg or national avg
+    // Base salary: the state's gated posting median, else the national base
+    // (gated national median, or the cited BLS OEWS median as fallback).
     const stateData = stateSalaries.find(s => s.state === selectedState);
-    const baseSalary = stateData ? stateData.avgSalary : nationalAvg;
+    const baseSalary = stateData ? stateData.medianSalary : national.base;
 
     const expMult = EXPERIENCE_OPTIONS.find(e => e.value === experience)?.multiplier || 1;
     const setMult = SETTING_OPTIONS.find(s => s.value === setting)?.multiplier || 1;
@@ -87,8 +109,11 @@ export default function SalaryCalculator({ stateSalaries, nationalAvg }: Props) 
       specImpact: Math.round(specContrib),
       stateName: stateData?.state || 'National',
       stateCode: stateData?.stateCode || 'US',
+      // Basis of the base figure, for the honest footnote below.
+      basis: stateData ? ('postings' as const) : national.basis,
+      basisCount: stateData ? stateData.jobCount : national.jobCount,
     };
-  }, [selectedState, experience, setting, specialty, stateSalaries, nationalAvg]);
+  }, [selectedState, experience, setting, specialty, stateSalaries, national]);
 
   return (
     <div style={{ ...clayCard, padding: '0', overflow: 'hidden', border: '2px solid rgba(190,24,93,0.12)' }}>
@@ -236,16 +261,22 @@ export default function SalaryCalculator({ stateSalaries, nationalAvg }: Props) 
           }}>
             <span style={{ fontSize: '12px', color: '#5A4A42' }}>Hourly equivalent</span>
             <span style={{ fontSize: '14px', fontWeight: 700, color: '#831843' }}>
-              ~{formatSalary(Math.round(result.estimated / 2080))}/hr
+              {/* Whole dollars, NOT the $1k rounding (which would zero it out) */}
+              ~${Math.round(roundSalaryToNearestThousand(result.estimated) / 2080)}/hr
             </span>
           </div>
 
-          {/* Audit P0 #22: no fabricated posting counts (the old "ten
-              thousand plus postings" boast) — the base figures come from
-              live postings on this board plus BLS wage data, so say
-              exactly that. */}
+          {/* Audit P0 #22 + review P9 #2f: no fabricated posting counts, and
+              the footnote names the ACTUAL base — BLS is credited only when
+              BLS actually enters the computation. The multipliers remain
+              editorial estimates and say so. */}
           <p style={{ fontSize: '10px', color: '#94A3B8', marginTop: '14px', lineHeight: 1.4 }}>
-            * Estimates based on BLS wage data ({formatStatVintage(STAT_SOURCES.averageSalary.asOf)} release) and live job postings on {brand.name}. Actual salary varies by employer.
+            {result.basis === 'postings' ? (
+              <>* Estimate from the median of {result.basisCount ?? 'current'} {result.stateName === 'National' ? '' : `${result.stateName} `}live job postings on {brand.name} with disclosed salary. </>
+            ) : (
+              <>* Base: BLS OEWS national median wage ({formatStatVintage(STAT_SOURCES.averageSalary.asOf)} release) — too few disclosed-salary postings to use board data. </>
+            )}
+            Experience, setting, and specialty multipliers are {brand.name}&apos;s editorial estimates, not survey data. Figures rounded to the nearest $1,000; actual salary varies by employer.
           </p>
         </div>
       </div>

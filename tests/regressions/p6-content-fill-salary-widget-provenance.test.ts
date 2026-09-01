@@ -48,9 +48,11 @@ describe('P6 #9 — the widget stamps its figures with real provenance', () => {
         expect(src).toContain('data-testid="salary-provenance"');
     });
 
-    it('states the state-average basis as live postings on the board, count-free', () => {
+    it('states the state-median basis as live postings on the board, count-free', () => {
+        // P9 #2c/#2d: the state figure is a gated median now, and the stamp
+        // says so (disclosed AND non-estimated — the analytics pool's terms).
         expect(src).toContain(
-            'average computed from live postings with disclosed salary on {brand.name}',
+            'median computed from live postings with disclosed, non-estimated salary on {brand.name}',
         );
         // No live-count sentence: the widget receives no N, so it must not
         // claim one (the "Based on N…" clause is reserved for surfaces that
@@ -63,7 +65,7 @@ describe('P6 #9 — the widget stamps its figures with real provenance', () => {
         expect(src).toContain(
             "import { SALARY_COMPARISON_NATIONAL_AVG_K } from '@/config/niche/stats'",
         );
-        expect(src).toContain('const NATIONAL_AVG_SALARY = SALARY_COMPARISON_NATIONAL_AVG_K');
+        expect(src).toContain('const NATIONAL_MEDIAN_SALARY = SALARY_COMPARISON_NATIONAL_AVG_K');
     });
 
     it('carries no hand-typed dollar figures and no render-time dates', () => {
@@ -94,33 +96,36 @@ describe('P6 #9 — the widget stamps its figures with real provenance', () => {
 
 describe('P6 #9 hardening — job-page call site keeps the widget alive ($k units)', () => {
     // Pre-existing defect (initial commit ec7f4ba, fixed in this package):
-    // getStateSalaryAverage already returns thousands ("/ 2 / 1000"), but the
-    // call site divided by 1000 AGAIN — the widget received 0, its
-    // `stateAvgSalary <= 0` guard returned null, and the entire A21 surface
-    // (provenance line included) was dead on every job page. These pins hold
-    // the units contract at both ends so the double division cannot return.
+    // the state figure is computed in thousands, but the call site divided
+    // by 1000 AGAIN — the widget received 0, its `<= 0` guard returned
+    // null, and the entire A21 surface (provenance line included) was dead
+    // on every job page. These pins hold the units contract at both ends so
+    // the double division cannot return. (P9 #2c/#2d follow-up: the figure
+    // is now a gated MEDIAN from lib/salary-analytics — same $k contract.)
     const PAGE = 'app/jobs/[slug]/page.tsx';
     const pageSrc = read(PAGE);
 
-    it('getStateSalaryAverage still returns $k (thousands)', () => {
-        // If this ever changes to raw dollars, the call-site pin below must
-        // be reconciled in the same commit — this failure is the tripwire.
-        expect(pageSrc).toMatch(
-            /return Math\.round\(\(avgMin \+ avgMax\) \/ 2 \/ 1000\);/,
-        );
+    it('getStateSalaryMedianK returns $k (thousands) from the gated pipeline', () => {
+        // getGatedMedianKForWhere rounds median/1000 — the $k contract moved
+        // into lib/salary-analytics. If this call site ever changes to raw
+        // dollars, the call-site pin below must be reconciled in the same
+        // commit — this failure is the tripwire.
+        expect(pageSrc).toContain('getGatedMedianKForWhere({');
+        const analytics = read('lib/salary-analytics.ts');
+        expect(analytics).toContain('Math.round(row.median / 1000)');
     });
 
-    it('the widget receives stateAvgSalary verbatim — no second /1000', () => {
-        expect(pageSrc).toContain('stateAvgSalary={stateAvgSalary}');
-        expect(pageSrc).not.toContain('stateAvgSalary={Math.round(stateAvgSalary / 1000)}');
+    it('the widget receives stateMedianSalaryK verbatim — no second /1000', () => {
+        expect(pageSrc).toContain('stateMedianSalaryK={stateMedianSalaryK}');
+        expect(pageSrc).not.toContain('stateMedianSalaryK={Math.round(stateMedianSalaryK / 1000)}');
         // No re-scaling of the already-$k value anywhere in the file.
-        expect(stripComments(pageSrc)).not.toMatch(/stateAvgSalary\s*\/\s*1000/);
+        expect(stripComments(pageSrc)).not.toMatch(/stateMedianSalaryK\s*\/\s*1000/);
     });
 
     it('the widget prop is documented as $k, matching what the page now passes', () => {
-        // Both sides of the contract: the prop comment in the widget says
+        // Both sides of the contract: the prop doc in the widget says
         // thousands, and the guard that killed the dead surface is intact.
-        expect(src).toMatch(/stateAvgSalary: number; \/\/ in thousands/);
-        expect(src).toContain('if (!stateName || stateAvgSalary <= 0) return null;');
+        expect(src).toMatch(/Gated state MEDIAN in thousands/);
+        expect(src).toContain('if (!stateName || stateMedianSalaryK <= 0) return null;');
     });
 });

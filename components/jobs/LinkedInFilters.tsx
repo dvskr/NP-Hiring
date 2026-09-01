@@ -545,11 +545,16 @@ export default function LinkedInFilters() {
                   position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
                   width: '15px', height: '15px', color: 'var(--text-tertiary)',
                 }} />
-                {/* SEO Fix C4: aria-label gives screen readers a name (WCAG 4.1.2). */}
+                {/* SEO Fix C4: aria-label gives screen readers a name (WCAG 4.1.2).
+                    Copy reflects what the deterministic matcher actually does
+                    (lib/search-query-intent.ts): free text over title/company,
+                    plus structural extraction of state names/codes and work-mode
+                    terms — so 'remote np jobs in Texas' is an honest example,
+                    not a promise the old literal-substring AND would break. */}
                 <input
-                  aria-label="Search by job title or company"
+                  aria-label="Search by job title, company, state, or work mode"
                   type="search"
-                  placeholder="Job title, company..."
+                  placeholder={'Try "remote np jobs in Texas"'}
                   value={searchInput}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchInput(e.target.value)}
                   className="li-filter-input"

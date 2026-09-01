@@ -21,6 +21,7 @@
 
 import {
     POSITIVE_KEYWORDS,
+    CONDITIONAL_POSITIVE_KEYWORDS,
     NEGATIVE_KEYWORDS,
     GENERIC_NP_TITLES,
     MENTAL_HEALTH_CONTEXT_TERMS,
@@ -39,6 +40,9 @@ import {
     CATCH_ALL_TERM,
     TITLE_CONTEXT_WORDS,
     WRONG_ROLE_CO_OCCURRENCE_EXCEPTIONS,
+    NON_NP_PROVIDER_TITLE_PATTERNS,
+    PA_ONLY_TITLE_PATTERNS,
+    PA_BARE_TITLE_PATTERN,
 } from '@/config/niche/relevance';
 
 // Re-exports for existing consumers (lib/filters.ts mirrors these four
@@ -69,6 +73,54 @@ export interface RelevanceResult {
 
 function isAprnTitle(titleLower: string): boolean {
     return APRN_TITLE_MARKERS.some((m) => titleLower.includes(m));
+}
+
+/**
+ * Positive-keyword check with conditional-token support (live-review fix
+ * #1d). Plain POSITIVE_KEYWORDS match as before; CONDITIONAL_POSITIVE
+ * tokens (bare ' cnm ') only count when one of their context witnesses
+ * ('midwife', …) appears in the full posting — so 'Clinical Nurse
+ * Manager – CNM' can no longer claim a Tier-1 positive.
+ *
+ * @param haystack     Text the token must appear in (title or combined).
+ * @param combinedText Full posting text the context witness may appear in.
+ */
+function hasPositiveKeyword(haystack: string, combinedText: string): boolean {
+    if (POSITIVE_KEYWORDS.some((kw) => haystack.includes(kw))) return true;
+    return CONDITIONAL_POSITIVE_KEYWORDS.some(
+        ({ tokens, requiresAny }) =>
+            tokens.some((t) => haystack.includes(t)) &&
+            requiresAny.some((ctx) => combinedText.includes(ctx)),
+    );
+}
+
+/**
+ * Hard provider-class veto (live-review fix #1a/#1c) — runs BEFORE the
+ * title-positive short-circuit, because a Tier-1 positive like 'advanced
+ * practice provider' must not exempt a '(PA)' or 'Podiatrist (DPM)' title.
+ *
+ *   - NON_NP_PROVIDER_TITLE_PATTERNS (podiatrist/DPM/dentist/…): vetoed
+ *     unless the title itself carries an NP credential token.
+ *   - PA patterns: vetoed unless the title carries an NP credential token
+ *     OR is a dual-role NP-or-PA posting (those are wanted by design).
+ */
+function hasHardProviderClassVeto(titleLower: string, dualRole: boolean): boolean {
+    const titleHasNpToken =
+        TITLE_CONTEXT_WORDS.some((t) => titleLower.includes(t)) ||
+        ROLE_TITLE_REGEX.test(titleLower);
+
+    if (NON_NP_PROVIDER_TITLE_PATTERNS.some((re) => re.test(titleLower))) {
+        if (!titleHasNpToken) return true;
+    }
+
+    const paSignal =
+        PA_ONLY_TITLE_PATTERNS.some((re) => re.test(titleLower)) ||
+        PA_BARE_TITLE_PATTERN.test(titleLower);
+    if (paSignal && !titleHasNpToken && !dualRole) {
+        return true;
+    }
+
+    return false;
 }
 
 function hasMentalHealthContext(combinedText: string): boolean {
@@ -137,7 +189,7 @@ export function classifyRelevance(
     const aprn = isAprnTitle(titleLower);
 
     // 1. MUST have a Positive Keyword in Title OR Description
-    let hasPositive = POSITIVE_KEYWORDS.some((kw) => combinedText.includes(kw));
+    let hasPositive = hasPositiveKeyword(combinedText, combinedText);
 
     if (!hasPositive) {
         const psychContext = hasMentalHealthContext(combinedText);
@@ -164,7 +216,16 @@ export function classifyRelevance(
         return { passes: false, reason: 'relevance_no_keyword' };
     }
 
-    const titleHasPositiveKeyword = POSITIVE_KEYWORDS.some((kw) => titleLower.includes(kw));
+    // 1a. HARD PROVIDER-CLASS VETO (live-review fix #1a/#1c) — evaluated
+    // before every rescue/short-circuit below. A '(PA),' / 'Podiatrist
+    // (DPM)' / 'Psychologist' title is a different profession no matter
+    // what Tier-1 positive ('advanced practice provider') or description
+    // boilerplate the posting carries.
+    if (hasHardProviderClassVeto(titleLower, dualRole)) {
+        return { passes: false, reason: 'relevance_wrong_role' };
+    }
+
+    const titleHasPositiveKeyword = hasPositiveKeyword(titleLower, combinedText);
 
     // 1b. OFF-SPECIALTY VETO
     // A title that DEFINES another specialty (Family NP, primary care, hospice,
@@ -231,8 +292,9 @@ export function classifyRelevance(
 
     // 3. Strong filter on TITLE for wrong roles.
     // Exception: title itself contains a positive keyword → trust it.
-    const titleHasPositive = POSITIVE_KEYWORDS.some((kw) => titleLower.includes(kw));
-    if (titleHasPositive) {
+    // (The hard provider-class veto at step 1a already ran, so this
+    // short-circuit can no longer pass '(PA)' / podiatrist-class titles.)
+    if (titleHasPositiveKeyword) {
         return { passes: true, reason: 'pass' };
     }
 
@@ -240,12 +302,15 @@ export function classifyRelevance(
         if (!titleLower.includes(neg)) return false;
 
         // Exception A: a negative keyword is allowed when its configured
-        // indicator terms co-occur (e.g. 'psychiatrist' in collaborative-care
-        // or dual-role psychiatrist+PMHNP postings).
+        // indicator terms co-occur IN THE TITLE (e.g. dual-role
+        // 'Psychiatrist/PMHNP' postings). Live-review fix #1b: indicators
+        // used to be checked against title+description, which admitted any
+        // bare 'Psychiatrist' posting whose JD mentioned 'nurse
+        // practitioner' in boilerplate — 207 published physician rows.
         const coOccurrenceIndicators = WRONG_ROLE_CO_OCCURRENCE_EXCEPTIONS[neg];
         if (coOccurrenceIndicators) {
             const hasIndicator = coOccurrenceIndicators.some((indicator) =>
-                combinedText.includes(indicator),
+                titleLower.includes(indicator),
             );
             return !hasIndicator;
         }

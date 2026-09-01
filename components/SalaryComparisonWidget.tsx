@@ -11,17 +11,23 @@ import { buildProvenanceSentences } from '@/components/SalaryProvenance';
 
 interface SalaryComparisonWidgetProps {
     stateName: string | null;
-    stateAvgSalary: number; // in thousands (e.g., 155 = $155k)
+    /**
+     * Gated state MEDIAN in thousands (e.g. 155 = $155k) — computed by the
+     * job page over the NP-eligible analytics pool under the benchmark
+     * publishing gate (P9 #2c/#2d). ≤ 0 (below the gate) hides the widget.
+     */
+    stateMedianSalaryK: number;
     jobMinSalary?: number | null;
     jobMaxSalary?: number | null;
 }
 
-// National-average figure ($k) lives in config/niche/stats.ts.
-const NATIONAL_AVG_SALARY = SALARY_COMPARISON_NATIONAL_AVG_K;
+// National figure ($k) lives in config/niche/stats.ts — derived from the
+// cited BLS OEWS MEDIAN annual wage (STAT_SOURCES.averageSalary).
+const NATIONAL_MEDIAN_SALARY = SALARY_COMPARISON_NATIONAL_AVG_K;
 
 // "Source: BLS OEWS, Nurse Practitioners (29-1171) — median annual wage,
 // May 2024." — source + vintage straight from STAT_SOURCES metadata, never
-// re-typed. NATIONAL_AVG_SALARY above derives from this same entry via
+// re-typed. NATIONAL_MEDIAN_SALARY above derives from this same entry via
 // config/niche/stats.ts, so the stamp can never cite a different figure
 // than the card displays.
 const [NATIONAL_CITED_SENTENCE] = buildProvenanceSentences({
@@ -30,18 +36,18 @@ const [NATIONAL_CITED_SENTENCE] = buildProvenanceSentences({
 
 export default function SalaryComparisonWidget({
     stateName,
-    stateAvgSalary,
+    stateMedianSalaryK,
     jobMinSalary,
     jobMaxSalary,
 }: SalaryComparisonWidgetProps) {
-    if (!stateName || stateAvgSalary <= 0) return null;
+    if (!stateName || stateMedianSalaryK <= 0) return null;
 
     const jobMidpoint = jobMinSalary && jobMaxSalary
         ? Math.round((Number(jobMinSalary) + Number(jobMaxSalary)) / 2 / 1000)
         : null;
 
-    const stateVsNational = stateAvgSalary - NATIONAL_AVG_SALARY;
-    const stateVsNationalPct = Math.round((stateVsNational / NATIONAL_AVG_SALARY) * 100);
+    const stateVsNational = stateMedianSalaryK - NATIONAL_MEDIAN_SALARY;
+    const stateVsNationalPct = Math.round((stateVsNational / NATIONAL_MEDIAN_SALARY) * 100);
 
     return (
         <div
@@ -62,10 +68,10 @@ export default function SalaryComparisonWidget({
                     style={{ backgroundColor: '#EDF2EE', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '14px', boxShadow: '3px 3px 6px rgba(0,0,0,0.04), -1px -1px 3px rgba(255,255,255,0.6), inset 1px 1px 2px rgba(255,255,255,0.5)' }}
                 >
                     <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--text-tertiary)' }}>
-                        {stateName} Avg
+                        {stateName} Median
                     </div>
                     <div className="text-2xl font-bold" style={{ color: 'var(--salary-color, #1d4ed8)' }}>
-                        ${stateAvgSalary}k
+                        ${stateMedianSalaryK}k
                     </div>
                 </div>
 
@@ -75,10 +81,10 @@ export default function SalaryComparisonWidget({
                     style={{ backgroundColor: '#EDF2EE', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '14px', boxShadow: '3px 3px 6px rgba(0,0,0,0.04), -1px -1px 3px rgba(255,255,255,0.6), inset 1px 1px 2px rgba(255,255,255,0.5)' }}
                 >
                     <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--text-tertiary)' }}>
-                        National Avg
+                        National Median (BLS)
                     </div>
                     <div className="text-2xl font-bold" style={{ color: 'var(--text-secondary)' }}>
-                        ${NATIONAL_AVG_SALARY}k
+                        ${NATIONAL_MEDIAN_SALARY}k
                     </div>
                 </div>
             </div>
@@ -87,14 +93,14 @@ export default function SalaryComparisonWidget({
             <div className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
                 {stateVsNational > 0 ? (
                     <span>
-                        {stateName} pays <strong style={{ color: 'var(--color-primary)' }}>+{stateVsNationalPct}%</strong> above the national average
+                        {stateName} pays <strong style={{ color: 'var(--color-primary)' }}>+{stateVsNationalPct}%</strong> above the national median
                     </span>
                 ) : stateVsNational < 0 ? (
                     <span>
-                        {stateName} pays <strong style={{ color: '#ef4444' }}>{stateVsNationalPct}%</strong> below the national average
+                        {stateName} pays <strong style={{ color: '#ef4444' }}>{stateVsNationalPct}%</strong> below the national median
                     </span>
                 ) : (
-                    <span>{stateName} pays at the national average</span>
+                    <span>{stateName} pays at the national median</span>
                 )}
             </div>
 
@@ -105,14 +111,14 @@ export default function SalaryComparisonWidget({
                     style={{ backgroundColor: '#EDF2EE', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '14px', boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), 2px 2px 4px rgba(0,0,0,0.03)', color: 'var(--text-secondary)' }}
                 >
                     This position&apos;s salary ({`$${Math.round(Number(jobMinSalary) / 1000)}k-$${Math.round(Number(jobMaxSalary) / 1000)}k`}) is{' '}
-                    {jobMidpoint > stateAvgSalary ? (
+                    {jobMidpoint > stateMedianSalaryK ? (
                         <strong style={{ color: 'var(--color-primary)' }}>above</strong>
-                    ) : jobMidpoint < stateAvgSalary ? (
+                    ) : jobMidpoint < stateMedianSalaryK ? (
                         <strong style={{ color: '#f59e0b' }}>below</strong>
                     ) : (
                         <strong>at</strong>
                     )}{' '}
-                    the {stateName} average.
+                    the {stateName} median.
                 </div>
             )}
 
@@ -126,7 +132,7 @@ export default function SalaryComparisonWidget({
                 className="mt-3"
                 style={{ fontSize: '11px', lineHeight: 1.6, color: 'var(--text-muted)', margin: '12px 0 0' }}
             >
-                {NATIONAL_CITED_SENTENCE} {stateName} average computed from live postings with disclosed salary on {brand.name}.
+                {NATIONAL_CITED_SENTENCE} {stateName} median computed from live postings with disclosed, non-estimated salary on {brand.name}.
             </p>
         </div>
     );

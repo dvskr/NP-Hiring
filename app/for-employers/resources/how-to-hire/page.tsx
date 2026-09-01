@@ -68,8 +68,8 @@ const MARKET_STATS = [
     stat: STAT_SOURCES.averageSalary,
   },
   {
-    label: `Projected ${brand.niche.short} employment growth (2022–2032)`,
-    stat: STAT_SOURCES.blsGrowth2032,
+    label: `Projected ${brand.niche.short} employment growth (2024–2034)`,
+    stat: STAT_SOURCES.blsGrowth2034,
   },
   {
     label: 'Jurisdictions with Full Practice Authority',
@@ -175,7 +175,7 @@ const FAQS = [
   },
   {
     q: `Why is ${brand.niche.short} hiring so competitive right now?`,
-    a: `The profession is growing fast — the BLS projects ${STAT_SOURCES.blsGrowth2032.formatted} employment growth for ${brand.niche.descriptor}s from 2022 to 2032, among the fastest of any occupation — while demand from team-based and access-focused care models keeps rising. Employers that post transparent salary ranges and streamline credentialing consistently fill roles faster than those that don't.`,
+    a: `The profession is growing fast — the BLS projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, among the fastest of any occupation — while demand from team-based and access-focused care models keeps rising. Employers that post transparent salary ranges and streamline credentialing consistently fill roles faster than those that don't.`,
   },
 ] as const;
 

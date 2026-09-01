@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { buildCategoryWhereClause } from '@/lib/filters';
 import JobCard from '@/components/JobCard';
@@ -26,10 +27,12 @@ const LG_FILTER = buildCategoryWhereClause('lgbtq');
 async function getJobs(skip = 0, take = 20) { return prisma.job.findMany({ where: LG_FILTER, orderBy: BEST_SORT_ORDER_BY, skip, take }); }
 async function getStats() {
   const totalJobs = await prisma.job.count({ where: LG_FILTER });
-  const salaryData = await prisma.job.aggregate({ where: { ...LG_FILTER, normalizedMinSalary: { not: null }, normalizedMaxSalary: { not: null } }, _avg: { normalizedMinSalary: true, normalizedMaxSalary: true } });
-  const avgSalary = Math.round(((salaryData._avg.normalizedMinSalary || 0) + (salaryData._avg.normalizedMaxSalary || 0)) / 2 / 1000);
+  // P9 #2c/#2d: gated MEDIAN over the NP-eligible analytics pool
+  // (lib/salary-analytics) — 0 below the n ≥ 5 / 3-employer publishing
+  // gate, which keeps this page's existing fallback copy in charge.
+  const medianSalaryK = await getGatedMedianKForWhere({ ...LG_FILTER, normalizedMinSalary: { not: null }, normalizedMaxSalary: { not: null } });
   const topEmployers = await prisma.job.groupBy({ by: ['employer'], where: LG_FILTER, _count: { employer: true }, orderBy: { _count: { employer: 'desc' } }, take: 8 });
-  return { totalJobs, avgSalary, topEmployers: topEmployers.map((e: EmployerGroupResult) => ({ name: e.employer, count: e._count.employer })) };
+  return { totalJobs, medianSalaryK, topEmployers: topEmployers.map((e: EmployerGroupResult) => ({ name: e.employer, count: e._count.employer })) };
 }
 
 const faqs = [
@@ -73,7 +76,7 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
         headlineSub="jobs, affirming care."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `${stats.avgSalary}k` : '$120K+', label: 'avg salary' },
+          { value: stats.medianSalaryK > 0 ? `${stats.medianSalaryK}k` : '$120K+', label: 'median salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description={`Gender-affirming and LGBTQ+-focused ${brand.niche.short} positions with inclusive, culturally competent care.`}

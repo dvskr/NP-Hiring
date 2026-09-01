@@ -96,7 +96,7 @@ export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[
         },
         {
             question: `What is the ${brand.niche.short} job outlook?`,
-            answer: `The ${brand.niche.short} job outlook is strong: ${STAT_SOURCES.blsGrowth2032.source} projects ${STAT_SOURCES.blsGrowth2032.formatted} employment growth for nurse practitioners through 2032 — much faster than average. Roughly ${STAT_SOURCES.hrsaShortagePopulation.formatted} Americans live in federally designated Health Professional Shortage Areas (${STAT_SOURCES.hrsaShortagePopulation.source}, ${STAT_SOURCES.hrsaShortagePopulation.asOf}), so demand for ${brand.niche.short}s continues to expand alongside telehealth access.`,
+            answer: `The ${brand.niche.short} job outlook is strong: ${STAT_SOURCES.blsGrowth2034.source} projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for nurse practitioners through 2034 — much faster than average. Roughly ${STAT_SOURCES.hrsaShortagePopulation.formatted} Americans live in federally designated Health Professional Shortage Areas (${STAT_SOURCES.hrsaShortagePopulation.source}, ${STAT_SOURCES.hrsaShortagePopulation.asOf}), so demand for ${brand.niche.short}s continues to expand alongside telehealth access.`,
         },
         {
             question: `How long does it take to become an ${brand.niche.short}?`,

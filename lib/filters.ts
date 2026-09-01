@@ -10,6 +10,8 @@ import {
     TITLE_CONTEXT_WORDS,
 } from '@/config/niche/relevance';
 import { CATEGORY_AXES } from '@/lib/pseo/taxonomy-registry';
+import { NON_NP_PROFESSION_CLASSES } from '@/lib/profession-classifier';
+import { extractSearchQueryIntent, buildSearchConditionSet } from '@/lib/search-query-intent';
 import {
     CANONICAL_CATEGORY_SLUGS,
     withTagFallback,
@@ -458,7 +460,54 @@ const PSYCH_EMPLOYER_SIGNALS = [
   ...PSYCH_EMPLOYER_ALLOWLIST,
 ];
 
+// NP-signal rescue for the provider-class / role-class exclusions below.
+// Deliberately NARROWER than PSYCH_TITLE_SIGNALS: it must not contain the
+// bare 'cnm' substring ('Clinical Nurse Manager – CNM' would rescue itself)
+// or employer-name patterns (a podiatrist AT a health system is still a
+// podiatrist).
+const NP_TITLE_RESCUE_SIGNALS = [
+  'Practitioner', 'PMHNP', 'APRN', 'ARNP', ' NP', 'NP-C', 'CRNA', 'Midwife',
+];
+
 export const GLOBAL_EXCLUSIONS: Prisma.JobWhereInput[] = [
+  // ── Profession-class gate (live-review fix #1, the durable exclusion) ──
+  // Rows the classifier has marked as a non-NP profession are excluded from
+  // every published listing surface. The explicit `not: null` conjunct
+  // guarantees NULL (unclassified) rows PASS — pre-backfill inventory keeps
+  // its current behavior until scripts/backfill-profession-class.ts has
+  // classified it. Title-pattern clauses below cover the already-published
+  // NULL rows in the meantime.
+  {
+    AND: [
+      { professionClass: { not: null } },
+      { professionClass: { in: [...NON_NP_PROFESSION_CLASSES] } },
+    ],
+  },
+  // ── Provider-class title veto for pre-backfill NULL rows (review 1a/1c/1d) ──
+  // Rows ingested before the classifier existed have professionClass = NULL
+  // and pass the gate above, so the known leaked provider classes are hidden
+  // by TITLE until scripts/backfill-profession-class.ts stamps them: the 6
+  // published Podiatrist rows, the Ascend '(PA),' posting, 'Clinical Nurse
+  // Manager – CNM', 'Clinical Educator', 'Nurse Manager - Homeless Services'.
+  // Prisma `contains` cannot express word boundaries, so only unambiguous
+  // multi-character tokens appear here (bare 'DPM'/'PA' word-forms are the
+  // classifier's job). NP_TITLE_RESCUE_SIGNALS narrowly exempts dual-role
+  // titles ('Psychologist or PMHNP', 'Nurse Practitioner Educator').
+  {
+    AND: [
+      {
+        OR: [
+          'Podiatrist', 'Podiatric', 'Dentist', 'Optometrist', 'Chiropractor',
+          'Psychologist', 'Educator', 'Nurse Manager', '(PA)', 'PA-C',
+        ].map((m): Prisma.JobWhereInput => ({ title: { contains: m, mode: 'insensitive' } })),
+      },
+      {
+        NOT: {
+          OR: NP_TITLE_RESCUE_SIGNALS.map((w): Prisma.JobWhereInput => ({ title: { contains: w, mode: 'insensitive' } })),
+        },
+      },
+    ],
+  },
   // Exclude pure MD Psychiatrist roles (no NP/Nurse/PMHNP/APRN mention)
   {
     AND: [
@@ -718,19 +767,35 @@ export function buildWhereClause(filters: RecruitmentFilterState): Prisma.JobWhe
     andConditions.push({ NOT: exclusion });
   });
 
-  // Search — split into terms and require ALL terms to match (AND)
+  // Search — filter-first deterministic intent (live-review item #3, WP-3).
+  //
+  // The old block ANDed EVERY whitespace token as a required literal
+  // substring: "remote nurse practitioner jobs in Texas" → 0 results
+  // ("jobs"/"in" had to appear verbatim), bare "remote" matched 132
+  // isRemote=false rows as text, and state codes never hit structurally.
+  //
+  // Now lib/search-query-intent.ts extracts STRUCTURAL tokens into hard
+  // constraints — work-mode terms map to the same isRemote/isHybrid signals
+  // the Work Mode facet uses, state names AND codes map to the same
+  // stateCode/state equality the ?location branch uses — and stopwords
+  // (jobs, position, np, the whole-niche "nurse practitioner" phrase) are
+  // dropped. Only the residual meaningful tokens stay text search, ORed
+  // across the text columns with AND across tokens as before.
+  //
+  // MERGE RULE: query-derived constraints yield to explicit filter params —
+  // a checked Work Mode facet suppresses the query's work-mode terms, and a
+  // location/stateCode param suppresses the query's state (explicit UI
+  // filter wins on conflict; see lib/search-query-intent.ts header).
   if (filters.search && filters.search.trim()) {
-    const terms = filters.search.trim().split(/\s+/).filter(Boolean);
-    for (const term of terms) {
-      andConditions.push({
-        OR: [
-          { title: { contains: term, mode: 'insensitive' } },
-          { employer: { contains: term, mode: 'insensitive' } },
-          { description: { contains: term, mode: 'insensitive' } },
-          { city: { contains: term, mode: 'insensitive' } },
-          { state: { contains: term, mode: 'insensitive' } },
-        ],
-      });
+    const intent = extractSearchQueryIntent(filters.search);
+    const searchConditions = buildSearchConditionSet(intent, {
+      hasExplicitWorkMode: filters.workMode.length > 0,
+      hasExplicitLocation: Boolean(filters.location || filters.stateCode),
+    });
+    if (searchConditions.workMode) andConditions.push(searchConditions.workMode);
+    if (searchConditions.state) andConditions.push(searchConditions.state);
+    for (const textCondition of searchConditions.text) {
+      andConditions.push(textCondition);
     }
   }
 

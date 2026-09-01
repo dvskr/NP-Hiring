@@ -22,19 +22,110 @@ const SCHEMA_UNIT_TEXT: Record<SalaryPeriodKey, 'HOUR' | 'DAY' | 'WEEK' | 'MONTH
   hourly: 'HOUR',
   daily: 'DAY',
   weekly: 'WEEK',
-  // Schema.org has no native 'biweekly'; report as WEEK with x2 multiplier
-  // would be confusing. Clamp to MONTH so Google bins it sensibly until we
-  // gain a per-period baseSalary helper.
+  // Schema.org has no native 'biweekly'. We emit MONTH and CONVERT the value
+  // (× 26 pay periods / 12 months) in buildJobPostingSchema — the previous
+  // clamp-without-converting understated biweekly pay by ~2.17× (live-review
+  // item 7-iii residual).
   biweekly: 'MONTH',
   monthly: 'MONTH',
   annual: 'YEAR',
+  // 'unknown' cadence: the only values allowed to back a unit are the
+  // ANNUALIZED normalized bounds (see pickBoundForSchema), so YEAR is the
+  // only honest unitText. The pipeline withholds normalized values for these
+  // rows, so in practice baseSalary is suppressed entirely.
+  unknown: 'YEAR',
 };
-function mapSalaryUnitText(period: string | null): 'HOUR' | 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' {
-  return SCHEMA_UNIT_TEXT[canonicalSalaryPeriod(period)];
+// 26 biweekly pay periods per year spread over 12 months.
+const BIWEEKLY_TO_MONTHLY = 26 / 12;
+
+// ─── SOC / occupationalCategory gating (live-review item 7-i) ────────────────
+//
+// Codes verified live against the O*NET-SOC taxonomy (onetonline.org, family
+// 29, fetched 2026-08-21):
+//   29-1171.00  Nurse Practitioners
+//   29-1151.00  Nurse Anesthetists (CRNA)
+//   29-1161.00  Nurse Midwives (CNM)
+//   29-1141.04  Clinical Nurse Specialists (O*NET specialty under 29-1141 RNs)
+//   29-1071.00  Physician Assistants
+//
+// Previously every JobPosting hardcoded the NP code — including psychiatrist,
+// podiatrist, and PA listings. Per Google's guidance a wrong occupational
+// category is worse than none, so anything we cannot classify
+// deterministically gets NO occupationalCategory at all.
+const SOC_NP = '29-1171.00';
+const SOC_CRNA = '29-1151.00';
+const SOC_CNM = '29-1161.00';
+const SOC_CNS = '29-1141.04';
+const SOC_PA = '29-1071.00';
+
+const TITLE_CRNA_RE = /\bcrna\b|\bnurse\s+anesthetist\b/i;
+// 'CNM' alone is ambiguous — 'Clinical Nurse Manager – CNM' rows exist in the
+// corpus (review item 1d). Require a midwifery token, or a bare CNM without
+// manager context.
+const TITLE_CNM_MIDWIFE_RE = /\bnurse[\s-]?midwi(?:fe|ves|fery)\b|\bmidwifery\b/i;
+const TITLE_CNM_TOKEN_RE = /\bcnm\b/i;
+const TITLE_MANAGER_CONTEXT_RE = /\bnurse\s+manager\b|\bcase\s+manager\b|\bclinical\s+nurse\s+manager\b/i;
+const TITLE_CNS_RE = /\bclinical\s+nurse\s+specialist\b|\bcns\b/i;
+const TITLE_NP_RE = /\bnurse\s+practitioners?\b|\b(?:pmhnp|fnp|agnp|agpcnp|agacnp|acnp|pnp|nnp|whnp|dnp)(?:-(?:c|bc))?\b|\bnp\b|\baprn\b/i;
+const TITLE_PA_RE = /\bphysician\s+(?:assistant|associate)s?\b|\bpa-c\b/i;
+
+// Persisted `professionClass` → SOC code. Keys MUST mirror the Prisma
+// `ProfessionClass` enum exactly (prisma/schema.prisma / NON_NP + NP_ELIGIBLE
+// sets in lib/profession-classifier.ts). An earlier draft gated on
+// 'np'/'aprn_non_np'/'unknown' — values that do not exist in the enum — so
+// every classified NP/CRNA/CNM/CNS row silently lost its SOC once the
+// backfill stamped real classes. physician / other_clinical / nonclinical
+// are intentionally absent: a classified non-NP row never gets a nursing or
+// PA code, whatever its title looks like.
+const SOC_BY_PROFESSION_CLASS: Readonly<Record<string, string>> = {
+  np_eligible: SOC_NP,
+  aprn_crna: SOC_CRNA,
+  aprn_midwife: SOC_CNM,
+  aprn_cns: SOC_CNS,
+  pa_only: SOC_PA,
+};
+
+/**
+ * Derive the O*NET-SOC occupationalCategory for a listing, or undefined when
+ * it cannot be determined with confidence (omission beats a wrong code).
+ *
+ * Precedence: the persisted `professionClass` column (WP-1C, written by the
+ * ingest classifier) is authoritative when present; a deterministic title
+ * scan is the interim fallback for rows not yet classified.
+ */
+export function deriveOccupationalCategory(job: {
+  title: string;
+  professionClass?: string | null;
+}): string | undefined {
+  const title = job.title || '';
+  const fromTitle = (): string | undefined => {
+    if (TITLE_CRNA_RE.test(title)) return SOC_CRNA;
+    if (
+      TITLE_CNM_MIDWIFE_RE.test(title) ||
+      (TITLE_CNM_TOKEN_RE.test(title) && !TITLE_MANAGER_CONTEXT_RE.test(title))
+    ) {
+      return SOC_CNM;
+    }
+    if (TITLE_CNS_RE.test(title)) return SOC_CNS;
+    if (TITLE_NP_RE.test(title)) return SOC_NP;
+    if (TITLE_PA_RE.test(title)) return SOC_PA;
+    return undefined;
+  };
+
+  const professionClass = job.professionClass;
+  if (professionClass) {
+    // Classified rows: the enum value alone decides. Non-NP classes and any
+    // unrecognized future value map to undefined — omission beats a wrong
+    // code per Google's structured-data guidance.
+    return SOC_BY_PROFESSION_CLASS[professionClass];
+  }
+  // NULL/absent = classifier has not stamped this row yet (pre-backfill) —
+  // fall back to the deterministic title scan.
+  return fromTitle();
 }
 
 interface JobStructuredDataProps {
-  job: Job;
+  job: Job & { professionClass?: string | null };
 }
 
 /**
@@ -53,7 +144,12 @@ function stripUndefined(obj: Record<string, unknown>): Record<string, unknown> {
   return result;
 }
 
-export default function JobStructuredData({ job }: JobStructuredDataProps) {
+/**
+ * Build the JobPosting JSON-LD object for a job. Exported as a pure function
+ * so the schema logic (SOC gating, TELECOMMUTE semantics, salary units) is
+ * unit-testable without rendering React.
+ */
+export function buildJobPostingSchema(job: JobStructuredDataProps['job']): Record<string, unknown> {
   // Use originalPostedAt (real source date) with createdAt fallback for SEO accuracy
   const rawDate = job.originalPostedAt || job.createdAt;
   const datePosted = rawDate instanceof Date ? rawDate : new Date(rawDate as string);
@@ -84,15 +180,16 @@ export default function JobStructuredData({ job }: JobStructuredDataProps) {
   const canonicalSlug = job.slug || slugify(job.title, job.id);
   const canonicalUrl = `${brand.baseUrl}/jobs/${canonicalSlug}`;
 
-  // SEO Fix #1: location semantics for remote / hybrid / in-person.
-  // Google requires:
-  //   - Remote-only       → omit jobLocation, set jobLocationType TELECOMMUTE
-  //                          + applicantLocationRequirements
-  //   - Hybrid            → emit BOTH a physical jobLocation AND
-  //                          jobLocationType TELECOMMUTE
-  //   - In-person / null  → emit physical jobLocation only
-  // Previously remote jobs shipped a physical CA address with no TELECOMMUTE
-  // flag, so Google Jobs treated them as local CA postings.
+  // SEO Fix #1 (corrected per live-review item 7-ii): location semantics for
+  // remote / hybrid / in-person. Google's actual guidance: jobLocationType
+  // TELECOMMUTE means the job is 100% remote — DO NOT use it for hybrid
+  // roles that require any on-site presence.
+  //   - Remote-only (isRemote && !isHybrid) → omit jobLocation, set
+  //     jobLocationType TELECOMMUTE + applicantLocationRequirements
+  //   - Hybrid                              → physical jobLocation ONLY,
+  //     never TELECOMMUTE (an earlier version of this block claimed the
+  //     opposite of the guidance and emitted TELECOMMUTE for hybrid)
+  //   - In-person / null                    → physical jobLocation only
   const hasPhysicalLocation = !!(job.city || job.state || job.stateCode);
   const addressLocality = hasPhysicalLocation ? (job.city || undefined) : undefined;
   const addressRegion = hasPhysicalLocation ? (job.stateCode || job.state || undefined) : undefined;
@@ -113,11 +210,13 @@ export default function JobStructuredData({ job }: JobStructuredDataProps) {
       }
     : undefined;
 
-  // Remote-only jobs: drop physical jobLocation entirely.
-  // Hybrid: keep physical jobLocation AND add TELECOMMUTE.
-  const jobLocation = job.isRemote && !job.isHybrid ? undefined : physicalJobLocation;
-  const jobLocationType = job.isRemote || job.isHybrid ? 'TELECOMMUTE' : undefined;
-  const applicantLocationRequirements = job.isRemote
+  // Remote-only jobs: drop physical jobLocation entirely and mark TELECOMMUTE.
+  // Hybrid: physical jobLocation only — hybrid is NOT 100% remote, so it gets
+  // neither TELECOMMUTE nor applicantLocationRequirements.
+  const isFullyRemote = job.isRemote && !job.isHybrid;
+  const jobLocation = isFullyRemote ? undefined : physicalJobLocation;
+  const jobLocationType = isFullyRemote ? 'TELECOMMUTE' : undefined;
+  const applicantLocationRequirements = isFullyRemote
     ? { '@type': 'Country', name: 'US' }
     : undefined;
 
@@ -129,21 +228,53 @@ export default function JobStructuredData({ job }: JobStructuredDataProps) {
   // UI and schema can never branch differently on the same DB value.
   const periodKey = canonicalSalaryPeriod(job.salaryPeriod);
   const unitText = SCHEMA_UNIT_TEXT[periodKey];
-  const minForSchema = periodKey === 'annual'
-    ? (job.normalizedMinSalary != null ? job.normalizedMinSalary : job.minSalary)
-    : (job.minSalary != null ? job.minSalary : job.normalizedMinSalary);
-  const maxForSchema = periodKey === 'annual'
-    ? (job.normalizedMaxSalary != null ? job.normalizedMaxSalary : job.maxSalary)
-    : (job.maxSalary != null ? job.maxSalary : job.normalizedMaxSalary);
+  // salaryPeriod='unknown' is a DECISION, not a missing value (P9 #2a): the
+  // ingest validator saw a magnitude in the ambiguous band with no explicit
+  // period token, kept the raw figures for the record, and REFUSED to
+  // normalize them. canonicalSalaryPeriod used to fold 'unknown' into
+  // 'annual', which republished that raw ambiguous figure here with unitText
+  // YEAR — a possibly-monthly $35,000 emitted as $35,000/year, recreating the
+  // 7-iii wrong-unit defect for this row class. It now returns 'unknown' as
+  // its own key (formatSalary renders no figure for it, matching this
+  // emitter's suppression). Omission beats wrong: under an unknown period
+  // only ANNUALIZED normalized values may back a YEAR unit; the pipeline
+  // withholds them for these rows, so baseSalary is suppressed entirely
+  // (undefined bounds → no block below).
+  const isUnknownPeriod = periodKey === 'unknown';
+  // Non-annual periods use the RAW source values ONLY — normalizedMin/Max are
+  // ANNUALIZED figures, so falling back to them under an HOUR/MONTH unitText
+  // (as the previous version did when one raw bound was missing) mixed units
+  // inside a single QuantitativeValue. A missing bound is omitted instead.
+  const pickBoundForSchema = (
+    normalized: number | null | undefined,
+    raw: number | null | undefined,
+  ): number | null | undefined => {
+    if (isUnknownPeriod) return normalized; // never the raw unclassified figure
+    if (periodKey === 'annual') return normalized != null ? normalized : raw;
+    return raw;
+  };
+  const rawMinForSchema = pickBoundForSchema(job.normalizedMinSalary, job.minSalary);
+  const rawMaxForSchema = pickBoundForSchema(job.normalizedMaxSalary, job.maxSalary);
 
-  const baseSalary = minForSchema != null || maxForSchema != null
+  // Biweekly is the one period whose unitText (MONTH) differs from the source
+  // cadence, so the per-paycheck value must be converted to per-month
+  // (× 26 / 12). Every other period passes through in its native unit.
+  // Rounded — synthetic cents would imply precision the source doesn't carry.
+  const toSchemaValue = (value: number | null | undefined): number | undefined => {
+    if (value == null) return undefined;
+    return periodKey === 'biweekly' ? Math.round(value * BIWEEKLY_TO_MONTHLY) : value;
+  };
+  const minForSchema = toSchemaValue(rawMinForSchema);
+  const maxForSchema = toSchemaValue(rawMaxForSchema);
+
+  const baseSalary = minForSchema !== undefined || maxForSchema !== undefined
     ? {
         '@type': 'MonetaryAmount',
         currency: 'USD',
         value: stripUndefined({
           '@type': 'QuantitativeValue',
-          minValue: minForSchema ?? undefined,
-          maxValue: maxForSchema ?? minForSchema ?? undefined,
+          minValue: minForSchema,
+          maxValue: maxForSchema ?? minForSchema,
           unitText,
         }),
       }
@@ -203,7 +334,11 @@ export default function JobStructuredData({ job }: JobStructuredDataProps) {
     // new grads. Google uses this in Rich Results filtering.
     ...(job.newGradFriendly ? { experienceInPlaceOfEducation: true } : {}),
     industry: 'Healthcare',
-    occupationalCategory: '29-1171.00',
+    // Live-review item 7-i: previously hardcoded to the NP code for EVERY
+    // listing (psychiatrists, podiatrists, PAs included). Now derived per
+    // listing; undefined (unclassifiable) is stripped below — omission
+    // beats a wrong code per Google's structured-data guidance.
+    occupationalCategory: deriveOccupationalCategory(job),
     // Only emit directApply when the application actually completes on this
     // page (in-platform ATS via applyOnPlatform). For employer-direct-link
     // and aggregator listings we omit — the apply flow leaves the URL.
@@ -215,6 +350,12 @@ export default function JobStructuredData({ job }: JobStructuredDataProps) {
       value: job.id,
     },
   });
+
+  return structuredData;
+}
+
+export default function JobStructuredData({ job }: JobStructuredDataProps) {
+  const structuredData = buildJobPostingSchema(job);
 
   // SEO/security fix (B29): job.title/description/employer arrive from
   // external aggregators. A literal "</script>" inside any of them would

@@ -4,6 +4,12 @@ import Link from 'next/link'
 import BreadcrumbSchema from '@/components/BreadcrumbSchema'
 import ProgramEmbedBuilder from '@/components/ProgramEmbedBuilder'
 import { prisma } from '@/lib/prisma'
+import { getSiteStatsOrNull } from '@/lib/site-stats'
+import {
+  canonicalActiveJobWhere,
+  COUNT_DISPLAY_FLOOR,
+  SUBSCRIBER_DISPLAY_FLOOR,
+} from '@/lib/canonical-counts'
 import {
   ArrowRight,
   GraduationCap,
@@ -97,34 +103,42 @@ async function getProgramGuide() {
   }
 }
 
-async function getProgramsStats() {
+interface ProgramsStats {
+  totalJobs: number
+  statesCovered: number
+  subscribers: number
+}
+
+/**
+ * Live review 2026-08-17 items #4a/#4d: this page previously ran a FIFTH
+ * private "active job" predicate (bare isPublished + not-archived) and a
+ * third ad-hoc subscriber definition (`isSubscribed`), and its catch block
+ * zero-filled on failure — which the unconditional "+" suffix then rendered
+ * as a literal "0+ NPs in Network" pill.
+ *
+ * Now: job + subscriber totals come from the canonical SiteStat snapshot
+ * (lib/site-stats.ts — the same numbers the homepage quotes), states-covered
+ * is derived under the same canonical predicate, and ANY failure returns
+ * null so the caller OMITS the stat pills instead of fabricating them
+ * (the /press page's omit-not-fabricate rule).
+ */
+async function getProgramsStats(): Promise<ProgramsStats | null> {
   try {
-    const [totalJobs, stateRows, subscribers] = await Promise.all([
-      prisma.job.count({
-        where: {
-          isPublished: true,
-          isManuallyUnpublished: false,
-          archivedAt: null,
-        },
-      }),
+    const [stats, stateRows] = await Promise.all([
+      getSiteStatsOrNull(),
       prisma.job.groupBy({
         by: ['stateCode'],
-        where: {
-          isPublished: true,
-          isManuallyUnpublished: false,
-          archivedAt: null,
-          stateCode: { not: null },
-        },
+        where: { ...canonicalActiveJobWhere(), stateCode: { not: null } },
       }),
-      prisma.emailLead.count({ where: { isSubscribed: true } }),
     ])
+    if (!stats) return null
     return {
-      totalJobs,
+      totalJobs: stats.totalJobs,
       statesCovered: stateRows.length,
-      subscribers,
+      subscribers: stats.totalSubscribers,
     }
   } catch {
-    return { totalJobs: 0, statesCovered: 0, subscribers: 0 }
+    return null
   }
 }
 
@@ -135,6 +149,45 @@ export default async function ForProgramsPage() {
   ])
   const fmt = (n: number) =>
     n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${n}`
+
+  // Floor-gated stat pills (live review item #4d): each pill renders only
+  // when its real number clears its display floor; below the floor — or when
+  // stats are unavailable — the pill is OMITTED entirely. No "+" padding, no
+  // zero-fill: a literal "0+ NPs in Network" is what this replaced.
+  const statPills = stats
+    ? [
+        ...(stats.totalJobs >= COUNT_DISPLAY_FLOOR
+          ? [{
+              value: fmt(stats.totalJobs),
+              label: `Active ${brand.niche.short} Roles`,
+              icon: Building2,
+              bg: '#D4F5E9',
+              iconBg: '#34D399',
+              color: '#065F46',
+            }]
+          : []),
+        ...(stats.statesCovered > 0
+          ? [{
+              value: String(stats.statesCovered),
+              label: 'States Covered',
+              icon: FileBarChart2,
+              bg: '#FFE0D3',
+              iconBg: '#F97316',
+              color: '#7C2D12',
+            }]
+          : []),
+        ...(stats.subscribers >= SUBSCRIBER_DISPLAY_FLOOR
+          ? [{
+              value: fmt(stats.subscribers),
+              label: `${brand.niche.short}s in Network`,
+              icon: GraduationCap,
+              bg: '#E8DAFE',
+              iconBg: '#A855F7',
+              color: '#4C1D95',
+            }]
+          : []),
+      ]
+    : []
 
   return (
     <>
@@ -430,7 +483,9 @@ export default async function ForProgramsPage() {
             </div>
           </div>
 
-          {/* Stat pills */}
+          {/* Stat pills — floor-gated; the whole band is omitted when no
+              pill clears its floor (omit-not-fabricate, review item #4d) */}
+          {statPills.length > 0 && (
           <div
             className="emp-stats-grid"
             style={{
@@ -441,35 +496,7 @@ export default async function ForProgramsPage() {
               marginTop: '48px',
             }}
           >
-            {[
-              {
-                value: fmt(stats.totalJobs),
-                label: `Active ${brand.niche.short} Roles`,
-                icon: Building2,
-                bg: '#D4F5E9',
-                iconBg: '#34D399',
-                color: '#065F46',
-                suffix: '+',
-              },
-              {
-                value: String(stats.statesCovered),
-                label: 'States Covered',
-                icon: FileBarChart2,
-                bg: '#FFE0D3',
-                iconBg: '#F97316',
-                color: '#7C2D12',
-                suffix: '',
-              },
-              {
-                value: fmt(stats.subscribers),
-                label: `${brand.niche.short}s in Network`,
-                icon: GraduationCap,
-                bg: '#E8DAFE',
-                iconBg: '#A855F7',
-                color: '#4C1D95',
-                suffix: '+',
-              },
-            ].map((s) => {
+            {statPills.map((s) => {
               const SIcon = s.icon
               return (
                 <div
@@ -511,7 +538,6 @@ export default async function ForProgramsPage() {
                       }}
                     >
                       {s.value}
-                      {s.suffix}
                     </span>
                     <span
                       style={{
@@ -529,6 +555,7 @@ export default async function ForProgramsPage() {
               )
             })}
           </div>
+          )}
         </div>
       </section>
 

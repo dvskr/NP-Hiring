@@ -869,9 +869,12 @@ function PostJobContent() {
           }}>
             <Building2 size={24} color="#fff" />
           </div>
-          <h2 style={{ fontSize: '22px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 8px' }}>
-            Post a Job
-          </h2>
+          {/* h1, not h2 — this gate card is what a logged-out visitor (and
+              any crawler that renders the client bundle) sees, and the page
+              previously had no h1 in any state (live-review item 7-vii). */}
+          <h1 style={{ fontSize: '22px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 8px' }}>
+            Post a {brand.niche.long} Job
+          </h1>
           <p style={{ fontSize: '14px', color: '#6B7F8A', margin: '0 0 28px', lineHeight: 1.5 }}>
             You must be logged in as an employer to post jobs. Create an account to manage listings and track applicants.
           </p>
@@ -1015,6 +1018,16 @@ function PostJobContent() {
   return (
     <>
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '16px 16px 120px' }}>
+
+        {/* Live-review item 7-vii: single visible h1 above the wizard — the
+            page previously had no h1 at all (first heading was a step-title
+            h2). Step titles stay h2s. */}
+        <h1 style={{ fontSize: '26px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '8px 0 4px' }}>
+          Post a {brand.niche.long} Job
+        </h1>
+        <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 20px' }}>
+          Your first post is free with every feature included.
+        </p>
 
         {/* Resume banner — shown ONLY on initial hydration of an
             existing draft, and dismissed permanently after the first

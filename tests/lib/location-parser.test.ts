@@ -45,16 +45,20 @@ describe('parseLocation — Remote patterns', () => {
         expect(r.stateCode).toBe('TX');
     });
 
-    it('parses "Telehealth - Denver, CO"', () => {
+    // Live-review item 1e: 'telehealth' / 'virtual' are service-line words,
+    // not work-mode proof — telehealth clinics hire onsite staff, and these
+    // substrings marked verifiably onsite rows as remote. The city/state
+    // still parses; the remote flag now requires a standalone remote token.
+    it('parses "Telehealth - Denver, CO" WITHOUT inferring remote', () => {
         const r = parseLocation('Telehealth - Denver, CO');
-        expect(r.isRemote).toBe(true);
+        expect(r.isRemote).toBe(false);
         expect(r.city).toBe('Denver');
         expect(r.stateCode).toBe('CO');
     });
 
-    it('parses "Virtual, United States" as remote', () => {
+    it('does NOT treat "Virtual, United States" as remote (item 1e)', () => {
         const r = parseLocation('Virtual, United States');
-        expect(r.isRemote).toBe(true);
+        expect(r.isRemote).toBe(false);
     });
 
     it('parses "Work From Home" as remote', () => {
@@ -131,14 +135,27 @@ describe('parseLocation — Edge cases', () => {
         expect(r.state).toBe('Texas');
     });
 
-    it('handles "Nationwide" as remote', () => {
+    // Live-review item 1e: country/coverage markers are not remote markers.
+    // 'Los Angeles, CA, United States' was being flagged remote through the
+    // 'united states' substring — the Tia '- Onsite' rows shipped TELECOMMUTE
+    // structured data this way. A bare country string is simply unknown.
+    it('does NOT treat "Nationwide" as remote (item 1e)', () => {
         const r = parseLocation('Nationwide');
-        expect(r.isRemote).toBe(true);
+        expect(r.isRemote).toBe(false);
+        expect(r.city).toBeNull();
     });
 
-    it('handles "United States" as remote', () => {
+    it('does NOT treat "United States" as remote (item 1e)', () => {
         const r = parseLocation('United States');
-        expect(r.isRemote).toBe(true);
+        expect(r.isRemote).toBe(false);
+        expect(r.city).toBeNull();
+    });
+
+    it('a city inside the United States is not remote either', () => {
+        const r = parseLocation('Los Angeles, CA, United States');
+        expect(r.isRemote).toBe(false);
+        expect(r.city).toBe('Los Angeles');
+        expect(r.stateCode).toBe('CA');
     });
 
     it('handles multi-word city', () => {

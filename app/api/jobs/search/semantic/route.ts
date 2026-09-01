@@ -24,6 +24,7 @@ import { prisma } from '@/lib/prisma';
 import { rateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { embed, AiGatewayError } from '@/lib/ai/gateway';
+import { GLOBAL_EXCLUSIONS } from '@/lib/filters';
 import { semanticJobSearch, reciprocalRankFusion } from '@/lib/ai/vector-search';
 import { parseSemanticQuery } from '@/lib/ai/query-parser';
 import { isAiFeatureEnabled } from '@/lib/ai/feature-flags';
@@ -179,6 +180,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Keyword side also honors the parsed state + remote constraints so the
     // RRF fusion stays consistent — neither side can leak rows that violate
     // the hard filter.
+    //
+    // Live-review fix #1b: this leg used to bypass GLOBAL_EXCLUSIONS entirely,
+    // which is how published psychiatrist rows were legitimately served to
+    // "NP search". It now composes the same exclusion fragments /jobs uses
+    // (profession-class gate + title-pattern vetoes); the hydrate query below
+    // applies them again so the VECTOR leg cannot leak an excluded row either.
     const keywordHits = await prisma.job.findMany({
         where: {
             isPublished: true,
@@ -188,6 +195,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             ...(state ? { stateCode: state } : {}),
             ...(remoteOnly ? { isRemote: true } : {}),
             OR: tokenOr,
+            AND: GLOBAL_EXCLUSIONS.map((exclusion) => ({ NOT: exclusion })),
         },
         select: { id: true },
         take: 50,
@@ -238,8 +246,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // ── 4. Hydrate full job rows for the UI ─────────────────────────────
     // Select every column JobCard reads from `Job` so we can hand the rows
     // straight to the existing component without prop-by-prop spreading.
+    // GLOBAL_EXCLUSIONS runs here too (live-review fix #1b): vector hits skip
+    // the Prisma keyword filter, and the raw-SQL leg only carries the
+    // profession-class gate — this is the choke point that guarantees NO
+    // excluded row reaches the response regardless of which leg found it.
+    // (Excluded ids drop out of the id-join and are filtered from `ordered`.)
     const jobs = await prisma.job.findMany({
-        where: { id: { in: fused.map((h) => h.jobId) } },
+        where: {
+            id: { in: fused.map((h) => h.jobId) },
+            AND: GLOBAL_EXCLUSIONS.map((exclusion) => ({ NOT: exclusion })),
+        },
         select: {
             id: true, title: true, slug: true, employer: true, location: true,
             jobType: true, mode: true, experienceLevel: true,

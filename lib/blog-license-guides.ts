@@ -463,7 +463,7 @@ Renewal cycles, continuing-education requirements, and fees are set by the ${s.b
 
 ## What ${NP}s earn in ${s.name}
 
-The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2032.formatted} (${STAT_SOURCES.blsGrowth2032.source}). For live ${s.name} numbers — average pay, reported ranges, top employers, and pay by practice setting computed from current postings — see the [${s.name} salary guide](/salary-guide/${s.stateSlug}) and browse [open ${s.code} positions](/jobs/state/${s.stateSlug}).
+The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2034.formatted} (${STAT_SOURCES.blsGrowth2034.source}). For live ${s.name} numbers — average pay, reported ranges, top employers, and pay by practice setting computed from current postings — see the [${s.name} salary guide](/salary-guide/${s.stateSlug}) and browse [open ${s.code} positions](/jobs/state/${s.stateSlug}).
 
 ## Frequently asked questions
 

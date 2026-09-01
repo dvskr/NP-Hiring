@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { buildCategoryWhereClause } from '@/lib/filters';
 import JobCard from '@/components/JobCard';
@@ -35,10 +36,12 @@ async function getJobs(skip = 0, take = 20) {
 
 async function getStats() {
   const totalJobs = await prisma.job.count({ where: CT_FILTER });
-  const salaryData = await prisma.job.aggregate({ where: { ...CT_FILTER, normalizedMinSalary: { not: null }, normalizedMaxSalary: { not: null } }, _avg: { normalizedMinSalary: true, normalizedMaxSalary: true } });
-  const avgSalary = Math.round(((salaryData._avg.normalizedMinSalary || 0) + (salaryData._avg.normalizedMaxSalary || 0)) / 2 / 1000);
+  // P9 #2c/#2d: gated MEDIAN over the NP-eligible analytics pool
+  // (lib/salary-analytics) — 0 below the n ≥ 5 / 3-employer publishing
+  // gate, which keeps this page's existing fallback copy in charge.
+  const medianSalaryK = await getGatedMedianKForWhere({ ...CT_FILTER, normalizedMinSalary: { not: null }, normalizedMaxSalary: { not: null } });
   const topEmployers = await prisma.job.groupBy({ by: ['employer'], where: CT_FILTER, _count: { employer: true }, orderBy: { _count: { employer: 'desc' } }, take: 8 });
-  return { totalJobs, avgSalary, topEmployers: topEmployers.map((e: EmployerGroupResult) => ({ name: e.employer, count: e._count.employer })) };
+  return { totalJobs, medianSalaryK, topEmployers: topEmployers.map((e: EmployerGroupResult) => ({ name: e.employer, count: e._count.employer })) };
 }
 
 const contractFaqs = [
@@ -94,7 +97,7 @@ export default async function ContractPage({ searchParams }: PageProps) {
         headlineSub="jobs, fixed-term roles."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$110K+', label: 'avg salary' },
+          { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$110K+', label: 'median salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description="Fixed-term assignments with premium rates, diverse settings, and geographic flexibility."
@@ -141,11 +144,11 @@ export default async function ContractPage({ searchParams }: PageProps) {
                 </ul>
               </div>
             )}
-            {stats.avgSalary > 0 && (
+            {stats.medianSalaryK > 0 && (
               <div style={{ ...clayCard, padding: '24px' }}>
                 <TrendingUp size={20} style={{ color: '#34D399', marginBottom: '8px' }} />
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}>${stats.avgSalary}k</div>
-                <div style={{ fontSize: '13px', color: '#7A6A62' }}>Average salary</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}>${stats.medianSalaryK}k</div>
+                <div style={{ fontSize: '13px', color: '#7A6A62' }}>Median salary</div>
               </div>
             )}
           </div>
@@ -197,8 +200,8 @@ export default async function ContractPage({ searchParams }: PageProps) {
               <div>
                 <TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} />
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Premium Rates</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Average contract {brand.niche.short} salary:</p>
-                <p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.avgSalary}k</p>
+                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Median contract {brand.niche.short} salary:</p>
+                <p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.medianSalaryK}k</p>
               </div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ct_salary.webp`} alt={`Contract ${brand.niche.short} pay`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>

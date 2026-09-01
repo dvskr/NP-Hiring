@@ -38,7 +38,7 @@ function buildJobsHubFaqs(totalJobs: number): HubFaq[] {
     },
     {
       question: `How fast is demand for ${brand.niche.descriptor}s growing?`,
-      answer: `The BLS projects ${STAT_SOURCES.blsGrowth2032.formatted} employment growth for ${brand.niche.descriptor}s from 2022 to 2032 (${STAT_SOURCES.blsGrowth2032.source}) — among the fastest-growing occupations in the United States.`,
+      answer: `The BLS projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for ${brand.niche.descriptor}s from 2024 to 2034 (${STAT_SOURCES.blsGrowth2034.source}) — among the fastest-growing occupations in the United States.`,
     },
     {
       question: `Where can ${brand.niche.descriptor}s practice independently?`,

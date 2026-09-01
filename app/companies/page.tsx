@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
-import { activeIndexableJobWhere } from '@/lib/active-job-filter';
+import { canonicalActiveJobWhere, canonicalEmployerWhere } from '@/lib/canonical-counts';
 import {
   COMPANIES_PER_PAGE,
   buildCompaniesPath,
@@ -49,13 +49,19 @@ interface CompaniesPageProps {
 }
 
 /**
- * Employers with at least one active, indexable job — the exact population the
+ * Employers with at least one canonical active job — the exact population the
  * directory renders, and therefore the only honest source for the visible count
  * and the pagination arithmetic. `cache` dedupes the query between
  * generateMetadata (which needs the page count) and the render.
+ *
+ * Live review 2026-08-17 item #4c: this is now the ONE employer definition
+ * (lib/canonical-counts.ts canonicalEmployerWhere) — the same predicate
+ * SiteStat.totalCompanies snapshots — so this hero, the /about stat, and the
+ * cached metadata count can no longer put three different employer totals in
+ * front of readers.
  */
 const getDirectoryCount = cache(async (): Promise<number> =>
-  prisma.company.count({ where: { jobs: { some: activeIndexableJobWhere() } } }),
+  prisma.company.count({ where: canonicalEmployerWhere() }),
 );
 
 /** Escaped exactly like the Organization schema in app/companies/[slug]/page.tsx. */
@@ -74,11 +80,12 @@ const COMPANIES_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`
  * generateMetadata pattern, and is pinned by
  * tests/regressions/p0-hubs-truth-inventory-claims.test.ts.
  *
- * NOTE: SiteStat.totalCompanies counts DISTINCT `job.employer` strings, which
- * is a larger population than the Company rows this page can link. The VISIBLE
- * count in the hero uses the directory's own count instead, so what a reader
- * sees always matches what the page renders. Reconciling the two counters is a
- * lib/site-stats.ts change and is out of scope here.
+ * SiteStat.totalCompanies and this page's directory count now share ONE
+ * definition — canonicalEmployerWhere() (Company rows with ≥1 canonical
+ * active job). The distinct-employer-string counter that made the snapshot a
+ * larger population than the rows this page can link was retired in the
+ * live-review count unification (2026-08-17 item #4c); the only remaining
+ * difference is the snapshot's hourly cache lag.
  *
  * P2 #11: paged views self-canonicalize (`?page=N`) and stay indexable; page 1
  * always canonicalizes to the bare path so `?page=1` can't fork the hub.
@@ -155,7 +162,11 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
   // it), so null-expiry employers were dropped from this directory entirely
   // while sitemap.xml still submitted their profile URLs. Both files now use
   // the shared helper — one predicate, no drift.
-  const activeJobWhere = activeIndexableJobWhere(now);
+  // Canonical predicate (activeIndexableJobWhere + GLOBAL_EXCLUSIONS): the
+  // listing, the per-company job badges, and the visible/pagination count all
+  // derive from the same clause, so none can drift from the others — and none
+  // can exceed what /jobs itself browses.
+  const activeJobWhere = canonicalActiveJobWhere(now);
   const directoryWhere = { jobs: { some: activeJobWhere } };
   const directorySelect = {
     id: true,

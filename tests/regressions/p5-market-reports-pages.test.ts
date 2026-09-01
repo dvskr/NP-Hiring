@@ -106,7 +106,7 @@ describe('P5 reports — live figures derive, never hand-typed', () => {
     it('national context renders from STAT_SOURCES, not retyped', () => {
         expect(reportPage).toContain("from '@/lib/stats-sources'");
         expect(reportPage).toContain('STAT_SOURCES.averageSalary');
-        expect(reportPage).toContain('STAT_SOURCES.blsGrowth2032');
+        expect(reportPage).toContain('STAT_SOURCES.blsGrowth2034');
         expect(reportPage).toContain('STAT_SOURCES.fullPracticeStates');
     });
 });

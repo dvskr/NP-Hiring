@@ -93,7 +93,7 @@ export default function EditorialPolicyPage() {
     // in that file; this table follows automatically.
     const dataSourceRows = [
         { label: `Median ${brand.niche.short} salary`, stat: STAT_SOURCES.averageSalary },
-        { label: `Projected ${brand.niche.short} employment growth`, stat: STAT_SOURCES.blsGrowth2032 },
+        { label: `Projected ${brand.niche.short} employment growth`, stat: STAT_SOURCES.blsGrowth2034 },
         { label: 'Primary-care shortage population', stat: STAT_SOURCES.hrsaShortagePopulation },
         { label: 'Full Practice Authority states', stat: STAT_SOURCES.fullPracticeStates },
     ];

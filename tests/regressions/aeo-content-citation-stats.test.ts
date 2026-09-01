@@ -58,7 +58,7 @@ describe('B4 — UI salary constants derive from the cited BLS figure', () => {
         const salaryPebble = CAREER_PULSE_STATS.find((s) => /salary/i.test(s.label));
         const growthPebble = CAREER_PULSE_STATS.find((s) => /growth/i.test(s.label));
         expect(salaryPebble?.value).toBe(`$${DERIVED_K}K`);
-        expect(growthPebble?.value).toBe(STAT_SOURCES.blsGrowth2032.formatted);
+        expect(growthPebble?.value).toBe(STAT_SOURCES.blsGrowth2034.formatted);
     });
 
     it('config/niche/stats.ts contains no hardcoded dollar salary figure', () => {

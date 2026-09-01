@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Building, Briefcase, DollarSign, Shield, TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { buildCategoryWhereClause } from '@/lib/filters';
 import JobCard from '@/components/JobCard';
@@ -48,16 +49,15 @@ async function getJobs(skip: number = 0, take: number = 20) {
 
 async function getStats() {
   const totalJobs = await prisma.job.count({ where: WHERE_CLAUSE });
-  const salaryData = await prisma.job.aggregate({
-    where: { ...WHERE_CLAUSE, normalizedMinSalary: { not: null }, normalizedMaxSalary: { not: null } },
-    _avg: { normalizedMinSalary: true, normalizedMaxSalary: true },
-  });
-  const avgSalary = Math.round(((salaryData._avg.normalizedMinSalary || 0) + (salaryData._avg.normalizedMaxSalary || 0)) / 2 / 1000);
+  // P9 #2c/#2d: gated MEDIAN over the NP-eligible analytics pool
+  // (lib/salary-analytics) — 0 below the n ≥ 5 / 3-employer publishing
+  // gate, which keeps this page's existing fallback copy in charge.
+  const medianSalaryK = await getGatedMedianKForWhere({ ...WHERE_CLAUSE, normalizedMinSalary: { not: null }, normalizedMaxSalary: { not: null } });
   const topEmployers = await prisma.job.groupBy({
     by: ['employer'], where: WHERE_CLAUSE,
     _count: { employer: true }, orderBy: { _count: { employer: 'desc' } }, take: 8,
   });
-  return { totalJobs, avgSalary, topEmployers: topEmployers.map((e: EmployerGroupResult) => ({ name: e.employer, count: e._count.employer })) };
+  return { totalJobs, medianSalaryK, topEmployers: topEmployers.map((e: EmployerGroupResult) => ({ name: e.employer, count: e._count.employer })) };
 }
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
@@ -114,7 +114,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
         headlineSub="jobs, hospital & acute care."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$140K+', label: 'avg salary' },
+          { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$140K+', label: 'median salary' },
           { value: `${stats.topEmployers.length}+`, label: 'hospitals' },
         ]}
         description="Hospital-based and acute care positions with structured schedules, competitive pay, and multidisciplinary team support."
@@ -178,14 +178,14 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
                 </ul>
               </div>
             )}
-            {stats.avgSalary > 0 && (
+            {stats.medianSalaryK > 0 && (
               <div className="cat-bento-card" style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                   <TrendingUp size={20} style={{ color: '#34D399' }} />
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Salary Insights</h3>
                 </div>
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.avgSalary}k</div>
-                <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Average annual salary</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.medianSalaryK}k</div>
+                <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Median annual salary</div>
                 <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Includes shift differentials and sign-on bonuses.</p>
               </div>
             )}
@@ -253,7 +253,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary + Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Inpatient {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k annually` : 'competitive salaries'} with full benefits, malpractice coverage, and retirement plans.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Inpatient {brand.niche.short}s earn {stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k annually` : 'competitive salaries'} with full benefits, malpractice coverage, and retirement plans.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>

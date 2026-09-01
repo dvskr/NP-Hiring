@@ -251,9 +251,20 @@ describe('cost-of-living comparator (P2 #5)', () => {
     expect(clientComponent).not.toMatch(/import \{[^}]*\} from '\.\/city-picker-data'/);
   });
 
-  it('excludes inferred-pay rows from the aggregation', () => {
+  it('excludes inferred-pay rows from the aggregation (via the gated analytics pool)', () => {
+    // P9 #2c/#2d: the tool now aggregates through npSalaryAnalyticsWhere
+    // (which carries salaryIsEstimated: false plus the confidence, expiry,
+    // and cadence gates) + the NP-title filter + benchmark medians, instead
+    // of its own inline predicate over every published row.
     const src = read(routeFile('/tools/cost-of-living-comparison'));
-    expect(src).toContain('salaryIsEstimated: false');
+    expect(src).toContain('npSalaryAnalyticsWhere');
+    expect(src).toContain('filterNpEligibleRows');
+    expect(src).toContain('summarizeBenchmarks');
+    // readCode: the page's doc comment DISCUSSES the removed `_avg` call —
+    // only code may not contain one.
+    expect(readCode(routeFile('/tools/cost-of-living-comparison'))).not.toContain('_avg');
+    const utils = read('lib/salary-utils.ts');
+    expect(utils).toContain('salaryIsEstimated: false');
   });
 
   it('handles an aggregation failure without taking the route down', () => {

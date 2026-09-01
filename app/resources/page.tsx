@@ -17,6 +17,7 @@ import { SALARY_GUIDE_EDITION_YEAR } from '@/app/api/salary-guide/pdf-availabili
 import LicensureChecker from '@/components/LicensureChecker';
 import StateImage from '@/components/StateImage';
 import { prisma } from '@/lib/prisma';
+import { getGatedStateBenchmarks } from '@/lib/salary-analytics';
 import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
 
 export const revalidate = 86400;
@@ -126,32 +127,27 @@ const featuredGuides = [
 ];
 
 export default async function ResourcesPage() {
-  const [blogPosts, stateSalaryData] = await Promise.all([
+  const [blogPosts, benchmarkRows] = await Promise.all([
     prisma.blogPost.findMany({
       where: { status: 'published' },
       select: { slug: true, title: true, category: true, metaDescription: true, imageUrl: true, publishDate: true },
       orderBy: { publishDate: 'desc' },
     }),
-    prisma.job.groupBy({
-      by: ['state'],
-      where: { isPublished: true, state: { not: null }, normalizedMinSalary: { not: null } },
-      _avg: { normalizedMinSalary: true, normalizedMaxSalary: true },
-      _min: { normalizedMinSalary: true },
-      _max: { normalizedMaxSalary: true },
-      _count: { id: true },
-    }),
+    // P9 #2c/#2d: gated per-state medians for the embedded licensure
+    // checker — replaces the old `_avg` mean-of-min/max over every
+    // published row (psychiatrist/PA pay and estimated rows included).
+    getGatedStateBenchmarks(),
   ]);
 
-  const stateSalaries = stateSalaryData
-    .filter(s => s.state && s._avg.normalizedMinSalary)
+  const stateSalaries = benchmarkRows
     .map(s => ({
-      state: s.state!,
-      avgSalary: Math.round(((s._avg.normalizedMinSalary || 0) + (s._avg.normalizedMaxSalary || 0)) / 2),
-      minSalary: Math.round(s._min.normalizedMinSalary || 0),
-      maxSalary: Math.round(s._max.normalizedMaxSalary || 0),
-      jobCount: s._count.id,
+      state: s.scope,
+      medianSalary: s.median,
+      p25: s.p25,
+      p75: s.p75,
+      jobCount: s.postings,
     }))
-    .sort((a, b) => b.avgSalary - a.avgSalary);
+    .sort((a, b) => b.medianSalary - a.medianSalary);
 
   // Split state_spotlight from other articles
   const stateGuides = blogPosts.filter(p => p.category === 'state_spotlight');

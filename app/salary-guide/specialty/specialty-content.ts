@@ -10,8 +10,11 @@
  * Every dollar figure here is either (a) STAT_SOURCES.averageSalary
  * (BLS-cited), (b) a computed premium range over that median (premiums
  * mirror the hub's published table — see specialty-config.ts), or (c) live
- * DB aggregates. Nothing is typed in by hand, and no figure derives from
- * the ingest tuning constants in config/niche/salary.ts.
+ * GATED MEDIANS (review P9 #2c/#2d: the npSalaryAnalyticsWhere pool scoped
+ * to NP-eligible titles, published only under the benchmark widget's
+ * policy — true median, n ≥ 5 postings from ≥ 3 employers; never a
+ * mean-of-min/max). Nothing is typed in by hand, and no figure derives
+ * from the ingest tuning constants in config/niche/salary.ts.
  *
  * CREDENTIAL TRUTH: every group noun goes through specialtyNoun /
  * specialtyNounPlural, and every mention of the cited median goes through
@@ -26,10 +29,20 @@ import type { SpecialtyPremium, SpecialtySalaryPage } from './specialty-config';
 // ─── Live-data shapes (filled by the page's DB queries) ─────────────────────
 
 export interface SpecialtyLiveStats {
-    avgSalary: number;
+    /**
+     * Gated MEDIAN over the NP-eligible analytics pool for this specialty
+     * (benchmark policy: n ≥ 5 postings from ≥ 3 employers). 0 below the
+     * gate — callers must check gatePassed before rendering any figure.
+     */
+    medianSalary: number;
+    /** Lowest disclosed normalized min across the gated pool (0 = none). */
     minSalary: number;
+    /** Highest disclosed normalized max across the gated pool (0 = none). */
     maxSalary: number;
+    /** Postings behind the published median (the gated sample size). */
     jobCount: number;
+    /** True when the benchmark publishing gate passed. */
+    gatePassed: boolean;
 }
 
 export interface SpecialtyStateRow {
@@ -37,20 +50,26 @@ export interface SpecialtyStateRow {
     stateCode: string;
     /** Matches the /salary-guide/[state] + /jobs/<cat>/[state] slug shape. */
     slug: string;
-    avgSalary: number;
+    /** Gated per-state median (benchmark policy — rows below it are omitted). */
+    medianSalary: number;
     jobCount: number;
 }
 
 export interface SpecialtyExperienceRow {
     label: string;
-    avgSalary: number;
+    /** Gated per-band median (benchmark policy — bands below it are omitted). */
+    medianSalary: number;
     jobCount: number;
 }
 
-/** Minimum postings before a live aggregate is trustworthy enough to render. */
+/**
+ * Minimum postings before the specialty INDEX page's "N live postings with
+ * pay" count chip renders. A count display only — every dollar FIGURE is
+ * gated by the benchmark policy (BENCHMARK_MIN_POSTINGS /
+ * BENCHMARK_MIN_EMPLOYERS in components/tools/benchmark-model.ts), which
+ * superseded the old per-surface mean floors here (P9 #2d).
+ */
 export const MIN_LIVE_JOBS = 3;
-/** Minimum postings for a state row in the top-paying-states table. */
-export const MIN_STATE_JOBS = 2;
 
 // ─── Formatting ─────────────────────────────────────────────────────────────
 
@@ -63,22 +82,6 @@ export function formatSalary(n: number): string {
 /** The cited all-NP median as a number (BLS OEWS via lib/stats-sources.ts). */
 export function nationalMedian(): number {
     return Number(STAT_SOURCES.averageSalary.value);
-}
-
-/**
- * Midpoint of the disclosed salary bounds for an aggregate.
- *
- * Prisma's `_avg` skips nulls per column, so a set where no posting
- * discloses an upper bound yields `_avg.normalizedMaxSalary === null`.
- * Naively averaging `(min + max) / 2` with a `|| 0` fallback would then
- * HALVE the real figure and publish it as a salary — so only the bounds
- * that actually exist are averaged, and a set with no usable bound returns
- * 0 for callers to gate on (omit, never fabricate).
- */
-export function averageOfBounds(avgMin: number | null, avgMax: number | null): number {
-    const bounds = [avgMin, avgMax].filter((v): v is number => typeof v === 'number' && v > 0);
-    if (bounds.length === 0) return 0;
-    return Math.round(bounds.reduce((sum, v) => sum + v, 0) / bounds.length);
 }
 
 /** True when a live aggregate has a renderable min–max spread (never "$X–$0"). */
@@ -224,15 +227,17 @@ export function buildSpecialtyFaqs(
             `${brand.name} publishes ${noun} pay only from live ${noun} postings that disclose salary — no national ${noun} wage figure is cited on this board.`,
         );
     }
-    if (live && live.jobCount >= MIN_LIVE_JOBS && live.avgSalary > 0) {
+    // P9 #2d: only a GATED median may be quoted (benchmark policy — n ≥ 5
+    // postings from ≥ 3 employers), stated as a median, never an "average".
+    if (live && live.gatePassed && live.medianSalary > 0) {
         // The min–max spread is appended only when both bounds are real —
         // a set where no posting discloses an upper bound would otherwise
         // publish "range $98K–$0".
         const spread = hasReportedRange(live)
-            ? ` (range ${formatSalary(live.minSalary)}–${formatSalary(live.maxSalary)})`
+            ? ` (disclosed ranges span ${formatSalary(live.minSalary)}–${formatSalary(live.maxSalary)})`
             : '';
         payParts.push(
-            `Across ${live.jobCount} active ${noun} postings with disclosed pay on ${brand.name}, the average is ${formatSalary(live.avgSalary)} per year${spread}.`,
+            `Across ${live.jobCount} active ${noun} postings with disclosed pay on ${brand.name}, the median is ${formatSalary(live.medianSalary)} per year${spread}.`,
         );
     }
     faqs.push({ q: `How much does ${indefiniteArticle(page.role)} ${page.role} make?`, a: payParts.join(' ') });
@@ -245,11 +250,13 @@ export function buildSpecialtyFaqs(
         });
     }
 
-    // 3. Top-paying states — only when live data supports it.
+    // 3. Top-paying states — only when live data supports it. Each row is a
+    //    gated per-state MEDIAN (benchmark policy), so the sample counts
+    //    quoted here are always ≥ the publishing minimum.
     if (topStates.length >= 3) {
         const top3 = topStates
             .slice(0, 3)
-            .map((s) => `${s.state} (${formatSalary(s.avgSalary)} average across ${s.jobCount} ${s.jobCount === 1 ? 'posting' : 'postings'})`)
+            .map((s) => `${s.state} (${formatSalary(s.medianSalary)} median across ${s.jobCount} ${s.jobCount === 1 ? 'posting' : 'postings'})`)
             .join(', ');
         faqs.push({
             q: `Which states pay ${specialtyNounPlural(page)} the most?`,

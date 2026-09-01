@@ -16,11 +16,19 @@ interface StateGuide {
   slug: string;
 }
 
+/**
+ * P9 #2c/#2d: a gated per-state benchmark row (lib/salary-analytics
+ * getGatedStateBenchmarks) — true median + quartiles over the NP-eligible
+ * analytics pool, present only for states that cleared the n ≥ 5 posting /
+ * 3-employer publishing gate. States below the gate simply have no row and
+ * the salary card is omitted (omit, never fabricate).
+ */
 interface StateSalary {
   state: string;
-  avgSalary: number;
-  minSalary: number;
-  maxSalary: number;
+  medianSalary: number;
+  p25: number;
+  p75: number;
+  /** Postings behind the published median (gated sample size). */
   jobCount: number;
 }
 
@@ -301,25 +309,25 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
                   </div>
                   <div>
                     <p style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>
-                      Average Salary in {selectedState}
+                      Median Salary in {selectedState}
                     </p>
                     <div style={{ fontSize: '28px', fontWeight: 800, color: '#1A2E35', lineHeight: 1.1 }}>
-                      ${fmt(result.salary.avgSalary)}
+                      ${fmt(result.salary.medianSalary)}
                     </div>
                   </div>
                 </div>
                 <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 12px' }}>
-                  Range: ${fmt(result.salary.minSalary)} – ${fmt(result.salary.maxSalary)}
+                  Middle half: ${fmt(result.salary.p25)} – ${fmt(result.salary.p75)}
                 </p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div style={{ padding: '10px 14px', borderRadius: '10px', background: '#FDF2F8' }}>
                     <div style={{ fontSize: '18px', fontWeight: 800, color: '#BE185D' }}>{fmt(result.salary.jobCount)}</div>
-                    <div style={{ fontSize: '10px', color: '#64748B' }}>Active Jobs</div>
+                    <div style={{ fontSize: '10px', color: '#64748B' }}>Salaried Postings</div>
                   </div>
                   <div style={{ padding: '10px 14px', borderRadius: '10px', background: '#EEF2FF' }}>
                     <div style={{ fontSize: '18px', fontWeight: 800, color: '#6366F1' }}>
-                      ~${fmt(Math.round(result.salary.avgSalary / 2080))}
+                      ~${fmt(Math.round(result.salary.medianSalary / 2080))}
                     </div>
                     <div style={{ fontSize: '10px', color: '#64748B' }}>Per Hour</div>
                   </div>

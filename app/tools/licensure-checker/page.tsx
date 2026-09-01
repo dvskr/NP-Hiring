@@ -33,6 +33,7 @@ import MultiStatePlanner, { type PlannerState } from '@/components/tools/MultiSt
 import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard } from '@/components/tools/tool-theme';
 import { LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
 import { prisma } from '@/lib/prisma';
+import { getGatedStateBenchmarks } from '@/lib/salary-analytics';
 import { logger } from '@/lib/logger';
 import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
 import { STAT_SOURCES } from '@/lib/stats-sources';
@@ -72,11 +73,17 @@ interface StateGuideRef {
   slug: string;
 }
 
+/**
+ * P9 #2c/#2d: gated benchmark row (true median + quartiles over the
+ * NP-eligible analytics pool) — matches LicensureChecker's StateSalary
+ * shape. Only states past the n ≥ 5 / 3-employer publishing gate appear;
+ * the checker omits the salary card for the rest.
+ */
 interface StateSalaryRow {
   state: string;
-  avgSalary: number;
-  minSalary: number;
-  maxSalary: number;
+  medianSalary: number;
+  p25: number;
+  p75: number;
   jobCount: number;
 }
 
@@ -97,23 +104,16 @@ function titleCaseSlugFragment(fragment: string): string {
 
 async function loadCheckerData(): Promise<CheckerData> {
   try {
-    const [guidePosts, salaryRows] = await Promise.all([
+    const [guidePosts, benchmarkRows] = await Promise.all([
       prisma.blogPost.findMany({
         where: { status: 'published', category: 'state_spotlight' },
         select: { slug: true },
       }),
-      prisma.job.groupBy({
-        by: ['state'],
-        where: {
-          isPublished: true,
-          state: { not: null },
-          normalizedMinSalary: { not: null },
-        },
-        _avg: { normalizedMinSalary: true, normalizedMaxSalary: true },
-        _min: { normalizedMinSalary: true },
-        _max: { normalizedMaxSalary: true },
-        _count: { id: true },
-      }),
+      // P9 #2c/#2d: gated per-state medians — replaces the old `_avg`
+      // mean-of-min/max over every published row (psychiatrist/PA pay and
+      // estimated rows included), which this tool then divided by 2080 and
+      // republished as an hourly figure too.
+      getGatedStateBenchmarks(),
     ]);
 
     // Deduplicate: some states carry a "-2" copy of their guide.
@@ -125,16 +125,15 @@ async function loadCheckerData(): Promise<CheckerData> {
       if (!guideByState.has(name)) guideByState.set(name, post.slug);
     }
 
-    const stateSalaries = salaryRows
-      .filter((row) => row.state && row._avg.normalizedMinSalary)
+    const stateSalaries: StateSalaryRow[] = benchmarkRows
       .map((row) => ({
-        state: row.state as string,
-        avgSalary: Math.round(((row._avg.normalizedMinSalary ?? 0) + (row._avg.normalizedMaxSalary ?? 0)) / 2),
-        minSalary: Math.round(row._min.normalizedMinSalary ?? 0),
-        maxSalary: Math.round(row._max.normalizedMaxSalary ?? 0),
-        jobCount: row._count.id,
+        state: row.scope,
+        medianSalary: row.median,
+        p25: row.p25,
+        p75: row.p75,
+        jobCount: row.postings,
       }))
-      .sort((a, b) => b.avgSalary - a.avgSalary);
+      .sort((a, b) => b.medianSalary - a.medianSalary);
 
     return {
       stateGuides: [...guideByState.entries()]
@@ -292,7 +291,7 @@ export default async function LicensureCheckerToolPage() {
               `Practice-authority tiers (full, reduced, restricted) come from the AANP state practice environment — ${STAT_SOURCES.fullPracticeStates.formatted} grant full practice authority as of ${STAT_SOURCES.fullPracticeStates.asOf}.`,
               'The planner states the Nurse Licensure Compact rules, which are stable: a multistate RN license is issued only by a compact member state acting as your primary state of residence, and it covers the RN layer only.',
               'APRN licensure is treated as state-by-state in every case. The compact covers the RN layer only.',
-              'Salary figures in the checker are averages over live published postings in that state, refreshed daily.',
+              `Salary figures in the checker are true medians over live ${brand.niche.short}-eligible postings with disclosed, non-estimated salary, shown only for states with at least 5 postings from 3+ employers, refreshed daily.`,
               'The timeline band is a broad planning aid keyed to practice-authority tier, not a state-specific processing estimate.',
             ]}
             exclusions={[

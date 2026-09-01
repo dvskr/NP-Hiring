@@ -1,6 +1,10 @@
 import { Job } from '@/lib/types';
 import { salaryConfig } from '@/config/niche/salary';
-import { normalizeSalary } from './salary-normalizer';
+import {
+  normalizeSalary,
+  detectSalaryConflict,
+  SALARY_CONFLICT_CONFIDENCE,
+} from './salary-normalizer';
 import { parseLocation } from './location-parser';
 import { formatDisplaySalary } from './salary-display';
 import { cleanDescription } from './description-cleaner';
@@ -272,16 +276,103 @@ export function canonicalizeJobType(raw: string | null | undefined): string | nu
 const MODE_HYBRID_RE = /\b(?:hybrid|split between|days (?:in[\s-]office|remote)|(?:\d+\s*)?days? (?:on[\s-]site|in[\s-]person)|flex(?:ible)? schedule|partial(?:ly)? remote|(?:\d+|two|three|four)\s*days?\s*(?:per|a)\s*week\s*(?:remote|on[\s-]?site|in[\s-]?office))\b/i;
 // Extended 2026-05-05: added 'fully virtual', 'work from anywhere',
 // '100% telework', 'remote-first', 'distributed team', 'wherever you are'.
-const MODE_REMOTE_RE = /\b(?:fully remote|100% remote|100 ?% remote|wfh|work[\s-]from[\s-]home|remote[\s-]?friendly|remote[\s-]?eligible|remote[\s-]?first|telecommute|telework|100% telework|fully virtual|virtual position|virtual role|home[\s-]based|telehealth|tele[\s-]psychiatry|tele[\s-]health|work\s+from\s+anywhere|distributed team|wherever you are|fully distributed|remote)\b/i;
+// Tightened per live-review item 1e:
+//   - the bare `|remote` tail matched ANY mention of the word anywhere in the
+//     description ("no remote option available", benefits boilerplate) and
+//     classified verifiably onsite rows as Remote. Replaced with the phrase
+//     forms 'remote position/role/opportunity'.
+//   - bare 'telehealth'/'tele-psychiatry'/'tele-health' are service-line
+//     mentions ("experience with telehealth visits preferred"), not work-mode
+//     statements — onsite telehealth-clinic rows (the Tia case) matched them.
+//     Only the explicit '100%/fully telehealth' forms remain remote proof.
+const MODE_REMOTE_RE = /\b(?:fully remote|100% remote|100 ?% remote|wfh|work[\s-]from[\s-]home|remote[\s-]?friendly|remote[\s-]?eligible|remote[\s-]?first|remote\s+(?:position|role|opportunity)|telecommute|telework|100% telework|fully virtual|virtual position|virtual role|home[\s-]based|(?:100%|fully)[\s-]?tele(?:health|medicine|psychiatry)|work\s+from\s+anywhere|distributed team|wherever you are|fully distributed)\b/i;
 const MODE_ONSITE_RE = /\b(?:on[\s-]?site|onsite|in[\s-]?person|in person|office[\s-]?based|in[\s-]?office|office\s+location|clinic[\s-]?based|hospital[\s-]?based|outpatient (?:clinic|setting)|brick[\s-]and[\s-]mortar|on[\s-]premises?)\b/i;
 
-function detectMode(text: string): string | null {
+export function detectMode(text: string): string | null {
   // Hybrid is most specific — check first so "remote" in a hybrid post
   // doesn't get classified as fully Remote.
   if (MODE_HYBRID_RE.test(text)) return 'Hybrid';
   if (MODE_REMOTE_RE.test(text)) return 'Remote';
   if (MODE_ONSITE_RE.test(text)) return 'In-Person';
   return null;
+}
+
+// Title-level mode tokens for reconcileWorkMode. The TITLE is the strongest
+// text signal we have — 'NP - Los Angeles - Onsite' is an explicit
+// employer statement, unlike a keyword buried in description boilerplate.
+const TITLE_ONSITE_RE = /\bon[\s-]?site\b|\bin[\s-]person\b/i;
+const TITLE_REMOTE_RE = /\b(?:remote|work\s+from\s+home|100%\s*remote|telecommute)\b/i;
+const TITLE_HYBRID_RE = /\bhybrid\b/i;
+
+export interface ReconciledWorkMode {
+  mode: string | null;
+  isRemote: boolean;
+  isHybrid: boolean;
+}
+
+function flagsForMode(mode: string): ReconciledWorkMode {
+  if (mode === 'Remote') return { mode, isRemote: true, isHybrid: false };
+  if (mode === 'Hybrid') return { mode, isRemote: false, isHybrid: true };
+  return { mode: 'In-Person', isRemote: false, isHybrid: false };
+}
+
+/**
+ * Single source of truth for mode ↔ isRemote/isHybrid consistency
+ * (live-review item 1e / 7-iv).
+ *
+ * The previous sync only ratcheted TOWARD remote: a location-parser false
+ * positive ('…, United States' → isRemote=true) could never be cleared by a
+ * detected 'In-Person' mode, which is how verifiably onsite rows (the Tia
+ * '- Onsite' listings) shipped TELECOMMUTE structured data.
+ *
+ * Precedence, most → least authoritative:
+ *   1. `structuredMode` — an explicit machine-readable mode (the employer
+ *      post-job form's required work-mode field). Wins over ALL keyword
+ *      inference, in both directions.
+ *   2. Explicit token in the TITLE (Hybrid > Onsite > Remote; a title
+ *      carrying both onsite and remote tokens is ambiguous and defers).
+ *   3. Mode detected from full text (`detectMode`).
+ *   4. Location-string flags from parseLocation.
+ *
+ * Output invariants: isRemote and isHybrid are never both true, and the
+ * returned mode always agrees with the returned flags. isRemote=true means
+ * FULLY remote — that is what /jobs/remote filters on and what JobPosting
+ * jobLocationType TELECOMMUTE asserts to Google.
+ *
+ * Employer create routes (app/api/jobs/post-free, app/api/create-checkout)
+ * should call this with their form's mode as `structuredMode` instead of
+ * deriving flags from free-text location, so the three write paths cannot
+ * drift.
+ */
+export function reconcileWorkMode(input: {
+  title: string;
+  detectedMode: string | null;
+  locationIsRemote: boolean;
+  locationIsHybrid: boolean;
+  structuredMode?: string | null;
+}): ReconciledWorkMode {
+  const { title, detectedMode, locationIsRemote, locationIsHybrid, structuredMode } = input;
+
+  if (structuredMode === 'Remote' || structuredMode === 'Hybrid' || structuredMode === 'In-Person') {
+    return flagsForMode(structuredMode);
+  }
+
+  const titleOnsite = TITLE_ONSITE_RE.test(title);
+  const titleRemote = TITLE_REMOTE_RE.test(title);
+  if (TITLE_HYBRID_RE.test(title)) return flagsForMode('Hybrid');
+  if (titleOnsite && !titleRemote) return flagsForMode('In-Person');
+  if (titleRemote && !titleOnsite) return flagsForMode('Remote');
+
+  if (detectedMode === 'Remote' || detectedMode === 'Hybrid' || detectedMode === 'In-Person') {
+    return flagsForMode(detectedMode);
+  }
+
+  // No mode signal anywhere in the text — fall back to the location string.
+  // Hybrid first: a hybrid location ('Hybrid — Austin, TX') is not fully
+  // remote, so the flags stay mutually exclusive.
+  if (locationIsHybrid) return flagsForMode('Hybrid');
+  if (locationIsRemote) return flagsForMode('Remote');
+  return { mode: null, isRemote: false, isHybrid: false };
 }
 
 /**
@@ -417,10 +508,22 @@ export function validateAndNormalizeSalary(
   // Use extracted period if available, otherwise detect from magnitude.
   // Inference cutoffs derive from the niche's pay levels — see
   // config/niche/salary.ts (jobNormalizer.inference).
+  //
+  // Review P9 #2a — two fixes in this block:
+  //   1. The annual check is INCLUSIVE (>=): the old strict `>` at the
+  //      $40,000 boundary combined with the monthly branch's `<=` to tag
+  //      exactly $40,000 as monthly → ×12 → a published $480k/yr salary.
+  //   2. MONTHLY is never magnitude-inferred. A bare value in the old
+  //      monthly band (weeklyBelow..annualAbove) becomes period='unknown':
+  //      raw values are kept for the record, but normalizeSalary refuses
+  //      to annualize a guess, so the row carries no normalized salary and
+  //      is excluded from analytics and salary filtering. Monthly ×12 now
+  //      requires an explicit token (source period field or "/month" in
+  //      the posting text — both arrive via `extractedPeriod`).
   const INFER = salaryConfig.jobNormalizer.inference;
   if (extractedPeriod && periodMap[extractedPeriod]) {
     period = periodMap[extractedPeriod];
-  } else if ((min && min > INFER.annualAbove) || (max && max > INFER.annualAbove)) {
+  } else if ((min && min >= INFER.annualAbove) || (max && max >= INFER.annualAbove)) {
     period = 'annual';
   } else {
     const ref = min || max || 0;
@@ -428,10 +531,8 @@ export function validateAndNormalizeSalary(
       period = 'hourly';
     } else if (ref < INFER.weeklyBelow) {
       period = 'weekly';
-    } else if (ref <= INFER.monthlyAtOrBelow) {
-      period = 'monthly';
     } else {
-      period = 'annual';
+      period = 'unknown';
     }
   }
 
@@ -837,17 +938,33 @@ export function normalizeJobWithReason(rawJob: Record<string, unknown>, source: 
     const summary = smartSummarize(fullDescription, 300);
     const fullText = `${title} ${fullDescription} ${location}`;
 
+    // Review P9 #2e: extractSalary now ALWAYS runs, so the posting text
+    // can challenge a wrong structured value (previously it only ran when
+    // structured salary was absent, meaning the description could never
+    // contradict a bad ×12).
+    const textSalary = extractSalary(fullText);
+
     // Period hint priority:
     //   1. Source-supplied (e.g. adzuna sets salaryPeriod='annual')
-    //   2. Regex-extracted from description (only when source had no salary)
+    //   2. Regex-extracted from the posting text — adopted outright when
+    //      the source had no salary, or as the explicit-period token when
+    //      the text is describing the SAME figures the source sent
+    //      (values within 5%). This is what lets "$8,000/month" in a
+    //      description still annualize ×12 now that magnitude-based
+    //      monthly inference is gone.
     //   3. null → magnitude-based inference inside the validator
     let extractedPeriod: string | null = sourceSuppliedPeriod;
     if (!salaryMin && !salaryMax) {
-      const extracted = extractSalary(fullText);
-      salaryMin = extracted.min;
-      salaryMax = extracted.max;
+      salaryMin = textSalary.min;
+      salaryMax = textSalary.max;
       // Only override if regex got something AND source didn't already provide one.
-      if (!extractedPeriod) extractedPeriod = extracted.period;
+      if (!extractedPeriod) extractedPeriod = textSalary.period;
+    } else if (!extractedPeriod && textSalary.period) {
+      const sameFigure = (a: number | null, b: number | null): boolean =>
+        a != null && b != null && Math.abs(a - b) / Math.max(a, b) <= 0.05;
+      if (sameFigure(salaryMin, textSalary.min) || sameFigure(salaryMax, textSalary.max)) {
+        extractedPeriod = textSalary.period;
+      }
     }
 
     // Validate and normalize salary data
@@ -869,7 +986,7 @@ export function normalizeJobWithReason(rawJob: Record<string, unknown>, source: 
       rawJob.jobType ? String(rawJob.jobType) : null,
     );
     const jobType = canonicalRaw ?? detectJobType(fullText);
-    const mode = detectMode(fullText);
+    const detectedMode = detectMode(fullText);
     const experienceLevel = detectExperienceLevel(title, fullText);
 
 
@@ -894,21 +1011,48 @@ export function normalizeJobWithReason(rawJob: Record<string, unknown>, source: 
       title,
     });
 
+    // Review P9 #2e: structured-vs-text conflict check. When the posting
+    // text annualizes to a materially different figure (>1.5×) than the
+    // structured value we normalized, the row is flagged approximate:
+    // salaryIsEstimated=true renders the "~" display prefix, and the
+    // conflict-floor confidence keeps it out of every published aggregate
+    // (npSalaryAnalyticsWhere gates on confidence ≥ 0.8). Deterministic
+    // rules only — no schema column, no external calls.
+    const salaryConflict = detectSalaryConflict(
+      { min: salaryMin, max: salaryMax, period: salaryPeriod },
+      { min: textSalary.min, max: textSalary.max, period: textSalary.period },
+    );
+    if (salaryConflict) {
+      console.log(
+        `[Salary] Conflict for "${title}": structured ${salaryMin ?? '—'}-${salaryMax ?? '—'} (${salaryPeriod ?? 'no period'}) vs text ${textSalary.min ?? '—'}-${textSalary.max ?? '—'} (${textSalary.period ?? 'no period'}) — flagged approximate`,
+      );
+      normalizedSalaryData.salaryIsEstimated = true;
+      normalizedSalaryData.salaryConfidence = Math.min(
+        normalizedSalaryData.salaryConfidence ?? SALARY_CONFLICT_CONFIDENCE,
+        SALARY_CONFLICT_CONFIDENCE,
+      );
+    }
+
     // Parse location into structured data
     const parsedLocationData = parseLocation(location);
 
-    // Sync isHybrid/isRemote with mode detection (mode checks full text, location parser only checks location)
-    let isRemote = parsedLocationData.isRemote;
-    let isHybrid = parsedLocationData.isHybrid;
-    if (mode === 'Hybrid') isHybrid = true;
-    if (mode === 'Remote') isRemote = true;
-
-    // Title-level remote fallback. Aggregator rows often have "Remote"
-    // in the title but skip the structured flag (~149 rows in the
-    // current corpus). Without this they're invisible on /jobs/remote.
-    if (!isRemote && /\b(remote|work\s+from\s+home|100%\s*remote)\b/i.test(title)) {
-      isRemote = true;
-    }
+    // Reconcile mode ↔ isRemote/isHybrid bidirectionally (live-review item
+    // 1e). Replaces the previous one-way ratchet, which could only ADD the
+    // remote flag — an explicit onsite title ('… - Onsite') or a detected
+    // In-Person mode now clears a location-parser false positive instead of
+    // being silently outvoted by it. Aggregator payloads carry no structured
+    // mode field, so structuredMode is null on this path; the employer create
+    // routes pass their form's required work-mode field here instead.
+    const workMode = reconcileWorkMode({
+      title,
+      detectedMode,
+      locationIsRemote: parsedLocationData.isRemote,
+      locationIsHybrid: parsedLocationData.isHybrid,
+      structuredMode: null,
+    });
+    const mode = workMode.mode;
+    const isRemote = workMode.isRemote;
+    const isHybrid = workMode.isHybrid;
 
     // Generate display salary
     const displaySalary = formatDisplaySalary(

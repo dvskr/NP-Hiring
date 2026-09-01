@@ -253,7 +253,7 @@ describe('P2 #10 — the two TODO(verify) markers are resolved, not carried', ()
     });
 
     it('every stat whose sourceUrl is a moving "current" link documents the drift', () => {
-        // Review finding: blsGrowth2032 documented that its OOH link always
+        // Review finding: blsGrowth2034 documented that its OOH link always
         // shows the LATEST cycle, but averageSalary carried the identical
         // hazard (bls.gov/oes/CURRENT/) with no mention of it — so the
         // citation can silently start naming a vintage the link no longer
@@ -270,7 +270,7 @@ describe('P2 #10 — the two TODO(verify) markers are resolved, not carried', ()
     });
 
     it('the growth stat names its projection cycle wherever it renders', () => {
-        expect(STAT_SOURCES.blsGrowth2032.source).toContain('2022–2032');
+        expect(STAT_SOURCES.blsGrowth2034.source).toContain('2024–2034');
     });
 });
 

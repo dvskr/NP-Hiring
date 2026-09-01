@@ -14,9 +14,16 @@
  *     Nurse anesthetists and nurse midwives are APRNs, not the niche
  *     role, and this template must not say otherwise in visible copy or
  *     in JSON-LD.
- *   - Live sections (board averages, top-paying states, experience
- *     bands) render only when the underlying aggregate clears the
- *     MIN_LIVE_JOBS / MIN_STATE_JOBS floors — omit, never fabricate.
+ *   - Live sections (board median, top-paying states, experience bands)
+ *     are GATED MEDIANS (review P9 #2c/#2d): computed over the
+ *     npSalaryAnalyticsWhere pool (published, non-expired, non-estimated,
+ *     confidence ≥ 0.8, annual-cadence) scoped to NP-eligible titles, and
+ *     published only under the benchmark widget's policy — true median,
+ *     n ≥ BENCHMARK_MIN_POSTINGS from ≥ BENCHMARK_MIN_EMPLOYERS. Below
+ *     the gate the section is omitted — never a mean, never fabricated.
+ *     (The previous mean-of-min/max over every isPublished row let
+ *     psych-tagged psychiatrist pay feed the psych specialty page
+ *     directly.)
  *   - FAQPage JSON-LD and the visible accordion render from ONE array
  *     (B48), escaped with the repo's \u003c pattern.
  */
@@ -38,21 +45,31 @@ import {
     SpecialtySalaryPage,
 } from '../specialty-config';
 import {
-    averageOfBounds,
     buildSpecialtyFaqs,
     configRange,
     formatSalary,
     hasReportedRange,
     medianSentence,
     medianSentenceParts,
-    MIN_LIVE_JOBS,
-    MIN_STATE_JOBS,
     specialtyNoun,
     specialtyNounPlural,
     SpecialtyExperienceRow,
     SpecialtyLiveStats,
     SpecialtyStateRow,
 } from '../specialty-content';
+// P9 #2c/#2d: every live figure runs the gated analytics pool through the
+// benchmark widget's publishing policy — the same pipeline as the
+// salary-guide hub and state pages.
+import {
+    summarizeBenchmarks,
+    BENCHMARK_MIN_POSTINGS,
+    BENCHMARK_MIN_EMPLOYERS,
+} from '@/components/tools/benchmark-model';
+import {
+    npSalaryAnalyticsWhere,
+    NP_SALARY_ANALYTICS_SELECT,
+    filterNpEligibleRows,
+} from '@/lib/salary-utils';
 import {
     Award,
     ArrowRight,
@@ -80,49 +97,68 @@ const specialtyOgImage = (page: SpecialtySalaryPage): string =>
 const tagWhere = (slug: CategoryTag): Prisma.JobWhereInput =>
     withTagFallback(slug) as Prisma.JobWhereInput;
 
-async function getLiveStats(slug: CategoryTag): Promise<SpecialtyLiveStats> {
-    const stats = await prisma.job.aggregate({
-        where: {
-            isPublished: true,
-            normalizedMinSalary: { not: null },
-            ...tagWhere(slug),
-        },
-        _avg: { normalizedMinSalary: true, normalizedMaxSalary: true },
-        _min: { normalizedMinSalary: true },
-        _max: { normalizedMaxSalary: true },
-        _count: { id: true },
+/**
+ * NP-eligible analytics rows for this specialty tag: the hygiene pool
+ * (npSalaryAnalyticsWhere — published, non-expired, non-estimated,
+ * confidence ≥ 0.8, annual-cadence, normalized salary present) intersected
+ * with the tag predicate via a top-level AND (both sides carry their own
+ * AND/OR trees, so object spread would silently drop clauses), then scoped
+ * to NP-eligible titles in JS. This is the ONLY pool any figure on this
+ * page may derive from.
+ */
+async function fetchSpecialtyAnalyticsRows(
+    slug: CategoryTag,
+    extra: Prisma.JobWhereInput = {},
+): Promise<Array<{ state: string | null; employer: string | null; title: string | null; normalizedMinSalary: number | null; normalizedMaxSalary: number | null }>> {
+    const rows = await prisma.job.findMany({
+        where: { AND: [npSalaryAnalyticsWhere(), tagWhere(slug), extra] },
+        select: NP_SALARY_ANALYTICS_SELECT,
     });
+    return filterNpEligibleRows(rows);
+}
+
+async function getLiveStats(slug: CategoryTag): Promise<SpecialtyLiveStats> {
+    const npRows = await fetchSpecialtyAnalyticsRows(slug);
+    // Pool the whole tag through the national benchmark gate; rows without a
+    // state still count toward the specialty-wide median (same coalescing as
+    // the state pages' getNationalBase).
+    const { national } = summarizeBenchmarks(
+        npRows.map((r) => ({ ...r, state: r.state ?? 'Unknown' })),
+    );
+    const mins = npRows
+        .map((r) => r.normalizedMinSalary)
+        .filter((v): v is number => typeof v === 'number' && v > 0);
+    const maxs = npRows
+        .map((r) => r.normalizedMaxSalary ?? r.normalizedMinSalary)
+        .filter((v): v is number => typeof v === 'number' && v > 0);
     return {
-        avgSalary: averageOfBounds(stats._avg.normalizedMinSalary, stats._avg.normalizedMaxSalary),
-        minSalary: Math.round(stats._min.normalizedMinSalary || 0),
-        maxSalary: Math.round(stats._max.normalizedMaxSalary || 0),
-        jobCount: stats._count.id,
+        medianSalary: national?.median ?? 0,
+        minSalary: mins.length > 0 ? Math.min(...mins) : 0,
+        maxSalary: maxs.length > 0 ? Math.max(...maxs) : 0,
+        // The sample size behind the published median — benchmark postings
+        // when gated (rows lacking an employer are excluded there), else the
+        // raw eligible-row count for the cross-link copy.
+        jobCount: national?.postings ?? npRows.length,
+        gatePassed: national != null,
     };
 }
 
 async function getTopPayingStates(slug: CategoryTag): Promise<SpecialtyStateRow[]> {
-    const rows = await prisma.job.groupBy({
-        by: ['state'],
-        where: {
-            isPublished: true,
-            state: { not: null },
-            normalizedMinSalary: { not: null },
-            ...tagWhere(slug),
-        },
-        _avg: { normalizedMinSalary: true, normalizedMaxSalary: true },
-        _count: { id: true },
-    });
-    return rows
-        .filter((r) => r.state && STATE_CODES[r.state] && r._count.id >= MIN_STATE_JOBS)
-        .map((r) => ({
-            state: r.state!,
-            stateCode: STATE_CODES[r.state!],
-            slug: stateToSlug(r.state!),
-            avgSalary: averageOfBounds(r._avg.normalizedMinSalary, r._avg.normalizedMaxSalary),
-            jobCount: r._count.id,
+    const npRows = await fetchSpecialtyAnalyticsRows(slug, { state: { not: null } });
+    // summarizeBenchmarks enforces the per-state publishing gate (n ≥ 5
+    // postings from ≥ 3 employers) and computes true medians — a ranked
+    // list over anything less re-created the n=1 "top paying state" defect.
+    const { states } = summarizeBenchmarks(npRows);
+    return states
+        .filter((s) => STATE_CODES[s.scope])
+        .map((s) => ({
+            state: s.scope,
+            stateCode: STATE_CODES[s.scope],
+            slug: stateToSlug(s.scope),
+            medianSalary: s.median,
+            jobCount: s.postings,
         }))
-        .filter((r) => r.avgSalary > 0)
-        .sort((a, b) => b.avgSalary - a.avgSalary)
+        .sort((a, b) => b.medianSalary - a.medianSalary)
         .slice(0, 8);
 }
 
@@ -133,25 +169,19 @@ async function getExperienceBands(slug: CategoryTag): Promise<SpecialtyExperienc
         { label: 'Roles requiring 5+ years', extra: { minYearsExperience: { gte: 5 } } },
     ] as const;
     const results = await Promise.all(
-        bands.map(async (band) => {
-            const stats = await prisma.job.aggregate({
-                where: {
-                    isPublished: true,
-                    normalizedMinSalary: { not: null },
-                    ...band.extra,
-                    ...tagWhere(slug),
-                },
-                _avg: { normalizedMinSalary: true, normalizedMaxSalary: true },
-                _count: { id: true },
-            });
-            return {
-                label: band.label,
-                avgSalary: averageOfBounds(stats._avg.normalizedMinSalary, stats._avg.normalizedMaxSalary),
-                jobCount: stats._count.id,
-            };
+        bands.map(async (band): Promise<SpecialtyExperienceRow | null> => {
+            const npRows = await fetchSpecialtyAnalyticsRows(slug, band.extra);
+            // Same publishing gate per band — a three-posting "average" for
+            // an experience bucket is the same defect as a one-posting state.
+            const { national } = summarizeBenchmarks(
+                npRows.map((r) => ({ ...r, state: r.state ?? 'Unknown' })),
+            );
+            return national
+                ? { label: band.label, medianSalary: national.median, jobCount: national.postings }
+                : null;
         }),
     );
-    return results.filter((r) => r.jobCount >= MIN_LIVE_JOBS && r.avgSalary > 0);
+    return results.filter((r): r is SpecialtyExperienceRow => r != null);
 }
 
 // ─── Static params + metadata ───────────────────────────────────────────────
@@ -222,10 +252,10 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
         getExperienceBands(page.slug),
     ]);
 
-    // A posting count alone is not enough: if nothing in the set discloses a
-    // usable bound the average is 0, and a "$0" stat card is worse than no
-    // card at all (omit, never fabricate).
-    const hasLive = live.jobCount >= MIN_LIVE_JOBS && live.avgSalary > 0;
+    // P9 #2d: a figure renders ONLY when the benchmark publishing gate
+    // passed (n ≥ BENCHMARK_MIN_POSTINGS from ≥ BENCHMARK_MIN_EMPLOYERS
+    // over the NP-eligible analytics pool). Below it: omit, never fabricate.
+    const hasLive = live.gatePassed && live.medianSalary > 0;
     const range = configRange(page);
     const median = STAT_SOURCES.averageSalary;
     const faqs = buildSpecialtyFaqs(page, live, topStates);
@@ -260,9 +290,9 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
             ? [
                 {
                     icon: BarChart3,
-                    label: 'Average on This Board',
-                    value: formatSalary(live.avgSalary),
-                    sub: `${live.jobCount} postings with disclosed pay`,
+                    label: 'Median on This Board',
+                    value: formatSalary(live.medianSalary),
+                    sub: `Median of ${live.jobCount} postings with disclosed pay`,
                     color: '#A855F7',
                 },
             ]
@@ -435,13 +465,13 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                 {/* A4 (teardown parity): provenance line under the stat
                     cards — cited vintage from STAT_SOURCES metadata, and
                     the live snapshot basis only when it clears the SAME
-                    MIN_LIVE_JOBS gate the cards use (omit, never
+                    benchmark publishing gate the cards use (omit, never
                     fabricate). No review date: live sections regenerate
                     daily and this page has no editorial review literal
                     (B54 — its Article schema omits dates too). */}
                 <SalaryProvenance
                     cited={[median]}
-                    live={hasLive ? { count: live.jobCount, minimum: MIN_LIVE_JOBS } : undefined}
+                    live={hasLive ? { count: live.jobCount, minimum: BENCHMARK_MIN_POSTINGS } : undefined}
                     style={{ textAlign: 'center', margin: '-16px 0 32px' }}
                 />
 
@@ -471,7 +501,9 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                             Top-Paying States for {nounPlural}
                         </h2>
                         <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
-                            Average of active postings with disclosed salary on {brand.name}. Updated daily.
+                            Median of active postings with disclosed, non-estimated salary on {brand.name} —
+                            published only for states with at least {BENCHMARK_MIN_POSTINGS} postings
+                            from {BENCHMARK_MIN_EMPLOYERS}+ employers. Updated daily.
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {topStates.map((s, i) => (
@@ -498,7 +530,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                                         <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                                            {formatSalary(s.avgSalary)}
+                                            {formatSalary(s.medianSalary)}
                                         </span>
                                         <Link
                                             href={stateEligible ? `/jobs/${page.slug}/${s.slug}` : `/jobs/state/${s.slug}`}
@@ -539,8 +571,10 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                             Pay by Experience Requirement
                         </h2>
                         <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
-                            Averages across live {page.label.toLowerCase()} postings on this board, grouped by the
-                            experience each posting asks for. Buckets overlap (a 5+ years role also counts toward 3+).
+                            Medians across live {page.label.toLowerCase()} postings with disclosed salary on this
+                            board, grouped by the experience each posting asks for and published only when a
+                            bucket clears the {BENCHMARK_MIN_POSTINGS}-posting, {BENCHMARK_MIN_EMPLOYERS}-employer
+                            minimum. Buckets overlap (a 5+ years role also counts toward 3+).
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {experienceBands.map((band) => (
@@ -562,7 +596,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                                         {band.jobCount} {band.jobCount === 1 ? 'posting' : 'postings'}
                                     </span>
                                     <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                                        {formatSalary(band.avgSalary)}
+                                        {formatSalary(band.medianSalary)}
                                     </span>
                                 </div>
                             ))}

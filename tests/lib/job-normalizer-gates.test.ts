@@ -234,12 +234,15 @@ describe('normalizeJobWithReason — salary period passthrough (Bug #1)', () => 
         expect(result.job!.normalizedMaxSalary).toBe(100000);
     });
 
-    it('without the period hint, magnitude-based inference would mislabel as monthly', () => {
-        // No salaryPeriod hint → validator's magnitude rule kicks in. For
-        // a value <= 40000 with no period it'd bucket as 'monthly'. This
-        // test pins that legacy behavior so we know what we're protecting
-        // against. The fix above (Bug #1) is what makes this NOT happen
-        // when the source supplies the period.
+    it('without the period hint, an ambiguous value is period=unknown — never monthly (review P9 #2a)', () => {
+        // No salaryPeriod hint → the validator used to bucket any value
+        // <= 40000 as 'monthly' and annualize ×12 on a guess ($35k →
+        // $420k, and exactly $40k → the review's published $480k).
+        // Magnitude-inferred monthly is now dead: a tokenless value in
+        // that band becomes 'unknown' with normalized values withheld, so
+        // it can never enter analytics or salary filtering. Monthly ×12
+        // requires an explicit token (source period field or "/month" in
+        // the posting text).
         const result = normalizeJobWithReason(
             rawJob({
                 minSalary: 35000,
@@ -249,9 +252,9 @@ describe('normalizeJobWithReason — salary period passthrough (Bug #1)', () => 
             'adzuna',
         );
         expect(result.job).not.toBeNull();
-        // Magnitude $35k → period inferred as 'monthly' → normalized to 12*35000 = 420000
-        // (which is now within the new $550k cap, so it actually appears as $420k annual)
-        expect(result.job!.salaryPeriod).toBe('monthly');
+        expect(result.job!.salaryPeriod).toBe('unknown');
+        expect(result.job!.normalizedMinSalary).toBeNull();
+        expect(result.job!.normalizedMaxSalary).toBeNull();
     });
 
     it('high annual salary $487k passes (Bug #2 — was killed by old $400k cap)', () => {

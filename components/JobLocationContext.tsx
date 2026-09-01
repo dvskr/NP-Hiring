@@ -10,6 +10,10 @@ import {
     getAuthorityLabel,
     type StatePracticeInfo,
 } from '@/lib/state-practice-authority';
+import {
+    isNpServableClass,
+    type ProfessionClass,
+} from '@/lib/profession-classifier';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import {
     buildCitySlug,
@@ -69,6 +73,39 @@ export interface JobLocationInput {
     normalizedMaxSalary: number | null;
     /** True when the range was inferred/clamped rather than posted. */
     salaryIsEstimated: boolean;
+    /**
+     * Live-review fix #1 (profession conditioning): the job's profession
+     * class — the stored column when present, else the caller's render-time
+     * `classifyProfession(title, description)` result. Controls whether the
+     * NP practice-authority row renders (np_eligible / aprn classes only —
+     * a podiatrist or PA listing must not carry NP scope-of-practice
+     * advice) and whether an honest APRN profession label accompanies it.
+     * Omitted/null keeps the pre-classifier NP behavior (unclassifiable
+     * rows keep their current rendering until the backfill stamps them).
+     */
+    professionClass?: ProfessionClass | null;
+}
+
+/** Honest profession labels for APRN classes served by design (review 1d). */
+const APRN_PROFESSION_LABELS: Partial<Record<ProfessionClass, string>> = {
+    aprn_midwife: 'Certified Nurse-Midwife (CNM)',
+    aprn_crna: 'Certified Registered Nurse Anesthetist (CRNA)',
+    aprn_cns: 'Clinical Nurse Specialist (CNS)',
+};
+
+/**
+ * Note rendered with the practice-environment row for APRN (non-NP)
+ * listings, so a CNM/CRNA/CNS role is labeled by its real profession
+ * instead of being implicitly branded as an NP position. Null for
+ * np_eligible / unclassified rows (no note needed) — and for non-NP
+ * classes, where the authority row is suppressed entirely.
+ */
+export function buildProfessionNote(
+    professionClass: ProfessionClass | null | undefined,
+): string | null {
+    const label = professionClass ? APRN_PROFESSION_LABELS[professionClass] : undefined;
+    if (!label) return null;
+    return `This listing is a ${label} role — an APRN profession in its own right, not a nurse practitioner position. The state practice rules below describe the NP practice environment.`;
 }
 
 export interface AdjustedSalaryContext {
@@ -87,8 +124,18 @@ export interface JobLocationContextModel {
     colDeltaPct: number;
     /** Null when the job has no posted (non-estimated, plausible) range. */
     adjustedSalary: AdjustedSalaryContext | null;
-    /** Null for jurisdictions the practice-authority dataset does not cover. */
+    /**
+     * Null for jurisdictions the practice-authority dataset does not cover —
+     * and for listings classified as a non-NP profession, which must not
+     * carry NP scope-of-practice advice (live-review fix #1).
+     */
     authority: StatePracticeInfo | null;
+    /**
+     * Honest profession label note for APRN (CNM/CRNA/CNS) listings,
+     * rendered with the authority row. Null/omitted for NP and
+     * unclassified listings.
+     */
+    professionNote?: string | null;
     /** Null unless the city page both resolves AND clears the inventory gate. */
     cityJobsHref: string | null;
     stateJobsHref: string;
@@ -162,7 +209,13 @@ export function buildJobLocationContext(
         colIndex,
         colDeltaPct: Math.round(colIndex - NATIONAL_COL_INDEX),
         adjustedSalary,
-        authority: getStatePracticeAuthority(record.state),
+        // NP practice-authority advice renders only for NP/APRN listings
+        // (NULL/undefined = unclassified = current behavior, per the
+        // pre-backfill safety rule). Non-NP classes get no authority row.
+        authority: isNpServableClass(input.professionClass ?? null)
+            ? getStatePracticeAuthority(record.state)
+            : null,
+        professionNote: buildProfessionNote(input.professionClass),
         cityJobsHref: canLinkCity
             ? `/jobs/city/${buildCitySlug(record.name, record.stateCode)}`
             : null,
@@ -288,6 +341,11 @@ export default function JobLocationContext({ model }: JobLocationContextProps) {
                         <Scale size={17} />
                     </span>
                     <div style={{ minWidth: 0 }}>
+                        {model.professionNote && (
+                            <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px', lineHeight: 1.55 }}>
+                                {model.professionNote}
+                            </p>
+                        )}
                         <p style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 2px', color: AUTHORITY_COLORS[model.authority.authority] }}>
                             {getAuthorityLabel(model.authority.authority)}
                         </p>

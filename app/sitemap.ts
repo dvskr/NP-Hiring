@@ -412,32 +412,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       _count: { state: true },
       _max: { updatedAt: true },
     });
-    const stateSalaryCounts = await prisma.job.groupBy({
-      by: ['state'],
-      where: { ...ACTIVE_JOB_WHERE, state: { not: null }, normalizedMinSalary: { not: null } },
-      _count: { state: true },
-      _max: { updatedAt: true },
-    });
     const slugify = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
     const stateLastmod = new Map<string, Date>();
     for (const r of stateJobCounts) {
       if (r._max.updatedAt) stateLastmod.set(slugify((r.state || '').trim()), r._max.updatedAt);
     }
-    const stateSalaryLastmod = new Map<string, Date>();
-    for (const r of stateSalaryCounts) {
-      if (r._max.updatedAt) stateSalaryLastmod.set(slugify((r.state || '').trim()), r._max.updatedAt);
-    }
     const statesWithJobs = new Set(stateJobCounts.map(r => slugify((r.state || '').trim())));
-    const statesWithSalary = new Set(stateSalaryCounts.map(r => slugify((r.state || '').trim())));
     statePages = US_STATES.filter(s => statesWithJobs.has(s)).map(state => ({
       url: `${baseUrl}/jobs/state/${state}`,
       lastModified: stateLastmod.get(state) ?? latestJobDate,
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     }));
-    salaryGuideStatePages = US_STATES.filter(s => statesWithSalary.has(s)).map(state => ({
+    // /salary-guide/[state] gates on the SAME set as /jobs/state/[state]:
+    // ≥ 1 active job (ACTIVE_JOB_WHERE), which is predicate-identical to
+    // that page's own notFound() (getStateActiveJobCount). A state whose
+    // disclosed salaries are all hourly/estimated/non-NP renders its
+    // below-gate branch (BLS figure, "sample too small") rather than 404,
+    // so gating here on disclosed salary would only under-advertise — and
+    // the PREVIOUS disclosed-salary predicate (looser than the page's old
+    // analytics-pool 404 gate) advertised URLs that hard-404'd: the exact
+    // indexed → 404 bounce this gate exists to prevent. Sitemap gate and
+    // page 404 gate must always read the same predicate.
+    salaryGuideStatePages = US_STATES.filter(s => statesWithJobs.has(s)).map(state => ({
       url: `${baseUrl}/salary-guide/${state}`,
-      lastModified: stateSalaryLastmod.get(state) ?? latestJobDate,
+      lastModified: stateLastmod.get(state) ?? latestJobDate,
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     }));

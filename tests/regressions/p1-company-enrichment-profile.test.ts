@@ -290,10 +290,14 @@ describe('P1 #12 — /companies hub links point at pages that actually render', 
         expect(hub).not.toContain('`/companies/${company.normalizedName}`');
     });
 
-    it('the card set uses the same active predicate as the profile 404 gate', () => {
+    it('the card set uses a predicate at least as strict as the profile 404 gate', () => {
         // The hub used to count every published row (expired included), so it
         // linked to — and printed job counts for — profiles that notFound().
-        expect(hub).toContain('const activeJobWhere = activeIndexableJobWhere(now)');
+        // Live review 2026-08-17 item #4c tightened the hub further onto the
+        // canonical predicate (activeIndexableJobWhere + GLOBAL_EXCLUSIONS,
+        // lib/canonical-counts.ts) — a strict SUBSET of the profile gate, so
+        // every hub link still resolves while hub counts match /jobs.
+        expect(hub).toContain('const activeJobWhere = canonicalActiveJobWhere(now)');
         expect(hub).toContain('some: activeJobWhere');
         expect(hub).toContain('where: activeJobWhere');
         expect(hub).not.toMatch(/where:\s*\{\s*isPublished:\s*true\s*\}/);
@@ -316,11 +320,17 @@ describe('P1 #12 — company surfaces share ONE active-job predicate', () => {
         expect(sitemap).toContain('some: ACTIVE_JOB_WHERE');
     });
 
-    it('BOTH company files import the helper instead of hand-rolling expiry', () => {
+    it('BOTH company files derive from the helper instead of hand-rolling expiry', () => {
+        // The profile imports the helper directly; the hub consumes it through
+        // lib/canonical-counts.ts (which composes the helper with the /jobs
+        // GLOBAL_EXCLUSIONS — count unification, live review item #4c).
+        expect(src, 'profile').toContain(
+            "import { activeIndexableJobWhere } from '@/lib/active-job-filter'",
+        );
+        expect(hub, 'hub').toContain(
+            "import { canonicalActiveJobWhere, canonicalEmployerWhere } from '@/lib/canonical-counts'",
+        );
         for (const [name, file] of [['profile', src], ['hub', hub]] as const) {
-            expect(file, name).toContain(
-                "import { activeIndexableJobWhere } from '@/lib/active-job-filter'",
-            );
             // The hand-rolled predicate treated expiresAt=NULL as EXPIRED and
             // 404'd pages that sitemap.xml submits and middleware serves 200.
             // Comment-stripped: the replacement is documented in prose above

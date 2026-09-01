@@ -37,13 +37,22 @@ const STATE_CODES: Record<string, string> = {
 const CODE_TO_STATE: Record<string, string> = Object.entries(STATE_CODES)
   .reduce((acc, [state, code]) => ({ ...acc, [code]: state }), {} as Record<string, string>);
 
-// Remote/Hybrid indicators
-const REMOTE_KEYWORDS = [
-  'remote', 'telehealth', 'telepsychiatry', 'virtual', 'work from home',
-  'wfh', 'anywhere', 'nationwide', 'united states', 'usa remote',
-];
+// Remote/Hybrid indicators (live-review item 1e).
+//
+// The previous keyword list treated substrings as remote proof and flagged
+// verifiably onsite rows:
+//   - 'united states' / 'nationwide' are COUNTRY markers, not work-mode
+//     markers — 'Los Angeles, CA, United States' is an onsite location
+//     (the Tia '- Onsite' rows were published as Remote through this).
+//   - 'telehealth' / 'telepsychiatry' / 'virtual' are service-line words;
+//     telehealth clinics hire onsite staff, and 'Virtual Care Center' is a
+//     building name.
+// A LOCATION string only proves remote when it carries a standalone
+// remote / work-from-home token (word-boundary, not substring).
+const REMOTE_LOCATION_RE = /\bremote\b|\bwork[\s-]?from[\s-]?home\b|\bwfh\b|\banywhere\b/i;
 
-const HYBRID_KEYWORDS = ['hybrid', 'flexible', 'partial remote'];
+// 'flexible' alone describes a schedule, not a work mode — dropped.
+const HYBRID_LOCATION_RE = /\bhybrid\b|\bpartial(?:ly)?[\s-]remote\b/i;
 
 /**
  * Parse a location string into structured data
@@ -74,22 +83,16 @@ export function parseLocation(location: string): ParsedLocation {
   result.originalLocation = normalized;
   const lower = normalized.toLowerCase();
 
-  // Check for remote
-  for (const keyword of REMOTE_KEYWORDS) {
-    if (lower.includes(keyword)) {
-      result.isRemote = true;
-      result.confidence = 0.7;
-      break;
-    }
-  }
-
-  // Check for hybrid
-  for (const keyword of HYBRID_KEYWORDS) {
-    if (lower.includes(keyword)) {
-      result.isHybrid = true;
-      result.confidence = 0.7;
-      break;
-    }
+  // Check for hybrid FIRST — 'partial remote' contains 'remote', and a hybrid
+  // role is by definition not fully remote, so the two flags stay mutually
+  // exclusive (isRemote=true means fully remote downstream: /jobs/remote,
+  // JobPosting TELECOMMUTE).
+  if (HYBRID_LOCATION_RE.test(lower)) {
+    result.isHybrid = true;
+    result.confidence = 0.7;
+  } else if (REMOTE_LOCATION_RE.test(lower)) {
+    result.isRemote = true;
+    result.confidence = 0.7;
   }
 
   // ── Pre-clean: strip remote/hybrid/country markers to isolate city/state ──
@@ -117,8 +120,11 @@ export function parseLocation(location: string): ParsedLocation {
     .trim()
     .replace(/^[,\-–\s]+|[,\-–\s]+$/g, ''); // trim delimiters
 
-  // If nothing left after cleaning and it's remote, return remote-only
-  if (!cleaned && result.isRemote) {
+  // If nothing is left after stripping mode/country markers there is no
+  // city/state to extract — return what we have. (Previously only the remote
+  // case returned here; now that 'United States' alone no longer implies
+  // remote, falling through would mis-file the country name as a city.)
+  if (!cleaned) {
     return result;
   }
 

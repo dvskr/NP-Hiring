@@ -18,6 +18,21 @@ import { createHash } from 'crypto';
 import { prisma } from '../prisma';
 import { embed } from './gateway';
 import { logger } from '../logger';
+import { NON_NP_PROFESSION_CLASSES } from '../profession-classifier';
+
+/**
+ * Profession-class gate for the raw-SQL legs (live-review fix #1d): the
+ * vector queries bypass Prisma's GLOBAL_EXCLUSIONS, which is exactly how
+ * published psychiatrist rows kept reaching "NP search". Rows classified
+ * as a non-NP profession are excluded; NULL (unclassified) rows pass so
+ * pre-backfill inventory keeps its current behavior. Values interpolated
+ * here are trusted compile-time enum literals from lib/profession-classifier
+ * (never user input). Exported for the regression test.
+ */
+export const PROFESSION_CLASS_EXCLUSION_SQL =
+    `AND (j.profession_class IS NULL OR j.profession_class NOT IN (` +
+    NON_NP_PROFESSION_CLASSES.map((c) => `'${c}'`).join(', ') +
+    `))`;
 
 export interface JobSearchHit {
     jobId: string;
@@ -93,6 +108,7 @@ export async function platformRevenueJobsWithSimilarity(
         JOIN jobs j ON j.id = je.job_id
         WHERE j.is_published = true
           AND j.archived_at IS NULL
+          ${PROFESSION_CLASS_EXCLUSION_SQL}
           AND (
               j.source_type = 'employer'
               OR j.apply_on_platform = true
@@ -144,6 +160,7 @@ export async function semanticJobSearch(
         JOIN jobs j ON j.id = je.job_id
         WHERE j.is_published = true
           AND j.archived_at IS NULL
+          ${PROFESSION_CLASS_EXCLUSION_SQL}
           ${stateFilter}
           ${remoteFilter}
           ${qualityFilter}

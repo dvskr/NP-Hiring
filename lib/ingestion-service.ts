@@ -10,6 +10,13 @@ import { checkDuplicate, buildJobIdentityKey, buildApplyUrlPathKey } from './ded
 import { getOrCreateCompany } from './company-normalizer';
 import { recordIngestionStats } from './source-analytics';
 import { classifyRelevance } from './utils/job-filter';
+import {
+  classifyProfession,
+  NON_NP_PROFESSION_CLASSES,
+  PROFESSION_PUBLISH_CONFIDENCE_FLOOR,
+  PROFESSION_CLASSIFIER_VERSION,
+  type ProfessionClass,
+} from './profession-classifier';
 import { computeCompleteness } from './job-normalizer';
 import { extractWithLLM, type LLMExtractResult } from './llm-enrichment';
 import { collectEmployerEmails } from './employer-email-collector';
@@ -712,6 +719,31 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
           isEmployerPosted: false, // aggregated jobs are never employer-posted
         });
 
+        // ── Profession classification at insert (live-review fix #1) ──
+        // Deterministic rules over title+description (no LLM, no network).
+        // Two quarantine triggers, both inserted UNPUBLISHED with
+        // isManuallyUnpublished=true so the renewal path (renewJob above)
+        // can never silently revive them:
+        //   - a confident NON-NP class (pa_only/physician/other_clinical/
+        //     nonclinical) — wrong profession, never in scope;
+        //   - confidence below the publish floor (incl. unclassifiable
+        //     rows) — we quarantine rather than guess.
+        // Rows are inserted, never dropped, so the audit trail and a human
+        // review path survive. NULL-class rows above the floor cannot occur
+        // (null carries confidence 0), so every published insert carries a
+        // real class going forward.
+        const profession = classifyProfession(
+          normalizedJob.title as string,
+          (normalizedJob.description as string | null) ?? rawDesc,
+        );
+        const professionQuarantineReason =
+          profession.professionClass !== null &&
+          (NON_NP_PROFESSION_CLASSES as readonly ProfessionClass[]).includes(profession.professionClass)
+            ? 'non_np_class'
+            : profession.confidence < PROFESSION_PUBLISH_CONFIDENCE_FLOOR
+              ? 'below_confidence_floor'
+              : null;
+
         const savedJob = await prisma.job.create({
           data: {
             id: newId,
@@ -719,8 +751,42 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
             slug,
             companyId,
             qualityScore,
+            professionClass: profession.professionClass,
+            professionConfidence: profession.confidence,
+            ...(professionQuarantineReason
+              ? { isPublished: false, isManuallyUnpublished: true }
+              : {}),
           },
         });
+
+        if (professionQuarantineReason) {
+          console.warn(
+            `[${source.toUpperCase()}] Profession quarantine (${professionQuarantineReason}): "${normalizedJob.title}" ` +
+            `class=${profession.professionClass ?? 'null'} confidence=${profession.confidence} rule=${profession.rule}`,
+          );
+          // Audit row via the JobHealthCheck append-only log — same table the
+          // dead-link/expiry unpublish paths use, so "why is this job hidden?"
+          // has one answer surface. Non-fatal: losing the audit row must not
+          // block the ingest.
+          try {
+            await prisma.jobHealthCheck.create({
+              data: {
+                jobId: savedJob.id,
+                checkType: 'profession_class',
+                outcome: `profession_quarantined_${professionQuarantineReason}`,
+                // The listing itself is alive at the source — this is an
+                // editorial out-of-scope quarantine, not a dead-link kill.
+                alive: true,
+                errorMessage:
+                  `class=${profession.professionClass ?? 'null'} ` +
+                  `confidence=${profession.confidence} rule=${profession.rule}`,
+                checkerVersion: PROFESSION_CLASSIFIER_VERSION,
+              },
+            });
+          } catch (auditErr) {
+            console.warn(`[Ingest] profession-quarantine audit row failed for ${savedJob.id}:`, auditErr);
+          }
+        }
         added++;
         newJobIds.push(savedJob.id);
         qualityScoreSum += qualityScore;
@@ -773,7 +839,11 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
           if (!globalTitleKeyMap.has(idKey)) globalTitleKeyMap.set(idKey, savedJob.id);
         }
 
-        newJobUrls.push(`${brand.baseUrl}/jobs/${slug}`);
+        // Quarantined rows are unpublished — pinging search engines with a
+        // URL that middleware will 410 would be self-inflicted crawl waste.
+        if (!professionQuarantineReason) {
+          newJobUrls.push(`${brand.baseUrl}/jobs/${slug}`);
+        }
 
         // NOTE: Link validation (validateApplyLink) is skipped during ingestion
         // to avoid HTTP timeout overhead. It runs separately via check-dead-links cron.

@@ -9,7 +9,7 @@
  * Why the list is trimmed: shipping every city as a <select> option would put
  * a few hundred kilobytes of markup on a landing page for no benefit. The
  * dropdown carries the largest cities per state plus every city that has
- * enough salaried postings of its own to beat the state average, which is
+ * enough salaried postings of its own to publish a gated median, which is
  * where the comparison is actually informative.
  */
 import { CITIES } from '@/lib/pseo/city-data/cities';
@@ -17,9 +17,9 @@ import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/di
 import { CITY_SAMPLE_THRESHOLD, type NominalBasis } from './col-model';
 
 export interface SalaryAggregate {
-  /** Average of posting midpoints, annual USD. */
+  /** Gated median of posting midpoints, annual USD (see lib/salary-analytics). */
   nominal: number;
-  /** Number of salaried postings behind the average. */
+  /** Number of salaried postings behind the median. */
   sample: number;
 }
 
@@ -53,7 +53,7 @@ export interface CityOption {
  *     `cityLinkResolves` is the repo's existing guard for exactly this, reused
  *     here rather than reimplemented so the rule cannot drift.
  *
- * The picker admits the 15 largest cities per state on state-average fallback
+ * The picker admits the 15 largest cities per state on state-median fallback
  * alone, so cities with 0-2 postings are certainly present. `basis === 'city'`
  * is the honest proxy for (1): it means the city cleared
  * CITY_SAMPLE_THRESHOLD postings that disclose pay, and those are a subset of

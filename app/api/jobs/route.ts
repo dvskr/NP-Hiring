@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { buildWhereClause, parseFiltersFromParams } from '@/lib/filters';
+import {
+  buildSearchConditionSet,
+  computeZeroResultSearchHint,
+  extractSearchQueryIntent,
+  type SearchQueryIntent,
+  type ZeroResultSearchHint,
+} from '@/lib/search-query-intent';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { buildJobsOrderBy, type JobSort } from '@/lib/utils/job-sort';
@@ -133,11 +140,37 @@ export async function GET(request: NextRequest) {
     // Map employer logo onto job objects
     const jobsWithLogo = jobs.map(j => ({ ...j, companyLogoUrl: j.employerJobs?.companyLogoUrl || null, employerJobs: undefined }));
 
+    // Search transparency (review item #3): echo what the deterministic
+    // intent extraction did with the free-text query, and — on a zero-result
+    // search — name WHICH extracted dimension emptied it, so the UI can say
+    // "no remote matches in Texas — N jobs without 'remote'" instead of a
+    // blanket "No jobs found". Additive response fields only; the existing
+    // jobs/total/page/totalPages contract is unchanged.
+    let search: { intent: SearchQueryIntent; zeroResultHint?: ZeroResultSearchHint } | undefined;
+    if (filters.search && filters.search.trim()) {
+      const intent = extractSearchQueryIntent(filters.search);
+      search = { intent };
+      if (total === 0) {
+        const set = buildSearchConditionSet(intent, {
+          hasExplicitWorkMode: filters.workMode.length > 0,
+          hasExplicitLocation: Boolean(filters.location || filters.stateCode),
+        });
+        const hint = await computeZeroResultSearchHint({
+          baseWhere: buildWhereClause({ ...filters, search: '' }),
+          set,
+          intent,
+          count: (hintWhere) => prisma.job.count({ where: hintWhere }),
+        });
+        if (hint) search.zeroResultHint = hint;
+      }
+    }
+
     return NextResponse.json({
       jobs: jobsWithLogo,
       total,
       page,
       totalPages: Math.ceil(total / limit),
+      ...(search ? { search } : {}),
     });
   } catch (error) {
     logger.error('Error fetching jobs', error);

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Shield, TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { buildCategoryWhereClause } from '@/lib/filters';
 import JobCard from '@/components/JobCard';
@@ -49,14 +50,11 @@ async function getCorrectionalJobs(skip: number = 0, take: number = 20) {
 async function getCorrectionalStats() {
   const totalJobs = await prisma.job.count({ where: CORRECTIONAL_FILTER });
 
-  const salaryData = await prisma.job.aggregate({
-    where: { ...CORRECTIONAL_FILTER, normalizedMinSalary: { not: null }, normalizedMaxSalary: { not: null } },
-    _avg: { normalizedMinSalary: true, normalizedMaxSalary: true },
-  });
+  // P9 #2c/#2d: gated MEDIAN over the NP-eligible analytics pool
+  // (lib/salary-analytics) — 0 below the n ≥ 5 / 3-employer publishing
+  // gate, which keeps this page's existing fallback copy in charge.
+  const medianSalaryK = await getGatedMedianKForWhere({ ...CORRECTIONAL_FILTER, normalizedMinSalary: { not: null }, normalizedMaxSalary: { not: null } });
 
-  const avgMinSalary = salaryData._avg.normalizedMinSalary || 0;
-  const avgMaxSalary = salaryData._avg.normalizedMaxSalary || 0;
-  const avgSalary = Math.round((avgMinSalary + avgMaxSalary) / 2 / 1000);
 
   const topEmployers = await prisma.job.groupBy({
     by: ['employer'],
@@ -71,7 +69,7 @@ async function getCorrectionalStats() {
     count: e._count.employer,
   }));
 
-  return { totalJobs, avgSalary, topEmployers: processedEmployers };
+  return { totalJobs, medianSalaryK, topEmployers: processedEmployers };
 }
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
@@ -190,7 +188,7 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
         headlineSub="jobs, secure settings."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$120K+', label: 'avg salary' },
+          { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$120K+', label: 'median salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description="Correctional healthcare positions with structured schedules, high autonomy, and federal loan forgiveness eligibility."
@@ -254,14 +252,14 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
                 </ul>
               </div>
             )}
-            {stats.avgSalary > 0 && (
+            {stats.medianSalaryK > 0 && (
               <div className="cat-bento-card" style={{ ...clayCard, padding: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                   <TrendingUp size={20} style={{ color: '#34D399' }} />
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Salary Insights</h3>
                 </div>
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.avgSalary}k</div>
-                <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Average annual salary</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.medianSalaryK}k</div>
+                <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Median annual salary</div>
                 <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Correctional roles often pay above typical NP rates.</p>
               </div>
             )}
@@ -329,7 +327,7 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary + Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Correctional {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$95K–$160K'} annually, and government roles add pension, health insurance, and loan repayment.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Correctional {brand.niche.short}s earn {stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$95K–$160K'} annually, and government roles add pension, health insurance, and loan repayment.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>

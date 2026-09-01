@@ -43,6 +43,12 @@ const checkoutLayout = read('app/post-job/checkout/layout.tsx');
 const employers = read('app/for-employers/page.tsx');
 const terms = read('app/terms/page.tsx');
 const featuredTestimonials = read('components/FeaturedTestimonials.tsx');
+// Live review item 8c (WP-5): the comparison table moved to a SHARED module
+// consumed by BOTH /for-employers and /pricing, because /pricing carried a
+// stale pre-audit fork of it. The table-honesty guards below now read the
+// module; the page-level guards still read the pages.
+const comparison = read('lib/employer-comparison.ts');
+const pricing = read('app/pricing/page.tsx');
 
 /** WCAG 2.x sRGB relative-luminance contrast, so colour claims are computed. */
 const channel = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
@@ -59,6 +65,8 @@ function contrast(a: string, b: string): number {
 const previewCode = code(preview);
 const checkoutLayoutCode = code(checkoutLayout);
 const employersCode = code(employers);
+const comparisonCode = code(comparison);
+const pricingCode = code(pricing);
 
 describe('P2 #16 — the price is visible before checkout', () => {
     it('derives the paid/free decision from the quota API, not a guess', () => {
@@ -225,20 +233,31 @@ describe('P2 #16 — /for-employers discloses the free-post terms', () => {
 });
 
 describe('P2 #16 — the comparison table is honest', () => {
-    it('drops the unenforceable "No Unqualified Applicants" guarantee', () => {
-        expect(employersCode).not.toContain('No Unqualified Applicants');
+    it('both pages consume the ONE audited module — no local fork can drift', () => {
+        for (const [name, src] of [['for-employers', employers], ['pricing', pricing]] as const) {
+            expect(src, name).toContain("from '@/lib/employer-comparison'");
+            expect(code(src), name).not.toMatch(/const comparisonRows(?::|\s*=\s*\[)/);
+        }
     });
 
-    it('claims inventory, which we can verify, rather than audience composition', () => {
-        expect(employersCode).not.toContain('100% ${brand.niche.medium} Audience');
-        expect(employers).toContain('${brand.niche.medium}-Only Job Inventory');
+    it('drops the unenforceable "No Unqualified Applicants" guarantee', () => {
+        for (const src of [employersCode, pricingCode, comparisonCode]) {
+            expect(src).not.toContain('No Unqualified Applicants');
+        }
+    });
+
+    it('claims screened inventory, which we can verify, rather than audience composition', () => {
+        for (const src of [employersCode, pricingCode, comparisonCode]) {
+            expect(src).not.toContain('100% ${brand.niche.medium} Audience');
+        }
+        // Live review item 8a: even "-Only Job Inventory" was an absolute the
+        // inventory falsified — the row is now a screening commitment.
+        expect(comparison).toContain('${brand.niche.medium}-Focused Job Inventory');
+        expect(comparison).toContain('screened at ingest and removed when flagged out of scope');
     });
 
     it('stops asserting that competitors have no free posting option', () => {
-        const rows = employers.slice(
-            employers.indexOf('const comparisonRows'),
-            employers.indexOf('// Single source of truth for the FAQ content'),
-        );
+        const rows = comparison.slice(comparison.indexOf('const EMPLOYER_COMPARISON_ROWS'));
         const freeRow = rows.split('\n').find((l) => l.includes('First Post Free'));
         expect(freeRow).toBeDefined();
         expect(freeRow).toContain("indeed: 'partial'");
@@ -246,14 +265,17 @@ describe('P2 #16 — the comparison table is honest', () => {
     });
 
     it('marks competitor paid add-ons as limited rather than absent', () => {
-        const rows = employers.slice(
-            employers.indexOf('const comparisonRows'),
-            employers.indexOf('// Single source of truth for the FAQ content'),
-        );
+        const rows = comparison.slice(comparison.indexOf('const EMPLOYER_COMPARISON_ROWS'));
         for (const feature of ['Direct Candidate Messaging', 'Candidate Profile Unlocks']) {
             const row = rows.split('\n').find((l) => l.includes(feature));
             expect(row, feature).toBeDefined();
             expect(row, feature).toContain("indeed: 'partial'");
+        }
+    });
+
+    it('never resurrects the fork\'s unverifiable "Others: 30 days" cell', () => {
+        for (const src of [employersCode, pricingCode, comparisonCode]) {
+            expect(src).not.toContain("'Others: 30 days'");
         }
     });
 
@@ -284,9 +306,8 @@ describe('P2 #16 — the comparison table is honest', () => {
  * fails here instead of on the live page.
  */
 describe('P2 #16 — the comparison table renders as English', () => {
-    const rowsBlock = employersCode.slice(
-        employersCode.indexOf('const comparisonRows'),
-        employersCode.indexOf('const employerFaqs'),
+    const rowsBlock = comparisonCode.slice(
+        comparisonCode.indexOf('const EMPLOYER_COMPARISON_ROWS'),
     );
 
     /** Evaluate a source template literal against the real config objects. */
@@ -338,7 +359,13 @@ describe('P2 #16 — the comparison table renders as English', () => {
         expect(employersCode).not.toMatch(/Every candidate here is/);
         expect(employersCode).not.toMatch(/100% \$\{brand\.niche\.\w+\} audience/i);
         expect(employersCode).not.toMatch(/100% (NP|PMHNP|CRNA) audience/i);
-        expect(employers).toContain('Every job on this board is a');
+        // Live review item 8a (WP-5): the inventory claim itself was then
+        // falsified at the DB level (out-of-scope listings, items 1a–1d), so
+        // the absolute became a screening commitment. The absolute may return
+        // only when the WP-1 inventory-invariant test gates it.
+        expect(employersCode).not.toMatch(/Every job on this board is/);
+        expect(employers).toContain('This board is built exclusively for');
+        expect(employers).toContain('screened at ingest');
     });
 
     it('states the board scope the config declares, not a narrower one', () => {
@@ -353,10 +380,10 @@ describe('P2 #16 — the comparison table renders as English', () => {
         expect(employersCode).not.toMatch(
             /Every job on this board is a\{' '\}\s*\{brand\.niche\.descriptor\}/,
         );
-        expect(employers).toContain('{brand.niche.long} or {brand.niche.adjective} nursing role');
-        // The note it has to agree with is still there…
-        expect(employers).toContain(
-            'We only list ${brand.niche.long} and ${brand.niche.adjective} nursing roles',
+        expect(employers).toContain('{brand.niche.long} and {brand.niche.adjective} nursing roles');
+        // The note it has to agree with lives in the shared module now…
+        expect(comparison).toContain(
+            'Built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles',
         );
         // …and both halves render as distinct English, not the same word twice.
         expect(brand.niche.long.toLowerCase()).not.toBe(brand.niche.adjective.toLowerCase());

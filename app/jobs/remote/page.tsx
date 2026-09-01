@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Home, Globe, TrendingUp, Building2, Bell, ArrowRight, Briefcase, DollarSign } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { GLOBAL_EXCLUSIONS } from '@/lib/filters';
 import JobCard from '@/components/JobCard';
@@ -69,22 +70,16 @@ async function getRemoteStats() {
     where: REMOTE_FILTER,
   });
 
-  // Average salary for remote positions
-  const salaryData = await prisma.job.aggregate({
-    where: {
+  // Gated median salary for remote positions
+  // P9 #2c/#2d: gated MEDIAN over the NP-eligible analytics pool
+  // (lib/salary-analytics) — 0 below the n ≥ 5 / 3-employer publishing
+  // gate, which keeps this page's existing fallback copy in charge.
+  const medianSalaryK = await getGatedMedianKForWhere({
       ...REMOTE_FILTER,
       normalizedMinSalary: { not: null },
       normalizedMaxSalary: { not: null },
-    },
-    _avg: {
-      normalizedMinSalary: true,
-      normalizedMaxSalary: true,
-    },
-  });
+    });
 
-  const avgMinSalary = salaryData._avg.normalizedMinSalary || 0;
-  const avgMaxSalary = salaryData._avg.normalizedMaxSalary || 0;
-  const avgSalary = Math.round((avgMinSalary + avgMaxSalary) / 2 / 1000);
 
   // Companies hiring remotely
   const topEmployers = await prisma.job.groupBy({
@@ -109,7 +104,7 @@ async function getRemoteStats() {
 
   return {
     totalJobs,
-    avgSalary,
+    medianSalaryK,
     topEmployers: processedEmployers,
   };
 }
@@ -212,7 +207,7 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
         headlineSub="jobs, work from anywhere."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$110K+', label: 'avg salary' },
+          { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$110K+', label: 'median salary' },
           { value: `${stats.topEmployers.length}+`, label: 'companies' },
         ]}
         description="Telehealth and remote positions with competitive pay, flexible schedules, and multi-state reach."
@@ -325,14 +320,14 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
               )}
 
               {/* Salary Insights */}
-              {stats.avgSalary > 0 && (
+              {stats.medianSalaryK > 0 && (
                 <div className="remote-bento-card" style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                     <TrendingUp size={20} style={{ color: '#34D399' }} />
                     <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Salary Insights</h3>
                   </div>
-                  <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.avgSalary}k</div>
-                  <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Average annual salary</div>
+                  <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.medianSalaryK}k</div>
+                  <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Median annual salary</div>
                   <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Based on remote {brand.niche.short} positions with salary data.</p>
                 </div>
               )}
@@ -407,7 +402,7 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Parity</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Remote {brand.niche.short}s {stats.avgSalary > 0 ? `average $${stats.avgSalary}k on current listings` : 'typically earn $95K–$160K'} — competitive with comparable in-office roles.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Remote {brand.niche.short}s {stats.medianSalaryK > 0 ? `post a median of $${stats.medianSalaryK}k on current listings` : 'typically earn $95K–$160K'} — competitive with comparable in-office roles.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>

@@ -178,12 +178,15 @@ describe('A4 — every salary surface renders the shared provenance line', () =>
         expect(code).not.toContain('dateModified');
     });
 
-    it('the specialty detail template gates its live basis on MIN_LIVE_JOBS', () => {
+    it('the specialty detail template gates its live basis on the benchmark policy', () => {
         const src = read(SPECIALTY_DETAIL);
         expect(src).toContain("import SalaryProvenance from '@/components/SalaryProvenance'");
         expect(src).toContain('cited={[median]}');
+        // P9 #2d: the published-figure gate is the benchmark widget's
+        // n ≥ BENCHMARK_MIN_POSTINGS policy, so the provenance minimum
+        // quotes the same constant the figures are gated by.
         expect(src).toContain(
-            'live={hasLive ? { count: live.jobCount, minimum: MIN_LIVE_JOBS } : undefined}',
+            'live={hasLive ? { count: live.jobCount, minimum: BENCHMARK_MIN_POSTINGS } : undefined}',
         );
     });
 

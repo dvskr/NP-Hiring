@@ -136,8 +136,8 @@ const NP_MEDIAN_CITED = `${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES
 /** "27 states + DC" — AANP Full Practice Authority count. */
 const FPA_STATES = STAT_SOURCES.fullPracticeStates.formatted;
 
-/** "45%" — BLS-projected NP employment growth, cited. */
-const NP_GROWTH_CITED = `${STAT_SOURCES.blsGrowth2032.formatted} (${STAT_SOURCES.blsGrowth2032.source})`;
+/** "40%" — BLS-projected NP employment growth, cited. */
+const NP_GROWTH_CITED = `${STAT_SOURCES.blsGrowth2034.formatted} (${STAT_SOURCES.blsGrowth2034.source})`;
 
 /** Salary answer for NP-specialty categories: live average when known, cited national median otherwise. */
 function specialtySalaryAnswer(roleLabel: string, avgSalary?: number): string {
@@ -432,7 +432,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What is the job outlook for family practice ${brand.niche.short}s?`,
-            answer: `Strong — the BLS projects ${NP_GROWTH_CITED} employment growth for ${brand.niche.descriptor}s from 2022 to 2032, and primary care is where much of that demand lands. There are currently ${totalJobs} family practice positions listed here, with new openings added daily.`,
+            answer: `Strong — the BLS projects ${NP_GROWTH_CITED} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, and primary care is where much of that demand lands. There are currently ${totalJobs} family practice positions listed here, with new openings added daily.`,
         },
     ],
     'adult-gerontology': ({ totalJobs, avgSalary }) => [
@@ -720,7 +720,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What is the job outlook for primary care ${brand.niche.short}s?`,
-            answer: `Strong — the BLS projects ${NP_GROWTH_CITED} employment growth for ${brand.niche.descriptor}s from 2022 to 2032, and primary care absorbs much of that demand as practices expand team-based care models.`,
+            answer: `Strong — the BLS projects ${NP_GROWTH_CITED} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, and primary care absorbs much of that demand as practices expand team-based care models.`,
         },
     ],
     hospitalist: ({ totalJobs, avgSalary }) => [

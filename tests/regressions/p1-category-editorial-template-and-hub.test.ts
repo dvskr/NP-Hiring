@@ -226,7 +226,7 @@ describe('P1 #17 — /jobs hub editorial + citable FAQ', () => {
 
     it('every figure derives from stats-sources or the live DB count', () => {
         expect(src).toContain('STAT_SOURCES.averageSalary.formatted');
-        expect(src).toContain('STAT_SOURCES.blsGrowth2032');
+        expect(src).toContain('STAT_SOURCES.blsGrowth2034');
         expect(src).toContain('STAT_SOURCES.fullPracticeStates');
         expect(src).toContain('totalJobs.toLocaleString()');
         // Fabricated-inventory claims stay dead (P0 #5 regression surface).

@@ -172,9 +172,33 @@ export const POSITIVE_KEYWORDS = [
     'certified nurse-midwife',
     'nurse midwife',
     'nurse-midwife',
-    ' cnm ',
-    'cnm,',
+    // NOTE (live-review fix #1d): the bare ' cnm ' / 'cnm,' abbreviations
+    // moved to CONDITIONAL_POSITIVE_KEYWORDS below — 'Clinical Nurse
+    // Manager – CNM – Inpatient Psychiatry' (NewYork-Presbyterian, was
+    // published) matched ' cnm ' and short-circuited every negative check.
+    // The abbreviation now only counts WITH midwife context.
     'clinical nurse specialist',
+];
+
+/**
+ * Positive tokens that only count when a context token co-occurs anywhere
+ * in the posting (title+description). Live-review fix #1d: the bare CNM
+ * abbreviation is ambiguous between Certified Nurse-Midwife and Clinical
+ * Nurse Manager, so it needs a midwife-context witness before it can act
+ * as a Tier-1 positive (or a title-positive short-circuit).
+ */
+export interface ConditionalPositiveKeyword {
+    /** Substring tokens, matched exactly like POSITIVE_KEYWORDS entries. */
+    readonly tokens: readonly string[];
+    /** At least ONE of these substrings must also appear in the posting. */
+    readonly requiresAny: readonly string[];
+}
+
+export const CONDITIONAL_POSITIVE_KEYWORDS: readonly ConditionalPositiveKeyword[] = [
+    {
+        tokens: [' cnm ', 'cnm,'],
+        requiresAny: ['midwife', 'midwifery', 'cnm-certified', 'labor and delivery', 'obstetric'],
+    },
 ];
 
 /**
@@ -274,6 +298,19 @@ export const NEGATIVE_KEYWORDS = [
     'neurologist',
     'collaborating psychiatrist',
     'nocturnist',
+
+    // Non-NP provider classes that leaked to the live board (review 1a/1d,
+    // 2026-08-17): 6 published Podiatrist rows passed Tier 3 on 'nurse
+    // practitioner' JD boilerplate; 'Clinical Educator' (Strive Health) and
+    // 'Nurse Manager - Homeless Services' were published with no negative.
+    // Short abbreviations (DPM, DDS) live in NON_NP_PROVIDER_TITLE_PATTERNS
+    // below — word-boundary regexes, not space-padded substrings.
+    'podiatrist',
+    'podiatric',
+    'dentist',
+    'optometrist',
+    'educator',
+    'nurse manager',
 
     // Non-human "nurse practitioner" roles. NOT in the donor list —
     // added because this engine's Tier 2 accepts any 'nurse
@@ -565,10 +602,14 @@ export const TITLE_CONTEXT_WORDS = [
 
 /**
  * Negative keywords that are ALLOWED when specific indicator terms co-occur
- * anywhere in the posting. Retained from the PMHNP pack (donor dropped the
- * mechanism, relying on its title-positive short-circuit): 'psychiatrist'
- * is fine in collaborative-care / dual-role psychiatrist+NP postings,
- * which the board's psych segment still ingests.
+ * IN THE TITLE. Live-review fix #1b (2026-08-17): the old semantics checked
+ * indicators against title+description, which admitted ANY bare
+ * 'Psychiatrist' posting whose JD carried 'nurse practitioner'/'aprn'
+ * boilerplate — 207 published psychiatrist rows. The engine
+ * (lib/utils/job-filter.ts) now requires the indicator in the TITLE itself,
+ * so genuinely dual-role postings ('Psychiatrist/PMHNP', 'Psychiatrist or
+ * Nurse Practitioner') stay in scope while description-only mentions no
+ * longer rescue a physician posting.
  */
 export const WRONG_ROLE_CO_OCCURRENCE_EXCEPTIONS: Record<string, readonly string[]> = {
     psychiatrist: [
@@ -580,6 +621,50 @@ export const WRONG_ROLE_CO_OCCURRENCE_EXCEPTIONS: Record<string, readonly string
         'psych np',
     ],
 };
+
+// ─── Hard-veto title tiers (live-review fix #1, 2026-08-21) ─────────────────
+// Evaluated by the engine BEFORE the title-positive short-circuit
+// (job-filter.ts step 3): a Tier-1 positive like 'advanced practice
+// provider' in the title must NOT exempt these provider-class vetoes.
+// Word-boundary regexes, not space-padded substrings, so '(DPM)' / '(PA),'
+// punctuation-adjacent forms match.
+
+/**
+ * Non-NP provider classes that are never in scope regardless of what the
+ * description says. A title is exempt only when it also carries an NP
+ * credential token (dual-role 'Psychologist or PMHNP' style titles).
+ */
+export const NON_NP_PROVIDER_TITLE_PATTERNS: readonly RegExp[] = [
+    /\bpodiatrist\b/i,
+    /\bpodiatric\b/i,
+    /\bdpm\b/i,
+    /\bdentist\b/i,
+    /\bdds\b/i,
+    /\bdmd\b/i,
+    /\boptometrist\b/i,
+    /\bchiropractor\b/i,
+    /\bpsychologist\b/i,
+];
+
+/**
+ * PA-only title signals (review 1c — the Ascend '(PA),' posting). The
+ * space-padded ' pa ' negative cannot see '(PA),'; these word-boundary
+ * patterns can. The engine skips this veto when the title carries an NP
+ * credential token or is a dual-role NP-or-PA posting.
+ */
+export const PA_ONLY_TITLE_PATTERNS: readonly RegExp[] = [
+    /physician\s+assistant/i,
+    /\bpa-c\b/i,
+    /\(pa\)/i,
+];
+
+/**
+ * Bare `PA` token — counts as a PA-only signal ONLY when it is not a
+ * state-abbreviation suffix: 'Philadelphia, PA' / 'Erie - PA' location
+ * tails are excluded via lookbehind, while 'PA - Dermatology',
+ * 'Urgent Care PA' and 'PA/NP' forms still match.
+ */
+export const PA_BARE_TITLE_PATTERN: RegExp = /(?<![,\-–—])(?<![,\-–—]\s)\bpa\b/i;
 
 // ─── Query-time mirror vocabularies (lib/filters.ts GLOBAL_EXCLUSIONS) ──────
 // The query-time gate protects rows ALREADY in the database (ingested before

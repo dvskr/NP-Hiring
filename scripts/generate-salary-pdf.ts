@@ -65,7 +65,7 @@ const OUTPUT_PATH = path.join(
 
 // ── Cited figures (all from lib/stats-sources.ts — never hardcoded) ─────
 const NATIONAL_SALARY = STAT_SOURCES.averageSalary;
-const NP_GROWTH = STAT_SOURCES.blsGrowth2032;
+const NP_GROWTH = STAT_SOURCES.blsGrowth2034;
 // P2 #22 follow-up: the Full Practice Authority card in buildHtml() used to
 // assert a "+12-15%" FPA salary premium in its prose and again as a bullet.
 // It was cited to nothing here or in lib/stats-sources.ts, the repo's own

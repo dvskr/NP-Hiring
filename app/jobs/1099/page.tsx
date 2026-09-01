@@ -5,6 +5,7 @@ import Image from 'next/image';
 import CategoryHero from '@/components/CategoryHero';
 import { FileText, DollarSign, Scale, Calculator, Building2, Lightbulb, Bell, Briefcase, TrendingUp, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { buildCategoryWhereClause } from '@/lib/filters';
 import JobCard from '@/components/JobCard';
@@ -49,14 +50,11 @@ async function getICJobs(skip: number = 0, take: number = 20) {
 async function getICStats() {
   const totalJobs = await prisma.job.count({ where: IC_FILTER });
 
-  const salaryData = await prisma.job.aggregate({
-    where: { ...IC_FILTER, normalizedMinSalary: { not: null }, normalizedMaxSalary: { not: null } },
-    _avg: { normalizedMinSalary: true, normalizedMaxSalary: true },
-  });
+  // P9 #2c/#2d: gated MEDIAN over the NP-eligible analytics pool
+  // (lib/salary-analytics) — 0 below the n ≥ 5 / 3-employer publishing
+  // gate, which keeps this page's existing fallback copy in charge.
+  const medianSalaryK = await getGatedMedianKForWhere({ ...IC_FILTER, normalizedMinSalary: { not: null }, normalizedMaxSalary: { not: null } });
 
-  const avgMinSalary = salaryData._avg.normalizedMinSalary || 0;
-  const avgMaxSalary = salaryData._avg.normalizedMaxSalary || 0;
-  const avgSalary = Math.round((avgMinSalary + avgMaxSalary) / 2 / 1000);
 
   const topEmployers = await prisma.job.groupBy({
     by: ['employer'],
@@ -71,7 +69,7 @@ async function getICStats() {
     count: e._count.employer,
   }));
 
-  return { totalJobs, avgSalary, topEmployers: processedEmployers };
+  return { totalJobs, medianSalaryK, topEmployers: processedEmployers };
 }
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
@@ -195,7 +193,7 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
         photoTagBody="New 1099 postings across telehealth, group, and private practice."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '—', label: 'avg salary' },
+          { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '—', label: 'median salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description={`Independent contractor ${brand.niche.short} roles with Schedule C deductions, flexible caseloads, and full control of your schedule.`}
@@ -256,14 +254,14 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
                 </ul>
               </div>
             )}
-            {stats.avgSalary > 0 && (
+            {stats.medianSalaryK > 0 && (
               <div className="cat-bento-card" style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                   <TrendingUp size={20} style={{ color: '#34D399' }} />
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Salary Insights</h3>
                 </div>
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.avgSalary}k</div>
-                <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Average annual salary</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.medianSalaryK}k</div>
+                <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Median annual salary</div>
                 <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>1099 gross rates before self-employment tax.</p>
               </div>
             )}
@@ -329,7 +327,7 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Comparison</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>1099 {brand.niche.short}s {stats.avgSalary > 0 ? `average $${stats.avgSalary}k gross on current listings` : 'typically earn more gross than comparable W2 roles'} — before accounting for self-employment tax and the benefits you fund yourself.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>1099 {brand.niche.short}s {stats.medianSalaryK > 0 ? `post a median of $${stats.medianSalaryK}k gross on current listings` : 'typically earn more gross than comparable W2 roles'} — before accounting for self-employment tax and the benefits you fund yourself.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>

@@ -73,7 +73,7 @@ describe('P1 #4 — generator figures trace to sanctioned sources only', () => {
     it('national figures derive from lib/stats-sources.ts', () => {
         expect(src).toContain("from '@/lib/stats-sources'");
         expect(src).toContain('STAT_SOURCES.averageSalary');
-        expect(src).toContain('STAT_SOURCES.blsGrowth2032');
+        expect(src).toContain('STAT_SOURCES.blsGrowth2034');
         expect(src).toContain('STAT_SOURCES.fullPracticeStates');
         expect(src).toContain('STAT_SOURCES.hrsaShortagePopulation');
         // The OEWS median must never be re-hardcoded in the generator.

@@ -32,7 +32,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CopyCitation from '@/components/CopyCitation';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
-import { activeIndexableJobWhere } from '@/lib/active-job-filter';
+import { canonicalActiveJobWhere, canonicalEmployerWhere } from '@/lib/canonical-counts';
 import { brand } from '@/config/brand';
 import { STAT_SOURCES, STATS_LAST_REVIEWED } from '@/lib/stats-sources';
 import { getStatesByAuthority } from '@/lib/state-practice-authority';
@@ -138,18 +138,27 @@ interface InventorySnapshot {
  * Live board inventory. Returns null on any failure so the caller can omit
  * the block entirely — quoting a fallback constant on a page journalists
  * cite would be fabrication.
+ *
+ * Live review 2026-08-17 item #4a/#4c: counts now run through the canonical
+ * predicates (lib/canonical-counts.ts) — the same activeIndexableJobWhere +
+ * GLOBAL_EXCLUSIONS filter /jobs browses with — so this page can never quote
+ * a bigger board than a journalist finds by clicking through. Employers are
+ * the ONE shared definition (Company rows with ≥1 canonical active job), not
+ * a distinct-employer-string count that disagreed with /companies and /about.
+ * canonicalActiveJobWhere() carries no top-level OR, so composing the state
+ * filter by spread cannot clobber the expiry gate.
  */
 async function getInventorySnapshot(): Promise<InventorySnapshot | null> {
     try {
-        const where = activeIndexableJobWhere();
-        const [totalJobs, employerGroups, stateGroups] = await Promise.all([
+        const where = canonicalActiveJobWhere();
+        const [totalJobs, totalEmployers, stateGroups] = await Promise.all([
             prisma.job.count({ where }),
-            prisma.job.groupBy({ by: ['employer'], where }),
+            prisma.company.count({ where: canonicalEmployerWhere() }),
             prisma.job.groupBy({ by: ['state'], where: { ...where, state: { not: null } } }),
         ]);
         return {
             totalJobs,
-            totalEmployers: employerGroups.length,
+            totalEmployers,
             totalStates: stateGroups.length,
         };
     } catch (error) {
@@ -189,7 +198,7 @@ export default async function PressPage() {
 
     const dataSourceRows = [
         { label: `Median ${brand.niche.short} salary, United States`, stat: STAT_SOURCES.averageSalary },
-        { label: `Projected ${brand.niche.short} employment growth`, stat: STAT_SOURCES.blsGrowth2032 },
+        { label: `Projected ${brand.niche.short} employment growth`, stat: STAT_SOURCES.blsGrowth2034 },
         { label: 'Population in primary-care shortage areas', stat: STAT_SOURCES.hrsaShortagePopulation },
         { label: 'Full Practice Authority jurisdictions', stat: STAT_SOURCES.fullPracticeStates },
     ];
@@ -425,9 +434,10 @@ export default async function PressPage() {
                             ))}
                         </div>
                         <p style={{ marginTop: '12px', fontSize: '13px', color: MUTED_TEXT }}>
-                            Counted with the same filter our sitemaps use: published, unexpired, and not flagged as a
-                            repeatedly dead source link. If you need a cut of this by specialty, state, or setting,
-                            ask — we will run it.
+                            Counted with the same filter the /jobs browse pages use: published, unexpired, not
+                            flagged as a repeatedly dead source link, and with out-of-scope (non-{brand.niche.short})
+                            roles excluded. If you need a cut of this by specialty, state, or setting, ask — we will
+                            run it.
                         </p>
                     </Section>
                 )}

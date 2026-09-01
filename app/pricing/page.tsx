@@ -3,6 +3,12 @@ import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+// Live review item 8c (WP-5): this page carried a stale pre-audit FORK of
+// the /for-employers comparison table ("100% NP Audience", "No Unqualified
+// Applicants", "Others: 30 days") labeled "same as employer page" — the P2
+// #16 honesty audit had only reached /for-employers. Both pages now render
+// the ONE audited module, so the audit cannot be forked away again.
+import { EMPLOYER_COMPARISON_ROWS } from '@/lib/employer-comparison';
 import { config } from '@/lib/config';
 import { Check, ArrowRight, X, HelpCircle, RefreshCw, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign } from 'lucide-react';
 
@@ -56,19 +62,9 @@ const clayIconWrap = (gradient: string): React.CSSProperties => ({
     flexShrink: 0,
 });
 
-/* ═══ Comparison Data — same as employer page ═══ */
-const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: true | false | 'partial'; linkedin: true | false | 'partial'; note?: string }[] = [
-    { feature: `100% ${brand.niche.medium} Audience`, us: true, indeed: false, linkedin: false },
-    { feature: 'No Unqualified Applicants', us: true, indeed: false, linkedin: false },
-    { feature: `First Post Free (No Card)`, us: true, indeed: false, linkedin: false },
-    { feature: `Flat $${config.postingPrice}/Post — No Bidding`, us: true, indeed: false, linkedin: false, note: 'Indeed is pay-per-click' },
-    { feature: `${config.durationDays}-Day Listing Duration`, us: true, indeed: false, linkedin: false, note: 'Others: 30 days' },
-    { feature: 'Direct Candidate Messaging', us: true, indeed: false, linkedin: 'partial', note: 'LinkedIn: paid add-on' },
-    { feature: 'Candidate Profile Unlocks', us: true, indeed: false, linkedin: 'partial', note: 'LinkedIn: paid add-on' },
-    { feature: 'Built-In Screening Questions', us: true, indeed: true, linkedin: false },
-    { feature: 'Daily Niche Job Alerts', us: true, indeed: 'partial', linkedin: 'partial', note: 'Others: generic alerts' },
-    { feature: 'Instant Apply Notifications', us: true, indeed: true, linkedin: true },
-];
+/* ═══ Comparison Data — the shared audited module (lib/employer-comparison.ts),
+   genuinely the same rows as the employer page ═══ */
+const comparisonRows = EMPLOYER_COMPARISON_ROWS;
 
 const faqs = [
     { q: 'How many free posts do I get?', a: `Your first job post is completely free — no credit card required, and every feature is included.` },

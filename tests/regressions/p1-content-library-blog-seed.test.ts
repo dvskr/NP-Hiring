@@ -153,8 +153,8 @@ describe('truth rules', () => {
                 expect(STAT_SOURCES.averageSalary.formatted).toBe('$129,210');
                 expect(body, `${slug}: median cited without BLS attribution`).toMatch(/BLS/);
             }
-            if (/45%/.test(body)) {
-                expect(STAT_SOURCES.blsGrowth2032.formatted).toBe('45%');
+            if (/40%/.test(body)) {
+                expect(STAT_SOURCES.blsGrowth2034.formatted).toBe('40%');
             }
             if (body.includes('27 states + DC')) {
                 expect(STAT_SOURCES.fullPracticeStates.formatted).toBe('27 states + DC');

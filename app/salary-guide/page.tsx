@@ -17,6 +17,19 @@ import { SALARY_GUIDE_PDF_AVAILABLE } from '@/app/api/salary-guide/pdf-availabil
 // stays confined there (niche-copy debt ratchet).
 import { PSYCH_SPECIALTY_SLUG } from '@/lib/pseo/taxonomy-registry';
 import { SALARY_SPECIALTY_PAGES } from '@/app/salary-guide/specialty/specialty-config';
+// Review P9 #2c/#2d: published aggregates run on the gated NP-eligible
+// pool and adopt the benchmark widget's policy (median, n ≥ 5 postings,
+// ≥ 3 employers) — the one salary surface the live review found correct.
+import {
+  summarizeBenchmarks,
+  BENCHMARK_MIN_POSTINGS,
+  BENCHMARK_MIN_EMPLOYERS,
+} from '@/components/tools/benchmark-model';
+import {
+  npSalaryAnalyticsWhere,
+  NP_SALARY_ANALYTICS_SELECT,
+  filterNpEligibleRows,
+} from '@/lib/salary-utils';
 
 // ── Editorial review date (audit P0 #23, B54 principle) ─────────────────
 // The Article schema's dateModified must reflect a REAL content review,
@@ -35,7 +48,7 @@ const LAST_REVIEWED_DATE = '2026-07-28';
 // re-hardcoding a national salary here.
 const NATIONAL_SALARY = STAT_SOURCES.averageSalary; // '$129,210' (BLS OEWS May 2024 median)
 const NATIONAL_SALARY_K = Math.round(Number(NATIONAL_SALARY.value) / 1000); // 129
-const NP_GROWTH = STAT_SOURCES.blsGrowth2032; // '45%'
+const NP_GROWTH = STAT_SOURCES.blsGrowth2034; // '40%'
 const FPA_STATES = STAT_SOURCES.fullPracticeStates; // '27 states + DC' (AANP)
 const SHORTAGE_POP = STAT_SOURCES.hrsaShortagePopulation; // '90 million+' (HRSA, primary care)
 
@@ -69,58 +82,90 @@ const STATE_CODES: Record<string, string> = {
 interface StateSalary {
   state: string;
   stateCode: string;
-  avgSalary: number;
-  minSalary: number;
-  maxSalary: number;
+  /** True median over NP-eligible postings — never a mean of min/max. */
+  medianSalary: number;
+  /** 25th / 75th percentile of the same gated pool. */
+  p25: number;
+  p75: number;
+  jobCount: number;
+  employers: number;
+  slug: string;
+}
+
+/** A state with disclosed-salary postings but below the publishing gate. */
+interface SmallSampleState {
+  state: string;
+  stateCode: string;
   jobCount: number;
   slug: string;
 }
 
-async function getSalaryByState(): Promise<StateSalary[]> {
-  const stateData = await prisma.job.groupBy({
-    by: ['state'],
+const stateSlug = (name: string) => name.toLowerCase().replace(/\s+/g, '-');
+
+/**
+ * Review P9 #2c/#2d rebuild. One fetch feeds every posting-derived figure
+ * on this page:
+ *   - pool     = npSalaryAnalyticsWhere (published, non-expired,
+ *                non-estimated, confidence ≥ 0.8, annual-cadence) further
+ *                scoped to NP-eligible titles (interim deterministic
+ *                heuristic until the professionClass column lands).
+ *   - figures  = benchmark-model medians/percentiles under its n ≥ 5
+ *                postings / ≥ 3 employers gate — the same policy the
+ *                public benchmark widget already enforces.
+ * States below the gate are listed WITHOUT a figure ("sample too small"),
+ * never as a ranked row.
+ */
+async function getSalaryAnalytics() {
+  const rows = await prisma.job.findMany({
     where: {
-      isPublished: true,
-      state: { not: null },
-      normalizedMinSalary: { not: null },
+      // Base disclosed-salary predicate — pinned byte-identical against
+      // scripts/generate-salary-pdf.ts by p1-salary-pdf-deliverable.
+      isPublished: true, normalizedMinSalary: { not: null },
+      ...npSalaryAnalyticsWhere(),
     },
-    _avg: { normalizedMinSalary: true, normalizedMaxSalary: true },
-    _min: { normalizedMinSalary: true },
-    _max: { normalizedMaxSalary: true },
-    _count: { id: true },
+    select: NP_SALARY_ANALYTICS_SELECT,
   });
 
-  return stateData
-    .filter(s => s.state && s._avg.normalizedMinSalary)
-    .map(s => ({
-      state: s.state!,
-      stateCode: STATE_CODES[s.state!] || '',
-      avgSalary: Math.round(((s._avg.normalizedMinSalary || 0) + (s._avg.normalizedMaxSalary || 0)) / 2),
-      minSalary: Math.round(s._min.normalizedMinSalary || 0),
-      maxSalary: Math.round(s._max.normalizedMaxSalary || 0),
-      jobCount: s._count.id,
-      slug: s.state!.toLowerCase().replace(/\s+/g, '-'),
+  const npRows = filterNpEligibleRows(rows);
+  const { national, states } = summarizeBenchmarks(npRows);
+
+  const gatedStates: StateSalary[] = states
+    .map((s) => ({
+      state: s.scope,
+      stateCode: STATE_CODES[s.scope] || '',
+      medianSalary: s.median,
+      p25: s.p25,
+      p75: s.p75,
+      jobCount: s.postings,
+      employers: s.employers,
+      slug: stateSlug(s.scope),
     }))
-    .sort((a, b) => b.avgSalary - a.avgSalary);
-}
+    .sort((a, b) => b.medianSalary - a.medianSalary);
 
-async function getOverallStats() {
-  const stats = await prisma.job.aggregate({
-    where: { isPublished: true, normalizedMinSalary: { not: null } },
-    _avg: { normalizedMinSalary: true, normalizedMaxSalary: true },
-    _min: { normalizedMinSalary: true },
-    _max: { normalizedMaxSalary: true },
-    _count: { id: true },
-  });
-
-  const avgMin = stats._avg.normalizedMinSalary || 120000;
-  const avgMax = stats._avg.normalizedMaxSalary || 150000;
+  const gatedNames = new Set(gatedStates.map((s) => s.state));
+  const countsByState = new Map<string, number>();
+  for (const row of npRows) {
+    if (row.state) countsByState.set(row.state, (countsByState.get(row.state) ?? 0) + 1);
+  }
+  const smallSampleStates: SmallSampleState[] = [...countsByState.entries()]
+    .filter(([name]) => !gatedNames.has(name))
+    .map(([name, count]) => ({
+      state: name,
+      stateCode: STATE_CODES[name] || '',
+      jobCount: count,
+      slug: stateSlug(name),
+    }))
+    .sort((a, b) => a.state.localeCompare(b.state));
 
   return {
-    avgSalary: Math.round((avgMin + avgMax) / 2),
-    minSalary: Math.round(stats._min.normalizedMinSalary || 85000),
-    maxSalary: Math.round(stats._max.normalizedMaxSalary || 200000),
-    jobsWithSalary: stats._count.id,
+    stateSalaries: gatedStates,
+    smallSampleStates,
+    national,
+    overallStats: {
+      // Size of the gated analytics pool — the honest "postings analyzed"
+      // basis for every figure on this page.
+      jobsWithSalary: npRows.length,
+    },
   };
 }
 
@@ -282,10 +327,14 @@ const faqData = [
 ];
 
 export default async function SalaryGuidePage() {
-  const [stateSalaries, overallStats] = await Promise.all([
-    getSalaryByState(),
-    getOverallStats(),
-  ]);
+  const { stateSalaries, smallSampleStates, national, overallStats } = await getSalaryAnalytics();
+
+  // Calculator base: the gated national median of NP-eligible postings
+  // when it exists; otherwise fall back to the cited BLS OEWS national
+  // median — never an ungated posting mean.
+  const calculatorNational = national
+    ? { base: national.median, basis: 'postings' as const, jobCount: national.postings }
+    : { base: Number(NATIONAL_SALARY.value), basis: 'bls' as const };
 
   const currentYear = new Date().getFullYear();
 
@@ -370,8 +419,8 @@ export default async function SalaryGuidePage() {
             {/* Calculator (8 cols on desktop, full row on mobile) */}
             <div className="sal-hero-calc" style={{ minWidth: 0 }}>
               <SalaryCalculator
-                stateSalaries={stateSalaries.map(s => ({ state: s.state, stateCode: s.stateCode, avgSalary: s.avgSalary, minSalary: s.minSalary, maxSalary: s.maxSalary }))}
-                nationalAvg={overallStats.avgSalary}
+                stateSalaries={stateSalaries.map(s => ({ state: s.state, stateCode: s.stateCode, medianSalary: s.medianSalary, jobCount: s.jobCount }))}
+                national={calculatorNational}
               />
             </div>
 
@@ -474,7 +523,7 @@ export default async function SalaryGuidePage() {
                 {[
                   { value: NATIONAL_SALARY.formatted, label: 'National Median (BLS)', color: '#BE185D' },
                   { value: '$165,000+', label: 'Top 10% Earn', color: '#BE185D' },
-                  { value: NP_GROWTH.formatted, label: 'Job Growth by 2032', color: '#F59E0B' },
+                  { value: NP_GROWTH.formatted, label: 'Job Growth by 2034', color: '#F59E0B' },
                   { value: overallStats.jobsWithSalary.toLocaleString('en-US'), label: 'Live Postings Analyzed', color: '#F59E0B' },
                 ].map(s => (
                   <div key={s.label} style={{ textAlign: 'center' }}>
@@ -518,7 +567,9 @@ export default async function SalaryGuidePage() {
                     the download must never be advertised as the place to get
                     state data. Traffic flows the other way: the PDF points
                     readers here. */}
-                <strong>Note:</strong> Real-time salary data from active {brand.niche.short} job postings, updated daily.
+                <strong>Note:</strong> Each figure is the <strong>median</strong> of that state&apos;s active {brand.niche.short}-eligible postings with disclosed,
+                non-estimated salary (screened by job title), recomputed daily. A state appears with a figure only when it has at least {BENCHMARK_MIN_POSTINGS} such
+                postings from {BENCHMARK_MIN_EMPLOYERS}+ employers — states below that sample are listed separately without a figure.
                 {' '}Each state name links to a detailed page with pay by setting and top employers.
               </p>
               {/* A4: the table's own snapshot basis — the same national
@@ -537,24 +588,21 @@ export default async function SalaryGuidePage() {
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(190,24,93,0.02))' }}>
                     <th style={{ width: '35%', padding: '14px 20px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>State</th>
-                    <th style={{ width: '20%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Avg. Salary</th>
-                    <th className="sal-range-col" style={{ width: '25%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Range</th>
-                    <th style={{ width: '10%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Jobs</th>
+                    <th style={{ width: '20%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Median</th>
+                    <th className="sal-range-col" style={{ width: '25%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>P25–P75</th>
+                    <th style={{ width: '10%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Sample</th>
                     <th style={{ width: '10%', padding: '14px 16px', textAlign: 'right', borderBottom: '2px solid rgba(0,0,0,0.06)' }}><span style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Review P9 #2d: no gold top-3 badges or highlight rows —
+                      the ranked-with-medals treatment was the maximally
+                      confident presentation of a contaminated number. Rows
+                      here already cleared the n≥5 / 3-employer gate. */}
                   {stateSalaries.map((state, i) => (
-                    <tr key={state.state} style={{ background: i < 3 ? 'rgba(251,191,36,0.06)' : i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
+                    <tr key={state.state} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.015)' }}>
                       <td style={{ padding: '12px 20px', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {i < 3 && (
-                            <span style={{
-                              width: '22px', height: '22px', borderRadius: '50%',
-                              background: '#FEF3C7', color: '#92400E', fontSize: '11px', fontWeight: 700,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>{i + 1}</span>
-                          )}
                           <div>
                             {/* Audit P0 #20: the hub must link its own 51
                                 state children — same slug derivation as
@@ -567,13 +615,13 @@ export default async function SalaryGuidePage() {
                         </div>
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)', fontWeight: 700, color: '#1A2E35' }}>
-                        ${fmt(state.avgSalary)}
+                        ${fmt(state.medianSalary)}
                       </td>
                       <td className="sal-range-col" style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '12px', color: '#64748B' }}>
-                        ${fmt(state.minSalary)} - ${fmt(state.maxSalary)}
+                        ${fmt(state.p25)} - ${fmt(state.p75)}
                       </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '13px', color: '#64748B' }}>
-                        {state.jobCount}
+                      <td style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '12px', color: '#64748B', whiteSpace: 'nowrap' }}>
+                        {state.jobCount} · {state.employers} emp.
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                         <Link href={`/jobs/state/${state.slug}`} style={{ fontSize: '12px', color: '#BE185D', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
@@ -585,6 +633,27 @@ export default async function SalaryGuidePage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Review P9 #2d: states with postings but below the publishing
+                gate are named WITHOUT a figure — the honest replacement for
+                the n=1 "averages" this table used to rank. */}
+            {smallSampleStates.length > 0 && (
+              <div style={{ ...clayCard, marginTop: '20px', padding: '18px 24px' }}>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>
+                  States with too few postings for a reliable figure
+                </p>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 10px', lineHeight: 1.5 }}>
+                  Fewer than {BENCHMARK_MIN_POSTINGS} qualifying postings (or fewer than {BENCHMARK_MIN_EMPLOYERS} employers) — sample too small to publish a salary figure. Browse the live listings instead:
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>
+                  {smallSampleStates.map((s) => (
+                    <Link key={s.state} href={`/salary-guide/${s.slug}`} className="sal-state-link" style={{ fontSize: '12.5px', fontWeight: 600, color: '#1A2E35', textDecoration: 'none' }}>
+                      {s.state} <span style={{ color: '#94A3B8', fontWeight: 500 }}>({s.jobCount})</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -775,7 +844,7 @@ export default async function SalaryGuidePage() {
           <div style={{ ...clayCard, padding: '22px 28px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: '13px', color: '#5A4A42' }}>
               <li>• <strong>{SHORTAGE_POP.formatted}</strong> Americans live in primary-care shortage areas (HRSA)</li>
-              <li>• <strong>{NP_GROWTH.formatted}</strong> projected NP job growth through 2032 (BLS)</li>
+              <li>• <strong>{NP_GROWTH.formatted}</strong> projected NP job growth through 2034 (BLS)</li>
             </ul>
           </div>
         </div>

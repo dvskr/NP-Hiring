@@ -228,7 +228,7 @@ describe('P2 #9 — /press derives its numbers instead of stating them', () => {
         expect(pressPage).not.toContain("'use client'");
         expect(pressPage).toContain("from '@/lib/stats-sources'");
         expect(pressPage).toContain('STAT_SOURCES.averageSalary');
-        expect(pressPage).toContain('STAT_SOURCES.blsGrowth2032');
+        expect(pressPage).toContain('STAT_SOURCES.blsGrowth2034');
         expect(pressPage).toContain('STAT_SOURCES.hrsaShortagePopulation');
         expect(pressPage).toContain('STAT_SOURCES.fullPracticeStates');
         expect(pressPage).toContain('STATS_LAST_REVIEWED');
@@ -260,8 +260,12 @@ describe('P2 #9 — /press derives its numbers instead of stating them', () => {
         expect(fn).toContain('return null;');
         // …and the section is conditional on that value.
         expect(pressPage).toContain('{inventory && (');
-        // Counted with the same filter the sitemaps use, not a looser one.
-        expect(pressPage).toContain('activeIndexableJobWhere()');
+        // Counted with the canonical countable-inventory predicate (live
+        // review 2026-08-17 item #4: activeIndexableJobWhere composed with
+        // GLOBAL_EXCLUSIONS via lib/canonical-counts.ts) — strictly tighter
+        // than the sitemap filter alone, never looser.
+        expect(pressPage).toContain('canonicalActiveJobWhere()');
+        expect(pressPage).toContain('canonicalEmployerWhere()');
     });
 
     it('labels board aggregates as board-specific, not as market data', () => {

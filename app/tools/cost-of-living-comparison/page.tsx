@@ -28,8 +28,17 @@ import {
   type CityOption,
   type SalaryAggregate,
 } from '@/components/tools/city-picker-data';
-import { CITY_SAMPLE_THRESHOLD } from '@/components/tools/col-model';
 import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard } from '@/components/tools/tool-theme';
+import {
+  summarizeBenchmarks,
+  BENCHMARK_MIN_POSTINGS,
+  BENCHMARK_MIN_EMPLOYERS,
+} from '@/components/tools/benchmark-model';
+import {
+  npSalaryAnalyticsWhere,
+  NP_SALARY_ANALYTICS_SELECT,
+  filterNpEligibleRows,
+} from '@/lib/salary-utils';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 
@@ -66,14 +75,6 @@ export const metadata: Metadata = {
   alternates: { canonical: PAGE_URL },
 };
 
-const SALARY_WHERE = {
-  isPublished: true,
-  salaryIsEstimated: false,
-  state: { not: null },
-  normalizedMinSalary: { not: null },
-  normalizedMaxSalary: { not: null },
-} as const;
-
 interface ComparatorData {
   options: CityOption[];
   defaultPair: readonly [string, string] | null;
@@ -83,45 +84,43 @@ interface ComparatorData {
 
 const EMPTY_DATA: ComparatorData = { options: [], defaultPair: null, statesCovered: 0, postingsCounted: 0 };
 
-function midpoint(min: number | null, max: number | null): number {
-  return Math.round(((min ?? 0) + (max ?? min ?? 0)) / 2);
-}
-
+/**
+ * P9 #2c/#2d: every nominal figure this tool renders is a gated MEDIAN over
+ * the NP-eligible analytics pool (npSalaryAnalyticsWhere + NP-title gate),
+ * per state and per city, published only past the benchmark gate
+ * (n ≥ BENCHMARK_MIN_POSTINGS from ≥ BENCHMARK_MIN_EMPLOYERS). The old
+ * `_avg` mean-of-min/max here ran over every published disclosed-salary row
+ * — psychiatrist/PA/podiatrist pay included — and city columns published
+ * an "average" of as few as 3 postings.
+ */
 async function loadComparatorData(): Promise<ComparatorData> {
   try {
-    const [stateRows, cityRows] = await Promise.all([
-      prisma.job.groupBy({
-        by: ['state'],
-        where: SALARY_WHERE,
-        _avg: { normalizedMinSalary: true, normalizedMaxSalary: true },
-        _count: { id: true },
-      }),
-      prisma.job.groupBy({
-        by: ['city', 'state'],
-        where: { ...SALARY_WHERE, city: { not: null } },
-        _avg: { normalizedMinSalary: true, normalizedMaxSalary: true },
-        _count: { id: true },
-      }),
-    ]);
+    const rows = await prisma.job.findMany({
+      where: { AND: [npSalaryAnalyticsWhere(), { state: { not: null } }] },
+      select: { ...NP_SALARY_ANALYTICS_SELECT, city: true },
+    });
+    const npRows = filterNpEligibleRows(rows);
 
+    // Per-state gated medians. `sample` = postings behind the median.
     const stateNominals = new Map<string, SalaryAggregate>();
-    let postingsCounted = 0;
-    for (const row of stateRows) {
-      if (!row.state) continue;
-      const nominal = midpoint(row._avg.normalizedMinSalary, row._avg.normalizedMaxSalary);
-      if (nominal <= 0) continue;
-      stateNominals.set(row.state, { nominal, sample: row._count.id });
-      postingsCounted += row._count.id;
+    for (const row of summarizeBenchmarks(npRows).states) {
+      stateNominals.set(row.scope, { nominal: row.median, sample: row.postings });
     }
+    const postingsCounted = npRows.length;
 
+    // Per-city gated medians — the benchmark scope key is the resolved city
+    // slug, so the same n ≥ 5 / 3-employer policy applies per city. Cities
+    // below the gate get no entry and fall back to their state's median in
+    // buildCityOptions, exactly as thin cities always have.
+    const cityKeyedRows = npRows
+      .map((row) => {
+        const slug = resolveCitySlug((row as { city?: string | null }).city ?? null, row.state);
+        return slug ? { ...row, state: slug } : null;
+      })
+      .filter((row): row is NonNullable<typeof row> => row != null);
     const cityNominals = new Map<string, SalaryAggregate>();
-    for (const row of cityRows) {
-      if (row._count.id < CITY_SAMPLE_THRESHOLD) continue;
-      const slug = resolveCitySlug(row.city, row.state);
-      if (!slug) continue;
-      const nominal = midpoint(row._avg.normalizedMinSalary, row._avg.normalizedMaxSalary);
-      if (nominal <= 0) continue;
-      cityNominals.set(slug, { nominal, sample: row._count.id });
+    for (const row of summarizeBenchmarks(cityKeyedRows).states) {
+      cityNominals.set(row.scope, { nominal: row.median, sample: row.postings });
     }
 
     const options = buildCityOptions({ perState: CITIES_PER_STATE, cityNominals, stateNominals });
@@ -146,7 +145,7 @@ const FAQS = [
   },
   {
     q: 'Where does the salary data come from?',
-    a: `Live postings on this board. Where a city has at least ${CITY_SAMPLE_THRESHOLD} published listings that disclose a pay range, we average those postings' midpoints; below that threshold the state average stands in, and each column tells you which basis it used and how many postings sit behind it. Listings whose pay was inferred rather than posted are excluded entirely.`,
+    a: `Live postings on this board. Where a city has at least ${BENCHMARK_MIN_POSTINGS} published listings with disclosed, non-estimated pay from ${BENCHMARK_MIN_EMPLOYERS}+ employers, we use the true median of those postings' midpoints; below that threshold the state median stands in, and each column tells you which basis it used and how many postings sit behind it. Listings whose pay was inferred rather than posted are excluded entirely.`,
   },
   {
     q: 'Does a higher salary in an expensive city still come out ahead?',
@@ -169,11 +168,11 @@ export default async function CostOfLivingComparisonPage() {
   const data = await loadComparatorData();
 
   const assumptions: readonly string[] = [
-    'Nominal pay is the average midpoint of published postings on this board that disclose a salary range. Postings whose pay was inferred rather than posted by the employer are excluded.',
-    `A city uses its own postings when it has at least ${CITY_SAMPLE_THRESHOLD} of them with disclosed pay; otherwise the state average stands in. Each column states which basis it used and the sample size behind it.`,
+    `Nominal pay is the true median midpoint of published ${brand.niche.short}-eligible postings on this board that disclose a salary range. Postings whose pay was inferred rather than posted by the employer are excluded.`,
+    `A city uses its own postings when it has at least ${BENCHMARK_MIN_POSTINGS} of them with disclosed pay from ${BENCHMARK_MIN_EMPLOYERS}+ employers; otherwise the state median stands in. Each column states which basis it used and the sample size behind it.`,
     'The cost-of-living index comes from this site’s city dataset, where 100 is the national average. It covers living costs — housing, groceries, utilities, transport, healthcare — not taxes.',
     'The adjusted figure is nominal pay multiplied by (100 ÷ the city’s index), the same formula used for cost-of-living adjusted pay across the rest of this site.',
-    'The picker carries the largest cities in each state plus every city with enough postings of its own to beat the state average.',
+    'The picker carries the largest cities in each state plus every city with enough postings of its own to publish a gated median of its own.',
   ];
 
   return (

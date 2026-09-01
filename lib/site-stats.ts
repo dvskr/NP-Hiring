@@ -9,8 +9,18 @@
  *
  * Reads fall back to a live compute if the row hasn't been populated yet (e.g.
  * before the cron's first run), and to fixed defaults if the DB is unreachable.
+ *
+ * Count semantics (live review 2026-08-17 item #4a/#4c):
+ *   - totalJobs counts the canonical countable inventory
+ *     (lib/canonical-counts.ts: activeIndexableJobWhere + GLOBAL_EXCLUSIONS),
+ *     NOT bare `isPublished` — the cached homepage number previously exceeded
+ *     what /jobs actually browses by ~200 rows (expired + excluded roles).
+ *   - totalCompanies counts Company rows with ≥1 canonical active job (the
+ *     ONE employer definition), replacing the distinct-`employer`-string
+ *     counter that disagreed with /companies and /about by a few units.
  */
 import { prisma } from '@/lib/prisma';
+import { canonicalActiveJobWhere, canonicalEmployerWhere } from '@/lib/canonical-counts';
 
 export interface SiteStats {
     totalJobs: number;
@@ -23,16 +33,13 @@ const FALLBACK: SiteStats = { totalJobs: 200, totalCompanies: 500, totalSubscrib
 
 /** Compute the live numbers. Expensive — call from the cron, not page renders. */
 export async function computeSiteStats(): Promise<SiteStats> {
-    const [totalJobs, distinctEmployers, totalSubscribers] = await Promise.all([
-        prisma.job.count({ where: { isPublished: true } }),
-        prisma.job.findMany({
-            where: { isPublished: true },
-            distinct: ['employer'],
-            select: { employer: true },
-        }),
+    const now = new Date();
+    const [totalJobs, totalCompanies, totalSubscribers] = await Promise.all([
+        prisma.job.count({ where: canonicalActiveJobWhere(now) }),
+        prisma.company.count({ where: canonicalEmployerWhere(now) }),
         prisma.emailLead.count({ where: { newsletterOptIn: true, isSuppressed: false } }),
     ]);
-    return { totalJobs, totalCompanies: distinctEmployers.length, totalSubscribers };
+    return { totalJobs, totalCompanies, totalSubscribers };
 }
 
 /** Compute + persist the numbers into the SiteStat singleton row. */
@@ -62,5 +69,30 @@ export async function getSiteStats(): Promise<SiteStats> {
         return await computeSiteStats();
     } catch {
         return FALLBACK;
+    }
+}
+
+/**
+ * Same read, but returns null on failure instead of the FALLBACK constants.
+ *
+ * For surfaces bound by the omit-not-fabricate rule (/press, /for-programs —
+ * live review item #4d): a placeholder figure quoted by a journalist or a
+ * program director is fabrication, so those pages OMIT the stat block when the
+ * numbers are unavailable rather than rendering a default. The homepage keeps
+ * getSiteStats(): there the number is decorative and a render must not fail.
+ */
+export async function getSiteStatsOrNull(): Promise<SiteStats | null> {
+    try {
+        const row = await prisma.siteStat.findFirst({ orderBy: { updatedAt: 'desc' } });
+        if (row) {
+            return {
+                totalJobs: row.totalJobs,
+                totalCompanies: row.totalCompanies,
+                totalSubscribers: row.totalSubscribers,
+            };
+        }
+        return await computeSiteStats();
+    } catch {
+        return null;
     }
 }

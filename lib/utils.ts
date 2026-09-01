@@ -40,7 +40,7 @@ function getEffectiveDate(job: { originalPostedAt?: Date | null; createdAt: Date
  * downstream that branches on period (formatSalary UI, JobPosting schema,
  * salary backfill scripts) must accept both. Single source of truth here.
  */
-export type SalaryPeriodKey = 'hourly' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'annual';
+export type SalaryPeriodKey = 'hourly' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'annual' | 'unknown';
 
 export function canonicalSalaryPeriod(period?: string | null): SalaryPeriodKey {
   const p = (period || '').toLowerCase().trim();
@@ -49,6 +49,14 @@ export function canonicalSalaryPeriod(period?: string | null): SalaryPeriodKey {
   if (p === 'week' || p === 'weekly') return 'weekly';
   if (p === 'biweekly' || p === 'bi-weekly' || p === 'fortnightly') return 'biweekly';
   if (p === 'month' || p === 'monthly' || p === 'mo') return 'monthly';
+  // Review P9 #2a: a stored 'unknown' is a DECISION, not a missing value —
+  // the ingest validator saw a magnitude in the ambiguous tokenless band and
+  // refused to classify its cadence. Folding it into 'annual' here made
+  // formatSalary render the raw ambiguous figure as "$35k/yr" on the
+  // job-detail header while the card showed "Competitive" and the JobPosting
+  // schema deliberately omitted baseSalary — the exact wrong-unit claim (and
+  // card/header contradiction, #2e) the withhold decision exists to prevent.
+  if (p === 'unknown') return 'unknown';
   // Anything else (incl. 'year', 'yearly', 'annual', '', null) → annual
   return 'annual';
 }
@@ -66,6 +74,13 @@ export function formatSalary(
   // '/yr' in the UI while the schema correctly emitted 'HOUR' — a fresh
   // mismatch. Both surfaces now agree.
   const periodKey = canonicalSalaryPeriod(period);
+
+  // 'unknown' cadence → no figure at all. The raw bounds have no trustworthy
+  // unit ("$35,000" per what?), so every rendering is a potential wrong-unit
+  // claim. This matches the other surfaces for these rows: the card renders
+  // "Competitive" (displaySalary null) and the JobPosting schema suppresses
+  // baseSalary — the header badge must not be the one surface that guesses.
+  if (periodKey === 'unknown') return '';
 
   const formatNumber = (n: number, p: SalaryPeriodKey): string => {
     // For non-annual periods, show the raw number with comma formatting (e.g. $175/hr).
@@ -89,6 +104,7 @@ export function formatSalary(
     biweekly: '/2wk',
     monthly: '/mo',
     annual: '/yr',
+    unknown: '', // unreachable — 'unknown' early-returns above (no figure)
   };
   const periodSuffix = suffix[periodKey];
 

@@ -9,6 +9,11 @@ import FeaturedTestimonials from '@/components/FeaturedTestimonials';
 // query and its public-safety thresholds (components/tools/benchmark-model.ts);
 // this page only decides where it sits.
 import EmployerBenchmarkWidget from '@/components/tools/EmployerBenchmarkWidget';
+// Live review item 8c (WP-5): the comparison table is a SHARED audited
+// module — /pricing renders the SAME rows, so the honesty audit can no
+// longer be forked away on one page and survive on the other. The
+// cell-honesty rules live with the data in lib/employer-comparison.ts.
+import { EMPLOYER_COMPARISON_ROWS } from '@/lib/employer-comparison';
 import { config } from '@/lib/config';
 import {
   Check, ArrowRight, X, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign, HelpCircle,
@@ -23,7 +28,10 @@ export const metadata: Metadata = {
   title: `For Employers — Hire ${brand.niche.short}s | ${brand.niche.short} Job Board`,
   // Trimmed from 189 chars to ~145 for SERP display (audit 09 M-20).
   description:
-    `Hire ${brand.niche.long}s. First post free — all features included. Reach thousands actively searching for ${brand.niche.short} roles.`,
+    // Live review WP-5: "Reach thousands actively searching" was an
+    // unmeasured audience-size claim (the subscriber counter is nowhere
+    // near it) — restated without the number.
+    `Hire ${brand.niche.long}s. First post free — all features included. Reach candidates actively searching for ${brand.niche.short} roles.`,
   openGraph: {
     // Edge-generated OG card — no dependency on storage assets that don't
     // exist on this board (the old pmhnp-*.webp URL 400s).
@@ -61,50 +69,15 @@ const iconBgCentered: React.CSSProperties = {
 
 /**
  * Comparison table (content audit P2 #16 — "make the comparison-table cells
- * honest"). Each cell was re-audited against what this product actually
- * does and what the named competitors publicly offer. Changes from the
- * pre-audit version, and why:
- *
- *   - "100% NP Audience" → "NP-Only Job Inventory". We can verify what we
- *     list; we cannot verify who is reading.
- *   - "No Unqualified Applicants" — DELETED. Anyone can click Apply here
- *     too. It was an unenforceable guarantee sitting on a page whose own
- *     subhead promises "no cherry-picking", and it was replaced with a row
- *     where all three products score true.
- *   - "First Post Free" — competitors moved false → partial. Both Indeed
- *     and LinkedIn do offer free listings; claiming otherwise was simply
- *     wrong. What is distinctive is that our free post carries the full
- *     feature set, and that now lives in the note.
- *   - Messaging / profile unlocks — Indeed moved false → partial: those
- *     capabilities exist there as paid products.
- *   - Listing duration — the competitor cells no longer assert "Others: 30
- *     days" (unverifiable and plan-dependent), and the note now carries
- *     the disclosure that matters to the buyer in front of us: the FREE
- *     first post runs config.freeDurationDays, not the headline duration.
- *   - "Built-In Screening Questions" — LinkedIn moved false → true.
- *
- * Rule for future edits: the {brand.name} column must describe behaviour
- * that ships (with its limits in the note); competitor columns must not
- * assert anything more specific than "offered / limited or paid / not
- * offered", because their packaging changes without notice — see the
- * dated footnote rendered under the table.
+ * honest") — MOVED to lib/employer-comparison.ts (live review item 8c,
+ * WP-5) so /pricing and this page render one audited copy. The full
+ * cell-honesty history and the rule for future edits travel with the data.
+ * One cell changed in the move (live review items 1a–1d → 8a): the
+ * "NP-Only Job Inventory" absolute became a screening commitment, because
+ * the live inventory carried out-of-scope listings; the absolute may
+ * return only when the WP-1 inventory-invariant test is green.
  */
-const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: true | false | 'partial'; linkedin: true | false | 'partial'; note?: string }[] = [
-  // Note copy must never hand-write an English article ("a"/"an") in front
-  // of a brand.niche.* token: brand.niche.long is 'Nurse Practitioner' here,
-  // so `an ${brand.niche.long}` shipped as "an Nurse Practitioner". Phrase
-  // around the article so the row survives a niche-token change.
-  { feature: `${brand.niche.medium}-Only Job Inventory`, us: true, indeed: false, linkedin: false, note: `We only list ${brand.niche.long} and ${brand.niche.adjective} nursing roles` },
-  { feature: `First Post Free (No Card)`, us: true, indeed: 'partial', linkedin: 'partial', note: 'Others offer limited free listings; ours includes every paid feature' },
-  { feature: `Flat $${config.postingPrice}/Post — No Bidding`, us: true, indeed: false, linkedin: false, note: 'Others bill per click or per day' },
-  { feature: `${config.durationDays}-Day Listing Duration`, us: true, indeed: 'partial', linkedin: 'partial', note: `Paid posts run ${config.durationDays} days; the free first post runs ${config.freeDurationDays} days. Competitor durations vary by plan` },
-  { feature: 'Direct Candidate Messaging', us: true, indeed: 'partial', linkedin: 'partial', note: `${config.limits.inmailsPerPosting} InMails included per posting; a paid add-on elsewhere` },
-  { feature: 'Candidate Profile Unlocks', us: true, indeed: 'partial', linkedin: 'partial', note: `${config.limits.candidateUnlocksPerPosting} included per posting; a paid add-on elsewhere` },
-  { feature: 'Built-In Screening Questions', us: true, indeed: true, linkedin: true, note: 'Up to 5 questions, with knockout answers' },
-  { feature: 'Daily Niche Job Alerts', us: true, indeed: 'partial', linkedin: 'partial', note: 'Others send broader cross-industry alerts' },
-  { feature: 'Applications in a Built-In Dashboard', us: true, indeed: true, linkedin: true },
-  { feature: 'Instant Apply Notifications', us: true, indeed: true, linkedin: true },
-];
+const comparisonRows = EMPLOYER_COMPARISON_ROWS;
 
 // Single source of truth for the FAQ content. Both the FAQPage JSON-LD and
 // the visible accordion consume this list — they cannot diverge (repo
@@ -125,8 +98,11 @@ const employerFaqs = [
     // unverifiable audience claim the comparison table deleted, and it feeds
     // the FAQPage JSON-LD, so it was being served to Google as a fact too.
     // Restated as what we can actually verify: distribution, not readership.
+    // Live review item 8a (WP-5): "only carries" was an absolute inventory
+    // guarantee the live inventory falsified (review items 1a–1d). Restated
+    // as the screening commitment — what the pipeline actually does.
     q: 'Who sees my job posting?',
-    a: `Your listing goes live on a board that only carries ${brand.niche.long} and ${brand.niche.adjective} nursing roles, so it sits alongside relevant work rather than competing with unrelated listings. It's also highlighted in daily job-alert emails to subscribed candidates and gets its own indexed SEO page on Google.`,
+    a: `Your listing goes live on a board built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles — listings are screened at ingest and removed when flagged out of scope — so it sits alongside relevant work rather than competing with unrelated listings. It's also highlighted in daily job-alert emails to subscribed candidates and gets its own indexed SEO page on Google.`,
   },
   {
     q: 'How do candidates apply?',
@@ -213,10 +189,16 @@ export default async function ForEmployersPage() {
                     matches and config/niche/credentials.ts offers as categories.
                     A CRNA or CNM is an APRN, not a nurse practitioner, so
                     "every job is an NP role" would be false for part of the
-                    inventory. Both halves of the scope are named. */}
-                No bidding wars, no per-click billing, no surprise invoices. Every job on this board is a{' '}
-                {brand.niche.long} or {brand.niche.adjective} nursing role, so your posting is never buried under
-                unrelated listings.
+                    inventory. Both halves of the scope are named.
+                    Live review item 8a (WP-5, 2026-08-21): even the two-cohort
+                    absolute ("Every job on this board is…") was falsified at
+                    the DB level by out-of-scope listings (review items 1a–1d).
+                    Softened to the screening commitment; the absolute may
+                    return ONLY when the WP-1 inventory-invariant test is
+                    green over the live inventory. */}
+                No bidding wars, no per-click billing, no surprise invoices. This board is built exclusively for{' '}
+                {brand.niche.long} and {brand.niche.adjective} nursing roles — listings are screened at ingest and
+                removed when flagged out of scope — so your posting isn&apos;t buried under unrelated listings.
               </p>
 
               {/* CTA Buttons — No Sugar */}

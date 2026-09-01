@@ -10,9 +10,11 @@
 //     in config/niche/stats.ts now DERIVE from this entry (they had been
 //     retuned to an earlier OEWS vintage), so the two families cannot
 //     disagree again. app/salary-guide/page.tsx also reads this entry.
-//   - blsGrowth2032: 45% — the BLS Employment Projections NP-specific
-//     2022–2032 figure (44.5%, rounded), which the CAREER_PULSE_STATS
-//     pebble in config/niche/stats.ts mirrors.
+//   - blsGrowth2034 (formerly blsGrowth2032): 40% — the BLS Employment
+//     Projections NP-specific 2024–2034 figure (40.1%, rounded), which the
+//     CAREER_PULSE_STATS pebble in config/niche/stats.ts mirrors.
+//     REFRESHED 2026-08-21 (live-review item 5): the entry had carried the
+//     stale 2022–2032 cycle's 45%.
 //   - hrsaShortagePopulation: the donor's mental-health-HPSA figure was
 //     replaced with the PRIMARY-CARE HPSA population (the NP-relevant
 //     shortage stat). Flagged `isEstimate` — see the entry. Any page copy
@@ -21,7 +23,7 @@
 //   - fullPracticeStates: verified against AANP (27 states + DC, 2025).
 //
 // P2 #10 CONSOLIDATION PASS (2026-07-29):
-//   - The two open verify-markers (on blsGrowth2032 and
+//   - The two open verify-markers (on the BLS growth entry and
 //     hrsaShortagePopulation) were resolved by DELETING the unverifiable
 //     figures they carried rather than by promoting them: each marker
 //     asserted a newer number that nothing in this repo could check —
@@ -73,7 +75,7 @@ import { salaryConfig } from '../config/niche/salary';
 export interface StatSource {
     /** Raw numeric value used in JSON-LD or computations. */
     value: string;
-    /** Human-formatted display value (e.g. "$129,210", "45%"). */
+    /** Human-formatted display value (e.g. "$129,210", "40%"). */
     formatted: string;
     /** Wider range for ranges shown on listing pages, e.g. "$120K–$140K". */
     range?: string;
@@ -106,7 +108,7 @@ export interface StatSource {
 }
 
 /** When the stats in this file were last verified against their sources. */
-export const STATS_LAST_REVIEWED = '2026-07-29';
+export const STATS_LAST_REVIEWED = '2026-08-21';
 
 export const STAT_SOURCES = {
     /** Median annual NP salary, US-wide (BLS OEWS, all nurse practitioners). */
@@ -124,7 +126,7 @@ export const STAT_SOURCES = {
             'The May 2024 OEWS release is the newest NP median this repo holds. ' +
             'No later release is present in repo data, so the vintage was left ' +
             'as-is rather than guessed. LINK-DRIFT HAZARD (same one documented ' +
-            'on blsGrowth2032): sourceUrl points at /oes/current/, which BLS ' +
+            'on blsGrowth2034): sourceUrl points at /oes/current/, which BLS ' +
             'repoints to the LATEST release every year — so this entry and the ' +
             'link a reader clicks drift apart silently, and the citation starts ' +
             'naming a vintage the page no longer shows. Re-check it whenever BLS ' +
@@ -139,28 +141,40 @@ export const STAT_SOURCES = {
 
     /**
      * BLS-projected employment growth for nurse practitioners, stated for
-     * the projection cycle named in `source` (NP-specific 2022–2032
-     * projection: 44.5%, rounded to 45%).
+     * the projection cycle named in `source` (NP-specific 2024–2034
+     * projection: 40.1%, rounded to 40%).
      *
      * The cycle is spelled out in `source` deliberately: consumers render
      * it alongside the number, so a reader always sees which projection
-     * round the 45% belongs to rather than assuming it is current.
+     * round the 40% belongs to rather than assuming it is current.
+     *
+     * NOTE: the OOH page groups nurse anesthetists, nurse midwives, and
+     * nurse practitioners into one occupation and shows 35% (2024–2034)
+     * for the combined group. This entry deliberately carries the
+     * NP-SPECIFIC (SOC 29-1171) figure from the Employment Projections
+     * program tables — 40.1% — because every consumer renders it as
+     * "growth for nurse practitioners". Do not "correct" it to 35%.
      */
-    blsGrowth2032: {
-        value: '45',
-        formatted: '45%',
-        source: 'BLS Employment Projections — Nurse Practitioners (2022–2032)',
+    blsGrowth2034: {
+        value: '40',
+        formatted: '40%',
+        source: 'BLS Employment Projections — Nurse Practitioners (2024–2034)',
         sourceUrl: 'https://www.bls.gov/ooh/healthcare/nurse-anesthetists-nurse-midwives-and-nurse-practitioners.htm',
-        asOf: '2024',
+        asOf: '2025-09',
         vintageNote:
-            'BLS publishes a new Employment Projections cycle roughly annually, ' +
-            'and the OOH page at sourceUrl always shows the LATEST cycle — so this ' +
-            'entry and its link drift apart over time. Nothing in this repo can ' +
-            'verify a newer cycle, so no newer number is asserted here. To refresh: ' +
-            'read the current NP-specific projection from sourceUrl, then update ' +
-            'value/formatted/source/asOf here, the key name (blsGrowth2032), the ' +
+            'Refreshed 2026-08-21 from the 2024–34 Employment Projections cycle ' +
+            '(released September 2025): NP-specific growth 40.1%, rounded to 40%, ' +
+            'corroborated by the BLS Monthly Labor Review projections-overview ' +
+            'article (2026) and the OOH combined-occupation page (35% for nurse ' +
+            'anesthetists + midwives + NPs together). BLS publishes a new cycle ' +
+            'roughly annually, and the OOH page at sourceUrl always shows the ' +
+            'LATEST cycle — so this entry and its link drift apart over time. To ' +
+            'refresh: read the current NP-specific projection, then update ' +
+            'value/formatted/source/asOf here, the key name (blsGrowth2034), the ' +
             'CAREER_PULSE_STATS pebble in config/niche/stats.ts, and every ' +
-            '"through 2032" / "from 2022 to 2032" string in page copy TOGETHER.',
+            '"through 2034" / "from 2024 to 2034" string in page copy TOGETHER ' +
+            '(tests/regressions/p9-claims-promises-review5.test.ts pins the ' +
+            'vintage strings).',
     },
 
     /**

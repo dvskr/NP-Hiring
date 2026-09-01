@@ -99,6 +99,21 @@ model Job {
   // Currently shadow-mode: written but not used to auto-unpublish until tuned.
   healthConsecutiveMissing Int                       @default(0) @map("health_consecutive_missing")
   healthLastSeenAt         DateTime?                 @map("health_last_seen_at")
+  // ─── Profession classification (live-review fix #1, 2026-08-21) ───
+  // WHICH PROFESSION the posting recruits, assigned by the deterministic
+  // rules classifier in lib/profession-classifier.ts (title+description,
+  // no LLM). NULL means exactly "not yet classified" — the state of every
+  // pre-existing row (no backfill in the migration, no default) — and
+  // every query-time gate MUST let NULL pass so unclassified inventory
+  // keeps its current behavior until scripts/backfill-profession-class.ts
+  // has run. Non-NP classes (pa_only / physician / other_clinical /
+  // nonclinical) are excluded from all published listing surfaces at
+  // query time via GLOBAL_EXCLUSIONS (lib/filters.ts) and the semantic
+  // search legs. professionConfidence is the classifier's 0..1 score for
+  // the stored class; ingest quarantines below-floor rows (unpublished,
+  // never deleted) rather than guessing.
+  professionClass          ProfessionClass?          @map("profession_class")
+  professionConfidence     Float?                    @map("profession_confidence")
   // ─── Category tags (P9 — kills cross-taxonomy duplication) ───
   // Pre-computed canonical category slugs that this job qualifies for.
   // Populated at ingest by lib/pseo/category-tagger.ts and at query time
@@ -144,7 +159,38 @@ model Job {
   // Composite for the two most common experience filters
   // (/jobs?newGrad=true and /jobs?minExperience=5).
   @@index([newGradFriendly, minYearsExperience])
+  // Profession-class gate: every published-listing predicate composes
+  // "professionClass NOT IN (non-NP classes) OR NULL" (GLOBAL_EXCLUSIONS),
+  // and the backfill/quarantine scripts scan by class.
+  @@index([professionClass])
   @@map("jobs")
+}
+
+/// Job-level profession classification (live-review fix #1). A real enum,
+/// following the RecruitmentType precedent: this is a closed fact about
+/// what profession a posting recruits — a new value is a product decision
+/// worth a migration. "unknown/unclassified" is deliberately NOT a value:
+/// it is the NULL state of Job.professionClass, so nothing can ever write
+/// "unclassified" as if it were a positive classification.
+///
+///   np_eligible    — NP / APRN-NP roles (incl. dual-role "NP or PA")
+///   aprn_midwife   — Certified Nurse-Midwife (CNM) roles
+///   aprn_crna      — Certified Registered Nurse Anesthetist roles
+///   aprn_cns       — Clinical Nurse Specialist roles
+///   pa_only        — Physician Assistant-only postings
+///   physician      — MD/DO roles (psychiatrist, physician, MD/DO)
+///   other_clinical — non-NP/PA/MD clinicians (podiatrist/DPM, dentist,
+///                    optometrist, psychologist, RN-staff, therapists, …)
+///   nonclinical    — educators, managers, recruiters, admin roles
+enum ProfessionClass {
+  np_eligible
+  aprn_midwife
+  aprn_crna
+  aprn_cns
+  pa_only
+  physician
+  other_clinical
+  nonclinical
 }
 
 /// Append-only audit log of every job-health decision.

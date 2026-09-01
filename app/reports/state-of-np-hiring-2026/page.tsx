@@ -253,7 +253,7 @@ export default async function StateOfHiring2026Page() {
 
     const nationalContextRows = [
         { label: `Median ${brand.niche.short} salary, United States`, stat: STAT_SOURCES.averageSalary },
-        { label: `Projected ${brand.niche.short} employment growth`, stat: STAT_SOURCES.blsGrowth2032 },
+        { label: `Projected ${brand.niche.short} employment growth`, stat: STAT_SOURCES.blsGrowth2034 },
         { label: 'Full Practice Authority jurisdictions', stat: STAT_SOURCES.fullPracticeStates },
     ];
 

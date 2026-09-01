@@ -33,7 +33,7 @@ function stateSlug(state: string): string {
 function basisLabel(option: CityOption): string {
   return option.basis === 'city'
     ? `${option.name} postings (${option.sample.toLocaleString('en-US')} with pay)`
-    : `${option.state} average (${option.sample.toLocaleString('en-US')} postings with pay)`;
+    : `${option.state} median (${option.sample.toLocaleString('en-US')} postings with pay)`;
 }
 
 function CityColumn({ option, adjusted, accent }: { option: CityOption; adjusted: number; accent: string }) {
@@ -194,7 +194,7 @@ export default function CostOfLivingComparator({ options, defaultPair }: Props) 
         </div>
         <p style={{ fontSize: '12px', color: '#94A3B8', margin: '12px 0 0', lineHeight: 1.55 }}>
           {options.length.toLocaleString('en-US')} cities available. Where a city has at least three of its own
-          salaried postings we use them; otherwise the state average stands in, and each column says which.
+          salaried postings we use them; otherwise the state median stands in, and each column says which.
         </p>
       </div>
 

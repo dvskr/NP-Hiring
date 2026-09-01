@@ -40,7 +40,6 @@ import {
     SALARY_SPECIALTY_SLUGS,
 } from '@/app/salary-guide/specialty/specialty-config';
 import {
-    averageOfBounds,
     buildSpecialtyFaqs,
     configRange,
     formatSalary,
@@ -49,7 +48,6 @@ import {
     premiumEstimateRange,
     specialtyNoun,
     specialtyNounPlural,
-    MIN_LIVE_JOBS,
 } from '@/app/salary-guide/specialty/specialty-content';
 import { TEMPLATE_REFERENCE_NICHE_TERMS } from './brand-leak-scan';
 
@@ -179,53 +177,72 @@ describe('P1 #7 — derived ranges trace to the cited BLS median', () => {
     });
 });
 
-describe('P1 #7 — live aggregates never publish a halved or $0 figure', () => {
-    it('averageOfBounds averages only the bounds Prisma actually returned', () => {
-        // Both bounds present → midpoint.
-        expect(averageOfBounds(120000, 160000)).toBe(140000);
-        // Upper bound null (no posting in the set discloses a max): the
-        // figure must be the lower bound, NOT (min + 0) / 2 = half of it.
-        expect(averageOfBounds(140000, null)).toBe(140000);
-        expect(averageOfBounds(null, 160000)).toBe(160000);
-        // Nothing usable → 0 so callers gate the section away.
-        expect(averageOfBounds(null, null)).toBe(0);
-        expect(averageOfBounds(0, 0)).toBe(0);
-    });
-
+describe('P1 #7 / P9 #2c+#2d — live figures are gated medians, never means or $0', () => {
     it('hasReportedRange rejects spreads that would render "$X – $0"', () => {
-        const base = { avgSalary: 140000, jobCount: 9 };
+        const base = { medianSalary: 140000, jobCount: 9, gatePassed: true };
         expect(hasReportedRange({ ...base, minSalary: 98000, maxSalary: 210000 })).toBe(true);
         expect(hasReportedRange({ ...base, minSalary: 98000, maxSalary: 0 })).toBe(false);
         expect(hasReportedRange({ ...base, minSalary: 0, maxSalary: 0 })).toBe(false);
     });
 
-    it('the FAQ omits the live clause entirely when the average is unusable', () => {
+    it('the FAQ omits the live clause when the gate failed or the median is unusable', () => {
         const fp = getSpecialtySalaryPage('family-practice')!;
-        const faqs = buildSpecialtyFaqs(fp, { avgSalary: 0, minSalary: 0, maxSalary: 0, jobCount: 40 }, []);
+        // 40 postings but below the benchmark gate (e.g. too few employers).
+        const faqs = buildSpecialtyFaqs(
+            fp,
+            { medianSalary: 0, minSalary: 0, maxSalary: 0, jobCount: 40, gatePassed: false },
+            [],
+        );
         expect(faqs[0].a).not.toMatch(/\$0\b/);
         expect(faqs[0].a).not.toContain('active FNP postings');
+        // A gate that passed with an unusable figure still renders nothing.
+        const zeroMedian = buildSpecialtyFaqs(
+            fp,
+            { medianSalary: 0, minSalary: 0, maxSalary: 0, jobCount: 9, gatePassed: true },
+            [],
+        );
+        expect(zeroMedian[0].a).not.toMatch(/\$0\b/);
         // …and drops just the spread when only the upper bound is missing.
-        const noMax = buildSpecialtyFaqs(fp, { avgSalary: 140000, minSalary: 98000, maxSalary: 0, jobCount: 9 }, []);
+        const noMax = buildSpecialtyFaqs(
+            fp,
+            { medianSalary: 140000, minSalary: 98000, maxSalary: 0, jobCount: 9, gatePassed: true },
+            [],
+        );
         expect(noMax[0].a).toContain(formatSalary(140000));
         expect(noMax[0].a).not.toContain('range');
         expect(noMax[0].a).not.toMatch(/\$0\b/);
+        // The live clause states a MEDIAN — never "the average is".
+        expect(noMax[0].a).toContain('the median is');
+        expect(noMax[0].a).not.toContain('the average is');
     });
 
-    it('the page routes every aggregate through the helper (no raw (min+max)/2)', () => {
+    it('the page runs the gated analytics pipeline — no _avg mean survives (P9 #2c/#2d)', () => {
         const src = read('app/salary-guide/specialty/[specialty]/page.tsx');
-        expect(src).not.toMatch(/normalizedMaxSalary\s*\|\|\s*0\s*\)?\s*\)\s*\/\s*2/);
-        expect(src.match(/averageOfBounds\(/g)?.length).toBe(3); // stats, states, experience
+        // The hub/state-page pipeline: hygiene pool + NP-title gate + benchmark policy.
+        expect(src).toContain('npSalaryAnalyticsWhere');
+        expect(src).toContain('filterNpEligibleRows');
+        expect(src).toContain('summarizeBenchmarks');
+        expect(src).toContain('BENCHMARK_MIN_POSTINGS');
+        expect(src).toContain('BENCHMARK_MIN_EMPLOYERS');
+        expect(src).toContain('live.gatePassed');
         expect(src).toContain('hasReportedRange(live)');
-        expect(src).toContain('live.avgSalary > 0');
+        // No mean-of-min/max aggregate remains on the page.
+        expect(src).not.toContain('_avg');
+        expect(src).not.toMatch(/normalizedMaxSalary\s*\|\|\s*0\s*\)?\s*\)\s*\/\s*2/);
+        expect(src).not.toContain('averageOfBounds');
+        // …and the content builders quote medians, never averages.
+        const content = read('app/salary-guide/specialty/specialty-content.ts');
+        expect(content).not.toContain('the average is');
+        expect(content).not.toContain('averageOfBounds');
     });
 });
 
 describe('P1 #7 — FAQ builder (feeds visible accordion AND FAQPage schema)', () => {
-    const live = { avgSalary: 141000, minSalary: 98000, maxSalary: 210000, jobCount: 17 };
+    const live = { medianSalary: 141000, minSalary: 98000, maxSalary: 210000, jobCount: 17, gatePassed: true };
     const topStates = [
-        { state: 'California', stateCode: 'CA', slug: 'california', avgSalary: 165000, jobCount: 6 },
-        { state: 'Washington', stateCode: 'WA', slug: 'washington', avgSalary: 158000, jobCount: 4 },
-        { state: 'New Jersey', stateCode: 'NJ', slug: 'new-jersey', avgSalary: 151000, jobCount: 3 },
+        { state: 'California', stateCode: 'CA', slug: 'california', medianSalary: 165000, jobCount: 6 },
+        { state: 'Washington', stateCode: 'WA', slug: 'washington', medianSalary: 158000, jobCount: 5 },
+        { state: 'New Jersey', stateCode: 'NJ', slug: 'new-jersey', medianSalary: 151000, jobCount: 5 },
     ];
 
     it('renders substantive FAQs even with ZERO live inventory (no soft-404 shell)', () => {
@@ -241,14 +258,14 @@ describe('P1 #7 — FAQ builder (feeds visible accordion AND FAQPage schema)', (
         }
     });
 
-    it('includes live board figures only when the aggregate clears the floor', () => {
+    it('includes live board figures only when the benchmark gate passed', () => {
         const fp = getSpecialtySalaryPage('family-practice')!;
         const withLive = buildSpecialtyFaqs(fp, live, []);
-        expect(withLive[0].a).toContain(formatSalary(live.avgSalary));
+        expect(withLive[0].a).toContain(formatSalary(live.medianSalary));
         expect(withLive[0].a).toContain(String(live.jobCount));
 
-        const belowFloor = buildSpecialtyFaqs(fp, { ...live, jobCount: MIN_LIVE_JOBS - 1 }, []);
-        expect(belowFloor[0].a).not.toContain(formatSalary(live.avgSalary));
+        const belowGate = buildSpecialtyFaqs(fp, { ...live, gatePassed: false }, []);
+        expect(belowGate[0].a).not.toContain(formatSalary(live.medianSalary));
     });
 
     it('adds a top-paying-states FAQ only with >= 3 qualifying states', () => {
@@ -257,7 +274,10 @@ describe('P1 #7 — FAQ builder (feeds visible accordion AND FAQPage schema)', (
         const statesFaq = withStates.find((f) => f.q.includes('states pay'));
         expect(statesFaq).toBeDefined();
         expect(statesFaq!.a).toContain('California');
-        expect(statesFaq!.a).toContain(formatSalary(topStates[0].avgSalary));
+        expect(statesFaq!.a).toContain(formatSalary(topStates[0].medianSalary));
+        // Each quoted state figure is a median, never an "average".
+        expect(statesFaq!.a).toContain('median');
+        expect(statesFaq!.a).not.toContain('average');
 
         const withoutStates = buildSpecialtyFaqs(fp, null, topStates.slice(0, 2));
         expect(withoutStates.find((f) => f.q.includes('states pay'))).toBeUndefined();
@@ -285,11 +305,11 @@ describe('P1 #7 — FAQ builder (feeds visible accordion AND FAQPage schema)', (
 describe('P1 #7 — credential truth: CRNAs and CNMs are never rendered as the niche role', () => {
     /** APRN roles that are NOT the board's niche role. */
     const NON_NICHE_SLUGS = ['anesthesia', 'midwifery'] as const;
-    const live = { avgSalary: 141000, minSalary: 98000, maxSalary: 210000, jobCount: 17 };
+    const live = { medianSalary: 141000, minSalary: 98000, maxSalary: 210000, jobCount: 17, gatePassed: true };
     const topStates = [
-        { state: 'California', stateCode: 'CA', slug: 'california', avgSalary: 165000, jobCount: 6 },
-        { state: 'Washington', stateCode: 'WA', slug: 'washington', avgSalary: 158000, jobCount: 4 },
-        { state: 'New Jersey', stateCode: 'NJ', slug: 'new-jersey', avgSalary: 151000, jobCount: 3 },
+        { state: 'California', stateCode: 'CA', slug: 'california', medianSalary: 165000, jobCount: 6 },
+        { state: 'Washington', stateCode: 'WA', slug: 'washington', medianSalary: 158000, jobCount: 5 },
+        { state: 'New Jersey', stateCode: 'NJ', slug: 'new-jersey', medianSalary: 151000, jobCount: 5 },
     ];
 
     it('the config flags them non-niche and forces them to carry a credential', () => {
@@ -412,9 +432,10 @@ describe('P1 #7 — wiring: hub links, sitemap entries, page plumbing', () => {
         expect(src).toContain('alternates: { canonical: url }');
         expect(src).toContain('/api/og?title='); // OG via the board's own edge route
         expect(src).toContain('generateStaticParams');
-        // Live sections must gate on the floors — never render $0 shells.
-        expect(src).toContain('MIN_LIVE_JOBS');
-        expect(src).toContain('MIN_STATE_JOBS');
+        // Live sections must gate on the benchmark publishing policy —
+        // never render $0 shells or below-gate figures (P9 #2d).
+        expect(src).toContain('BENCHMARK_MIN_POSTINGS');
+        expect(src).toContain('BENCHMARK_MIN_EMPLOYERS');
         // No fabricated freshness (B54): Article schema must not stamp dates.
         expect(src).not.toContain('dateModified');
         expect(src).not.toContain('datePublished');

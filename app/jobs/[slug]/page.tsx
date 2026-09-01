@@ -31,8 +31,12 @@ import JobLocationContext, {
   buildJobLocationContext,
   resolveJobCityRecord,
 } from '@/components/JobLocationContext';
+// Live-review fix #1: render-time profession fallback for rows the
+// backfill has not stamped yet — deterministic rules, no network.
+import { classifyProfession, type ProfessionClass } from '@/lib/profession-classifier';
 import { CareerPulseCard, ApplicationTipsCard } from '@/components/jobs/SidebarVisualCards';
 import { prisma } from '@/lib/prisma';
+import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
 // P3 #9: the city breadcrumb is both an internal link and a BreadcrumbList
 // ListItem, so it must not carry a URL the city route cannot resolve.
 import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
@@ -345,31 +349,21 @@ async function getEmployerJobCount(employerName: string, currentJobId: string) {
 /**
  * Get average salary for a state
  */
-async function getStateSalaryAverage(stateName: string | null, stateCode: string | null) {
+/**
+ * P9 #2c/#2d: the state figure the comparison widget renders is a gated
+ * MEDIAN over the NP-eligible analytics pool (lib/salary-analytics), in
+ * whole $k. 0 below the n ≥ 5 / 3-employer publishing gate — the widget
+ * is omitted entirely rather than showing an ungated posting mean.
+ */
+async function getStateSalaryMedianK(stateName: string | null, stateCode: string | null) {
   if (!stateName && !stateCode) return 0;
 
-  const salaryData = await prisma.job.aggregate({
-    where: {
-      isPublished: true,
-      OR: [
-        ...(stateName ? [{ state: stateName }] : []),
-        ...(stateCode ? [{ stateCode: stateCode }] : []),
-      ],
-      normalizedMinSalary: { not: null, gte: 30000 },
-      normalizedMaxSalary: { not: null, gte: 30000 },
-    },
-    _avg: {
-      normalizedMinSalary: true,
-      normalizedMaxSalary: true,
-    },
+  return getGatedMedianKForWhere({
+    OR: [
+      ...(stateName ? [{ state: stateName }] : []),
+      ...(stateCode ? [{ stateCode: stateCode }] : []),
+    ],
   });
-
-  const avgMin = salaryData._avg.normalizedMinSalary || 0;
-  const avgMax = salaryData._avg.normalizedMaxSalary || 0;
-
-  if (avgMin === 0 && avgMax === 0) return 0;
-
-  return Math.round((avgMin + avgMax) / 2 / 1000);
 }
 
 /**
@@ -428,7 +422,9 @@ export async function generateMetadata({ params }: JobPageProps) {
   if (result.status === 'gone') {
     return {
       title: 'Page Not Found',
-      description: `This ${brand.niche.short} position is no longer available. Browse current job openings on ${brand.name}.`,
+      // Live-review fix #1 (copy honesty): the row is deleted, so its
+      // profession is unknowable — do not brand it "This NP position".
+      description: `This position is no longer available. Browse current ${brand.niche.short} job openings on ${brand.name}.`,
       robots: { index: false, follow: true },
     };
   }
@@ -764,7 +760,7 @@ export default async function JobPage({ params }: JobPageProps) {
     relatedJobs,
     companyInfo,
     employerJobCount,
-    stateAvgSalary,
+    stateMedianSalaryK,
     relevantBlogPosts,
     internalLinkBuckets,
     locationCityJobCount,
@@ -779,7 +775,7 @@ export default async function JobPage({ params }: JobPageProps) {
     }),
     getCompanyInfo(job.companyId, job.employer, job.id),
     getEmployerJobCount(job.employer, job.id),
-    getStateSalaryAverage(job.state, job.stateCode),
+    getStateSalaryMedianK(job.state, job.stateCode),
     getRelevantBlogPosts(job),
     getInternalLinkBuckets({
       currentJobId: job.id,
@@ -808,6 +804,16 @@ export default async function JobPage({ params }: JobPageProps) {
   ]);
   const employerUserId = (job as unknown as Record<string, unknown>).employerUserId as string | null | undefined;
 
+  // Live-review fix #1 (profession conditioning): stored column when the
+  // backfill/ingest has stamped it, else the deterministic render-time
+  // classifier. Conditions the NP practice-authority advice below — a
+  // podiatrist/PA/physician listing must not carry NP scope-of-practice
+  // copy, and CNM/CRNA/CNS listings are labeled by their real profession.
+  const storedProfessionClass =
+    ((job as unknown as { professionClass?: ProfessionClass | null }).professionClass) ?? null;
+  const effectiveProfessionClass: ProfessionClass | null =
+    storedProfessionClass ?? classifyProfession(job.title, job.description).professionClass;
+
   // P5 A5: null when the city has no dataset match — the module (and its
   // AnimatedContainer wrapper) is skipped entirely, never padded.
   const locationContext = buildJobLocationContext(
@@ -818,6 +824,7 @@ export default async function JobPage({ params }: JobPageProps) {
       normalizedMinSalary: job.normalizedMinSalary,
       normalizedMaxSalary: job.normalizedMaxSalary,
       salaryIsEstimated: job.salaryIsEstimated,
+      professionClass: effectiveProfessionClass,
     },
     locationCityJobCount,
   );
@@ -1162,11 +1169,11 @@ export default async function JobPage({ params }: JobPageProps) {
             </AnimatedContainer>
 
             {/* Salary Comparison Widget (A21) */}
-            {stateAvgSalary > 0 && job.state && (
+            {stateMedianSalaryK > 0 && job.state && (
               <AnimatedContainer animation="fade-in-up" delay={220}>
                 <SalaryComparisonWidget
                   stateName={job.state}
-                  stateAvgSalary={stateAvgSalary}
+                  stateMedianSalaryK={stateMedianSalaryK}
                   jobMinSalary={job.normalizedMinSalary}
                   jobMaxSalary={job.normalizedMaxSalary}
                 />

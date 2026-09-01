@@ -143,9 +143,12 @@ describe('P1 #4 follow-up — the hub page’s flag-gated surfaces are truthful'
     it('the state-table note no longer branches on the PDF flag', () => {
         // The flag flip is what made the false branch visible. The note
         // describes the live table, which is true regardless of the flag.
-        const noteStart = hubSrc.indexOf('<strong>Note:</strong> Real-time salary data');
+        // Anchor updated for the P9 #2c/#2d rebuild: the note now describes
+        // the gated-median table (still flag-independent, still true of the
+        // live table).
+        const noteStart = hubSrc.indexOf('<strong>Note:</strong> Each figure is the <strong>median</strong>');
         expect(noteStart).toBeGreaterThan(-1);
-        const note = hubSrc.slice(noteStart, noteStart + 400);
+        const note = hubSrc.slice(noteStart, noteStart + 800);
         expect(note).not.toContain('SALARY_GUIDE_PDF_AVAILABLE');
         expect(note).toContain('Each state name links to a detailed page');
     });
@@ -162,7 +165,7 @@ describe('P1 #4 follow-up — the hub page’s flag-gated surfaces are truthful'
         // methodologySources renders exactly these four STAT_SOURCES entries.
         const cited = [
             'STAT_SOURCES.averageSalary',      // BLS OEWS
-            'STAT_SOURCES.blsGrowth2032',      // BLS Employment Projections
+            'STAT_SOURCES.blsGrowth2034',      // BLS Employment Projections
             'STAT_SOURCES.fullPracticeStates', // AANP
             'STAT_SOURCES.hrsaShortagePopulation', // HRSA
         ];

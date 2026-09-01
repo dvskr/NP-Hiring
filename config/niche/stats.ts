@@ -52,8 +52,8 @@ export const NATIONAL_AVG_SALARY_K = Math.round(
  * (app/jobs/[slug]/page.tsx). This card IS live on every job page.
  *
  * NP HIRING:
- *   - growth derives from STAT_SOURCES.blsGrowth2032 (BLS Employment
- *     Projections, NP-specific 2022–2032);
+ *   - growth derives from STAT_SOURCES.blsGrowth2034 (BLS Employment
+ *     Projections, NP-specific 2024–2034);
  *   - salary derives from STAT_SOURCES.averageSalary (BLS OEWS May 2024);
  *   - the former hardcoded 'openings on this board' count pebble was
  *     replaced with an evergreen cadence claim (citation-trust sweep
@@ -73,7 +73,7 @@ export interface CareerPulseStat {
 }
 
 export const CAREER_PULSE_STATS: readonly CareerPulseStat[] = [
-    { emoji: '📈', value: STAT_SOURCES.blsGrowth2032.formatted, label: 'Projected growth 2022-2032', color: '#D5F5F1' },
+    { emoji: '📈', value: STAT_SOURCES.blsGrowth2034.formatted, label: 'Projected growth 2024-2034', color: '#D5F5F1' },
     { emoji: '💰', value: `$${NATIONAL_AVG_SALARY_K}K`, label: 'Median annual salary (BLS)', color: '#FDE68A' },
     { emoji: '🏥', value: 'Daily', label: 'New jobs from employer ATS feeds', color: '#BFDBFE' },
 ];
