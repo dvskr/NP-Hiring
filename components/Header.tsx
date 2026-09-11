@@ -155,12 +155,12 @@ export default function Header() {
   return (
     <LazyMotion features={domAnimation}>
       {/* Spacer — pushes page content down past the position:fixed nav.
-          Total nav footprint = the 64px edge-to-edge bar (no padding strip).
+          Total nav footprint = 18px top + 64px nav pill + 18px bottom = 100px.
           The strip is now symmetric (was 12/0) so the floating nav reads as
           vertically centered inside its background panel instead of flush
-          against the bottom edge. (Bar is 64px tall, edge to edge — owner
-          direction 2026-09-12; the hero pulls up under it by the same 64.) */}
-      <div style={{ height: 64 }} />
+          against the bottom edge. (Floating mint pill — owner direction 2026-09-12: gutters on top,
+          left and right, no max-width cap. The hero pulls up under it by 80.) */}
+      <div style={{ height: 100 }} />
 
       {/* Floating navbar wrapper. Solid background matching the page bg so
           the padding strip above + below + on the sides of the visible nav
@@ -171,9 +171,9 @@ export default function Header() {
       <div
         className="fixed top-0 left-0 right-0 z-[100]"
         style={{
-          padding: 0,
+          padding: '18px 16px',
           pointerEvents: 'none',
-          background: '#D5F5F1',
+          background: '#F5F0EB',
         }}
       >
         <header
@@ -183,16 +183,17 @@ export default function Header() {
             // change vs. the previous fixed value), then scales with the
             // viewport up to a ceiling of 1680px on very wide screens.
             // Wrapper padding (16px each side) still bounds it on narrow.
-            // Edge-to-edge mint bar (owner direction 2026-09-12): no pill, no cap.
+            // Floating mint pill (owner direction 2026-09-12): spans the full width
+            // minus the wrapper's 16px side gutters — no max-width cap.
             maxWidth: 'none',
             width: '100%',
             height: 64,
-            borderRadius: 0,
+            borderRadius: '18px',
             backgroundColor: '#D5F5F1',
-            borderBottom: '1px solid rgba(122,28,43,0.14)',
+            border: '1px solid rgba(122,28,43,0.12)',
             boxShadow: scrolled
-              ? '0 6px 24px rgba(90,74,66,0.12), 0 1px 0 rgba(122,28,43,0.06)'
-              : 'none',
+              ? '0 8px 32px rgba(90,74,66,0.14), 0 2px 8px rgba(90,74,66,0.06), inset 0 1px 0 rgba(255,255,255,0.7)'
+              : '0 4px 20px rgba(90,74,66,0.10), 0 1px 4px rgba(90,74,66,0.04), inset 0 1px 0 rgba(255,255,255,0.7)',
             display: 'flex',
             alignItems: 'center',
             paddingLeft: 'clamp(12px, 2vw, 32px)',
@@ -346,7 +347,7 @@ export default function Header() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             className="fixed inset-0 z-[99] lg:hidden"
-            style={{ top: 64 }}
+            style={{ top: 100 }}
           >
             <div
               // Fully opaque (1.0) -- 0.98 let the page content bleed through
@@ -451,15 +452,15 @@ export default function Header() {
         .nav-pill-floating:active {
           transform: translateY(0) scale(0.98) !important;
         }
-        /* Mobile menu scroll container. 64px == the fixed overlay's top
+        /* Mobile menu scroll container. 100px == the fixed overlay's top
            offset (the nav footprint), so the cap matches the visible box.
            The vh line is the fallback for engines without dvh; the dvh line
            wins where supported and is the one that matters on iOS Safari,
            whose visible viewport shrinks under the URL bar. overscroll-behavior
            keeps the rubber-band from chaining to the locked page behind. */
         .mobile-menu-scroll {
-          max-height: calc(100vh - 64px);
-          max-height: calc(100dvh - 64px);
+          max-height: calc(100vh - 100px);
+          max-height: calc(100dvh - 100px);
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
           overscroll-behavior: contain;
