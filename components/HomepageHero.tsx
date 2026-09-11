@@ -124,7 +124,7 @@ export default function HomepageHero() {
             style={{
                 position: 'relative',
                 margin: 0,
-                marginTop: -80,
+                marginTop: -64,
                 overflow: 'hidden',
                 background: CREAM,
                 /* content-driven height — no minHeight, so the hero ends right
