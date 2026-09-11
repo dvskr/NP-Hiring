@@ -161,13 +161,10 @@ export default function HomepageHero() {
                     margin: '0 auto',
                 }}
             >
-                {/* ── Headline: <role> JOBS. / SALARY FIRST. ──
-                    Owner direction 2026-09-11: drop the "Real … Real …"
-                    echo and the "nonsense" snark. The promise is the ordering
-                    principle of the board — pay is shown before anything else
-                    (posted ranges on cards, the salary floor filter, the
-                    state guide) — so it becomes the headline. Two stickers on
-                    opposite corners keep the No Sugar composition. */}
+                {/* ── Headline: <role> JOBS. ──
+                    Owner direction 2026-09-11: a single line — the cycling
+                    role stamp and the word "jobs." Nothing under it but the
+                    search bar. */}
                 <m.h1
                     variants={fadeUp}
                     className="font-heading"
@@ -196,19 +193,6 @@ export default function HomepageHero() {
                         <span key={stampedRole} className="ns-stamp">{stampedRole}</span>
                     </span>
                     {' '}jobs.
-                    <br />
-                    Salary{' '}
-                    <span
-                        style={{
-                            background: SOFT_GREEN,
-                            color: OXBLOOD,
-                            padding: '0 12px',
-                            display: 'inline-block',
-                            transform: 'rotate(1deg)',
-                        }}
-                    >
-                        first.
-                    </span>
                 </m.h1>
 
                 {/* ── Search — flat, hard-shadowed ── */}
