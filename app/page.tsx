@@ -170,8 +170,8 @@ interface FreeTool {
   label: string;
   blurb: string;
   icon: LucideIcon;
-  /** Set when the destination is an interactive tool rather than a guide. */
-  interactive?: boolean;
+  /** Clay chip label — what kind of thing opens (mirrors the blog tape's category chip). */
+  chip: string;
 }
 
 const FREE_TOOLS: readonly FreeTool[] = [
@@ -180,176 +180,283 @@ const FREE_TOOLS: readonly FreeTool[] = [
     label: `${brand.niche.short} Salary Calculator`,
     blurb: 'Filter live posted pay by state, experience and setting.',
     icon: Calculator,
-    interactive: true,
+    chip: 'Calculator',
   },
   {
     href: '/tools/licensure-checker',
     label: 'Licensure Checker',
     blurb: 'Pick a state for requirements, practice authority and timeline.',
     icon: Stethoscope,
-    interactive: true,
+    chip: 'Checker',
   },
   {
     href: '/tools/1099-vs-w2-calculator',
     label: '1099 vs W-2 Calculator',
     blurb: 'What contract pay really nets after self-employment tax.',
     icon: Receipt,
-    interactive: true,
+    chip: 'Calculator',
   },
   {
     href: '/resources/fpa-guide',
     label: 'Full Practice Authority Guide',
     blurb: 'All 50 states classified full, reduced or restricted.',
     icon: ShieldCheck,
+    chip: 'Guide',
   },
   {
     href: '/resources/private-practice-guide',
     label: 'Private Practice Startup',
     blurb: 'LLC, credentialing, EHR and malpractice, step by step.',
     icon: Building2,
+    chip: 'Guide',
   },
   {
     href: '/job-alerts',
     label: 'Job Alerts',
     blurb: `New ${brand.niche.short} roles emailed as they are indexed.`,
     icon: Bell,
+    chip: 'Alerts',
   },
 ];
 
+/* ── Sticker-card system (owner direction, 2026-09-10) ──
+ * Every card on the marketing surfaces shares ONE anatomy, first shipped on
+ * the blog "reading tape" (components/HomepageBlogSection.tsx) and the
+ * featured-jobs strip: white face, 2px #7A1C2B border, hard 5px offset
+ * shadow, clay pastel chip, Lora title, muted blurb, and a decorative
+ * accent bar beside the action word. The chip fills and bar widths below are
+ * the SAME constants the tape uses so the two sections rhyme exactly.
+ *
+ * STAGE: this band sits between the peach state grid and the powder-blue
+ * employer band, so it gets its own stage — blush + berry dot-grid — rather
+ * than inheriting the page gradient (which made it read as a continuation
+ * of the states section) or repeating the tape's cream line-grid.
+ *
+ * Static CSS only — NO template interpolations in style blocks (styled-jsx
+ * dynamic styles deadlock Turbopack; see project memory). */
+const TOOL_CHIP_FILLS = ['#D5F5F1', '#FBCFE8', '#FDE3C8', '#B9EBD6'];
+const TOOL_BAR_WIDTHS = ['38%', '64%', '22%', '50%'];
+
+const FREE_TOOLS_CSS = `
+  .ftools-wrap {
+    position: relative;
+    background-color: #FBE7EE;
+    background-image: radial-gradient(rgba(122,28,43,0.18) 1.2px, transparent 1.4px);
+    background-size: 22px 22px;
+    padding: 72px 0 76px;
+  }
+  .ftools-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  .ftools-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px 32px;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+  }
+  .ftools-eyeb {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #BE185D;
+    margin: 0 0 6px;
+  }
+  .ftools-h2 {
+    font-weight: 700;
+    font-size: clamp(26px, 3vw, 36px);
+    margin: 0;
+    color: #7A1C2B;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  .ftools-lede {
+    font-size: 15px;
+    color: #5A4A42;
+    margin: 10px 0 0;
+    line-height: 1.6;
+    max-width: 560px;
+  }
+  .ftools-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 24px;
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #fff;
+    background: #BE185D;
+    border: 2px solid #7A1C2B;
+    box-shadow: 4px 4px 0 #7A1C2B;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: transform 0.15s ease, background 0.2s ease;
+  }
+  .ftools-more:hover { transform: translateY(-2px); background: #9D174D; }
+  .ftools-more:focus-visible { outline: 3px solid #BE185D; outline-offset: 2px; }
+
+  .ftools-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  @media (min-width: 640px) { .ftools-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1024px) { .ftools-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .tool-card {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 2px solid #7A1C2B;
+    box-shadow: 5px 5px 0 #7A1C2B;
+    padding: 20px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+  .tool-card:hover { transform: translateY(-4px); }
+  .tool-card:focus-visible { outline: 3px solid #BE185D; outline-offset: 2px; }
+  .tool-card__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .tool-card__chip {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.5);
+    box-shadow: 3px 3px 8px rgba(190,24,93,0.10), -2px -2px 5px rgba(255,255,255,0.8), inset 2px 2px 3px rgba(255,255,255,0.7);
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #7A1C2B;
+  }
+  .tool-card__icon {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #FBF2E6;
+    border: 2px solid #7A1C2B;
+    box-shadow: 3px 3px 0 #7A1C2B;
+    color: #7A1C2B;
+  }
+  .tool-card__title {
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.3;
+    color: #2b1a1e;
+    margin: 0 0 8px;
+  }
+  .tool-card__desc {
+    font-size: 12.5px;
+    color: #7a6d70;
+    line-height: 1.5;
+    margin: 0 0 14px;
+  }
+  .tool-card__bar {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tool-card__track {
+    flex: 1;
+    height: 4px;
+    background: rgba(122,28,43,0.12);
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+  .tool-card__fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: #BE185D;
+    border-radius: 2px;
+  }
+  .tool-card__open {
+    font-size: 11px;
+    font-weight: 800;
+    color: #9b8291;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tool-card:hover, .ftools-more:hover { transform: none; }
+  }
+  @media (max-width: 768px) {
+    .ftools-wrap { padding: 52px 0 56px; }
+    .ftools-head { margin-bottom: 22px; }
+  }
+`;
+
 function FreeToolsBand() {
   return (
-    <section
-      aria-labelledby="free-tools-heading"
-      style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}
-    >
-      <div style={{ maxWidth: '640px', marginBottom: '28px' }}>
-        <p
-          style={{
-            fontSize: '12px',
-            fontWeight: 700,
-            color: '#BE185D',
-            textTransform: 'uppercase',
-            letterSpacing: '0.15em',
-            margin: '0 0 8px',
-          }}
-        >
-          Always free
-        </p>
-        <h2
-          id="free-tools-heading"
-          className="font-lora"
-          style={{
-            fontSize: 'clamp(24px, 4vw, 36px)',
-            fontWeight: 700,
-            color: '#1A2E35',
-            margin: '0 0 10px',
-            lineHeight: 1.15,
-          }}
-        >
-          Free {brand.niche.short} career tools
-        </h2>
-        <p style={{ fontSize: '15px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-          No account, no paywall. Work out what a role should pay, what your state requires, and what
-          contract work actually nets — before you apply.
-        </p>
-      </div>
+    <section aria-labelledby="free-tools-heading" className="ftools-wrap">
+      <style>{FREE_TOOLS_CSS}</style>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {FREE_TOOLS.map((tool) => {
-          const ToolIcon = tool.icon;
-          return (
-            <Link key={tool.href} href={tool.href} className="tool-card group" style={{ textDecoration: 'none' }}>
-              <div
-                style={{
-                  height: '100%',
-                  background: '#FFFFFF',
-                  borderRadius: '20px',
-                  border: '1px solid rgba(255,255,255,0.6)',
-                  boxShadow:
-                    '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)',
-                  padding: '22px',
-                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                }}
-              >
-                <div
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: '#FDF2F8',
-                    border: '1px solid rgba(190,24,93,0.12)',
-                    marginBottom: '14px',
-                  }}
-                >
-                  <ToolIcon size={21} style={{ color: '#BE185D' }} aria-hidden="true" />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: 0, lineHeight: 1.3 }}>
-                    {tool.label}
-                  </h3>
-                  {tool.interactive && (
-                    <span
-                      style={{
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        color: '#BE185D',
-                        background: '#FDF2F8',
-                        border: '1px solid rgba(190,24,93,0.15)',
-                        borderRadius: '8px',
-                        padding: '3px 7px',
-                      }}
-                    >
-                      Interactive
-                    </span>
-                  )}
-                </div>
-                <p style={{ fontSize: '13.5px', color: '#7A6A62', margin: '0 0 14px', lineHeight: 1.55 }}>
-                  {tool.blurb}
-                </p>
-                <span
-                  style={{
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    color: '#BE185D',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                  }}
-                >
-                  Open
-                  <span className="group-hover:translate-x-1 transition-transform" aria-hidden="true">→</span>
+      <div className="ftools-inner">
+        <div className="ftools-head">
+          <div>
+            <p className="ftools-eyeb">Always free</p>
+            <h2 id="free-tools-heading" className="ftools-h2 font-heading">
+              Free {brand.niche.short} career tools
+            </h2>
+            <p className="ftools-lede">
+              No account, no paywall. Work out what a role should pay, what your state requires, and
+              what contract work actually nets — before you apply.
+            </p>
+          </div>
+          {/* The tools hub carries the calculators that did not fit above
+              (salary benchmark, cost-of-living comparison). Linking the hub
+              rather than every tool keeps this band stable as that set grows. */}
+          <Link href="/tools" className="ftools-more">
+            All free tools →
+          </Link>
+        </div>
+
+        <div className="ftools-grid">
+          {FREE_TOOLS.map((tool, i) => {
+            const ToolIcon = tool.icon;
+            return (
+              <Link key={tool.href} href={tool.href} className="tool-card">
+                <span className="tool-card__top">
+                  <span className="tool-card__chip" style={{ background: TOOL_CHIP_FILLS[i % TOOL_CHIP_FILLS.length] }}>
+                    {tool.chip}
+                  </span>
+                  <span className="tool-card__icon" aria-hidden="true">
+                    <ToolIcon size={18} strokeWidth={2.25} />
+                  </span>
                 </span>
-              </div>
-            </Link>
-          );
-        })}
+                <h3 className="tool-card__title font-heading">{tool.label}</h3>
+                <p className="tool-card__desc">{tool.blurb}</p>
+                <span className="tool-card__bar" aria-hidden="true">
+                  <span className="tool-card__track">
+                    <span className="tool-card__fill" style={{ width: TOOL_BAR_WIDTHS[i % TOOL_BAR_WIDTHS.length] }} />
+                  </span>
+                  <span className="tool-card__open">Open →</span>
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
-
-      {/* The tools hub carries the calculators that did not fit above
-          (salary benchmark, cost-of-living comparison). Linking the hub rather
-          than every tool keeps this band stable as that set grows. */}
-      <p style={{ marginTop: '20px', fontSize: '14px' }}>
-        <Link href="/tools" style={{ color: '#BE185D', fontWeight: 700, textDecoration: 'none' }}>
-          Browse every free {brand.niche.short} tool →
-        </Link>
-      </p>
-
-      <style>{`
-        .tool-card:hover > div,
-        .tool-card:focus-visible > div {
-          transform: translateY(-4px);
-          box-shadow: 10px 10px 24px rgba(0,0,0,0.09), -5px -5px 14px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6);
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .tool-card:hover > div,
-          .tool-card:focus-visible > div { transform: none; }
-        }
-      `}</style>
     </section>
   );
 }

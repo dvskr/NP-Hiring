@@ -119,7 +119,8 @@ const css = `
     .rtape-card {
         width: 300px;
         flex: none;
-        display: block;
+        display: flex;
+        flex-direction: column;
         background: #fff;
         border: 2px solid #7A1C2B;
         box-shadow: 5px 5px 0 #7A1C2B;
@@ -132,6 +133,7 @@ const css = `
     .rtape-card:focus-visible { outline: 3px solid #BE185D; outline-offset: 2px; }
     .rtape-chip {
         display: inline-block;
+        align-self: flex-start;
         padding: 5px 12px;
         border-radius: 999px;
         border: 1px solid rgba(255,255,255,0.5);
@@ -157,6 +159,7 @@ const css = `
         margin: 0 0 14px;
     }
     .rtape-bar {
+        margin-top: auto;
         display: flex;
         align-items: center;
         gap: 8px;
