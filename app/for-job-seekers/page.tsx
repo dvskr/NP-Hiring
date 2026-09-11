@@ -94,9 +94,6 @@ const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: t
 export default async function ForJobSeekersPage() {
   const stats = await getStats();
   const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${n}`;
-  const jobCountDisplay = stats.totalJobs > 1000
-    ? `${Math.floor(stats.totalJobs / 100) * 100}+`
-    : stats.totalJobs.toLocaleString();
 
   return (
     <>
@@ -110,7 +107,7 @@ export default async function ForJobSeekersPage() {
           SECTION 1: HERO — Reuse HomepageHero (3D nurse background)
           ═══════════════════════════════════════════════════════════════ */}
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #F5D5C4 15%, #F0C4AF 50%, #FDFBF7 100%)' }}>
-        <HomepageHero jobCountDisplay={jobCountDisplay} employerCountDisplay={stats.totalCompanies.toLocaleString()} />
+        <HomepageHero />
       </div>
 
       {/* ═══ FEATURED JOBS ═══ */}

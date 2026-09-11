@@ -6,12 +6,6 @@ import Link from 'next/link';
 import { Search, MapPin, Globe, Monitor, Clock, Clock3, GraduationCap } from 'lucide-react';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 
-interface HomepageHeroProps {
-    jobCountDisplay: string;
-    /** Canonical employer count (lib/site-stats.ts), pre-formatted. */
-    employerCountDisplay: string;
-}
-
 /* ── "No Sugar" palette (user-approved mock, 2026-07-09) ──
    Oxblood ink + berry accent + soft-green highlight on the site's cream.
    Flat surfaces, hard offset shadows, square corners — no clay here by
@@ -82,7 +76,7 @@ const fadeUp = {
     show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] } },
 };
 
-export default function HomepageHero({ jobCountDisplay, employerCountDisplay }: HomepageHeroProps) {
+export default function HomepageHero() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
     const [locationQuery, setLocationQuery] = useState('');
@@ -185,7 +179,8 @@ export default function HomepageHero({ jobCountDisplay, employerCountDisplay }: 
                         letterSpacing: '-0.01em',
                         textTransform: 'uppercase',
                         color: OXBLOOD,
-                        margin: 0,
+                        /* headline sits straight on the search bar now — no subline */
+                        margin: '0 0 36px',
                     }}
                 >
                     <span
@@ -215,47 +210,6 @@ export default function HomepageHero({ jobCountDisplay, employerCountDisplay }: 
                         first.
                     </span>
                 </m.h1>
-
-                {/* ── Live stat kicker — every figure comes from the cached
-                    SiteStat snapshot (lib/site-stats.ts); "updated daily" is
-                    the aggregator cadence already published on the OG card. ── */}
-                <m.p
-                    variants={fadeUp}
-                    style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        justifyContent: 'center',
-                        gap: '6px 14px',
-                        fontSize: '12px',
-                        fontWeight: 800,
-                        letterSpacing: '0.12em',
-                        textTransform: 'uppercase',
-                        color: BERRY,
-                        fontVariantNumeric: 'tabular-nums',
-                        margin: '28px 0 0',
-                    }}
-                >
-                    <span>{jobCountDisplay} open roles</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{employerCountDisplay} employers</span>
-                    <span aria-hidden="true">·</span>
-                    <span>Updated daily</span>
-                </m.p>
-
-                {/* ── Promise line ── */}
-                <m.p
-                    variants={fadeUp}
-                    style={{
-                        fontSize: '17px',
-                        fontWeight: 600,
-                        lineHeight: 1.45,
-                        color: OXBLOOD,
-                        maxWidth: '560px',
-                        margin: '12px 0 32px',
-                    }}
-                >
-                    Pay shown as real figures, never &ldquo;competitive&rdquo; &mdash; plus the practice rules for every state.
-                </m.p>
 
                 {/* ── Search — flat, hard-shadowed ── */}
                 <m.form
