@@ -7,6 +7,7 @@ import VideoJsonLd from '@/components/VideoJsonLd';
 import HomepageHero from '@/components/HomepageHero';
 import FeaturedJobsSection from '@/components/FeaturedJobsSection';
 import { prisma } from '@/lib/prisma';
+import { getSiteStats } from '@/lib/site-stats';
 import {
   ArrowRight, Search, Users, Briefcase, MapPin,
   Check, X, Star, Sparkles, DollarSign, Bell, Bookmark, FileText, SlidersHorizontal, BookOpen, Gift, Award,
@@ -58,17 +59,22 @@ const iconBgCentered: React.CSSProperties = {
   margin: '0 auto 14px',
 };
 
+/* Hero figures come from the canonical cached SiteStat snapshot (the same
+   source as the homepage), so the shared hero never shows two different
+   inventories. Remote/state counts stay page-local. */
 async function getStats() {
   try {
-    const [totalJobs, remoteJobs, stateCount, totalCompanies] = await Promise.all([
-      prisma.job.count({ where: { isPublished: true } }),
+    const [site, remoteJobs, stateCount] = await Promise.all([
+      getSiteStats(),
       prisma.job.count({ where: { isPublished: true, isRemote: true } }),
       prisma.job.groupBy({ by: ['state'], where: { isPublished: true, state: { not: null } } }).then(r => r.length),
-      prisma.job.groupBy({ by: ['employer'], where: { isPublished: true } }).then(r => r.length),
     ]);
-    return { totalJobs, remoteJobs, stateCount, totalCompanies };
+    return { totalJobs: site.totalJobs, remoteJobs, stateCount, totalCompanies: site.totalCompanies };
   } catch {
-    return { totalJobs: 9000, remoteJobs: 2000, stateCount: 50, totalCompanies: 4000 };
+    // getSiteStats never throws (it carries its own last-resort defaults);
+    // the page-local counts are omitted rather than invented.
+    const site = await getSiteStats();
+    return { totalJobs: site.totalJobs, remoteJobs: 0, stateCount: 0, totalCompanies: site.totalCompanies };
   }
 }
 
@@ -104,7 +110,7 @@ export default async function ForJobSeekersPage() {
           SECTION 1: HERO — Reuse HomepageHero (3D nurse background)
           ═══════════════════════════════════════════════════════════════ */}
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #F5D5C4 15%, #F0C4AF 50%, #FDFBF7 100%)' }}>
-        <HomepageHero jobCountDisplay={jobCountDisplay} />
+        <HomepageHero jobCountDisplay={jobCountDisplay} employerCountDisplay={stats.totalCompanies.toLocaleString()} />
       </div>
 
       {/* ═══ FEATURED JOBS ═══ */}

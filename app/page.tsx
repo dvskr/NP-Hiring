@@ -84,7 +84,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Home() {
-  const totalJobs = await getTotalJobCount();
+  const [totalJobs, uniqueEmployerCount] = await Promise.all([getTotalJobCount(), getUniqueEmployerCount()]);
   const jobCountDisplay = totalJobs > 1000
     ? `${Math.floor(totalJobs / 100) * 100}+`
     : totalJobs.toLocaleString();
@@ -121,7 +121,7 @@ export default async function Home() {
       {/* Main content */}
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #F5D5C4 15%, #F0C4AF 50%, #FDFBF7 100%)' }}>
         {/* 1. Hero — above the fold */}
-        <HomepageHero jobCountDisplay={jobCountDisplay} />
+        <HomepageHero jobCountDisplay={jobCountDisplay} employerCountDisplay={uniqueEmployerCount.toLocaleString()} />
 
         {/* 2. Employer Clay Dough Strip */}
         <EmployerTrustSection />

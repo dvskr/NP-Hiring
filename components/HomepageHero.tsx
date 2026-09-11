@@ -8,6 +8,8 @@ import { LazyMotion, domAnimation, m } from 'framer-motion';
 
 interface HomepageHeroProps {
     jobCountDisplay: string;
+    /** Canonical employer count (lib/site-stats.ts), pre-formatted. */
+    employerCountDisplay: string;
 }
 
 /* ── "No Sugar" palette (user-approved mock, 2026-07-09) ──
@@ -80,7 +82,7 @@ const fadeUp = {
     show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] } },
 };
 
-export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
+export default function HomepageHero({ jobCountDisplay, employerCountDisplay }: HomepageHeroProps) {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
     const [locationQuery, setLocationQuery] = useState('');
@@ -165,7 +167,13 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
                     margin: '0 auto',
                 }}
             >
-                {/* ── Headline: REAL <role> JOBS. / REAL NUMBERS. ── */}
+                {/* ── Headline: <role> JOBS. / SALARY FIRST. ──
+                    Owner direction 2026-09-11: drop the "Real … Real …"
+                    echo and the "nonsense" snark. The promise is the ordering
+                    principle of the board — pay is shown before anything else
+                    (posted ranges on cards, the salary floor filter, the
+                    state guide) — so it becomes the headline. Two stickers on
+                    opposite corners keep the No Sugar composition. */}
                 <m.h1
                     variants={fadeUp}
                     className="font-heading"
@@ -180,7 +188,6 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
                         margin: 0,
                     }}
                 >
-                    Real{' '}
                     <span
                         style={{
                             background: BERRY,
@@ -192,10 +199,10 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
                     >
                         {/* key remount re-fires the stamp animation each cycle */}
                         <span key={stampedRole} className="ns-stamp">{stampedRole}</span>
-                        {' '}jobs.
                     </span>
+                    {' '}jobs.
                     <br />
-                    Real{' '}
+                    Salary{' '}
                     <span
                         style={{
                             background: SOFT_GREEN,
@@ -205,21 +212,49 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
                             transform: 'rotate(1deg)',
                         }}
                     >
-                        numbers.
+                        first.
                     </span>
                 </m.h1>
 
-                {/* ── Subline ── */}
+                {/* ── Live stat kicker — every figure comes from the cached
+                    SiteStat snapshot (lib/site-stats.ts); "updated daily" is
+                    the aggregator cadence already published on the OG card. ── */}
                 <m.p
                     variants={fadeUp}
                     style={{
-                        fontSize: '16px',
-                        fontWeight: 600,
-                        color: OXBLOOD,
-                        margin: '26px 0 32px',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        justifyContent: 'center',
+                        gap: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        color: BERRY,
+                        fontVariantNumeric: 'tabular-nums',
+                        margin: '28px 0 0',
                     }}
                 >
-                    {jobCountDisplay} openings. Every specialty. Zero &ldquo;competitive pay&rdquo; nonsense.
+                    <span>{jobCountDisplay} open roles</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{employerCountDisplay} employers</span>
+                    <span aria-hidden="true">·</span>
+                    <span>Updated daily</span>
+                </m.p>
+
+                {/* ── Promise line ── */}
+                <m.p
+                    variants={fadeUp}
+                    style={{
+                        fontSize: '17px',
+                        fontWeight: 600,
+                        lineHeight: 1.45,
+                        color: OXBLOOD,
+                        maxWidth: '560px',
+                        margin: '12px 0 32px',
+                    }}
+                >
+                    Pay shown as real figures, never &ldquo;competitive&rdquo; &mdash; plus the practice rules for every state.
                 </m.p>
 
                 {/* ── Search — flat, hard-shadowed ── */}
