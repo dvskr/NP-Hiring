@@ -15,15 +15,15 @@ import { Check, ArrowRight, X, HelpCircle, RefreshCw, Calendar, Star, TrendingUp
 // Edge-generated OG card — no dependency on storage assets that don't
 // exist on this board (the old pmhnp-*.webp URL 400s). Same pattern as
 // app/for-employers/page.tsx.
-const PRICING_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Pricing — first post free, then $${config.postingPrice}`)}&type=page`;
+const PRICING_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Pricing: first post free, then $${config.postingPrice}`)}&type=page`;
 
 export const metadata: Metadata = {
-    title: `Pricing — ${brand.niche.short} Job Board | First Post Free, Then $${config.postingPrice}`,
+    title: `Pricing | ${brand.niche.short} Job Board | First Post Free, Then $${config.postingPrice}`,
     description:
         `Simple, transparent pricing for ${brand.niche.short} job postings. Your first post is free with all features. After that, $${config.postingPrice} per post. No subscriptions, no contracts.`,
     openGraph: {
-        title: `Pricing — ${brand.niche.short} Job Board`,
-        description: `Post ${brand.niche.short} jobs — first one free, then $${config.postingPrice}/post. Every post gets the full package.`,
+        title: `Pricing | ${brand.niche.short} Job Board`,
+        description: `Post ${brand.niche.short} jobs. The first one is free, then $${config.postingPrice}/post. Every post gets the full package.`,
         images: [{ url: PRICING_OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} job board pricing` }],
     },
     twitter: { card: 'summary_large_image', images: [PRICING_OG_IMAGE] },
@@ -67,15 +67,15 @@ const clayIconWrap = (gradient: string): React.CSSProperties => ({
 const comparisonRows = EMPLOYER_COMPARISON_ROWS;
 
 const faqs = [
-    { q: 'How many free posts do I get?', a: `Your first job post is completely free — no credit card required, and every feature is included.` },
-    { q: 'What happens after my free post?', a: `Every post after your first is a flat $${config.postingPrice}. Same features, same visibility. Just add payment at checkout.` },
-    { q: 'How long do job postings stay active?', a: `Paid postings (and renewals) run for ${config.durationDays} days. Free postings run for ${config.freeDurationDays} days — a shorter trial window. You can renew paid postings at any time from your employer dashboard.` },
+    { q: 'How many free posts do I get?', a: `Your first job post is completely free. No credit card is required, and every feature is included.` },
+    { q: 'What happens after my free post?', a: `Every post after your first is a flat $${config.postingPrice}, with the same features and the same visibility. Simply add payment at checkout.` },
+    { q: 'How long do job postings stay active?', a: `Paid postings (and renewals) run for ${config.durationDays} days. Free postings run for ${config.freeDurationDays} days, a shorter trial window. You can renew paid postings at any time from your employer dashboard.` },
     { q: 'What does renewal cost?', a: `Renewals are $${config.renewalPrice} (10% off the regular price) and apply to paid postings only. Your listing gets another ${config.durationDays} days and is boosted back to the top of search results.` },
-    { q: 'If I renew before my posting expires, do I lose the remaining days?', a: `No. Renewing early adds ${config.durationDays} days to your current expiration date — you don't lose any time you've already paid for. Renew whenever it's convenient.` },
-    { q: 'Are free posts different from paid posts?', a: `Same features — Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks, ${config.limits.inmailsPerPosting} InMails, and full analytics. The only difference is duration: free posts run ${config.freeDurationDays} days, paid posts run ${config.durationDays} days.` },
-    { q: 'Do I lose access to candidates I\'ve unlocked when my posting expires?', a: 'No. Once you\'ve unlocked a candidate (viewed their full profile), their contact info, resume, and details remain in your dashboard forever — even after the posting expires. To unlock new candidates or send new InMails, you\'ll need an active posting.' },
-    { q: 'Can I edit my job posting after publishing?', a: 'Yes! You can edit your posting anytime from your dashboard — update salary, requirements, or any details. Changes go live immediately.' },
-    { q: 'Do you offer bulk discounts?', a: `Yes! Contact us at ${brand.email.support} for custom pricing if you need to post 5+ positions. We offer volume discounts for larger organizations.` },
+    { q: 'If I renew before my posting expires, do I lose the remaining days?', a: `No. Renewing early adds ${config.durationDays} days to your current expiration date, so you do not lose any time you have already paid for. Renew whenever it is convenient.` },
+    { q: 'Are free posts different from paid posts?', a: `They have the same features: Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks, ${config.limits.inmailsPerPosting} InMails, and full analytics. The only difference is duration: free posts run ${config.freeDurationDays} days, paid posts run ${config.durationDays} days.` },
+    { q: 'Do I lose access to candidates I\'ve unlocked when my posting expires?', a: 'No. Once you\'ve unlocked a candidate (viewed their full profile), their contact info, resume, and details remain in your dashboard forever, even after the posting expires. To unlock new candidates or send new InMails, you will need an active posting.' },
+    { q: 'Can I edit my job posting after publishing?', a: 'Yes. You can edit your posting at any time from your dashboard to update the salary, requirements, or any other details. Changes go live immediately.' },
+    { q: 'Do you offer bulk discounts?', a: `Yes. Contact us at ${brand.email.support} for custom pricing if you need to post 5+ positions. We offer volume discounts for larger organizations.` },
 ];
 
 export default function PricingPage() {
@@ -123,7 +123,7 @@ export default function PricingPage() {
                             First Post Free, Then ${config.postingPrice}
                         </h1>
                         <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
-                            Every post gets the full package — no downgrades, no hidden fees. Start hiring in under 5 minutes.
+                            Every post gets the full package, with no downgrades and no hidden fees. Start hiring in under 5 minutes.
                         </p>
                     </div>
                 </section>
@@ -164,13 +164,13 @@ export default function PricingPage() {
                                             <span style={{ fontSize: '56px', fontWeight: 800, color: '#831843', lineHeight: 1 }}>${config.postingPrice}</span>
                                             <span style={{ fontSize: '16px', color: '#BE185D', fontWeight: 500 }}>/post</span>
                                         </div>
-                                        <p style={{ fontSize: '14px', color: '#BE185D', fontWeight: 700, marginTop: '6px' }}>First post FREE — no card required</p>
+                                        <p style={{ fontSize: '14px', color: '#BE185D', fontWeight: 700, marginTop: '6px' }}>First post free. No card required.</p>
                                     </div>
 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: 'rgba(255,255,255,0.7)', borderRadius: '10px', border: '1px solid rgba(190,24,93,0.1)', marginBottom: '20px' }}>
                                         <RefreshCw size={14} style={{ color: '#BE185D', flexShrink: 0 }} />
                                         <p style={{ fontSize: '12px', color: '#831843', margin: 0, lineHeight: 1.4 }}>
-                                            <strong>Renewals: ${config.renewalPrice}</strong> (10% off) — another {config.durationDays} days
+                                            <strong>Renewals: ${config.renewalPrice}</strong> (10% off) for another {config.durationDays} days
                                         </p>
                                     </div>
 
@@ -181,13 +181,13 @@ export default function PricingPage() {
                                         textDecoration: 'none',
                                         boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
                                     }}>
-                                        Start Posting — First Post Free <ArrowRight size={16} />
+                                        Start Posting: First Post Free <ArrowRight size={16} />
                                     </Link>
                                 </div>
 
                                 {/* Right — Feature checklist */}
                                 <div style={{ padding: '44px 36px 36px' }}>
-                                    <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Full Package — Every Post</h2>
+                                    <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Full Package on Every Post</h2>
                                     <p style={{ fontSize: '13px', color: '#5A4A42', margin: '0 0 20px', lineHeight: 1.5 }}>No tiers. No downgrades. Free or paid, you get everything.</p>
                                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px' }}>
                                         {[
@@ -220,7 +220,7 @@ export default function PricingPage() {
                                 </div>
                                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>60-Day Listing</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                                    Double the industry standard. Your job stays visible for 2 full months — no daily budget, no bidding.
+                                    Double the industry standard. Your job stays visible for 2 full months with no daily budget and no bidding.
                                 </p>
                             </div>
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
@@ -252,7 +252,7 @@ export default function PricingPage() {
                                 <TrendingUp size={22} />
                             </div>
                             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Top Search Placement</h3>
-                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Featured listings rank higher — more visibility, more clicks.</p>
+                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Featured listings rank higher, which means more visibility and more clicks.</p>
                         </div>
 
                         <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -268,7 +268,7 @@ export default function PricingPage() {
                                 <Users size={22} />
                             </div>
                             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{config.limits.candidateUnlocksPerPosting} Candidate Unlocks</h3>
-                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>View full profiles — contact info, resume, LinkedIn.</p>
+                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>View full profiles: contact info, resume, and LinkedIn.</p>
                         </div>
 
                         <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -276,7 +276,7 @@ export default function PricingPage() {
                                 <Briefcase size={22} />
                             </div>
                             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{config.limits.inmailsPerPosting} InMails</h3>
-                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Message candidates directly — no guessing emails.</p>
+                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Message candidates directly, with no guessing at email addresses.</p>
                         </div>
 
                         {/* ═══ ROW 3: Analytics (12 cols full-width) ═══ */}
@@ -314,7 +314,7 @@ export default function PricingPage() {
                         How We Compare
                     </h2>
                     <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '440px', margin: '0 auto 44px', lineHeight: 1.6 }}>
-                        An honest look at what you get — no cherry-picking.
+                        An honest look at what you get, with no cherry-picking.
                     </p>
 
                     {/* Split: Table (left) + CTA Card (right) */}
@@ -396,7 +396,7 @@ export default function PricingPage() {
                                     <span style={{ color: '#BE185D' }}>Next {brand.niche.short}</span>?
                                 </h3>
                                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px' }}>
-                                    First post free — all features included. Then just ${config.postingPrice}/post.
+                                    Your first post is free with all features included. Then just ${config.postingPrice}/post.
                                 </p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     <Link href="/post-job" className="emp-cta-primary" style={{
@@ -405,7 +405,7 @@ export default function PricingPage() {
                                         textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                                         boxShadow: '4px 4px 12px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
                                     }}>
-                                        Post a Job — First Post Free <ArrowRight size={15} />
+                                        Post a Job: First Post Free <ArrowRight size={15} />
                                     </Link>
                                     <Link href="/contact" className="emp-cta-secondary" style={{
                                         padding: '12px 24px', borderRadius: '12px', fontWeight: 600, fontSize: '14px',

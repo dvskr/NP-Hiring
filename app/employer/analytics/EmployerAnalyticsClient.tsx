@@ -61,7 +61,7 @@ export default function EmployerAnalyticsClient() {
         }
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'load failed');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Request failed');
       })
       .finally(() => {
         clearTimeout(arm);
@@ -139,7 +139,7 @@ export default function EmployerAnalyticsClient() {
       )}
 
       {error && (
-        <div style={{ ...card, color: '#EF4444' }}>Failed to load: {error}</div>
+        <div style={{ ...card, color: '#EF4444' }}>Failed to load analytics: {error}</div>
       )}
 
       {!loading && !error && data && (
@@ -222,7 +222,7 @@ export default function EmployerAnalyticsClient() {
           {data.jobs && data.jobs.length === 0 && (
             <div style={{ ...card, color: '#8A9BA6', textAlign: 'center' }}>
               <Eye size={20} style={{ display: 'block', margin: '0 auto 8px' }} />
-              No job activity yet. Post your first job to start tracking views and applies.
+              No job activity yet. Post your first job to start tracking views and apply clicks.
             </div>
           )}
         </>

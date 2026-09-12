@@ -251,7 +251,7 @@ export default function EmployerSettingsClient() {
                     // Don't bounce to /login on a 5xx — the user is logged in,
                     // the API just hiccuped. Show an error message instead so
                     // the page doesn't disappear into a redirect loop.
-                    showMsg('error', 'Could not load settings. Please refresh.');
+                    showMsg('error', 'Could not load settings. Please refresh the page.');
                     return;
                 }
                 const settingsData = await settingsRes.json();
@@ -278,7 +278,7 @@ export default function EmployerSettingsClient() {
                 } catch { /* silent */ }
             } catch (err) {
                 console.error('Settings load failed:', err);
-                showMsg('error', 'Could not load settings. Please refresh.');
+                showMsg('error', 'Could not load settings. Please refresh the page.');
             } finally {
                 setLoading(false);
             }
@@ -308,7 +308,7 @@ export default function EmployerSettingsClient() {
                 }),
             });
             if (!res.ok) throw new Error();
-            showMsg('success', 'Settings saved!');
+            showMsg('success', 'Settings saved.');
         } catch {
             showMsg('error', 'Failed to save. Please try again.');
         } finally {
@@ -327,9 +327,9 @@ export default function EmployerSettingsClient() {
                 redirectTo: `${window.location.origin}/auth/confirm?type=recovery`,
             });
             if (error) throw error;
-            showMsg('success', 'Password reset email sent!');
+            showMsg('success', 'Password reset email sent.');
         } catch {
-            showMsg('error', 'Failed to send reset email.');
+            showMsg('error', 'Failed to send the reset email.');
         } finally {
             setSendingReset(false);
         }
@@ -344,9 +344,9 @@ export default function EmployerSettingsClient() {
                 body: JSON.stringify(alertPrefs),
             });
             if (!res.ok) throw new Error();
-            showMsg('success', 'Alert preferences saved!');
+            showMsg('success', 'Alert preferences saved.');
         } catch {
-            showMsg('error', 'Failed to save alerts.');
+            showMsg('error', 'Failed to save alert preferences.');
         } finally {
             setSavingAlerts(false);
         }
@@ -376,7 +376,7 @@ export default function EmployerSettingsClient() {
                         We couldn&apos;t load your settings
                     </h3>
                     <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 16px' }}>
-                        Please refresh the page. If the problem persists, sign out and back in.
+                        Please refresh the page. If the problem persists, sign out and sign back in.
                     </p>
                     <button
                         onClick={() => window.location.reload()}
@@ -395,10 +395,10 @@ export default function EmployerSettingsClient() {
     }
 
     const sections = [
-        { key: 'company' as const, label: 'Company Profile', icon: <Building2 size={18} />, color: '#BE185D', bg: '#FCE7F3', desc: 'Brand & info' },
+        { key: 'company' as const, label: 'Company Profile', icon: <Building2 size={18} />, color: '#BE185D', bg: '#FCE7F3', desc: 'Brand & details' },
         { key: 'billing' as const, label: 'Billing & Plans', icon: <CreditCard size={18} />, color: '#7C3AED', bg: '#EDE9FE', desc: 'Invoices & receipts' },
         { key: 'alerts' as const, label: 'Candidate Alerts', icon: <BellRing size={18} />, color: '#F59E0B', bg: '#FEF3C7', desc: 'Match notifications' },
-        { key: 'notifications' as const, label: 'Notifications', icon: <Bell size={18} />, color: '#EC4899', bg: '#FCE7F3', desc: 'Newsletter & app alerts' },
+        { key: 'notifications' as const, label: 'Notifications', icon: <Bell size={18} />, color: '#EC4899', bg: '#FCE7F3', desc: 'Newsletter & applications' },
         { key: 'account' as const, label: 'Account Security', icon: <ShieldCheck size={18} />, color: '#0EA5E9', bg: '#DBEAFE', desc: 'Password & access' },
     ];
 
@@ -611,7 +611,7 @@ export default function EmployerSettingsClient() {
                                 <FileText size={24} color="#B0BEC5" />
                             </div>
                             <p style={{ color: '#8A9BA6', fontSize: '14px', margin: 0 }}>
-                                No payment history yet. Post your first job to get started!
+                                No payment history yet. Post your first job to get started.
                             </p>
                         </div>
                     ) : (
@@ -668,7 +668,7 @@ export default function EmployerSettingsClient() {
                                                 </td>
                                                 <td style={{ padding: '14px 8px', fontSize: '13px', whiteSpace: 'nowrap' }}>
                                                     {p.isFree ? (
-                                                        <span style={{ color: '#B0BEC5', fontSize: '12px' }}>—</span>
+                                                        <span style={{ color: '#B0BEC5', fontSize: '12px' }}>None</span>
                                                     ) : latestCharge ? (
                                                         // Two buttons side-by-side: the Stripe "Invoice" PDF
                                                         // (formal document) and the Stripe "Receipt" page
@@ -747,7 +747,7 @@ export default function EmployerSettingsClient() {
                         </div>
                     </div>
                     <p style={{ color: '#8A9BA6', fontSize: '13px', marginBottom: '20px' }}>
-                        Get notified when new {brand.niche.short} candidates match your criteria.
+                        Receive a notification when new {brand.niche.short} candidates match your criteria.
                     </p>
 
                     {/* Specialties */}
@@ -791,7 +791,7 @@ export default function EmployerSettingsClient() {
                     {/* Experience + Work Mode */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                         <div>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#8A9BA6', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Min Experience</label>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#8A9BA6', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Minimum Experience</label>
                             <select value={alertPrefs.minExperience ?? ''} onChange={e => setAlertPrefs(prev => ({ ...prev, minExperience: e.target.value ? Number(e.target.value) : null }))} style={clayInput}>
                                 <option value="">Any</option>
                                 <option value="0">New Grad</option>
@@ -846,7 +846,7 @@ export default function EmployerSettingsClient() {
                                             Send me the monthly newsletter
                                         </p>
                                         <p style={{ fontSize: '11px', color: '#8A9BA6', margin: '2px 0 0' }}>
-                                            Sent to {profile.email} · unsubscribe any time
+                                            Sent to {profile.email} · unsubscribe at any time
                                         </p>
                                     </div>
                                 </div>
@@ -876,7 +876,7 @@ export default function EmployerSettingsClient() {
                         </div>
                         {notifPrefs.length === 0 ? (
                             <p style={{ fontSize: '13px', color: '#8A9BA6', margin: 0, padding: '16px 0' }}>
-                                You don&apos;t have any active job postings yet. Once you post a job, you&apos;ll see per-listing notification toggles here.
+                                You do not have any active job postings yet. Once you post a job, notification toggles for each listing will appear here.
                             </p>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -922,7 +922,7 @@ export default function EmployerSettingsClient() {
                         </h3>
                     </div>
                     <p style={{ color: '#8A9BA6', fontSize: '14px', marginBottom: '16px', lineHeight: 1.5 }}>
-                        Click below to receive a password reset link at <strong style={{ color: '#1A2E35' }}>{profile.email}</strong>.
+                        Use the button below to receive a password reset link at <strong style={{ color: '#1A2E35' }}>{profile.email}</strong>.
                     </p>
                     <button
                         onClick={handlePasswordReset}

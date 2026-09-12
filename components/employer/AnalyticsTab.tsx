@@ -185,7 +185,7 @@ export default function AnalyticsTab() {
                 <div className="flex items-center gap-2 mb-4">
                     <BarChart3 size={18} style={{ color: 'var(--text-tertiary)' }} />
                     <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                        Apply Clicks — Last 30 Days
+                        Apply Clicks: Last 30 Days
                     </h3>
                 </div>
                 <div className="flex items-end gap-[2px] h-32">
@@ -260,7 +260,7 @@ export default function AnalyticsTab() {
                             How You Compare
                         </h3>
                         <span className="text-xs ml-auto" style={{ color: 'var(--text-tertiary)' }}>
-                            vs {benchmarks.totalJobsInPool} jobs on platform
+                            vs. {benchmarks.totalJobsInPool} jobs on the platform
                         </span>
                     </div>
 

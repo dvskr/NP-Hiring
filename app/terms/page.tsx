@@ -174,7 +174,7 @@ export default function TermsPage() {
             <li style={liStyle}>We may suspend or terminate employer accounts that repeatedly violate these Terms</li>
           </ul>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Listing duration & renewals:</p>
-          <p style={pStyle}>All job postings — free or paid — are active for 60 days from the date of publication. After 60 days, postings expire automatically. Employers may renew paid postings through the employer dashboard. Renewals add 60 days to the current expiration date; renewing early does not forfeit any remaining time on the existing posting.</p>
+          <p style={pStyle}>All job postings, free or paid, are active for 60 days from the date of publication. After 60 days, postings expire automatically. Employers may renew paid postings through the employer dashboard. Renewals add 60 days to the current expiration date; renewing early does not forfeit any remaining time on the existing posting.</p>
 
           <h2 id="pricing-and-payments" style={h2Style}>7. Pricing, Free Postings & Payments</h2>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Pricing schedule (current as of the &quot;Last updated&quot; date above):</p>
@@ -182,7 +182,7 @@ export default function TermsPage() {
             <li style={liStyle}>Each verified employer email domain is allowed one free job posting (the first), lifetime, with no credit card required</li>
             <li style={liStyle}>Additional postings (after the free quota is exhausted) are $199 USD each, one-time</li>
             <li style={liStyle}>Renewals of paid postings are $179 USD, one-time, and add 60 days to the existing expiration</li>
-            <li style={liStyle}>All postings — free, paid, or renewed — receive the same features: 60-day duration, Featured badge, top placement in search results, 25 candidate profile unlocks, 25 InMails, and full analytics</li>
+            <li style={liStyle}>All postings, whether free, paid, or renewed, receive the same features: 60-day duration, Featured badge, top placement in search results, 25 candidate profile unlocks, 25 InMails, and full analytics</li>
             <li style={liStyle}>Free postings cannot be renewed at the discounted rate. Once a free posting expires, the employer may post a new listing at the standard $199 rate</li>
           </ul>
           <p style={pStyle}>Current pricing is also published at <Link href="/pricing" style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.domain}/pricing</Link> and is incorporated into this Agreement by reference. We may change pricing at any time, and changes will be effective for postings created after the change date. Postings already paid for under prior pricing are not affected.</p>
@@ -220,7 +220,7 @@ export default function TermsPage() {
           <p style={pStyle}>Candidates agree that, when they make their profile visible and indicate openness to opportunities, their profile may be discoverable by employers using the Service. Candidates may at any time make their profile non-visible or close their account. See our <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'none' }}>Privacy Policy</Link> for full details on how candidate data is collected, used, shared, and protected.</p>
 
           <h2 id="intellectual-property" style={h2Style}>10. Intellectual Property</h2>
-          <p style={pStyle}>All content provided by {ENTITY} on {brand.name} — including text, graphics, logos, icons, images, audio clips, data compilations, software, design, and the &quot;{brand.name}&quot; brand — is the property of {ENTITY} or its licensors and is protected by United States and international copyright, trademark, and other intellectual property laws.</p>
+          <p style={pStyle}>All content provided by {ENTITY} on {brand.name}, including text, graphics, logos, icons, images, audio clips, data compilations, software, design, and the &quot;{brand.name}&quot; brand, is the property of {ENTITY} or its licensors and is protected by United States and international copyright, trademark, and other intellectual property laws.</p>
           <p style={pStyle}>You may not reproduce, distribute, modify, create derivative works of, publicly display, or otherwise exploit any content from the Service without our prior written permission, except for your personal, non-commercial use within the Service.</p>
           <p style={pStyle}>By submitting content to the Service (including job postings, candidate profiles, resumes, and messages), you grant {ENTITY} a worldwide, non-exclusive, royalty-free license to host, store, display, transmit, and use that content as necessary to operate, improve, and promote the Service. This license terminates when you delete the content, except where reasonably required for our backups, audit logs, or legal compliance.</p>
 
@@ -234,10 +234,10 @@ export default function TermsPage() {
             <li style={liStyle}>We are not an employment agency, recruiter, or staffing firm</li>
             <li style={liStyle}>We do not warrant that the Service will be uninterrupted, error-free, or free of harmful components</li>
           </ul>
-          <p style={pStyle}>Job seekers and employers use the Service at their own risk. We strongly encourage all users to conduct their own due diligence — including license verification, reference checks, and background checks where appropriate — before extending or accepting any offer.</p>
+          <p style={pStyle}>Job seekers and employers use the Service at their own risk. We strongly encourage all users to conduct their own due diligence, including license verification, reference checks, and background checks where appropriate, before extending or accepting any offer.</p>
 
           <h2 id="limitation-of-liability" style={h2Style}>12. Limitation of Liability</h2>
-          <p style={pStyle}>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, {ENTITY.toUpperCase()}, ITS OFFICERS, DIRECTORS, EMPLOYEES, CONTRACTORS, AGENTS, LICENSORS, AND SUPPLIERS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, REVENUE, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, ARISING OUT OF OR RELATING TO YOUR USE OF — OR INABILITY TO USE — THE SERVICE.</p>
+          <p style={pStyle}>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, {ENTITY.toUpperCase()}, ITS OFFICERS, DIRECTORS, EMPLOYEES, CONTRACTORS, AGENTS, LICENSORS, AND SUPPLIERS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, REVENUE, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, ARISING OUT OF OR RELATING TO YOUR USE OF, OR INABILITY TO USE, THE SERVICE.</p>
           <p style={pStyle}>OUR TOTAL CUMULATIVE LIABILITY TO YOU FOR ALL CLAIMS ARISING FROM OR RELATED TO THE SERVICE SHALL NOT EXCEED THE GREATER OF: (A) THE TOTAL AMOUNT YOU PAID TO US IN THE TWELVE (12) MONTHS PRECEDING THE EVENT GIVING RISE TO THE CLAIM, OR (B) ONE HUNDRED US DOLLARS ($100).</p>
           <p style={pStyle}>SOME JURISDICTIONS DO NOT ALLOW THE EXCLUSION OF CERTAIN WARRANTIES OR THE LIMITATION OR EXCLUSION OF LIABILITY FOR INCIDENTAL OR CONSEQUENTIAL DAMAGES. ACCORDINGLY, SOME OF THE ABOVE LIMITATIONS MAY NOT APPLY TO YOU.</p>
 
@@ -253,8 +253,8 @@ export default function TermsPage() {
 
           <h2 id="termination" style={h2Style}>14. Termination</h2>
           <p style={pStyle}>You may terminate your account at any time by following the account-deletion flow in your dashboard or by emailing <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a>. Account deletion is subject to a 30-day grace period during which the account may be restored, after which it is permanently purged.</p>
-          <p style={pStyle}>We may suspend or terminate your access to the Service, or any portion of it, at any time, with or without notice, for any reason — including violation of these Terms, suspected fraud, or any other conduct we determine is harmful to the Service or other users.</p>
-          <p style={pStyle}>Upon termination, your right to use the Service immediately ceases. Provisions that by their nature should survive termination — including intellectual property, disclaimers, limitation of liability, indemnification, and dispute resolution — shall survive.</p>
+          <p style={pStyle}>We may suspend or terminate your access to the Service, or any portion of it, at any time, with or without notice, for any reason, including violation of these Terms, suspected fraud, or any other conduct we determine is harmful to the Service or other users.</p>
+          <p style={pStyle}>Upon termination, your right to use the Service immediately ceases. Provisions that by their nature should survive termination, including intellectual property, disclaimers, limitation of liability, indemnification, and dispute resolution, shall survive.</p>
 
           <h2 id="governing-law" style={h2Style}>15. Governing Law, Venue & Dispute Resolution</h2>
           <p style={pStyle}>These Terms and any dispute arising out of or related to them or the Service are governed by the laws of the State of {brand.legal.governingState}, United States, without regard to its conflict-of-laws principles. The United Nations Convention on Contracts for the International Sale of Goods does not apply.</p>

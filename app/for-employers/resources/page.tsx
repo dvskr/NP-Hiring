@@ -24,10 +24,10 @@ import {
 import { BookOpen, PenLine, ClipboardList, ArrowRight, FileText } from 'lucide-react';
 
 const HUB_URL = `${brand.baseUrl}/for-employers/resources`;
-const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Employer Hiring Resources — hire ${brand.niche.short}s`)}&type=page`;
+const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Employer Hiring Resources: Hire ${brand.niche.short}s`)}&type=page`;
 
 export const metadata: Metadata = {
-  title: `Employer Hiring Resources — Guides & ${brand.niche.short} Job Description Templates | ${brand.name}`,
+  title: `Employer Hiring Resources | Guides & ${brand.niche.short} Job Description Templates | ${brand.name}`,
   description: `Free hiring resources for teams recruiting ${brand.niche.descriptor}s: a step-by-step hiring guide, a job-description writing guide, and ${JD_TEMPLATES.length} setting-specific ${brand.niche.short} job description templates.`,
   openGraph: {
     title: `Employer Hiring Resources | ${brand.name}`,
@@ -44,21 +44,21 @@ const HUB_RESOURCES = [
   {
     href: '/for-employers/resources/how-to-hire',
     title: `How to Hire a ${brand.niche.long}`,
-    description: `The full hiring process — defining the role, benchmarking pay against live salary data, credential verification, and realistic timeline planning.`,
+    description: `The full hiring process: defining the role, benchmarking pay against live salary data, credential verification, and realistic timeline planning.`,
     icon: BookOpen,
     tag: 'Guide',
   },
   {
     href: '/for-employers/resources/job-description-guide',
     title: `Writing a ${brand.niche.short} Job Description`,
-    description: `The anatomy of a job description that qualified ${brand.niche.descriptor}s actually respond to — section by section, with the mistakes to avoid.`,
+    description: `The anatomy of a job description that qualified ${brand.niche.descriptor}s actually respond to, section by section, with the mistakes to avoid.`,
     icon: PenLine,
     tag: 'Guide',
   },
   {
     href: '/for-employers/resources/job-description-templates',
     title: `${brand.niche.short} Job Description Templates`,
-    description: `${JD_TEMPLATES.length} setting-specific skeleton templates — outpatient, inpatient, telehealth, and specialty settings — ready to customize in the post-job form.`,
+    description: `${JD_TEMPLATES.length} setting-specific skeleton templates (outpatient, inpatient, telehealth, and specialty settings), ready to customize in the post-job form.`,
     icon: ClipboardList,
     tag: 'Template Library',
   },
@@ -109,7 +109,7 @@ export default function EmployerResourcesHubPage() {
               Employer Hiring Resources
             </h1>
             <p className="text-lg md:text-xl text-pink-100">
-              Everything your team needs to recruit {brand.niche.descriptor}s — hiring guides, salary benchmarking pointers, and {JD_TEMPLATES.length} job-description templates.
+              Everything your team needs to recruit {brand.niche.descriptor}s: hiring guides, salary benchmarking pointers, and {JD_TEMPLATES.length} job-description templates.
             </p>
           </div>
         </div>
@@ -208,7 +208,7 @@ export default function EmployerResourcesHubPage() {
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm text-white"
               style={{ background: 'linear-gradient(145deg, #BE185D, #9D174D)' }}
             >
-              Post a Job — First Post Free <ArrowRight size={16} aria-hidden="true" />
+              Post a Job: First Post Free <ArrowRight size={16} aria-hidden="true" />
             </Link>
           </div>
         </div>

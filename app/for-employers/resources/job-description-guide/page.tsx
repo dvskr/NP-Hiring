@@ -62,7 +62,7 @@ export const metadata: Metadata = {
 const JD_ANATOMY = [
   {
     section: 'About your organization',
-    advice: `Two or three sentences on who you are and who you serve. Skip the mission-statement boilerplate — name the care model, the patient mix, and what makes the clinical environment distinctive.`,
+    advice: `Two or three sentences on who you are and who you serve. Skip the mission-statement boilerplate and name the care model, the patient mix, and what makes the clinical environment distinctive.`,
   },
   {
     section: 'Position summary',
@@ -74,27 +74,27 @@ const JD_ANATOMY = [
   },
   {
     section: 'Required qualifications',
-    advice: `Keep this list short and legally accurate: graduate degree (MSN/DNP) from an accredited program, active national board certification — AANP or ANCC for ${brand.niche.short}s, in the population focus the role serves — active RN and APRN licensure in your state, and DEA registration if the role prescribes. State your real experience requirement explicitly, including "new grads welcome" if that is true.`,
+    advice: `Keep this list short and legally accurate: graduate degree (MSN/DNP) from an accredited program, active national board certification (AANP or ANCC for ${brand.niche.short}s, in the population focus the role serves), active RN and APRN licensure in your state, and DEA registration if the role prescribes. State your real experience requirement explicitly, including "new grads welcome" if that is true.`,
   },
   {
     section: 'Preferred qualifications',
-    advice: `Separate nice-to-haves from must-haves honestly. Language fluency, procedural skills, and prior experience with your patient population belong here — not in the required list, where they silently filter out candidates you would actually hire.`,
+    advice: `Separate nice-to-haves from must-haves honestly. Language fluency, procedural skills, and prior experience with your patient population belong here, not in the required list, where they silently filter out candidates you would actually hire.`,
   },
   {
     section: 'Schedule',
-    advice: `Days, hours, call expectations, weekend rotations, and admin time. Ambiguity here is the number-one source of first-call mismatches — a clinician deciding between offers compares schedules before almost anything else.`,
+    advice: `Days, hours, call expectations, weekend rotations, and admin time. Ambiguity here is the number-one source of first-call mismatches; a clinician deciding between offers compares schedules before almost anything else.`,
   },
   {
     section: 'Compensation and benefits',
-    advice: `Post a real salary range. Some states require a posted pay range by law — verify your state's rules — and even where it is optional, an honest range pre-qualifies candidates and signals negotiating in good faith. List the benefits that matter to clinicians: CME stipend and days, malpractice coverage (with tail), retirement match, and PTO.`,
+    advice: `Post a real salary range. Some states require a posted pay range by law (verify your state's rules), and even where it is optional, an honest range pre-qualifies candidates and signals negotiating in good faith. List the benefits that matter to clinicians: CME stipend and days, malpractice coverage (with tail), retirement match, and PTO.`,
   },
   {
     section: 'Why join us',
-    advice: `One or two sentences on what makes this job different from the other openings a candidate is comparing it against — clinician-led leadership, panel or caseload limits you actually hold to, administrative support, a growth path. This is the only section where you are arguing rather than describing, so keep it concrete: a specific commitment beats an adjective.`,
+    advice: `One or two sentences on what makes this job different from the other openings a candidate is comparing it against: clinician-led leadership, panel or caseload limits you actually hold to, administrative support, and a growth path. This is the only section where you are arguing rather than describing, so keep it concrete: a specific commitment beats an adjective.`,
   },
   {
     section: 'How to apply',
-    advice: `Say what happens next and how fast you respond. A short application with a stated response window outperforms a long portal form — working clinicians apply between patients, not at a desk.`,
+    advice: `Say what happens next and how fast you respond. A short application with a stated response window outperforms a long portal form; working clinicians apply between patients, not at a desk.`,
   },
 ] as const;
 
@@ -106,7 +106,7 @@ const TITLE_DOS = [
 ] as const;
 
 const TITLE_DONTS = [
-  `Internal req codes or grade levels ("Provider II — Req 4471")`,
+  `Internal req codes or grade levels ("Provider II, Req 4471")`,
   `Generic titles ("Healthcare Provider", "Clinician") that never surface in a ${brand.niche.short} search`,
   'ALL-CAPS, emoji, or urgency bait ("HIRING NOW!!!")',
   'Stuffing every keyword into one unreadable title',
@@ -123,7 +123,7 @@ const COMMON_MISTAKES = [
   },
   {
     title: 'Requiring the wrong certification',
-    body: `Certification follows population focus — an acute-care inpatient role and a primary-care clinic role call for different certifications, and both come from AANP or ANCC for ${brand.niche.short}s. Name the population focus you need and let the certification requirement follow from it.`,
+    body: `Certification follows population focus: an acute-care inpatient role and a primary-care clinic role call for different certifications, and both come from AANP or ANCC for ${brand.niche.short}s. Name the population focus you need and let the certification requirement follow from it.`,
   },
   {
     title: 'Burying the practice model',
@@ -143,15 +143,15 @@ const FAQS = [
   },
   {
     q: `Should I include a salary range in my ${brand.niche.short} job posting?`,
-    a: `Yes. Several states require a posted pay range by law — verify your state's current rules — and even where optional, a transparent range pre-qualifies candidates on the factor most likely to end a negotiation late. Use the ${brand.name} salary guide's live state-level data to set a range that is competitive in your market.`,
+    a: `Yes. Several states require a posted pay range by law (verify your state's current rules), and even where it is optional, a transparent range pre-qualifies candidates on the factor most likely to end a negotiation late. Use the ${brand.name} salary guide's live state-level data to set a range that is competitive in your market.`,
   },
   {
     q: `How long should a ${brand.niche.short} job description be?`,
-    a: `Long enough to answer a candidate's comparison questions, short enough to scan between patients. The template skeletons in our library run a few thousand characters with bulleted responsibilities and qualifications — enough structure to be complete without becoming a wall of prose.`,
+    a: `Long enough to answer a candidate's comparison questions, short enough to scan between patients. The template skeletons in our library run a few thousand characters with bulleted responsibilities and qualifications, which is enough structure to be complete without becoming a wall of prose.`,
   },
   {
     q: `Can I start from a template instead of writing from scratch?`,
-    a: `Yes — the ${brand.name} template library has ${JD_TEMPLATES.length} setting-specific skeletons (outpatient, inpatient, telehealth, and specialty settings) with bracketed prompts marking every detail you should customize. The same templates are available directly inside the post-job form's description editor.`,
+    a: `Yes. The ${brand.name} template library has ${JD_TEMPLATES.length} setting-specific skeletons (outpatient, inpatient, telehealth, and specialty settings) with bracketed prompts marking every detail you should customize. The same templates are available directly inside the post-job form's description editor.`,
   },
 ] as const;
 
@@ -209,7 +209,7 @@ export default function JobDescriptionGuidePage() {
               Last reviewed: {new Date(`${LAST_REVIEWED}T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
             </p>
             <p className="text-lg md:text-xl text-pink-100">
-              The section-by-section structure that qualified {brand.niche.descriptor}s actually respond to — and the mistakes that make them skip your posting.
+              The section-by-section structure that qualified {brand.niche.descriptor}s actually respond to, and the mistakes that make them skip your posting.
             </p>
           </div>
         </div>
@@ -232,7 +232,7 @@ export default function JobDescriptionGuidePage() {
               The Anatomy of a Strong {brand.niche.short} Job Description
             </h2>
             <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-              Nine sections, in this order — the same structure every skeleton in our template library uses.
+              Nine sections, in this order: the same structure every skeleton in our template library uses.
             </p>
             <ol className="space-y-4">
               {JD_ANATOMY.map((item, i) => (
@@ -314,7 +314,7 @@ export default function JobDescriptionGuidePage() {
               </h2>
             </div>
             <p className="text-sm mb-5" style={{ color: '#9D174D' }}>
-              {JD_TEMPLATES.length} setting-specific skeletons built on this exact structure — outpatient, inpatient, telehealth, and specialty settings — with bracketed prompts marking everything you should customize.
+              {JD_TEMPLATES.length} setting-specific skeletons built on this exact structure (outpatient, inpatient, telehealth, and specialty settings), with bracketed prompts marking everything you should customize.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
@@ -329,7 +329,7 @@ export default function JobDescriptionGuidePage() {
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm bg-white"
                 style={{ color: '#831843', border: '1px solid rgba(190,24,93,0.3)' }}
               >
-                Post a Job — First Post Free
+                Post a Job: First Post Free
               </Link>
             </div>
           </div>

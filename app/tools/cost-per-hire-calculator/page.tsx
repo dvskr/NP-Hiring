@@ -49,8 +49,8 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 
 const PAGE_PATH = '/tools/cost-per-hire-calculator';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
-const PAGE_TITLE = `Cost Per Hire Calculator — Flat-Fee Posting vs Sponsored Ads vs Agency`;
-const PAGE_DESCRIPTION = `Work out your real cost per hire for a ${brand.niche.short} role: a flat-fee posting priced from our published rates against sponsored-ad spend and an agency contingency fee, using your own applicant volume and time-to-fill. No industry benchmarks — every alternative figure is one you enter.`;
+const PAGE_TITLE = `Cost Per Hire Calculator | Flat-Fee Posting vs Sponsored Ads vs Agency`;
+const PAGE_DESCRIPTION = `Work out your real cost per hire for a ${brand.niche.short} role: a flat-fee posting priced from our published rates against sponsored-ad spend and an agency contingency fee, using your own applicant volume and time-to-fill. No industry benchmarks: every alternative figure is one you enter.`;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent('Cost Per Hire Calculator')}&type=page`;
 
 export const metadata: Metadata = {
@@ -78,18 +78,18 @@ export const metadata: Metadata = {
 const ASSUMPTIONS: readonly string[] = [
   `Cost per hire is total channel spend divided by hires. Cost per applicant is total channel spend divided by applicants. Nothing else is folded in.`,
   `Our own prices are read from the pricing config the checkout charges against: ${formatUsd(FLAT_FEE_PRICING.postingPrice)} per post for ${FLAT_FEE_PRICING.paidDurationDays} days, ${formatUsd(FLAT_FEE_PRICING.renewalPrice)} per renewal, and ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate unlocks plus ${FLAT_FEE_PRICING.inmailsPerPosting} direct messages included per posting.`,
-  `The free post is scoped to the employer's email domain rather than to a login: ${FREE_POST_SCOPE_NOTE}, and it runs ${FLAT_FEE_PRICING.freeDurationDays} days. A five-recruiter health system therefore gets one free post between all five, not one each — so a multi-role plan modelled here shows at most ${FLAT_FEE_PRICING.freePostsPerDomain} free posting and prices every other post at ${formatUsd(FLAT_FEE_PRICING.postingPrice)}.`,
-  `Every figure for the sponsored-ad and agency channels is yours. We publish no typical cost per click, no typical contingency rate, no typical time-to-fill, and no typical applicant-to-hire ratio — we sell one side of this comparison, and a benchmark from us would not be evidence.`,
+  `The free post is scoped to the employer's email domain rather than to a login: ${FREE_POST_SCOPE_NOTE}, and it runs ${FLAT_FEE_PRICING.freeDurationDays} days. A five-recruiter health system therefore gets one free post between all five, not one each, so a multi-role plan modeled here shows at most ${FLAT_FEE_PRICING.freePostsPerDomain} free posting and prices every other post at ${formatUsd(FLAT_FEE_PRICING.postingPrice)}.`,
+  `Every figure for the sponsored-ad and agency channels is yours. We publish no typical cost per click, no typical contingency rate, no typical time-to-fill, and no typical applicant-to-hire ratio. We sell one side of this comparison, and a benchmark from us would not be evidence.`,
   `A channel with nothing entered is reported as not comparable, never as zero. A zero in a cost column would read as free.`,
-  `The applicant-volume default of ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} is the number of candidate unlocks a posting includes — a plan feature, not an expected response rate. Replace it with what your own postings draw.`,
+  `The applicant-volume default of ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} is the number of candidate unlocks a posting includes. It is a plan feature, not an expected response rate. Replace it with what your own postings draw.`,
   `Time-to-fill defaults to ${DEFAULT_TIME_TO_FILL_DAYS} days, which is the paid posting's run length rather than a market average, and it is applied identically to all three channels so the default cannot tilt the result. The vacancy overlay only affects anything once you enter a cost per day unfilled, which starts at zero.`,
-  `First-year base — the figure an agency contingency rate is applied to — starts at the cited national median of ${STAT_SOURCES.averageSalary.formatted} (${FIRST_YEAR_BASE_SOURCE}). Replace it with your budgeted base.`,
+  `First-year base, the figure an agency contingency rate is applied to, starts at the cited national median of ${STAT_SOURCES.averageSalary.formatted} (${FIRST_YEAR_BASE_SOURCE}). Replace it with your budgeted base.`,
 ];
 
 const EXCLUSIONS: readonly string[] = [
   'Candidate quality and retention. A cheaper hire that leaves in four months is not cheaper, and this calculator cannot see that.',
-  'Your own team\u2019s time. Screening, scheduling, and interviewing all cost money, and they differ sharply between channels — an agency fee buys screening work a posting does not.',
-  'Any benchmark for what other employers pay per click, per applicant, or in agency fees. We do not have defensible figures for those and will not print undefensible ones.',
+  'Your own team\u2019s time. Screening, scheduling, and interviewing all cost money, and they differ sharply between channels: an agency fee buys screening work that a posting does not.',
+  'Any benchmark for what other employers pay per click, per applicant, or in agency fees. We do not have defensible figures for those and will not print indefensible ones.',
   'Sourcing tools, ATS subscriptions, careers-site costs, and referral bonuses. Add them as part of a channel\u2019s spend if you want them counted.',
   'Offer declines and backfills. Both raise real cost per hire, and both are specific to your process.',
 ];
@@ -97,23 +97,23 @@ const EXCLUSIONS: readonly string[] = [
 const FAQS = [
   {
     q: 'How is cost per hire calculated?',
-    a: `Total spend on a channel divided by the hires that channel produced. This calculator does that for three channels side by side and adds an optional overlay for the cost of the seat sitting empty: time-to-fill multiplied by what a day of vacancy costs you. It deliberately stops there. Formulas that fold in recruiter salaries, ATS licences, and overhead produce a bigger number that is harder to check and impossible to compare between employers — if you want those included, add them to a channel's spend yourself.`,
+    a: `Total spend on a channel divided by the hires that channel produced. This calculator does that for three channels side by side and adds an optional overlay for the cost of the seat sitting empty: time-to-fill multiplied by what a day of vacancy costs you. It deliberately stops there. Formulas that fold in recruiter salaries, ATS licenses, and overhead produce a bigger number that is harder to check and impossible to compare between employers. If you want those included, add them to a channel's spend yourself.`,
   },
   {
     q: 'Why does this not tell me the typical cost per hire in healthcare?',
-    a: `Because we sell one of the channels being compared, and a benchmark published by an interested party is not evidence. Every industry cost-per-hire figure you will find comes from a survey with its own definition of which costs count, and quoting one here would let us pick the definition that flatters us. The comparison is built entirely from prices we can prove — ours — plus numbers you read off your own invoices and ATS.`,
+    a: `Because we sell one of the channels being compared, and a benchmark published by an interested party is not evidence. Every industry cost-per-hire figure you will find comes from a survey with its own definition of which costs count, and quoting one here would let us pick the definition that flatters us. The comparison is built entirely from prices we can prove (ours) plus numbers you read off your own invoices and ATS.`,
   },
   {
     q: 'Is a flat-fee posting really cheaper than an agency?',
-    a: `Not in the abstract, no — we sell one side of that comparison and we have not measured the other, so any margin we quoted you would be marketing rather than a finding. What we can hand you instead is the arithmetic. A contingency fee is a percentage of a first-year salary, so it scales with the salary; a posting is a fixed ${formatUsd(FLAT_FEE_PRICING.postingPrice)} per post that does not. The calculator totals our side from our published rates — posts, renewals, and the one free post per domain if it is still available — and prints that as the cost per hire your other channels have to beat, then applies your own contingency rate to your own base. The verdict is yours and it is about your roles. Spend is also not the whole comparison. A contingency agency does the sourcing and first-pass screening, carries the risk of not placing anyone, and is paid only on a hire; a posting puts the role in front of candidates and leaves the screening with you. The right question is not which is cheaper but whether the fee difference is worth more to you than the work it buys — which is why the calculator prints the number and then tells you what the number leaves out.`,
+    a: `Not in the abstract. We sell one side of that comparison and we have not measured the other, so any margin we quoted would be marketing rather than a finding. What we can hand you instead is the arithmetic. A contingency fee is a percentage of a first-year salary, so it scales with the salary; a posting is a fixed ${formatUsd(FLAT_FEE_PRICING.postingPrice)} per post that does not. The calculator totals our side from our published rates (posts, renewals, and the one free post per domain if it is still available) and prints that as the cost per hire your other channels have to beat, then applies your own contingency rate to your own base. The verdict is yours and it is about your roles. Spend is also not the whole comparison. A contingency agency does the sourcing and first-pass screening, carries the risk of not placing anyone, and is paid only on a hire; a posting puts the role in front of candidates and leaves the screening with you. The right question is not which is cheaper but whether the fee difference is worth more to you than the work it buys, which is why the calculator prints the number and then tells you what the number leaves out.`,
   },
   {
     q: 'What should I use for time-to-fill?',
-    a: `Your own history, from the day a role opened to the day an offer was accepted. The field starts at ${DEFAULT_TIME_TO_FILL_DAYS} days only because that is how long a paid posting runs — it is a product fact standing in for a number we do not have, and it is applied to all three channels equally so it cannot favour one. Time-to-fill has no effect on the result until you enter what a day of vacancy costs you.`,
+    a: `Your own history, from the day a role opened to the day an offer was accepted. The field starts at ${DEFAULT_TIME_TO_FILL_DAYS} days only because that is how long a paid posting runs. It is a product fact standing in for a number we do not have, and it is applied to all three channels equally so it cannot favor one. Time-to-fill has no effect on the result until you enter what a day of vacancy costs you.`,
   },
   {
     q: 'How do I work out what a day of vacancy costs?',
-    a: `Start with what you are actually spending to cover the gap: locum or agency coverage day rates, overtime for the staff absorbing the work, or the visit revenue the empty schedule is not generating. Whatever you use, it is your figure and only yours — the default is zero, and with it at zero the vacancy columns stay switched off rather than showing an invented cost.`,
+    a: `Start with what you are actually spending to cover the gap: locum or agency coverage day rates, overtime for the staff absorbing the work, or the visit revenue the empty schedule is not generating. Whatever you use, it is your figure and only yours. The default is zero, and while it stays at zero the vacancy columns remain switched off rather than showing an invented cost.`,
   },
   {
     q: `What does a posting include?`,
@@ -121,7 +121,7 @@ const FAQS = [
   },
   {
     q: `Who exactly gets the free post?`,
-    a: `Your employer email domain does, not your login: ${FREE_POST_SCOPE_NOTE}. It runs ${FLAT_FEE_PRICING.freeDurationDays} days rather than the ${FLAT_FEE_PRICING.paidDurationDays} a paid post gets, and it does not reset for each new recruiter who signs up — if a health system with five recruiters fills five roles, one of those posts is free and the other four are ${formatUsd(FLAT_FEE_PRICING.postingPrice)} each. That matters when you model a multi-role plan here, so untick the free-post box in the calculator if anyone at your domain has already used it.`,
+    a: `Your employer email domain does, not your login: ${FREE_POST_SCOPE_NOTE}. It runs ${FLAT_FEE_PRICING.freeDurationDays} days rather than the ${FLAT_FEE_PRICING.paidDurationDays} a paid post gets, and it does not reset for each new recruiter who signs up. If a health system with five recruiters fills five roles, one of those posts is free and the other four are ${formatUsd(FLAT_FEE_PRICING.postingPrice)} each. That matters when you model a multi-role plan here, so uncheck the free-post box in the calculator if anyone at your domain has already used it.`,
   },
 ] as const;
 
@@ -180,7 +180,7 @@ export default function CostPerHireCalculatorPage() {
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
               A flat-fee posting, sponsored ads, and an agency search, side by side on cost per applicant and cost
-              per hire — with an optional overlay for what the empty seat is costing while you wait.
+              per hire, with an optional overlay for what the empty seat costs while you wait.
             </p>
             <p style={{ fontSize: '13.5px', color: '#7A6A62', margin: '16px 0 0', lineHeight: 1.6 }}>
               <strong>We sell postings, so we publish no benchmarks.</strong> Our prices are filled in because we can
@@ -205,7 +205,7 @@ export default function CostPerHireCalculatorPage() {
             assumptions={ASSUMPTIONS}
             exclusions={EXCLUSIONS}
             sources={[
-              { label: `${brand.name} pricing — the rates in the flat-fee column`, url: '/pricing' },
+              { label: `${brand.name} pricing: the rates in the flat-fee column`, url: '/pricing' },
               { label: 'Posted-pay benchmark by state, from live listings', url: '/tools/salary-benchmark' },
               { label: STAT_SOURCES.averageSalary.source, url: STAT_SOURCES.averageSalary.sourceUrl },
             ]}

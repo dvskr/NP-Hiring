@@ -88,8 +88,8 @@ describe('P2 #16 — the price is visible before checkout', () => {
 
     it('labels the primary button with the action it actually performs', () => {
         expect(preview).toContain('const primaryCtaLabel = willBePaid');
-        expect(preview).toContain('`Continue to Payment — $${config.postingPrice}`');
-        expect(preview).toContain("'Looks Good — Post Job'");
+        expect(preview).toContain('`Continue to Payment: $${config.postingPrice}`');
+        expect(preview).toContain("'Looks Good, Post Job'");
         expect(preview).toContain('{primaryCtaLabel}');
     });
 

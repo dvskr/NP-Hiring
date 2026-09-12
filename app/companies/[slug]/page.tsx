@@ -13,6 +13,10 @@ import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 import { RECRUITMENT_TYPE_LABELS } from '@/lib/filters';
 import ClaimProfileCta from './ClaimProfileCta';
 import { normalizeDisplaySalary } from '@/lib/salary-display';
+// Company names, job titles and locations are employer-authored and often
+// carry dashes as separators. They stay raw in the DB lookups and in both
+// JSON-LD blocks; visible render points go through lib/display-text.ts.
+import { displayText, normalizeDisplayText } from '@/lib/display-text';
 
 // GSC Fix: ISR caching prevents DB pool exhaustion when Googlebot crawls company pages.
 // Previously defaulted to dynamic (no cache) → every crawl hit the DB.
@@ -212,6 +216,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         });
 
         if (!company) return { title: 'Company Not Found' };
+        const companyName = displayText(company.name);
 
         // GSC Fix: Check if company has any active jobs.
         // Companies with 0 active jobs get noindexed to prevent soft 404 flags.
@@ -227,20 +232,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         // P1 #12: edge-generated OG card via /api/og (pattern:
         // app/companies/page.tsx COMPANIES_OG_IMAGE) — company pages
         // previously shipped no social image at all.
-        const ogImage = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${company.name} ${brand.niche.short} Jobs`)}&type=page&subtitle=${encodeURIComponent(`${activeJobCount} open ${brand.niche.descriptor} position${activeJobCount === 1 ? '' : 's'}: salary data, locations, direct apply`)}`;
+        const ogImage = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${companyName} ${brand.niche.short} Jobs`)}&type=page&subtitle=${encodeURIComponent(`${activeJobCount} open ${brand.niche.descriptor} position${activeJobCount === 1 ? '' : 's'}: salary data, locations, direct apply`)}`;
 
         return {
-            title: `${company.name} ${brand.niche.short} Jobs`,
+            title: `${companyName} ${brand.niche.short} Jobs`,
             description: company.description
-                ? `${company.description.substring(0, 150)}... View open ${brand.niche.short} positions at ${company.name}.`
-                : `Browse open ${brand.niche.long} (${brand.niche.short}) positions at ${company.name}. Find salary info, locations, and apply today.`,
+                ? `${company.description.substring(0, 150)}... View open ${brand.niche.short} positions at ${companyName}.`
+                : `Browse open ${brand.niche.long} (${brand.niche.short}) positions at ${companyName}. Find salary info, locations, and apply today.`,
             openGraph: {
-                title: `${company.name} ${brand.niche.short} Jobs`,
+                title: `${companyName} ${brand.niche.short} Jobs`,
                 // Expanded from a 30-char default so social cards (LinkedIn,
                 // Facebook) have enough copy to render a usable preview.
                 description: company.description
-                    ? `${company.description.substring(0, 140)}... View ${activeJobCount} open ${brand.niche.short} role${activeJobCount === 1 ? '' : 's'} at ${company.name}.`
-                    : `Browse ${activeJobCount} open ${brand.niche.short} position${activeJobCount === 1 ? '' : 's'} at ${company.name}. Salary info, locations, and direct apply.`,
+                    ? `${company.description.substring(0, 140)}... View ${activeJobCount} open ${brand.niche.short} role${activeJobCount === 1 ? '' : 's'} at ${companyName}.`
+                    : `Browse ${activeJobCount} open ${brand.niche.short} position${activeJobCount === 1 ? '' : 's'} at ${companyName}. Salary info, locations, and direct apply.`,
                 url: `${brand.baseUrl}/companies/${slug}`,
                 type: 'website',
                 siteName: brand.name,
@@ -248,13 +253,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                     url: ogImage,
                     width: 1200,
                     height: 630,
-                    alt: `${company.name}: open ${brand.niche.short} positions`,
+                    alt: `${companyName}: open ${brand.niche.short} positions`,
                 }],
             },
             twitter: {
                 card: 'summary_large_image',
-                title: `${company.name} ${brand.niche.short} Jobs`,
-                description: `Browse ${activeJobCount} open ${brand.niche.descriptor} position${activeJobCount === 1 ? '' : 's'} at ${company.name}.`,
+                title: `${companyName} ${brand.niche.short} Jobs`,
+                description: `Browse ${activeJobCount} open ${brand.niche.descriptor} position${activeJobCount === 1 ? '' : 's'} at ${companyName}.`,
                 images: [ogImage],
             },
             alternates: {
@@ -348,6 +353,9 @@ export default async function CompanyPage({ params }: Props) {
     }
 
     const activeJobCount = company.jobs.length;
+    // Visible-text form of the name. BreadcrumbSchema, both JSON-LD blocks and
+    // the avatar initial keep reading the raw company.name.
+    const companyName = displayText(company.name);
 
     // GSC Fix: Companies with 0 active jobs → proper 404 instead of 200 + "No open positions".
     // Google flags these as soft 404 because the page renders but has no meaningful content.
@@ -479,7 +487,7 @@ export default async function CompanyPage({ params }: Props) {
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-3 mb-2 flex-wrap">
                                     <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                                        {company.name}
+                                        {companyName}
                                     </h1>
                                     {company.isVerified && (
                                         <span
@@ -528,8 +536,8 @@ export default async function CompanyPage({ params }: Props) {
                                         </span>
                                         <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
                                             {company.recruitmentType === 'direct_hire'
-                                                ? `Our team classified ${company.name} as a direct employer: it hires clinicians onto its own staff rather than recruiting for client organizations.`
-                                                : `Our team classified ${company.name} as a staffing agency: it recruits and places clinicians with client organizations. That is a fact about how it hires, not a quality judgment; agencies and direct employers both post legitimate roles.`}
+                                                ? `Our team classified ${companyName} as a direct employer: it hires clinicians onto its own staff rather than recruiting for client organizations.`
+                                                : `Our team classified ${companyName} as a staffing agency: it recruits and places clinicians with client organizations. That is a fact about how it hires, not a quality judgment; agencies and direct employers both post legitimate roles.`}
                                         </p>
                                     </div>
                                 )}
@@ -545,7 +553,7 @@ export default async function CompanyPage({ params }: Props) {
                                             Claimed by employer
                                         </span>
                                         <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
-                                            Someone at {company.name} asked to be recognized as this profile&apos;s
+                                            Someone at {companyName} asked to be recognized as this profile&apos;s
                                             owner, and our team approved the request on{' '}
                                             {formatApprovalDate(company.claimVerifiedAt)}. Claiming does not let an
                                             employer edit the listings or pay figures below; those remain
@@ -603,7 +611,7 @@ export default async function CompanyPage({ params }: Props) {
                             style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}
                         >
                             <h2 id="salary-snapshot-heading" className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-                                Posted Pay at {company.name}
+                                Posted Pay at {companyName}
                             </h2>
                             <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
                                 Annualized from the {salarySnapshot.sampleSize === activeJobCount
@@ -648,7 +656,7 @@ export default async function CompanyPage({ params }: Props) {
                             style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}
                         >
                             <h2 id="hiring-focus-heading" className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-                                Where {company.name} Is Hiring
+                                Where {companyName} Is Hiring
                             </h2>
                             {/* The badge is a count of THIS employer's active
                                 postings, not of the page each chip links to.
@@ -661,7 +669,7 @@ export default async function CompanyPage({ params }: Props) {
                                 legitimately differ. Say what the number counts
                                 instead of letting adjacency imply otherwise. */}
                             <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
-                                Counts are {company.name}&apos;s active postings in each area. Follow a link
+                                Counts are {companyName}&apos;s active postings in each area. Follow a link
                                 to browse every employer hiring for it.
                             </p>
                             {categoryTally.length > 0 && (
@@ -728,7 +736,7 @@ export default async function CompanyPage({ params }: Props) {
                             style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}
                         >
                             <p className="text-lg mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                No open positions at {company.name} right now.
+                                No open positions at {companyName} right now.
                             </p>
                             <p className="text-sm mb-6" style={{ color: 'var(--text-tertiary)' }}>
                                 Check back later or browse other {brand.niche.short} jobs.
@@ -757,7 +765,7 @@ export default async function CompanyPage({ params }: Props) {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1.5">
                                                 <h3 className="ce-hover-title font-semibold text-base transition-colors">
-                                                    {job.title}
+                                                    {normalizeDisplayText(job.title)}
                                                 </h3>
                                                 {job.isFeatured && (
                                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-900">
@@ -766,7 +774,7 @@ export default async function CompanyPage({ params }: Props) {
                                                 )}
                                             </div>
                                             <div className="flex flex-wrap items-center gap-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                                                <span>{job.location}</span>
+                                                <span>{normalizeDisplayText(job.location)}</span>
                                                 {job.jobType && <span>· {job.jobType}</span>}
                                                 {job.isRemote && <span className="text-pink-700 font-medium">Remote</span>}
                                                 {job.displaySalary && <span>· {normalizeDisplaySalary(job.displaySalary)}</span>}
@@ -820,7 +828,7 @@ export default async function CompanyPage({ params }: Props) {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="ce-hover-title font-semibold text-sm truncate transition-colors">
-                                                {employer.name}
+                                                {normalizeDisplayText(employer.name)}
                                             </div>
                                             <div className="text-xs font-medium" style={{ color: '#BE185D' }}>
                                                 {employer._count.jobs} open {employer._count.jobs === 1 ? 'position' : 'positions'}
@@ -849,7 +857,7 @@ export default async function CompanyPage({ params }: Props) {
                         <div className="mt-10">
                             <ClaimProfileCta
                                 companyId={company.id}
-                                companyName={company.name}
+                                companyName={companyName}
                                 profilePath={`/companies/${slug}`}
                             />
                         </div>

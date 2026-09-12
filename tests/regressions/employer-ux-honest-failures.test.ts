@@ -55,11 +55,11 @@ describe('F16: ApplicantsTab surfaces failures instead of swallowing them', () =
         // Non-OK responses are promoted to errors, not ignored.
         expect(applicantsTab).toMatch(/data\.error \|\| `Status update failed \(\$\{res\.status\}\)`/);
         // Single status change reports the failure to the user.
-        expect(applicantsTab).toContain('Couldn’t update applicant status — please try again.');
+        expect(applicantsTab).toContain('Couldn’t update applicant status. Please try again.');
     });
 
     it('notes save toasts on failure and keeps the editor open', () => {
-        expect(applicantsTab).toContain('Couldn’t save notes — please try again.');
+        expect(applicantsTab).toContain('Couldn’t save notes. Please try again.');
         // setEditingNotes(null) after a save must only happen on the success
         // path: assert it is not inside the catch block of handleSaveNotes.
         const saveNotes = applicantsTab.slice(
@@ -92,8 +92,8 @@ describe('V2: EmployerDashboardClient Pause/Republish and Archive/Restore fail l
 
     it('toggle-publish surfaces failures and prefers the server message', () => {
         expect(dashboard).toMatch(/result\.message \|\| result\.error \|\| `Request failed \(\$\{res\.status\}\)`/);
-        expect(dashboard).toContain('Couldn’t pause this job — please try again.');
-        expect(dashboard).toContain('Couldn’t republish this job — please try again.');
+        expect(dashboard).toContain('Couldn’t pause this job. Please try again.');
+        expect(dashboard).toContain('Couldn’t republish this job. Please try again.');
     });
 
     it('pause-reason modal only closes on success', () => {
@@ -116,8 +116,8 @@ describe('V2: EmployerDashboardClient Pause/Republish and Archive/Restore fail l
     });
 
     it('archive/restore surfaces failures', () => {
-        expect(dashboard).toContain('Couldn’t archive this job — please try again.');
-        expect(dashboard).toContain('Couldn’t restore this job — please try again.');
+        expect(dashboard).toContain('Couldn’t archive this job. Please try again.');
+        expect(dashboard).toContain('Couldn’t restore this job. Please try again.');
         const archive = dashboard.slice(
             dashboard.indexOf('const performArchiveToggle'),
             dashboard.indexOf('const handleRenewCheckout'),

@@ -25,19 +25,19 @@ const STORAGE_BASE = brand.assets.storageBase;
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: `For Employers — Hire ${brand.niche.short}s | ${brand.niche.short} Job Board`,
+  title: `For Employers | Hire ${brand.niche.short}s | ${brand.niche.short} Job Board`,
   // Trimmed from 189 chars to ~145 for SERP display (audit 09 M-20).
   description:
     // Live review WP-5: "Reach thousands actively searching" was an
     // unmeasured audience-size claim (the subscriber counter is nowhere
     // near it) — restated without the number.
-    `Hire ${brand.niche.long}s. First post free — all features included. Reach candidates actively searching for ${brand.niche.short} roles.`,
+    `Hire ${brand.niche.long}s. Your first post is free with all features included. Reach candidates actively searching for ${brand.niche.short} roles.`,
   openGraph: {
     // Edge-generated OG card — no dependency on storage assets that don't
     // exist on this board (the old pmhnp-*.webp URL 400s).
-    images: [{ url: `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Hire ${brand.niche.short}s — first post free`)}&type=page`, width: 1200, height: 630, alt: `${brand.niche.short} employer hiring solutions` }],
+    images: [{ url: `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Hire ${brand.niche.short}s: first post free`)}&type=page`, width: 1200, height: 630, alt: `${brand.niche.short} employer hiring solutions` }],
   },
-  twitter: { card: 'summary_large_image', images: [`${brand.baseUrl}/api/og?title=${encodeURIComponent(`Hire ${brand.niche.short}s — first post free`)}&type=page`] },
+  twitter: { card: 'summary_large_image', images: [`${brand.baseUrl}/api/og?title=${encodeURIComponent(`Hire ${brand.niche.short}s: first post free`)}&type=page`] },
   alternates: { canonical: `${brand.baseUrl}/for-employers` },
 };
 
@@ -87,11 +87,11 @@ const comparisonRows = EMPLOYER_COMPARISON_ROWS;
 const employerFaqs = [
   {
     q: `How much does it cost to hire on ${brand.name}?`,
-    a: `Your first job post is completely free with every feature included — no credit card required. After that it's a flat $${config.postingPrice} per post, and renewals are $${config.renewalPrice}. No subscriptions, no pay-per-click bidding, no contracts.`,
+    a: `Your first job post is completely free with every feature included, and no credit card is required. After that, it is a flat $${config.postingPrice} per post, and renewals are $${config.renewalPrice}. There are no subscriptions, no pay-per-click bidding, and no contracts.`,
   },
   {
     q: 'What does every job post include?',
-    a: `Every post — free or paid — includes the full package: a ${config.durationDays}-day listing (${config.freeDurationDays} days for free posts), Featured badge, top search placement, ${config.limits.candidateUnlocksPerPosting} candidate profile unlocks, ${config.limits.inmailsPerPosting} InMails, up to 5 screening questions, and a live analytics dashboard.`,
+    a: `Every post, free or paid, includes the full package: a ${config.durationDays}-day listing (${config.freeDurationDays} days for free posts), Featured badge, top search placement, ${config.limits.candidateUnlocksPerPosting} candidate profile unlocks, ${config.limits.inmailsPerPosting} InMails, up to 5 screening questions, and a live analytics dashboard.`,
   },
   {
     // P2 #16: this answer asserted "a 100% NP audience" — the same
@@ -102,7 +102,7 @@ const employerFaqs = [
     // guarantee the live inventory falsified (review items 1a–1d). Restated
     // as the screening commitment — what the pipeline actually does.
     q: 'Who sees my job posting?',
-    a: `Your listing goes live on a board built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles — listings are screened at ingest and removed when flagged out of scope — so it sits alongside relevant work rather than competing with unrelated listings. It's also highlighted in daily job-alert emails to subscribed candidates and gets its own indexed SEO page on Google.`,
+    a: `Your listing goes live on a board built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles (listings are screened at ingest and removed when flagged out of scope), so it sits alongside relevant work rather than competing with unrelated listings. It is also highlighted in daily job-alert emails to subscribed candidates and receives its own indexed SEO page on Google.`,
   },
   {
     q: 'How do candidates apply?',
@@ -110,14 +110,14 @@ const employerFaqs = [
   },
   {
     q: 'Can I edit my posting after it goes live?',
-    a: 'Yes. Open your employer dashboard from the link in your confirmation email and click Edit on any posting — changes to salary, requirements, or the description go live immediately.',
+    a: 'Yes. Open your employer dashboard from the link in your confirmation email and click Edit on any posting. Changes to the salary, requirements, or description go live immediately.',
   },
   {
     // P2 #16: this answer now states the ACTUAL policy from Terms §8 rather
     // than implying a guarantee. Posting fees are generally non-refundable;
     // a request inside 7 days is reviewed, not automatically granted.
     q: 'Do you offer refunds or volume discounts?',
-    a: `Posting fees are generally non-refundable, but if you're unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we'll review the request case by case. Postings removed for a Terms violation aren't refunded, and free posts involve no payment to refund. Posting 5+ positions? Email us for volume pricing.`,
+    a: `Posting fees are generally non-refundable, but if you are unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we will review the request case by case. Postings removed for a Terms violation are not refunded, and free posts involve no payment to refund. Posting 5+ positions? Email us for volume pricing.`,
   },
 ];
 
@@ -196,9 +196,9 @@ export default async function ForEmployersPage() {
                     Softened to the screening commitment; the absolute may
                     return ONLY when the WP-1 inventory-invariant test is
                     green over the live inventory. */}
-                No bidding wars, no per-click billing, no surprise invoices. This board is built exclusively for{' '}
-                {brand.niche.long} and {brand.niche.adjective} nursing roles — listings are screened at ingest and
-                removed when flagged out of scope — so your posting isn&apos;t buried under unrelated listings.
+                No bidding wars, no per-click billing, and no surprise invoices. This board is built exclusively for{' '}
+                {brand.niche.long} and {brand.niche.adjective} nursing roles (listings are screened at ingest and
+                removed when flagged out of scope), so your posting is not buried under unrelated listings.
               </p>
 
               {/* CTA Buttons — No Sugar */}
@@ -211,7 +211,7 @@ export default async function ForEmployersPage() {
                   border: '2px solid #7A1C2B', boxShadow: '5px 5px 0 #7A1C2B',
                   textDecoration: 'none', transition: 'transform 0.15s ease',
                 }}>
-                  Post a Job — Free <ArrowRight size={16} />
+                  Post a Job Free <ArrowRight size={16} />
                 </Link>
                 <Link href="/pricing" style={{
                   display: 'inline-flex', alignItems: 'center', gap: '9px',
@@ -299,7 +299,7 @@ export default async function ForEmployersPage() {
             Every Post Gets the Full Package
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>
-            No tiers. No feature gates. Free or paid — every listing gets the same premium treatment.
+            No tiers. No feature gates. Free or paid, every listing gets the same premium treatment.
           </p>
 
           {/* ─── Bento Grid ─── */}
@@ -321,7 +321,7 @@ export default async function ForEmployersPage() {
                 </div>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>{config.durationDays}-Day Listing</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Your paid job stays visible for two full months — no daily budget, no bidding. The free first post
+                  Your paid job stays visible for two full months with no daily budget and no bidding. The free first post
                   runs {config.freeDurationDays} days with the same features.
                 </p>
               </div>
@@ -354,7 +354,7 @@ export default async function ForEmployersPage() {
                 <TrendingUp size={22} />
               </div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Top Search Placement</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Featured listings rank higher — more visibility, more clicks.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Featured listings rank higher, which means more visibility and more clicks.</p>
             </div>
 
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -370,7 +370,7 @@ export default async function ForEmployersPage() {
                 <Users size={22} />
               </div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{config.limits.candidateUnlocksPerPosting} Candidate Unlocks</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>View full profiles — contact info, resume, LinkedIn.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>View full profiles: contact info, resume, and LinkedIn.</p>
             </div>
 
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -378,7 +378,7 @@ export default async function ForEmployersPage() {
                 <Briefcase size={22} />
               </div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{config.limits.inmailsPerPosting} InMails</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Message candidates directly — no guessing emails.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Message candidates directly, with no guessing at email addresses.</p>
             </div>
 
             {/* ROW 3: Analytics (8 cols) + Pricing (4 cols) */}
@@ -448,7 +448,7 @@ export default async function ForEmployersPage() {
             How We Compare
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '440px', margin: '0 auto 44px', lineHeight: 1.6 }}>
-            An honest look at what you get — no cherry-picking.
+            An honest look at what you get, with no cherry-picking.
           </p>
 
           {/* Split: Table (left) + CTA Card (right) */}
@@ -517,7 +517,7 @@ export default async function ForEmployersPage() {
                 <strong style={{ color: '#475569' }}>Limited</strong> means the capability exists but is restricted,
                 costs extra, or varies by plan. The {brand.name} column describes what this product does today, with
                 its limits stated. The Indeed and LinkedIn columns describe their publicly documented standard
-                offerings — those change often, so check their sites before deciding. Spot something out of date?{' '}
+                offerings; those change often, so check their sites before deciding. Spot something out of date?{' '}
                 <a href={`mailto:${brand.email.contact}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>
                   Tell us
                 </a>{' '}
@@ -563,7 +563,7 @@ export default async function ForEmployersPage() {
                   <span style={{ color: '#BE185D' }}>Next {brand.niche.short}</span>?
                 </h3>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px' }}>
-                  First post free — all features included. Then just ${config.postingPrice}/post.
+                  Your first post is free with all features included. Then just ${config.postingPrice}/post.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <Link href="/post-job" className="emp-cta-primary" style={{
@@ -572,7 +572,7 @@ export default async function ForEmployersPage() {
                     textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                     boxShadow: '4px 4px 12px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
                   }}>
-                    Post a Job — First Post Free <ArrowRight size={15} />
+                    Post a Job: First Post Free <ArrowRight size={15} />
                   </Link>
                   <Link href="/contact" className="emp-cta-secondary" style={{
                     padding: '12px 24px', borderRadius: '12px', fontWeight: 600, fontSize: '14px',
@@ -604,7 +604,7 @@ export default async function ForEmployersPage() {
             Guides for Hiring Teams
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 40px', lineHeight: 1.6 }}>
-            The hiring process, the job description, and ready-to-customize templates — free whether you post here or not.
+            The hiring process, the job description, and ready-to-customize templates, all free whether you post here or not.
           </p>
 
           <div className="emp-resources-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
@@ -665,7 +665,7 @@ export default async function ForEmployersPage() {
             What should you pay a {brand.niche.long}?
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '520px', margin: '0 auto 32px', lineHeight: 1.6 }}>
-            Median and 25th–75th percentile posted pay by state, from live listings. Set your range before you
+            Median and 25th to 75th percentile posted pay by state, from live listings. Set your range before you
             write the posting, not after the first week of silence.
           </p>
 

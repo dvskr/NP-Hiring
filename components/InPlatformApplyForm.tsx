@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { FileText, Upload, CheckCircle, Loader2, AlertCircle, X, ShieldCheck, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { displayText } from '@/lib/display-text';
 
 interface InPlatformApplyFormProps {
     jobId: string;
@@ -56,6 +57,9 @@ export default function InPlatformApplyForm({
     const [screeningQuestions, setScreeningQuestions] = useState<ScreeningQuestion[]>([]);
     const [screeningAnswers, setScreeningAnswers] = useState<Record<string, string>>({});
     const [screeningErrors, setScreeningErrors] = useState<Record<string, string>>({});
+    // Employer-authored title rendered through displayText so a dash used as
+    // a separator never reaches the dialog (lib/display-text.ts).
+    const displayJobTitle = displayText(jobTitle);
 
     // Records an answer and clears any validation error for that question so
     // the inline "required" message disappears as soon as the user fixes it.
@@ -292,15 +296,15 @@ export default function InPlatformApplyForm({
                         <CheckCircle size={28} style={{ color: '#22C55E' }} />
                     </div>
                     <h3 id="apply-success-title" className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Application Submitted!</h3>
-                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your application for <strong>{jobTitle}</strong> has been sent to the employer. They will be notified by email.</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your application for <strong>{displayJobTitle}</strong> has been sent to the employer. They will be notified by email.</p>
                     {similarJobs.length > 0 && (
                         <div className="mt-6 text-left">
                             <p className="text-sm font-semibold mb-3 flex items-center gap-1.5" style={{ color: 'var(--text-secondary)' }}><Briefcase size={14} /> Similar positions you might like</p>
                             <div className="space-y-2">
                                 {similarJobs.map(job => (
                                     <Link key={job.id} href={`/jobs/${job.slug || job.id}`} className="block p-3 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-                                        <p className="text-sm font-medium" style={{ color: 'var(--color-primary)' }}>{job.title}</p>
-                                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{job.employer} · {job.location}</p>
+                                        <p className="text-sm font-medium" style={{ color: 'var(--color-primary)' }}>{displayText(job.title)}</p>
+                                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{displayText(job.employer)} · {displayText(job.location)}</p>
                                     </Link>
                                 ))}
                             </div>
@@ -342,7 +346,7 @@ export default function InPlatformApplyForm({
                         Apply for this position
                     </h3>
                     <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                        {jobTitle}
+                        {displayJobTitle}
                     </p>
                 </div>
                 <button

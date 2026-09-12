@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { normalizeDisplaySalary } from '@/lib/salary-display';
+import { displayText, normalizeDisplayText } from '@/lib/display-text';
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -196,17 +197,17 @@ function CompactJobCard({ job, extra }: { job: DashboardJob; extra?: React.React
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     margin: 0,
                 }}>
-                    {job.title}
+                    {normalizeDisplayText(job.title)}
                 </p>
                 <p style={{
                     fontSize: '12px', color: '#6B7F8A', marginTop: '2px',
                     display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
                     margin: 0,
                 }}>
-                    <span>{job.employer}</span>
+                    <span>{normalizeDisplayText(job.employer)}</span>
                     <span style={{ opacity: 0.4 }}>·</span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                        <MapPin size={11} /> {job.location}
+                        <MapPin size={11} /> {normalizeDisplayText(job.location)}
                     </span>
                     {job.displaySalary && (
                         <>
@@ -1098,7 +1099,7 @@ export default function DashboardContent() {
                                         <button
                                             type="button"
                                             onClick={() => dismissRecommendation(job.id)}
-                                            aria-label={`Not interested in ${job.title} at ${job.employer}`}
+                                            aria-label={`Not interested in ${displayText(job.title)} at ${displayText(job.employer)}`}
                                             style={{
                                                 background: 'none', border: 'none', cursor: 'pointer',
                                                 fontSize: '12px', color: '#8A9BA6', padding: '2px 6px',

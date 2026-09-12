@@ -85,7 +85,7 @@ const AUTHORITY_META: Record<PlannerAuthority, {
     color: '#B91C1C',
     bg: '#FEE2E2',
     icon: ShieldX,
-    consequence: 'career-long physician supervision, delegation, or team management is required to practise.',
+    consequence: 'career-long physician supervision, delegation, or team management is required to practice.',
   },
 };
 
@@ -138,7 +138,7 @@ export default function MultiStatePlanner({ states }: Props) {
             Multi-state licensure planner
           </h2>
           <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.72)', margin: '4px 0 0' }}>
-            What changes state to state — practice authority, the licensure guide, and where the roles are
+            What changes from state to state: practice authority, the licensure guide, and where the roles are
           </p>
         </div>
       </div>
@@ -146,7 +146,7 @@ export default function MultiStatePlanner({ states }: Props) {
       {/* Inputs */}
       <div style={{ padding: '26px 30px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
         <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
-          <legend style={{ ...labelStyle, marginBottom: '10px' }}>States you want to practise in</legend>
+          <legend style={{ ...labelStyle, marginBottom: '10px' }}>States where you want to practice</legend>
           <div
             style={{
               display: 'grid',
@@ -226,7 +226,7 @@ export default function MultiStatePlanner({ states }: Props) {
             Pick the states you are considering
           </p>
           <p style={{ fontSize: '13px', color: '#CBD5E1', margin: 0 }}>
-            The planner will line them up by practice authority and link each one&apos;s licensure guide.
+            The planner will list them by practice authority and link each one&apos;s licensure guide.
           </p>
         </div>
       ) : (
@@ -273,7 +273,7 @@ export default function MultiStatePlanner({ states }: Props) {
                       <strong>Practice authority:</strong> {meta.consequence}
                     </p>
                     <p style={{ fontSize: '13px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                      <strong>APRN layer:</strong> {s.name} issues its own APRN license — the compact does not
+                      <strong>APRN layer:</strong> {s.name} issues its own APRN license; the compact does not
                       cover it. Confirm current requirements with the {s.name} board of nursing.
                     </p>
                   </div>
@@ -303,7 +303,7 @@ export default function MultiStatePlanner({ states }: Props) {
       {/* Compact rules — stated as rules, never as a per-state verdict. */}
       <div style={{ padding: '22px 30px 26px', borderTop: '1px solid rgba(0,0,0,0.05)', background: '#F8FAFC' }}>
         <h3 style={{ fontSize: '13px', fontWeight: 800, color: '#1A2E35', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          The RN layer: how the Nurse Licensure Compact actually works
+          The RN layer: how the Nurse Licensure Compact works
         </h3>
         <ul style={{ margin: 0, padding: '0 0 0 18px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
           <li style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6 }}>
@@ -313,15 +313,15 @@ export default function MultiStatePlanner({ states }: Props) {
           </li>
           <li style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6 }}>
             A multistate RN license is issued by your <strong>primary state of residence</strong>, and only if
-            that state is a compact member. Live in a non-member state and there is no multistate privilege to
+            that state is a compact member. If you live in a non-member state, there is no multistate privilege to
             carry anywhere, whatever the destination.
           </li>
           <li style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6 }}>
-            Between two member states the compact removes the separate RN endorsement step only. Into a
-            non-member state you need an RN license by endorsement as well as that state&apos;s APRN license.
+            Between two member states, the compact removes only the separate RN endorsement step. For a
+            non-member state, you need an RN license by endorsement as well as that state&apos;s APRN license.
           </li>
           <li style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6 }}>
-            <strong>We do not publish a per-state member list here.</strong> Membership moves — jurisdictions
+            <strong>We do not publish a per-state member list here.</strong> Membership changes: jurisdictions
             enact the compact and implement it on separate timelines, and some are only partially implemented,
             so a stale list would be worse than none on a decision this size. Check the current list at the
             source before you plan around it.
@@ -334,7 +334,7 @@ export default function MultiStatePlanner({ states }: Props) {
           className="tool-link"
           style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '13px', fontSize: '12.5px', fontWeight: 700, color: TOOL_ACCENT, textDecoration: 'none' }}
         >
-          NCSBN — current compact member jurisdictions <ExternalLink size={12} aria-hidden="true" />
+          NCSBN: current compact member jurisdictions <ExternalLink size={12} aria-hidden="true" />
         </a>
       </div>
 

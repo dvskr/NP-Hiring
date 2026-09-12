@@ -305,7 +305,7 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                         {candidate.headline && (
                             <p style={{ fontSize: '14px', color: '#6B7F8A', margin: '0 0 10px' }}>
                                 {candidate.headline}
-                                {candidate.yearsExperience !== null && ` | ${candidate.yearsExperience} years experience`}
+                                {candidate.yearsExperience !== null && ` | ${candidate.yearsExperience} years of experience`}
                             </p>
                         )}
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
@@ -517,7 +517,7 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                             Unlock Full Candidate Access
                         </h3>
                         <p style={{ fontSize: '13px', color: '#8A9BA6', marginBottom: '4px', lineHeight: 1.6 }}>
-                            Contact info, resume, and LinkedIn access requires an active job posting with remaining unlocks.
+                            Contact info, resume, and LinkedIn access require an active job posting with remaining unlocks.
                         </p>
                         <p style={{ fontSize: '12px', color: '#B0C4BC', marginBottom: '18px' }}>
                             Post a job to unlock candidate profiles (your first post is free).

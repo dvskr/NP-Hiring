@@ -93,7 +93,7 @@ function SuccessContent() {
           if (attempts >= maxAttempts) {
             setState({
               loading: false,
-              error: 'Payment received but your job is still being activated. Refresh in a moment, or check your email for the confirmation link.',
+              error: 'Payment received, but your job is still being activated. Refresh in a moment, or check your email for the confirmation link.',
               session: data,
             });
             return;

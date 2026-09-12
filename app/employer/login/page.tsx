@@ -3,7 +3,7 @@ import { brand } from '@/config/brand'
 
 export const metadata = {
   title: `Employer Login | ${brand.name}`,
-  description: 'Log in to your employer dashboard to manage job postings',
+  description: 'Log in to your employer dashboard to manage your job postings.',
 }
 
 export default function EmployerLoginPage() {

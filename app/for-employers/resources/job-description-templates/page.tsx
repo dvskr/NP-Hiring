@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: `${JD_TEMPLATES.length} ${brand.niche.short} Job Description Templates`,
-    description: `Setting-specific ${brand.niche.short} job description skeletons — free to browse, customize, and post.`,
+    description: `Setting-specific ${brand.niche.short} job description skeletons, free to browse, customize, and post.`,
     images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} job description templates` }],
   },
   twitter: { card: 'summary_large_image', images: [OG_IMAGE] },
@@ -85,7 +85,7 @@ export default function JdTemplateLibraryPage() {
               {brand.niche.short} Job Description Templates
             </h1>
             <p className="text-lg md:text-xl text-pink-100">
-              {JD_TEMPLATES.length} setting-specific skeletons — bullet-structured, with bracketed prompts marking every detail to customize. The same starters are built into the post-job form.
+              {JD_TEMPLATES.length} setting-specific, bullet-structured skeletons with bracketed prompts marking every detail to customize. The same starters are built into the post-job form.
             </p>
           </div>
         </div>
@@ -110,7 +110,7 @@ export default function JdTemplateLibraryPage() {
               <Link href="/for-employers/resources/job-description-guide" className="underline font-medium" style={{ color: 'var(--color-primary)' }}>
                 job-description guide
               </Link>{' '}
-              recommends. Text in [square brackets] is a prompt for you to replace with your actual specifics — visit lengths, EHR, schedule, salary range. The shared qualification, compensation, and application sections stay consistent across all {JD_TEMPLATES.length} templates so the scope-of-practice language is reviewed once. Inside the post-job form, the same templates fill in your practice name and location from the fields you have already entered.
+              recommends. Text in [square brackets] is a prompt for you to replace with your actual specifics, such as visit lengths, EHR, schedule, and salary range. The shared qualification, compensation, and application sections stay consistent across all {JD_TEMPLATES.length} templates so the scope-of-practice language is reviewed once. Inside the post-job form, the same templates fill in your practice name and location from the fields you have already entered.
             </p>
           </div>
 
@@ -147,14 +147,14 @@ export default function JdTemplateLibraryPage() {
               Use a template in your posting
             </h2>
             <p className="text-sm mb-5 max-w-lg mx-auto" style={{ color: '#9D174D' }}>
-              Open the post-job form and pick any of these {JD_TEMPLATES.length} starters from the description editor — your practice name and location fill in automatically. First post free.
+              Open the post-job form and pick any of these {JD_TEMPLATES.length} starters from the description editor, and your practice name and location fill in automatically. Your first post is free.
             </p>
             <Link
               href="/post-job"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm text-white"
               style={{ background: 'linear-gradient(145deg, #BE185D, #9D174D)' }}
             >
-              Post a Job — First Post Free <ArrowRight size={16} aria-hidden="true" />
+              Post a Job: First Post Free <ArrowRight size={16} aria-hidden="true" />
             </Link>
           </div>
         </div>

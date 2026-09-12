@@ -24,10 +24,10 @@ const stepSrcSet = (base: string) =>
     STEP_SIZES.map((s) => `/images/how-it-works/${base}-${s}.webp ${s}w`).join(', ');
 
 const STEPS = [
-    { base: 'step-employer-post', title: 'Post Your Listing', desc: `Start from an ${brand.niche.short} template or generate the full description with AI. Set required experience and your post is live in 5 minutes — first one free.` },
-    { base: 'step-employer-reach', title: `Reach Every ${brand.niche.short}`, desc: 'Your listing surfaces in semantic search, the weekly digest, and new-grad-friendly filters — plus its own indexed SEO page on Google.' },
+    { base: 'step-employer-post', title: 'Post Your Listing', desc: `Start from an ${brand.niche.short} template or generate the full description with AI. Set required experience, and your post is live in 5 minutes. The first one is free.` },
+    { base: 'step-employer-reach', title: `Reach Every ${brand.niche.short}`, desc: 'Your listing surfaces in semantic search, the weekly digest, and new-grad-friendly filters, plus its own indexed SEO page on Google.' },
     { base: 'step-employer-browse', title: 'Browse & Unlock in Bulk', desc: 'Search the talent pool with experience filters, then unlock multiple profiles in one click using your remaining credits.' },
-    { base: 'step-employer-track', title: 'Track & Hire', desc: 'Per-job views, apply clicks, and CTR in the analytics dashboard. Export CSV to your ATS or hiring spreadsheet anytime.' },
+    { base: 'step-employer-track', title: 'Track & Hire', desc: 'See per-job views, apply clicks, and CTR in the analytics dashboard. Export CSV to your ATS or hiring spreadsheet anytime.' },
 ];
 
 const css = `
@@ -258,7 +258,7 @@ export default function EmployerHowItWorks() {
                             e.currentTarget.style.boxShadow = '0 4px 20px rgba(200,90,120,0.3)';
                         }}
                     >
-                        Post a Job — First Post Free <ArrowUpRight size={15} />
+                        Post a Job (First Post Free) <ArrowUpRight size={15} />
                     </Link>
                 </m.div>
             </m.div>

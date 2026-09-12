@@ -199,8 +199,8 @@ export default function PreviewPage() {
         // Pay button would only ever 503 — surface the state here instead.
         if (paidPostingAvailable === false) {
           setError(
-            "Your organization has used its free post, and paid posting isn't open yet. " +
-            'Your job details are saved — contact support and we\'ll notify you when checkout is available.'
+            'Your organization has used its free post, and paid posting is not open yet. ' +
+            'Your job details are saved. Contact support and we will notify you when checkout is available.'
           );
         } else {
           router.push('/post-job/checkout');
@@ -301,7 +301,7 @@ export default function PreviewPage() {
 
   const willBeFree = quotaStatus?.eligible === true && quotaStatus.willBeFree === true;
   const packageHeadline = willBeFree
-    ? `Free trial post — live for ${quotaStatus?.freeDurationDays ?? config.freeDurationDays} days`
+    ? `Free trial post, live for ${quotaStatus?.freeDurationDays ?? config.freeDurationDays} days`
     : quotaStatus?.eligible === true
       ? `Live for ${quotaStatus?.paidDurationDays ?? config.durationDays} days`
       : `Live for ${config.durationDays} days`;
@@ -320,13 +320,13 @@ export default function PreviewPage() {
       ? `$${config.postingPrice}`
       : null;
   const priceCaption = willBeFree
-    ? `$0 today — your organization's free post`
+    ? `$0 today for your organization's free post`
     : willBePaid
       ? 'One-time charge · secure Stripe checkout'
       : null;
   const primaryCtaLabel = willBePaid
-    ? `Continue to Payment — $${config.postingPrice}`
-    : 'Looks Good — Post Job';
+    ? `Continue to Payment: $${config.postingPrice}`
+    : 'Looks Good, Post Job';
 
   return (
     <div style={{ background: '#F5F0EB', minHeight: '100vh', padding: '0 16px 80px' }}>
@@ -550,7 +550,7 @@ export default function PreviewPage() {
                   }}>
                     Apply Now <ExternalLink size={16} />
                   </a>
-                  <p style={{ marginTop: '8px', fontSize: '11px', color: '#B0BEC5', textAlign: 'center' }}>Opens in a new tab — verify your link works.</p>
+                  <p style={{ marginTop: '8px', fontSize: '11px', color: '#B0BEC5', textAlign: 'center' }}>Opens in a new tab. Verify that your link works.</p>
                 </>
               )}
             </div>
@@ -610,8 +610,8 @@ export default function PreviewPage() {
         {paidPostingAvailable === false && quotaStatus?.eligible === true && quotaStatus.willBeFree === false && (
           <div style={{ ...cardBase, padding: '14px 18px', marginBottom: '16px', background: '#FFFBEB', border: '1px solid #FDE68A' }}>
             <p style={{ fontSize: '13px', fontWeight: 600, color: '#92400E', margin: 0 }}>
-              Your organization has used its free post — paid posting is coming soon
-              and isn&apos;t open yet, so this job can&apos;t be published today. Your
+              Your organization has used its free post. Paid posting is coming soon
+              but is not open yet, so this job cannot be published today. Your
               draft stays saved.
             </p>
           </div>

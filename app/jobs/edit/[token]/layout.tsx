@@ -13,7 +13,7 @@ import { Metadata } from 'next';
  */
 export const metadata: Metadata = {
     title: `Edit Your Job Posting | ${brand.name}`,
-    description: `Update your ${brand.niche.short} job posting on ${brand.name} — details, salary, and application settings.`,
+    description: `Update your ${brand.niche.short} job posting on ${brand.name}: details, salary, and application settings.`,
     robots: { index: false, follow: false },
 };
 

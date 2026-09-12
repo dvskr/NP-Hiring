@@ -58,7 +58,7 @@ export const metadata: Metadata = {
 
 // Typical W-2 comparison band this board uses for salary sanity checks —
 // derived from config/niche/salary.ts, never typed inline.
-const TYPICAL_BAND = `$${Math.round(salaryConfig.normalizer.typical.min / 1000)}K–$${Math.round(salaryConfig.normalizer.typical.max / 1000)}K`;
+const TYPICAL_BAND = `$${Math.round(salaryConfig.normalizer.typical.min / 1000)}K to $${Math.round(salaryConfig.normalizer.typical.max / 1000)}K`;
 
 // Labor-market context — each entry pairs a cited stat from
 // lib/stats-sources.ts with its visible source link.
@@ -68,7 +68,7 @@ const MARKET_STATS = [
     stat: STAT_SOURCES.averageSalary,
   },
   {
-    label: `Projected ${brand.niche.short} employment growth (2024–2034)`,
+    label: `Projected ${brand.niche.short} employment growth (2024 to 2034)`,
     stat: STAT_SOURCES.blsGrowth2034,
   },
   {
@@ -92,7 +92,7 @@ const HIRING_STEPS = [
   },
   {
     title: 'Post where the audience is specialized',
-    body: `Generalist boards reach everyone, which means screening everyone. A niche board reaches only ${brand.niche.descriptor}s, so every applicant already holds the baseline credential. Wherever you post, keep the application short — long forms lose working clinicians.`,
+    body: `Generalist boards reach everyone, which means screening everyone. A niche board reaches only ${brand.niche.descriptor}s, so every applicant already holds the baseline credential. Wherever you post, keep the application short; long forms lose working clinicians.`,
   },
   {
     title: 'Screen credentials early, not at offer stage',
@@ -100,11 +100,11 @@ const HIRING_STEPS = [
   },
   {
     title: 'Interview for clinical fit and practice fit',
-    body: `Pair a clinical conversation (case walk-throughs appropriate to the population focus) with a practice-model conversation: documentation expectations, collaboration structure, escalation paths, and autonomy. Misalignment on practice model — not clinical skill — is what drives early turnover.`,
+    body: `Pair a clinical conversation (case walk-throughs appropriate to the population focus) with a practice-model conversation: documentation expectations, collaboration structure, escalation paths, and autonomy. Misalignment on practice model, not clinical skill, is what drives early turnover.`,
   },
   {
     title: 'Make the offer and start credentialing in parallel',
-    body: `The signed offer is the midpoint, not the finish line. Kick off state licensure verification, payer enrollment, and facility privileging the same week the offer is signed — these run in parallel with the candidate's notice period, and they are almost always the longest poles in the timeline.`,
+    body: `The signed offer is the midpoint, not the finish line. Kick off state licensure verification, payer enrollment, and facility privileging the same week the offer is signed. These run in parallel with the candidate's notice period, and they are almost always the longest poles in the timeline.`,
   },
 ] as const;
 
@@ -123,7 +123,7 @@ const CREDENTIAL_CHECKLIST = [
   },
   {
     title: 'State RN and APRN licensure',
-    body: `Both licenses must be active and unrestricted in your state. Verify through your state board of nursing; RN licenses can also be checked through Nursys, the national licensure verification system. State-specific requirements vary — the board is the authoritative source.`,
+    body: `Both licenses must be active and unrestricted in your state. Verify through your state board of nursing; RN licenses can also be checked through Nursys, the national licensure verification system. State-specific requirements vary; the board is the authoritative source.`,
   },
   {
     title: 'DEA registration',
@@ -135,14 +135,14 @@ const CREDENTIAL_CHECKLIST = [
   },
   {
     title: 'Practice-authority fit for your state',
-    body: `States grant ${brand.niche.short}s full, reduced, or restricted practice authority — ${STAT_SOURCES.fullPracticeStates.formatted} currently grant Full Practice Authority. In reduced- and restricted-practice states you will need a collaborative or supervisory agreement with a physician in place before the start date. Check your state's current rules at the source below.`,
+    body: `States grant ${brand.niche.short}s full, reduced, or restricted practice authority; ${STAT_SOURCES.fullPracticeStates.formatted} currently grant Full Practice Authority. In reduced- and restricted-practice states you will need a collaborative or supervisory agreement with a physician in place before the start date. Check your state's current rules at the source below.`,
   },
 ] as const;
 
 const TIMELINE_POINTS = [
   {
     title: 'Licensure is the long pole for out-of-state hires',
-    body: `A candidate already licensed in your state can often start after standard onboarding. A relocating candidate needs state licensure first, and processing times vary widely by state — verify current expectations with your state board of nursing before committing to a start date.`,
+    body: `A candidate already licensed in your state can often start after standard onboarding. A relocating candidate needs state licensure first, and processing times vary widely by state, so verify current expectations with your state board of nursing before committing to a start date.`,
   },
   {
     title: 'Payer credentialing and privileging run on their own clocks',
@@ -163,19 +163,19 @@ const FAQS = [
   },
   {
     q: `Does my ${brand.niche.short} hire need a collaborating physician?`,
-    a: `It depends on your state. States grant full, reduced, or restricted practice authority — ${STAT_SOURCES.fullPracticeStates.formatted} currently grant Full Practice Authority, where ${brand.niche.short}s practice independently. In reduced- and restricted-practice states, a collaborative or supervisory agreement must be in place before the start date. Check your state's current rules with the state board of nursing or the AANP State Practice Environment resource.`,
+    a: `It depends on your state. States grant full, reduced, or restricted practice authority; ${STAT_SOURCES.fullPracticeStates.formatted} currently grant Full Practice Authority, where ${brand.niche.short}s practice independently. In reduced- and restricted-practice states, a collaborative or supervisory agreement must be in place before the start date. Check your state's current rules with the state board of nursing or the AANP State Practice Environment resource.`,
   },
   {
     q: `How long does it take to hire a ${brand.niche.descriptor}?`,
-    a: `The recruiting phase depends on your market and salary competitiveness, but the post-offer phase is what most employers underestimate: notice periods, state licensure for relocating candidates, payer enrollment, and facility privileging each run on their own clock and vary by state and payer. Start credentialing the week the offer is signed and set the start date from the credentialing plan — not the other way around.`,
+    a: `The recruiting phase depends on your market and salary competitiveness, but the post-offer phase is what most employers underestimate: notice periods, state licensure for relocating candidates, payer enrollment, and facility privileging each run on their own clock and vary by state and payer. Start credentialing the week the offer is signed and set the start date from the credentialing plan, not the other way around.`,
   },
   {
     q: `How do I benchmark ${brand.niche.short} salary for my role?`,
-    a: `Start from the national median annual wage of ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}), then adjust for your state, setting, and specialty — pay differs meaningfully across all three. The ${brand.name} salary guide breaks down live compensation data by state so you can anchor your posted range to what candidates in your market actually see.`,
+    a: `Start from the national median annual wage of ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}), then adjust for your state, setting, and specialty, since pay differs meaningfully across all three. The ${brand.name} salary guide breaks down live compensation data by state so you can anchor your posted range to what candidates in your market actually see.`,
   },
   {
     q: `Why is ${brand.niche.short} hiring so competitive right now?`,
-    a: `The profession is growing fast — the BLS projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, among the fastest of any occupation — while demand from team-based and access-focused care models keeps rising. Employers that post transparent salary ranges and streamline credentialing consistently fill roles faster than those that don't.`,
+    a: `The profession is growing fast: the BLS projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, among the fastest of any occupation, while demand from team-based and access-focused care models keeps rising. Employers that post transparent salary ranges and streamline credentialing consistently fill roles faster than those that do not.`,
   },
 ] as const;
 
@@ -238,7 +238,7 @@ export default function HowToHireGuidePage() {
               Last reviewed: {new Date(`${LAST_REVIEWED}T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
             </p>
             <p className="text-lg md:text-xl text-pink-100">
-              Process, credentialing, salary benchmarking, and timeline expectations — from role definition to a fully credentialed start.
+              Process, credentialing, salary benchmarking, and timeline expectations, from role definition to a fully credentialed start.
             </p>
           </div>
         </div>
@@ -314,10 +314,10 @@ export default function HowToHireGuidePage() {
               <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Benchmarking the Salary</h2>
             </div>
             <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
-              The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}). {TYPICAL_BAND} is the typical W-2 comparison band this board&apos;s salary pipeline uses as a sanity check, but pay varies meaningfully by state, setting, and specialty — anchoring to a national number alone will leave your range uncompetitive in some markets and overpriced in others.
+              The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}). {TYPICAL_BAND} is the typical W-2 comparison band this board&apos;s salary pipeline uses as a sanity check, but pay varies meaningfully by state, setting, and specialty. Anchoring to a national number alone will leave your range uncompetitive in some markets and overpriced in others.
             </p>
             <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
-              Use the live salary guide to see disclosed-pay data for your state before setting the range, and post the range in the job description — transparent listings pre-qualify candidates on the single factor most likely to end a negotiation late.
+              Use the live salary guide to see disclosed-pay data for your state before setting the range, and post the range in the job description. Transparent listings pre-qualify candidates on the single factor most likely to end a negotiation late.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
@@ -355,7 +355,7 @@ export default function HowToHireGuidePage() {
               ))}
             </ul>
             <p className="text-xs mt-5 leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
-              State licensure specifics — fees, continuing-education requirements, and processing times — vary by jurisdiction and change over time. Your state board of nursing is the authoritative source; the{' '}
+              State licensure specifics (fees, continuing-education requirements, and processing times) vary by jurisdiction and change over time. Your state board of nursing is the authoritative source; the{' '}
               <a href={STAT_SOURCES.fullPracticeStates.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline">
                 AANP State Practice Environment
               </a>{' '}
@@ -402,7 +402,7 @@ export default function HowToHireGuidePage() {
             </Link>
             <Link href="/post-job" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold text-sm" style={{ color: 'var(--color-primary)' }}>Post Your Role</h3>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>First post free — every feature included.</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>First post free, with every feature included.</p>
             </Link>
           </div>
         </div>

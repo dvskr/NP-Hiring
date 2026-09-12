@@ -241,7 +241,7 @@ function SavedIndicator({
 
   const label = (() => {
     if (status === 'saving') return 'Saving…';
-    if (status === 'error') return "Couldn't save — will retry";
+    if (status === 'error') return 'Could not save. Will retry.';
     if (status === 'saved' && lastSavedAt) {
       // Until the deferred seed resolves (or when a fresh save makes the
       // stored clock older than lastSavedAt), elapsed clamps into the
@@ -963,8 +963,8 @@ function PostJobContent() {
             Paid posting is coming soon
           </h2>
           <p style={{ fontSize: '14px', color: '#6B7F8A', margin: '0 0 28px', lineHeight: 1.5 }}>
-            Your organization has used its free job post, and paid posting isn&apos;t
-            open on {brand.name} yet. Email us and we&apos;ll notify you the moment
+            Your organization has used its free job post, and paid posting is not
+            open on {brand.name} yet. Email us and we will notify you as soon as
             checkout is ready.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1040,7 +1040,7 @@ function PostJobContent() {
             background: '#FDF2F8', border: '1px solid #FBCFE8',
           }}>
             <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', margin: 0 }}>
-              ✓ Resumed your unfinished post — all fields restored. Auto-saving as you go.
+              ✓ Resumed your unfinished post with all fields restored. Auto-saving as you go.
             </p>
           </div>
         )}
@@ -1073,7 +1073,7 @@ function PostJobContent() {
                 {/* Job Title */}
                 <div>
                   <Label required htmlFor="title">Job Title</Label>
-                  <input type="text" id="title" placeholder={`e.g. Remote ${brand.niche.short} - Telehealth`}
+                  <input type="text" id="title" placeholder={`e.g. Remote ${brand.niche.short} (Telehealth)`}
                     {...register('title')}
                     style={errors.title ? clayInputError : clayInput}
                   />
@@ -1104,7 +1104,7 @@ function PostJobContent() {
                 <div>
                   <Label required htmlFor="contactEmail">Contact Email</Label>
                   <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '-4px 0 8px' }}>
-                    Use your company email (not Gmail/Yahoo) to verify your identity
+                    Use your company email (not Gmail or Yahoo) to verify your identity.
                   </p>
                   <input type="email" id="contactEmail" placeholder="hiring@yourcompany.com"
                     {...register('contactEmail')}
@@ -1432,7 +1432,7 @@ function PostJobContent() {
                     <input type="checkbox" checked={salaryCompetitive} onChange={(e) => handleCompetitiveChange(e.target.checked)}
                       style={{ width: '18px', height: '18px', accentColor: '#BE185D', borderRadius: '4px' }}
                     />
-                    <span style={{ fontSize: '13px', color: '#6B7F8A' }}>Competitive salary (don&apos;t display range)</span>
+                    <span style={{ fontSize: '13px', color: '#6B7F8A' }}>Competitive salary (do not display a range)</span>
                   </label>
 
                   {salaryCompetitive && (
@@ -1497,7 +1497,7 @@ function PostJobContent() {
                         />
                         <div>
                           <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on {brand.name}</span>
-                          <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly — no website needed</p>
+                          <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly. No website needed.</p>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
                             {['Resume', 'Cover letter', 'Email alerts'].map(f => (
                               <span key={f} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '8px', background: '#FCE7F3', color: '#BE185D', fontWeight: 500 }}>✓ {f}</span>
@@ -1518,7 +1518,7 @@ function PostJobContent() {
                       />
                       <ErrorMsg message={errors.applyUrl?.message} />
                       <InfoBox emoji="💡" color="amber">
-                        This should be a direct link to your application page — <strong>not your company homepage</strong>.
+                        This should be a direct link to your application page, <strong>not your company homepage</strong>.
                       </InfoBox>
                     </div>
                   )}
@@ -1527,7 +1527,7 @@ function PostJobContent() {
                   {watch('applyOnPlatform') && (
                     <>
                       <InfoBox emoji="✅" color="teal">
-                        <strong>Great choice!</strong> You&apos;ll receive email notifications for each new application and manage all applicants from your dashboard.
+                        <strong>Great choice!</strong> You will receive email notifications for each new application and manage all applicants from your dashboard.
                       </InfoBox>
                       <div style={{ marginTop: '16px' }}>
                         <ScreeningQuestionsBuilder />
@@ -1545,7 +1545,7 @@ function PostJobContent() {
               <h2 style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
                 Your Posting Includes
               </h2>
-              <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 24px' }}>Every job post gets the full package — free or paid</p>
+              <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 24px' }}>Every job post gets the full package, free or paid</p>
 
               <div style={{
                 ...cardBase, padding: '20px',
@@ -1561,7 +1561,7 @@ function PostJobContent() {
                     <Check size={18} color="#fff" />
                   </div>
                   <div>
-                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>Full Package — Every Post</h3>
+                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>Full Package for Every Post</h3>
                     <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '2px 0 0' }}>First post free, then ${config.postingPrice}/post</p>
                   </div>
                 </div>

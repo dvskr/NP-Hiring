@@ -127,7 +127,7 @@ export default function AssumptionsPanel({
       {reviewedOn && (
         <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0 }}>
           Model last reviewed {formatReviewed(reviewedOn)}. This is an estimate for planning, not tax,
-          legal, or financial advice — verify anything you act on with a qualified professional.
+          legal, or financial advice. Verify anything you act on with a qualified professional.
         </p>
       )}
     </section>

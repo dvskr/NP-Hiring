@@ -627,7 +627,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 </h3>
                 <p style={{ fontSize: '13px', color: accentColor, margin: '0 0 14px', lineHeight: 1.5, opacity: 0.85 }}>
                   {expired
-                    ? `Expired on ${expiryDate} — no longer visible to candidates. Renew to relist.`
+                    ? `Expired on ${expiryDate}. It is no longer visible to candidates. Renew to relist it.`
                     : `Expires on ${expiryDate}. Renew now to keep it visible.`}
                 </p>
                 <button
@@ -689,7 +689,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 </label>
                 <input
                   type="text" id="location"
-                  placeholder="e.g. Remote, New York NY"
+                  placeholder="e.g., Remote or New York, NY"
                   {...register('location')}
                   style={errors.location ? clayInputError : clayInput}
                 />
@@ -918,7 +918,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                       />
                       <div>
                         <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>External Application URL</span>
-                        <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates are redirected to your website or ATS</p>
+                        <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates are redirected to your website or ATS.</p>
                       </div>
                     </div>
                   </label>
@@ -938,7 +938,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                       />
                       <div>
                         <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on {brand.name}</span>
-                        <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly — applications arrive in your dashboard</p>
+                        <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly, and applications arrive in your dashboard.</p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
                           {['Resume', 'Cover letter', 'Email alerts'].map(f => (
                             <span key={f} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '8px', background: '#FCE7F3', color: '#BE185D', fontWeight: 500 }}>✓ {f}</span>
@@ -992,7 +992,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
               color: '#1A2E35', margin: '0 0 4px',
             }}>Contact</h2>
             <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '0 0 20px' }}>
-              Where applicant notifications go and an optional public link to your careers page.
+              The address where applicant notifications are sent, plus an optional public link to your careers page.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -1025,7 +1025,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 fontSize: '11px', color: '#6B7F8A', lineHeight: 1.5,
               }}>
                 <strong style={{ color: '#1A2E35' }}>Not editable here:</strong> company name &amp; logo (Settings → Company Profile),
-                pricing tier, expiry date, paused/featured/archived state — those have their own dedicated controls.
+                pricing tier, expiry date, paused/featured/archived state. Those have their own dedicated controls.
               </div>
             </div>
           </div>
@@ -1167,14 +1167,14 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
               fontSize: '18px', fontWeight: 700,
               fontFamily: 'var(--font-lora), Georgia, serif',
               color: '#1A2E35', margin: '0 0 4px',
-            }}>This free post can&apos;t be renewed</h3>
+            }}>This free post cannot be renewed</h3>
             <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 16px' }}>{job.title}</p>
 
             <p style={{ fontSize: '14px', color: '#1A2E35', lineHeight: 1.6, margin: '0 0 8px' }}>
               Renewals at the discounted ${config.renewalPrice} rate are available for paid postings only.
             </p>
             <p style={{ fontSize: '13px', color: '#6B7F8A', lineHeight: 1.6, margin: '0 0 20px' }}>
-              You can post this role again as a fresh listing for ${config.postingPrice} — same {config.durationDays}-day duration and a new bucket of {config.limits.candidateUnlocksPerPosting} unlocks &amp; {config.limits.inmailsPerPosting} InMails.
+              You can post this role again as a fresh listing for ${config.postingPrice}, with the same {config.durationDays}-day duration and a new bucket of {config.limits.candidateUnlocksPerPosting} unlocks &amp; {config.limits.inmailsPerPosting} InMails.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1184,7 +1184,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 border: 'none', padding: '12px 16px', fontWeight: 700,
                 boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
               }}>
-                Post a New Job — ${config.postingPrice}
+                Post a New Job for ${config.postingPrice}
               </Link>
               <button
                 onClick={() => setShowRenewModal(false)}

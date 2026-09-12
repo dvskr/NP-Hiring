@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { normalizeDisplaySalary } from '@/lib/salary-display';
+// Employer-authored title / employer / location strings render through
+// displayText so a dash used as a separator never reaches the embed
+// (lib/display-text.ts). Avatar colour / initial keep the raw employer.
+import { displayText } from '@/lib/display-text';
 import type { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { brand } from '@/config/brand'
@@ -208,7 +212,7 @@ function jobUrl(job: WidgetJob, program: string | undefined): string {
 // Truncate long locations — mirrors components/JobCard.tsx:127
 function shortLocationOf(job: WidgetJob): string {
   if (!job.location) return 'Remote'
-  const first = job.location.split(';')[0].split(',').slice(0, 2).join(',').trim()
+  const first = displayText(job.location).split(';')[0].split(',').slice(0, 2).join(',').trim()
   return first.length > 35 ? first.slice(0, 33) + '…' : first
 }
 
@@ -223,7 +227,7 @@ function buildSalaryDisplay(job: WidgetJob): string | null {
   if (!min && !max) return job.salaryRange
   const fmt = (n: number) => (n >= 1000 ? `$${(n / 1000).toFixed(0)}K` : `$${n.toLocaleString()}`)
   const period = job.salaryPeriod === 'hourly' ? '/hr' : '/yr'
-  if (min && max && min !== max) return `${fmt(min)} - ${fmt(max)}${period}`
+  if (min && max && min !== max) return `${fmt(min)} to ${fmt(max)}${period}`
   if (min) return `${fmt(min)}${period}`
   if (max) return `${fmt(max)}${period}`
   return null
@@ -279,8 +283,9 @@ function renderJobCard(job: RenderedJob, program: string | undefined): string {
     ? '2px solid #BE185D'
     : '1px solid rgba(255,255,255,0.5)'
 
+  const employerText = displayText(job.employer)
   const logo = job.companyLogoUrl
-    ? `<img src="${escape(job.companyLogoUrl)}" alt="${escape(job.employer)} logo" width="48" height="48" loading="lazy" decoding="async" class="pd-avatar-img">`
+    ? `<img src="${escape(job.companyLogoUrl)}" alt="${escape(employerText)} logo" width="48" height="48" loading="lazy" decoding="async" class="pd-avatar-img">`
     : `<div class="pd-avatar" style="background:${avatarColor(job.employer)};">${escape((job.employer[0] || '?').toUpperCase())}</div>`
 
   // Lucide BadgeCheck shape — same icon JobCard.tsx renders at line 238.
@@ -313,9 +318,9 @@ function renderJobCard(job: RenderedJob, program: string | undefined): string {
       ${verifiedBadge}
     </div>
     <div class="pd-body">
-      <h3 class="pd-title">${escape(job.title)}</h3>
+      <h3 class="pd-title">${escape(displayText(job.title))}</h3>
       <div class="pd-employer-row">
-        <span class="pd-employer">${escape(job.employer)}</span>
+        <span class="pd-employer">${escape(employerText)}</span>
         ${featuredPill}
       </div>
       <div class="pd-pills">
@@ -373,7 +378,7 @@ function renderHtml(args: {
     jobs.length === 0
       ? `<div class="pd-empty">
           <p>No ${categoryLabel ? `${categoryLabel} ` : ''}${brand.niche.short} roles currently listed in <strong>${escape(state)}</strong>.</p>
-          <p>New jobs are added daily — <a href="${escape(baseUrl())}/jobs?utm_source=widget&amp;utm_medium=embed&amp;utm_campaign=${utmCampaign}${escape(categoryQuery)}" target="_blank" rel="noopener">browse all ${brand.niche.short} jobs →</a></p>
+          <p>New jobs are added daily. <a href="${escape(baseUrl())}/jobs?utm_source=widget&amp;utm_medium=embed&amp;utm_campaign=${utmCampaign}${escape(categoryQuery)}" target="_blank" rel="noopener">Browse all ${brand.niche.short} jobs →</a></p>
         </div>`
       : ''
 
@@ -849,7 +854,7 @@ function renderErrorHtml(args: { reason: string }): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>${brand.name} — widget</title>
+<title>${brand.name} | Widget</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@600;700;800&display=swap" rel="stylesheet">

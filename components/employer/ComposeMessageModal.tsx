@@ -71,7 +71,7 @@ export default function ComposeMessageModal({
 
             if (!res.ok) {
                 const text = await res.text();
-                let msg = 'Failed to send message';
+                let msg = 'Failed to send message.';
                 try { msg = JSON.parse(text).error || msg; } catch { /* */ }
                 setErrorMsg(msg);
                 setStatus('error');
@@ -166,7 +166,7 @@ export default function ComposeMessageModal({
                             <Mail size={14} style={{ color: inmailLimitReached ? '#EF4444' : '#60A5FA' }} />
                             <span className="text-xs font-medium" style={{ color: inmailLimitReached ? '#EF4444' : '#60A5FA' }}>
                                 {inmailLimitReached
-                                    ? 'InMail limit reached — upgrade for unlimited'
+                                    ? 'InMail limit reached. Upgrade for unlimited.'
                                     : inmailUsage.unlimited
                                         ? 'Unlimited InMails (Premium)'
                                         : `${inmailRemaining} InMail${inmailRemaining !== 1 ? 's' : ''} remaining`

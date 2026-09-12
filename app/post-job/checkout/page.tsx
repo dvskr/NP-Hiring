@@ -140,7 +140,7 @@ export default function CheckoutPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({} as { error?: string; cause?: string }));
         const baseMsg = errorData.error || 'Failed to create checkout session';
-        const fullMsg = errorData.cause ? `${baseMsg} — ${errorData.cause}` : baseMsg;
+        const fullMsg = errorData.cause ? `${baseMsg}: ${errorData.cause}` : baseMsg;
         throw new Error(fullMsg);
       }
 
@@ -186,7 +186,7 @@ export default function CheckoutPage() {
       return 'Competitive';
     }
     if (jobData?.salaryMin && jobData?.salaryMax) {
-      return `$${jobData.salaryMin.toLocaleString()} - $${jobData.salaryMax.toLocaleString()}`;
+      return `$${jobData.salaryMin.toLocaleString()} to $${jobData.salaryMax.toLocaleString()}`;
     }
     if (jobData?.salaryMin) {
       return `$${jobData.salaryMin.toLocaleString()}+`;
@@ -205,8 +205,8 @@ export default function CheckoutPage() {
         <div className="bg-white rounded-lg shadow-md p-8 text-center">
           <h1 className="text-2xl font-bold mb-2">Paid posting is coming soon</h1>
           <p className="text-gray-600 mb-6">
-            Checkout isn&apos;t open yet, so paid job posts can&apos;t be purchased
-            right now. Your job details are saved — we&apos;ll have this ready shortly.
+            Checkout is not open yet, so paid job posts cannot be purchased
+            right now. Your job details are saved, and we will have this ready shortly.
           </p>
           <div className="flex flex-col gap-3">
             <Link
@@ -353,7 +353,7 @@ export default function CheckoutPage() {
             Creating checkout session...
           </>
         ) : (
-          `Proceed to Payment - ${getPrice()}`
+          `Proceed to Payment: ${getPrice()}`
         )}
       </button>
 

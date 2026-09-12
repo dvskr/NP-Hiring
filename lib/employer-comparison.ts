@@ -57,9 +57,9 @@ export interface ComparisonRow {
 }
 
 export const EMPLOYER_COMPARISON_ROWS: ComparisonRow[] = [
-    { feature: `${brand.niche.medium}-Focused Job Inventory`, us: true, indeed: false, linkedin: false, note: `Built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles — listings are screened at ingest and removed when flagged out of scope` },
+    { feature: `${brand.niche.medium}-Focused Job Inventory`, us: true, indeed: false, linkedin: false, note: `Built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles. Listings are screened at ingest and removed when flagged out of scope` },
     { feature: `First Post Free (No Card)`, us: true, indeed: 'partial', linkedin: 'partial', note: 'Others offer limited free listings; ours includes every paid feature' },
-    { feature: `Flat $${config.postingPrice}/Post — No Bidding`, us: true, indeed: false, linkedin: false, note: 'Others bill per click or per day' },
+    { feature: `Flat $${config.postingPrice}/Post, No Bidding`, us: true, indeed: false, linkedin: false, note: 'Others bill per click or per day' },
     { feature: `${config.durationDays}-Day Listing Duration`, us: true, indeed: 'partial', linkedin: 'partial', note: `Paid posts run ${config.durationDays} days; the free first post runs ${config.freeDurationDays} days. Competitor durations vary by plan` },
     { feature: 'Direct Candidate Messaging', us: true, indeed: 'partial', linkedin: 'partial', note: `${config.limits.inmailsPerPosting} InMails included per posting; a paid add-on elsewhere` },
     { feature: 'Candidate Profile Unlocks', us: true, indeed: 'partial', linkedin: 'partial', note: `${config.limits.candidateUnlocksPerPosting} included per posting; a paid add-on elsewhere` },

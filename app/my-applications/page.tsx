@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { normalizeDisplaySalary } from '@/lib/salary-display';
+import { displayText, normalizeDisplayText } from '@/lib/display-text';
 import Link from 'next/link';
 import { Clock, ChevronRight, AlertCircle, Trash2, Loader2, ArrowRight, Bookmark, MapPin, RefreshCw } from 'lucide-react';
 import { brand } from '@/config/brand';
@@ -440,16 +441,16 @@ export default function MyApplicationsPage() {
                                                     lineHeight: 1.3,
                                                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                                 }}>
-                                                    {app.job.title}
+                                                    {normalizeDisplayText(app.job.title)}
                                                 </h3>
                                             </Link>
 
                                             {/* Employer + Location */}
                                             <p style={{ fontSize: '13px', color: '#6B7F8A', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                {app.job.employer}
+                                                {normalizeDisplayText(app.job.employer)}
                                                 <span style={{ color: '#B0C4BC' }}>·</span>
                                                 <MapPin size={12} style={{ color: '#BE185D' }} />
-                                                {app.job.location}
+                                                {normalizeDisplayText(app.job.location)}
                                             </p>
 
                                             {/* Meta pills */}
@@ -495,11 +496,11 @@ export default function MyApplicationsPage() {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 {!isWithdrawn && (
                                                     <button
-                                                        onClick={() => requestWithdraw(app.id, app.job.title)}
+                                                        onClick={() => requestWithdraw(app.id, displayText(app.job.title))}
                                                         disabled={withdrawing === app.id}
                                                         className="app-action-btn"
                                                         title="Withdraw application"
-                                                        aria-label={`Withdraw application for ${app.job.title}`}
+                                                        aria-label={`Withdraw application for ${displayText(app.job.title)}`}
                                                         style={{
                                                             width: '28px', height: '28px',
                                                             display: 'flex', alignItems: 'center', justifyContent: 'center',

@@ -181,15 +181,15 @@ describe('B64: talent-search fails loudly on save and browse', () => {
         // ...the flip is reverted...
         expect(fn).toMatch(/if \(wasSaved\) next\.add\(candidateId\); else next\.delete\(candidateId\)/);
         // ...and the employer is told.
-        expect(fn).toContain('Couldn’t save this candidate — please try again.');
-        expect(fn).toContain('Couldn’t remove this saved candidate — please try again.');
+        expect(fn).toContain('Couldn’t save this candidate. Please try again.');
+        expect(fn).toContain('Couldn’t remove this saved candidate. Please try again.');
     });
 
     it('browse fetch failures set a dedicated error state', () => {
         expect(talentSearch).toContain('const [browseError, setBrowseError]');
         // Non-OK and network failures both surface.
         expect(talentSearch).toMatch(/setBrowseError\(`Couldn’t load candidates \(request failed with status \$\{res\.status\}\)\.`\)/);
-        expect(talentSearch).toContain('Couldn’t load candidates — check your connection and try again.');
+        expect(talentSearch).toContain('Couldn’t load candidates. Check your connection and try again.');
         // The old silent swallow on the browse path is gone.
         const browse = talentSearch.slice(
             talentSearch.indexOf('/api/employer/candidates?'),

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { normalizeDisplaySalary } from '@/lib/salary-display';
+import { displayText } from '@/lib/display-text';
 import Link from 'next/link';
 import { MapPin, ArrowUpRight } from 'lucide-react';
 import { LazyMotion, domAnimation, m, useReducedMotion } from 'framer-motion';
@@ -410,16 +411,16 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
                                 <Link href={href} className="fjs-job">
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <p className="fjs-jmeta">
-                                            <span style={{ fontWeight: 700, color: '#6b5a5e' }}>{job.employer}</span>
+                                            <span style={{ fontWeight: 700, color: '#6b5a5e' }}>{displayText(job.employer)}</span>
                                             {job.jobType && <><span>·</span><span>{job.jobType}</span></>}
                                             <span>·</span>
                                             <span>{mounted ? relativeTime(postedDate) : ''}</span>
                                         </p>
-                                        <h3 className="fjs-jtitle font-heading">{job.title}</h3>
+                                        <h3 className="fjs-jtitle font-heading">{displayText(job.title)}</h3>
                                         <p className="fjs-jmeta">
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                                 <MapPin size={13} style={{ color: '#BE185D' }} />
-                                                {job.location}
+                                                {displayText(job.location)}
                                             </span>
                                             {job.displaySalary && (
                                                 <span className="fjs-jsal">{normalizeDisplaySalary(job.displaySalary)}</span>

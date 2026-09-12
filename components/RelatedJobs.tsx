@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { normalizeDisplaySalary } from '@/lib/salary-display';
+import { displayText } from '@/lib/display-text';
 import { MapPin, ArrowRight } from 'lucide-react';
 import { slugify } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
@@ -62,9 +63,13 @@ export default function RelatedJobs({
         {filteredJobs.slice(0, 4).map((job) => {
           // Prefer stored slug; slugify is legacy-row fallback only.
           const jobSlug = job.slug || slugify(job.title, job.id);
+          // Employer-authored strings render through displayText so a dash
+          // used as a separator never reaches the page (lib/display-text.ts).
+          const displayTitle = displayText(job.title);
+          const displayEmployer = displayText(job.employer);
           const shortLocation = (() => {
             if (!job.location) return 'Remote';
-            const first = job.location.split(';')[0].split(',').slice(0, 2).join(',').trim();
+            const first = displayText(job.location).split(';')[0].split(',').slice(0, 2).join(',').trim();
             return first.length > 30 ? first.slice(0, 28) + '…' : first;
           })();
 
@@ -91,7 +96,7 @@ export default function RelatedJobs({
                   {job.companyLogoUrl ? (
                     <img
                       src={job.companyLogoUrl}
-                      alt={`${job.employer} logo`}
+                      alt={`${displayEmployer} logo`}
                       width={44}
                       height={44}
                       loading="lazy"
@@ -123,14 +128,14 @@ export default function RelatedJobs({
                     margin: '0 0 3px', lineHeight: 1.3,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>
-                    {job.title}
+                    {displayTitle}
                   </h3>
                   <p style={{
                     fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)',
                     margin: '0 0 8px',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>
-                    {job.employer}
+                    {displayEmployer}
                   </p>
 
                   {/* Badges Row */}

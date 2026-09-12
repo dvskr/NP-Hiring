@@ -179,7 +179,8 @@ describe('P1 #12 — category / state breakdown chips', () => {
         // /jobs/<slug> gates on title keywords for CATEGORY_FILTERS slugs
         // (lib/filters.ts) rather than the categoryTags column tallied here,
         // so the destination total can legitimately differ from the badge.
-        expect(src).toContain("Counts are {company.name}&apos;s active postings in each area.");
+        // `companyName` is the displayText() form of company.name (lib/display-text.ts).
+        expect(src).toContain("Counts are {companyName}&apos;s active postings in each area.");
     });
 
     it('both chip rows are hidden when their tallies are empty', () => {

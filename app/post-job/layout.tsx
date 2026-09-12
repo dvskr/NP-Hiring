@@ -15,7 +15,7 @@ import { Metadata } from 'next';
 // deliberately not quoted here.)
 export const metadata: Metadata = {
     title: 'Post a Job',
-    description: `Post your ${brand.niche.short} job opening — your first post is free with every feature included, then a flat $${config.postingPrice} per post. Every listing includes email alerts to subscribed candidates.`,
+    description: `Post your ${brand.niche.short} job opening. Your first post is free with every feature included, then a flat $${config.postingPrice} per post. Every listing includes email alerts to subscribed candidates.`,
     alternates: {
         canonical: `${brand.baseUrl}/post-job`,
     },

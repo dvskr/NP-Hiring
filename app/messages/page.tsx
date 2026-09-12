@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/components/ui/ToastProvider';
+// Job titles and employer names are employer-authored and often carry dashes
+// as separators; they render through normalizeDisplayText (lib/display-text.ts).
+import { normalizeDisplayText } from '@/lib/display-text';
 
 /** Format date as actual date/time for messaging (not relative like "Just posted") */
 function formatMessageDate(date: string | Date): string {
@@ -610,7 +613,7 @@ export default function MessagesPage() {
                                                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                                         maxWidth: '180px',
                                                     }}>
-                                                        {conv.jobTitle}
+                                                        {normalizeDisplayText(conv.jobTitle)}
                                                     </span>
                                                 )}
                                                 {conv.unreadCount > 0 && (
@@ -740,7 +743,7 @@ export default function MessagesPage() {
                                         </div>
                                         <div style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>
                                             {convDetail.otherUser.role === 'employer'
-                                                ? (convDetail.otherUser.company || 'Employer')
+                                                ? (normalizeDisplayText(convDetail.otherUser.company) || 'Employer')
                                                 : (convDetail.otherUser.headline || convDetail.otherUser.specialties || 'Candidate')}
                                         </div>
                                         {convDetail.otherUser.role !== 'employer' && convDetail.otherUser.licenseStates && (
@@ -784,7 +787,7 @@ export default function MessagesPage() {
                                                     fontSize: '12px', fontWeight: 400,
                                                     color: '#60A5FA', marginLeft: '8px',
                                                 }}>
-                                                    · {convDetail.jobTitle}
+                                                    · {normalizeDisplayText(convDetail.jobTitle)}
                                                 </span>
                                             )}
                                         </div>

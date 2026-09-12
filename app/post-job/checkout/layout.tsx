@@ -56,7 +56,7 @@ const assurances: { icon: React.ReactNode; title: string; body: React.ReactNode 
         title: 'What you are buying',
         body: (
             <>
-                One {brand.niche.short} job posting, live for {config.durationDays} days, with the full feature set —
+                One {brand.niche.short} job posting, live for {config.durationDays} days, with the full feature set:
                 Featured badge, top placement, {config.limits.candidateUnlocksPerPosting} candidate unlocks,{' '}
                 {config.limits.inmailsPerPosting} InMails, and applicant analytics. A one-time charge of $
                 {config.postingPrice}. No subscription is created and no card is stored by us.
@@ -87,7 +87,7 @@ const assurances: { icon: React.ReactNode; title: string; body: React.ReactNode 
         body: (
             <>
                 Salary, requirements, and description stay editable from your employer dashboard after the post goes
-                live — changes publish immediately, and you do not pay again to edit.
+                live. Changes publish immediately, and you do not pay again to edit.
             </>
         ),
     },

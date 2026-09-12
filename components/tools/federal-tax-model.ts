@@ -115,15 +115,15 @@ export const PAYROLL_TAX = {
 /** Visible citations rendered in the tool's assumptions panel. */
 export const TAX_MODEL_SOURCES: ReadonlyArray<{ label: string; url: string }> = [
   {
-    label: `IRS — ${TAX_MODEL_YEAR} inflation-adjusted brackets and standard deduction`,
+    label: `IRS: ${TAX_MODEL_YEAR} inflation-adjusted brackets and standard deduction`,
     url: 'https://www.irs.gov/filing/federal-income-tax-rates-and-brackets',
   },
   {
-    label: `Social Security Administration — ${TAX_MODEL_YEAR} contribution and benefit base`,
+    label: `Social Security Administration: ${TAX_MODEL_YEAR} contribution and benefit base`,
     url: 'https://www.ssa.gov/oact/cola/cbb.html',
   },
   {
-    label: 'IRS — Self-employment tax (Social Security and Medicare)',
+    label: 'IRS: Self-employment tax (Social Security and Medicare)',
     url: 'https://www.irs.gov/businesses/small-businesses-self-employed/self-employment-tax-social-security-and-medicare-taxes',
   },
 ];
@@ -135,9 +135,9 @@ export const TAX_MODEL_SOURCES: ReadonlyArray<{ label: string; url: string }> = 
  * except the state-tax one, which is neutral between the two columns.
  */
 export const TAX_MODEL_EXCLUSIONS: readonly string[] = [
-  'State and local income tax. Rates, brackets, and local add-ons vary by jurisdiction and are not modeled — the estimate below is federal only, so both columns are overstated by whatever your state charges.',
+  'State and local income tax. Rates, brackets, and local add-ons vary by jurisdiction and are not modeled. The estimate below is federal only, so both columns are overstated by whatever your state charges.',
   'The Section 199A qualified business income (QBI) deduction. Clinical practice is a specified service trade or business, so eligibility phases out with income and depends on facts this tool does not collect. Excluding it makes the 1099 column conservative.',
-  'Retirement contributions as a deduction. Money you put into a SEP-IRA or solo 401(k) is treated here as cash out of pocket, not as a deduction — another conservative simplification on the 1099 side.',
+  'Retirement contributions as a deduction. Money you put into a SEP-IRA or solo 401(k) is treated here as cash out of pocket, not as a deduction, which is another conservative simplification on the 1099 side.',
   'Itemized deductions, dependents, credits, other income, and any income taxed at capital-gains rates. The model applies the standard deduction to a single stream of earned income.',
   'Quarterly estimated-payment timing, penalties, and entity choice (sole proprietor vs S corp). Electing S-corp treatment changes the self-employment tax picture materially and is out of scope.',
 ];

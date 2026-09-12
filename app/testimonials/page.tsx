@@ -37,7 +37,7 @@ const MAX_TESTIMONIALS = 60;
 
 export const metadata: Metadata = {
     title: 'Employer Testimonials',
-    description: `What hiring teams say about posting ${brand.niche.long} roles on ${brand.name} — published only with the employer's explicit permission.`,
+    description: `What hiring teams say about posting ${brand.niche.long} roles on ${brand.name}, published only with the employer's explicit permission.`,
     alternates: { canonical: `${brand.baseUrl}/testimonials` },
     robots: { index: true, follow: true },
 };
@@ -154,7 +154,7 @@ export default async function TestimonialsPage() {
                     >
                         Every testimonial below was written by an employer with a real posting account on{' '}
                         {brand.name} and is published only because that employer explicitly opted in. We do not
-                        solicit, script, edit, or incentivise them — and we do not invent them.
+                        solicit, script, edit, or incentivize them, and we do not invent them.
                     </p>
                 </header>
 
@@ -192,7 +192,7 @@ export default async function TestimonialsPage() {
                                 }}
                             >
                                 <span style={{ fontSize: '13px', fontWeight: 700, color: '#7A1C2B' }}>
-                                    — {formatAttribution(t.employerName, t.displayAs)}
+                                    {formatAttribution(t.employerName, t.displayAs)}
                                 </span>
                                 {t.featuredAt && (
                                     <time
@@ -263,8 +263,8 @@ export default async function TestimonialsPage() {
                         </li>
                     </ul>
                     <p style={{ fontSize: '13.5px', color: MUTED_TEXT, margin: '14px 0 0', lineHeight: 1.7 }}>
-                        Our wider rules on what we will and will not publish — including our standing ban on
-                        fabricated people, quotes, and reviews — are in the{' '}
+                        Our wider rules on what we will and will not publish, including our standing ban on
+                        fabricated people, quotes, and reviews, are in the{' '}
                         <Link href="/editorial-policy" style={linkStyle}>
                             editorial policy
                         </Link>
@@ -289,7 +289,7 @@ export default async function TestimonialsPage() {
                             boxShadow: '4px 4px 12px rgba(190,24,93,0.2)',
                         }}
                     >
-                        Post a job — first post free <ArrowRight size={15} aria-hidden="true" />
+                        Post a job: first post free <ArrowRight size={15} aria-hidden="true" />
                     </Link>
                     <p style={{ fontSize: '12.5px', color: MUTED_TEXT, margin: '10px 0 0' }}>
                         Free posts run {config.freeDurationDays} days. See{' '}
