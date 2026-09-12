@@ -12,6 +12,7 @@ import { STATE_CODES, CODE_TO_STATE, stateToSlug } from '@/lib/pseo/setting-stat
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 import { RECRUITMENT_TYPE_LABELS } from '@/lib/filters';
 import ClaimProfileCta from './ClaimProfileCta';
+import { normalizeDisplaySalary } from '@/lib/salary-display';
 
 // GSC Fix: ISR caching prevents DB pool exhaustion when Googlebot crawls company pages.
 // Previously defaulted to dynamic (no cache) → every crawl hit the DB.
@@ -768,7 +769,7 @@ export default async function CompanyPage({ params }: Props) {
                                                 <span>{job.location}</span>
                                                 {job.jobType && <span>· {job.jobType}</span>}
                                                 {job.isRemote && <span className="text-pink-700 font-medium">Remote</span>}
-                                                {job.displaySalary && <span>· {job.displaySalary}</span>}
+                                                {job.displaySalary && <span>· {normalizeDisplaySalary(job.displaySalary)}</span>}
                                             </div>
                                         </div>
                                         <div className="text-xs flex-shrink-0" style={{ color: 'var(--text-tertiary)' }}>

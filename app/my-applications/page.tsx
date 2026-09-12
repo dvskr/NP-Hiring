@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { normalizeDisplaySalary } from '@/lib/salary-display';
 import Link from 'next/link';
 import { Clock, ChevronRight, AlertCircle, Trash2, Loader2, ArrowRight, Bookmark, MapPin, RefreshCw } from 'lucide-react';
 import { brand } from '@/config/brand';
@@ -459,7 +460,7 @@ export default function MyApplicationsPage() {
                                                 </span>
                                                 {app.job.displaySalary && (
                                                     <span style={{ ...cardRecessed, padding: '3px 10px', fontSize: '11px', fontWeight: 600, color: '#1d4ed8' }}>
-                                                        {app.job.displaySalary}
+                                                        {normalizeDisplaySalary(app.job.displaySalary)}
                                                     </span>
                                                 )}
                                                 {app.job.mode && (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { normalizeDisplaySalary } from '@/lib/salary-display';
 import Link from 'next/link';
 import { MapPin, ArrowUpRight } from 'lucide-react';
 import { LazyMotion, domAnimation, m, useReducedMotion } from 'framer-motion';
@@ -421,7 +422,7 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
                                                 {job.location}
                                             </span>
                                             {job.displaySalary && (
-                                                <span className="fjs-jsal">{job.displaySalary}</span>
+                                                <span className="fjs-jsal">{normalizeDisplaySalary(job.displaySalary)}</span>
                                             )}
                                         </p>
                                     </div>

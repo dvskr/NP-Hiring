@@ -24,6 +24,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 // never a guess). Labels are shared with the /jobs facet and the company
 // profile via lib/filters.ts so the three surfaces can't drift.
 import { RECRUITMENT_TYPE_LABELS, type RecruitmentTypeValue } from '@/lib/filters';
+import { normalizeDisplaySalary } from '@/lib/salary-display';
 
 type JobCardJob = Job & {
   companyRecruitmentType?: RecruitmentTypeValue | null;
@@ -61,7 +62,7 @@ function stripHtml(html: string | null | undefined): string {
 
 // Helper to build a salary string when displaySalary is missing
 function buildSalaryDisplay(job: Job): string | null {
-  if (job.displaySalary) return job.displaySalary;
+  if (job.displaySalary) return normalizeDisplaySalary(job.displaySalary);
   const min = job.normalizedMinSalary;
   const max = job.normalizedMaxSalary;
   if (!min && !max) return job.salaryRange || null;

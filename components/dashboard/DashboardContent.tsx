@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { normalizeDisplaySalary } from '@/lib/salary-display';
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -211,7 +212,7 @@ function CompactJobCard({ job, extra }: { job: DashboardJob; extra?: React.React
                         <>
                             <span style={{ opacity: 0.4 }}>·</span>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                <DollarSign size={11} /> {job.displaySalary}
+                                <DollarSign size={11} /> {normalizeDisplaySalary(job.displaySalary)}
                             </span>
                         </>
                     )}

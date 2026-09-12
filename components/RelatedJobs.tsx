@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { normalizeDisplaySalary } from '@/lib/salary-display';
 import { MapPin, ArrowRight } from 'lucide-react';
 import { slugify } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
@@ -142,7 +143,7 @@ export default function RelatedJobs({
                     {job.mode && <Badge variant="outline" size="sm">{job.mode}</Badge>}
                     {job.displaySalary && (
                       <Badge variant="salary" size="sm">
-                        {job.displaySalary}
+                        {normalizeDisplaySalary(job.displaySalary)}
                       </Badge>
                     )}
                   </div>
