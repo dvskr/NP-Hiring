@@ -183,7 +183,7 @@ export default function AdminEmailPage() {
             });
             const data = await res.json();
             if (data.success) {
-                showMsg(`✅ Broadcast started! ${data.total || data.sent || 0} recipients. ${data.message || ''}`);
+                showMsg(`Broadcast started: ${data.total || data.sent || 0} recipients. ${data.message || ''}`);
                 setSubject(''); setBody(''); setPreviewHtml(null);
                 fetchHistory();
             } else {
@@ -197,7 +197,7 @@ export default function AdminEmailPage() {
     const handleTestSend = async () => {
         if (!subject || !body) { showMsg('Subject and body are required', true); return; }
         if (!adminEmail) {
-            showMsg('Could not determine your account email for the test send — reload the page and try again.', true);
+            showMsg('Could not determine your account email for the test send. Reload the page and try again.', true);
             return;
         }
         setSending(true);
@@ -213,7 +213,7 @@ export default function AdminEmailPage() {
                 }),
             });
             const data = await res.json();
-            if (data.success) showMsg('✅ Test email sent to your inbox!');
+            if (data.success) showMsg('Test email sent to your inbox.');
             else showMsg(data.error || 'Test send failed', true);
         } catch { showMsg('Test send failed', true); }
         finally { setSending(false); }
@@ -242,7 +242,7 @@ export default function AdminEmailPage() {
     }, []);
 
     const saveTemplate = async () => {
-        if (!templateName || !subject || !body) { showMsg('Name, subject, and body required', true); return; }
+        if (!templateName || !subject || !body) { showMsg('Name, subject, and body are required', true); return; }
         try {
             const res = await fetch('/api/admin/email/templates', {
                 method: 'POST',
@@ -250,7 +250,7 @@ export default function AdminEmailPage() {
                 body: JSON.stringify({ name: templateName, subject, body }),
             });
             const data = await res.json();
-            if (data.success) { showMsg('✅ Template saved!'); setTemplateName(''); fetchTemplates(); }
+            if (data.success) { showMsg('Template saved.'); setTemplateName(''); fetchTemplates(); }
             else showMsg(data.error || 'Save failed', true);
         } catch { showMsg('Save failed', true); }
     };
@@ -564,7 +564,7 @@ export default function AdminEmailPage() {
                                 {broadcasts.length === 0 && (
                                     <tr>
                                         <td colSpan={7} style={{ padding: '40px', textAlign: 'center', ...sub }}>
-                                            No broadcasts sent yet. Go to the Compose tab to send your first email!
+                                            No broadcasts sent yet. Go to the Compose tab to send your first email.
                                         </td>
                                     </tr>
                                 )}

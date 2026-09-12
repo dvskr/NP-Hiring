@@ -270,7 +270,7 @@ describe('P2 #10 — the two TODO(verify) markers are resolved, not carried', ()
     });
 
     it('the growth stat names its projection cycle wherever it renders', () => {
-        expect(STAT_SOURCES.blsGrowth2034.source).toContain('2024–2034');
+        expect(STAT_SOURCES.blsGrowth2034.source).toContain('2024 to 2034');
     });
 });
 

@@ -50,8 +50,8 @@ async function getStats() {
 // trauma practices). /jobs/va = federal employment with GS pay + FEHB.
 const veteransFaqs = [
   {
-    question: `What's the difference between Veterans ${brand.niche.short} roles and federal VA employment?`,
-    answer: `Veterans ${brand.niche.short} roles span multiple sectors — VA medical centers (federal employment), Vet Centers (community readjustment counseling), Community Care Network (CCN) civilian providers, and community practices that serve veteran patients. /jobs/va focuses specifically on federal Veterans Affairs employment with the GS pay scale, FEHB benefits, and EDRP loan repayment.`,
+    question: `What is the difference between Veterans ${brand.niche.short} roles and federal VA employment?`,
+    answer: `Veterans ${brand.niche.short} roles span multiple sectors: VA medical centers (federal employment), Vet Centers (community readjustment counseling), Community Care Network (CCN) civilian providers, and community practices that serve veteran patients. The /jobs/va page focuses specifically on federal Veterans Affairs employment with the GS pay scale, FEHB benefits, and EDRP loan repayment.`,
   },
   {
     question: `What clinical skills matter most in veterans-focused ${brand.niche.short} work?`,
@@ -59,18 +59,18 @@ const veteransFaqs = [
   },
   {
     question: 'Do I need military experience to work in veterans care?',
-    answer: 'No — military experience is not required, but cultural competency is. Employers look for familiarity with military culture, deployment cycles, and the VA system, which you can build through employer-provided training and time with veteran patients. Prior experience in primary care, rehabilitation, pain management, or community settings that serve veterans translates well.',
+    answer: 'No. Military experience is not required, but cultural competency is. Employers look for familiarity with military culture, deployment cycles, and the VA system, which you can build through employer-provided training and time with veteran patients. Prior experience in primary care, rehabilitation, pain management, or community settings that serve veterans translates well.',
   },
   {
     question: `How does the VA Community Care Network (CCN) affect ${brand.niche.short} employment?`,
-    answer: `CCN contracts civilian providers to deliver care to eligible veterans. ${brand.niche.short}s in private practice, telehealth platforms, and community clinics can join CCN to expand their caseload with VA-funded patients while keeping their existing employer relationship — an alternative path to serving veterans without entering federal employment.`,
+    answer: `CCN contracts civilian providers to deliver care to eligible veterans. ${brand.niche.short}s in private practice, telehealth platforms, and community clinics can join CCN to expand their caseload with VA-funded patients while keeping their existing employer relationship. This is an alternative path to serving veterans without entering federal employment.`,
   },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
   return {
-    title: `${stats.totalJobs} Veterans ${brand.niche.short} Jobs — Serve Those Who Served`,
+    title: `${stats.totalJobs} Veterans ${brand.niche.short} Jobs: Serve Those Who Served`,
     description: `Find ${stats.totalJobs} ${brand.niche.short} jobs serving veterans across VA, Vet Centers, Community Care Network civilian providers, and community practices. Primary care, rehabilitation, and specialty roles.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/veterans` },
     openGraph: {
@@ -128,7 +128,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
           { value: stats.medianSalaryK > 0 ? `${stats.medianSalaryK}k` : '$120K+', label: 'median salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description="Care for veterans across VA medical centers, Vet Centers, and community providers — from primary care to specialty services."
+        description="Care for veterans across VA medical centers, Vet Centers, and community providers, from primary care to specialty services."
         ctaLabel="Browse Veterans Jobs"
         ctaHref="/jobs?category=veterans"
         secondaryCtaLabel="Set Alert"
@@ -145,7 +145,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
                 {jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}
               </div>
             ) : (
-              <div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions right now. Check back soon.</p></div>
+              <div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions are available right now. Check back soon.</p></div>
             )}
             <div style={{ textAlign: 'center', marginTop: '32px' }}>
               <Link href="/jobs?category=veterans" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>Browse All Veterans Jobs <ArrowRight size={16} /></Link>
@@ -195,7 +195,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Federal Benefits</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Federal pension, 13-26 PTO days, and 11 paid holidays.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Federal pension, 13 to 26 PTO days, and 11 paid holidays.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>PSLF Eligible</h3>

@@ -94,7 +94,7 @@ function getTips(props: {
     const defaults = [
       { icon: '✨', text: 'Tailor your cover letter to mention the specific patient population this role serves.' },
       { icon: '📄', text: 'Include your NPI number, active license states, and DEA registration on your resume.' },
-      { icon: '💬', text: 'Prepare 2-3 clinical case examples that show your diagnostic reasoning skills.' },
+      { icon: '💬', text: 'Prepare 2 to 3 clinical case examples that show your diagnostic reasoning skills.' },
     ];
     for (const d of defaults) {
       if (tips.length >= 3) break;

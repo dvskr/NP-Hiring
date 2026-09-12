@@ -112,7 +112,7 @@ export default function TopStatesList({ states }: TopStatesProps) {
                                 <p className="text-sm font-semibold text-gray-800 group-hover:text-pink-800 transition-colors text-center">
                                     {state.name}
                                 </p>
-                                <p className="text-xs text-gray-400 text-center">{state.count} openings</p>
+                                <p className="text-xs text-gray-400 text-center">{state.count} {state.count === 1 ? 'opening' : 'openings'}</p>
                             </Link>
                         </m.div>
                     ))}

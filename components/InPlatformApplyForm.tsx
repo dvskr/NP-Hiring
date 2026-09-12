@@ -134,12 +134,12 @@ export default function InPlatformApplyForm({
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ];
         if (!allowedTypes.includes(file.type)) {
-            setError('Please upload a PDF or Word document');
+            setError('Please upload a PDF or Word document.');
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            setError('Resume must be under 5MB');
+            setError('Your resume must be under 5MB.');
             return;
         }
 
@@ -178,13 +178,13 @@ export default function InPlatformApplyForm({
 
         // Validate file type
         if (file.type !== 'application/pdf') {
-            setError('Cover letter must be a PDF file');
+            setError('Your cover letter must be a PDF file.');
             return;
         }
 
         // Validate file size (5MB)
         if (file.size > 5 * 1024 * 1024) {
-            setError('Cover letter must be under 5MB');
+            setError('Your cover letter must be under 5MB.');
             return;
         }
 
@@ -222,7 +222,7 @@ export default function InPlatformApplyForm({
         const missing: Record<string, string> = {};
         for (const q of screeningQuestions) {
             if (q.isRequired && !(screeningAnswers[q.id] || '').trim()) {
-                missing[q.id] = 'This question is required';
+                missing[q.id] = 'This question is required.';
             }
         }
         setScreeningErrors(missing);
@@ -292,7 +292,7 @@ export default function InPlatformApplyForm({
                         <CheckCircle size={28} style={{ color: '#22C55E' }} />
                     </div>
                     <h3 id="apply-success-title" className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Application Submitted!</h3>
-                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your application for <strong>{jobTitle}</strong> has been sent to the employer. They&apos;ll be notified by email.</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your application for <strong>{jobTitle}</strong> has been sent to the employer. They will be notified by email.</p>
                     {similarJobs.length > 0 && (
                         <div className="mt-6 text-left">
                             <p className="text-sm font-semibold mb-3 flex items-center gap-1.5" style={{ color: 'var(--text-secondary)' }}><Briefcase size={14} /> Similar positions you might like</p>
@@ -413,7 +413,7 @@ export default function InPlatformApplyForm({
                                     Using your profile resume
                                 </p>
                                 <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                                    Your saved resume will be shared with the employer
+                                    Your saved resume will be shared with the employer.
                                 </p>
                             </div>
                             <CheckCircle size={16} style={{ color: '#BE185D' }} />
@@ -595,7 +595,7 @@ export default function InPlatformApplyForm({
                                 id="coverLetter"
                                 value={coverLetter}
                                 onChange={(e) => setCoverLetter(e.target.value)}
-                                placeholder="Tell the employer why you're a great fit for this role..."
+                                placeholder="Tell the employer why you are a strong fit for this role..."
                                 rows={5}
                                 maxLength={COVER_LETTER_MAX}
                                 aria-describedby="cover-letter-counter"
@@ -616,7 +616,7 @@ export default function InPlatformApplyForm({
                             />
                             <p id="cover-letter-counter" className="text-xs mt-1" style={{ color: coverLetter.length >= COVER_LETTER_MAX ? '#ef4444' : 'var(--text-tertiary)' }}>
                                 {coverLetter.length > 0
-                                    ? `${coverLetter.length.toLocaleString('en-US')} / ${COVER_LETTER_MAX.toLocaleString('en-US')} characters${coverLetter.length >= COVER_LETTER_MAX ? ' — limit reached' : ''}`
+                                    ? `${coverLetter.length.toLocaleString('en-US')} / ${COVER_LETTER_MAX.toLocaleString('en-US')} characters${coverLetter.length >= COVER_LETTER_MAX ? ' (limit reached)' : ''}`
                                     : `A brief note can help you stand out (up to ${COVER_LETTER_MAX.toLocaleString('en-US')} characters)`}
                             </p>
                         </>

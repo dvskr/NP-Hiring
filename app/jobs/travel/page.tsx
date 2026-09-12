@@ -36,7 +36,7 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: `What is a Travel ${brand.niche.short}?`, a: `An ${brand.niche.short} who takes temporary assignments (8-26 weeks) at healthcare facilities across the country through staffing agencies.` },
+  { q: `What is a Travel ${brand.niche.short}?`, a: `A travel ${brand.niche.short} is an ${brand.niche.short} who takes temporary assignments of 8 to 26 weeks at healthcare facilities across the country through staffing agencies.` },
   { q: 'What is the pay like?', a: `Travel ${brand.niche.short}s generally earn more than comparable permanent staff, plus tax-free housing stipends, travel reimbursement, and completion bonuses. Pay packages vary by state, specialty, and setting.` },
   { q: 'Is housing provided?', a: 'Yes, most agencies offer furnished housing or generous housing stipends. Meals and incidental per diems are also common.' },
   { q: 'Do I need multi-state licenses?', a: 'You need APRN licensure in each state where you take an assignment. Most agencies handle the licensure paperwork and often reimburse application fees.' },
@@ -47,7 +47,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Travel ${brand.niche.short} Jobs — Nationwide Assignments`,
+    title: `${stats.totalJobs} Travel ${brand.niche.short} Jobs: Nationwide Assignments`,
     description: `Find ${stats.totalJobs} travel ${brand.niche.short} and locum tenens positions. Housing stipends, flexible nationwide assignments, and premium pay packages. Updated daily.`,
     keywords: ['travel np jobs', 'travel nurse practitioner', 'locum tenens nurse practitioner', 'traveling np positions'],
     alternates: { canonical: `${brand.baseUrl}/jobs/travel` },
@@ -98,7 +98,7 @@ export default async function TravelJobsPage({ searchParams }: PageProps) {
         <div className="grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
             <h2 className="font-lora mb-6" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>Travel Positions ({stats.totalJobs})</h2>
-            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions right now.</p></div>)}
+            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions are available right now.</p></div>)}
             <div style={{ textAlign: 'center', marginTop: '32px' }}><Link href="/jobs?category=travel" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>Browse All Travel Jobs <ArrowRight size={16} /></Link></div>
           </div>
           <div className="lg:col-span-1">
@@ -116,7 +116,7 @@ export default async function TravelJobsPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Built for Adventure</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Explore the Country</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Take 8-26 week assignments at top facilities nationwide. Experience new cities, cultures, and clinical environments while building a diverse resume.</p></div>
+              <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Explore the Country</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Take assignments of 8 to 26 weeks at top facilities nationwide. Experience new cities, cultures, and clinical environments while building a diverse resume.</p></div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_travel_adventure.webp`} alt={`Travel ${brand.niche.short} exploring new locations`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -146,7 +146,7 @@ export default async function TravelJobsPage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Before You Apply</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>What You Need to Know</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            {[{ n: '01', t: 'Multi-State License', d: 'Start licensure early in target states — agencies often assist with applications and fees.' }, { n: '02', t: 'Travel Docs', d: 'Keep CV, certs, and references ready for quick credentialing.' }, { n: '03', t: 'Tax Home', d: 'Establish a tax home for maximum tax-free stipend benefits.' }, { n: '04', t: 'Agency Research', d: 'Compare staffing agencies for pay packages and support.' }].map(item => (
+            {[{ n: '01', t: 'Multi-State License', d: 'Start licensure early in your target states. Agencies often assist with applications and fees.' }, { n: '02', t: 'Travel Docs', d: 'Keep your CV, certifications, and references ready for quick credentialing.' }, { n: '03', t: 'Tax Home', d: 'Establish a tax home to receive the maximum tax-free stipend benefits.' }, { n: '04', t: 'Agency Research', d: 'Compare staffing agencies for pay packages and support.' }].map(item => (
               <div key={item.n} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}><span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3' }}>{item.n}</span><h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>{item.t}</h3><p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>{item.d}</p></div>
             ))}
           </div>

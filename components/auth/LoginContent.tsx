@@ -104,7 +104,7 @@ export default function LoginContent() {
         const msg = signInError.message.toLowerCase();
         if (msg.includes('email not confirmed') || msg.includes('not confirmed') || msg.includes('confirm')) {
           setIsUnconfirmed(true);
-          setError('Your email has not been confirmed yet. Check your inbox (and spam) for the confirmation link.');
+          setError('Your email address has not been confirmed yet. Please check your inbox (and your spam folder) for the confirmation link.');
         } else {
           setError(signInError.message);
         }
@@ -132,7 +132,7 @@ export default function LoginContent() {
         router.push(dest);
       }
     } catch {
-      setError('An unexpected error occurred');
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -159,8 +159,8 @@ export default function LoginContent() {
       </h1>
       <p style={{ fontSize: '14px', color: '#6B7F8A', marginBottom: '14px', textAlign: 'center' }}>
         {role === 'employer'
-          ? `Manage your job listings and find top ${brand.niche.short} talent`
-          : 'Access your saved jobs, applications, and profile'}
+          ? `Manage your job listings and find top ${brand.niche.short} talent.`
+          : 'Access your saved jobs, applications, and profile.'}
       </p>
 
       {/* ═══ ROLE TOGGLE ═══ */}
@@ -232,8 +232,8 @@ export default function LoginContent() {
                 <p style={{ fontSize: '13px', color: '#DC2626', margin: 0 }}>{error}</p>
                 {isUnconfirmed && (
                   <div style={{ marginTop: '8px' }}>
-                    {resendStatus === 'sent' && <p style={{ fontSize: '12px', color: '#059669', marginBottom: '4px' }}>✓ Confirmation email resent!</p>}
-                    {resendStatus === 'error' && <p style={{ fontSize: '12px', color: '#DC2626', marginBottom: '4px' }}>Failed to resend.</p>}
+                    {resendStatus === 'sent' && <p style={{ fontSize: '12px', color: '#059669', marginBottom: '4px' }}>✓ Confirmation email resent.</p>}
+                    {resendStatus === 'error' && <p style={{ fontSize: '12px', color: '#DC2626', marginBottom: '4px' }}>Unable to resend. Please try again.</p>}
                     <button type="button" onClick={handleResendConfirmation}
                       disabled={resendCooldown > 0 || resendStatus === 'sending'}
                       style={{ fontSize: '12px', fontWeight: 600, color: accent, background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -251,7 +251,7 @@ export default function LoginContent() {
           {/* Email */}
           <div>
             <label htmlFor="login-email" style={labelStyle}>
-              {role === 'employer' ? 'Work Email' : 'Email address'}
+              {role === 'employer' ? 'Work email' : 'Email address'}
             </label>
             <input id="login-email" type="email" value={email}
               onChange={(e) => setEmail(e.target.value)} required autoComplete="email"

@@ -34,23 +34,23 @@ function buildJobsHubFaqs(totalJobs: number): HubFaq[] {
     },
     {
       question: `What is the average ${brand.niche.descriptor} salary?`,
-      answer: `${brand.niche.long}s earn a median annual wage of ${median}. Actual pay varies with specialty, practice setting, experience, and state — many listings include posted salary ranges, and the salary guide breaks pay down state by state.`,
+      answer: `${brand.niche.long}s earn a median annual wage of ${median}. Actual pay varies with specialty, practice setting, experience, and state. Many listings include posted salary ranges, and the salary guide breaks pay down state by state.`,
     },
     {
       question: `How fast is demand for ${brand.niche.descriptor}s growing?`,
-      answer: `The BLS projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for ${brand.niche.descriptor}s from 2024 to 2034 (${STAT_SOURCES.blsGrowth2034.source}) — among the fastest-growing occupations in the United States.`,
+      answer: `The BLS projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for ${brand.niche.descriptor}s from 2024 to 2034 (${STAT_SOURCES.blsGrowth2034.source}), which places the role among the fastest-growing occupations in the United States.`,
     },
     {
       question: `Where can ${brand.niche.descriptor}s practice independently?`,
-      answer: `${STAT_SOURCES.fullPracticeStates.formatted} grant ${brand.niche.descriptor}s Full Practice Authority (${STAT_SOURCES.fullPracticeStates.source}), meaning they can evaluate, diagnose, and prescribe without physician oversight. The remaining states require a collaborative or supervisory agreement — browse jobs by state to see local practice environments.`,
+      answer: `${STAT_SOURCES.fullPracticeStates.formatted} grant ${brand.niche.descriptor}s Full Practice Authority (${STAT_SOURCES.fullPracticeStates.source}), meaning they can evaluate, diagnose, and prescribe without physician oversight. The remaining states require a collaborative or supervisory agreement. Browse jobs by state to see local practice environments.`,
     },
     {
       question: `Which specialties and job types can I browse?`,
-      answer: `Dedicated hubs cover the major NP specialties — family practice, adult-gerontology, pediatric, acute care, emergency, and more — plus APRN roles (CRNA, CNM, CNS), work settings such as remote, telehealth, and travel, and job types from full-time to per-diem, contract, and 1099.`,
+      answer: `Dedicated hubs cover the major NP specialties, including family practice, adult-gerontology, pediatric, acute care, and emergency, as well as APRN roles (CRNA, CNM, CNS), work settings such as remote, telehealth, and travel, and job types from full-time to per-diem, contract, and 1099.`,
     },
     {
       question: `Can I get new ${brand.niche.descriptor} jobs by email?`,
-      answer: `Yes — free job alerts deliver new ${brand.niche.descriptor} roles matching your preferences to your inbox. Alerts can be changed or unsubscribed at any time.`,
+      answer: `Yes. Free job alerts deliver new ${brand.niche.descriptor} roles that match your preferences to your inbox. Alerts can be changed or unsubscribed at any time.`,
     },
   ];
 }
@@ -96,7 +96,7 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
   let title = `Browse ${jobCountDisplay} ${nicheTitlePair} Jobs Near Me`;
   // SEO Fix #7: trim default desc to ≤160 chars (Google SERP cap). Previous
   // 280-char default got truncated and lost the value-prop tail.
-  let description = `Search ${jobCountDisplay} ${brand.niche.short} & ${brand.niche.adjective} NP jobs by state, salary, and type — remote, telehealth, in-person, travel, locum & per diem. Updated daily.`;
+  let description = `Search ${jobCountDisplay} ${brand.niche.short} & ${brand.niche.adjective} NP jobs by state, salary, and type: remote, telehealth, in-person, travel, locum & per diem. Updated daily.`;
 
   // Customize based on active filters
   const titleParts: string[] = [];
@@ -132,7 +132,7 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
   const shouldNoindex = hasUserFilters || isPaginated || isEmpty;
 
   if (isPaginated && !hasUserFilters) {
-    title = `${title} — Page ${pageNum}`;
+    title = `${title} (Page ${pageNum})`;
   }
 
   // Self-canonical for paginated views; otherwise root /jobs.
@@ -144,14 +144,14 @@ export async function generateMetadata({ searchParams }: JobsPageProps): Promise
     title,
     description,
     openGraph: {
-      title: `${title} - Find Your Next Position`,
+      title: `${title}: Find Your Next Position`,
       description,
       type: 'website',
       // P0 OG sweep: the previous Supabase page-screenshot 400'd on every
       // social share of /jobs and every filtered jobs URL. The board's own
       // /api/og edge renderer carries the live filter-aware title instead
       // (same pattern as app/for-employers/page.tsx).
-      images: [{ url: `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${jobCountDisplay} ${brand.niche.short} Jobs`)}&type=page`, width: 1200, height: 630, alt: `${brand.niche.short} Job Board — Browse ${brand.niche.adjective} nurse practitioner jobs` }],
+      images: [{ url: `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${jobCountDisplay} ${brand.niche.short} Jobs`)}&type=page`, width: 1200, height: 630, alt: `${brand.niche.short} Job Board: Browse ${brand.niche.adjective} nurse practitioner jobs` }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -336,10 +336,10 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
             </h2>
             <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.75, margin: '0 0 14px' }}>
               {brand.legal.brandDisplayName} lists {brand.niche.descriptor} and APRN roles across every major
-              specialty — from <Link href="/jobs/family-practice" style={{ color: '#BE185D', fontWeight: 600 }}>family practice</Link> and{' '}
+              specialty, from <Link href="/jobs/family-practice" style={{ color: '#BE185D', fontWeight: 600 }}>family practice</Link> and{' '}
               <Link href="/jobs/acute-care" style={{ color: '#BE185D', fontWeight: 600 }}>acute care</Link> to{' '}
               <Link href="/jobs/anesthesia" style={{ color: '#BE185D', fontWeight: 600 }}>nurse anesthesia (CRNA)</Link> and{' '}
-              <Link href="/jobs/midwifery" style={{ color: '#BE185D', fontWeight: 600 }}>nurse midwifery (CNM)</Link> — plus dedicated
+              <Link href="/jobs/midwifery" style={{ color: '#BE185D', fontWeight: 600 }}>nurse midwifery (CNM)</Link>, plus dedicated
               hubs for <Link href="/jobs/remote" style={{ color: '#BE185D', fontWeight: 600 }}>remote</Link>,{' '}
               <Link href="/jobs/telehealth" style={{ color: '#BE185D', fontWeight: 600 }}>telehealth</Link>, and{' '}
               <Link href="/jobs/travel" style={{ color: '#BE185D', fontWeight: 600 }}>travel</Link> work.
@@ -351,7 +351,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
               {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}).
             </p>
             <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.75, margin: 0 }}>
-              Where you practice shapes how you practice — {STAT_SOURCES.fullPracticeStates.formatted} grant Full
+              Where you practice shapes how you practice: {STAT_SOURCES.fullPracticeStates.formatted} grant Full
               Practice Authority ({STAT_SOURCES.fullPracticeStates.source}). Browse{' '}
               <Link href="/jobs/locations" style={{ color: '#BE185D', fontWeight: 600 }}>jobs by location</Link> to see
               local inventory, or set a free <Link href="/job-alerts" style={{ color: '#BE185D', fontWeight: 600 }}>job alert</Link>{' '}
@@ -362,7 +362,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
           {/* Citable FAQ — same array feeds the FAQPage schema above */}
           <section aria-labelledby="jobs-hub-faq" style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 20px 64px' }}>
             <h2 id="jobs-hub-faq" className="font-lora" style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 700, color: '#1A2E35', marginBottom: '20px' }}>
-              {brand.niche.long} jobs — frequently asked questions
+              Frequently asked questions about {brand.niche.long} jobs
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {hubFaqs.map((faq, index) => (

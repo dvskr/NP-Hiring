@@ -36,18 +36,18 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: `What defines a mid-career ${brand.niche.short} role?`, a: `Mid-career ${brand.niche.short} positions target providers with 3-10+ years of experience. These roles offer leadership opportunities, higher autonomy, specialty focus, and compensation toward the top of the typical $95K-$160K ${brand.niche.short} band.` },
+  { q: `What defines a mid-career ${brand.niche.short} role?`, a: `Mid-career ${brand.niche.short} positions target providers with 3 to 10+ years of experience. These roles offer leadership opportunities, greater autonomy, a specialty focus, and compensation toward the top of the typical $95K to $160K ${brand.niche.short} band.` },
   { q: 'What leadership roles are available?', a: `Mid-career ${brand.niche.short}s can advance to clinical supervisor, program director, lead clinician, chief ${brand.niche.short}, or clinical director positions. Many roles involve mentoring new graduates and overseeing clinical protocols.` },
   { q: 'How do I transition into a specialty?', a: `With 3+ years of ${brand.niche.adjective} experience, you can move into specialties like cardiology, oncology, dermatology, emergency, or hospitalist practice. Additional certifications and targeted clinical experience accelerate the transition.` },
-  { q: 'Is precepting valuable for mid-career growth?', a: 'Yes — precepting students and supervising new grads strengthens your clinical leadership profile and can support adjunct faculty appointments. Whether precepting is compensated varies by employer, so ask how it is recognized — pay, protected time, or CE credit — when negotiating a role.' },
-  { q: `What salary growth can mid-career ${brand.niche.short}s expect?`, a: `Mid-career ${brand.niche.short}s typically out-earn entry-level colleagues by a wide margin. Leadership responsibilities, specialty expertise, and multi-state licensure push compensation toward the top of the ${brand.niche.short} pay range — and often beyond it in high-demand markets.` },
+  { q: 'Is precepting valuable for mid-career growth?', a: 'Yes. Precepting students and supervising new graduates strengthens your clinical leadership profile and can support adjunct faculty appointments. Whether precepting is compensated varies by employer, so ask how it is recognized (pay, protected time, or CE credit) when negotiating a role.' },
+  { q: `What salary growth can mid-career ${brand.niche.short}s expect?`, a: `Mid-career ${brand.niche.short}s typically out-earn entry-level colleagues by a wide margin. Leadership responsibilities, specialty expertise, and multi-state licensure push compensation toward the top of the ${brand.niche.short} pay range, and often beyond it in high-demand markets.` },
 ];
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Mid-Career ${brand.niche.short} Jobs — Leadership & Specialty`,
+    title: `${stats.totalJobs} Mid-Career ${brand.niche.short} Jobs | Leadership & Specialty`,
     description: `Find ${stats.totalJobs} mid-career ${brand.niche.short} positions. Leadership, specialty, and supervisory roles for experienced ${brand.niche.descriptor}s.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/mid-career` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
@@ -79,7 +79,7 @@ export default async function MidCareerPage({ searchParams }: PageProps) {
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('mid-career') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Mid-Career"
         headlineLine2={brand.niche.short}
-        headlineSub="jobs, advance your career."
+        headlineSub="jobs to advance your career."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$130K+', label: 'median salary' },
@@ -97,7 +97,7 @@ export default async function MidCareerPage({ searchParams }: PageProps) {
         <div className="grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
             <h2 className="font-lora mb-6" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>Mid-Career Positions ({stats.totalJobs})</h2>
-            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions right now.</p></div>)}
+            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions are available right now.</p></div>)}
             <div style={{ textAlign: 'center', marginTop: '32px' }}><Link href="/jobs?category=mid-career" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>Browse All Mid-Career Jobs <ArrowRight size={16} /></Link></div>
           </div>
           <div className="lg:col-span-1">
@@ -145,7 +145,7 @@ export default async function MidCareerPage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Before You Apply</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>What You Need</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            {[{ n: '01', t: `${brand.niche.short} Certification`, d: 'Active national certification in your specialty.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: '3+ Years Experience', d: `Demonstrated ${brand.niche.adjective} clinical experience.` }, { n: '04', t: 'Leadership Skills', d: 'Supervisory, mentoring, or program management experience.' }].map(item => (
+            {[{ n: '01', t: `${brand.niche.short} Certification`, d: 'Active national certification in your specialty.' }, { n: '02', t: 'State License', d: 'APRN licensure and prescriptive authority.' }, { n: '03', t: '3+ Years of Experience', d: `Demonstrated ${brand.niche.adjective} clinical experience.` }, { n: '04', t: 'Leadership Skills', d: 'Supervisory, mentoring, or program management experience.' }].map(item => (
               <div key={item.n} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}><span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3' }}>{item.n}</span><h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginTop: '12px', marginBottom: '8px' }}>{item.t}</h3><p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>{item.d}</p></div>
             ))}
           </div>

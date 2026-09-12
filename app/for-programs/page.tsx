@@ -26,7 +26,7 @@ import {
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: `For Program Directors — Free ${brand.niche.short} Jobs Widget | ${brand.name}`,
+  title: `For Program Directors: Free ${brand.niche.short} Jobs Widget | ${brand.name}`,
   description:
     `Help your ${brand.niche.short} students land their first job. Free embeddable jobs widget for your career services page, plus quarterly placement reports for your accreditation file.`,
   alternates: { canonical: `${brand.baseUrl}/for-programs` },
@@ -44,7 +44,7 @@ const clayCard: React.CSSProperties = {
 const CONTACT_EMAIL = brand.email.hello
 const CONTACT_SUBJECT = encodeURIComponent(`${brand.name} widget for our program`)
 const CONTACT_BODY = encodeURIComponent(
-  `Hi Sathish,\n\nI'm the program director (or coordinator) at <UNIVERSITY> in <STATE>. I'd like to learn more about the free ${brand.niche.short} jobs widget for our career services page.\n\nA couple of times that work for a 15-minute chat:\n  • <DAY/TIME 1>\n  • <DAY/TIME 2>\n  • <DAY/TIME 3>\n\nThanks,\n<NAME>\n<TITLE, PROGRAM>`,
+  `Hello Sathish,\n\nI am the program director (or coordinator) at <UNIVERSITY> in <STATE>. I would like to learn more about the free ${brand.niche.short} jobs widget for our career services page.\n\nA few times that work for a 15-minute call:\n  • <DAY/TIME 1>\n  • <DAY/TIME 2>\n  • <DAY/TIME 3>\n\nThank you,\n<NAME>\n<TITLE, PROGRAM>`,
 )
 const MAILTO = `mailto:${CONTACT_EMAIL}?subject=${CONTACT_SUBJECT}&body=${CONTACT_BODY}`
 
@@ -54,23 +54,23 @@ const MAILTO = `mailto:${CONTACT_EMAIL}?subject=${CONTACT_SUBJECT}&body=${CONTAC
 const programFaqs = [
   {
     q: 'Is there a cost to my program?',
-    a: `No. The widget and quarterly placement report are both free for accredited ${brand.niche.short} programs. We make money from employers who post jobs on the main site.`,
+    a: `No. The widget and the quarterly placement report are both free for accredited ${brand.niche.short} programs. We earn revenue from employers who post jobs on the main site.`,
   },
   {
     q: 'Do you collect data on our students?',
-    a: 'No. The widget is anonymous — we track aggregate clicks on the widget itself, but never tie clicks to individual students. No accounts, no PII, no cookies set on your students.',
+    a: 'No. The widget is anonymous. We track aggregate clicks on the widget itself but never tie clicks to individual students. There are no accounts, no PII, and no cookies set on your students.',
   },
   {
-    q: "What if my IT team can't add an iframe?",
-    a: "We can also send you a co-branded link your students can bookmark or you can put in your LMS. Email us and we'll work with you.",
+    q: 'What if my IT team cannot add an iframe?',
+    a: 'We can also send you a co-branded link that your students can bookmark or that you can add to your LMS. Email us and we will work with you.',
   },
   {
     q: 'How is the placement report compiled?',
-    a: `We aggregate the active ${brand.niche.short} listings in your state by setting (outpatient, inpatient, telehealth, etc.), salary range, and employer type. After your widget has been live for ~90 days we add cohort-specific data showing where students from your program have been viewing roles.`,
+    a: `We aggregate the active ${brand.niche.short} listings in your state by setting (outpatient, inpatient, telehealth, etc.), salary range, and employer type. After your widget has been live for approximately 90 days, we add cohort-specific data showing where students from your program have been viewing roles.`,
   },
   {
     q: 'Can I see another program using the widget?',
-    a: 'Yes — once we have a few installs we share live examples on request. Email us.',
+    a: 'Yes. Once we have a few installs, we share live examples on request. Email us.',
   },
 ]
 
@@ -277,7 +277,7 @@ export default async function ForProgramsPage() {
                   fontWeight: 400,
                 }}
               >
-                Two free tools for accredited {brand.niche.short} programs — an
+                Two free tools for accredited {brand.niche.short} programs: an
                 embeddable jobs widget for your career services page,
                 plus quarterly placement reports for your accreditation
                 file.
@@ -461,7 +461,7 @@ export default async function ForProgramsPage() {
                       marginBottom: '10px',
                     }}
                   >
-                    Telehealth · Full-time · $148k–$172k
+                    Telehealth · Full-time · $148k to $172k
                   </div>
                   <div
                     style={{
@@ -611,7 +611,7 @@ export default async function ForProgramsPage() {
               lineHeight: 1.6,
             }}
           >
-            No fees, no student data shared with us, no contract.
+            No fees, no student data shared with us, and no contract.
             Designed for accredited {brand.niche.short} programs.
           </p>
 
@@ -672,9 +672,9 @@ export default async function ForProgramsPage() {
                     lineHeight: 1.6,
                   }}
                 >
-                  One line of HTML on your career services page. Shows
+                  One line of HTML on your career services page. It shows
                   the latest {brand.niche.short} roles in your state, refreshes daily,
-                  co-branded with your program.
+                  and is co-branded with your program.
                 </p>
                 <a
                   href="#demo"
@@ -723,9 +723,9 @@ export default async function ForProgramsPage() {
                     Latest {brand.niche.short} Jobs
                   </div>
                   {[
-                    { t: `Outpatient ${brand.niche.short} — Telehealth`, c: '#1A2E35' },
-                    { t: `Inpatient ${brand.niche.short} — UCSF Med Cntr`, c: '#1A2E35' },
-                    { t: `Urgent Care ${brand.niche.short} — Bay Area Health`, c: '#1A2E35' },
+                    { t: `Outpatient ${brand.niche.short} (Telehealth)`, c: '#1A2E35' },
+                    { t: `Inpatient ${brand.niche.short} at UCSF Medical Center`, c: '#1A2E35' },
+                    { t: `Urgent Care ${brand.niche.short} at Bay Area Health`, c: '#1A2E35' },
                   ].map((row, i) => (
                     <div
                       key={i}
@@ -883,7 +883,7 @@ export default async function ForProgramsPage() {
                     lineHeight: 1.55,
                   }}
                 >
-                  PDF for your accreditation file — settings, salaries,
+                  A PDF for your accreditation file covering settings, salaries,
                   and employer types in your state.
                 </p>
               </div>
@@ -947,8 +947,8 @@ export default async function ForProgramsPage() {
                     fontWeight: 500,
                   }}
                 >
-                  Your program name on the widget — so students recognize
-                  it as a service from your school, not a generic feed.
+                  Your program name appears on the widget, so students recognize
+                  it as a service from your school rather than a generic feed.
                 </p>
               </div>
             </div>
@@ -1003,7 +1003,7 @@ export default async function ForProgramsPage() {
               lineHeight: 1.6,
             }}
           >
-            Pick your state and name your program — the live preview and
+            Select your state and enter your program name. The live preview and
             embed snippet update as you type.
           </p>
 
@@ -1057,7 +1057,7 @@ export default async function ForProgramsPage() {
             }}
           >
             One line of HTML on your career services page. No account,
-            no API key, no maintenance. Jobs refresh automatically every
+            no API key, and no maintenance. Jobs refresh automatically every
             day from our server.
           </p>
 
@@ -1075,7 +1075,7 @@ export default async function ForProgramsPage() {
                 bg: '#EFF6FF',
                 title: 'WordPress',
                 body: 'Edit the career services page → add a "Custom HTML" block → paste the snippet → publish.',
-                note: 'Most common at universities. Works on WordPress.com and self-hosted.',
+                note: 'Most common at universities. Works on WordPress.com and self-hosted installations.',
               },
               {
                 icon: Globe,
@@ -1090,7 +1090,7 @@ export default async function ForProgramsPage() {
                 accent: '#E86C2C',
                 bg: '#FFF7ED',
                 title: 'Any other site',
-                body: 'Squarespace, Wix, Webflow, Canvas, Blackboard, plain HTML — all support an "Embed" or "Custom Code" block. Paste the snippet in.',
+                body: 'Squarespace, Wix, Webflow, Canvas, Blackboard, and plain HTML all support an "Embed" or "Custom Code" block. Paste the snippet in.',
                 note: 'If you can paste HTML anywhere on the page, you can install the widget.',
               },
             ].map(({ icon: Icon, accent, bg, title, body, note }) => (
@@ -1191,8 +1191,8 @@ export default async function ForProgramsPage() {
                   lineHeight: 1.5,
                 }}
               >
-                Forward the snippet to your web admin, or send us your
-                career-services URL — we&apos;ll install it for you.
+                Forward the snippet to your web administrator, or send us your
+                career services URL and we will install it for you.
               </p>
             </div>
             <a
@@ -1273,14 +1273,14 @@ export default async function ForProgramsPage() {
               {
                 step: '01',
                 title: 'Send us an email',
-                body: 'Tell us your university name and state. Two-line reply, no forms.',
+                body: 'Tell us your university name and state. A two-line reply is all it takes, with no forms.',
                 accent: '#BE185D',
                 bg: '#FDF2F8',
               },
               {
                 step: '02',
                 title: 'We send the embed',
-                body: 'One line of HTML — give it to your IT team or paste it yourself. Co-branded with your program.',
+                body: 'One line of HTML. Give it to your IT team or paste it yourself. Co-branded with your program.',
                 accent: '#E86C2C',
                 bg: '#FFF7ED',
               },
@@ -1508,8 +1508,8 @@ export default async function ForProgramsPage() {
               lineHeight: 1.65,
             }}
           >
-            Send us a quick email with your program name and a few times
-            that work for a 15-minute intro call. We&apos;ll come prepared with
+            Send us a short email with your program name and a few times
+            that work for a 15-minute introductory call. We will come prepared with
             a sample widget for your state.
           </p>
           <a

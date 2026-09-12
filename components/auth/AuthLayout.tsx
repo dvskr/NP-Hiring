@@ -80,7 +80,7 @@ export default function AuthLayout({ children, illustration, testimonial }: Auth
           By continuing, you agree to our{' '}
           <Link href="/terms" style={{ color: '#BE185D', textDecoration: 'underline' }}>Terms</Link>
           {' '}and{' '}
-          <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'underline' }}>Privacy Policy</Link>
+          <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'underline' }}>Privacy Policy</Link>.
         </p>
       </div>
 

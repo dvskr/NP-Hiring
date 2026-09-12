@@ -226,7 +226,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         // P1 #12: edge-generated OG card via /api/og (pattern:
         // app/companies/page.tsx COMPANIES_OG_IMAGE) — company pages
         // previously shipped no social image at all.
-        const ogImage = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${company.name} ${brand.niche.short} Jobs`)}&type=page&subtitle=${encodeURIComponent(`${activeJobCount} open ${brand.niche.descriptor} position${activeJobCount === 1 ? '' : 's'} — salary data, locations, direct apply`)}`;
+        const ogImage = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${company.name} ${brand.niche.short} Jobs`)}&type=page&subtitle=${encodeURIComponent(`${activeJobCount} open ${brand.niche.descriptor} position${activeJobCount === 1 ? '' : 's'}: salary data, locations, direct apply`)}`;
 
         return {
             title: `${company.name} ${brand.niche.short} Jobs`,
@@ -234,7 +234,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                 ? `${company.description.substring(0, 150)}... View open ${brand.niche.short} positions at ${company.name}.`
                 : `Browse open ${brand.niche.long} (${brand.niche.short}) positions at ${company.name}. Find salary info, locations, and apply today.`,
             openGraph: {
-                title: `${company.name} — ${brand.niche.short} Jobs`,
+                title: `${company.name} ${brand.niche.short} Jobs`,
                 // Expanded from a 30-char default so social cards (LinkedIn,
                 // Facebook) have enough copy to render a usable preview.
                 description: company.description
@@ -247,12 +247,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                     url: ogImage,
                     width: 1200,
                     height: 630,
-                    alt: `${company.name} — open ${brand.niche.short} positions`,
+                    alt: `${company.name}: open ${brand.niche.short} positions`,
                 }],
             },
             twitter: {
                 card: 'summary_large_image',
-                title: `${company.name} — ${brand.niche.short} Jobs`,
+                title: `${company.name} ${brand.niche.short} Jobs`,
                 description: `Browse ${activeJobCount} open ${brand.niche.descriptor} position${activeJobCount === 1 ? '' : 's'} at ${company.name}.`,
                 images: [ogImage],
             },
@@ -528,7 +528,7 @@ export default async function CompanyPage({ params }: Props) {
                                         <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
                                             {company.recruitmentType === 'direct_hire'
                                                 ? `Our team classified ${company.name} as a direct employer: it hires clinicians onto its own staff rather than recruiting for client organizations.`
-                                                : `Our team classified ${company.name} as a staffing agency: it recruits and places clinicians with client organizations. That is a fact about how it hires, not a quality judgment — agencies and direct employers both post legitimate roles.`}
+                                                : `Our team classified ${company.name} as a staffing agency: it recruits and places clinicians with client organizations. That is a fact about how it hires, not a quality judgment; agencies and direct employers both post legitimate roles.`}
                                         </p>
                                     </div>
                                 )}
@@ -544,11 +544,11 @@ export default async function CompanyPage({ params }: Props) {
                                             Claimed by employer
                                         </span>
                                         <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
-                                            Someone at {company.name} asked to be recognised as this profile&apos;s
-                                            owner and our team approved the request on{' '}
+                                            Someone at {company.name} asked to be recognized as this profile&apos;s
+                                            owner, and our team approved the request on{' '}
                                             {formatApprovalDate(company.claimVerifiedAt)}. Claiming does not let an
-                                            employer edit the listings or pay figures below — those stay
-                                            derived from their live postings.
+                                            employer edit the listings or pay figures below; those remain
+                                            derived from its live postings.
                                         </p>
                                     </div>
                                 )}

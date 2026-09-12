@@ -358,7 +358,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                 >{brand.niche.long} &amp; APRN Jobs</h1>
                 <p style={{
                   fontSize: '13px', color: '#6B7F8A', margin: 0, fontWeight: 500,
-                }}>Browse fresh {brand.niche.short} roles across the US — telehealth, on-site, hybrid, and locum.</p>
+                }}>Browse fresh {brand.niche.short} roles across the US: telehealth, on-site, hybrid, and locum.</p>
               </header>
               {/* Empty right column mirrors the breadcrumb column so the
                   middle <header> stays optically centered. */}
@@ -484,7 +484,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                         onChange={(e) => setAiQuery(e.target.value)}
                         autoComplete="off"
                         aria-label="Describe the role you want"
-                        title='Describe a role in your own words — e.g. "telehealth child psychiatry, west coast"'
+                        title='Describe a role in your own words, for example "telehealth child psychiatry, west coast"'
                         className="hero-search-input"
                         style={{ boxShadow: 'none', outline: 'none', border: 'none', background: 'transparent', width: '100%', fontSize: '0.9rem', color: '#1f2937', textAlign: 'left' }}
                         onFocus={(e) => { e.target.style.boxShadow = 'none'; e.target.style.outline = 'none'; }}
@@ -633,7 +633,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                     {!aiLoading && !aiError && aiResults !== null && (
                       <>
                         Showing <strong>relevant matches</strong> for <strong>&ldquo;{aiSubmittedQuery}&rdquo;</strong>
-                        {aiDegraded && <span style={{ color: '#92400e', marginLeft: 6 }}>(degraded — keyword fallback)</span>}
+                        {aiDegraded && <span style={{ color: '#92400e', marginLeft: 6 }}>(degraded: keyword fallback)</span>}
                       </>
                     )}
                   </p>

@@ -34,8 +34,8 @@ function ResetPasswordContent() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    if (password !== confirmPassword) { setError('Passwords do not match'); setLoading(false); return; }
-    if (password.length < 8) { setError('Password must be at least 8 characters'); setLoading(false); return; }
+    if (password !== confirmPassword) { setError('Passwords do not match.'); setLoading(false); return; }
+    if (password.length < 8) { setError('Password must be at least 8 characters.'); setLoading(false); return; }
 
     try {
       const supabase = createClient()
@@ -44,7 +44,7 @@ function ResetPasswordContent() {
       setSuccess(true)
       setTimeout(() => { router.push('/login') }, 3000)
     } catch {
-      setError('An unexpected error occurred')
+      setError('An unexpected error occurred.')
     } finally {
       setLoading(false)
     }
@@ -66,10 +66,10 @@ function ResetPasswordContent() {
         fontFamily: 'var(--font-lora), Georgia, serif',
         margin: '0 0 6px', letterSpacing: '-0.5px', textAlign: 'center',
       }}>
-        {linkExpired ? 'Link Expired' : success ? 'Password Updated' : 'Set new password'}
+        {linkExpired ? 'Link Expired' : success ? 'Password Updated' : 'Set a New Password'}
       </h1>
       <p style={{ fontSize: '14px', color: '#6B7F8A', marginBottom: '20px', textAlign: 'center' }}>
-        {linkExpired ? 'This link is no longer valid' : success ? 'Redirecting to login...' : 'Choose a strong password'}
+        {linkExpired ? 'This link is no longer valid.' : success ? 'Redirecting you to login...' : 'Choose a strong password.'}
       </p>
 
       {renderCard(
@@ -78,7 +78,7 @@ function ResetPasswordContent() {
             <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <AlertCircle className="w-7 h-7" />
             </div>
-            <p style={{ fontSize: '14px', color: '#6B7F8A', margin: 0 }}>Reset links expire after 1 hour for security.</p>
+            <p style={{ fontSize: '14px', color: '#6B7F8A', margin: 0 }}>For your security, reset links expire after 1 hour.</p>
             <Link href="/forgot-password" style={{ ...ctaButtonStyle(false), width: 'auto', display: 'inline-flex', marginTop: '4px', textDecoration: 'none' }}>
               Request New Link
             </Link>

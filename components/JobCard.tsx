@@ -70,7 +70,7 @@ function buildSalaryDisplay(job: Job): string | null {
     return `$${n.toLocaleString()}`;
   };
   const period = job.salaryPeriod === 'hourly' ? '/hr' : '/yr';
-  if (min && max && min !== max) return `${fmt(min)} - ${fmt(max)}${period}`;
+  if (min && max && min !== max) return `${fmt(min)} to ${fmt(max)}${period}`;
   if (min) return `${fmt(min)}${period}`;
   if (max) return `${fmt(max)}${period}`;
   return null;
@@ -111,7 +111,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
   const cardLocation = job.isRemote
     ? 'Remote'
     : (job.city && job.state ? `${job.city}, ${job.state}` : (job.state || job.location || ''));
-  const cardAriaLabel = `${job.title} at ${job.employer}${cardLocation ? ` — ${cardLocation}` : ''}`;
+  const cardAriaLabel = `${job.title} at ${job.employer}${cardLocation ? `, ${cardLocation}` : ''}`;
   // S5 fix (2026-06-01): getJobFreshness computes against `new Date()`,
   // which differs by milliseconds-to-seconds between server SSR and the
   // hydration tick on the client — producing strings like "Posted today"

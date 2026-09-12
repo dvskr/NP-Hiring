@@ -49,8 +49,8 @@ const CITIES_PER_STATE = 15;
 
 const PAGE_PATH = '/tools/cost-of-living-comparison';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
-const PAGE_TITLE = `Cost of Living Salary Comparison for ${brand.niche.short}s — City vs City`;
-const PAGE_DESCRIPTION = `Compare ${brand.niche.short} pay between two cities in real terms. Posted salary, cost-of-living index, and what the money is actually worth — so a bigger offer in a pricier city stops looking like a raise.`;
+const PAGE_TITLE = `Cost of Living Salary Comparison for ${brand.niche.short}s: City vs City`;
+const PAGE_DESCRIPTION = `Compare ${brand.niche.short} pay between two cities in real terms. Posted salary, cost-of-living index, and what the money is actually worth, so a larger offer in a more expensive city stops looking like a raise.`;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent('Cost of Living Salary Comparison')}&type=page`;
 
 export const metadata: Metadata = {
@@ -153,7 +153,7 @@ const FAQS = [
   },
   {
     q: 'Does this include state income tax?',
-    a: `No. The cost-of-living index covers living costs — housing, groceries, utilities, transport, healthcare — not income tax. A state with no income tax can improve your real position beyond what this comparison shows, and a high-tax state can erode it. Treat the result as a living-costs comparison and layer tax on separately.`,
+    a: `No. The cost-of-living index covers living costs (housing, groceries, utilities, transport, and healthcare), not income tax. A state with no income tax can improve your real position beyond what this comparison shows, and a high-tax state can erode it. Treat the result as a living-costs comparison and layer tax on separately.`,
   },
   {
     q: 'Can I use this to negotiate a relocation offer?',
@@ -170,9 +170,9 @@ export default async function CostOfLivingComparisonPage() {
   const assumptions: readonly string[] = [
     `Nominal pay is the true median midpoint of published ${brand.niche.short}-eligible postings on this board that disclose a salary range. Postings whose pay was inferred rather than posted by the employer are excluded.`,
     `A city uses its own postings when it has at least ${BENCHMARK_MIN_POSTINGS} of them with disclosed pay from ${BENCHMARK_MIN_EMPLOYERS}+ employers; otherwise the state median stands in. Each column states which basis it used and the sample size behind it.`,
-    'The cost-of-living index comes from this site’s city dataset, where 100 is the national average. It covers living costs — housing, groceries, utilities, transport, healthcare — not taxes.',
+    'The cost-of-living index comes from this site’s city dataset, where 100 is the national average. It covers living costs (housing, groceries, utilities, transport, and healthcare), not taxes.',
     'The adjusted figure is nominal pay multiplied by (100 ÷ the city’s index), the same formula used for cost-of-living adjusted pay across the rest of this site.',
-    'The picker carries the largest cities in each state plus every city with enough postings of its own to publish a gated median of its own.',
+    'The picker carries the largest cities in each state, plus every city with enough postings to publish a gated median of its own.',
   ];
 
   return (
@@ -227,7 +227,7 @@ export default async function CostOfLivingComparisonPage() {
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
               A $15,000 raise that comes with a 30% jump in living costs is a pay cut. Put two cities side by
               side and see posted {brand.niche.short} pay, the cost-of-living gap, and what each salary is
-              actually worth — plus the number the second city would have to hit to break even.
+              actually worth, plus the number the second city would have to hit to break even.
             </p>
             {data.postingsCounted > 0 && (
               <p style={{ fontSize: '13px', color: '#7A6A62', margin: '16px 0 0' }}>
@@ -247,7 +247,7 @@ export default async function CostOfLivingComparisonPage() {
                 Comparison data is unavailable right now
               </p>
               <p style={{ fontSize: '14px', color: '#5A4A42', margin: '0 0 18px', lineHeight: 1.6 }}>
-                We only show pay figures we can trace to live postings, so the comparator stays empty rather
+                We show only pay figures we can trace to live postings, so the comparator stays empty rather
                 than guessing. The state pay pages below are built from the same data.
               </p>
               <Link
@@ -270,12 +270,12 @@ export default async function CostOfLivingComparisonPage() {
             intro="Two numbers drive everything on this page: what postings in each city actually pay, and how far a dollar goes there. Here is where each comes from."
             assumptions={assumptions}
             exclusions={[
-              'Income tax of any kind. The index measures living costs, not what a state or city withholds — a no-income-tax state will do better than this comparison implies.',
+              'Income tax of any kind. The index measures living costs, not what a state or city withholds; a no-income-tax state will do better than this comparison implies.',
               'Your own housing situation. Cost-of-living indices assume an average household; if you own outright, rent below market, or commute in from outside the metro, your real gap will differ.',
               'Employer benefits, shift differentials, and bonuses. Only the posted base range feeds these figures.',
             ]}
             sources={[
-              { label: `${brand.name} salary guide — state pay from live postings`, url: '/salary-guide' },
+              { label: `${brand.name} salary guide: state pay from live postings`, url: '/salary-guide' },
               { label: 'Browse jobs by location', url: '/jobs/locations' },
             ]}
           />

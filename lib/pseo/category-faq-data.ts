@@ -143,11 +143,11 @@ const NP_GROWTH_CITED = `${STAT_SOURCES.blsGrowth2034.formatted} (${STAT_SOURCES
 function specialtySalaryAnswer(roleLabel: string, avgSalary?: number): string {
     return avgSalary
         ? `${roleLabel} positions listed here average approximately $${avgSalary.toLocaleString()} per year. Nationally, ${brand.niche.descriptor}s earn a median annual wage of ${NP_MEDIAN_CITED}; actual pay varies with experience, setting, geography, and employment type.`
-        : `${brand.niche.long}s earn a median annual wage of ${NP_MEDIAN_CITED}. ${roleLabel} compensation varies with experience, practice setting, geography, and employment type — browse listings with posted salary ranges for current, real-world figures.`;
+        : `${brand.niche.long}s earn a median annual wage of ${NP_MEDIAN_CITED}. ${roleLabel} compensation varies with experience, practice setting, geography, and employment type. Browse listings with posted salary ranges for current, real-world figures.`;
 }
 
 /** Practice-authority answer for NP-specialty categories, driven by the cited AANP stat. */
-const NP_FPA_ANSWER = `Practice authority is set state by state. ${FPA_STATES} grant ${brand.niche.descriptor}s Full Practice Authority (${STAT_SOURCES.fullPracticeStates.source}), meaning they can evaluate, diagnose, and prescribe without physician oversight; the remaining states require a collaborative or supervisory agreement with a physician. Check the practice-authority details on this page — or the AANP State Practice Environment map — for the state you are browsing.`;
+const NP_FPA_ANSWER = `Practice authority is set state by state. ${FPA_STATES} grant ${brand.niche.descriptor}s Full Practice Authority (${STAT_SOURCES.fullPracticeStates.source}), meaning they can evaluate, diagnose, and prescribe without physician oversight; the remaining states require a collaborative or supervisory agreement with a physician. Check the practice-authority details on this page, or the AANP State Practice Environment map, for the state you are browsing.`;
 
 // Partial — categories without a built-in (e.g. 'metro') always pass customFaqs.
 const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => FAQItem[]>> = {
@@ -178,12 +178,12 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What is the difference between telehealth and remote ${brand.niche.short} jobs?`,
-            answer: `Telehealth specifically refers to providing patient care virtually via video or phone. Remote ${brand.niche.short} jobs may include telehealth patient care but also encompass roles like utilization review, case management, or clinical documentation that are done remotely but don\'t involve direct patient care via video.`,
+            answer: `Telehealth specifically refers to providing patient care virtually via video or phone. Remote ${brand.niche.short} jobs may include telehealth patient care but also encompass roles like utilization review, case management, or clinical documentation that are done remotely but do not involve direct patient care via video.`,
         },
         {
             question: `What is the average telehealth ${brand.niche.short} salary?`,
             answer: avgSalary
-                ? `Telehealth ${brand.niche.short} positions offer an average salary of approximately $${avgSalary.toLocaleString()} per year. Compensation varies based on patient volume, state licensure, and employment type (W-2 vs 1099).`
+                ? `Telehealth ${brand.niche.short} positions offer an average salary of approximately $${avgSalary.toLocaleString()} per year. Compensation varies based on patient volume, state licensure, and employment type (W-2 versus 1099).`
                 : `Telehealth ${brand.niche.short} salaries range from $120,000 to $200,000+ annually. Many telehealth companies offer productivity-based compensation where higher patient volumes lead to increased earnings.`,
         },
         {
@@ -206,7 +206,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Do I need experience for travel ${brand.niche.short} positions?`,
-            answer: `Most travel ${brand.niche.short} positions require 1-2 years of clinical experience, as you\'ll be expected to practice independently with minimal orientation. However, some agencies offer "first-time traveler" programs with additional support. Having an active compact nursing license (NLC) can expand your opportunities.`,
+            answer: `Most travel ${brand.niche.short} positions require 1-2 years of clinical experience, as you will be expected to practice independently with minimal orientation. However, some agencies offer "first-time traveler" programs with additional support. Having an active compact nursing license (NLC) can expand your opportunities.`,
         },
     ],
     'new-grad': ({ totalJobs }) => [
@@ -216,7 +216,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Can new graduate ${brand.niche.short}s find jobs easily?`,
-            answer: `Yes — demand for ${brand.niche.short}s far exceeds supply. New graduates are highly sought after, with many employers offering structured orientation, mentorship, and collaborative practice agreements. The ${brand.niche.short} field has one of the highest job placement rates among advanced practice professions.`,
+            answer: `Yes. Demand for ${brand.niche.short}s far exceeds supply. New graduates are highly sought after, with many employers offering structured orientation, mentorship, and collaborative practice agreements. The ${brand.niche.short} field has one of the highest job placement rates among advanced practice professions.`,
         },
         {
             question: `What should new grad ${brand.niche.short}s look for in their first job?`,
@@ -242,7 +242,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Can per diem ${brand.niche.short}s work at multiple facilities?`,
-            answer: `Yes — per diem ${brand.niche.short}s can typically work at multiple facilities simultaneously. This is one of the main advantages of per diem work. You\'ll need to ensure you have proper credentialing and privileges at each facility, and check for any non-compete clauses in your agreements.`,
+            answer: `Yes. Per diem ${brand.niche.short}s can typically work at multiple facilities simultaneously. This is one of the main advantages of per diem work. You will need to ensure you have proper credentialing and privileges at each facility, and check for any non-compete clauses in your agreements.`,
         },
     ],
     inpatient: ({ totalJobs, avgSalary }) => [
@@ -278,11 +278,11 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What does a typical outpatient ${brand.niche.short} schedule look like?`,
-            answer: 'Most outpatient positions offer Monday-Friday, 8am-5pm schedules with no nights, weekends, or on-call requirements. Typical caseloads are 12-20 patients per day for medication management, or 6-8 if integrating therapy. Many clinics offer 4-day work weeks.',
+            answer: 'Most outpatient positions offer Monday through Friday, 8 a.m. to 5 p.m. schedules with no nights, weekends, or on-call requirements. Typical caseloads are 12-20 patients per day for medication management, or 6-8 if integrating therapy. Many clinics offer 4-day work weeks.',
         },
         {
             question: `Can outpatient ${brand.niche.short}s start their own private practice?`,
-            answer: `Yes — outpatient experience is ideal preparation for private practice. In full practice authority states, ${brand.niche.short}s can open independent practices. Most ${brand.niche.short}s gain 2-3 years of supervised experience first, then transition to private practice earning $200K+ with full schedule control.`,
+            answer: `Yes. Outpatient experience is ideal preparation for private practice. In full practice authority states, ${brand.niche.short}s can open independent practices. Most ${brand.niche.short}s gain 2-3 years of supervised experience first, then transition to private practice earning $200K+ with full schedule control.`,
         },
     ],
     'community-health': ({ totalJobs, avgSalary }) => [
@@ -302,7 +302,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Do community health ${brand.niche.short}s qualify for loan repayment?`,
-            answer: 'Yes — many community health positions at FQHCs and nonprofit agencies qualify for National Health Service Corps (NHSC) loan repayment of up to $50,000 for two years of service. Positions at 501(c)(3) employers also qualify for Public Service Loan Forgiveness (PSLF) after 120 qualifying payments.',
+            answer: 'Yes. Many community health positions at FQHCs and nonprofit agencies qualify for National Health Service Corps (NHSC) loan repayment of up to $50,000 for two years of service. Positions at 501(c)(3) employers also qualify for Public Service Loan Forgiveness (PSLF) after 120 qualifying payments.',
         },
     ],
 
@@ -320,11 +320,11 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
             question: `What is the average salary for full-time ${brand.niche.short} jobs?`,
             answer: avgSalary
                 ? `Full-time positions listed here average approximately $${avgSalary.toLocaleString()} per year. Nationally, ${brand.niche.descriptor}s earn a median annual wage of ${NP_MEDIAN_CITED}; pay varies with specialty, setting, and state.`
-                : `${brand.niche.long}s earn a median annual wage of ${NP_MEDIAN_CITED}. Full-time pay varies with specialty, setting, experience, and state — compare posted salary ranges on individual listings for current figures.`,
+                : `${brand.niche.long}s earn a median annual wage of ${NP_MEDIAN_CITED}. Full-time pay varies with specialty, setting, experience, and state. Compare posted salary ranges on individual listings for current figures.`,
         },
         {
             question: `What benefits do full-time ${brand.niche.short} positions include?`,
-            answer: `Full-time W-2 packages typically include health insurance, a retirement plan with employer match, paid time off, CME allowance, and malpractice coverage. Many employers add signing bonuses, licensure and certification fee reimbursement, or loan-repayment support — total compensation often matters as much as base salary.`,
+            answer: `Full-time W-2 packages typically include health insurance, a retirement plan with employer match, paid time off, CME allowance, and malpractice coverage. Many employers add signing bonuses, licensure and certification fee reimbursement, or loan-repayment support, so total compensation often matters as much as base salary.`,
         },
     ],
     'part-time': ({ totalJobs }) => [
@@ -338,7 +338,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `How are part-time ${brand.niche.short}s paid?`,
-            answer: `Part-time ${brand.niche.short} roles are usually paid hourly, and hourly rates often run above the full-time equivalent because benefits are reduced or excluded. Actual rates vary by state, setting, and specialty — compare posted ranges on individual listings.`,
+            answer: `Part-time ${brand.niche.short} roles are usually paid hourly, and hourly rates often run above the full-time equivalent because benefits are reduced or excluded. Actual rates vary by state, setting, and specialty. Compare posted ranges on individual listings.`,
         },
         {
             question: `Do part-time ${brand.niche.short} positions include benefits?`,
@@ -346,7 +346,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Can I combine multiple part-time ${brand.niche.short} roles?`,
-            answer: `Yes — many ${brand.niche.short}s stack two or three part-time roles across different settings for variety and income stability. Each facility credentials you separately, so factor in onboarding time, and review non-compete or exclusivity clauses in each agreement before committing.`,
+            answer: `Yes. Many ${brand.niche.short}s stack two or three part-time roles across different settings for variety and income stability. Each facility credentials you separately, so factor in onboarding time, and review non-compete or exclusivity clauses in each agreement before committing.`,
         },
     ],
     contract: ({ totalJobs }) => [
@@ -356,11 +356,11 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What is a contract ${brand.niche.short} position?`,
-            answer: `A contract role is a fixed-term engagement — commonly a few months — either as a W-2 employee of a staffing agency or as an independent contractor. Many contracts are temp-to-perm, letting you and the employer evaluate fit before converting to a permanent role.`,
+            answer: `A contract role is a fixed-term engagement, commonly a few months, either as a W-2 employee of a staffing agency or as an independent contractor. Many contracts are temp-to-perm, letting you and the employer evaluate fit before converting to a permanent role.`,
         },
         {
             question: `How does contract ${brand.niche.short} pay compare to permanent roles?`,
-            answer: `Contract rates generally run above equivalent permanent salaries because you trade away benefits and long-term stability. Whether that premium works in your favor depends on how you cover health insurance, retirement, and time between contracts — compare posted rates on individual listings and price in the full package.`,
+            answer: `Contract rates generally run above equivalent permanent salaries because you trade away benefits and long-term stability. Whether that premium works in your favor depends on how you cover health insurance, retirement, and time between contracts. Compare posted rates on individual listings and price in the full package.`,
         },
         {
             question: `What should I review before signing an ${brand.niche.short} contract?`,
@@ -378,7 +378,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Do 1099 ${brand.niche.short}s earn more than W-2 employees?`,
-            answer: `Gross hourly rates for 1099 work typically run above comparable W-2 rates because the employer pays no benefits or payroll taxes on your behalf. Whether you net more depends on your tax situation and benefit costs — compare posted rates on individual listings and model the after-tax picture before choosing.`,
+            answer: `Gross hourly rates for 1099 work typically run above comparable W-2 rates because the employer pays no benefits or payroll taxes on your behalf. Whether you net more depends on your tax situation and benefit costs. Compare posted rates on individual listings and model the after-tax picture before choosing.`,
         },
         {
             question: `What do I need before taking a 1099 ${brand.niche.short} position?`,
@@ -392,7 +392,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'locum-tenens': ({ totalJobs }) => [
         {
             question: `How many locum tenens ${brand.niche.short} jobs are available?`,
-            answer: `There are currently ${totalJobs} locum tenens ${brand.niche.short} assignments available. Locum roles provide temporary coverage — for vacancies, leave, or peak demand — typically arranged through staffing agencies.`,
+            answer: `There are currently ${totalJobs} locum tenens ${brand.niche.short} assignments available. Locum roles provide temporary coverage for vacancies, leave, or peak demand, typically arranged through staffing agencies.`,
         },
         {
             question: `What does locum tenens mean for ${brand.niche.short}s?`,
@@ -404,7 +404,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Do I need a license in every state where I take locum assignments?`,
-            answer: `Yes — you need an active APRN license in each assignment state. Agencies commonly assist with or reimburse licensing costs, and expedited endorsement or multistate pathways can shorten the timeline in participating states. Keep your credentials file current so onboarding is fast.`,
+            answer: `Yes. You need an active APRN license in each assignment state. Agencies commonly assist with or reimburse licensing costs, and expedited endorsement or multistate pathways can shorten the timeline in participating states. Keep your credentials file current so onboarding is fast.`,
         },
         {
             question: `How much experience do locum tenens ${brand.niche.short} roles require?`,
@@ -416,7 +416,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'family-practice': ({ totalJobs, avgSalary }) => [
         {
             question: `What does a family practice ${brand.niche.short} (FNP) do?`,
-            answer: `Family nurse practitioners deliver primary care across the entire lifespan — preventive visits, chronic disease management, and acute episodic care for children, adults, and older adults. FNPs practice in primary care clinics, FQHCs, urgent care, retail health, and telehealth.`,
+            answer: `Family nurse practitioners deliver primary care across the entire lifespan: preventive visits, chronic disease management, and acute episodic care for children, adults, and older adults. FNPs practice in primary care clinics, FQHCs, urgent care, retail health, and telehealth.`,
         },
         {
             question: `What certification do family practice ${brand.niche.short}s need?`,
@@ -432,7 +432,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What is the job outlook for family practice ${brand.niche.short}s?`,
-            answer: `Strong — the BLS projects ${NP_GROWTH_CITED} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, and primary care is where much of that demand lands. There are currently ${totalJobs} family practice positions listed here, with new openings added daily.`,
+            answer: `The outlook is strong. The BLS projects ${NP_GROWTH_CITED} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, and primary care is where much of that demand lands. There are currently ${totalJobs} family practice positions listed here, with new openings added daily.`,
         },
     ],
     'adult-gerontology': ({ totalJobs, avgSalary }) => [
@@ -460,7 +460,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     pediatric: ({ totalJobs, avgSalary }) => [
         {
             question: `What does a pediatric ${brand.niche.short} (PNP) do?`,
-            answer: `Pediatric nurse practitioners care for infants, children, adolescents, and young adults — well-child visits, immunizations, developmental screening, and management of acute and chronic childhood conditions. There are currently ${totalJobs} pediatric positions listed here.`,
+            answer: `Pediatric nurse practitioners care for infants, children, adolescents, and young adults: well-child visits, immunizations, developmental screening, and management of acute and chronic childhood conditions. There are currently ${totalJobs} pediatric positions listed here.`,
         },
         {
             question: `What certification do pediatric ${brand.niche.short}s need?`,
@@ -494,7 +494,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Where do women's health ${brand.niche.short}s work?`,
-            answer: `OB/GYN group practices, family planning and reproductive health clinics, fertility centers, public health programs, and telehealth platforms all hire WHNPs. Some roles focus on gynecology only; others include prenatal and postpartum panels — confirm the scope in each listing.`,
+            answer: `OB/GYN group practices, family planning and reproductive health clinics, fertility centers, public health programs, and telehealth platforms all hire WHNPs. Some roles focus on gynecology only; others include prenatal and postpartum panels, so confirm the scope in each listing.`,
         },
         {
             question: `Can women's health ${brand.niche.short}s practice independently?`,
@@ -504,7 +504,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'acute-care': ({ totalJobs, avgSalary }) => [
         {
             question: `What does an acute care ${brand.niche.short} (ACNP) do?`,
-            answer: `Acute care NPs manage adults with complex, acute, and critical illness — in ICUs, step-down units, emergency and hospital specialty services. The role includes rapid assessment, ordering and interpreting diagnostics, managing treatment plans, and performing procedures within granted privileges. There are currently ${totalJobs} acute care positions listed here.`,
+            answer: `Acute care NPs manage adults with complex, acute, and critical illness in ICUs, step-down units, and emergency and hospital specialty services. The role includes rapid assessment, ordering and interpreting diagnostics, managing treatment plans, and performing procedures within granted privileges. There are currently ${totalJobs} acute care positions listed here.`,
         },
         {
             question: `What certification do acute care ${brand.niche.short}s need?`,
@@ -514,7 +514,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
             question: `What is the average acute care ${brand.niche.short} salary?`,
             answer: avgSalary
                 ? `Acute care positions listed here average approximately $${avgSalary.toLocaleString()} per year. Nationally, ${brand.niche.descriptor}s earn a median annual wage of ${NP_MEDIAN_CITED}; hospital-based roles frequently add night, weekend, and holiday shift differentials on top of base pay.`
-                : `${brand.niche.long}s earn a median annual wage of ${NP_MEDIAN_CITED}. Hospital-based acute care roles frequently add night, weekend, and holiday shift differentials on top of base pay — compare posted ranges on individual listings.`,
+                : `${brand.niche.long}s earn a median annual wage of ${NP_MEDIAN_CITED}. Hospital-based acute care roles frequently add night, weekend, and holiday shift differentials on top of base pay. Compare posted ranges on individual listings.`,
         },
         {
             question: `Do I need ICU experience for acute care ${brand.niche.short} roles?`,
@@ -528,17 +528,17 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     emergency: ({ totalJobs, avgSalary }) => [
         {
             question: `What does an emergency ${brand.niche.short} (ENP) do?`,
-            answer: `Emergency NPs evaluate and treat patients across the full acuity spectrum of the emergency department — from fast-track injuries and infections to supporting higher-acuity resuscitation care. ENPs work in hospital EDs, freestanding emergency centers, and urgent care. There are currently ${totalJobs} emergency positions listed here.`,
+            answer: `Emergency NPs evaluate and treat patients across the full acuity spectrum of the emergency department, from fast-track injuries and infections to supporting higher-acuity resuscitation care. ENPs work in hospital EDs, freestanding emergency centers, and urgent care. There are currently ${totalJobs} emergency positions listed here.`,
         },
         {
             question: `How do I become an emergency ${brand.niche.short}?`,
-            answer: `Most ENPs first certify as family nurse practitioners (AANP FNP-C or ANCC FNP-BC), then add emergency-specific training or experience. The dedicated ENP-C specialty credential is offered through AANP's certification board to certified FNPs with emergency preparation. Some emergency roles are also filled by acute care-certified NPs — check each listing's requirements.`,
+            answer: `Most ENPs first certify as family nurse practitioners (AANP FNP-C or ANCC FNP-BC), then add emergency-specific training or experience. The dedicated ENP-C specialty credential is offered through AANP's certification board to certified FNPs with emergency preparation. Some emergency roles are also filled by acute care-certified NPs; check each listing's requirements.`,
         },
         {
             question: `What is the average emergency ${brand.niche.short} salary?`,
             answer: avgSalary
                 ? `Emergency positions listed here average approximately $${avgSalary.toLocaleString()} per year. Nationally, ${brand.niche.descriptor}s earn a median annual wage of ${NP_MEDIAN_CITED}; emergency roles frequently add night, weekend, and holiday differentials.`
-                : `${brand.niche.long}s earn a median annual wage of ${NP_MEDIAN_CITED}. Emergency medicine roles frequently add night, weekend, and holiday shift differentials — compare posted ranges on individual listings.`,
+                : `${brand.niche.long}s earn a median annual wage of ${NP_MEDIAN_CITED}. Emergency medicine roles frequently add night, weekend, and holiday shift differentials. Compare posted ranges on individual listings.`,
         },
         {
             question: `What schedules do emergency ${brand.niche.short}s work?`,
@@ -552,21 +552,21 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     anesthesia: ({ totalJobs, avgSalary }) => [
         {
             question: `What does a certified registered nurse anesthetist (CRNA) do?`,
-            answer: `CRNAs plan and deliver anesthesia care — general, regional, and sedation — across surgical, obstetric, and procedural settings, managing patients before, during, and after anesthesia. In many rural facilities, CRNAs are the primary anesthesia providers. There are currently ${totalJobs} CRNA positions listed here.`,
+            answer: `CRNAs plan and deliver anesthesia care, including general, regional, and sedation, across surgical, obstetric, and procedural settings, managing patients before, during, and after anesthesia. In many rural facilities, CRNAs are the primary anesthesia providers. There are currently ${totalJobs} CRNA positions listed here.`,
         },
         {
             question: `What certification do CRNAs need?`,
-            answer: `CRNAs graduate from a nurse anesthesia program accredited by the Council on Accreditation (COA) — admission requires critical-care RN experience — then pass the National Certification Examination administered by NBCRNA. Certification is maintained through NBCRNA's Continued Professional Certification (CPC) program.`,
+            answer: `CRNAs graduate from a nurse anesthesia program accredited by the Council on Accreditation (COA), where admission requires critical-care RN experience, and then pass the National Certification Examination administered by NBCRNA. Certification is maintained through NBCRNA's Continued Professional Certification (CPC) program.`,
         },
         {
             question: `How much do CRNAs earn?`,
             answer: avgSalary
                 ? `CRNA positions listed here average approximately $${avgSalary.toLocaleString()} per year. CRNA compensation sits at the top of the APRN pay scale and varies with setting, call burden, and state.`
-                : `CRNA compensation sits at the top of the APRN pay scale and varies with setting, call burden, and state. Independent-contractor and locum CRNA engagements typically run above employed W-2 packages on an hourly basis — compare posted ranges on individual listings.`,
+                : `CRNA compensation sits at the top of the APRN pay scale and varies with setting, call burden, and state. Independent-contractor and locum CRNA engagements typically run above employed W-2 packages on an hourly basis. Compare posted ranges on individual listings.`,
         },
         {
             question: `Do CRNAs require physician supervision?`,
-            answer: `CRNA supervision rules are set by state law and facility policy rather than the NP practice-authority framework. A number of states have opted out of the federal physician-supervision requirement for anesthesia services, while others require anesthesiologist or physician involvement — verify the rules for the specific state and facility before accepting a role.`,
+            answer: `CRNA supervision rules are set by state law and facility policy rather than the NP practice-authority framework. A number of states have opted out of the federal physician-supervision requirement for anesthesia services, while others require anesthesiologist or physician involvement, so verify the rules for the specific state and facility before accepting a role.`,
         },
         {
             question: `Where do CRNAs work?`,
@@ -585,8 +585,8 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         {
             question: `How much do certified nurse midwives earn?`,
             answer: avgSalary
-                ? `CNM positions listed here average approximately $${avgSalary.toLocaleString()} per year. Compensation varies with birth volume, call requirements, and setting — hospital-employed, birth center, and private practice models pay differently.`
-                : `CNM compensation varies with birth volume, call requirements, and setting — hospital-employed, birth center, and private practice models pay differently. Compare posted salary ranges on individual listings for current figures.`,
+                ? `CNM positions listed here average approximately $${avgSalary.toLocaleString()} per year. Compensation varies with birth volume, call requirements, and setting; hospital-employed, birth center, and private practice models pay differently.`
+                : `CNM compensation varies with birth volume, call requirements, and setting; hospital-employed, birth center, and private practice models pay differently. Compare posted salary ranges on individual listings for current figures.`,
         },
         {
             question: `Can nurse midwives practice independently?`,
@@ -594,7 +594,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Where do certified nurse midwives work?`,
-            answer: `Hospital labor and delivery units, freestanding birth centers, OB/GYN group practices, community health programs, and home-birth practices. Call schedules vary substantially — clarify call frequency, backup arrangements, and birth volume expectations when comparing offers.`,
+            answer: `Hospital labor and delivery units, freestanding birth centers, OB/GYN group practices, community health programs, and home-birth practices. Call schedules vary substantially, so clarify call frequency, backup arrangements, and birth volume expectations when comparing offers.`,
         },
     ],
 
@@ -602,7 +602,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'urgent-care': ({ totalJobs, avgSalary }) => [
         {
             question: `What does an urgent care ${brand.niche.short} do?`,
-            answer: `Urgent care ${brand.niche.short}s treat episodic, walk-in complaints — infections, minor injuries, lacerations, and sprains — for patients of all ages, handling assessment, treatment, and disposition within a single visit. There are currently ${totalJobs} urgent care positions listed here.`,
+            answer: `Urgent care ${brand.niche.short}s treat episodic, walk-in complaints, including infections, minor injuries, lacerations, and sprains, for patients of all ages, handling assessment, treatment, and disposition within a single visit. There are currently ${totalJobs} urgent care positions listed here.`,
         },
         {
             question: `What certification do urgent care ${brand.niche.short}s need?`,
@@ -614,7 +614,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What schedules do urgent care ${brand.niche.short}s work?`,
-            answer: `Urgent care runs on defined shifts — commonly three or four longer shifts per week including some evenings and weekends — with no patient panel or after-hours documentation to carry between shifts. Clarify the weekend and holiday rotation before accepting an offer.`,
+            answer: `Urgent care runs on defined shifts, commonly three or four longer shifts per week including some evenings and weekends, with no patient panel or after-hours documentation to carry between shifts. Clarify the weekend and holiday rotation before accepting an offer.`,
         },
         {
             question: `Can urgent care ${brand.niche.short}s practice independently?`,
@@ -624,7 +624,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'home-health': ({ totalJobs, avgSalary }) => [
         {
             question: `What does a home health ${brand.niche.short} do?`,
-            answer: `Home health ${brand.niche.short}s deliver primary and transitional care during home visits — assessments, medication reconciliation, chronic disease management, and annual wellness visits for homebound and medically complex patients. There are currently ${totalJobs} home health positions listed here.`,
+            answer: `Home health ${brand.niche.short}s deliver primary and transitional care during home visits: assessments, medication reconciliation, chronic disease management, and annual wellness visits for homebound and medically complex patients. There are currently ${totalJobs} home health positions listed here.`,
         },
         {
             question: `What qualifications do home health ${brand.niche.short} roles require?`,
@@ -636,7 +636,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What does a typical home health ${brand.niche.short} day look like?`,
-            answer: `A route of scheduled home visits across a defined territory, with documentation between stops or in blocks. Visit counts vary by program and patient complexity — ask about daily visit expectations, territory size, and drive-time compensation when comparing roles.`,
+            answer: `A route of scheduled home visits across a defined territory, with documentation between stops or in blocks. Visit counts vary by program and patient complexity, so ask about daily visit expectations, territory size, and drive-time compensation when comparing roles.`,
         },
         {
             question: `Can home health ${brand.niche.short}s practice independently?`,
@@ -646,11 +646,11 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     neonatal: ({ totalJobs, avgSalary }) => [
         {
             question: `What does a neonatal ${brand.niche.short} (NNP) do?`,
-            answer: `NNPs manage premature and critically ill newborns in Level II–IV NICUs — attending high-risk deliveries, leading resuscitations, performing procedures such as line placement and intubation, and guiding families through intensive care. There are currently ${totalJobs} neonatal positions listed here.`,
+            answer: `NNPs manage premature and critically ill newborns in Level II to IV NICUs, attending high-risk deliveries, leading resuscitations, performing procedures such as line placement and intubation, and guiding families through intensive care. There are currently ${totalJobs} neonatal positions listed here.`,
         },
         {
             question: `What certification do neonatal ${brand.niche.short}s need?`,
-            answer: `NNPs complete a graduate neonatal NP program — admission commonly requires Level III/IV NICU RN experience — then certify as NNP-BC through the National Certification Corporation (NCC), alongside state APRN licensure. NRP (Neonatal Resuscitation Program) completion is standard.`,
+            answer: `NNPs complete a graduate neonatal NP program, for which admission commonly requires Level III/IV NICU RN experience, and then certify as NNP-BC through the National Certification Corporation (NCC), alongside state APRN licensure. NRP (Neonatal Resuscitation Program) completion is standard.`,
         },
         {
             question: `What is the average neonatal ${brand.niche.short} salary?`,
@@ -658,13 +658,13 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What schedules do neonatal ${brand.niche.short}s work?`,
-            answer: `NICUs run 24/7, so NNP schedules are shift-based — commonly 12- or 24-hour blocks with rotating nights and weekends. Ask how delivery coverage, call, and post-call time are structured when comparing units.`,
+            answer: `NICUs run 24/7, so NNP schedules are shift-based, commonly 12- or 24-hour blocks with rotating nights and weekends. Ask how delivery coverage, call, and post-call time are structured when comparing units.`,
         },
     ],
     oncology: ({ totalJobs, avgSalary }) => [
         {
             question: `What does an oncology ${brand.niche.short} do?`,
-            answer: `Oncology ${brand.niche.short}s manage patients through cancer treatment and survivorship — symptom management, treatment monitoring, toxicity checks for chemotherapy and immunotherapy, and long-term follow-up in partnership with medical oncologists. There are currently ${totalJobs} oncology positions listed here.`,
+            answer: `Oncology ${brand.niche.short}s manage patients through cancer treatment and survivorship: symptom management, treatment monitoring, toxicity checks for chemotherapy and immunotherapy, and long-term follow-up in partnership with medical oncologists. There are currently ${totalJobs} oncology positions listed here.`,
         },
         {
             question: `What certification do oncology ${brand.niche.short}s need?`,
@@ -676,21 +676,21 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Where do oncology ${brand.niche.short}s work?`,
-            answer: `Academic cancer centers, community oncology practices, infusion clinics, and survivorship programs. Roles differ in treatment-phase focus — active treatment, infusion oversight, or survivorship follow-up — so confirm the clinic mix in each listing.`,
+            answer: `Academic cancer centers, community oncology practices, infusion clinics, and survivorship programs. Roles differ in treatment-phase focus (active treatment, infusion oversight, or survivorship follow-up), so confirm the clinic mix in each listing.`,
         },
         {
             question: `Do I need oncology experience to start?`,
-            answer: `Many centers hire ${brand.niche.short}s with strong medical backgrounds and train the oncology layer — chemotherapy and immunotherapy competencies, oncologic emergencies, and symptom management — through structured onboarding. Dedicated oncology NP fellowships exist at larger academic centers.`,
+            answer: `Many centers hire ${brand.niche.short}s with strong medical backgrounds and train the oncology layer (chemotherapy and immunotherapy competencies, oncologic emergencies, and symptom management) through structured onboarding. Dedicated oncology NP fellowships exist at larger academic centers.`,
         },
     ],
     cardiology: ({ totalJobs, avgSalary }) => [
         {
             question: `What does a cardiology ${brand.niche.short} do?`,
-            answer: `Cardiology ${brand.niche.short}s manage cardiovascular disease across clinic and hospital settings — heart failure management, guideline-directed medication titration, device checks, stress-test supervision, and pre/post-procedure care with cath lab and EP teams. There are currently ${totalJobs} cardiology positions listed here.`,
+            answer: `Cardiology ${brand.niche.short}s manage cardiovascular disease across clinic and hospital settings: heart failure management, guideline-directed medication titration, device checks, stress-test supervision, and pre/post-procedure care with cath lab and EP teams. There are currently ${totalJobs} cardiology positions listed here.`,
         },
         {
             question: `What certification do cardiology ${brand.niche.short}s need?`,
-            answer: `Outpatient cardiology roles are filled by ${brand.niche.short}s certified through AANP or ANCC (family or adult-gerontology track). Inpatient and ICU cardiology typically requires the acute care track — AGACNP-BC through ANCC or ACNPC-AG through AACN. ACLS is standard, and employers screen for ECG interpretation fluency.`,
+            answer: `Outpatient cardiology roles are filled by ${brand.niche.short}s certified through AANP or ANCC (family or adult-gerontology track). Inpatient and ICU cardiology typically requires the acute care track: AGACNP-BC through ANCC or ACNPC-AG through AACN. ACLS is standard, and employers screen for ECG interpretation fluency.`,
         },
         {
             question: `What is the average cardiology ${brand.niche.short} salary?`,
@@ -698,13 +698,13 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Where do cardiology ${brand.niche.short}s work?`,
-            answer: `Heart failure clinics, general cardiology practices, device and electrophysiology programs, cath lab teams, and cardiovascular surgery step-down units. Clinic-only, inpatient-only, and hybrid roles all appear on this board — check each listing's setting.`,
+            answer: `Heart failure clinics, general cardiology practices, device and electrophysiology programs, cath lab teams, and cardiovascular surgery step-down units. Clinic-only, inpatient-only, and hybrid roles all appear on this board; check each listing's setting.`,
         },
     ],
     'primary-care': ({ totalJobs, avgSalary }) => [
         {
             question: `What does a primary care ${brand.niche.short} do?`,
-            answer: `Primary care ${brand.niche.short}s provide first-contact care for a continuity panel — prevention, chronic disease management, acute visits, and care coordination. There are currently ${totalJobs} primary care positions listed here, across private practices, health systems, FQHCs, and value-based care groups.`,
+            answer: `Primary care ${brand.niche.short}s provide first-contact care for a continuity panel: prevention, chronic disease management, acute visits, and care coordination. There are currently ${totalJobs} primary care positions listed here, across private practices, health systems, FQHCs, and value-based care groups.`,
         },
         {
             question: `What certification do primary care ${brand.niche.short}s need?`,
@@ -720,17 +720,17 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What is the job outlook for primary care ${brand.niche.short}s?`,
-            answer: `Strong — the BLS projects ${NP_GROWTH_CITED} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, and primary care absorbs much of that demand as practices expand team-based care models.`,
+            answer: `The outlook is strong. The BLS projects ${NP_GROWTH_CITED} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, and primary care absorbs much of that demand as practices expand team-based care models.`,
         },
     ],
     hospitalist: ({ totalJobs, avgSalary }) => [
         {
             question: `What does a hospitalist ${brand.niche.short} do?`,
-            answer: `Hospitalist ${brand.niche.short}s practice inpatient medicine — admissions, daily rounding, cross-cover, and discharge planning — co-managing adult general medicine patients with physician hospitalists. There are currently ${totalJobs} hospitalist positions listed here.`,
+            answer: `Hospitalist ${brand.niche.short}s practice inpatient medicine (admissions, daily rounding, cross-cover, and discharge planning), co-managing adult general medicine patients with physician hospitalists. There are currently ${totalJobs} hospitalist positions listed here.`,
         },
         {
             question: `What certification do hospitalist ${brand.niche.short}s need?`,
-            answer: `Adult inpatient medicine teams prefer the acute care track: AGACNP-BC through ANCC or ACNPC-AG through AACN. Some services consider family-track ${brand.niche.short}s with inpatient experience — check each listing. Hospital credentialing and privileging define the final scope.`,
+            answer: `Adult inpatient medicine teams prefer the acute care track: AGACNP-BC through ANCC or ACNPC-AG through AACN. Some services consider family-track ${brand.niche.short}s with inpatient experience; check each listing. Hospital credentialing and privileging define the final scope.`,
         },
         {
             question: `What is the average hospitalist ${brand.niche.short} salary?`,
@@ -738,13 +738,13 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What schedules do hospitalist ${brand.niche.short}s work?`,
-            answer: `Block schedules dominate — commonly seven days on, seven days off, with day and night rotations. That concentration makes hospitalist work attractive for clinicians who want extended time off between blocks; clarify the night-shift share before signing.`,
+            answer: `Block schedules dominate, commonly seven days on and seven days off, with day and night rotations. That concentration makes hospitalist work attractive for clinicians who want extended time off between blocks; clarify the night-shift share before signing.`,
         },
     ],
     dermatology: ({ totalJobs, avgSalary }) => [
         {
             question: `What does a dermatology ${brand.niche.short} do?`,
-            answer: `Dermatology ${brand.niche.short}s manage medical dermatology — acne, psoriasis, eczema, and skin cancer surveillance — plus procedures such as biopsies and cryotherapy, and cosmetic services in many practices. There are currently ${totalJobs} dermatology positions listed here.`,
+            answer: `Dermatology ${brand.niche.short}s manage medical dermatology, including acne, psoriasis, eczema, and skin cancer surveillance, plus procedures such as biopsies and cryotherapy, and cosmetic services in many practices. There are currently ${totalJobs} dermatology positions listed here.`,
         },
         {
             question: `What certification do dermatology ${brand.niche.short}s need?`,
@@ -762,7 +762,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     orthopedic: ({ totalJobs, avgSalary }) => [
         {
             question: `What does an orthopedic ${brand.niche.short} do?`,
-            answer: `Orthopedic ${brand.niche.short}s work across sports medicine, joint replacement, and spine practices — fracture care, joint injections, pre- and post-operative management, and first-assist duties in the OR for surgical roles. There are currently ${totalJobs} orthopedic positions listed here.`,
+            answer: `Orthopedic ${brand.niche.short}s work across sports medicine, joint replacement, and spine practices: fracture care, joint injections, pre- and post-operative management, and first-assist duties in the OR for surgical roles. There are currently ${totalJobs} orthopedic positions listed here.`,
         },
         {
             question: `What certification do orthopedic ${brand.niche.short}s need?`,
@@ -774,7 +774,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Do orthopedic ${brand.niche.short}s work in the OR?`,
-            answer: `Many do — first-assist roles split the week between clinic panels and OR days. Clinic-only roles focus on new injuries, post-op checks, casting, splinting, and image-guided injections. Listings usually state whether first-assisting is expected, so match the mix to your training.`,
+            answer: `Many do. First-assist roles split the week between clinic panels and OR days. Clinic-only roles focus on new injuries, post-op checks, casting, splinting, and image-guided injections. Listings usually state whether first-assisting is expected, so match the mix to your training.`,
         },
     ],
     'clinical-nurse-specialist': ({ totalJobs }) => [
@@ -788,26 +788,26 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What certification do clinical nurse specialists need?`,
-            answer: `A graduate CNS program (MSN or DNP) in a defined specialty population, then national certification — for example AGCNS-BC through ANCC or the ACCNS credentials through AACN — alongside state APRN licensure. CNS title recognition varies by state, so verify the rules with the state board.`,
+            answer: `A graduate CNS program (MSN or DNP) in a defined specialty population, then national certification, for example AGCNS-BC through ANCC or the ACCNS credentials through AACN, alongside state APRN licensure. CNS title recognition varies by state, so verify the rules with the state board.`,
         },
         {
             question: `Where do clinical nurse specialists work?`,
-            answer: `Predominantly health systems and hospitals — critical care, perioperative, medical-surgical, oncology, and pediatric service lines — plus quality departments and professional-development teams. Compensation varies with the system's model for the role; compare posted ranges on individual listings.`,
+            answer: `Predominantly health systems and hospitals, across critical care, perioperative, medical-surgical, oncology, and pediatric service lines, plus quality departments and professional-development teams. Compensation varies with the system's model for the role; compare posted ranges on individual listings.`,
         },
     ],
     // ── 2026-07 P1 #15 verticals ────────────────────────────────────────────
     aesthetics: ({ totalJobs, avgSalary }) => [
         {
             question: `What does an aesthetic ${brand.niche.short} do?`,
-            answer: `Aesthetic ${brand.niche.short}s deliver cosmetic and medical aesthetic care — neuromodulator and dermal filler injections, laser and energy-based treatments, skin rejuvenation, and medical-grade skincare planning. There are currently ${totalJobs} aesthetics positions listed here across medical spas, dermatology and plastic surgery practices, and NP-owned clinics.`,
+            answer: `Aesthetic ${brand.niche.short}s deliver cosmetic and medical aesthetic care: neuromodulator and dermal filler injections, laser and energy-based treatments, skin rejuvenation, and medical-grade skincare planning. There are currently ${totalJobs} aesthetics positions listed here across medical spas, dermatology and plastic surgery practices, and NP-owned clinics.`,
         },
         {
             question: `What certification do aesthetic ${brand.niche.short}s need?`,
-            answer: `A national ${brand.niche.short} certification through AANP or ANCC (family or adult-gerontology track) plus state APRN licensure. Aesthetics itself is learned in practice — employers screen for injectable and device training, often through manufacturer-led programs. The optional CANS credential through the Plastic Surgical Nursing Certification Board recognizes aesthetic practice hours.`,
+            answer: `A national ${brand.niche.short} certification through AANP or ANCC (family or adult-gerontology track) plus state APRN licensure. Aesthetics itself is learned in practice; employers screen for injectable and device training, often through manufacturer-led programs. The optional CANS credential through the Plastic Surgical Nursing Certification Board recognizes aesthetic practice hours.`,
         },
         {
             question: `Can ${brand.niche.descriptor}s own an aesthetics practice?`,
-            answer: `It depends on the state. Ownership, medical-director, and delegation rules for cosmetic procedures are set by state law and vary widely — some states allow ${brand.niche.descriptor}-owned practices outright, others require a physician relationship. Confirm the current rules with your state board of nursing and medical board before planning ownership.`,
+            answer: `It depends on the state. Ownership, medical-director, and delegation rules for cosmetic procedures are set by state law and vary widely; some states allow ${brand.niche.descriptor}-owned practices outright, while others require a physician relationship. Confirm the current rules with your state board of nursing and medical board before planning ownership.`,
         },
         {
             question: `What is the average aesthetic ${brand.niche.short} salary?`,
@@ -817,11 +817,11 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'pain-management': ({ totalJobs, avgSalary }) => [
         {
             question: `What does a pain management ${brand.niche.short} do?`,
-            answer: `Pain management ${brand.niche.short}s evaluate and treat acute, chronic, and cancer-related pain with multimodal plans — medication management, interventional procedures, rehabilitation, and behavioral approaches. There are currently ${totalJobs} pain management positions listed here across interventional pain clinics, spine and orthopedic groups, cancer centers, and hospital pain services.`,
+            answer: `Pain management ${brand.niche.short}s evaluate and treat acute, chronic, and cancer-related pain with multimodal plans: medication management, interventional procedures, rehabilitation, and behavioral approaches. There are currently ${totalJobs} pain management positions listed here across interventional pain clinics, spine and orthopedic groups, cancer centers, and hospital pain services.`,
         },
         {
             question: `What certification do pain management ${brand.niche.short}s need?`,
-            answer: `A national ${brand.niche.short} certification through AANP or ANCC (family or adult-gerontology track per the patient population), state APRN licensure, and DEA registration — controlled-substance prescribing is central to the role. Pain management itself is generally learned in practice.`,
+            answer: `A national ${brand.niche.short} certification through AANP or ANCC (family or adult-gerontology track per the patient population), state APRN licensure, and DEA registration, since controlled-substance prescribing is central to the role. Pain management itself is generally learned in practice.`,
         },
         {
             question: `What are the prescribing rules for pain management ${brand.niche.short}s?`,
@@ -835,7 +835,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'palliative-hospice': ({ totalJobs, avgSalary }) => [
         {
             question: `What does a palliative care or hospice ${brand.niche.short} do?`,
-            answer: `Palliative and hospice ${brand.niche.short}s manage symptoms and goals of care for patients with serious, advanced, or life-limiting illness — pain and dyspnea control, advance care planning, and family support alongside interdisciplinary teams. There are currently ${totalJobs} positions listed here across hospital consult services, clinics, home-based programs, and inpatient hospice units.`,
+            answer: `Palliative and hospice ${brand.niche.short}s manage symptoms and goals of care for patients with serious, advanced, or life-limiting illness: pain and dyspnea control, advance care planning, and family support alongside interdisciplinary teams. There are currently ${totalJobs} positions listed here across hospital consult services, clinics, home-based programs, and inpatient hospice units.`,
         },
         {
             question: `What is the difference between palliative care and hospice?`,

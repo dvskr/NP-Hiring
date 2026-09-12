@@ -133,7 +133,7 @@ export default async function FeaturedTestimonials({ variant = 'section' }: Feat
                     id="checkout-testimonials-heading"
                     style={{ fontSize: '13px', fontWeight: 700, color: MUTED_TEXT, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}
                 >
-                    From hiring teams who posted here
+                    From hiring teams that posted here
                 </h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {shown.map((t) => (
@@ -143,7 +143,7 @@ export default async function FeaturedTestimonials({ variant = 'section' }: Feat
                                 &ldquo;{t.content}&rdquo;
                             </blockquote>
                             <figcaption style={{ fontSize: '12px', fontWeight: 700, color: '#7A1C2B' }}>
-                                — {formatAttribution(t.employerName, t.displayAs)}
+                                {formatAttribution(t.employerName, t.displayAs)}
                             </figcaption>
                         </figure>
                     ))}
@@ -170,7 +170,7 @@ export default async function FeaturedTestimonials({ variant = 'section' }: Feat
                     What Employers Say
                 </h2>
                 <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '460px', margin: '0 auto 44px', lineHeight: 1.6 }}>
-                    Real feedback from teams that hired here — shared with their permission.
+                    Real feedback from teams that hired here, shared with their permission.
                 </p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
@@ -181,7 +181,7 @@ export default async function FeaturedTestimonials({ variant = 'section' }: Feat
                                 &ldquo;{t.content}&rdquo;
                             </blockquote>
                             <figcaption style={{ marginTop: 'auto', fontSize: '13px', fontWeight: 700, color: '#7A1C2B' }}>
-                                — {formatAttribution(t.employerName, t.displayAs)}
+                                {formatAttribution(t.employerName, t.displayAs)}
                             </figcaption>
                         </figure>
                     ))}

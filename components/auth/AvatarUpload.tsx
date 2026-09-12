@@ -47,7 +47,7 @@ export default function AvatarUpload({
       onRemove()
     } catch (err: unknown) {
       console.error('Remove error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to remove avatar')
+      setError(err instanceof Error ? err.message : 'Failed to remove the avatar.')
     } finally {
       setRemoving(false)
     }
@@ -61,13 +61,13 @@ export default function AvatarUpload({
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      setError('Please select an image file')
+      setError('Please select an image file.')
       return
     }
 
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      setError('Image must be less than 2MB')
+      setError('The image must be smaller than 2MB.')
       return
     }
 
@@ -89,7 +89,7 @@ export default function AvatarUpload({
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Upload failed')
+        throw new Error(errorData.error || 'Upload failed.')
       }
 
       const { url } = await response.json()
@@ -102,7 +102,7 @@ export default function AvatarUpload({
       setPreview(null)
     } catch (err: unknown) {
       console.error('Upload error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to upload image')
+      setError(err instanceof Error ? err.message : 'Failed to upload the image.')
       setPreview(null)
     } finally {
       setUploading(false)
@@ -194,7 +194,7 @@ export default function AvatarUpload({
 
       {/* Info Text */}
       <p className="text-xs text-gray-500 text-center max-w-xs">
-        JPG, PNG or GIF. Max 2MB.
+        JPG, PNG or GIF. Maximum size 2MB.
       </p>
     </div>
   )

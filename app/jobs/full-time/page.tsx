@@ -45,17 +45,17 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: `What benefits do full-time ${brand.niche.short}s receive?`, a: `Full-time ${brand.niche.short}s typically receive comprehensive health/dental/vision insurance, 401k matching, PTO, CME allowances, malpractice coverage, and loan repayment programs at qualifying employers — nonprofit and public health systems often qualify for PSLF.` },
-  { q: `What is the average full-time ${brand.niche.short} salary?`, a: `Full-time ${brand.niche.short}s typically earn $95K-$160K base salary depending on specialty, location, setting, and experience — acute care, high-cost metros, and in-demand specialties often pay more. Many roles add productivity bonuses, quality incentives, and sign-on bonuses.` },
-  { q: `What schedule do full-time ${brand.niche.short}s work?`, a: 'Most outpatient full-time roles are Monday-Friday, 8am-5pm with no weekends. Inpatient and hospital roles often use 7-on/7-off or shift-based schedules. Some positions offer 4x10-hour day options.' },
-  { q: 'How does full-time compare to contract or PRN?', a: 'Full-time offers job security, benefits, PTO, and retirement contributions. Contract/PRN pay higher hourly rates but lack benefits and stability. Full-time is ideal for long-term career building.' },
-  { q: 'What qualifications are needed?', a: 'An active APRN license, national NP certification in your specialty, DEA registration where prescribing is required, and typically 1+ years of clinical experience. New grads are welcomed at many full-time positions.' },
+  { q: `What benefits do full-time ${brand.niche.short}s receive?`, a: `Full-time ${brand.niche.short}s typically receive comprehensive health/dental/vision insurance, 401k matching, PTO, CME allowances, malpractice coverage, and loan repayment programs at qualifying employers. Nonprofit and public health systems often qualify for PSLF.` },
+  { q: `What is the average full-time ${brand.niche.short} salary?`, a: `Full-time ${brand.niche.short}s typically earn a base salary of $95K to $160K depending on specialty, location, setting, and experience. Acute care, high-cost metros, and in-demand specialties often pay more. Many roles add productivity bonuses, quality incentives, and sign-on bonuses.` },
+  { q: `What schedule do full-time ${brand.niche.short}s work?`, a: 'Most outpatient full-time roles run Monday to Friday, 8am to 5pm, with no weekends. Inpatient and hospital roles often use 7-on/7-off or shift-based schedules. Some positions offer 4x10-hour day options.' },
+  { q: 'How does full-time compare to contract or PRN?', a: 'Full-time roles offer job security, benefits, PTO, and retirement contributions. Contract and PRN roles pay higher hourly rates but lack benefits and stability. Full-time work is ideal for long-term career building.' },
+  { q: 'What qualifications are needed?', a: 'An active APRN license, national NP certification in your specialty, DEA registration where prescribing is required, and typically 1+ years of clinical experience. New grads are welcome at many full-time positions.' },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
   return {
-    title: `${stats.totalJobs} Full-Time ${brand.niche.short} Jobs — Salaried + Benefits`,
+    title: `${stats.totalJobs} Full-Time ${brand.niche.short} Jobs: Salaried + Benefits`,
     description: `Find ${stats.totalJobs} full-time ${brand.niche.short} jobs with benefits, PTO, and retirement. Permanent ${brand.niche.descriptor} positions updated daily.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/full-time` },
   };
@@ -105,7 +105,7 @@ export default async function FullTimePage({ searchParams }: PageProps) {
         <div className="grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
             <h2 className="font-lora mb-6" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>Full-Time Positions ({stats.totalJobs})</h2>
-            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions right now. Check back soon.</p></div>)}
+            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions are available right now. Check back soon.</p></div>)}
             <div style={{ textAlign: 'center', marginTop: '32px' }}>
               <Link href="/jobs?category=full-time" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>Browse All Full-Time Jobs <ArrowRight size={16} /></Link>
             </div>
@@ -146,7 +146,7 @@ export default async function FullTimePage({ searchParams }: PageProps) {
             {[
               { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ft_benefits.webp`, t: 'Full Benefits', d: 'Health insurance, 401k, PTO, CME stipends, and loan repayment.' },
               { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ft_security.webp`, t: 'Job Security', d: 'Permanent positions with stable income and career advancement.' },
-              { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ft_balance.webp`, t: 'Work-Life Balance', d: 'Many full-time roles offer predictable M-F schedules.' },
+              { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ft_balance.webp`, t: 'Work-Life Balance', d: 'Many full-time roles offer predictable Monday to Friday schedules.' },
               { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ft_team.webp`, t: 'Team Integration', d: 'Become a core member of multidisciplinary care teams.' },
             ].map((c, i) => (
               <div key={i} className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>

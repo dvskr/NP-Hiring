@@ -13,7 +13,7 @@ import { Metadata } from 'next';
  */
 export const metadata: Metadata = {
     title: `My Applications | ${brand.name}`,
-    description: `Track the ${brand.niche.short} jobs you have applied to on ${brand.name} — application status, dates, and next steps.`,
+    description: `Track the ${brand.niche.short} jobs you have applied to on ${brand.name}, including application status, dates, and next steps.`,
     alternates: {
         canonical: `${brand.baseUrl}/my-applications`,
     },

@@ -110,7 +110,7 @@ export default function SalaryComparisonWidget({
                     className="rounded-lg p-3 text-sm"
                     style={{ backgroundColor: '#EDF2EE', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '14px', boxShadow: 'inset 1px 1px 2px rgba(255,255,255,0.5), 2px 2px 4px rgba(0,0,0,0.03)', color: 'var(--text-secondary)' }}
                 >
-                    This position&apos;s salary ({`$${Math.round(Number(jobMinSalary) / 1000)}k-$${Math.round(Number(jobMaxSalary) / 1000)}k`}) is{' '}
+                    This position&apos;s salary ({`$${Math.round(Number(jobMinSalary) / 1000)}k to $${Math.round(Number(jobMaxSalary) / 1000)}k`}) is{' '}
                     {jobMidpoint > stateMedianSalaryK ? (
                         <strong style={{ color: 'var(--color-primary)' }}>above</strong>
                     ) : jobMidpoint < stateMedianSalaryK ? (
@@ -132,7 +132,7 @@ export default function SalaryComparisonWidget({
                 className="mt-3"
                 style={{ fontSize: '11px', lineHeight: 1.6, color: 'var(--text-muted)', margin: '12px 0 0' }}
             >
-                {NATIONAL_CITED_SENTENCE} {stateName} median computed from live postings with disclosed, non-estimated salary on {brand.name}.
+                {NATIONAL_CITED_SENTENCE} The {stateName} median is computed from live postings with disclosed, non-estimated salary on {brand.name}.
             </p>
         </div>
     );

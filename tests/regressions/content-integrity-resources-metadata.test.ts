@@ -27,7 +27,7 @@ describe('F12 — /resources metadata matches actual inventory', () => {
 
   it('title/description describe the real inventory (salary tool, licensure checker, guides)', () => {
     const src = read('app/resources/page.tsx');
-    expect(src).toContain('Career Resources — Salary Tool & Licensure Checker');
+    expect(src).toContain('Career Resources: Salary Tool & Licensure Checker');
     expect(src).toContain('interactive salary calculator');
     expect(src).toContain('Full Practice Authority');
     expect(src).toContain('1099 vs W2');

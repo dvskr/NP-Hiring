@@ -286,8 +286,8 @@ export default function ProgramEmbedBuilder({ baseUrl }: Props) {
             lineHeight: 1.5,
           }}
         >
-          The widget below updates as you type. Pick your state, name your
-          program, and copy the snippet at the bottom.
+          The widget below updates as you type. Select your state, enter your
+          program name, and copy the snippet at the bottom.
         </p>
       </div>
 
@@ -301,7 +301,7 @@ export default function ProgramEmbedBuilder({ baseUrl }: Props) {
         <iframe
           key={`${stateCode}-${cleanProgram}-${limit}` /* force refresh when params change */}
           src={`/widget?state=${stateCode}&program=${encodeURIComponent(cleanProgram || 'Your Program')}${limit !== 6 ? `&limit=${limit}` : ''}`}
-          title={`Live ${brand.niche.short} jobs widget — ${stateName}`}
+          title={`Live ${brand.niche.short} jobs widget for ${stateName}`}
           loading="lazy"
           style={{
             width: '100%',
@@ -399,8 +399,8 @@ export default function ProgramEmbedBuilder({ baseUrl }: Props) {
             lineHeight: 1.5,
           }}
         >
-          Paste this anywhere on your career-services page. No login, no
-          API key. The jobs refresh automatically.
+          Paste this anywhere on your career-services page. No login or
+          API key is required. The jobs refresh automatically.
         </p>
       </div>
 
@@ -428,7 +428,7 @@ export default function ProgramEmbedBuilder({ baseUrl }: Props) {
             marginBottom: '8px',
           }}
         >
-          Site blocks iframes? Use this link instead
+          If your site blocks iframes, use this link instead
         </div>
         <p
           style={{
@@ -438,10 +438,10 @@ export default function ProgramEmbedBuilder({ baseUrl }: Props) {
             lineHeight: 1.55,
           }}
         >
-          A small number of universities block all embedded content via a
-          strict Content-Security-Policy. If the iframe above shows up
-          blank or refuses to load, link your students to this page
-          instead — it filters to {stateName} {brand.niche.short} roles.
+          A small number of universities block all embedded content through a
+          strict Content-Security-Policy. If the iframe above appears
+          blank or fails to load, link your students to this page
+          instead. It filters to {stateName} {brand.niche.short} roles.
         </p>
         <a
           href={fallbackUrl}

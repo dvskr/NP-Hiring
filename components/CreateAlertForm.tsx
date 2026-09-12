@@ -44,7 +44,7 @@ function buildCriteriaSummary(filters: InitialFilters): string {
   }
   if (filters.minSalary || filters.maxSalary) {
     if (filters.minSalary && filters.maxSalary) {
-      parts.push(`$${(filters.minSalary / 1000).toFixed(0)}k-$${(filters.maxSalary / 1000).toFixed(0)}k`);
+      parts.push(`$${(filters.minSalary / 1000).toFixed(0)}k to $${(filters.maxSalary / 1000).toFixed(0)}k`);
     } else if (filters.minSalary) {
       parts.push(`$${(filters.minSalary / 1000).toFixed(0)}k+`);
     } else if (filters.maxSalary) {
@@ -92,13 +92,13 @@ export default function CreateAlertForm({ initialFilters = {}, onSuccess }: Crea
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to create alert');
+        throw new Error(result.error || 'Failed to create the alert.');
       }
 
       setIsSuccess(true);
       onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -148,10 +148,10 @@ export default function CreateAlertForm({ initialFilters = {}, onSuccess }: Crea
               : 'border-slate-300 focus:border-pink-600 focus:ring-pink-600'
             }`}
           {...register('email', {
-            required: 'Email is required',
+            required: 'Email address is required.',
             pattern: {
               value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-              message: 'Please enter a valid email',
+              message: 'Please enter a valid email address.',
             },
           })}
         />
@@ -233,7 +233,7 @@ export default function CreateAlertForm({ initialFilters = {}, onSuccess }: Crea
       </button>
 
       <p className="text-xs text-center text-slate-500">
-        You can unsubscribe anytime from the email.
+        You can unsubscribe at any time from the email.
       </p>
     </form>
   );

@@ -251,7 +251,7 @@ export const HOMEPAGE_FEATURED_POSTS: FeaturedBlogPost[] = [
     {
         category: 'Salary',
         title: 'The Highest-Paying NP Specialties, Compared',
-        description: 'CRNA, acute care, emergency, and behavioral health — and the reasons behind every premium.',
+        description: 'CRNA, acute care, emergency, and behavioral health, with the reasons behind every premium.',
         href: '/blog/highest-paying-np-specialties',
     },
     {

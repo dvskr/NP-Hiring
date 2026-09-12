@@ -90,14 +90,14 @@ export default function AdminCompaniesPage() {
             });
             const data = await res.json().catch(() => ({} as { error?: string; company?: AdminCompany }));
             if (!res.ok || !data.company) {
-                showMsg(data.error || 'Update failed — please try again.', true);
+                showMsg(data.error || 'Update failed. Please try again.', true);
                 return;
             }
             const updated = data.company as AdminCompany;
             setCompanies(prev => prev.map(c => (c.id === updated.id ? updated : c)));
             showMsg(okMsg, false);
         } catch {
-            showMsg('Network error — please try again.', true);
+            showMsg('Network error. Please try again.', true);
         } finally {
             setBusyId(null);
         }
@@ -129,11 +129,11 @@ export default function AdminCompaniesPage() {
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 16px' }}>
             {/* Header */}
             <div style={{ marginBottom: 20 }}>
-                <h1 style={{ ...heading, fontSize: 28, marginBottom: 4 }}>Companies — Employer Type</h1>
+                <h1 style={{ ...heading, fontSize: 28, marginBottom: 4 }}>Companies: Employer Type</h1>
                 <p style={sub}>
                     Classify each company as a direct employer or a staffing agency. The list is
-                    sorted by active job count — working top-down covers the most live inventory
-                    per decision. Unclassified companies show no badge anywhere.
+                    sorted by active job count, so working from the top covers the most live
+                    inventory per decision. Unclassified companies show no badge anywhere.
                 </p>
             </div>
 
@@ -142,10 +142,10 @@ export default function AdminCompaniesPage() {
                 <ShieldQuestion size={18} style={{ color: '#BE185D', flexShrink: 0, marginTop: 2 }} />
                 <div style={{ fontSize: 13, color: '#4A5E6A', lineHeight: 1.6 }}>
                     <strong style={{ color: '#1A2E35' }}>Classify only what you have verified yourself.</strong>{' '}
-                    Nothing here is inferred — check the company&apos;s own site: does it hire clinicians
-                    onto its own staff (<em>direct employer</em>), or recruit and place them with client
-                    organizations (<em>staffing agency</em>)? Name keywords and job-ad wording are not
-                    evidence. If you are not sure, leave it unclassified — an unclassified company shows
+                    Nothing here is inferred. Check the company&apos;s own site: does it hire clinicians
+                    onto its own staff (<em>direct employer</em>), or does it recruit and place them with
+                    client organizations (<em>staffing agency</em>)? Name keywords and job-ad wording are
+                    not evidence. If you are not sure, leave it unclassified. An unclassified company shows
                     no badge, which is honest; a wrong badge is a public claim about a named organization.
                     <br />
                     <strong style={{ color: '#1A2E35' }}>Neither label is a warning.</strong>{' '}
@@ -244,7 +244,7 @@ export default function AdminCompaniesPage() {
                                                     <div style={{ ...muted, fontWeight: 400, marginTop: 4 }}>
                                                         {c.website
                                                             ? c.website.replace(/^https?:\/\//, '')
-                                                            : 'no website on file'}
+                                                            : 'No website on file'}
                                                     </div>
                                                 </td>
                                                 <td style={{ ...td, whiteSpace: 'nowrap', fontWeight: 600, color: '#1A2E35' }}>{c._count.jobs}</td>
@@ -257,7 +257,7 @@ export default function AdminCompaniesPage() {
                                                 <td style={{ ...td, textAlign: 'center', minWidth: 250 }}>
                                                     <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
                                                         <button
-                                                            onClick={() => void classify(c.id, 'direct_hire', `${c.name} classified as a direct employer — badge and filter placement are now live.`)}
+                                                            onClick={() => void classify(c.id, 'direct_hire', `${c.name} is now classified as a direct employer. The badge and filter placement are live.`)}
                                                             disabled={busy || c.recruitmentType === 'direct_hire'}
                                                             style={{
                                                                 padding: '7px 14px', borderRadius: '8px', fontSize: 12, fontWeight: 700,
@@ -269,7 +269,7 @@ export default function AdminCompaniesPage() {
                                                             {busy ? 'Saving…' : 'Direct'}
                                                         </button>
                                                         <button
-                                                            onClick={() => void classify(c.id, 'staffing_agency', `${c.name} classified as a staffing agency — badge and filter placement are now live.`)}
+                                                            onClick={() => void classify(c.id, 'staffing_agency', `${c.name} is now classified as a staffing agency. The badge and filter placement are live.`)}
                                                             disabled={busy || c.recruitmentType === 'staffing_agency'}
                                                             style={{
                                                                 padding: '7px 14px', borderRadius: '8px', fontSize: 12, fontWeight: 700,
@@ -281,7 +281,7 @@ export default function AdminCompaniesPage() {
                                                             {busy ? 'Saving…' : 'Staffing'}
                                                         </button>
                                                         <button
-                                                            onClick={() => void classify(c.id, null, `${c.name} is unclassified again — its badge is gone and it no longer matches either filter.`)}
+                                                            onClick={() => void classify(c.id, null, `${c.name} is unclassified again. Its badge has been removed and it no longer matches either filter.`)}
                                                             disabled={busy || c.recruitmentType === null}
                                                             style={{
                                                                 padding: '7px 14px', borderRadius: '8px', fontSize: 12, fontWeight: 700,
@@ -300,7 +300,7 @@ export default function AdminCompaniesPage() {
                                     {filtered.length === 0 && (
                                         <tr><td colSpan={5} style={{ ...td, textAlign: 'center', padding: 40, whiteSpace: 'normal' }}>
                                             {companies.length === 0
-                                                ? 'No companies yet — rows appear here as the ingest pipeline links jobs to employers.'
+                                                ? 'No companies yet. Rows appear here as the ingest pipeline links jobs to employers.'
                                                 : 'No companies match this filter.'}
                                         </td></tr>
                                     )}

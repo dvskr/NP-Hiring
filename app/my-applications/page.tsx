@@ -103,7 +103,7 @@ export default function MyApplicationsPage() {
             setApplications(data);
         } catch {
             setErrorKind('load');
-            setError('We couldn’t load your applications — check your connection and try again.');
+            setError('We couldn’t load your applications. Check your connection and try again.');
         } finally {
             setLoading(false);
         }
@@ -136,7 +136,7 @@ export default function MyApplicationsPage() {
                 setWithdrawError('Couldn’t withdraw this application. Please try again.');
             }
         } catch {
-            setWithdrawError('Couldn’t withdraw this application — check your connection and try again.');
+            setWithdrawError('Couldn’t withdraw this application. Check your connection and try again.');
         } finally {
             setWithdrawing(null);
         }
@@ -160,7 +160,7 @@ export default function MyApplicationsPage() {
     const requestWithdraw = (applicationId: string, jobTitle: string) => {
         setConfirm({
             title: 'Withdraw this application?',
-            description: `${jobTitle} — the employer still sees this application, marked “Withdrawn”, with your name on it. Your cover letter text and résumé are removed from it; a cover letter you uploaded as a file stays attached. This cannot be undone.`,
+            description: `${jobTitle}: the employer still sees this application, marked “Withdrawn”, with your name on it. Your cover letter text and résumé are removed from it; a cover letter you uploaded as a file stays attached. This cannot be undone.`,
             confirmLabel: 'Withdraw',
             variant: 'danger',
             onConfirm: () => {
@@ -190,7 +190,7 @@ export default function MyApplicationsPage() {
                         My Applications
                     </h1>
                     <p style={{ fontSize: '14px', color: '#6B7F8A', margin: '0 0 12px' }}>
-                        Applications you submitted through {brand.name} — with the status the
+                        Applications you submitted through {brand.name}, with the status the
                         employer has set.
                     </p>
                     {/* P2 #23: /saved carries an "Applied" tab listing jobs the
@@ -210,7 +210,7 @@ export default function MyApplicationsPage() {
                         }}
                     >
                         <Bookmark size={12} style={{ color: '#BE185D' }} />
-                        Jobs you saved or marked applied yourself live under My Jobs
+                        Jobs you saved or marked applied yourself are listed under My Jobs
                         <ArrowRight size={12} />
                     </Link>
                 </div>

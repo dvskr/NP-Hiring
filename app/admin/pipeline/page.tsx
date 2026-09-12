@@ -59,12 +59,12 @@ const BUCKET_COLOR: Record<string, string> = {
 };
 
 function fmt(n: number | null | undefined): string {
-    if (n == null) return '—';
+    if (n == null) return 'N/A';
     return n.toLocaleString();
 }
 
 function fmtDur(ms: number | null): string {
-    if (ms == null) return '—';
+    if (ms == null) return 'N/A';
     if (ms < 1000) return `${ms}ms`;
     return `${(ms / 1000).toFixed(1)}s`;
 }
@@ -135,7 +135,7 @@ export default function PipelineFlowPage() {
             setData(json);
             setLastFetched(new Date());
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Failed to load');
+            setError(e instanceof Error ? e.message : 'Failed to load pipeline data');
         } finally {
             setLoading(false);
         }
@@ -280,7 +280,7 @@ export default function PipelineFlowPage() {
             <Section title="Recent cron runs" icon={<Activity size={16} />}>
                 {data?.recentRuns?.length === 0 && (
                     <div style={{ padding: '12px 14px', color: '#6B7F8A', fontSize: '13px' }}>
-                        No runs logged yet — `withCronTracking` only fires after deploy. After the next ingest cron, rows will appear here.
+                        No runs have been logged yet. `withCronTracking` only fires after deployment. Rows will appear here after the next ingest cron runs.
                     </div>
                 )}
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -301,11 +301,11 @@ export default function PipelineFlowPage() {
                                 <td style={{ padding: '8px 14px' }}>
                                     {r.success ? (
                                         <span style={{ color: '#BE185D', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <CheckCircle2 size={14} /> ok
+                                            <CheckCircle2 size={14} /> OK
                                         </span>
                                     ) : (
                                         <span style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '4px' }} title={r.error ?? ''}>
-                                            <XCircle size={14} /> failed
+                                            <XCircle size={14} /> Failed
                                         </span>
                                     )}
                                 </td>
@@ -321,7 +321,7 @@ export default function PipelineFlowPage() {
 }
 
 function KpiCard({ label, value, accent }: { label: string; value: number | null | undefined; accent: string }) {
-    const display = value == null ? '—' : value.toLocaleString();
+    const display = value == null ? 'N/A' : value.toLocaleString();
     return (
         <div style={{ background: '#FFFFFF', border: '1px solid #E8ECF0', borderRadius: '12px', padding: '16px 18px' }}>
             <div style={{ fontSize: '12px', color: '#6B7F8A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>

@@ -53,7 +53,7 @@ export default function MessageEmployerButton({
             <button
                 onClick={() => !isDisabled && setIsOpen(true)}
                 disabled={isDisabled}
-                title={isDisabled ? 'This is your job posting' : `Send InMail to ${employerName}`}
+                title={isDisabled ? 'This is your job posting' : `Send a message to ${employerName}`}
                 style={{
                     width: '100%',
                     padding: '10px 18px',

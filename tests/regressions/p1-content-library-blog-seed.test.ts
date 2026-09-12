@@ -198,6 +198,14 @@ describe('truth rules', () => {
             ['$180K–$250K+', 'lib/pseo/state-narrative.ts — CRNA band'],
             ['$120K–$170K', 'lib/pseo/city-narrative.ts — behavioral-health band'],
             ['$5K', 'illustrative negotiation delta, not a market claim'],
+            // Prose-form ranges (dash-free copy): the same bands as above,
+            // written "X to Y" in post bodies. Same sources, same figures.
+            ['$110K to $170K', 'config/niche/salary.ts — normalizer.typical'],
+            ['$60 to $150+', 'config/niche/salary.ts header — locum NP hourly band'],
+            ['$180K to $250K+', 'lib/pseo/state-narrative.ts — CRNA band'],
+            ['$120K to $170K', 'lib/pseo/city-narrative.ts — behavioral-health band'],
+            ['$95K to $120K', 'app/jobs/new-grad + app/jobs/entry-level FAQ copy'],
+            ['$70 to $130', 'lib/pseo/setting-state-config.ts — contract hourly band'],
         ]);
         // Longest-first so '$110K–$170K' is consumed before its '$110K' half.
         const patterns = [...ALLOWED.keys()].sort((a, b) => b.length - a.length);

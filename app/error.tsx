@@ -86,8 +86,8 @@ export default function Error({ error, reset }: ErrorProps) {
                 </h1>
 
                 <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, maxWidth: '420px', margin: '0 auto 20px' }}>
-                    This page didn&apos;t load properly. Trying again usually fixes it. If it
-                    keeps happening, email{' '}
+                    This page did not load properly. Trying again usually resolves the issue. If the
+                    problem continues, email{' '}
                     <a href={`mailto:${brand.email.support}`} style={{ color: '#BE123C', fontWeight: 600 }}>
                         {brand.email.support}
                     </a>

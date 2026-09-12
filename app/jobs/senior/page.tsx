@@ -46,8 +46,8 @@ async function getStats() {
 
 const seniorFaqs = [
   { question: `What qualifies as a Senior ${brand.niche.short} role?`, answer: `Senior ${brand.niche.short} roles include positions like Clinical Director, Program Director, Medical Director, Lead ${brand.niche.short}, and Supervisor. These roles combine direct patient care with leadership responsibilities such as team oversight, program development, and quality improvement.` },
-  { question: `What salary range can Senior ${brand.niche.short}s expect?`, answer: `Senior ${brand.niche.short}s typically earn at the top of the standard ${brand.niche.short} pay band — often $140K-$160K+ — and director-level roles at larger organizations frequently exceed that with bonuses and comprehensive benefits packages.` },
-  { question: 'How many years of experience are needed for senior positions?', answer: `Most senior ${brand.niche.short} roles require 5-10+ years of ${brand.niche.adjective} clinical experience. Director-level positions often require demonstrated leadership experience, program development skills, and expertise in a specific clinical specialty.` },
+  { question: `What salary range can Senior ${brand.niche.short}s expect?`, answer: `Senior ${brand.niche.short}s typically earn at the top of the standard ${brand.niche.short} pay band, often $140K to $160K+, and director-level roles at larger organizations frequently exceed that with bonuses and comprehensive benefits packages.` },
+  { question: 'How many years of experience are needed for senior positions?', answer: `Most senior ${brand.niche.short} roles require 5 to 10+ years of ${brand.niche.adjective} clinical experience. Director-level positions often require demonstrated leadership experience, program development skills, and expertise in a specific clinical specialty.` },
   { question: 'What additional certifications help for leadership roles?', answer: `Beyond your national ${brand.niche.short} certification, training in healthcare administration, nursing leadership, and quality improvement strengthens candidacy. Many senior roles also value experience with evidence-based practice and program evaluation.` },
 ];
 
@@ -55,11 +55,11 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Senior ${brand.niche.short} Jobs — Director & Leadership`,
+    title: `${stats.totalJobs} Senior ${brand.niche.short} Jobs: Director & Leadership`,
     description: `Browse ${stats.totalJobs} senior ${brand.niche.short} leadership positions. Clinical Director, Program Director, Medical Director, and Lead ${brand.niche.short} roles.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/senior` },
     keywords: ['senior np jobs', 'nurse practitioner director', 'np leadership jobs', 'lead nurse practitioner', 'np supervisor'],
-    openGraph: { title: `Senior ${brand.niche.short} Jobs — ${stats.totalJobs} Leadership Positions`, description: `Find ${stats.totalJobs} senior ${brand.niche.descriptor} leadership roles.`, url: `${brand.baseUrl}/jobs/senior`, type: 'website' },
+    openGraph: { title: `Senior ${brand.niche.short} Jobs: ${stats.totalJobs} Leadership Positions`, description: `Find ${stats.totalJobs} senior ${brand.niche.descriptor} leadership roles.`, url: `${brand.baseUrl}/jobs/senior`, type: 'website' },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
 }
@@ -103,7 +103,7 @@ export default async function SeniorPage({ searchParams }: PageProps) {
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('senior') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Senior"
         headlineLine2={brand.niche.short}
-        headlineSub="jobs, leadership roles."
+        headlineSub="jobs in leadership roles."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$140K+', label: 'median salary' },
@@ -126,7 +126,7 @@ export default async function SeniorPage({ searchParams }: PageProps) {
                 {jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}
               </div>
             ) : (
-              <div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions right now. Check back soon.</p></div>
+              <div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions are available right now. Check back soon.</p></div>
             )}
             <div style={{ textAlign: 'center', marginTop: '32px' }}>
               <Link href="/jobs?category=senior" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>Browse All Senior Jobs <ArrowRight size={16} /></Link>
@@ -219,7 +219,7 @@ export default async function SeniorPage({ searchParams }: PageProps) {
             <div className="cat-bento-card cat-bento-cta" style={{ gridColumn: 'span 4', padding: '28px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(145deg, #831843, #BE185D)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.15)' }}>
               <Bell size={28} style={{ color: '#fff', marginBottom: '12px' }} />
               <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Get Leadership Alerts</h3>
-              <p style={{ fontSize: '12px', color: '#FBCFE8', marginBottom: '16px', lineHeight: 1.5 }}>New director and supervisor roles daily.</p>
+              <p style={{ fontSize: '12px', color: '#FBCFE8', marginBottom: '16px', lineHeight: 1.5 }}>New director and supervisor roles delivered daily.</p>
               <Link href="/job-alerts" style={{ padding: '12px 28px', borderRadius: '12px', fontWeight: 700, fontSize: '13px', background: '#fff', color: '#831843', textDecoration: 'none', boxShadow: '4px 4px 12px rgba(0,0,0,0.15)' }}>Set Up Alerts</Link>
             </div>
           </div>
@@ -258,7 +258,7 @@ export default async function SeniorPage({ searchParams }: PageProps) {
               { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
               { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
               { href: '/jobs/private-practice', label: 'Private Practice', sub: 'Own your practice' },
-              { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic based' },
+              { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based' },
               { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
               { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
             ].map(c => (

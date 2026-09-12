@@ -64,10 +64,10 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = parseInt(params.page || '1');
   return {
-    title: `${stats.totalJobs} Inpatient ${brand.niche.short} Jobs — Hospital & Acute Care`,
+    title: `${stats.totalJobs} Inpatient ${brand.niche.short} Jobs: Hospital & Acute Care`,
     description: `Find ${stats.totalJobs} inpatient ${brand.niche.short} jobs. Hospital-based ${brand.niche.descriptor} positions in acute care, step-down, and specialty inpatient units.`,
     openGraph: {
-      title: `${stats.totalJobs} Inpatient ${brand.niche.short} Jobs — Hospital-Based Roles`,
+      title: `${stats.totalJobs} Inpatient ${brand.niche.short} Jobs: Hospital-Based Roles`,
       description: `Browse inpatient ${brand.niche.descriptor} positions.`,
       type: 'website',
       images: [{ url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Inpatient ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Hospital & acute care ${brand.niche.short} positions`)}`, width: 1200, height: 630, alt: `Inpatient ${brand.niche.short} Jobs` }],
@@ -221,7 +221,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Higher Base Pay</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  Pay often sits at the top of the {brand.niche.short} range, with shift differentials, nights/weekends premiums, and sign-on bonuses.
+                  Pay often sits at the top of the {brand.niche.short} range, with shift differentials, night and weekend premiums, and sign-on bonuses.
                 </p>
               </div>
             </div>
@@ -230,7 +230,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_inp_bed.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Structured Shifts</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Predictable 7-on/7-off or 3×12 schedules — no after-hours calls.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Predictable 7-on/7-off or 3×12 schedules with no after-hours calls.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_inp_crisis.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -269,7 +269,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_clay_bell.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '14px' }} />
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Job Alerts</h3>
               <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                New inpatient listings delivered to your inbox — be first to apply.
+                New inpatient listings delivered to your inbox so you can be first to apply.
               </p>
               <Link href="/job-alerts" className="cat-cta-primary" style={{
                 padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
@@ -291,10 +291,10 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>Preparing for Inpatient Practice</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
             {[
-              { step: '01', title: 'Acute Care Readiness', text: 'Get comfortable with rapid assessment, deteriorating patients, and managing inpatient emergencies.' },
+              { step: '01', title: 'Acute Care Readiness', text: 'Become comfortable with rapid assessment, deteriorating patients, and the management of inpatient emergencies.' },
               { step: '02', title: 'Team Dynamics', text: 'Learn to collaborate with physicians, pharmacists, nurses, and case managers in multidisciplinary rounds.' },
-              { step: '03', title: 'Pharmacology', text: 'Stay current on inpatient pharmacology — acute settings require rapid titration, IV therapies, and careful medication reconciliation.' },
-              { step: '04', title: 'Shift Negotiation', text: 'Negotiate shift differentials for nights, weekends, and holidays — they can add meaningfully to your base pay.' },
+              { step: '03', title: 'Pharmacology', text: 'Stay current on inpatient pharmacology. Acute settings require rapid titration, IV therapies, and careful medication reconciliation.' },
+              { step: '04', title: 'Shift Negotiation', text: 'Negotiate shift differentials for nights, weekends, and holidays, as they can add meaningfully to your base pay.' },
             ].map(r => (
               <div key={r.step} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>{r.step}</span>

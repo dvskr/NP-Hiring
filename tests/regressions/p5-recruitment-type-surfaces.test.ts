@@ -38,8 +38,8 @@ describe('/jobs facet (components/jobs/LinkedInFilters.tsx)', () => {
 
     it('exposes the unclassified count and says what picking a type hides', () => {
         expect(src).toContain('unclassifiedCount');
-        expect(src).toMatch(/haven&rsquo;t classified yet/);
-        expect(src).toMatch(/doesn&rsquo;t\s+mean staffing agency/);
+        expect(src).toMatch(/have not classified yet/);
+        expect(src).toMatch(/does not\s+mean staffing agency/);
         // The count renders only when known — a failed probe must hide the
         // line, never fabricate a zero.
         expect(src).toMatch(/unclassifiedCount !== null && unclassifiedCount > 0/);

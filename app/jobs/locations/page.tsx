@@ -224,7 +224,7 @@ async function getLocationStats() {
  * Generate metadata for SEO
  */
 export const metadata: Metadata = {
-  title: `${brand.niche.short} Jobs by Location - All States`,
+  title: `${brand.niche.short} Jobs by Location | All States`,
   description: `Find ${brand.niche.descriptor} jobs in all 50 states. Browse ${brand.niche.short} positions by location, including remote opportunities.`,
   openGraph: {
     title: `${brand.niche.short} Jobs by Location`,
@@ -346,7 +346,7 @@ export default async function LocationsPage() {
                           color: '#1A2E35', margin: '0 0 6px', lineHeight: 1.2,
                         }}>Remote {brand.niche.short} Jobs</h2>
                         <p style={{ fontSize: '14px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                          Work from anywhere — telehealth &amp; fully remote positions across all 50 states
+                          Work from anywhere with telehealth and fully remote positions across all 50 states.
                         </p>
                       </div>
                     </div>
@@ -454,7 +454,7 @@ export default async function LocationsPage() {
             {stats.states.length === 0 ? (
               <div className="text-center py-12 rounded-xl" style={clayCard}>
                 <MapPin className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-tertiary)' }} />
-                <p style={{ color: 'var(--text-secondary)' }}>No state data available</p>
+                <p style={{ color: 'var(--text-secondary)' }}>No state data is available.</p>
               </div>
             ) : (
               <>
@@ -544,8 +544,8 @@ export default async function LocationsPage() {
                 </h2>
               </div>
               <p style={{ fontSize: '14px', color: '#7A6A62', marginBottom: '20px', lineHeight: 1.5 }}>
-                Every city in these states with live {brand.niche.short} openings, with the count next to each
-                one. Cities carrying {MIN_CITY_JOBS_FOR_LINK} or more roles get their own page.
+                Every city in these states with live {brand.niche.short} openings, with the count shown next to
+                each one. Cities with {MIN_CITY_JOBS_FOR_LINK} or more roles have their own page.
               </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -579,7 +579,7 @@ export default async function LocationsPage() {
                 </h2>
               </div>
               <p style={{ fontSize: '14px', color: '#7A6A62', marginTop: '-12px', marginBottom: '20px', lineHeight: 1.5 }}>
-                In-depth {brand.niche.short} job guides for major metros — practice authority, cost of living, top employers, and local licensure notes.
+                In-depth {brand.niche.short} job guides for major metros, covering practice authority, cost of living, top employers, and local licensure notes.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -674,7 +674,7 @@ export default async function LocationsPage() {
             <div className="grid md:grid-cols-2 gap-6 text-sm" style={{ color: 'var(--text-secondary)' }}>
               <div>
                 <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>State-by-State Opportunities</h3>
-                <p className="leading-relaxed">Each state offers unique opportunities for {brand.niche.descriptor}s. Browse by state to find positions that match your location preferences, licensing, and career goals. States vary in demand, salary ranges, and practice requirements.</p>
+                <p className="leading-relaxed">Each state offers unique opportunities for {brand.niche.descriptor}s. Browse by state to find positions that match your location preferences, licensure, and career goals. States vary in demand, salary ranges, and practice requirements.</p>
               </div>
               <div>
                 <h3 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Metropolitan Markets</h3>

@@ -80,8 +80,8 @@ export default function AIRecommendationsToggle(): React.JSX.Element {
                     Weekly AI job match digest
                 </div>
                 <div style={{ fontSize: '13px', color: '#6B21A8', marginBottom: '10px', lineHeight: 1.4 }}>
-                    Get a once-a-week email with the top jobs picked for your profile by our AI matcher.
-                    Sent every Monday morning. {loaded && (optIn ? 'You\'re subscribed.' : 'Not subscribed.')}
+                    Receive a weekly email with the top jobs selected for your profile by our AI matcher.
+                    It is sent every Monday morning. {loaded && (optIn ? 'You are subscribed.' : 'You are not subscribed.')}
                 </div>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: saving ? 'not-allowed' : 'pointer' }}>
                     <input
@@ -92,7 +92,7 @@ export default function AIRecommendationsToggle(): React.JSX.Element {
                         style={{ width: '16px', height: '16px', accentColor: '#7C3AED' }}
                     />
                     <span style={{ fontSize: '13px', fontWeight: 600, color: '#4C1D95' }}>
-                        {saving ? 'Saving…' : optIn ? 'Subscribed — uncheck to unsubscribe' : 'Subscribe to digest'}
+                        {saving ? 'Saving…' : optIn ? 'Subscribed. Uncheck to unsubscribe.' : 'Subscribe to digest'}
                     </span>
                 </label>
                 {error && (

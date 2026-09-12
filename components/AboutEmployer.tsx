@@ -70,7 +70,7 @@ const iconContainer: React.CSSProperties = {
 function ClaimedByEmployerBadge({ gapLeft = false }: { gapLeft?: boolean }) {
     return (
         <span
-            title="An employer asked to be recognised as the owner of this profile and our team approved the request."
+            title="An employer asked to be recognized as the owner of this profile, and our team approved the request."
             style={{
                 display: 'inline-flex', alignItems: 'center', gap: '4px',
                 padding: '2px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
@@ -243,7 +243,7 @@ export default function AboutEmployer({
             <p style={{ fontSize: '14px', lineHeight: 1.65, color: 'var(--text-secondary)', margin: '0 0 14px' }}>
                 {employerName} is hiring for this {brand.niche.short} position. {brand.niche.long}s
                 play a critical role in addressing the growing demand for {brand.niche.category} services across the United States.
-                This employer is actively seeking qualified candidates to join their team.
+                This employer is actively seeking qualified candidates to join its team.
             </p>
 
             {otherJobsCount > 0 && (

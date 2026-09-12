@@ -107,7 +107,7 @@ export default function MessageEmployerModal({
                 } else if (res.status === 401) {
                     setIsAuthenticated(false);
                 } else {
-                    setError(data.error || 'Failed to send message');
+                    setError(data.error || 'Failed to send the message.');
                 }
                 return;
             }
@@ -231,7 +231,7 @@ export default function MessageEmployerModal({
                         <div style={{ textAlign: 'center', padding: '16px 0' }}>
                             <CheckCircle size={48} style={{ color: '#10B981', margin: '0 auto 16px' }} />
                             <h4 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>
-                                Message sent!
+                                Message sent
                             </h4>
                             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '0 0 20px' }}>
                                 {employerName} will be notified by email. You can continue the conversation from your messages page.
@@ -256,7 +256,7 @@ export default function MessageEmployerModal({
                         <div style={{ textAlign: 'center', padding: '16px 0' }}>
                             <MessageSquare size={48} style={{ color: '#60A5FA', margin: '0 auto 16px' }} />
                             <h4 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>
-                                Already messaged
+                                Message already sent
                             </h4>
                             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '0 0 20px' }}>
                                 You&apos;ve already sent a message about this job. Continue the conversation from your messages page.
@@ -304,10 +304,10 @@ export default function MessageEmployerModal({
                         <div style={{ textAlign: 'center', padding: '16px 0' }}>
                             <AlertTriangle size={48} style={{ color: '#F59E0B', margin: '0 auto 16px' }} />
                             <h4 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>
-                                Almost there!
+                                Almost there
                             </h4>
                             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '0 0 8px' }}>
-                                To message employers, please add your <strong>first name</strong> to your profile. It only takes a moment!
+                                To message employers, please add your <strong>first name</strong> to your profile. It only takes a moment.
                             </p>
                             {missingFields.length > 0 && (
                                 <ul style={{ textAlign: 'left', fontSize: '14px', color: 'var(--text-secondary)', margin: '0 0 20px', paddingLeft: '20px' }}>
@@ -371,7 +371,7 @@ export default function MessageEmployerModal({
                                     id="msg-employer-body"
                                     value={body}
                                     onChange={e => setBody(e.target.value)}
-                                    placeholder={`Hi, I'm interested in this position and had a question...`}
+                                    placeholder={`Hello, I am interested in this position and have a question...`}
                                     maxLength={2000}
                                     rows={5}
                                     style={{

@@ -13,13 +13,13 @@ const REQUEST_TYPES: { value: string; label: string; description: string }[] = [
     },
     {
         value: 'deletion',
-        label: 'Delete my account & data',
+        label: 'Delete my account and data',
         description: 'Permanently remove your profile, applications, and uploaded files.',
     },
     {
         value: 'correction',
         label: 'Correct my data',
-        description: 'Fix something inaccurate in your profile that you cannot edit yourself.',
+        description: 'Correct inaccurate information in your profile that you cannot edit yourself.',
     },
     {
         value: 'portability',
@@ -29,7 +29,7 @@ const REQUEST_TYPES: { value: string; label: string; description: string }[] = [
     {
         value: 'object',
         label: 'Object to processing',
-        description: 'Ask us to stop a specific use of your data (e.g. AI candidate matching).',
+        description: 'Ask us to stop a specific use of your data (for example, AI candidate matching).',
     },
     {
         value: 'restrict',
@@ -44,7 +44,7 @@ const REQUEST_TYPES: { value: string; label: string; description: string }[] = [
 ];
 
 const JURISDICTIONS = [
-    { value: '', label: '— Choose if you know —' },
+    { value: '', label: 'Select if known' },
     { value: 'gdpr', label: 'EEA / UK / Switzerland (GDPR / UK GDPR / FADP)' },
     { value: 'ccpa', label: 'California (CCPA / CPRA)' },
     { value: 'lgpd', label: 'Brazil (LGPD)' },
@@ -112,11 +112,11 @@ export default function DataRequestPage() {
             });
             const data = await res.json();
             if (!res.ok) {
-                throw new Error(data?.error || 'Failed to submit');
+                throw new Error(data?.error || 'We could not submit your request.');
             }
             setSubmitted({ id: data.id, respondBy: data.respondBy });
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
+            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
         } finally {
             setSubmitting(false);
         }
@@ -141,7 +141,7 @@ export default function DataRequestPage() {
                     <Link href="/settings" style={{ color: '#BE185D', textDecoration: 'underline' }}>edit your profile</Link>
                     , <Link href="/settings" style={{ color: '#BE185D', textDecoration: 'underline' }}>export your data</Link>, or
                     {' '}<Link href="/settings" style={{ color: '#BE185D', textDecoration: 'underline' }}>delete your account</Link>{' '}
-                    directly. This form is for everything else.
+                    directly. Use this form for all other requests.
                 </p>
 
                 {authChecked && !authEmail ? (
@@ -159,8 +159,8 @@ export default function DataRequestPage() {
                         </p>
                         <p style={{ ...pStyle, marginBottom: '16px' }}>
                             To protect your data, we verify your identity through your account before
-                            acting on a privacy request. Sign in and we&apos;ll tie the request to the
-                            right person automatically.
+                            acting on a privacy request. Sign in and we will link the request to the
+                            correct account automatically.
                         </p>
                         <Link
                             href="/login?redirectTo=/data-request"
@@ -175,8 +175,8 @@ export default function DataRequestPage() {
                         </Link>
                         <p style={{ ...helpStyle, marginTop: '16px' }}>
                             Don&apos;t have an account? You can still file a request by emailing{' '}
-                            <a href={`mailto:${brand.email.support}?subject=Privacy%20Data%20Request`} style={{ color: '#BE185D', textDecoration: 'underline' }}>{brand.email.support}</a>{' '}
-                            — we&apos;ll verify your identity another way.
+                            <a href={`mailto:${brand.email.support}?subject=Privacy%20Data%20Request`} style={{ color: '#BE185D', textDecoration: 'underline' }}>{brand.email.support}</a>.
+                            We will verify your identity another way.
                         </p>
                     </div>
                 ) : submitted ? (
@@ -203,7 +203,7 @@ export default function DataRequestPage() {
                             <p style={{ ...pStyle, marginBottom: 0, color: '#065F46' }}>
                                 We will respond by{' '}
                                 <strong>{new Date(submitted.respondBy).toLocaleDateString(undefined, { dateStyle: 'long' })}</strong>.
-                                If we need to verify your identity, we&apos;ll email you within 5 business days.
+                                If we need to verify your identity, we will email you within 5 business days.
                             </p>
                         </div>
                     </div>
@@ -223,8 +223,8 @@ export default function DataRequestPage() {
                             />
                             <p style={helpStyle}>
                                 {authEmail
-                                    ? 'This is your account email — we verify requests against it and reply here.'
-                                    : 'Use the email associated with your account. We’ll reply here.'}
+                                    ? 'This is your account email. We verify requests against it and reply here.'
+                                    : 'Use the email associated with your account. We will reply here.'}
                             </p>
                         </div>
 
@@ -236,14 +236,14 @@ export default function DataRequestPage() {
                         <div>
                             <label htmlFor="type" style={labelStyle}>What would you like us to do? *</label>
                             <select id="type" name="type" required style={inputStyle} defaultValue="">
-                                <option value="" disabled>— Choose a request type —</option>
+                                <option value="" disabled>Choose a request type</option>
                                 {REQUEST_TYPES.map((t) => (
                                     <option key={t.value} value={t.value}>{t.label}</option>
                                 ))}
                             </select>
                             <p style={helpStyle}>
                                 {/* Inline glossary so users don't have to hunt through the policy. */}
-                                Not sure which fits? <Link href="/privacy#11" style={{ color: '#BE185D', textDecoration: 'underline' }}>See descriptions in the Privacy Policy</Link>.
+                                Not sure which one applies? <Link href="/privacy#11" style={{ color: '#BE185D', textDecoration: 'underline' }}>See descriptions in the Privacy Policy</Link>.
                             </p>
                         </div>
 
@@ -255,7 +255,7 @@ export default function DataRequestPage() {
                                 ))}
                             </select>
                             <p style={helpStyle}>
-                                Helps us pick the right SLA. We default to the strictest one if you skip this.
+                                This helps us apply the correct response deadline. If you leave this blank, we apply the strictest deadline.
                             </p>
                         </div>
 
@@ -263,7 +263,7 @@ export default function DataRequestPage() {
                             <label htmlFor="description" style={labelStyle}>Anything else we should know? (optional)</label>
                             <textarea id="description" name="description" rows={5} maxLength={2000} style={{ ...inputStyle, resize: 'vertical', minHeight: '120px' }} />
                             <p style={helpStyle}>
-                                E.g. specific records to delete, the alternate email you used, or which AI decision you want reviewed.
+                                For example, specific records to delete, an alternate email address you used, or the AI decision you would like reviewed.
                             </p>
                         </div>
 
@@ -292,8 +292,8 @@ export default function DataRequestPage() {
                         </button>
 
                         <p style={{ ...helpStyle, marginTop: '4px' }}>
-                            By submitting you confirm the information is accurate and consent to us processing
-                            it to respond to your request. Read our{' '}
+                            By submitting this form, you confirm that the information is accurate and consent to our
+                            processing it in order to respond to your request. Read our{' '}
                             <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'underline' }}>Privacy Policy</Link>.
                         </p>
                     </form>

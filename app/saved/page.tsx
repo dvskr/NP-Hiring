@@ -67,12 +67,12 @@ export default function SavedJobsPage() {
     try {
       const response = await fetch(`/api/jobs?ids=${ids.join(',')}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch jobs');
+        throw new Error('Failed to load jobs.');
       }
       const data: { jobs: Job[] } = await response.json();
       setJobs(data.jobs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
       setLoading(false);
     }
@@ -91,12 +91,12 @@ export default function SavedJobsPage() {
     try {
       const response = await fetch(`/api/jobs?ids=${ids.join(',')}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch jobs');
+        throw new Error('Failed to load jobs.');
       }
       const data: { jobs: Job[] } = await response.json();
       setAppliedJobsData(data.jobs);
     } catch (err) {
-      setAppliedError(err instanceof Error ? err.message : 'An error occurred');
+      setAppliedError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
       setAppliedLoading(false);
     }
@@ -150,7 +150,7 @@ export default function SavedJobsPage() {
   const handleClearAll = () => {
     setConfirm({
       title: 'Clear all saved jobs?',
-      description: `This removes all ${savedIds.length} saved job${savedIds.length !== 1 ? 's' : ''} from your list. This cannot be undone.`,
+      description: `This removes all ${savedIds.length} saved job${savedIds.length !== 1 ? 's' : ''} from your list. This action cannot be undone.`,
       confirmLabel: 'Clear all',
       variant: 'danger',
       onConfirm: () => {
@@ -238,12 +238,12 @@ export default function SavedJobsPage() {
       const keptCount = appliedJobs.length - clearable.length;
       if (keptCount > 0) {
         toast(
-          `Cleared ${clearable.length} — ${keptCount} kept. Submitted applications are never removed here; manage them from My Applications.`,
+          `Cleared ${clearable.length} and kept ${keptCount}. Submitted applications are never removed here. You can manage them from My Applications.`,
           'success',
         );
       }
     } catch {
-      toast('Couldn’t clear your history — please try again.', 'error');
+      toast('We could not clear your history. Please try again.', 'error');
     } finally {
       setClearingApplied(false);
     }
@@ -252,7 +252,7 @@ export default function SavedJobsPage() {
   const handleClearApplied = () => {
     setConfirm({
       title: 'Clear application history?',
-      description: 'This clears jobs you clicked through to from this list. Applications you submitted on this site are kept — employers still see them, and you can withdraw any of them from My Applications.',
+      description: 'This clears the jobs you clicked through to from this list. Applications you submitted on this site are kept: employers can still see them, and you can withdraw any of them from My Applications.',
       confirmLabel: 'Clear history',
       variant: 'danger',
       onConfirm: () => {
@@ -393,7 +393,7 @@ export default function SavedJobsPage() {
                             >
                                 <option value="recent">Recently Saved</option>
                                 <option value="salary">Highest Salary</option>
-                                <option value="title">Title A–Z</option>
+                                <option value="title">Title A to Z</option>
                             </select>
                         </div>
                     )}
@@ -525,7 +525,7 @@ export default function SavedJobsPage() {
                     color: '#8A9BA6', fontSize: '14px', marginBottom: '24px',
                     maxWidth: '340px', marginInline: 'auto', lineHeight: 1.6,
                 }}>
-                    Bookmark jobs you&apos;re interested in — they&apos;ll show up here.
+                    Bookmark the jobs you&apos;re interested in, and they&apos;ll appear here.
                 </p>
                 <Link href="/jobs" style={{
                     display: 'inline-flex', alignItems: 'center', gap: '8px',

@@ -341,7 +341,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
         // were pushing the title past 60 chars and cutting "Avg" mid-phrase).
         // Salary appended only if there's room.
         const baseTitle = `${stats.totalJobs} ${brand.niche.short} Jobs in ${cityName}, ${stateCode}`;
-        const salarySuffix = stats.avgSalary > 0 ? ` — $${stats.avgSalary}k Avg` : '';
+        const salarySuffix = stats.avgSalary > 0 ? `: $${stats.avgSalary}k Avg` : '';
         const title = (baseTitle + salarySuffix).length <= 60
             ? baseTitle + salarySuffix
             : baseTitle;
@@ -503,7 +503,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
     }
 
     const salaryRange = stats.minSalary > 0 && stats.maxSalary > 0
-        ? `$${stats.minSalary}k–$${stats.maxSalary}k`
+        ? `$${stats.minSalary}k to $${stats.maxSalary}k`
         : null;
 
     return (
@@ -566,13 +566,13 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                 breadcrumbs={['Careers', stateName, cityName]}
                 headlineLine1={cityName}
                 headlineLine2={brand.niche.short}
-                headlineSub={`jobs in ${stateCode}, find your fit.`}
+                headlineSub={`jobs in ${stateCode}. Find your fit.`}
                 stats={[
                     { value: `${stats.totalJobs}`, label: 'positions' },
                     { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K+', label: 'avg salary' },
                     { value: `${stats.uniqueEmployerCount}+`, label: 'employers' },
                 ]}
-                description={`Browse ${stats.totalJobs} ${brand.niche.short} positions in ${cityName}, ${stateName}. ${salaryRange ? `Salary range: ${salaryRange}/yr.` : ''} Remote, telehealth, inpatient, and outpatient roles updated daily.`}
+                description={`Browse ${stats.totalJobs} ${brand.niche.short} positions in ${cityName}, ${stateName}.${salaryRange ? ` Salary range: ${salaryRange} per year.` : ''} Remote, telehealth, inpatient, and outpatient roles updated daily.`}
                 ctaLabel={`View All ${cityName} Jobs`}
                 ctaHref={`/jobs?location=${encodeURIComponent(cityName)}`}
                 secondaryCtaLabel="Set Alert"
@@ -708,7 +708,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                     <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Why {brand.niche.short}s Choose {cityName}
                     </h2>
                     <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>
-                        {stats.totalJobs} open positions · {stats.uniqueEmployerCount}+ employers · {salaryRange ? `${salaryRange}/yr` : 'Competitive pay'}
+                        {stats.totalJobs} open positions · {stats.uniqueEmployerCount}+ employers · {salaryRange ? `${salaryRange} per year` : 'Competitive pay'}
                     </p>
 
                     <div className="city-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
@@ -739,10 +739,10 @@ export default async function CityJobsPage({ params }: CityPageProps) {
 
                         {/* ROW 2: 4 compact cards */}
                         {[
-                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp`, text: `Average salary ${stats.avgSalary > 0 ? `$${stats.avgSalary}k/yr` : '$130K+'} for ${brand.niche.short}s in ${cityName}.` },
-                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_hospital.webp`, text: `${stats.uniqueEmployerCount}+ healthcare employers actively hiring in ${cityName}.` },
-                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_community.webp`, text: `Inpatient, outpatient, community health, and private practice settings available.` },
-                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp`, text: `Telehealth and remote opportunities expanding in ${stateName}.` },
+                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp`, text: `Average salary of ${stats.avgSalary > 0 ? `$${stats.avgSalary}k per year` : '$130K+'} for ${brand.niche.short}s in ${cityName}.` },
+                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_hospital.webp`, text: `${stats.uniqueEmployerCount}+ healthcare employers are actively hiring in ${cityName}.` },
+                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_community.webp`, text: `Inpatient, outpatient, community health, and private practice settings are available.` },
+                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp`, text: `Telehealth and remote opportunities are expanding in ${stateName}.` },
                         ].map((card, i) => (
                             <div key={i} style={{ gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
                                 <Image src={card.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -756,7 +756,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Outlook</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                                    {cityName} {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K'} annually. {salaryRange ? `Range: ${salaryRange}/yr.` : 'Competitive compensation with benefits.'}
+                                    {cityName} {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K to $200K'} annually. {salaryRange ? `Range: ${salaryRange} per year.` : 'Competitive compensation with benefits.'}
                                 </p>
                             </div>
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
@@ -773,7 +773,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                             <Bell size={28} style={{ color: '#BE185D', marginBottom: '14px' }} />
                             <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Job Alerts</h3>
                             <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                                New {cityName} listings delivered to your inbox — be first to apply.
+                                New {cityName} listings are delivered to your inbox, so you can be the first to apply.
                             </p>
                             <Link href={`/job-alerts?location=${encodeURIComponent(cityName + ', ' + stateCode)}`} style={{
                                 padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
@@ -829,7 +829,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                             { href: '/jobs/remote', label: 'Remote', sub: 'Work from anywhere', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
                             { href: '/jobs/new-grad', label: 'New Grad', sub: 'Entry-level roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_newgrad.webp` },
                             { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual patient care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-                            { href: `/salary-guide/${stateSlug}`, label: 'Salary Guide', sub: `${stateName} comp data`, icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
+                            { href: `/salary-guide/${stateSlug}`, label: 'Salary Guide', sub: `${stateName} pay data`, icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
                             { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
                         ].map(c => (
                             <Link key={c.href} href={c.href} className="city-card" style={{ background: '#FFF', borderRadius: '18px', padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)', transition: 'transform 0.3s ease, box-shadow 0.3s ease' }}>
@@ -881,7 +881,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                             { href: `/jobs/state/${stateSlug}`, label: `All ${stateName} ${brand.niche.short} Jobs`, desc: `Browse every open position in ${stateCode}`, icon: '📍' },
                             { href: `/salary-guide/${stateSlug}`, label: `${stateName} Salary Guide`, desc: `Compensation data and trends`, icon: '💰' },
                             { href: '/jobs/locations', label: 'All Locations', desc: `${brand.niche.short} jobs in all 50 states`, icon: '🗺️' },
-                            { href: '/jobs/remote', label: `Remote ${brand.niche.short} Jobs`, desc: 'Work from anywhere positions', icon: '🏠' },
+                            { href: '/jobs/remote', label: `Remote ${brand.niche.short} Jobs`, desc: 'Work-from-anywhere positions', icon: '🏠' },
                             { href: '/jobs/telehealth', label: 'Telehealth Positions', desc: 'Virtual care opportunities', icon: '💻' },
                         ].map(link => (
                             <Link key={link.href} href={link.href} className="city-card" style={{
@@ -920,7 +920,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                             className="font-lora"
                             style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', marginBottom: '10px' }}
                         >
-                            {cityName}, {stateCode} — {brand.niche.short} Market Context</h2>
+                            {cityName}, {stateCode}: {brand.niche.short} Market Context</h2>
                         <p style={{ fontSize: '14px', lineHeight: 1.7, color: '#5A4A42', margin: 0 }}>
                             {narrative}
                         </p>
@@ -931,10 +931,10 @@ export default async function CityJobsPage({ params }: CityPageProps) {
             {/* ═══ FAQ ═══ */}
             <CategoryFAQ category="remote" totalJobs={stats.totalJobs} avgSalary={stats.avgSalary} customFaqs={[
                 { question: `How many ${brand.niche.short} jobs are in ${cityName}?`, answer: `There are currently ${stats.totalJobs} active ${brand.niche.short} positions in ${cityName}, ${stateName}. New roles are added daily across outpatient, inpatient, telehealth, and community health settings.` },
-                { question: `What is the average ${brand.niche.short} salary in ${cityName}?`, answer: stats.avgSalary > 0 ? `${brand.niche.short}s in ${cityName} earn an average salary of $${stats.avgSalary}k per year.${salaryRange ? ` The range is ${salaryRange}/yr depending on experience, setting, and whether the position is W-2 or 1099.` : ''}` : `${brand.niche.short} salaries in ${cityName} typically range from $130,000 to $200,000+ per year, depending on experience, practice setting, and employment type.` },
+                { question: `What is the average ${brand.niche.short} salary in ${cityName}?`, answer: stats.avgSalary > 0 ? `${brand.niche.short}s in ${cityName} earn an average salary of $${stats.avgSalary}k per year.${salaryRange ? ` The range is ${salaryRange} per year, depending on experience, setting, and whether the position is W-2 or 1099.` : ''}` : `${brand.niche.short} salaries in ${cityName} typically range from $130,000 to $200,000+ per year, depending on experience, practice setting, and employment type.` },
                 { question: `What types of ${brand.niche.short} jobs are available in ${cityName}?`, answer: `${cityName} offers a variety of ${brand.niche.short} positions including outpatient clinics, inpatient ${brand.niche.adjective} units, community health centers, private practices, telehealth roles, and substance abuse treatment facilities. Both full-time and part-time options are available.` },
                 { question: `Who are the top ${brand.niche.short} employers in ${cityName}?`, answer: `Top employers hiring ${brand.niche.short}s in ${cityName} include ${stats.topEmployers.slice(0, 5).map(e => e.name).join(', ')}. These organizations offer competitive salaries, benefits, and growth opportunities.` },
-                { question: `Do I need a ${stateName} license to work as an ${brand.niche.short} in ${cityName}?`, answer: `Yes, you need an active ${stateName} nursing license and ${brand.niche.short} certification to practice in ${cityName}. Requirements vary by state — check our ${stateName} licensure guide for specific details on scope of practice, prescriptive authority, and continuing education requirements.` },
+                { question: `Do I need a ${stateName} license to work as an ${brand.niche.short} in ${cityName}?`, answer: `Yes, you need an active ${stateName} nursing license and ${brand.niche.short} certification to practice in ${cityName}. Requirements vary by state, so check our ${stateName} licensure guide for specific details on scope of practice, prescriptive authority, and continuing education requirements.` },
             ]} />
 
             {/* ═══ Hover + Responsive CSS ═══ */}

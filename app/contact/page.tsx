@@ -13,31 +13,31 @@ const STORAGE_BASE = brand.assets.storageBase;
 // rendered into <head>-adjacent script) and the visible accordion (client-
 // rendered for the toggle UX) consume this list — they cannot diverge.
 const FAQ_ITEMS = [
-    { q: `Is ${brand.name} free for job seekers?`, a: 'Yes! Browsing jobs, setting up alerts, and applying are completely free. We never charge job seekers.' },
+    { q: `Is ${brand.name} free for job seekers?`, a: 'Yes. Browsing jobs, setting up alerts, and applying are completely free. We never charge job seekers.' },
     // P0 #5: cadence claim only — the previous answer carried a hardcoded
     // company-count figure (config/niche/copy.ts RULE: evergreen claims
     // only; live counters come from lib/site-stats.ts).
     { q: 'How often are jobs updated?', a: 'Our pipeline runs twice daily, pulling new listings from major job boards and direct employer career pages.' },
     { q: 'How do I post a job as an employer?', a: 'Create a free employer account and post your job listing. Featured listings are available for enhanced visibility.' },
-    { q: 'Can I get daily job alerts?', a: 'Absolutely! Sign up for free and set your preferences (location, job type, salary range). We\'ll email you matching jobs daily.' },
-    { q: 'How do I delete my account?', a: `Go to Settings > Account and click "Delete Account", or email us at ${brand.email.support} and we'll handle it within 24 hours.` },
-    { q: 'Why did a job listing disappear?', a: 'Jobs are automatically removed when they expire, get filled, or are reported by multiple users as invalid. Check the employer\'s site for the latest openings.' },
+    { q: 'Can I get daily job alerts?', a: 'Yes. Sign up for free and set your preferences (location, job type, and salary range), and we will email you matching jobs daily.' },
+    { q: 'How do I delete my account?', a: `Go to Settings > Account and click "Delete Account", or email us at ${brand.email.support} and we will handle it within 24 hours.` },
+    { q: 'Why did a job listing disappear?', a: 'Jobs are automatically removed when they expire, are filled, or are reported by multiple users as invalid. Check the employer\'s site for the latest openings.' },
 ];
 
 export const metadata: Metadata = {
     // `absolute` opts out of the layout title template so we don't
     // double-suffix " | PMHNP Hiring".
-    title: { absolute: `Contact ${brand.name} — Support, Employer & Partnership Inquiries` },
-    description: `Reach the ${brand.name} team for job-seeker support, employer questions, partnerships, or feedback. We respond within 24-48 hours.`,
+    title: { absolute: `Contact ${brand.name}: Support, Employer, and Partnership Inquiries` },
+    description: `Reach the ${brand.name} team for job-seeker support, employer questions, partnerships, or feedback. We respond within 24 to 48 hours.`,
     alternates: { canonical: `${brand.baseUrl}/contact` },
     openGraph: {
         title: `Contact ${brand.name}`,
-        description: `Get in touch with the team behind the #1 ${brand.niche.short} job board — support, employer, and partnership inquiries.`,
+        description: `Get in touch with the team behind the #1 ${brand.niche.short} job board for support, employer, and partnership inquiries.`,
         type: 'website',
         url: `${brand.baseUrl}/contact`,
         siteName: brand.name,
     },
-    twitter: { card: 'summary_large_image', title: `Contact ${brand.name}`, description: 'Get in touch with the team — support, employer, and partnership inquiries.' },
+    twitter: { card: 'summary_large_image', title: `Contact ${brand.name}`, description: 'Get in touch with the team for support, employer, and partnership inquiries.' },
 };
 
 const clayCard: React.CSSProperties = {
@@ -113,7 +113,7 @@ export default function ContactPage() {
                             We&apos;d love to <span style={{ color: '#BE185D' }}>hear from you</span>
                         </h1>
                         <p style={{ fontSize: '20px', color: '#6B7F8A', lineHeight: 1.6, margin: 0, maxWidth: '500px' }}>
-                            Whether you represent a clinic seeking your next top-tier {brand.niche.short}, or you&apos;re a candidate looking for the perfect match, our team is standing by.
+                            Whether you represent a clinic seeking your next top-tier {brand.niche.short} or you are a candidate looking for the perfect match, our team is ready to help.
                         </p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -157,7 +157,7 @@ export default function ContactPage() {
                                     </div>
                                     <div>
                                         <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A2E35', margin: '0 0 2px' }}>Response Time</p>
-                                        <p style={{ fontSize: '13px', color: '#8A9BA6', margin: 0 }}>We respond within 24-48 hours</p>
+                                        <p style={{ fontSize: '13px', color: '#8A9BA6', margin: 0 }}>We respond within 24 to 48 hours</p>
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>

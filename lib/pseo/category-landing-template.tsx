@@ -81,7 +81,7 @@ export const NEW_CATEGORY_COPY: Record<string, CategoryCopy> = {
     'adult-gerontology': {
         label: 'Adult-Gerontology',
         role: 'Adult-Gerontology Nurse Practitioner (AGNP)',
-        blurb: 'AGNP roles — primary and acute care for adult and older-adult populations.',
+        blurb: 'AGNP roles in primary and acute care for adult and older-adult populations.',
     },
     pediatric: {
         label: 'Pediatric',
@@ -306,7 +306,7 @@ export async function buildCategoryLandingMetadata(
             description,
             type: 'website',
             images: [{
-                url: `/api/og?type=page&title=${encodeURIComponent(`${role} Jobs`)}&subtitle=${encodeURIComponent(totalJobs > 0 ? `${totalJobs} open positions — updated daily` : 'Salaries, top employers, and new openings')}`,
+                url: `/api/og?type=page&title=${encodeURIComponent(`${role} Jobs`)}&subtitle=${encodeURIComponent(totalJobs > 0 ? `${totalJobs} open positions · updated daily` : 'Salaries, top employers, and new openings')}`,
                 width: 1200,
                 height: 630,
                 alt: `${role} Jobs`,
@@ -473,7 +473,7 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                         ) : (
                             <div style={{ ...clayCard, textAlign: 'center', padding: '48px 24px' }}>
                                 <p style={{ color: '#5A4A42', fontSize: '15px', margin: '0 0 16px' }}>
-                                    No {label.toLowerCase()} positions right now — new roles are added daily.
+                                    No {label.toLowerCase()} positions right now. New roles are added daily.
                                 </p>
                                 <Link href="/jobs" style={{ fontWeight: 700, fontSize: '14px', color: '#BE185D', textDecoration: 'none' }}>
                                     Browse all nurse practitioner jobs →

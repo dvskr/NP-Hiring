@@ -267,7 +267,7 @@ export default function AdminJobsPage() {
           ))}
         </select>
         <select value={publishedFilter} onChange={e => { setPublishedFilter(e.target.value); setPage(1); }} style={{ ...inputStyle, cursor: 'pointer' }}>
-          <option value="">All Status</option>
+          <option value="">All Statuses</option>
           <option value="true">Published</option>
           <option value="false">Unpublished</option>
         </select>
@@ -281,7 +281,7 @@ export default function AdminJobsPage() {
           <option value="oldest">Oldest</option>
           <option value="views">Most Views</option>
           <option value="clicks">Most Clicks</option>
-          <option value="title">Title A-Z</option>
+          <option value="title">Title A to Z</option>
         </select>
       </div>
 
@@ -351,7 +351,7 @@ export default function AdminJobsPage() {
                       {job.employer}
                     </td>
                     <td style={{ ...s.td, whiteSpace: 'nowrap' }}>
-                      <span style={{ textTransform: 'capitalize' }}>{job.sourceProvider || '—'}</span>
+                      <span style={{ textTransform: 'capitalize' }}>{job.sourceProvider || 'None'}</span>
                     </td>
                     <td style={{ ...s.td, textAlign: 'center' }}>
                       <button onClick={() => toggleField(job.id, 'isPublished', !job.isPublished)}

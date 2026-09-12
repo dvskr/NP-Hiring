@@ -63,12 +63,12 @@ const ldJson = (obj: unknown): string =>
 // serving veteran patients across all sectors.
 const vaFaqs = [
   {
-    question: `How does VA pay work for ${brand.niche.short}s — is it the standard GS scale?`,
+    question: `How does VA pay work for ${brand.niche.short}s, and is it the standard GS scale?`,
     answer: `VA ${brand.niche.short}s are appointed under Title 38 authority, and pay is set from nurse locality pay schedules that vary by facility rather than a single national General Schedule table. Each USAJobs announcement lists the salary range for its facility, and current pay schedules are published on VA.gov.`,
   },
   {
     question: 'What is the Education Debt Reduction Program (EDRP)?',
-    answer: `EDRP reimburses student-loan payments for clinicians hired into eligible, hard-to-fill VA positions. Eligibility is position-specific — the vacancy announcement states whether EDRP is authorized — and you apply after appointment within the program's application window. Current award limits and rules are published on VA.gov.`,
+    answer: `EDRP reimburses student-loan payments for clinicians hired into eligible, hard-to-fill VA positions. Eligibility is position-specific (the vacancy announcement states whether EDRP is authorized), and you apply after appointment within the program's application window. Current award limits and rules are published on VA.gov.`,
   },
   {
     question: 'Do I need a license in the same state as the VA facility?',
@@ -130,11 +130,11 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} VA ${brand.niche.short} Jobs — Federal Benefits, EDRP & Pension`,
+    title: `${stats.totalJobs} VA ${brand.niche.short} Jobs: Federal Benefits, EDRP & Pension`,
     description: `Find ${stats.totalJobs} VA ${brand.niche.short} jobs with federal pension, EDRP loan repayment up to $200K, FEHB coverage, and full practice authority within the VA system. Updated daily.`,
     openGraph: {
-      title: `${stats.totalJobs} VA ${brand.niche.short} Jobs - Veterans Affairs`,
-      description: `Browse VA ${brand.niche.descriptor} positions. Federal benefits, loan repayment, clinical autonomy.`,
+      title: `${stats.totalJobs} VA ${brand.niche.short} Jobs at Veterans Affairs`,
+      description: `Browse VA ${brand.niche.descriptor} positions with federal benefits, loan repayment, and clinical autonomy.`,
       type: 'website',
       images: [{
         url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} VA ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent('Federal benefits & EDRP loan repayment')}`,
@@ -337,22 +337,22 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
               <div key="01" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>01</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>USAJobs Account</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Create a USAJobs.gov profile with a federal-format resume — standard CVs are rejected.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Create a USAJobs.gov profile with a federal-format resume. Standard CVs are rejected.</p>
               </div>
               <div key="02" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>02</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>VetPro Credentialing</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Gather all documents for VHA VetPro credentialing — allow 60-90 days for processing.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Gather all documents for VHA VetPro credentialing, and allow 60 to 90 days for processing.</p>
               </div>
               <div key="03" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>03</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Security Clearance</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Prepare for Tier 1 investigation (SF-85) including fingerprinting and background check.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Prepare for a Tier 1 investigation (SF-85), including fingerprinting and a background check.</p>
               </div>
               <div key="04" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>04</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>EDRP Application</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Apply for Education Debt Reduction Program within 12 months of VA appointment.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Apply for the Education Debt Reduction Program within 12 months of your VA appointment.</p>
               </div>
           </div>
         </section>

@@ -577,7 +577,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                   {config.label} Positions in {stateName} ({stats.totalJobs})
                 </h2>
                 <Link href={`/jobs/${config.slug}`} style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textDecoration: 'none' }}>
-                  View All Jobs â†’
+                  View All Jobs →
                 </Link>
               </div>
 
@@ -613,18 +613,18 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     <div className="mt-8 flex items-center justify-center gap-4">
                       {page > 1 ? (
                         <Link href={`${basePath}?page=${page - 1}`} className="px-4 py-2 text-sm font-medium rounded-lg" style={{ ...clayCard, color: '#1A2E35', padding: '8px 16px' }}>
-                          â† Previous
+                          ← Previous
                         </Link>
                       ) : (
-                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: '#7A6A62', backgroundColor: '#F5F0EB' }}>â† Previous</span>
+                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: '#7A6A62', backgroundColor: '#F5F0EB' }}>← Previous</span>
                       )}
                       <span className="text-sm" style={{ color: '#5A4A42' }}>Page {page} of {totalPages}</span>
                       {page < totalPages ? (
                         <Link href={`${basePath}?page=${page + 1}`} className="px-4 py-2 text-sm font-medium rounded-lg" style={{ ...clayCard, color: '#1A2E35', padding: '8px 16px' }}>
-                          Next â†’
+                          Next →
                         </Link>
                       ) : (
-                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: '#7A6A62', backgroundColor: '#F5F0EB' }}>Next â†’</span>
+                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: '#7A6A62', backgroundColor: '#F5F0EB' }}>Next →</span>
                       )}
                     </div>
                   )}
@@ -642,7 +642,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     {config.label} Alerts
                   </h3>
                   <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
-                    New {config.label.toLowerCase()} {brand.niche.short} positions in {stateName} — delivered daily.
+                    New {config.label.toLowerCase()} {brand.niche.short} positions in {stateName}, delivered daily.
                   </p>
                   <Link href="/job-alerts" style={{
                     display: 'block', width: '100%', textAlign: 'center',
@@ -728,7 +728,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     {config.label} in {stateName}
                   </h3>
                   <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                    {config.heroSubtitle}. {config.tips[0] || ''}
+                    {config.heroSubtitle}. {config.tips[0] ? `${config.tips[0]}.` : ''}
                   </p>
                 </div>
                 <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
@@ -779,7 +779,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>{config.label} Alerts</h3>
                 <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                  New {config.label.toLowerCase()} listings in {stateName} — delivered daily.
+                  New {config.label.toLowerCase()} listings in {stateName}, delivered daily.
                 </p>
                 <Link href="/job-alerts" style={{
                   padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
@@ -853,7 +853,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
               <div style={{ fontSize: '11px', color: '#7A6A62', marginBottom: '6px' }}>Avg Cost of Living</div>
               <div style={{ fontSize: '28px', fontWeight: 800, color: avgCOL > 110 ? '#ef4444' : avgCOL > 100 ? '#f59e0b' : '#22c55e' }}>{avgCOL}</div>
               <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '4px' }}>
-                {avgCOL > 110 ? 'Above national avg' : avgCOL > 100 ? 'Near national avg' : 'Below national avg'} (100 = US avg)
+                {avgCOL > 110 ? 'Above national average' : avgCOL > 100 ? 'Near national average' : 'Below national average'} (100 = US average)
               </div>
             </div>
             {/* Shortage designations — P2 #7.
@@ -966,7 +966,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                   <DollarSign size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>{stateName} Salary Guide</div>
-                    <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Comp data by setting</div>
+                    <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Compensation data by setting</div>
                   </div>
                 </Link>
                 <Link href={`/jobs/state/${stateSlug}`}

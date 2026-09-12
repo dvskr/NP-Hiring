@@ -39,7 +39,7 @@ const faqs = [
   { q: `What is an LGBTQ+ affirming ${brand.niche.short} role?`, a: `LGBTQ+ affirming ${brand.niche.short} positions focus on culturally competent care for queer, transgender, and gender-diverse individuals. These roles involve training in minority stress, sexual and gender-minority health, and the unique health needs of LGBTQ+ communities.` },
   { q: 'What qualifications are needed?', a: 'An active APRN license, national NP certification, and DEA registration, plus training or experience in LGBTQ+ affirming care, gender-affirming treatment protocols, and culturally responsive practice.' },
   { q: `What settings hire LGBTQ+ affirming ${brand.niche.short}s?`, a: 'Community health centers, LGBTQ+ specialty clinics, sexual health and HIV programs, gender health clinics, student health services, telehealth platforms focused on queer communities, and health systems with dedicated LGBTQ+ programs.' },
-  { q: 'Why is LGBTQ+ affirming care important?', a: 'LGBTQ+ individuals face well-documented health disparities — driven by minority stress, discrimination, and systemic barriers — and many delay or avoid care after negative healthcare experiences. Affirming providers help close this critical health equity gap.' },
+  { q: 'Why is LGBTQ+ affirming care important?', a: 'LGBTQ+ individuals face well-documented health disparities, driven by minority stress, discrimination, and systemic barriers, and many delay or avoid care after negative healthcare experiences. Affirming providers help close this critical health equity gap.' },
   { q: `What does a gender-affirming ${brand.niche.short} do?`, a: `Gender-affirming ${brand.niche.short}s provide affirming clinical assessments for gender-diverse patients, support hormone therapy initiation and monitoring where their scope allows, and offer ongoing primary and preventive care within a trans-competent framework.` },
 ];
 
@@ -73,7 +73,7 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('lgbtq') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="LGBTQ+"
         headlineLine2={brand.niche.short}
-        headlineSub="jobs, affirming care."
+        headlineSub="jobs in affirming care."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.medianSalaryK > 0 ? `${stats.medianSalaryK}k` : '$120K+', label: 'median salary' },
@@ -91,7 +91,7 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
         <div className="grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
             <h2 className="font-lora mb-6" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>LGBTQ+ Affirming Positions {stats.totalJobs > 0 ? `(${stats.totalJobs})` : ''}</h2>
-            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62', marginBottom: '8px' }}>No explicitly labeled LGBTQ+ positions right now.</p><p style={{ fontSize: '13px', color: '#7A6A62' }}>Many inclusive employers don&apos;t tag roles —<Link href="/jobs" style={{ color: '#BE185D', fontWeight: 600 }}>browse all jobs</Link> and filter by employer.</p></div>)}
+            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62', marginBottom: '8px' }}>There are no explicitly labeled LGBTQ+ positions right now.</p><p style={{ fontSize: '13px', color: '#7A6A62' }}>Many inclusive employers do not tag their roles. <Link href="/jobs" style={{ color: '#BE185D', fontWeight: 600 }}>Browse all jobs</Link> and filter by employer.</p></div>)}
             <div style={{ textAlign: 'center', marginTop: '32px' }}><Link href="/jobs?category=lgbtq" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>Browse All LGBTQ+ Jobs <ArrowRight size={16} /></Link></div>
           </div>
           <div className="lg:col-span-1">

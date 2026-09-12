@@ -24,8 +24,8 @@ interface SubProcessor {
 export const SUB_PROCESSORS: SubProcessor[] = [
     {
         name: 'Vercel, Inc.',
-        purpose: 'Application hosting, edge functions, performance telemetry (Speed Insights)',
-        dataShared: 'IP address, request metadata, performance vitals (only after consent)',
+        purpose: 'Application hosting, edge functions, and performance telemetry (Speed Insights)',
+        dataShared: 'IP address, request metadata, and performance vitals (only after consent)',
         location: 'United States',
         transferMechanism: 'Standard Contractual Clauses (SCCs)',
         dpa: 'https://vercel.com/legal/dpa',
@@ -33,8 +33,8 @@ export const SUB_PROCESSORS: SubProcessor[] = [
     },
     {
         name: 'Supabase, Inc.',
-        purpose: 'Database, authentication, file storage (resumes, profile assets)',
-        dataShared: 'Account credentials, profile data, application data, uploaded files',
+        purpose: 'Database, authentication, and file storage (resumes and profile assets)',
+        dataShared: 'Account credentials, profile data, application data, and uploaded files',
         location: 'United States (us-east-1)',
         transferMechanism: 'Standard Contractual Clauses (SCCs)',
         dpa: 'https://supabase.com/dpa',
@@ -52,7 +52,7 @@ export const SUB_PROCESSORS: SubProcessor[] = [
     {
         name: 'Resend, Inc.',
         purpose: 'Transactional email (account, application, alert) and marketing email (job alerts)',
-        dataShared: 'Recipient email address, message content, delivery metadata',
+        dataShared: 'Recipient email address, message content, and delivery metadata',
         location: 'United States',
         transferMechanism: 'Standard Contractual Clauses (SCCs)',
         dpa: 'https://resend.com/legal/dpa',
@@ -62,7 +62,7 @@ export const SUB_PROCESSORS: SubProcessor[] = [
         name: 'Google LLC (Google Analytics 4)',
         purpose: 'Aggregate usage analytics to understand how visitors use the site',
         dataShared:
-            'Anonymized IP, user agent, page views, custom events. Loaded only after explicit analytics consent (Consent Mode v2). Ads/personalization signals stay disabled.',
+            'Anonymized IP address, user agent, page views, and custom events. Loaded only after explicit analytics consent (Consent Mode v2). Advertising and personalization signals remain disabled.',
         location: 'United States & global Google infrastructure',
         transferMechanism: 'Standard Contractual Clauses (SCCs); IP anonymization enabled',
         dpa: 'https://business.safety.google/processorterms/',
@@ -70,8 +70,8 @@ export const SUB_PROCESSORS: SubProcessor[] = [
     },
     {
         name: 'Functional Software, Inc. (Sentry)',
-        purpose: 'Application error monitoring (build-time wired; client init currently disabled)',
-        dataShared: 'Stack traces, request URL, anonymized user identifier (when active)',
+        purpose: 'Application error monitoring (wired at build time; client initialization currently disabled)',
+        dataShared: 'Stack traces, request URL, and anonymized user identifier (when active)',
         location: 'United States',
         transferMechanism: 'Standard Contractual Clauses (SCCs)',
         dpa: 'https://sentry.io/legal/dpa/',
@@ -79,8 +79,8 @@ export const SUB_PROCESSORS: SubProcessor[] = [
     },
     {
         name: 'OpenAI, L.L.C.',
-        purpose: 'AI résumé parsing (auto-fill profile from an uploaded résumé) and candidate/job embedding generation for semantic search and personalized recommendations',
-        dataShared: 'Résumé text (name, contact details, work history, education, licenses, NPI/DEA numbers); candidate profile synopsis (headline, bio, specialties, certifications, licensed states, years of experience). Processed in-flight; not used to train OpenAI models under the API data-usage policy.',
+        purpose: 'AI résumé parsing (profile auto-fill from an uploaded résumé) and candidate/job embedding generation for semantic search and personalized recommendations',
+        dataShared: 'Résumé text (name, contact details, work history, education, licenses, and NPI/DEA numbers); candidate profile synopsis (headline, bio, specialties, certifications, licensed states, and years of experience). Processed in flight and not used to train OpenAI models under the API data-usage policy.',
         location: 'United States',
         transferMechanism: 'Standard Contractual Clauses (SCCs)',
         dpa: 'https://openai.com/policies/data-processing-addendum',
@@ -89,7 +89,7 @@ export const SUB_PROCESSORS: SubProcessor[] = [
     {
         name: 'Upstash, Inc. (Redis)',
         purpose: 'Serverless Redis for HTTP rate limiting, AI response caching (to avoid duplicate LLM calls), and ingest-pipeline cross-chunk job-presence aggregation',
-        dataShared: 'IP address (rate-limit keys); pseudonymous user/tenant identifiers (AI rate-limit keys); cached AI response content which may include structured candidate data extracted from résumés (TTL-bounded, keyed by a hash of inputs)',
+        dataShared: 'IP address (rate-limit keys); pseudonymous user/tenant identifiers (AI rate-limit keys); cached AI response content, which may include structured candidate data extracted from résumés (TTL-bounded and keyed by a hash of the inputs)',
         location: 'United States',
         transferMechanism: 'Standard Contractual Clauses (SCCs)',
         dpa: 'https://upstash.com/trust/dpa.pdf',
@@ -97,7 +97,7 @@ export const SUB_PROCESSORS: SubProcessor[] = [
     },
     {
         name: 'Inngest, Inc.',
-        purpose: 'Durable background job execution: embedding-refresh jobs (on profile/job update), daily recommendation generation, weekly recommendation-digest emails, and job-health recovery probes',
+        purpose: 'Durable background job execution: embedding-refresh jobs (on profile or job update), daily recommendation generation, weekly recommendation-digest emails, and job-health recovery probes',
         dataShared: 'Event payloads include a pseudonymous user identifier (UUID) and job identifiers/apply-link URLs. The recommendation-digest function processes candidate email address and first name within its step executions.',
         location: 'United States',
         transferMechanism: 'Standard Contractual Clauses (SCCs)',
@@ -140,12 +140,12 @@ export default function SubProcessorsPage() {
                 <p style={pStyle}>
                     {brand.name} is operated by <strong>{brand.legal.entityName}</strong> ({brand.legal.address}). To operate the service,
                     {' '}{brand.legal.entityName} engages a small set of third-party service providers (&quot;sub-processors&quot;).
-                    Each sub-processor only receives the data necessary for its specific function and is bound by a Data
+                    Each sub-processor receives only the data necessary for its specific function and is bound by a Data
                     Processing Agreement that mirrors the protections in our{' '}
                     <Link href="/privacy" style={{ color: '#1D4ED8', textDecoration: 'underline' }}>Privacy Policy</Link>.
                 </p>
                 <p style={pStyle}>
-                    We notify customers of material changes to this list at least 30 days before they take effect via
+                    We notify customers of material changes to this list at least 30 days before they take effect, via
                     a banner on this page and (for active employer accounts) an email to the billing contact.
                 </p>
 
@@ -203,8 +203,8 @@ export default function SubProcessorsPage() {
 
                 <h2 style={h2Style}>Questions or DPA requests</h2>
                 <p style={pStyle}>
-                    If you are an employer customer and need a counter-signed Data Processing Addendum, or you have
-                    any question about this list, contact{' '}
+                    If you are an employer customer and need a counter-signed Data Processing Addendum, or if you have
+                    any questions about this list, contact{' '}
                     <a href={`mailto:${brand.email.privacy}`} style={{ color: '#1D4ED8', textDecoration: 'underline' }}>
                         {brand.email.privacy}
                     </a>.

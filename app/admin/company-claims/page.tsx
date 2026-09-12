@@ -102,7 +102,7 @@ export default function AdminCompanyClaimsPage() {
             });
             const data = await res.json().catch(() => ({} as { error?: string; claim?: CompanyClaim }));
             if (!res.ok || !data.claim) {
-                showMsg(data.error || 'Update failed — please try again.', true);
+                showMsg(data.error || 'Update failed. Please try again.', true);
                 return;
             }
             const updated = data.claim as CompanyClaim;
@@ -119,7 +119,7 @@ export default function AdminCompanyClaimsPage() {
             )));
             showMsg(okMsg, false);
         } catch {
-            showMsg('Network error — please try again.', true);
+            showMsg('Network error. Please try again.', true);
         } finally {
             setBusyId(null);
         }
@@ -145,8 +145,8 @@ export default function AdminCompanyClaimsPage() {
             <div style={{ marginBottom: 20 }}>
                 <h1 style={{ ...heading, fontSize: 28, marginBottom: 4 }}>Employer Profile Claims</h1>
                 <p style={sub}>
-                    An employer asking to be recognised as the owner of a company profile.
-                    Nothing is public until you approve it here.
+                    Each claim is a request from an employer to be recognized as the owner of a
+                    company profile. Nothing is public until you approve it here.
                 </p>
             </div>
 
@@ -156,7 +156,7 @@ export default function AdminCompanyClaimsPage() {
                 <div style={{ fontSize: 13, color: '#4A5E6A', lineHeight: 1.6 }}>
                     <strong style={{ color: '#1A2E35' }}>Two different badges, two different claims.</strong>{' '}
                     <em>Pipeline verified</em> means only that the ingest pipeline matched the scraped
-                    employer name against its known-employer map — it is not evidence about the person
+                    employer name against its known-employer map. It is not evidence about the person
                     in front of you, and approving a claim never changes it.{' '}
                     <em>Claimed</em> is the badge this queue sets, and it asserts exactly one thing: an
                     employer asked for this profile and an admin agreed.
@@ -253,7 +253,7 @@ export default function AdminCompanyClaimsPage() {
                                                     <div style={{ ...muted, fontWeight: 400, marginTop: 4 }}>
                                                         {c.company.website
                                                             ? c.company.website.replace(/^https?:\/\//, '')
-                                                            : 'no website on file'}
+                                                            : 'No website on file'}
                                                     </div>
                                                 </td>
                                                 <td style={{ ...td, minWidth: 180 }}>
@@ -274,7 +274,7 @@ export default function AdminCompanyClaimsPage() {
                                                     </div>
                                                 </td>
                                                 <td style={{ ...td, minWidth: 200, maxWidth: 320, whiteSpace: 'normal', lineHeight: 1.5, color: '#4A5E6A' }}>
-                                                    {c.note || <span style={muted}>—</span>}
+                                                    {c.note || <span style={muted}>No note</span>}
                                                     {c.reviewNote && (
                                                         <div style={{ ...muted, marginTop: 6 }}>Review note: {c.reviewNote}</div>
                                                     )}
@@ -303,7 +303,7 @@ export default function AdminCompanyClaimsPage() {
                                                     />
                                                     <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
                                                         <button
-                                                            onClick={() => void review(c.id, 'approve', 'Claim approved — the Claimed badge is now live on that profile.')}
+                                                            onClick={() => void review(c.id, 'approve', 'Claim approved. The Claimed badge is now live on that profile.')}
                                                             disabled={busy || c.status === 'approved'}
                                                             style={{
                                                                 padding: '7px 14px', borderRadius: '8px', fontSize: 12, fontWeight: 700,
@@ -320,7 +320,7 @@ export default function AdminCompanyClaimsPage() {
                                                                 'reject',
                                                                 isPending
                                                                     ? 'Claim rejected.'
-                                                                    : 'Claim rejected — the Claimed badge was pulled from that profile.',
+                                                                    : 'Claim rejected. The Claimed badge has been removed from that profile.',
                                                             )}
                                                             disabled={busy || c.status === 'rejected'}
                                                             style={{

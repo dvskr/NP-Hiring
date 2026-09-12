@@ -408,7 +408,7 @@ export async function generateMetadata({ params }: JobPageProps) {
     // not a 410 (deleted job). Use generic page-not-found metadata.
     return {
       title: 'Page Not Found',
-      description: `The page you are trying to access doesn’t exist. Browse current ${brand.niche.short} jobs on ${brand.name}.`,
+      description: `The page you are trying to access does not exist. Browse current ${brand.niche.short} jobs on ${brand.name}.`,
       robots: { index: false, follow: true },
     };
   }
@@ -437,7 +437,7 @@ export async function generateMetadata({ params }: JobPageProps) {
     const expiredTitle = result.title || `${brand.niche.short} Position`;
     const expiredEmployer = result.employer || 'Employer';
     return {
-      title: `${expiredTitle} — Position Filled`,
+      title: `${expiredTitle}: Position Filled`,
       description: `This ${expiredTitle} position at ${expiredEmployer} is no longer available. Browse similar ${brand.niche.short} jobs on ${brand.name}.`,
       robots: {
         index: false,
@@ -531,10 +531,10 @@ export async function generateMetadata({ params }: JobPageProps) {
     ? 'Remote'
     : (job.city && job.stateCode ? `${job.city}, ${job.stateCode}` : (job.state || ''));
   const fullTitle = titleLocation
-    ? `${job.title} at ${job.employer} — ${titleLocation}`
+    ? `${job.title} at ${job.employer} (${titleLocation})`
     : `${job.title} at ${job.employer}`;
   const titleWithLocation = fullTitle.length > 65
-    ? `${job.title} — ${titleLocation || job.employer}`.slice(0, 65)
+    ? `${job.title}, ${titleLocation || job.employer}`.slice(0, 65)
     : fullTitle;
 
   return {
@@ -635,7 +635,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
           <p style={{ fontSize: '15px', color: '#7A6A62', marginBottom: '0', lineHeight: 1.6 }}>
             {subtext}
           </p>
-          <p style={{ fontSize: '14px', color: '#7A6A62', marginTop: '8px' }}>Don&apos;t worry — we have hundreds of similar {brand.niche.short} positions available right now.</p>
+          <p style={{ fontSize: '14px', color: '#7A6A62', marginTop: '8px' }}>Hundreds of similar {brand.niche.short} positions are available right now.</p>
         </div>
 
         {/* Action Cards — 3×2 Grid */}
@@ -667,7 +667,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
 
         {/* Salary Guide CTA */}
         <div style={{ ...clayCard, padding: '28px 32px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#7A6A62', marginBottom: '16px' }}>While you&apos;re here, check out the latest {brand.niche.short} salary data:</p>
+          <p style={{ fontSize: '14px', color: '#7A6A62', marginBottom: '16px' }}>While you are here, review the latest {brand.niche.short} salary data:</p>
           <Link href="/salary-guide"
             className="gone-cta"
             style={{
@@ -1215,7 +1215,7 @@ export default async function JobPage({ params }: JobPageProps) {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <p className="text-sm font-medium">
-                      {expiryStatus.text}{expiryStatus.isUrgent && ' — Apply soon!'}
+                      {expiryStatus.text}{expiryStatus.isUrgent && '. Apply soon.'}
                     </p>
                   </div>
                 )}

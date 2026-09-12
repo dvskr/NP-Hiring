@@ -95,7 +95,7 @@ describe('B0: "Clear history" preserves submitted in-platform applications', () 
         );
         expect(fn).toMatch(/throw new Error\(`Applications request failed \(\$\{res\.status\}\)`\)/);
         const catchBlock = fn.slice(fn.indexOf('} catch'));
-        expect(catchBlock).toContain('Couldn’t clear your history — please try again.');
+        expect(catchBlock).toContain('We could not clear your history. Please try again.');
         expect(catchBlock).not.toContain('clearAppliedJobs()');
         expect(catchBlock).not.toContain('removeApplied(');
     });
