@@ -38,10 +38,10 @@ export interface ExperienceBucket {
 
 export const EXPERIENCE_BUCKETS: ReadonlyArray<ExperienceBucket> = Object.freeze([
   { min: 0, max: null, label: 'New grad accepted' },
-  { min: 1, max: 2, label: '1-2 years' },
-  { min: 2, max: 4, label: '2-4 years' },
-  { min: 5, max: 7, label: '5-7 years' },
-  { min: 7, max: 10, label: '7-10 years' },
+  { min: 1, max: 2, label: '1 to 2 years' },
+  { min: 2, max: 4, label: '2 to 4 years' },
+  { min: 5, max: 7, label: '5 to 7 years' },
+  { min: 7, max: 10, label: '7 to 10 years' },
   { min: 10, max: null, label: '10+ years' },
 ]);
 
@@ -83,7 +83,7 @@ function formatRange(min: number, max: number | null): string {
   if (max === null || max <= min) {
     return `${min}+ yrs`;
   }
-  return `${min}-${max} yrs`;
+  return `${min} to ${max} yrs`;
 }
 
 /**

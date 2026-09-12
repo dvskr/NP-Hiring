@@ -57,7 +57,7 @@ function styled410(opts: {
     subtext: string;
     title?: string; // browser tab title
 }): NextResponse {
-    const tabTitle = opts.title ?? `${opts.badge} — ${brand.name}`;
+    const tabTitle = opts.title ?? `${opts.badge} | ${brand.name}`;
     const safe = (s: string) => s
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -265,7 +265,7 @@ function gone410(reason: string): NextResponse {
         badge: 'Page Removed',
         heading: 'This page is no longer available',
         subtext: reason,
-        title: `Page Permanently Removed — ${brand.name}`,
+        title: `Page Permanently Removed | ${brand.name}`,
     });
 }
 
@@ -479,8 +479,8 @@ export async function middleware(request: NextRequest) {
                 return styled410({
                     badge: 'Position Removed',
                     heading: 'This position is no longer available',
-                    subtext: `This job listing has been permanently removed. Don't worry — we have hundreds of similar ${brand.niche.short} positions open right now.`,
-                    title: `Position Removed — ${brand.name}`,
+                    subtext: `This job listing has been permanently removed. Hundreds of similar ${brand.niche.short} positions are open right now.`,
+                    title: `Position Removed | ${brand.name}`,
                 });
             }
             // Cached "live" result short-circuits the DB call entirely.
@@ -524,8 +524,8 @@ export async function middleware(request: NextRequest) {
                             return styled410({
                                 badge: 'Position Removed',
                                 heading: 'This position is no longer available',
-                                subtext: `This job listing has been permanently removed. Don't worry — we have hundreds of similar ${brand.niche.short} positions open right now.`,
-                                title: `Position Removed — ${brand.name}`,
+                                subtext: `This job listing has been permanently removed. Hundreds of similar ${brand.niche.short} positions are open right now.`,
+                                title: `Position Removed | ${brand.name}`,
                             });
                         }
                         // Live — cache the negative so subsequent requests skip the round-trip.
@@ -559,9 +559,9 @@ export async function middleware(request: NextRequest) {
             // and recrawls far more aggressively than a clean 410.
             return styled410({
                 badge: 'Page Not Found',
-                heading: 'This page doesn’t exist',
-                subtext: `The page you’re looking for isn’t here — it may have moved or never existed. Browse current ${brand.niche.short} openings instead.`,
-                title: `Page Not Found — ${brand.name}`,
+                heading: 'This page does not exist',
+                subtext: `The page you are looking for is not here. It may have moved or it may never have existed. Browse current ${brand.niche.short} openings instead.`,
+                title: `Page Not Found | ${brand.name}`,
             });
         }
     }
@@ -678,8 +678,8 @@ export async function middleware(request: NextRequest) {
                                     return styled410({
                                         badge: 'No Open Positions',
                                         heading: 'This employer has no current openings',
-                                        subtext: `This company doesn't have any active ${brand.niche.short} openings right now. Browse positions from other employers below.`,
-                                        title: `No Open Positions — ${brand.name}`,
+                                        subtext: `This company does not have any active ${brand.niche.short} openings right now. Browse positions from other employers below.`,
+                                        title: `No Open Positions | ${brand.name}`,
                                     });
                                 }
                                 // Live company with jobs — cache so the next

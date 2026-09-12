@@ -7,7 +7,7 @@ import type { Metadata } from 'next';
 // canonical so inbound link variants don't splinter.
 export const metadata: Metadata = {
     title: `Account Settings | ${brand.name}`,
-    description: `Manage your ${brand.name} account — profile, resume, job preferences, alerts, and notifications.`,
+    description: `Manage your ${brand.name} account, including your profile, resume, job preferences, alerts, and notifications.`,
     alternates: { canonical: `${brand.baseUrl}/settings` },
     robots: { index: false, follow: false },
 };

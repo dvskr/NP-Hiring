@@ -18,8 +18,8 @@ Launch: 2026
 
 /* PURPOSE */
 
-Mission: Help every Nurse Practitioner find the right role through a transparent, data-rich job board built for NPs — from FNP and AGNP to PMHNP, NNP, WHNP, and the wider APRN cohort (CRNA, CNM, CNS).
+Mission: Help every Nurse Practitioner find the right role through a transparent, data-rich job board built for NPs, from FNP and AGNP to PMHNP, NNP, WHNP, and the wider APRN cohort (CRNA, CNM, CNS).
 
 Coverage: All 50 US states + DC
 Categories: 42 category pages
-Sources: 8 ATS sources at launch, growing
+Sources: 8 ATS sources at launch, and growing

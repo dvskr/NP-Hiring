@@ -120,7 +120,7 @@ function UnsubscribeContent() {
       }
       setOutcome(nextOutcome);
     } catch {
-      setActionError('Network error — we couldn’t reach the server. Please try again.');
+      setActionError('Network error: we couldn’t reach the server. Please try again.');
     } finally {
       setPending(null);
     }
@@ -144,7 +144,7 @@ function UnsubscribeContent() {
       }
       setOutcome('deleted');
     } catch {
-      setActionError('Network error — we couldn’t reach the server. Please try again.');
+      setActionError('Network error: we couldn’t reach the server. Please try again.');
     } finally {
       setPending(null);
     }
@@ -178,7 +178,7 @@ function UnsubscribeContent() {
     const copy = {
       paused: {
         title: 'Alert Paused',
-        body: 'You won’t receive this alert until you resume it. Nothing was deleted — your criteria are still saved.',
+        body: 'You won’t receive this alert until you resume it. Nothing was deleted, and your criteria are still saved.',
       },
       weekly: {
         title: 'Switched to Weekly',
@@ -273,8 +273,8 @@ function UnsubscribeContent() {
         </h1>
         <p className="text-gray-600 text-center mb-6">
           {isRunning
-            ? 'You don’t have to delete this alert to stop the noise — pick whatever fits. Every option below is reversible except the last one.'
-            : 'It isn’t sending you anything right now. You can leave it paused, change what it looks for, or delete it for good.'}
+            ? 'You don’t have to delete this alert to receive fewer emails. Choose whichever option fits. Every option below is reversible except the last one.'
+            : 'This alert isn’t sending you anything right now. You can leave it paused, change what it looks for, or delete it permanently.'}
         </p>
 
         {actionError && (
@@ -354,7 +354,7 @@ function UnsubscribeContent() {
             to the fatal-error branch above. */}
         <p className="mt-6 text-xs text-gray-400 text-center">
           Pausing and cadence changes only affect this one alert. Any other
-          alerts on your address keep running — manage them all from{' '}
+          alerts on your address keep running. You can manage them all from{' '}
           <Link
             href={`/job-alerts/manage?token=${encodeURIComponent(token ?? '')}`}
             className="underline"

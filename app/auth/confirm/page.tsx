@@ -110,7 +110,7 @@ export default function AuthConfirmPage() {
             // redirect (before appending ?code=), so the email IS confirmed.
             // We just can't establish a client session without the verifier.
             // Carry the return target into login so the intent survives.
-            setMessage('Email confirmed! Please log in to continue.')
+            setMessage('Your email is confirmed. Please log in to continue.')
             setStatus('success')
             const loginUrl = nextPath !== '/dashboard'
               ? `/login?confirmed=true&redirectTo=${encodeURIComponent(nextPath)}`
@@ -124,14 +124,14 @@ export default function AuthConfirmPage() {
             urlParams.get('type') === 'recovery'
 
           if (isRecovery) {
-            setMessage('Verified! Redirecting to reset password...')
+            setMessage('Verified. Redirecting you to reset your password...')
             setStatus('success')
             router.push('/reset-password')
             return
           }
 
           // Email confirmation — user is now logged in
-          setMessage('Email confirmed! Redirecting...')
+          setMessage('Email confirmed. Redirecting...')
           setStatus('success')
           // F27: bootstrap the UserProfile server-side NOW. The signup-time
           // profile POST 401'd (no session existed), so ensureProfileFromAuth
@@ -160,7 +160,7 @@ export default function AuthConfirmPage() {
         if (!hash) {
           console.log('No code or hash fragment found, redirecting to login')
           setStatus('error')
-          setMessage('Invalid or expired link. Redirecting to login...')
+          setMessage('This link is invalid or has expired. Redirecting to login...')
           setTimeout(() => router.push('/login'), 2000)
           return
         }
@@ -199,7 +199,7 @@ export default function AuthConfirmPage() {
         if (error) {
           console.error('Failed to set session:', error.message)
           setStatus('error')
-          setMessage('Session expired or invalid. Please try again.')
+          setMessage('Your session has expired or is invalid. Please try again.')
           setTimeout(() => router.push('/login'), 3000)
           return
         }
@@ -207,14 +207,14 @@ export default function AuthConfirmPage() {
 
         // Handle different auth types
         if (type === 'recovery') {
-          setMessage('Verified! Redirecting to reset password...')
+          setMessage('Verified. Redirecting you to reset your password...')
           setStatus('success')
           router.push('/reset-password')
           return
         }
 
         // Magic link / email confirmation — user is now logged in
-        setMessage('Email confirmed! Redirecting...')
+        setMessage('Email confirmed. Redirecting...')
         setStatus('success')
         // F27: same server-side profile + opt-in bootstrap as the PKCE path
         // above — see that comment for why this must precede the welcome call.
@@ -303,7 +303,7 @@ export default function AuthConfirmPage() {
               htmlFor="resend-email"
               style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary, #94A3B8)', marginBottom: '6px' }}
             >
-              Enter your email and we&apos;ll send a fresh confirmation link:
+              Enter your email address and we will send you a new confirmation link:
             </label>
             <input
               id="resend-email"
@@ -345,12 +345,12 @@ export default function AuthConfirmPage() {
               {resendStatus === 'sending'
                 ? 'Sending...'
                 : resendStatus === 'sent'
-                  ? '✓ Confirmation email sent — check your inbox'
+                  ? '✓ Confirmation email sent. Please check your inbox.'
                   : 'Resend confirmation email'}
             </button>
             {resendStatus === 'error' && (
               <p style={{ fontSize: '12px', color: '#EF4444', margin: '8px 0 0' }}>
-                Could not send the email. Wait a minute and try again, or sign in to resend from there.
+                We could not send the email. Please wait a minute and try again, or sign in to resend it from your account.
               </p>
             )}
             <p style={{ fontSize: '12px', color: 'var(--text-secondary, #94A3B8)', margin: '12px 0 0', textAlign: 'center' }}>

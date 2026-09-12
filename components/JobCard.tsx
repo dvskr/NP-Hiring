@@ -24,6 +24,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 // never a guess). Labels are shared with the /jobs facet and the company
 // profile via lib/filters.ts so the three surfaces can't drift.
 import { RECRUITMENT_TYPE_LABELS, type RecruitmentTypeValue } from '@/lib/filters';
+import { normalizeDisplaySalary } from '@/lib/salary-display';
 
 type JobCardJob = Job & {
   companyRecruitmentType?: RecruitmentTypeValue | null;
@@ -61,7 +62,7 @@ function stripHtml(html: string | null | undefined): string {
 
 // Helper to build a salary string when displaySalary is missing
 function buildSalaryDisplay(job: Job): string | null {
-  if (job.displaySalary) return job.displaySalary;
+  if (job.displaySalary) return normalizeDisplaySalary(job.displaySalary);
   const min = job.normalizedMinSalary;
   const max = job.normalizedMaxSalary;
   if (!min && !max) return job.salaryRange || null;
@@ -70,7 +71,7 @@ function buildSalaryDisplay(job: Job): string | null {
     return `$${n.toLocaleString()}`;
   };
   const period = job.salaryPeriod === 'hourly' ? '/hr' : '/yr';
-  if (min && max && min !== max) return `${fmt(min)} - ${fmt(max)}${period}`;
+  if (min && max && min !== max) return `${fmt(min)} to ${fmt(max)}${period}`;
   if (min) return `${fmt(min)}${period}`;
   if (max) return `${fmt(max)}${period}`;
   return null;
@@ -111,7 +112,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
   const cardLocation = job.isRemote
     ? 'Remote'
     : (job.city && job.state ? `${job.city}, ${job.state}` : (job.state || job.location || ''));
-  const cardAriaLabel = `${job.title} at ${job.employer}${cardLocation ? ` — ${cardLocation}` : ''}`;
+  const cardAriaLabel = `${job.title} at ${job.employer}${cardLocation ? `, ${cardLocation}` : ''}`;
   // S5 fix (2026-06-01): getJobFreshness computes against `new Date()`,
   // which differs by milliseconds-to-seconds between server SSR and the
   // hydration tick on the client — producing strings like "Posted today"

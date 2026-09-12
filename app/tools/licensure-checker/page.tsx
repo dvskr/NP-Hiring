@@ -43,7 +43,7 @@ export const revalidate = 86400;
 const PAGE_PATH = '/tools/licensure-checker';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
 const PAGE_TITLE = `${brand.niche.short} Licensure Checker & Multi-State Planner`;
-const PAGE_DESCRIPTION = `Check ${brand.niche.short} licensure requirements, practice authority, and salary for any state — then line up every state you are considering side by side, with each one's licensure guide and how the Nurse Licensure Compact does and does not apply.`;
+const PAGE_DESCRIPTION = `Check ${brand.niche.short} licensure requirements, practice authority, and salary for any state, then line up every state you are considering side by side, with each one's licensure guide and how the Nurse Licensure Compact does and does not apply.`;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Licensure Checker`)}&type=page`;
 
 export const metadata: Metadata = {
@@ -163,24 +163,24 @@ function buildPlannerStates(guides: readonly StateGuideRef[]): PlannerState[] {
 
 const FAQS = [
   {
-    q: 'Does a compact nursing license let me practise as an APRN in another state?',
-    a: `No. The Nurse Licensure Compact covers the RN license that underpins your APRN credential, not the APRN credential itself. Every state issues its own APRN license, so adding a state always means an APRN application to that state's board — the compact only removes the separate RN endorsement step, and only between member states.`,
+    q: 'Does a compact nursing license let me practice as an APRN in another state?',
+    a: `No. The Nurse Licensure Compact covers the RN license that underpins your APRN credential, not the APRN credential itself. Every state issues its own APRN license, so adding a state always means an APRN application to that state's board. The compact only removes the separate RN endorsement step, and only between member states.`,
   },
   {
     q: 'What decides whether I can hold a multistate RN license?',
-    a: `Your primary state of residence. Only a compact member state can issue a multistate license, so if you live in a non-member state you have no multistate privilege to carry anywhere, regardless of where you want to work. Check your home state against NCSBN's current member list before you plan around it — jurisdictions join and switch on their own timelines, and this page deliberately does not keep its own copy of that list.`,
+    a: `Your primary state of residence. Only a compact member state can issue a multistate license, so if you live in a non-member state you have no multistate privilege to carry anywhere, regardless of where you want to work. Check your home state against NCSBN's current member list before you plan around it. Jurisdictions join and switch on their own timelines, and this page deliberately does not keep its own copy of that list.`,
   },
   {
     q: `How many states grant ${brand.niche.short}s full practice authority?`,
-    a: `${STAT_SOURCES.fullPracticeStates.formatted}, according to ${STAT_SOURCES.fullPracticeStates.source} (as of ${STAT_SOURCES.fullPracticeStates.asOf}). In full-practice states you can evaluate, diagnose, prescribe, and manage treatment without a physician agreement. Reduced-practice states require a collaborative agreement and restricted-practice states require physician supervision — the checker labels each state and the planner totals them across your selection.`,
+    a: `${STAT_SOURCES.fullPracticeStates.formatted}, according to ${STAT_SOURCES.fullPracticeStates.source} (as of ${STAT_SOURCES.fullPracticeStates.asOf}). In full-practice states you can evaluate, diagnose, prescribe, and manage treatment without a physician agreement. Reduced-practice states require a collaborative agreement, and restricted-practice states require physician supervision. The checker labels each state, and the planner totals them across your selection.`,
   },
   {
     q: 'How long does licensure take, and what does it cost?',
-    a: `That varies by state and by your own file, and we do not publish figures we cannot keep current for 51 jurisdictions. The checker shows a broad timeline band tied to practice-authority tier as a planning aid only — for fees, processing times, CE hours, and renewal cycles, go to the state board of nursing, which is the authoritative source.`,
+    a: `That varies by state and by your own file, and we do not publish figures we cannot keep current for 51 jurisdictions. The checker shows a broad timeline band tied to practice-authority tier as a planning aid only. For fees, processing times, CE hours, and renewal cycles, go to the state board of nursing, which is the authoritative source.`,
   },
   {
     q: 'Which states should I add first if I want telehealth or travel work?',
-    a: `If you live in a compact member state, the cheapest additions are other member states: the RN layer is already covered, so each one is an APRN application rather than two — confirm both ends against NCSBN's current member list. After that, weigh practice authority. A full-practice state removes the collaborative-agreement dependency entirely, which matters more for telehealth caseloads than for on-site roles.`,
+    a: `If you live in a compact member state, the cheapest additions are other member states: the RN layer is already covered, so each one is an APRN application rather than two. Confirm both ends against NCSBN's current member list. After that, weigh practice authority. A full-practice state removes the collaborative-agreement dependency entirely, which matters more for telehealth caseloads than for on-site roles.`,
   },
 ] as const;
 
@@ -242,7 +242,7 @@ export default async function LicensureCheckerToolPage() {
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
               Pick a state for its practice authority, licensure steps, timeline band, and live pay data.
-              Then line up every state you are considering in the planner below — all {plannerStates.length}{' '}
+              Then line up every state you are considering in the planner below: all {plannerStates.length}{' '}
               jurisdictions, sorted by what actually differs between them, starting with practice authority.
             </p>
           </div>
@@ -275,7 +275,7 @@ export default async function LicensureCheckerToolPage() {
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '600px', margin: '0 auto 34px', lineHeight: 1.6 }}>
             Telehealth panels, travel assignments, and border-state practices all run into the same question:
-            how different are these states really? Line them up and see it in one pass.
+            how different are these states, really? Line them up and see the answer in one pass.
           </p>
           <MultiStatePlanner states={plannerStates} />
         </div>
@@ -288,23 +288,23 @@ export default async function LicensureCheckerToolPage() {
             title="What these tools do and do not tell you"
             intro="Licensure is a YMYL topic, so this page is deliberately narrow: it states what our sourced data supports and hands you the board link for everything else."
             assumptions={[
-              `Practice-authority tiers (full, reduced, restricted) come from the AANP state practice environment — ${STAT_SOURCES.fullPracticeStates.formatted} grant full practice authority as of ${STAT_SOURCES.fullPracticeStates.asOf}.`,
+              `Practice-authority tiers (full, reduced, restricted) come from the AANP state practice environment; ${STAT_SOURCES.fullPracticeStates.formatted} grant full practice authority as of ${STAT_SOURCES.fullPracticeStates.asOf}.`,
               'The planner states the Nurse Licensure Compact rules, which are stable: a multistate RN license is issued only by a compact member state acting as your primary state of residence, and it covers the RN layer only.',
               'APRN licensure is treated as state-by-state in every case. The compact covers the RN layer only.',
               `Salary figures in the checker are true medians over live ${brand.niche.short}-eligible postings with disclosed, non-estimated salary, shown only for states with at least 5 postings from 3+ employers, refreshed daily.`,
               'The timeline band is a broad planning aid keyed to practice-authority tier, not a state-specific processing estimate.',
             ]}
             exclusions={[
-              'Which specific states are Nurse Licensure Compact members. Membership moves — jurisdictions enact the compact and implement it on separate timelines, and some are only partially implemented — so a per-state member or non-member verdict is exactly the kind of claim that goes stale without anyone noticing. The planner links you to NCSBN, which maintains the current list, rather than publishing a copy of it.',
-              'Application fees, renewal cycles, CE hour requirements, and processing times. These change per state and per applicant — the state board of nursing is the only authoritative source, and every state row links out to its guide rather than guessing.',
+              'Which specific states are Nurse Licensure Compact members. Membership changes: jurisdictions enact the compact and implement it on separate timelines, and some are only partially implemented, so a per-state member or non-member verdict is exactly the kind of claim that goes stale without anyone noticing. The planner links you to NCSBN, which maintains the current list, rather than publishing a copy of it.',
+              'Application fees, renewal cycles, CE hour requirements, and processing times. These change per state and per applicant; the state board of nursing is the only authoritative source, and every state row links out to its guide rather than guessing.',
               'The APRN Compact. It is not treated as an operating multistate APRN privilege anywhere in this planner.',
               'Endorsement eligibility specifics such as background-check status, prior discipline, or education equivalency reviews.',
               'Prescriptive-authority detail and controlled-substance schedules, which vary within practice-authority tiers.',
             ]}
             sources={[
               { label: STAT_SOURCES.fullPracticeStates.source, url: STAT_SOURCES.fullPracticeStates.sourceUrl },
-              { label: 'NCSBN — Nurse Licensure Compact, current member jurisdictions', url: 'https://www.nursecompact.com/' },
-              { label: `${brand.name} salary guide — state pay from live postings`, url: '/salary-guide' },
+              { label: 'NCSBN: Nurse Licensure Compact, current member jurisdictions', url: 'https://www.nursecompact.com/' },
+              { label: `${brand.name} salary guide: state pay from live postings`, url: '/salary-guide' },
             ]}
           />
         </div>

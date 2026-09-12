@@ -77,7 +77,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} Community Health ${brand.niche.short} Jobs — FQHC & Public Health NP Positions`,
+    title: `${stats.totalJobs} Community Health ${brand.niche.short} Jobs: FQHC & Public Health NP Positions`,
     description: `Find ${stats.totalJobs} community health ${brand.niche.short} jobs. ${brand.niche.long} positions at FQHCs, community health centers, and public health clinics with NHSC loan repayment eligibility and integrated care teams.`,
     keywords: ['community health np jobs', 'FQHC nurse practitioner', 'public health NP', 'community health center nurse practitioner', 'underserved population NP jobs'],
     openGraph: {
@@ -120,11 +120,11 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
     },
     {
       question: `How much do community health ${brand.niche.short}s earn?`,
-      answer: `Community health ${brand.niche.short} salaries typically fall within the standard NP range of roughly $95K-$150K, varying by location and experience. Many FQHC positions add NHSC loan repayment up to $50,000, PSLF eligibility, generous PTO, and benefits that meaningfully boost total compensation beyond base salary.`
+      answer: `Community health ${brand.niche.short} salaries typically fall within the standard NP range of roughly $95K to $150K, varying by location and experience. Many FQHC positions add NHSC loan repayment up to $50,000, PSLF eligibility, generous PTO, and benefits that meaningfully boost total compensation beyond base salary.`
     },
     {
       question: "Do community health positions qualify for loan repayment?",
-      answer: "Yes — many FQHC and public health positions qualify for National Health Service Corps (NHSC) loan repayment of up to $50,000 for two years of service. Positions at 501(c)(3) nonprofit employers also qualify for Public Service Loan Forgiveness (PSLF) after 120 qualifying payments."
+      answer: "Yes. Many FQHC and public health positions qualify for National Health Service Corps (NHSC) loan repayment of up to $50,000 for two years of service. Positions at 501(c)(3) nonprofit employers also qualify for Public Service Loan Forgiveness (PSLF) after 120 qualifying payments."
     },
     {
       question: `What qualifications are needed for community health ${brand.niche.short} roles?`,
@@ -311,7 +311,7 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ch_grant.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Grant-Funded Roles</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Many positions backed by federal and state health center expansion grants.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Many positions are backed by federal and state health center expansion grants.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ch_heart.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -324,7 +324,7 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary + Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Community health {brand.niche.short}s earn {stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$95K–$150K'} annually, and many roles add NHSC loan repayment, generous PTO, and PSLF-eligible nonprofit employment.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Community health {brand.niche.short}s earn {stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$95K to $150K'} annually, and many roles add NHSC loan repayment, generous PTO, and PSLF-eligible nonprofit employment.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
@@ -369,7 +369,7 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
               <div key="02" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>02</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Cultural Competency</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Experience with diverse, underserved populations. Bilingual skills (Spanish) are highly valued.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Experience with diverse, underserved populations is preferred. Bilingual skills (Spanish) are highly valued.</p>
               </div>
               <div key="03" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>03</span>
@@ -396,7 +396,7 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
               { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
               { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
               { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
-              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
+              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 pay data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
               { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
             ].map(c => (
               <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>

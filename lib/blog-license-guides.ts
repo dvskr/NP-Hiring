@@ -274,11 +274,11 @@ const NP_PROSE = brand.niche.descriptor; // 'nurse practitioner'
 function authorityIntroPhrase(s: LicenseGuideState): string {
     switch (s.authority) {
         case 'full':
-            return `${s.name} is a full practice authority state, so the licensure path here ends with independent practice — no collaborating or supervising physician required`;
+            return `${s.name} is a full practice authority state, so the licensure path here ends with independent practice; no collaborating or supervising physician is required`;
         case 'reduced':
             return `${s.name} is a reduced practice state, so plan for one extra step most full-practice states skip: a collaborative agreement with a physician`;
         case 'restricted':
-            return `${s.name} is a restricted practice state, so physician supervision is built into how ${NP}s practice here — and into the paperwork you'll file`;
+            return `${s.name} is a restricted practice state, so physician supervision is built into how ${NP}s practice here and into the paperwork you will file`;
     }
 }
 
@@ -286,18 +286,18 @@ function authoritySection(s: LicenseGuideState): string {
     switch (s.authority) {
         case 'full':
             return [
-                `The AANP classifies ${s.name} as a **full practice authority (FPA)** state — one of ${STAT_SOURCES.fullPracticeStates.formatted} (${STAT_SOURCES.fullPracticeStates.source}, ${STAT_SOURCES.fullPracticeStates.asOf}). Under FPA, ${NP_PROSE}s evaluate patients, diagnose, order and interpret tests, and initiate and manage treatment — including prescribing — under the licensure authority of the state board of nursing, without a mandated physician relationship.`,
-                `You'll feel the difference in the ${s.code} job market: postings rarely name a collaborating physician, ${NP}-owned practices are a realistic path, and telehealth employers often prioritize clinicians licensed in FPA states. One caveat: some full-practice states phase authority in through a transition-to-practice period after initial licensure, so confirm the current rule with the [${s.boardName}](${s.boardUrl}) before assuming day-one independence.`,
+                `The AANP classifies ${s.name} as a **full practice authority (FPA)** state, one of ${STAT_SOURCES.fullPracticeStates.formatted} (${STAT_SOURCES.fullPracticeStates.source}, ${STAT_SOURCES.fullPracticeStates.asOf}). Under FPA, ${NP_PROSE}s evaluate patients, diagnose, order and interpret tests, and initiate and manage treatment, including prescribing, under the licensure authority of the state board of nursing, without a mandated physician relationship.`,
+                `You will notice the difference in the ${s.code} job market: postings rarely name a collaborating physician, ${NP}-owned practices are a realistic path, and telehealth employers often prioritize clinicians licensed in FPA states. One caveat: some full-practice states phase authority in through a transition-to-practice period after initial licensure, so confirm the current rule with the [${s.boardName}](${s.boardUrl}) before assuming day-one independence.`,
             ].join('\n\n');
         case 'reduced':
             return [
-                `The AANP classifies ${s.name} as a **reduced practice** state. You hold your own APRN license, but state law requires a collaborative agreement with a physician covering at least one element of ${NP_PROSE} practice — most commonly prescriptive authority. The agreement is a filed, documented relationship, not day-to-day on-site oversight.`,
-                `Practically, that means employed roles in ${s.code} usually come with collaboration built in — hospitals and group practices maintain the agreements — while independent or practice-ownership routes require you to arrange (and often pay for) a collaborating physician yourself. The required contents of the agreement and any filing steps are defined by the [${s.boardName}](${s.boardUrl}); review the current rules there rather than relying on a colleague's older paperwork.`,
+                `The AANP classifies ${s.name} as a **reduced practice** state. You hold your own APRN license, but state law requires a collaborative agreement with a physician covering at least one element of ${NP_PROSE} practice, most commonly prescriptive authority. The agreement is a filed, documented relationship, not day-to-day on-site oversight.`,
+                `Practically, that means employed roles in ${s.code} usually come with collaboration built in (hospitals and group practices maintain the agreements), while independent or practice-ownership routes require you to arrange (and often pay for) a collaborating physician yourself. The required contents of the agreement and any filing steps are defined by the [${s.boardName}](${s.boardUrl}); review the current rules there rather than relying on a colleague's older paperwork.`,
             ].join('\n\n');
         case 'restricted':
             return [
-                `The AANP classifies ${s.name} as a **restricted practice** state: state law requires supervision, delegation, or team management by a physician for at least one element of ${NP_PROSE} practice. Expect ${s.code} job postings to name a supervising physician, reference protocols or practice agreements, and describe chart-review or delegation arrangements — that language reflects the licensure framework, not an individual employer's preference.`,
-                `Restricted does not mean unlicensed autonomy is the only difference — it shapes credentialing, prescriptive authority paperwork, and how quickly you can change practice settings, since supervision arrangements typically must be updated when you move. The [${s.boardName}](${s.boardUrl}) publishes the supervision and delegation requirements that apply; legislative changes in restricted states are frequent enough that the board page is the only current source worth trusting.`,
+                `The AANP classifies ${s.name} as a **restricted practice** state: state law requires supervision, delegation, or team management by a physician for at least one element of ${NP_PROSE} practice. Expect ${s.code} job postings to name a supervising physician, reference protocols or practice agreements, and describe chart-review or delegation arrangements. That language reflects the licensure framework, not an individual employer's preference.`,
+                `Restricted status affects more than autonomy: it shapes credentialing, prescriptive authority paperwork, and how quickly you can change practice settings, since supervision arrangements typically must be updated when you move. The [${s.boardName}](${s.boardUrl}) publishes the supervision and delegation requirements that apply; legislative changes in restricted states are frequent enough that the board page is the only current source worth trusting.`,
             ].join('\n\n');
     }
 }
@@ -312,18 +312,18 @@ const NLC_SOURCE_SENTENCE = `Compact status verified against the [live NCSBN ros
 function nlcSection(s: LicenseGuideState): string {
     if (s.nlcStatus === 'member') {
         return [
-            `${s.name} participates in the **Nurse Licensure Compact (NLC)**. The compact applies to the RN license that underpins your APRN credential: if ${s.name} is your primary state of residence, you can hold a multistate RN license that's recognized across compact member states without separate RN endorsements.`,
-            `Your APRN license itself is still issued state-by-state — compact RN privileges don't substitute for ${s.code} APRN licensure, and practicing as an ${NP} in another state still requires that state's APRN credential. Where the compact pays off is mobility: travel and telehealth roles, and any future multi-state practice, start from a simpler RN foundation. Verify your compact eligibility and primary-state-of-residence rules with the [${s.boardName}](${s.boardUrl}). ${NLC_SOURCE_SENTENCE}`,
+            `${s.name} participates in the **Nurse Licensure Compact (NLC)**. The compact applies to the RN license that underpins your APRN credential: if ${s.name} is your primary state of residence, you can hold a multistate RN license that is recognized across compact member states without separate RN endorsements.`,
+            `Your APRN license itself is still issued state-by-state. Compact RN privileges do not substitute for ${s.code} APRN licensure, and practicing as an ${NP} in another state still requires that state's APRN credential. Where the compact pays off is mobility: travel and telehealth roles, and any future multi-state practice, start from a simpler RN foundation. Verify your compact eligibility and primary-state-of-residence rules with the [${s.boardName}](${s.boardUrl}). ${NLC_SOURCE_SENTENCE}`,
         ].join('\n\n');
     }
     if (s.nlcStatus === 'pending') {
         return [
-            `${s.name} has **enacted the Nurse Licensure Compact but not yet implemented it** — NCSBN lists the implementation date as to-be-determined. Until the ${s.boardName} completes implementation, the compact changes nothing in practice: multistate RN licenses are neither issued to ${s.name} residents nor honored for practice in ${s.code}, so plan on a ${s.name}-issued RN license (typically by endorsement) beneath your APRN application, exactly as in a non-compact state.`,
-            `Implementation timing is set by the board and NCSBN, not by this guide — verify the current status with the [${s.boardName}](${s.boardUrl}) before planning a relocation or telehealth caseload around compact privileges. ${NLC_SOURCE_SENTENCE}`,
+            `${s.name} has **enacted the Nurse Licensure Compact but not yet implemented it**. NCSBN lists the implementation date as to-be-determined. Until the ${s.boardName} completes implementation, the compact changes nothing in practice: multistate RN licenses are neither issued to ${s.name} residents nor honored for practice in ${s.code}, so plan on a ${s.name}-issued RN license (typically by endorsement) beneath your APRN application, exactly as in a non-compact state.`,
+            `Implementation timing is set by the board and NCSBN, not by this guide. Verify the current status with the [${s.boardName}](${s.boardUrl}) before planning a relocation or telehealth caseload around compact privileges. ${NLC_SOURCE_SENTENCE}`,
         ].join('\n\n');
     }
     return [
-        `${s.name} does **not** participate in the Nurse Licensure Compact. Even if you already hold a multistate RN license issued by a compact state, you'll need a ${s.name}-issued RN license (typically by endorsement) before or alongside your ${s.code} APRN application — budget extra lead time for that step if you're relocating or picking up a telehealth caseload covering ${s.code} patients.`,
+        `${s.name} does **not** participate in the Nurse Licensure Compact. Even if you already hold a multistate RN license issued by a compact state, you will need a ${s.name}-issued RN license (typically by endorsement) before or alongside your ${s.code} APRN application. Budget extra lead time for that step if you are relocating or picking up a telehealth caseload covering ${s.code} patients.`,
         `The upside of planning for this early: RN endorsement and APRN licensure can usually be worked in parallel, and employers hiring into ${s.code} are used to the sequence. The [${s.boardName}](${s.boardUrl}) lists the endorsement requirements and current application checklists. ${NLC_SOURCE_SENTENCE}`,
     ].join('\n\n');
 }
@@ -346,9 +346,9 @@ export function buildLicenseGuideSteps(s: LicenseGuideState): LicenseGuideStep[]
             : `Hold an active, unencumbered ${s.name} RN license. ${s.name} is not a compact state, so out-of-state RNs first apply for ${s.code} RN licensure by endorsement.`;
     const prescriptiveStep =
         s.authority === 'full'
-            ? `Complete any prescriptive-authority or transition-to-practice requirements. In a full-practice state these are handled through the board itself — no collaborative or supervisory agreement is required.`
+            ? `Complete any prescriptive-authority or transition-to-practice requirements. In a full-practice state, these are handled through the board itself; no collaborative or supervisory agreement is required.`
             : s.authority === 'reduced'
-                ? `Establish and document your collaborative agreement with a physician, and file it as the board requires — in ${s.name} this is part of practicing, not optional paperwork.`
+                ? `Establish and document your collaborative agreement with a physician, and file it as the board requires. In ${s.name}, this is part of practicing, not optional paperwork.`
                 : `Establish your supervision or delegation arrangement with a physician and submit the practice-agreement documentation the board requires before beginning practice.`;
     return [
         { name: 'Verify your RN license foundation', text: rnStep },
@@ -362,12 +362,12 @@ export function buildLicenseGuideSteps(s: LicenseGuideState): LicenseGuideStep[]
         },
         {
             name: `Apply for APRN licensure with the ${s.boardName}`,
-            text: `Submit the APRN application with transcripts, certification verification, and the fees on the board's current checklist. The board's own checklist is authoritative — forms, fees, and processing times change, so work directly from the board site.`,
+            text: `Submit the APRN application with transcripts, certification verification, and the fees on the board's current checklist. The board's own checklist is authoritative. Forms, fees, and processing times change, so work directly from the board site.`,
         },
         { name: 'Secure your practice-authority paperwork', text: prescriptiveStep },
         {
             name: 'Register for federal identifiers',
-            text: `Obtain an NPI number, and register with the DEA if you'll prescribe controlled substances. Some states also require a separate state controlled-substance registration — the board checklist will say whether ${s.name} does.`,
+            text: `Obtain an NPI number, and register with the DEA if you will prescribe controlled substances. Some states also require a separate state controlled-substance registration; the board checklist will say whether ${s.name} does.`,
         },
     ];
 }
@@ -385,21 +385,21 @@ export interface LicenseGuideFaq {
 export function buildLicenseGuideFaq(s: LicenseGuideState): LicenseGuideFaq[] {
     const authorityAnswer =
         s.authority === 'full'
-            ? `Yes. The AANP classifies ${s.name} as a full practice authority state — one of ${STAT_SOURCES.fullPracticeStates.formatted} — so ${NP_PROSE}s can practice and prescribe without a required physician relationship. Some full-practice states apply a transition-to-practice period after initial licensure; the ${s.boardName} publishes the current requirement.`
+            ? `Yes. The AANP classifies ${s.name} as a full practice authority state, one of ${STAT_SOURCES.fullPracticeStates.formatted}, so ${NP_PROSE}s can practice and prescribe without a required physician relationship. Some full-practice states apply a transition-to-practice period after initial licensure; the ${s.boardName} publishes the current requirement.`
             : s.authority === 'reduced'
                 ? `No. The AANP classifies ${s.name} as a reduced practice state: ${NP_PROSE}s must maintain a collaborative agreement with a physician covering at least one element of practice, most commonly prescribing. The ${s.boardName} defines what the agreement must contain.`
                 : `No. The AANP classifies ${s.name} as a restricted practice state: physician supervision, delegation, or team management is required for ${NP_PROSE} practice. The ${s.boardName} publishes the supervision and practice-agreement requirements.`;
     const nlcAnswer = s.nlcStatus === 'member'
-        ? `Yes, ${s.name} is a Nurse Licensure Compact member (verified against the live NCSBN roster, ${NLC_VERIFIED_LABEL}). The compact covers the RN license underpinning your APRN credential — a multistate RN license works across member states — but APRN licensure itself is still issued individually by each state, including ${s.name}.`
+        ? `Yes, ${s.name} is a Nurse Licensure Compact member (verified against the live NCSBN roster, ${NLC_VERIFIED_LABEL}). The compact covers the RN license underpinning your APRN credential (a multistate RN license works across member states), but APRN licensure itself is still issued individually by each state, including ${s.name}.`
         : s.nlcStatus === 'pending'
-            ? `Not yet. ${s.name} has enacted the Nurse Licensure Compact, but implementation is pending — NCSBN lists the implementation date as to-be-determined (verified against the live NCSBN roster, ${NLC_VERIFIED_LABEL}). Until the ${s.boardName} completes implementation, a multistate RN license is neither issued nor honored in ${s.name}, so you still need a ${s.name}-issued RN license (by endorsement) plus ${s.code} APRN licensure; verify the current status with the board.`
+            ? `Not yet. ${s.name} has enacted the Nurse Licensure Compact, but implementation is pending. NCSBN lists the implementation date as to-be-determined (verified against the live NCSBN roster, ${NLC_VERIFIED_LABEL}). Until the ${s.boardName} completes implementation, a multistate RN license is neither issued nor honored in ${s.name}, so you still need a ${s.name}-issued RN license (by endorsement) plus ${s.code} APRN licensure; verify the current status with the board.`
             : `No, ${s.name} is not a Nurse Licensure Compact member (verified against the live NCSBN roster, ${NLC_VERIFIED_LABEL}). Even with a multistate RN license from a compact state, you need a ${s.name}-issued RN license (by endorsement) plus ${s.code} APRN licensure to practice as an ${NP} there.`;
     const physicianAnswer =
         s.authority === 'full'
-            ? `No collaborative or supervising physician is required in ${s.name} — it's a full practice authority state. Confirm any transition-to-practice conditions with the ${s.boardName}.`
+            ? `No collaborative or supervising physician is required in ${s.name}, which is a full practice authority state. Confirm any transition-to-practice conditions with the ${s.boardName}.`
             : s.authority === 'reduced'
-                ? `Yes — ${s.name} requires a documented collaborative agreement with a physician. Employed roles usually have this arranged by the employer; independent practice means arranging your own collaborator per the ${s.boardName}'s rules.`
-                : `Yes — ${s.name} requires physician supervision or delegation for ${NP_PROSE} practice, documented in the practice-agreement paperwork the ${s.boardName} requires.`;
+                ? `Yes. ${s.name} requires a documented collaborative agreement with a physician. Employed roles usually have this arranged by the employer; independent practice means arranging your own collaborator per the ${s.boardName}'s rules.`
+                : `Yes. ${s.name} requires physician supervision or delegation for ${NP_PROSE} practice, documented in the practice-agreement paperwork the ${s.boardName} requires.`;
     return [
         {
             name: `Does ${s.name} have full practice authority for ${NP}s?`,
@@ -411,7 +411,7 @@ export function buildLicenseGuideFaq(s: LicenseGuideState): LicenseGuideFaq[] {
         },
         {
             name: `What do I need to apply for APRN licensure in ${s.name}?`,
-            text: `An active RN license, an MSN or DNP from an accredited program, national certification (AANP or ANCC for ${NP}s; NBCRNA for CRNAs, AMCB for CNMs), and the application on the ${s.boardName}'s current checklist. Fees, forms, and processing times are set by the board and change — work directly from the board site rather than third-party summaries.`,
+            text: `An active RN license, an MSN or DNP from an accredited program, national certification (AANP or ANCC for ${NP}s; NBCRNA for CRNAs, AMCB for CNMs), and the application on the ${s.boardName}'s current checklist. Fees, forms, and processing times are set by the board and change, so work directly from the board site rather than third-party summaries.`,
         },
         {
             name: `Do I need a collaborating or supervising physician in ${s.name}?`,
@@ -419,7 +419,7 @@ export function buildLicenseGuideFaq(s: LicenseGuideState): LicenseGuideFaq[] {
         },
         {
             name: `How much do ${NP}s make in ${s.name}?`,
-            text: `The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}. State-level pay varies with cost of living and practice setting — the ${s.name} salary guide on ${brand.name} shows live averages and ranges computed from current ${s.code} postings.`,
+            text: `The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}. State-level pay varies with cost of living and practice setting. The ${s.name} salary guide on ${brand.name} shows live averages and ranges computed from current ${s.code} postings.`,
         },
     ];
 }
@@ -453,17 +453,17 @@ ${nlcSection(s)}
 
 ## How to apply for ${s.name} APRN licensure
 
-The sequence below is the standard ${s.code} path. Details — required forms, fees, fingerprinting, and processing times — are set by the [${s.boardName}](${s.boardUrl}) and change periodically, so treat the board's current checklist as the source of truth.
+The sequence below is the standard ${s.code} path. Details such as required forms, fees, fingerprinting, and processing times are set by the [${s.boardName}](${s.boardUrl}) and change periodically, so treat the board's current checklist as the source of truth.
 
 ${stepsMd}
 
 ## Renewing your ${s.name} license
 
-Renewal cycles, continuing-education requirements, and fees are set by the ${s.boardName} — we deliberately don't quote them here because boards revise them and stale numbers are worse than none. Two evergreen rules: keep your national certification current (state renewal typically requires it), and check the [board's renewal checklist](${s.boardUrl}) well before your expiration date so a missing CE item doesn't lapse your license.
+Renewal cycles, continuing-education requirements, and fees are set by the ${s.boardName}. We deliberately do not quote them here because boards revise them and stale numbers are worse than none. Two evergreen rules: keep your national certification current (state renewal typically requires it), and check the [board's renewal checklist](${s.boardUrl}) well before your expiration date so a missing CE item does not lapse your license.
 
 ## What ${NP}s earn in ${s.name}
 
-The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2034.formatted} (${STAT_SOURCES.blsGrowth2034.source}). For live ${s.name} numbers — average pay, reported ranges, top employers, and pay by practice setting computed from current postings — see the [${s.name} salary guide](/salary-guide/${s.stateSlug}) and browse [open ${s.code} positions](/jobs/state/${s.stateSlug}).
+The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2034.formatted} (${STAT_SOURCES.blsGrowth2034.source}). For live ${s.name} numbers, including average pay, reported ranges, top employers, and pay by practice setting computed from current postings, see the [${s.name} salary guide](/salary-guide/${s.stateSlug}) and browse [open ${s.code} positions](/jobs/state/${s.stateSlug}).
 
 ## Frequently asked questions
 

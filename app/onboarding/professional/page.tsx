@@ -29,7 +29,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata = {
     title: `Complete your profile | ${brand.name}`,
-    description: 'A few details so employers can find you in AI Match.',
+    description: 'Add a few details so employers can find you in AI Match.',
     robots: { index: false, follow: false },
 };
 

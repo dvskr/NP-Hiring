@@ -262,8 +262,8 @@ describe('truth rules', () => {
             expect(orphans, `${slug}: untraced dollar figure(s)`).toEqual([]);
         }
         const cfg = salaryConfig.normalizer.typical;
-        expect(SALARY_BANDS.typicalW2Annual.formatted).toBe(`$${cfg.min / 1000}K–$${cfg.max / 1000}K`);
-        expect(SALARY_BANDS.typicalW2Annual.formatted).toBe('$110K–$170K');
+        expect(SALARY_BANDS.typicalW2Annual.formatted).toBe(`$${cfg.min / 1000}K to $${cfg.max / 1000}K`);
+        expect(SALARY_BANDS.typicalW2Annual.formatted).toBe('$110K to $170K');
     });
 
     /**

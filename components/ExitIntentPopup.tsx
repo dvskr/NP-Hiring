@@ -129,7 +129,7 @@ export default function ExitIntentPopup() {
                     Don&apos;t Miss Your Dream {brand.niche.short} Job
                 </h3>
                 <p className="text-sm text-center mb-6" style={{ color: 'var(--text-secondary)' }}>
-                    Get the latest {brand.niche.short} positions delivered to your inbox daily. No spam — just jobs.
+                    Get the latest {brand.niche.short} positions delivered to your inbox daily. No spam, only jobs.
                 </p>
 
                 {status === 'done' ? (

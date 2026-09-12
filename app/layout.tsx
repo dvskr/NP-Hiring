@@ -55,11 +55,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl),
 
   title: {
-    default: `${brand.name} - ${brand.niche.long} Job Board`,
+    default: `${brand.name} | ${brand.niche.long} Job Board`,
     template: `%s | ${brand.name}`,
   },
 
-  description: `Browse thousands of ${brand.niche.short} jobs updated daily. Remote, telehealth & in-person ${brand.niche.short} positions with salary transparency. Free for job seekers.`,
+  description: `Browse thousands of ${brand.niche.short} jobs updated daily. Remote, telehealth, and in-person ${brand.niche.short} positions with salary transparency. Free for job seekers.`,
 
   keywords: [
     `${brand.niche.short} jobs`,
@@ -85,35 +85,35 @@ export const metadata: Metadata = {
     // cached image across unrelated pages.
     url: brand.baseUrl,
     siteName: brand.name,
-    title: `${brand.name} - Find ${brand.niche.long} Positions`,
+    title: `${brand.name}: Find ${brand.niche.long} Positions`,
     description: `The #1 job board for ${brand.niche.short}s. Browse remote and in-person ${brand.niche.descriptor} jobs across all 50 states.`,
     images: [
       {
         url: '/api/og',
         width: 1200,
         height: 630,
-        alt: `${brand.name} - ${brand.niche.long} Job Board`,
+        alt: `${brand.name} | ${brand.niche.long} Job Board`,
       },
     ],
   },
 
   twitter: {
     card: 'summary_large_image',
-    title: `${brand.name} - ${brand.niche.long} Job Board`,
+    title: `${brand.name} | ${brand.niche.long} Job Board`,
     description: `Find your next ${brand.niche.short} position. Remote and in-person jobs across 50 states, updated daily.`,
     images: ['/api/og'],
   },
 
   icons: {
     icon: [
-      { url: '/favicon.ico?v=5', sizes: '32x32' },
-      { url: '/favicon-16x16.png?v=5', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32.png?v=5', sizes: '32x32', type: 'image/png' },
-      { url: '/favicon-48x48.png?v=5', sizes: '48x48', type: 'image/png' },
-      { url: '/icon-192x192.png?v=5', sizes: '192x192', type: 'image/png' }
+      { url: '/favicon.ico?v=7', sizes: '32x32' },
+      { url: '/favicon-16x16.png?v=7', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png?v=7', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-48x48.png?v=7', sizes: '48x48', type: 'image/png' },
+      { url: '/icon-192x192.png?v=7', sizes: '192x192', type: 'image/png' }
     ],
     apple: [
-      { url: '/apple-touch-icon.png?v=4', sizes: '180x180', type: 'image/png' }
+      { url: '/apple-touch-icon.png?v=7', sizes: '180x180', type: 'image/png' }
     ],
     other: [
       {
@@ -191,7 +191,7 @@ export default function RootLayout({
         <link rel="author" href="/humans.txt" />
         <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM Site Information" />
         <link rel="alternate" type="text/plain" href="/ai.txt" title="AI Permissions" />
-        <link rel="alternate" type="application/rss+xml" href="/feed.xml" title={`${brand.name} — Latest Jobs`} />
+        <link rel="alternate" type="application/rss+xml" href="/feed.xml" title={`${brand.name}: Latest Jobs`} />
         {/* Organization and WebSite Schema Markup */}
         {/* fb:app_id removed (audit 27 M-1): no Meta Pixel, CAPI, or Facebook
             Login integration exists in the codebase, so the tag was inert

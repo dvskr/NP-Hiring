@@ -117,7 +117,7 @@ export default function ScreeningQuestionsBuilder() {
             Screening Questions <span className="font-normal text-xs" style={{ color: 'var(--text-tertiary)' }}>(optional, max 5)</span>
           </h3>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-            Add questions to pre-screen candidates before they apply
+            Add questions to pre-screen candidates before they apply.
           </p>
         </div>
         <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: 'rgba(244,114,182,0.12)', color: '#F472B6' }}>

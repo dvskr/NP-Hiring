@@ -37,17 +37,17 @@ async function getStats() {
 
 const faqs = [
   { q: `What types of private practice ${brand.niche.short} roles exist?`, a: 'Private practice roles include solo practice (you own and operate), group practice (join an established multi-provider office), independent contractor (1099 work for a practice), and hybrid roles combining in-person and telehealth. Each offers different levels of autonomy, risk, and earning potential.' },
-  { q: `How much do private practice ${brand.niche.short}s earn?`, a: `Most employed and group-practice ${brand.niche.short}s earn within the typical NP range of roughly $95K-$160K, depending on specialty, location, and payer mix. Practice owners and 1099 contractors set their own rates, so income varies with panel size, overhead, and how much of the billing they keep.` },
-  { q: 'Do I need business experience for private practice?', a: `For group practice employee roles, no — you focus on clinical work. For starting your own practice, understanding billing, credentialing, marketing, and operations is essential. Many ${brand.niche.short}s start in group practices before launching solo practices.` },
-  { q: 'What\'s needed to start a private practice?', a: 'You need: an active APRN license, national NP certification, full practice authority or a collaborating physician agreement (depending on your state), DEA registration, an NPI number, malpractice insurance, an EHR system, office space or a telehealth platform, and insurance panel credentialing.' },
-  { q: 'Is group practice or solo practice better?', a: `Group practice offers built-in referrals, shared overhead, administrative support, and lower financial risk. Solo practice offers maximum autonomy, higher earning ceiling, and full control of your schedule. Most ${brand.niche.short}s recommend 2-3 years in group practice before going solo.` },
+  { q: `How much do private practice ${brand.niche.short}s earn?`, a: `Most employed and group-practice ${brand.niche.short}s earn within the typical NP range of roughly $95K to $160K, depending on specialty, location, and payer mix. Practice owners and 1099 contractors set their own rates, so income varies with panel size, overhead, and how much of the billing they keep.` },
+  { q: 'Do I need business experience for private practice?', a: `For group practice employee roles, no. You focus on clinical work. For starting your own practice, understanding billing, credentialing, marketing, and operations is essential. Many ${brand.niche.short}s start in group practices before launching solo practices.` },
+  { q: 'What is needed to start a private practice?', a: 'You need: an active APRN license, national NP certification, full practice authority or a collaborating physician agreement (depending on your state), DEA registration, an NPI number, malpractice insurance, an EHR system, office space or a telehealth platform, and insurance panel credentialing.' },
+  { q: 'Is group practice or solo practice better?', a: `Group practice offers built-in referrals, shared overhead, administrative support, and lower financial risk. Solo practice offers maximum autonomy, higher earning ceiling, and full control of your schedule. Most ${brand.niche.short}s recommend 2 to 3 years in group practice before going solo.` },
 ];
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Private Practice ${brand.niche.short} Jobs — Own Your Practice`,
+    title: `${stats.totalJobs} Private Practice ${brand.niche.short} Jobs: Own Your Practice`,
     description: `Find ${stats.totalJobs} private practice ${brand.niche.short} positions. Solo, group, and independent contractor roles with clinical autonomy and ownership potential.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/private-practice` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
@@ -79,7 +79,7 @@ export default async function PrivatePracticePage({ searchParams }: PageProps) {
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('private-practice') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Private Practice"
         headlineLine2={brand.niche.short}
-        headlineSub="jobs, own your practice."
+        headlineSub="jobs to own your practice."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.medianSalaryK > 0 ? `${stats.medianSalaryK}k` : '$120K+', label: 'median salary' },
@@ -97,11 +97,11 @@ export default async function PrivatePracticePage({ searchParams }: PageProps) {
         <div className="grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
             <h2 className="font-lora mb-6" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>Private Practice Positions ({stats.totalJobs})</h2>
-            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions right now.</p></div>)}
+            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions are available right now.</p></div>)}
             <div style={{ textAlign: 'center', marginTop: '32px' }}><Link href="/jobs?category=private-practice" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>Browse All Private Practice Jobs <ArrowRight size={16} /></Link></div>
           </div>
           <div className="lg:col-span-1">
-            <div style={{ ...clayCard, padding: '24px', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}><Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 8px' }}>Practice Alerts</h3><p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px' }}>New practice opportunities daily.</p><Link href="/job-alerts" style={{ display: 'block', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none' }}>Create Alert</Link></div>
+            <div style={{ ...clayCard, padding: '24px', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}><Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 8px' }}>Practice Alerts</h3><p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px' }}>New practice opportunities delivered daily.</p><Link href="/job-alerts" style={{ display: 'block', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none' }}>Create Alert</Link></div>
             {stats.topEmployers.length > 0 && (<div style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}><Building2 size={20} style={{ color: '#BE185D', marginBottom: '8px' }} /><h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: '0 0 12px' }}>Top Practices</h3><ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>{stats.topEmployers.map((employer: ProcessedEmployer, index: number) => (<li key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: index < stats.topEmployers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}><span style={{ fontSize: '13px', color: '#5A4A42', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{employer.name}</span><span style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', marginLeft: '8px' }}>{employer.count}</span></li>))}</ul></div>)}
             {stats.medianSalaryK > 0 && (<div style={{ ...clayCard, padding: '24px' }}><TrendingUp size={20} style={{ color: '#34D399', marginBottom: '8px' }} /><div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}>${stats.medianSalaryK}k</div><div style={{ fontSize: '13px', color: '#7A6A62' }}>Median salary</div></div>)}
           </div>
@@ -132,7 +132,7 @@ export default async function PrivatePracticePage({ searchParams }: PageProps) {
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_pp_salary.webp`} alt="Earning potential" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)' }}>
-              <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} /><h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 10px' }}>Practice Alerts</h3><p style={{ fontSize: '13px', color: '#BE185D', lineHeight: 1.6, margin: '0 0 20px' }}>New practice opportunities daily.</p>
+              <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} /><h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 10px' }}>Practice Alerts</h3><p style={{ fontSize: '13px', color: '#BE185D', lineHeight: 1.6, margin: '0 0 20px' }}>New practice opportunities delivered daily.</p>
               <Link href="/job-alerts" className="cat-cta-primary" style={{ padding: '12px 28px', borderRadius: '12px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', boxShadow: '3px 3px 10px rgba(190,24,93,0.2)' }}>Create Alert</Link>
             </div>
           </div>

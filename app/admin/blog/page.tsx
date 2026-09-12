@@ -146,7 +146,7 @@ export default function AdminBlogPage() {
                 setEditorOpen(false);
                 fetchPosts();
             } else {
-                showMsg(data.error || 'Failed', true);
+                showMsg(data.error || 'Failed to save', true);
             }
         } catch { showMsg('Failed to save', true); }
         finally { setSaving(false); }
@@ -162,9 +162,9 @@ export default function AdminBlogPage() {
             });
             if (res.ok) {
                 setPosts(prev => prev.map(p => p.id === post.id ? { ...p, status: newStatus } : p));
-                showMsg(newStatus === 'published' ? 'Published!' : 'Unpublished', false);
+                showMsg(newStatus === 'published' ? 'Published' : 'Unpublished', false);
             }
-        } catch { showMsg('Failed', true); }
+        } catch { showMsg('Failed to update status', true); }
     };
 
     const deletePost = async (id: string) => {
@@ -214,7 +214,7 @@ export default function AdminBlogPage() {
             {/* Filters */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
                 <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...inputStyle, width: 'auto' }}>
-                    <option value="all">All Status</option>
+                    <option value="all">All Statuses</option>
                     <option value="published">Published</option>
                     <option value="draft">Draft</option>
                 </select>
@@ -261,7 +261,7 @@ export default function AdminBlogPage() {
                                                     : <GlobeLock size={16} style={{ color: '#94A3B8' }} />}
                                             </button>
                                         </td>
-                                        <td style={td}>{post.targetKeyword || '—'}</td>
+                                        <td style={td}>{post.targetKeyword || 'None'}</td>
                                         <td style={td}>
                                             {formatCT(post.publishDate, 'date')}
                                         </td>
@@ -362,7 +362,7 @@ export default function AdminBlogPage() {
                             {/* FAQ JSON — emitted as FAQPage JSON-LD by the post page.
                                 Must mirror the post's visible FAQ section. */}
                             <div>
-                                <label style={{ ...muted, fontWeight: 600, display: 'block', marginBottom: 6 }}>FAQ JSON (FAQPage schema — must match the post&apos;s visible FAQ)</label>
+                                <label style={{ ...muted, fontWeight: 600, display: 'block', marginBottom: 6 }}>FAQ JSON (FAQPage schema; must match the post&apos;s visible FAQ)</label>
                                 <textarea
                                     value={form.faqJson}
                                     onChange={e => setForm(p => ({ ...p, faqJson: e.target.value }))}
@@ -384,7 +384,7 @@ export default function AdminBlogPage() {
                                         ...inputStyle, minHeight: 300, fontFamily: 'monospace', fontSize: '13px',
                                         lineHeight: '1.7', resize: 'vertical',
                                     }}
-                                    placeholder="Write your blog post content in markdown..."
+                                    placeholder="Write your blog post content in Markdown..."
                                 />
                             </div>
                         </div>

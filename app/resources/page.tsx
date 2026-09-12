@@ -36,8 +36,8 @@ const RESOURCES_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`
 // config/niche/content-map.ts: no authored posts, license-guide series
 // unwritten) — a claim-vs-reality mismatch that answer engines penalize.
 export const metadata: Metadata = {
-  title: `${brand.niche.short} Career Resources — Salary Tool & Licensure Checker`,
-  description: `Free ${brand.niche.short} career resources: interactive salary calculator, state licensure checker, plus guides to Full Practice Authority, private practice startup, and 1099 vs W2 pay.`,
+  title: `${brand.niche.short} Career Resources: Salary Tool & Licensure Checker`,
+  description: `Free ${brand.niche.short} career resources: an interactive salary calculator, a state licensure checker, and guides to Full Practice Authority, private practice startup, and 1099 vs W2 pay.`,
   keywords: [
     `${brand.niche.short.toLowerCase()} resources`, `${brand.niche.descriptor} career`, `${brand.niche.short.toLowerCase()} salary guide`,
     `${brand.niche.short.toLowerCase()} licensure checker`, `${brand.niche.short.toLowerCase()} full practice authority`,
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     `${brand.niche.short.toLowerCase()} job search`,
   ],
   openGraph: {
-    title: `${brand.niche.short} Career Resources — Salary Tool & Licensure Checker`,
+    title: `${brand.niche.short} Career Resources: Salary Tool & Licensure Checker`,
     description: `Free career resources for ${brand.niche.descriptor}s: salary calculator, state licensure checker, and in-depth practice guides.`,
     // P0 OG sweep: edge-generated card via /api/og — the previous Supabase
     // page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
@@ -111,7 +111,7 @@ const featuredGuides = [
   {
     href: '/resources/fpa-guide',
     title: 'Full Practice Authority Guide',
-    desc: 'All 50 states classified. See which states allow independent practice and how FPA impacts pay.',
+    desc: 'All 50 states classified. See which states allow independent practice and how FPA affects pay.',
     icon: ShieldCheck,
     badge: '50 States',
     badgeColor: '#6366F1',
@@ -205,13 +205,13 @@ export default async function ResourcesPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
-        name: `${brand.niche.short} Resources & Career Guides — ${currentYear}`,
+        name: `${brand.niche.short} Resources & Career Guides ${currentYear}`,
         description: `Free career resources for ${brand.niche.descriptor}s.`,
         url: `${brand.baseUrl}/resources`,
         publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
         hasPart: [
           { '@type': 'Article', name: `${brand.niche.short} Full Practice Authority Guide`, url: `${brand.baseUrl}/resources/fpa-guide` },
-          { '@type': 'Article', name: `1099 vs W2 for ${brand.niche.short}s — Compensation Comparison`, url: `${brand.baseUrl}/resources/1099-vs-w2` },
+          { '@type': 'Article', name: `1099 vs W2 for ${brand.niche.short}s: Compensation Comparison`, url: `${brand.baseUrl}/resources/1099-vs-w2` },
           { '@type': 'Article', name: `How to Start an ${brand.niche.short} Private Practice`, url: `${brand.baseUrl}/resources/private-practice-guide` },
         ],
         numberOfItems: 3,
@@ -232,7 +232,7 @@ export default async function ResourcesPage() {
             {brand.niche.short} Resources & Guides
           </h1>
           <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto 32px', lineHeight: 1.6 }}>
-            Everything you need for your {brand.niche.short} career — from licensure requirements to salary negotiation.
+            Everything you need for your {brand.niche.short} career, from licensure requirements to salary negotiation.
           </p>
 
           {/* Stat Pills — count pills render only when the content actually
@@ -289,7 +289,7 @@ export default async function ResourcesPage() {
             }}>
               <div style={{ padding: '24px 28px' }}>
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#F59E0B', background: '#FEF3C7', padding: '4px 10px', borderRadius: '20px' }}>Compensation</span>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '10px 0 6px' }}>1099 vs W2 for {brand.niche.short}s — Complete Comparison</h2>
+                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '10px 0 6px' }}>1099 vs W2 for {brand.niche.short}s: Complete Comparison</h2>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.55, margin: 0 }}>
                   Independent contractor vs employee: tax strategies, income comparison, and which model maximizes your earnings.
                 </p>
@@ -309,7 +309,7 @@ export default async function ResourcesPage() {
             }}>
               <div style={{ padding: '24px 28px' }}>
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#10B981', background: '#D1FAE5', padding: '4px 10px', borderRadius: '20px' }}>Interactive</span>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '10px 0 6px' }}>Scope of Practice by State — All 50 States + DC</h2>
+                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '10px 0 6px' }}>Scope of Practice by State: All 50 States + DC</h2>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.55, margin: 0 }}>
                   Sortable, filterable practice-authority explorer with board of nursing links, licensure guides, salary data, and open jobs for every state.
                 </p>
@@ -587,7 +587,7 @@ export default async function ResourcesPage() {
                   /salary-guide and updates daily). */}
               <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.5, margin: '0 0 14px' }}>
                 Download the {SALARY_GUIDE_EDITION_YEAR} salary guide: national wage benchmarks, pay by experience,
-                setting and specialty, plus what to check before you negotiate.
+                setting, and specialty, plus what to check before you negotiate.
               </p>
               <ResourceDownloadGate resourceUrl={SALARY_GUIDE_URL} resourceTitle="Salary Guide PDF" />
             </div>

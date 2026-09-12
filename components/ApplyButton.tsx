@@ -243,7 +243,7 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
             )}
           </div>
           <p className="text-xs ml-7" style={{ color: 'var(--text-secondary)' }}>
-            Applied on {serverApplied.appliedAt ? formatAppliedDate(new Date(serverApplied.appliedAt)) : 'recently'}.{' '}
+            {serverApplied.appliedAt ? `Applied on ${formatAppliedDate(new Date(serverApplied.appliedAt))}.` : 'Applied recently.'}{' '}
             <Link href="/my-applications" className="underline font-medium" style={{ color: '#BE185D' }}>
               View your applications →
             </Link>
@@ -288,7 +288,7 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
             {[
               { icon: '👀', text: `Get noticed by employers hiring ${brand.niche.short}s` },
               { icon: '💬', text: 'Receive direct messages from recruiters' },
-              { icon: '⚡', text: 'Auto-fill applications with our Chrome extension (Coming soon)' },
+              { icon: '⚡', text: 'Auto-fill applications with our Chrome extension (coming soon)' },
             ].map((item) => (
               <div key={item.text} className="flex items-center gap-2.5">
                 <span className="text-sm flex-shrink-0">{item.icon}</span>
@@ -396,7 +396,7 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
               className="text-xs hover:underline mt-3"
               style={{ color: 'var(--text-tertiary)' }}
             >
-              ↗ Re-open the apply link
+              ↗ Reopen the apply link
             </button>
           )}
         </div>

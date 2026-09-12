@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { normalizeDisplaySalary } from '@/lib/salary-display';
 import type { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { brand } from '@/config/brand'
@@ -216,7 +217,7 @@ function displayModeOf(job: WidgetJob): string {
 }
 
 function buildSalaryDisplay(job: WidgetJob): string | null {
-  if (job.displaySalary) return job.displaySalary
+  if (job.displaySalary) return normalizeDisplaySalary(job.displaySalary)
   const min = job.normalizedMinSalary
   const max = job.normalizedMaxSalary
   if (!min && !max) return job.salaryRange

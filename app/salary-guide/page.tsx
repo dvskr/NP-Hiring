@@ -60,7 +60,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 // P0 OG sweep: edge-generated card via /api/og — the previous Supabase
 // page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
 // The median in the title derives from STAT_SOURCES above, never hardcoded.
-const SALARY_GUIDE_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Salary Guide 2026 — ${NATIONAL_SALARY.formatted} Median`)}&type=page`;
+const SALARY_GUIDE_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Salary Guide 2026: ${NATIONAL_SALARY.formatted} Median`)}&type=page`;
 
 // State codes mapping
 const STATE_CODES: Record<string, string> = {
@@ -173,8 +173,8 @@ export const metadata: Metadata = {
   // `absolute` opts out of the layout title template so the brand suffix
   // doesn't get appended a second time (was rendering "... | PMHNP Hiring
   // | PMHNP Hiring" — audit 09 M-17).
-  title: { absolute: `${brand.niche.short} Salary Guide 2026 — $${NATIONAL_SALARY_K}K Median by State | ${brand.name}` },
-  description: `Complete 2026 ${brand.niche.short} salary data: national median ${NATIONAL_SALARY.formatted} (BLS). All 50 states, by experience level, practice setting, and negotiation tips.`,
+  title: { absolute: `${brand.niche.short} Salary Guide 2026: $${NATIONAL_SALARY_K}K Median by State | ${brand.name}` },
+  description: `Complete 2026 ${brand.niche.short} salary data: national median ${NATIONAL_SALARY.formatted} (BLS), all 50 states, pay by experience level and practice setting, and negotiation tips.`,
   keywords: [
     `${brand.niche.descriptor} salary`,
     `${brand.niche.short.toLowerCase()} salary`,
@@ -240,20 +240,20 @@ const SALARY_FIGURE_PROVENANCE = `Every salary range and percentage premium on t
 
 /* ═══ Experience / Setting / Specialty data ═══ */
 const experienceData = [
-  { exp: 'New Grad (0-1 yr)', range: '$95,000 - $115,000', roles: `Staff ${brand.niche.short}, Outpatient Clinic` },
-  { exp: 'Early Career (1-3 yrs)', range: '$110,000 - $130,000', roles: `Staff ${brand.niche.short}, Telehealth Provider` },
-  { exp: 'Mid-Career (3-7 yrs)', range: '$125,000 - $150,000', roles: `Senior ${brand.niche.short}, Team Lead` },
-  { exp: 'Experienced (7-15 yrs)', range: '$150,000 - $180,000', roles: 'Clinical Director, Supervisor' },
-  { exp: 'Expert (15+ yrs)', range: '$180,000 - $250,000+', roles: 'Director, Consultant, Private Practice' },
+  { exp: 'New Grad (0-1 yr)', range: '$95,000 to $115,000', roles: `Staff ${brand.niche.short}, Outpatient Clinic` },
+  { exp: 'Early Career (1-3 yrs)', range: '$110,000 to $130,000', roles: `Staff ${brand.niche.short}, Telehealth Provider` },
+  { exp: 'Mid-Career (3-7 yrs)', range: '$125,000 to $150,000', roles: `Senior ${brand.niche.short}, Team Lead` },
+  { exp: 'Experienced (7-15 yrs)', range: '$150,000 to $180,000', roles: 'Clinical Director, Supervisor' },
+  { exp: 'Expert (15+ yrs)', range: '$180,000 to $250,000+', roles: 'Director, Consultant, Private Practice' },
 ];
 
 const settingData = [
-  { setting: 'Private Practice (Owner)', range: '$180,000 - $300,000+', notes: 'Highest earning potential, requires business skills', color: '#BE185D' },
-  { setting: 'Travel / Locum Tenens', range: '$150,000 - $250,000', notes: 'Includes housing, travel, higher hourly rates', color: '#8B5CF6' },
-  { setting: 'Telehealth / Remote', range: '$130,000 - $180,000', notes: 'Growing rapidly, flexible schedules', color: '#3B82F6' },
-  { setting: 'Outpatient Clinic', range: '$120,000 - $160,000', notes: 'Most common setting, steady patient load', color: '#F59E0B' },
-  { setting: 'Hospital / Inpatient', range: '$115,000 - $150,000', notes: 'Often includes shift differentials, benefits', color: '#EF4444' },
-  { setting: 'Community Health (FQHC)', range: '$100,000 - $130,000', notes: 'May qualify for loan forgiveness programs', color: '#6B7280' },
+  { setting: 'Private Practice (Owner)', range: '$180,000 to $300,000+', notes: 'Highest earning potential, requires business skills', color: '#BE185D' },
+  { setting: 'Travel / Locum Tenens', range: '$150,000 to $250,000', notes: 'Includes housing, travel, higher hourly rates', color: '#8B5CF6' },
+  { setting: 'Telehealth / Remote', range: '$130,000 to $180,000', notes: 'Growing rapidly, flexible schedules', color: '#3B82F6' },
+  { setting: 'Outpatient Clinic', range: '$120,000 to $160,000', notes: 'Most common setting, steady patient load', color: '#F59E0B' },
+  { setting: 'Hospital / Inpatient', range: '$115,000 to $150,000', notes: 'Often includes shift differentials, benefits', color: '#EF4444' },
+  { setting: 'Community Health (FQHC)', range: '$100,000 to $130,000', notes: 'May qualify for loan forgiveness programs', color: '#6B7280' },
 ];
 
 // `slug` links a row to its by-specialty deep-dive page (P1 #7); rows
@@ -297,14 +297,14 @@ const faqData = [
   // which the P1 PDF parity guard pins byte-identically) — it is attributed,
   // so the answer no longer presents it alongside a cited BLS median as
   // though both carry the same weight. See SALARY_FIGURE_PROVENANCE above.
-  { q: `How much do ${brand.niche.short}s make in 2026?`, a: `The national median ${brand.niche.short} salary is ${NATIONAL_SALARY.formatted} per year (${NATIONAL_SALARY.source}) — that is the one figure on this page taken from a public dataset. The experience ranges shown alongside it, roughly $95,000-$115,000 for new graduates and $150,000-$180,000+ for experienced ${brand.niche.short}s, are ${brand.name}'s own editorial estimates from the roles posted here rather than survey results, and individual offers move well outside them with setting, specialty, and location.` },
-  { q: `Which state pays ${brand.niche.short}s the most?`, a: `${brand.niche.short} pay is consistently highest in West Coast and Northeast markets — California, Washington, Oregon, Nevada, and New Jersey rank near the top in federal wage data. When adjusted for cost of living, several Midwest and Southern states offer stronger real purchasing power.` },
+  { q: `How much do ${brand.niche.short}s make in 2026?`, a: `The national median ${brand.niche.short} salary is ${NATIONAL_SALARY.formatted} per year (${NATIONAL_SALARY.source}); that is the one figure on this page taken from a public dataset. The experience ranges shown alongside it, roughly $95,000-$115,000 for new graduates and $150,000-$180,000+ for experienced ${brand.niche.short}s, are ${brand.name}'s own editorial estimates from the roles posted here rather than survey results, and individual offers move well outside them with setting, specialty, and location.` },
+  { q: `Which state pays ${brand.niche.short}s the most?`, a: `${brand.niche.short} pay is consistently highest in West Coast and Northeast markets; California, Washington, Oregon, Nevada, and New Jersey rank near the top in federal wage data. When adjusted for cost of living, several Midwest and Southern states offer stronger real purchasing power.` },
   // SECOND PASS: attributed for the same reason as the two answers above.
   // It is the fourth uncited range in this array; leaving it bare while
   // labelling its neighbours would repeat the exact defect this pass exists
   // to fix. No FAQ answer in faqData may state a figure as fact unless it
   // is a cited STAT_SOURCES entry.
-  { q: `Do telehealth ${brand.niche.short}s make less than in-person?`, a: `Broadly comparable — telehealth pay is not systematically lower, and in-person roles vary more by setting and acuity than telehealth does. The $120,000 to $170,000 range we see for telehealth roles, and the $180,000+ some national platforms pay experienced ${brand.niche.short}s with multi-state licenses, are ${brand.name}'s own estimates from the roles posted here rather than survey figures. Telehealth also trades differently on flexibility, licensure cost across states, and patient volume expectations, so compare specific offers rather than the ranges.` },
+  { q: `Do telehealth ${brand.niche.short}s make less than in-person?`, a: `Broadly comparable. Telehealth pay is not systematically lower, and in-person roles vary more by setting and acuity than telehealth does. The $120,000 to $170,000 range we see for telehealth roles, and the $180,000+ some national platforms pay experienced ${brand.niche.short}s with multi-state licenses, are ${brand.name}'s own estimates from the roles posted here rather than survey figures. Telehealth also trades differently on flexibility, licensure cost across states, and patient volume expectations, so compare specific offers rather than the ranges.` },
   // P2 #22 follow-up: this answer previously asserted a "+12-15%" Full
   // Practice Authority premium and a "$180,000-$300,000+" private-practice
   // ownership range. Neither has a source anywhere in this repo, the FPA
@@ -317,7 +317,7 @@ const faqData = [
   // specialization — an equally uncited figure left standing next to the
   // one that was deleted. The parenthetical is gone from the answer; the
   // table it came from is still on the page and is now labelled.
-  { q: `How can I increase my ${brand.niche.short} salary?`, a: 'Top strategies include: specializing in high-demand areas like acute care, emergency, or psychiatric-mental health, practicing in a Full Practice Authority state so independent contract, telehealth, and practice-ownership work are open to you at all, modelling private practice against your own visit volume and overhead rather than a headline range, working in rural/underserved areas for loan repayment incentives, and always negotiating total compensation. The specialty premiums shown on this page are our own estimates from posted roles, so treat them as a hypothesis to test against real offers rather than a number to expect.' },
+  { q: `How can I increase my ${brand.niche.short} salary?`, a: 'Top strategies include specializing in high-demand areas such as acute care, emergency, or psychiatric-mental health; practicing in a Full Practice Authority state so that independent contract, telehealth, and practice-ownership work are open to you at all; modelling private practice against your own visit volume and overhead rather than a headline range; working in rural or underserved areas for loan repayment incentives; and always negotiating total compensation. The specialty premiums shown on this page are our own estimates from posted roles, so treat them as a hypothesis to test against real offers rather than a number to expect.' },
   // SECOND PASS: "typically earn 20-50% more than permanent positions" and
   // "$150,000 to $250,000+" were both uncited. A locum rate is also not
   // comparable to a salary without pricing the benefits, malpractice, and
@@ -569,7 +569,7 @@ export default async function SalaryGuidePage() {
                     readers here. */}
                 <strong>Note:</strong> Each figure is the <strong>median</strong> of that state&apos;s active {brand.niche.short}-eligible postings with disclosed,
                 non-estimated salary (screened by job title), recomputed daily. A state appears with a figure only when it has at least {BENCHMARK_MIN_POSTINGS} such
-                postings from {BENCHMARK_MIN_EMPLOYERS}+ employers — states below that sample are listed separately without a figure.
+                postings from {BENCHMARK_MIN_EMPLOYERS}+ employers; states below that sample are listed separately without a figure.
                 {' '}Each state name links to a detailed page with pay by setting and top employers.
               </p>
               {/* A4: the table's own snapshot basis — the same national
@@ -589,7 +589,7 @@ export default async function SalaryGuidePage() {
                   <tr style={{ background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(190,24,93,0.02))' }}>
                     <th style={{ width: '35%', padding: '14px 20px', textAlign: 'left', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>State</th>
                     <th style={{ width: '20%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Median</th>
-                    <th className="sal-range-col" style={{ width: '25%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>P25–P75</th>
+                    <th className="sal-range-col" style={{ width: '25%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>P25 to P75</th>
                     <th style={{ width: '10%', padding: '14px 16px', textAlign: 'right', fontWeight: 600, color: '#64748B', borderBottom: '2px solid rgba(0,0,0,0.06)', fontSize: '11px', textTransform: 'uppercase' }}>Sample</th>
                     <th style={{ width: '10%', padding: '14px 16px', textAlign: 'right', borderBottom: '2px solid rgba(0,0,0,0.06)' }}><span style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Actions</span></th>
                   </tr>
@@ -618,7 +618,7 @@ export default async function SalaryGuidePage() {
                         ${fmt(state.medianSalary)}
                       </td>
                       <td className="sal-range-col" style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '12px', color: '#64748B' }}>
-                        ${fmt(state.p25)} - ${fmt(state.p75)}
+                        ${fmt(state.p25)} to ${fmt(state.p75)}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '12px', color: '#64748B', whiteSpace: 'nowrap' }}>
                         {state.jobCount} · {state.employers} emp.
@@ -643,7 +643,7 @@ export default async function SalaryGuidePage() {
                   States with too few postings for a reliable figure
                 </p>
                 <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 10px', lineHeight: 1.5 }}>
-                  Fewer than {BENCHMARK_MIN_POSTINGS} qualifying postings (or fewer than {BENCHMARK_MIN_EMPLOYERS} employers) — sample too small to publish a salary figure. Browse the live listings instead:
+                  Fewer than {BENCHMARK_MIN_POSTINGS} qualifying postings (or fewer than {BENCHMARK_MIN_EMPLOYERS} employers), so the sample is too small to publish a salary figure. Browse the live listings instead:
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>
                   {smallSampleStates.map((s) => (
@@ -797,7 +797,7 @@ export default async function SalaryGuidePage() {
                     actually controls, which is readable off
                     lib/state-practice-authority.ts. scripts/generate-salary-pdf.ts
                     mirrors this block and must be edited with it. */}
-                <strong>{FPA_STATES.formatted}</strong> grant FPA ({FPA_STATES.source}). Practice authority is a legal classification, not a pay scale — it decides which ways of earning are open to you in that state.
+                <strong>{FPA_STATES.formatted}</strong> grant FPA ({FPA_STATES.source}). Practice authority is a legal classification, not a pay scale. It decides which ways of earning are open to you in that state.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div style={{ padding: '14px 16px', borderRadius: '14px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>

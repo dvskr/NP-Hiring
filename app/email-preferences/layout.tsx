@@ -13,7 +13,7 @@ import { Metadata } from 'next';
  */
 export const metadata: Metadata = {
     title: `Email Preferences | ${brand.name}`,
-    description: `Choose which emails you receive from ${brand.name} — job alerts, reminders, and the newsletter.`,
+    description: `Choose which emails you receive from ${brand.name}: job alerts, reminders, and the newsletter.`,
     robots: { index: false, follow: false },
 };
 

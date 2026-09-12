@@ -28,7 +28,7 @@ const INTERNAL_LINK_MAP: [RegExp, string][] = [
     [internalUrlPattern('\\/jobs\\?type=telehealth\\b'), 'Browse telehealth NP jobs →'],
     [internalUrlPattern('\\/jobs\\?type=travel\\b'), 'Browse travel NP jobs →'],
     [internalUrlPattern('\\/jobs\\/remote\\b'), 'Browse remote NP jobs →'],
-    [internalUrlPattern('\\/jobs\\/telehealth\\b'), 'Browse telehealth jobs →'],
+    [internalUrlPattern('\\/jobs\\/telehealth\\b'), 'Browse telehealth NP jobs →'],
     [internalUrlPattern('\\/jobs\\/travel\\b'), 'Browse travel NP jobs →'],
     [internalUrlPattern('\\/jobs\\/new-grad\\b'), 'Browse new grad NP jobs →'],
     [internalUrlPattern('\\/jobs\\/per-diem\\b'), 'Browse per diem NP jobs →'],

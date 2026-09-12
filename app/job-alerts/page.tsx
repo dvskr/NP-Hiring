@@ -160,7 +160,7 @@ function JobAlertsContent() {
 
     // Validate email
     if (!email.trim()) {
-      setEmailError('Email is required');
+      setEmailError('Email address is required');
       return;
     }
     if (!validateEmail(email)) {
@@ -474,9 +474,9 @@ function JobAlertsContent() {
                       ))}
                     </select>
                     <p id="alert-min-years-note" style={{ fontSize: '11px', color: '#B0C4BC', marginTop: '4px' }}>
-                      Pick your years and we&apos;ll only send roles you qualify for —
-                      jobs asking for at most that much experience, plus jobs that
-                      don&apos;t state a minimum.
+                      Select your years of experience and we&apos;ll only send roles you
+                      qualify for: jobs asking for at most that much experience, plus
+                      jobs that don&apos;t state a minimum.
                     </p>
                   </div>
 
@@ -532,10 +532,10 @@ function JobAlertsContent() {
                     <p id="alert-min-salary-note" style={{ fontSize: '11px', color: '#B0C4BC', marginTop: '4px' }}>
                       Your alert matches a job when the top of its posted range reaches
                       this figure, and it keeps jobs that don&apos;t publish a salary at
-                      all — filtering those out would hide most postings. Jobs
+                      all, because filtering those out would hide most postings. Jobs
                       advertising a single figure rather than a range (&ldquo;$130,000/yr&rdquo;)
                       are missed even when that figure clears your minimum, and the jobs
-                      board does show those — so the two lists won&apos;t be identical.
+                      board does show those, so the two lists won&apos;t be identical.
                     </p>
                   </div>
 

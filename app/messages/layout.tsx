@@ -7,7 +7,7 @@ import type { Metadata } from 'next';
 // <brand>", via the root title template) instead of the generic default.
 export const metadata: Metadata = {
     title: 'Messages',
-    description: `Your ${brand.name} inbox — conversations between employers and candidates.`,
+    description: `Your ${brand.name} inbox: conversations between employers and candidates.`,
     robots: { index: false, follow: false },
 };
 

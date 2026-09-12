@@ -93,13 +93,13 @@ function moversFootnote(movers: Movers | null | undefined, isFalling: boolean): 
     const floor = isFalling ? movers.currentFloor : movers.previousFloor;
     if (floor === 0) return null;
     const which = isFalling ? 'current' : 'prior';
-    return `The ${which} window cut off at ${floor.toLocaleString('en-US')} clicks — rows past that cut show as “unranked” with a bounded delta, not a zero.`;
+    return `The ${which} window was cut off at ${floor.toLocaleString('en-US')} clicks. Rows past that cut show as “unranked” with a bounded delta rather than a zero.`;
 }
 
 function formatGscDate(value: string | null): string {
-    if (!value) return '—';
+    if (!value) return 'Not set';
     const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return '—';
+    if (Number.isNaN(parsed.getTime())) return 'Not set';
     return formatRelativeTime(parsed);
 }
 
@@ -248,7 +248,7 @@ function formatRelativeTime(date: Date): string {
 }
 
 function deltaPct(today: number, weekAgo: number): { pct: number; color: string; arrow: string } {
-    if (weekAgo === 0) return { pct: 0, color: '#7A6A62', arrow: '—' };
+    if (weekAgo === 0) return { pct: 0, color: '#7A6A62', arrow: '→' };
     const pct = ((today - weekAgo) / weekAgo) * 100;
     return {
         pct,
@@ -335,13 +335,13 @@ export default async function SeoHealthPage() {
 
             {/* ─── 1. GSC SNAPSHOTS ─────────────────────────────────────────── */}
             <div style={card}>
-                <h2 style={h2}>1. Search Console — last 14 days</h2>
+                <h2 style={h2}>1. Search Console: last 14 days</h2>
                 {data.snapshots.length === 0 ? (
                     <p style={{ fontSize: '13px', color: '#7A6A62' }}>
                         No snapshots yet. The <code>/api/cron/gsc-health-check</code> cron runs daily at
-                        09:30 UTC. If it&apos;s been &gt;24h since deploy, check the cron is firing in Vercel
-                        and that <code>GOOGLE_INDEXING_CREDENTIALS</code> + the service-account email is
-                        added to GSC → Settings → Users with read access.
+                        09:30 UTC. If more than 24 hours have passed since deployment, confirm that the cron is
+                        firing in Vercel, that <code>GOOGLE_INDEXING_CREDENTIALS</code> is set, and that the
+                        service-account email has been added to GSC → Settings → Users with read access.
                     </p>
                 ) : (
                     <>
@@ -406,15 +406,15 @@ export default async function SeoHealthPage() {
                 <h2 style={h2}>2. Sitemap submission status</h2>
                 {!data.latestSitemaps ? (
                     <p style={{ fontSize: '13px', color: '#7A6A62' }}>
-                        No sitemap status captured yet. The <code>gsc-health-check</code> cron pulls{' '}
-                        <code>sitemaps.list</code> on each run (same read-only GSC credentials) and
+                        No sitemap status has been captured yet. The <code>gsc-health-check</code> cron pulls{' '}
+                        <code>sitemaps.list</code> on each run (using the same read-only GSC credentials) and
                         alerts Discord when Google reports sitemap errors. Data appears after the
                         next run with GSC credentials configured.
                     </p>
                 ) : (
                     <>
                         <div style={{ fontSize: '12px', color: '#7A6A62', marginBottom: '8px' }}>
-                            As of {data.latestSitemaps.capturedOn.toISOString().slice(0, 10)} —{' '}
+                            As of {data.latestSitemaps.capturedOn.toISOString().slice(0, 10)}:{' '}
                             {data.latestSitemaps.entries.length} sitemap{data.latestSitemaps.entries.length === 1 ? '' : 's'} submitted.
                         </div>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -441,7 +441,7 @@ export default async function SeoHealthPage() {
                                         <td style={td}>{formatGscDate(s.lastSubmitted)}</td>
                                         <td style={td}>{formatGscDate(s.lastDownloaded)}</td>
                                         <td style={{ ...td, color: s.errors > 0 ? '#EF4444' : s.isPending ? '#F59E0B' : '#10B981', fontWeight: 600 }}>
-                                            {s.errors > 0 ? '✗ errors' : s.isPending ? '○ pending' : '✓ ok'}
+                                            {s.errors > 0 ? '✗ Errors' : s.isPending ? '○ Pending' : '✓ OK'}
                                         </td>
                                     </tr>
                                 ))}
@@ -453,35 +453,35 @@ export default async function SeoHealthPage() {
 
             {/* ─── 3. TOP MOVERS (WoW) ──────────────────────────────────────── */}
             <div style={card}>
-                <h2 style={h2}>3. Top movers — 7 days vs prior 7 days</h2>
+                <h2 style={h2}>3. Top movers: 7 days vs prior 7 days</h2>
                 {!data.latestDimensions ? (
                     <p style={{ fontSize: '13px', color: '#7A6A62' }}>
-                        No query/page dimension data captured yet. The <code>gsc-health-check</code>{' '}
+                        No query or page dimension data has been captured yet. The <code>gsc-health-check</code>{' '}
                         cron records the top {GSC_DIMENSION_ROW_LIMIT.toLocaleString('en-US')} queries and pages
-                        for two 7-day windows on each run; movers appear after its next run with GSC
+                        for two 7-day windows on each run. Movers appear after its next run with GSC
                         credentials configured.
                     </p>
                 ) : (
                     <>
                         <div style={{ fontSize: '12px', color: '#7A6A62', marginBottom: '12px' }}>
-                            Window: {data.latestDimensions.dims.window?.startDate ?? '—'} → {data.latestDimensions.dims.window?.endDate ?? '—'}{' '}
-                            vs {data.latestDimensions.dims.prevWindow?.startDate ?? '—'} → {data.latestDimensions.dims.prevWindow?.endDate ?? '—'}.
+                            Window: {data.latestDimensions.dims.window?.startDate ?? 'Not set'} → {data.latestDimensions.dims.window?.endDate ?? 'Not set'}{' '}
+                            vs {data.latestDimensions.dims.prevWindow?.startDate ?? 'Not set'} → {data.latestDimensions.dims.prevWindow?.endDate ?? 'Not set'}.
                             Ranked by click delta. Each window is GSC&apos;s top{' '}
                             {GSC_DIMENSION_ROW_LIMIT.toLocaleString('en-US')} rows by clicks, so a key can leave one
-                            window by crossing that cut rather than by losing traffic — those rows read{' '}
+                            window by crossing that cut rather than by losing traffic. Those rows read{' '}
                             <em>unranked</em> with a bounded (≥ / ≤) delta instead of a fabricated 0.
                             {data.indeterminateMovers > 0 && (
                                 <> {data.indeterminateMovers.toLocaleString('en-US')} row
                                     {data.indeterminateMovers === 1 ? ' is' : 's are'} omitted entirely because the
-                                    cut leaves their direction unknowable.</>
+                                    cut leaves {data.indeterminateMovers === 1 ? 'its' : 'their'} direction unknowable.</>
                             )}
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px' }}>
                             {([
-                                ['Queries — rising', data.queryMovers?.gainers ?? [], false, data.queryMovers, false],
-                                ['Queries — falling', data.queryMovers?.losers ?? [], false, data.queryMovers, true],
-                                ['Pages — rising', data.pageMovers?.gainers ?? [], true, data.pageMovers, false],
-                                ['Pages — falling', data.pageMovers?.losers ?? [], true, data.pageMovers, true],
+                                ['Rising queries', data.queryMovers?.gainers ?? [], false, data.queryMovers, false],
+                                ['Falling queries', data.queryMovers?.losers ?? [], false, data.queryMovers, true],
+                                ['Rising pages', data.pageMovers?.gainers ?? [], true, data.pageMovers, false],
+                                ['Falling pages', data.pageMovers?.losers ?? [], true, data.pageMovers, true],
                             ] as const).map(([label, rows, isPage, movers, isFalling]) => {
                                 const footnote = moversFootnote(movers, isFalling);
                                 return (
@@ -512,7 +512,7 @@ export default async function SeoHealthPage() {
                                                             {formatMoverDelta(r.clicksDelta, r.estimated)}
                                                         </td>
                                                         <td style={{ ...td, color: r.impressionsDelta === null ? '#7A6A62' : r.impressionsDelta >= 0 ? '#10B981' : '#EF4444' }}>
-                                                            {r.impressionsDelta === null ? '—' : formatMoverDelta(r.impressionsDelta, false)}
+                                                            {r.impressionsDelta === null ? 'N/A' : formatMoverDelta(r.impressionsDelta, false)}
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -534,18 +534,18 @@ export default async function SeoHealthPage() {
 
             {/* ─── 4. pSEO COVERAGE ─────────────────────────────────────────── */}
             <div style={card}>
-                <h2 style={h2}>4. pSEO coverage — renderable vs indexable</h2>
+                <h2 style={h2}>4. pSEO coverage: renderable vs indexable</h2>
                 <p style={{ fontSize: '12px', color: '#7A6A62', marginBottom: '12px' }}>
-                    Computed from <code>pseoStats</code> + the render/sitemap gates (no GSC API —
-                    Google&apos;s coverage breakdown has no public API). <strong>Renderable</strong> =
-                    category×city combos passing the render gate (≥{MIN_JOBS_FOR_CATEGORY_CITY} jobs, page serves 200).{' '}
-                    <strong>Indexable</strong> = renderable combos the sitemap advertises (fresh stats,
+                    Computed from <code>pseoStats</code> and the render and sitemap gates. No GSC API is
+                    involved, because Google&apos;s coverage breakdown has no public API. <strong>Renderable</strong> means
+                    category×city combos that pass the render gate (≥{MIN_JOBS_FOR_CATEGORY_CITY} jobs, and the page serves 200).{' '}
+                    <strong>Indexable</strong> means renderable combos that the sitemap advertises (fresh stats,
                     state-eligible category, city population floor). A wide gap means we publish pages
-                    the sitemap never tells Google about.
+                    that the sitemap never tells Google about.
                 </p>
                 {data.categoryCityCoverage.categories.length === 0 && data.settingStateCoverage.total === 0 ? (
                     <p style={{ fontSize: '13px', color: '#7A6A62' }}>
-                        No <code>pseoStats</code> rows yet — the <code>aggregate-pseo</code> cron
+                        No <code>pseoStats</code> rows yet. The <code>aggregate-pseo</code> cron
                         populates them.
                     </p>
                 ) : (
@@ -592,10 +592,10 @@ export default async function SeoHealthPage() {
                                             <td style={td}>{c.renderable.toLocaleString('en-US')}</td>
                                             <td style={td}>{c.indexable.toLocaleString('en-US')}</td>
                                             <td style={{ ...td, color: !c.sitemapEligible ? '#7A6A62' : pct >= 80 ? '#10B981' : pct >= 40 ? '#F59E0B' : '#EF4444', fontWeight: 600 }}>
-                                                {c.renderable > 0 ? `${pct}%` : '—'}
+                                                {c.renderable > 0 ? `${pct}%` : 'N/A'}
                                             </td>
                                             <td style={{ ...td, color: c.sitemapEligible ? '#10B981' : '#7A6A62' }}>
-                                                {c.sitemapEligible ? '✓' : '— state-ineligible'}
+                                                {c.sitemapEligible ? '✓' : 'State-ineligible'}
                                             </td>
                                         </tr>
                                     );
@@ -611,9 +611,9 @@ export default async function SeoHealthPage() {
                 <h2 style={h2}>5. Cron run log</h2>
                 {data.cronSummary.length === 0 ? (
                     <p style={{ fontSize: '13px', color: '#7A6A62' }}>
-                        No cron runs tracked yet. Crons opt into tracking via{' '}
-                        <code>withCronTracking()</code> in <code>lib/cron/track.ts</code>. The
-                        <code> historical-deindex</code> and <code>gsc-health-check</code> crons will
+                        No cron runs have been tracked yet. Crons opt into tracking via{' '}
+                        <code>withCronTracking()</code> in <code>lib/cron/track.ts</code>. The{' '}
+                        <code>historical-deindex</code> and <code>gsc-health-check</code> crons will
                         populate this table after their next run.
                     </p>
                 ) : (
@@ -632,7 +632,7 @@ export default async function SeoHealthPage() {
                                     {data.cronSummary.map((r) => (
                                         <tr key={r.name}>
                                             <td style={td}><code>{r.name}</code></td>
-                                            <td style={td}>{r._max.startedAt ? formatRelativeTime(r._max.startedAt) : '—'}</td>
+                                            <td style={td}>{r._max.startedAt ? formatRelativeTime(r._max.startedAt) : 'Never'}</td>
                                             <td style={td}>{r._count._all}</td>
                                         </tr>
                                     ))}
@@ -657,11 +657,11 @@ export default async function SeoHealthPage() {
                                         <td style={td}><code>{r.name}</code></td>
                                         <td style={td}>{formatRelativeTime(r.startedAt)}</td>
                                         <td style={{ ...td, color: r.success ? '#10B981' : '#EF4444', fontWeight: 600 }}>
-                                            {r.success ? '✓ ok' : '✗ failed'}
+                                            {r.success ? '✓ OK' : '✗ Failed'}
                                         </td>
-                                        <td style={td}>{r.durationMs ? `${(r.durationMs / 1000).toFixed(1)}s` : '—'}</td>
+                                        <td style={td}>{r.durationMs ? `${(r.durationMs / 1000).toFixed(1)}s` : 'N/A'}</td>
                                         <td style={{ ...td, fontFamily: 'monospace', fontSize: '11px', maxWidth: '480px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {r.error ? r.error : r.metrics ? JSON.stringify(r.metrics) : '—'}
+                                            {r.error ? r.error : r.metrics ? JSON.stringify(r.metrics) : 'None'}
                                         </td>
                                     </tr>
                                 ))}
@@ -676,7 +676,7 @@ export default async function SeoHealthPage() {
                 <h2 style={h2}>6. Deindex queue burn-down</h2>
                 {queueTotal === 0 ? (
                     <p style={{ fontSize: '13px', color: '#7A6A62' }}>
-                        Queue is empty. After the <code>deindex_queue</code> migration deploys, run{' '}
+                        The queue is empty. After the <code>deindex_queue</code> migration deploys, run{' '}
                         <code>npx tsx scripts/seed-deindex-queue.ts</code> to seed it from the GSC
                         ISSUES exports.
                     </p>
@@ -718,8 +718,8 @@ export default async function SeoHealthPage() {
                             </tbody>
                         </table>
                         <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '12px' }}>
-                            Avg attempt count: {(data.queueAttempts._avg.attempt ?? 0).toFixed(2)}.
-                            Max: {data.queueAttempts._max.attempt ?? 0}.
+                            Average attempt count: {(data.queueAttempts._avg.attempt ?? 0).toFixed(2)}.
+                            Maximum: {data.queueAttempts._max.attempt ?? 0}.
                         </div>
                     </>
                 )}
@@ -763,10 +763,10 @@ export default async function SeoHealthPage() {
                                 {data.recentSnippets.map((r) => (
                                     <tr key={r.citySlug}>
                                         <td style={td}><code>{r.citySlug}</code></td>
-                                        <td style={td}>{r.sourceModel ?? '—'}</td>
+                                        <td style={td}>{r.sourceModel ?? 'None'}</td>
                                         <td style={td}>{formatRelativeTime(r.generatedAt)}</td>
                                         <td style={{ ...td, color: r.approvedAt ? '#10B981' : '#F59E0B', fontWeight: 600 }}>
-                                            {r.approvedAt ? '✓ approved' : '○ pending'}
+                                            {r.approvedAt ? '✓ Approved' : '○ Pending'}
                                         </td>
                                     </tr>
                                 ))}

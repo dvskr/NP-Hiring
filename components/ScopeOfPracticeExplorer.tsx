@@ -138,7 +138,7 @@ export default function ScopeOfPracticeExplorer({ rows }: ScopeOfPracticeExplore
                         type="search"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="e.g. Texas or TX"
+                        placeholder="e.g., Texas or TX"
                         autoComplete="off"
                         className="w-full rounded-lg px-3 py-2 text-sm"
                         style={{
@@ -251,7 +251,7 @@ export default function ScopeOfPracticeExplorer({ rows }: ScopeOfPracticeExplore
                                     className="py-6 text-center"
                                     style={{ color: 'var(--text-secondary)' }}
                                 >
-                                    No jurisdictions match — clear the search or pick a
+                                    No jurisdictions match. Clear the search or choose a
                                     different tier.
                                 </td>
                             </tr>

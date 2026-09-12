@@ -122,12 +122,12 @@ export default function NotFound() {
                     </div>
 
                     <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>
-                        We couldn&apos;t find that page
+                        We could not find that page
                     </h1>
 
                     <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto 24px' }}>
-                        The link may be out of date, or the job it pointed to has been filled or
-                        expired. Search the board or pick up one of the trails below.
+                        The link may be out of date, or the job it pointed to may have been filled or
+                        expired. Search the board or choose one of the paths below.
                     </p>
 
                     {/* Plain GET form — works without JavaScript, submits to the

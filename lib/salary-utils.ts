@@ -32,7 +32,7 @@ export interface RawSalaryInput {
 export interface ProcessedSalary {
   normalizedMin: number | null;      // For filtering (annual)
   normalizedMax: number | null;      // For filtering (annual)
-  displaySalary: string | null;      // For display ("$150-$200/hr")
+  displaySalary: string | null;      // For display ("150 to 200/hr")
   salaryType: 'hourly' | 'annual' | 'daily' | 'unknown';
   isValid: boolean;
 }
@@ -145,7 +145,7 @@ function processHourlySalary(
   // Create display string (without $ since icon is used)
   let displaySalary: string;
   if (minRate && maxRate && minRate !== maxRate) {
-    displaySalary = `${minRate}-${maxRate}/hr`;
+    displaySalary = `${minRate} to ${maxRate}/hr`;
   } else {
     displaySalary = `${minRate || maxRate}/hr`;
   }
@@ -184,7 +184,7 @@ function processAnnualSalary(
   // Create display string (without $ since icon is used)
   let displaySalary: string;
   if (minSalary && maxSalary && minSalary !== maxSalary) {
-    displaySalary = `${formatK(minSalary)}-${formatK(maxSalary)}/yr`;
+    displaySalary = `${formatK(minSalary)} to ${formatK(maxSalary)}/yr`;
   } else {
     const salaryValue = minSalary || maxSalary;
     if (!salaryValue) {
@@ -229,7 +229,7 @@ function processDailySalary(
   // Create display string (without $ since icon is used)
   let displaySalary: string;
   if (minRate && maxRate && minRate !== maxRate) {
-    displaySalary = `${minRate}-${maxRate}/day`;
+    displaySalary = `${minRate} to ${maxRate}/day`;
   } else {
     displaySalary = `${minRate || maxRate}/day`;
   }
@@ -488,7 +488,7 @@ export function formatSalaryDisplay(
     const minHr = normalizedMin ? Math.round(normalizedMin / HOURLY_TO_ANNUAL_HOURS) : null;
     const maxHr = normalizedMax ? Math.round(normalizedMax / HOURLY_TO_ANNUAL_HOURS) : null;
     if (minHr && maxHr && minHr !== maxHr) {
-      return `${minHr}-${maxHr}/hr`;
+      return `${minHr} to ${maxHr}/hr`;
     }
     const hrRate = minHr || maxHr;
     return hrRate ? `${hrRate}/hr` : null;
@@ -496,7 +496,7 @@ export function formatSalaryDisplay(
 
   // Default to annual format
   if (normalizedMin && normalizedMax && normalizedMin !== normalizedMax) {
-    return `${formatK(normalizedMin)}-${formatK(normalizedMax)}/yr`;
+    return `${formatK(normalizedMin)} to ${formatK(normalizedMax)}/yr`;
   }
   
   const salaryValue = normalizedMin || normalizedMax;

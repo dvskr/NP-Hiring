@@ -125,7 +125,7 @@ export default function ReportsHubPage() {
                         What our own listings <span style={{ color: '#BE185D' }}>show</span>
                     </h1>
                     <p style={{ fontSize: '15px', color: '#4A5568', lineHeight: 1.7, margin: 0, maxWidth: '640px' }}>
-                        Reports built from {brand.name}&apos;s own {brand.niche.descriptor} postings — live
+                        Reports built from {brand.name}&apos;s own {brand.niche.descriptor} postings: live
                         aggregates with the sample limits stated, national context cited to primary sources,
                         and nothing padded to look bigger than it is. Free to quote with attribution via our{' '}
                         <Link href="/press" style={{ color: '#BE185D', textDecoration: 'underline' }}>

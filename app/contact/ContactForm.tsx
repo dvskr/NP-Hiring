@@ -76,8 +76,8 @@ export default function ContactForm() {
                 <div style={{ ...clayCard, padding: '16px 20px', marginBottom: '20px', background: '#FDF2F8', border: '1px solid #FBCFE8', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <CheckCircle size={18} color="#059669" />
                     <div>
-                        <p style={{ fontSize: '14px', fontWeight: 600, color: '#059669', margin: 0 }}>Message sent!</p>
-                        <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '2px 0 0' }}>We&apos;ll respond within 24-48 hours.</p>
+                        <p style={{ fontSize: '14px', fontWeight: 600, color: '#059669', margin: 0 }}>Message sent.</p>
+                        <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '2px 0 0' }}>We will respond within 24 to 48 hours.</p>
                     </div>
                 </div>
             )}

@@ -15,8 +15,8 @@ import { HOMEPAGE_FEATURED_POSTS, type FeaturedBlogPost } from '@/config/niche/c
  */
 
 const RESOURCE_GUIDES: FeaturedBlogPost[] = [
-    { category: 'Salary Guide', title: 'NP Salary Guide — every state, real numbers', description: 'Median pay, ranges, and the states that pay NPs the most.', href: '/salary-guide' },
-    { category: 'Licensure', title: 'Full Practice Authority, state by state', description: 'Where NPs practice independently — and where the rules are changing.', href: '/resources/fpa-guide' },
+    { category: 'Salary Guide', title: 'NP Salary Guide: every state, real numbers', description: 'Median pay, ranges, and the states that pay NPs the most.', href: '/salary-guide' },
+    { category: 'Licensure', title: 'Full Practice Authority, state by state', description: 'Where NPs practice independently, and where the rules are changing.', href: '/resources/fpa-guide' },
     { category: 'Contracts', title: '1099 vs W-2 for NPs', description: 'Taxes, benefits, and the real take-home math for contract work.', href: '/resources/1099-vs-w2' },
 ];
 

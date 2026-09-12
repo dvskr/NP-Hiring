@@ -158,7 +158,8 @@ export default function Header() {
           Total nav footprint = 18px top + 64px nav pill + 18px bottom = 100px.
           The strip is now symmetric (was 12/0) so the floating nav reads as
           vertically centered inside its background panel instead of flush
-          against the bottom edge. */}
+          against the bottom edge. (Floating mint pill — owner direction 2026-09-12: gutters on top,
+          left and right, no max-width cap. The hero pulls up under it by 80.) */}
       <div style={{ height: 100 }} />
 
       {/* Floating navbar wrapper. Solid background matching the page bg so
@@ -182,19 +183,21 @@ export default function Header() {
             // change vs. the previous fixed value), then scales with the
             // viewport up to a ceiling of 1680px on very wide screens.
             // Wrapper padding (16px each side) still bounds it on narrow.
-            maxWidth: 'clamp(1360px, 94vw, 1680px)',
-            margin: '0 auto',
+            // Floating mint pill (owner direction 2026-09-12): spans the full width
+            // minus the wrapper's 16px side gutters — no max-width cap.
+            maxWidth: 'none',
+            width: '100%',
             height: 64,
             borderRadius: '18px',
-            backgroundColor: '#F5F0EB',
-            border: '1px solid rgba(255,255,255,0.65)',
+            backgroundColor: '#D5F5F1',
+            border: '1px solid rgba(122,28,43,0.12)',
             boxShadow: scrolled
-              ? '0 8px 32px rgba(90,74,66,0.12), 0 2px 8px rgba(90,74,66,0.06), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.02)'
-              : '0 4px 20px rgba(90,74,66,0.08), 0 1px 4px rgba(90,74,66,0.04), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.02)',
+              ? '0 8px 32px rgba(90,74,66,0.14), 0 2px 8px rgba(90,74,66,0.06), inset 0 1px 0 rgba(255,255,255,0.7)'
+              : '0 4px 20px rgba(90,74,66,0.10), 0 1px 4px rgba(90,74,66,0.04), inset 0 1px 0 rgba(255,255,255,0.7)',
             display: 'flex',
             alignItems: 'center',
-            paddingLeft: '12px',
-            paddingRight: '12px',
+            paddingLeft: 'clamp(12px, 2vw, 32px)',
+            paddingRight: 'clamp(12px, 2vw, 32px)',
             pointerEvents: 'auto',
             transition: 'box-shadow 0.3s ease, transform 0.3s ease',
           }}
@@ -214,7 +217,7 @@ export default function Header() {
                 padding: '12px',
                 borderRadius: '10px',
                 color: '#5A4A42',
-                backgroundColor: '#EDE7E0',
+                backgroundColor: '#B9EBD6',
                 border: '1px solid rgba(255,255,255,0.5)',
                 boxShadow: '3px 3px 8px rgba(90,74,66,0.08), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 2px rgba(255,255,255,0.6)',
                 cursor: 'pointer',
@@ -293,7 +296,7 @@ export default function Header() {
                   }}
                   onMouseEnter={e => {
                     if (!active) {
-                      e.currentTarget.style.backgroundColor = '#EDE7E0';
+                      e.currentTarget.style.backgroundColor = '#B9EBD6';
                       e.currentTarget.style.color = '#5A4A42';
                       e.currentTarget.style.border = '1px solid rgba(255,255,255,0.5)';
                       e.currentTarget.style.boxShadow = '3px 3px 8px rgba(90,74,66,0.10), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 3px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02)';
@@ -317,14 +320,21 @@ export default function Header() {
             })}
           </nav>
 
-          {/* ═══ RIGHT: Auth ═══ */}
+          {/* ═══ Page-owned slot ═══
+              app/jobs/JobsPageClient.tsx portals its "Create alert" button in
+              here (owner direction 2026-09-12: the control lives in the nav
+              bar). Empty everywhere else; the page keeps the modal, the
+              filter prefill and the "only when filters are active" rule. */}
+          <div id="nav-alert-slot" className="flex items-center ml-auto lg:ml-0 mr-2 lg:mr-0" />
+
+{/* ═══ RIGHT: Auth ═══ */}
           <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
             {userRole === 'employer' && <PostJobCTA />}
             <HeaderAuth onRoleChange={(role) => setUserRole(role)} />
           </div>
 
           {/* Mobile right side - just auth (hamburger is on left) */}
-          <div className="lg:hidden flex items-center gap-2 ml-auto">
+          <div className="lg:hidden flex items-center gap-2">
             {userRole === 'employer' && <PostJobCTA mobile />}
             <HeaderAuth onRoleChange={(role) => setUserRole(role)} />
           </div>
@@ -455,6 +465,13 @@ export default function Header() {
            wins where supported and is the one that matters on iOS Safari,
            whose visible viewport shrinks under the URL bar. overscroll-behavior
            keeps the rubber-band from chaining to the locked page behind. */
+        /* "Create alert" (portaled from /jobs): icon-only below the desktop nav
+           breakpoint so it fits beside the auth controls. */
+        @media (max-width: 1023px) {
+          #nav-alert-slot .jp-alert-btn .jp-alert-label { display: none; }
+          #nav-alert-slot .jp-alert-btn { padding: 7px 9px !important; }
+        }
+
         .mobile-menu-scroll {
           max-height: calc(100vh - 100px);
           max-height: calc(100dvh - 100px);

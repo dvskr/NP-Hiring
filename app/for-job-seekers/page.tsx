@@ -7,6 +7,7 @@ import VideoJsonLd from '@/components/VideoJsonLd';
 import HomepageHero from '@/components/HomepageHero';
 import FeaturedJobsSection from '@/components/FeaturedJobsSection';
 import { prisma } from '@/lib/prisma';
+import { getSiteStats } from '@/lib/site-stats';
 import {
   ArrowRight, Search, Users, Briefcase, MapPin,
   Check, X, Star, Sparkles, DollarSign, Bell, Bookmark, FileText, SlidersHorizontal, BookOpen, Gift, Award,
@@ -20,13 +21,13 @@ const SEEKERS_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Fi
 
 export const metadata: Metadata = {
   // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
-  title: `For Job Seekers — Find Your Next ${brand.niche.short} Role`,
+  title: `For Job Seekers: Find Your Next ${brand.niche.short} Role`,
   // Removed the hardcoded "9,000+" job count (audit 09 M-21) — the actual
   // count drifts and a stale figure in metadata that doesn't match the
   // live UI is a credibility hit. Description now describes the platform
   // value without a numeric claim.
   description:
-    `Find your next ${brand.niche.long} position. Search thousands of verified roles, compare salaries, get daily alerts, and apply directly — 100% free forever.`,
+    `Find your next ${brand.niche.long} position. Search thousands of verified roles, compare salaries, get daily alerts, and apply directly, all 100% free forever.`,
   openGraph: {
     images: [{ url: SEEKERS_OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} job seeker career resources` }],
   },
@@ -58,24 +59,29 @@ const iconBgCentered: React.CSSProperties = {
   margin: '0 auto 14px',
 };
 
+/* Hero figures come from the canonical cached SiteStat snapshot (the same
+   source as the homepage), so the shared hero never shows two different
+   inventories. Remote/state counts stay page-local. */
 async function getStats() {
   try {
-    const [totalJobs, remoteJobs, stateCount, totalCompanies] = await Promise.all([
-      prisma.job.count({ where: { isPublished: true } }),
+    const [site, remoteJobs, stateCount] = await Promise.all([
+      getSiteStats(),
       prisma.job.count({ where: { isPublished: true, isRemote: true } }),
       prisma.job.groupBy({ by: ['state'], where: { isPublished: true, state: { not: null } } }).then(r => r.length),
-      prisma.job.groupBy({ by: ['employer'], where: { isPublished: true } }).then(r => r.length),
     ]);
-    return { totalJobs, remoteJobs, stateCount, totalCompanies };
+    return { totalJobs: site.totalJobs, remoteJobs, stateCount, totalCompanies: site.totalCompanies };
   } catch {
-    return { totalJobs: 9000, remoteJobs: 2000, stateCount: 50, totalCompanies: 4000 };
+    // getSiteStats never throws (it carries its own last-resort defaults);
+    // the page-local counts are omitted rather than invented.
+    const site = await getSiteStats();
+    return { totalJobs: site.totalJobs, remoteJobs: 0, stateCount: 0, totalCompanies: site.totalCompanies };
   }
 }
 
 const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: true | false | 'partial'; linkedin: true | false | 'partial'; note?: string }[] = [
   { feature: `100% ${brand.niche.short}-Only Jobs`, us: true, indeed: false, linkedin: false },
   { feature: 'Salary Transparency on Every Listing', us: true, indeed: false, linkedin: false, note: 'Others hide salary' },
-  { feature: 'Completely Free for Job Seekers', us: true, indeed: true, linkedin: 'partial', note: 'LinkedIn: premium features cost' },
+  { feature: 'Completely Free for Job Seekers', us: true, indeed: true, linkedin: 'partial', note: 'LinkedIn: premium features cost extra' },
   { feature: 'AI Match Scoring', us: true, indeed: false, linkedin: false },
   { feature: 'One-Click Direct Apply', us: true, indeed: true, linkedin: true },
   { feature: '50-State Licensure Guides', us: true, indeed: false, linkedin: false },
@@ -88,9 +94,6 @@ const comparisonRows: { feature: string; us: true | false | 'partial'; indeed: t
 export default async function ForJobSeekersPage() {
   const stats = await getStats();
   const fmt = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${n}`;
-  const jobCountDisplay = stats.totalJobs > 1000
-    ? `${Math.floor(stats.totalJobs / 100) * 100}+`
-    : stats.totalJobs.toLocaleString();
 
   return (
     <>
@@ -104,7 +107,7 @@ export default async function ForJobSeekersPage() {
           SECTION 1: HERO — Reuse HomepageHero (3D nurse background)
           ═══════════════════════════════════════════════════════════════ */}
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #F5D5C4 15%, #F0C4AF 50%, #FDFBF7 100%)' }}>
-        <HomepageHero jobCountDisplay={jobCountDisplay} />
+        <HomepageHero />
       </div>
 
       {/* ═══ FEATURED JOBS ═══ */}
@@ -119,10 +122,10 @@ export default async function ForJobSeekersPage() {
             100% Free · No Hidden Fees
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
-            Everything You Need — For Free
+            Everything You Need, For Free
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>
-            Every feature, every tool, every resource — completely free for {brand.niche.short} job seekers.
+            Every feature, every tool, and every resource is completely free for {brand.niche.short} job seekers.
           </p>
 
           {/* Bento Grid */}
@@ -140,7 +143,7 @@ export default async function ForJobSeekersPage() {
                 </div>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>AI Match Scoring</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Every job gets a 0–100 match score based on your license, specialty, experience, location, and salary preferences.
+                  Every job gets a 0 to 100 match score based on your license, specialty, experience, location, and salary preferences.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
@@ -161,7 +164,7 @@ export default async function ForJobSeekersPage() {
                 </div>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Salary Transparency</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  See salary ranges on every listing. No guessing, no surprises, no &quot;DOE.&quot;
+                  See salary ranges on every listing. No guessing, no surprises, and no &quot;DOE.&quot;
                 </p>
               </div>
             </div>
@@ -172,7 +175,7 @@ export default async function ForJobSeekersPage() {
                 <Bell size={22} />
               </div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Daily Job Alerts</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>New jobs matching your criteria — delivered to your inbox daily.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>New jobs matching your criteria, delivered to your inbox daily.</p>
             </div>
 
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -188,7 +191,7 @@ export default async function ForJobSeekersPage() {
                 <FileText size={22} />
               </div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>AI Resume Parser</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Upload your resume — AI fills your profile instantly.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Upload your resume and AI fills in your profile instantly.</p>
             </div>
 
             <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -196,7 +199,7 @@ export default async function ForJobSeekersPage() {
                 <Bookmark size={22} />
               </div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Save & Compare</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Bookmark jobs, compare benefits, decide on your terms.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Bookmark jobs, compare benefits, and decide on your terms.</p>
             </div>
 
             {/* ROW 3: Licensure Guides (8 cols) + Free Forever (4 cols) */}
@@ -257,7 +260,7 @@ export default async function ForJobSeekersPage() {
             Find Your Ideal Work Setting
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '440px', margin: '0 auto 44px', lineHeight: 1.6 }}>
-            From telehealth to private practice — we cover every practice setting.
+            From telehealth to private practice, we cover every practice setting.
           </p>
 
           <div className="seeker-types-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
@@ -296,7 +299,7 @@ export default async function ForJobSeekersPage() {
             How We Compare
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '440px', margin: '0 auto 44px', lineHeight: 1.6 }}>
-            Built exclusively for {brand.niche.short}s — not a generic job board.
+            Built exclusively for {brand.niche.short}s, not a generic job board.
           </p>
 
           <div className="seeker-compare-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '24px', alignItems: 'start' }}>
@@ -400,7 +403,7 @@ export default async function ForJobSeekersPage() {
             Tools Built for Your {brand.niche.short} Career
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '450px', margin: '0 auto 44px', lineHeight: 1.6 }}>
-            Research salaries, check licensure requirements, and plan your next move — all in one place.
+            Research salaries, check licensure requirements, and plan your next move, all in one place.
           </p>
 
           <div className="seeker-resource-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
@@ -425,7 +428,7 @@ export default async function ForJobSeekersPage() {
               },
               {
                 title: `${brand.niche.short} Career Blog`,
-                desc: `Interview tips, resume advice, CE requirements, and industry trends — written by ${brand.niche.short}s, for ${brand.niche.short}s.`,
+                desc: `Interview tips, resume advice, CE requirements, and industry trends, written by ${brand.niche.short}s for ${brand.niche.short}s.`,
                 href: '/blog',
                 IconComponent: FileText,
                 iconColor: '#4F46E5',

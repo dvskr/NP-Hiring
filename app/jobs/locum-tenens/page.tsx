@@ -84,11 +84,11 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs — Agency Staffing`,
+    title: `${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs | Agency Staffing`,
     description: `Find ${stats.totalJobs} locum tenens ${brand.niche.short} jobs. Multi-state assignments with housing stipends, malpractice coverage, and premium pay. Updated daily.`,
     keywords: ['locum tenens np', 'locum tenens nurse practitioner', 'travel np jobs', 'np travel assignments', 'temporary nurse practitioner positions', 'locum np jobs'],
     openGraph: {
-      title: `${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs - Travel Assignments`,
+      title: `${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs | Travel Assignments`,
       description: `Browse locum tenens and travel ${brand.niche.descriptor} positions. Premium pay, housing, and malpractice coverage.`,
       type: 'website',
       images: [{
@@ -131,11 +131,11 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
   const locumFaqs = [
     {
       question: `What is a locum tenens ${brand.niche.short}?`,
-      answer: `A locum tenens ${brand.niche.short} is a ${brand.niche.descriptor} who fills temporary staffing needs at healthcare facilities. Assignments typically last 2-13 weeks and often include housing stipends, travel reimbursement, malpractice coverage, and premium hourly rates.`
+      answer: `A locum tenens ${brand.niche.short} is a ${brand.niche.descriptor} who fills temporary staffing needs at healthcare facilities. Assignments typically last 2 to 13 weeks and often include housing stipends, travel reimbursement, malpractice coverage, and premium hourly rates.`
     },
     {
       question: `How much do locum tenens ${brand.niche.short}s earn?`,
-      answer: `Locum ${brand.niche.short} assignments commonly pay $60-$150+ per hour depending on specialty, state, and setting — usually well above comparable permanent W-2 rates. Many assignments add tax-free housing stipends, travel reimbursement, and paid malpractice coverage on top of the hourly rate.`
+      answer: `Locum ${brand.niche.short} assignments commonly pay $60 to $150+ per hour depending on specialty, state, and setting, usually well above comparable permanent W-2 rates. Many assignments add tax-free housing stipends, travel reimbursement, and paid malpractice coverage on top of the hourly rate.`
     },
     {
       question: `Do locum tenens ${brand.niche.short}s get benefits?`,
@@ -147,7 +147,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
     },
     {
       question: `Is locum tenens work good for new grad ${brand.niche.short}s?`,
-      answer: "Locum tenens can work for new grads who are confident in their clinical skills, but most agencies prefer 1-2 years of experience. New grads may find short-term assignments challenging due to rapid onboarding. Consider starting with permanent positions that offer mentorship before transitioning to locum work."
+      answer: "Locum tenens can work for new graduates who are confident in their clinical skills, but most agencies prefer 1 to 2 years of experience. New graduates may find short-term assignments challenging because of rapid onboarding. Consider starting with permanent positions that offer mentorship before transitioning to locum work."
     },
   ];
 
@@ -208,7 +208,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
         indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('locum-tenens') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Locum Tenens"
         headlineLine2={brand.niche.short}
-        headlineSub="jobs, travel & flexibility."
+        headlineSub="jobs with travel and flexibility."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$120K+', label: 'median salary' },
@@ -317,7 +317,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Premium Rates</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  Earn $60–$150+/hr with overtime premiums and completion bonuses.
+                  Earn $60 to $150+ per hour with overtime premiums and completion bonuses.
                 </p>
               </div>
             </div>
@@ -336,7 +336,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_locum_calendar.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Flexible Terms</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Choose 2-week to 12-month assignments based on your preference.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Choose 2-week to 12-month assignments based on your preferences.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_locum_map.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -349,7 +349,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Compensation</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Locum {brand.niche.short}s {stats.medianSalaryK > 0 ? `post a median of $${stats.medianSalaryK}k annualized on current listings` : 'often out-earn comparable permanent roles'} — plus tax-free housing stipends and paid malpractice coverage.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Locum {brand.niche.short}s {stats.medianSalaryK > 0 ? `post a median of $${stats.medianSalaryK}k annualized on current listings` : 'often out-earn comparable permanent roles'}, plus tax-free housing stipends and paid malpractice coverage.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
@@ -394,17 +394,17 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
               <div key="02" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>02</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Credentialing Docs</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Keep CV, references, certifications, and malpractice history ready for quick credentialing.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Keep your CV, references, certifications, and malpractice history ready for quick credentialing.</p>
               </div>
               <div key="03" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>03</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Tax Planning</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Set up tax-home strategy and track travel expenses for significant deductions.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Set up a tax-home strategy and track travel expenses for significant deductions.</p>
               </div>
               <div key="04" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>04</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Housing Stipend</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Negotiate housing stipend vs agency-provided housing based on assignment location.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Negotiate a housing stipend versus agency-provided housing based on the assignment location.</p>
               </div>
           </div>
         </section>

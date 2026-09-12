@@ -2,6 +2,7 @@
 
 import { brand } from '@/config/brand';
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -41,6 +42,14 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+  // The "Create alert" control renders INTO the nav bar (components/Header.tsx
+  // exposes #nav-alert-slot; owner direction 2026-09-12). The button stays
+  // this page's — same handler, same "only when filters are active" rule,
+  // same focus restore from the modal — it is just portaled up there.
+  const [navAlertSlot, setNavAlertSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setNavAlertSlot(document.getElementById('nav-alert-slot'));
+  }, []);
   const [showToast, setShowToast] = useState(false);
   const [currentFilters, setCurrentFilters] = useState<RecruitmentFilterState>(DEFAULT_FILTERS);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -349,7 +358,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                 >{brand.niche.long} &amp; APRN Jobs</h1>
                 <p style={{
                   fontSize: '13px', color: '#6B7F8A', margin: 0, fontWeight: 500,
-                }}>Browse fresh {brand.niche.short} roles across the US — telehealth, on-site, hybrid, and locum.</p>
+                }}>Browse fresh {brand.niche.short} roles across the US: telehealth, on-site, hybrid, and locum.</p>
               </header>
               {/* Empty right column mirrors the breadcrumb column so the
                   middle <header> stays optically centered. */}
@@ -393,23 +402,25 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
               onClose={() => setIsMobileFilterOpen(false)}
             />
 
-            {/* Create Alert Button (shown when filters are active) */}
-            {activeFilterCount > 0 && (
-              <div style={{ marginBottom: '20px' }}>
-                <button
-                  onClick={() => setIsAlertModalOpen(true)}
-                  className="jp-alert-btn"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    padding: '10px 20px', borderRadius: '16px',
-                    fontSize: '13px', fontWeight: 600,
-                    color: '#9D174D',
-                    backgroundColor: '#FBCFE8',
-                    border: '1px solid rgba(255,255,255,0.5)',
-                    cursor: 'pointer', transition: 'all 0.2s',
-                    boxShadow: '5px 5px 12px rgba(190,24,93,0.12), -3px -3px 8px rgba(255,255,255,0.8), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.03)',
-                  }}
-                >
+            {/* Create Alert control — shown when filters are active, rendered into
+                the nav bar's slot (see navAlertSlot above). Accessible name is
+                unchanged; the visible label is short so it fits the bar. */}
+            {activeFilterCount > 0 && navAlertSlot && createPortal(
+              <button
+                onClick={() => setIsAlertModalOpen(true)}
+                className="jp-alert-btn"
+                aria-label="Create Alert for This Search"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  padding: '7px 14px 7px 8px', borderRadius: '14px',
+                  fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap',
+                  color: '#9D174D',
+                  backgroundColor: '#FBCFE8',
+                  border: '1px solid rgba(255,255,255,0.6)',
+                  cursor: 'pointer', transition: 'all 0.2s',
+                  boxShadow: '3px 3px 8px rgba(190,24,93,0.12), -2px -2px 5px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)',
+                }}
+              >
                   {/* Bell icon pebble */}
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -422,9 +433,9 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
                     </svg>
                   </span>
-                  Create Alert for This Search
-                </button>
-              </div>
+                <span className="jp-alert-label">Create alert</span>
+              </button>,
+              navAlertSlot,
             )}
 
             {/* Results Count, Sort, and View Toggle — stays mounted during
@@ -473,7 +484,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                         onChange={(e) => setAiQuery(e.target.value)}
                         autoComplete="off"
                         aria-label="Describe the role you want"
-                        title='Describe a role in your own words — e.g. "telehealth child psychiatry, west coast"'
+                        title='Describe a role in your own words, for example "telehealth child psychiatry, west coast"'
                         className="hero-search-input"
                         style={{ boxShadow: 'none', outline: 'none', border: 'none', background: 'transparent', width: '100%', fontSize: '0.9rem', color: '#1f2937', textAlign: 'left' }}
                         onFocus={(e) => { e.target.style.boxShadow = 'none'; e.target.style.outline = 'none'; }}
@@ -622,7 +633,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                     {!aiLoading && !aiError && aiResults !== null && (
                       <>
                         Showing <strong>relevant matches</strong> for <strong>&ldquo;{aiSubmittedQuery}&rdquo;</strong>
-                        {aiDegraded && <span style={{ color: '#92400e', marginLeft: 6 }}>(degraded — keyword fallback)</span>}
+                        {aiDegraded && <span style={{ color: '#92400e', marginLeft: 6 }}>(degraded: keyword fallback)</span>}
                       </>
                     )}
                   </p>
@@ -964,7 +975,12 @@ function LoadingFallback() {
 
 /**
  * StickyFilterSidebar — JS-based fixed sidebar that stays pinned while scrolling.
- * Dynamically shrinks when the footer enters the viewport to avoid overlap.
+ * Dynamically shrinks when the footer enters the viewport to avoid overlap,
+ * and scrolls away with the results row once the row's bottom edge passes it
+ * (owner bug report 2026-09-12: the panel kept floating over the hub
+ * editorial + FAQ that render below the results). `position: sticky` is not
+ * an option here — html/body carry overflow-x: hidden (app/globals.css),
+ * which turns them into the sticky containing block and disables it.
  */
 function StickyFilterSidebar({ children }: { children: React.ReactNode }) {
   const placeholderRef = useRef<HTMLDivElement>(null);
@@ -972,6 +988,7 @@ function StickyFilterSidebar({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [leftPx, setLeftPx] = useState(0);
   const [maxH, setMaxH] = useState('calc(100vh - 120px)');
+  const [topPx, setTopPx] = useState(110);
 
   const SIDEBAR_TOP = 110; // px from top of viewport
   const FOOTER_GAP = 24;   // px gap between sidebar bottom and footer top
@@ -1003,9 +1020,26 @@ function StickyFilterSidebar({ children }: { children: React.ReactNode }) {
       }
     };
 
+    // Pin at SIDEBAR_TOP while the results row is on screen; once the row's
+    // bottom edge climbs above (SIDEBAR_TOP + panel height), ride up with it
+    // so the panel never paints over whatever renders after the row. The
+    // placeholder reserves the panel's height in the flow, so a short result
+    // list can never push the panel above its own row.
+    const clampToRow = () => {
+      const placeholder = placeholderRef.current;
+      const panel = sidebarRef.current;
+      const row = placeholder?.parentElement;
+      if (!placeholder || !panel || !row) return;
+      const panelH = panel.offsetHeight;
+      placeholder.style.minHeight = `${panelH}px`;
+      const rowBottom = row.getBoundingClientRect().bottom;
+      setTopPx(Math.min(SIDEBAR_TOP, Math.round(rowBottom - panelH)));
+    };
+
     const onScrollOrResize = () => {
       measure();
       adjustForFooter();
+      clampToRow();
     };
 
     // Wait for layout to fully settle after hydration
@@ -1035,7 +1069,7 @@ function StickyFilterSidebar({ children }: { children: React.ReactNode }) {
         className="hidden lg:block"
         style={{
           position: 'fixed',
-          top: '110px',
+          top: `${topPx}px`,
           left: `${leftPx}px`,
           width: '300px',
           maxHeight: maxH,

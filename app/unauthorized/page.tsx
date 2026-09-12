@@ -52,8 +52,8 @@ export default function UnauthorizedPage() {
                 </h1>
                 
                 <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, maxWidth: '400px', margin: '0 auto 30px' }}>
-                    This page belongs to a different account or requires permissions your
-                    account doesn&apos;t have. If you think that&apos;s wrong, sign in with the
+                    This page belongs to a different account or requires permissions that your
+                    account does not have. If you believe this is an error, sign in with the
                     account that owns it or <Link href="/contact" style={{ color: '#BE185D', fontWeight: 600 }}>contact support</Link>.
                 </p>
 

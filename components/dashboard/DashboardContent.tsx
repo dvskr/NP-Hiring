@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { normalizeDisplaySalary } from '@/lib/salary-display';
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -211,7 +212,7 @@ function CompactJobCard({ job, extra }: { job: DashboardJob; extra?: React.React
                         <>
                             <span style={{ opacity: 0.4 }}>·</span>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                <DollarSign size={11} /> {job.displaySalary}
+                                <DollarSign size={11} /> {normalizeDisplaySalary(job.displaySalary)}
                             </span>
                         </>
                     )}
@@ -333,7 +334,7 @@ function FeedbackRatingCard() {
                     <textarea
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Tell us more (optional)..."
+                        placeholder="Tell us more (optional)"
                         rows={2}
                         style={{
                             width: '100%', padding: '10px 12px', fontSize: '13px',
@@ -426,7 +427,7 @@ function TestimonialCard({ firstName }: { firstName: string | null }) {
                 Share Your Story
             </h3>
             <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 12px', lineHeight: 1.4 }}>
-                {firstName ? `${firstName}, your` : 'Your'} experience matters! Help other {brand.niche.short}s discover opportunities.
+                {firstName ? `${firstName}, your` : 'Your'} experience matters. Help other {brand.niche.short}s discover opportunities.
             </p>
 
             <textarea
@@ -460,7 +461,7 @@ function TestimonialCard({ firstName }: { firstName: string | null }) {
                     onChange={(e) => setConsent(e.target.checked)}
                     style={{ marginTop: '2px', accentColor: '#BE185D' }}
                 />
-                I consent to my review being featured publicly on the website
+                I consent to my review being featured publicly on the website.
             </label>
 
             {consent && (
@@ -563,11 +564,11 @@ export default function DashboardContent() {
 
             if (res.status === 401) { router.push('/login'); return }
             if (res.status === 403) { router.push('/'); return }
-            if (!res.ok) throw new Error('Failed to load dashboard')
+            if (!res.ok) throw new Error('Failed to load the dashboard.')
 
             setData(await res.json())
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Something went wrong')
+            setError(err instanceof Error ? err.message : 'Something went wrong.')
         } finally {
             setLoading(false)
             setHasFetched(true)
@@ -600,7 +601,7 @@ export default function DashboardContent() {
         return (
             <div style={{ maxWidth: '960px', margin: '0 auto', padding: '80px 20px', textAlign: 'center' }}>
                 <p style={{ color: '#EF4444', fontSize: '16px', marginBottom: '12px' }}>
-                    {error || 'Failed to load dashboard'}
+                    {error || 'Failed to load the dashboard.'}
                 </p>
                 <button
                     onClick={() => { setLoading(true); setError(null); setHasFetched(false) }}
@@ -687,7 +688,7 @@ export default function DashboardContent() {
                 <p style={{
                     fontSize: '14px', color: '#8A9BA6', margin: 0,
                 }}>
-                    — Here&apos;s what&apos;s happening with your job search.
+                    Here&apos;s what&apos;s happening with your job search.
                 </p>
             </div>
 
@@ -784,7 +785,7 @@ export default function DashboardContent() {
                                 <Link
                                     key={item.label}
                                     href={`/settings?tab=${item.fieldId.replace(/^tab-/, '')}`}
-                                    title={`Go to settings — ${item.label}`}
+                                    title={`Go to settings: ${item.label}`}
                                     style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '4px',
                                         fontSize: '12px', color: '#6B7F8A',
@@ -836,10 +837,10 @@ export default function DashboardContent() {
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <p style={{ fontSize: '12px', fontWeight: 700, color: '#1A2E35', margin: 0, lineHeight: 1.4 }}>
-                                    Skip the form — upload your resume
+                                    Skip the form and upload your resume
                                 </p>
                                 <p style={{ fontSize: '11px', color: '#4A5E6A', margin: '1px 0 0', lineHeight: 1.4 }}>
-                                    AI extracts your licenses, certifications, education and work history. You review before anything saves.
+                                    AI extracts your licenses, certifications, education, and work history. You review everything before anything is saved.
                                 </p>
                             </div>
                             <ArrowRight size={14} style={{ color: '#8B5CF6', flexShrink: 0 }} />
@@ -963,7 +964,7 @@ export default function DashboardContent() {
                                 No applications yet
                             </p>
                             <p style={{ fontSize: '13px', color: '#8A9BA6', marginBottom: '12px' }}>
-                                Applied jobs will appear here
+                                Jobs you apply to will appear here.
                             </p>
                             <Link href="/jobs" style={{ ...viewAllLink, fontSize: '14px' }}>
                                 Start browsing jobs <ArrowRight size={14} />
@@ -1025,7 +1026,7 @@ export default function DashboardContent() {
                                 No saved jobs
                             </p>
                             <p style={{ fontSize: '13px', color: '#8A9BA6', marginBottom: '12px' }}>
-                                Bookmark jobs below to save them
+                                Bookmark jobs below to save them here.
                             </p>
                             <Link href="/jobs" style={{ ...viewAllLink, fontSize: '14px' }}>
                                 Browse jobs <ArrowRight size={14} />
@@ -1049,7 +1050,7 @@ export default function DashboardContent() {
                             Recommended for you
                         </h2>
                         <p style={{ fontSize: '13px', color: '#8A9BA6', margin: 0 }}>
-                            Based on your profile and preferences
+                            Based on your profile and preferences.
                         </p>
                     </div>
                     <Link href="/jobs" style={viewAllLink}>
@@ -1061,7 +1062,7 @@ export default function DashboardContent() {
                     <div style={{ ...cardBase, textAlign: 'center', padding: '48px 24px' }}>
                         <Briefcase size={32} style={{ color: '#A8C5B8', margin: '0 auto 12px' }} />
                         <p style={{ fontSize: '14px', color: '#6B7F8A' }}>
-                            No recommendations yet — complete your profile preferences
+                            No recommendations yet. Complete your profile preferences.
                         </p>
                     </div>
                 ) : (
@@ -1144,7 +1145,7 @@ export default function DashboardContent() {
                             You have {unreadMessages} unread message{unreadMessages > 1 ? 's' : ''}
                         </p>
                         <p style={{ fontSize: '12px', color: '#6B7F8A', margin: 0 }}>
-                            From employers interested in your profile
+                            From employers interested in your profile.
                         </p>
                     </div>
                     <ArrowRight size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
@@ -1246,7 +1247,7 @@ export default function DashboardContent() {
                     <div style={{ padding: '16px 18px' }}>
                         <h3 style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 6px' }}>Career Resources</h3>
                         <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 8px', lineHeight: 1.5 }}>
-                            50-state licensure guides, interview prep, career growth.
+                            50-state licensure guides, interview preparation, and career growth.
                         </p>
                         <Link href="/resources" className="jc-view-btn" style={{ fontSize: '12px', fontWeight: 600, color: '#BE185D', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             Explore <ArrowRight size={11} />

@@ -114,12 +114,12 @@ export default function SignUpForm() {
     setError(null);
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError('Passwords do not match.');
       setLoading(false);
       return;
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError('Password must be at least 8 characters long.');
       setLoading(false);
       return;
     }
@@ -224,7 +224,7 @@ export default function SignUpForm() {
         }
       }
     } catch {
-      setError('An unexpected error occurred');
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -258,20 +258,20 @@ export default function SignUpForm() {
             Check your email
           </h3>
           <p style={{ fontSize: '14px', color: '#6B7F8A', margin: 0 }}>
-            We&apos;ve sent a confirmation link to <strong>{email}</strong>
+            We have sent a confirmation link to <strong>{email}</strong>.
           </p>
           <p style={{ fontSize: '12px', color: '#4B5E68', margin: 0 }}>
-            Check spam/junk if you don&apos;t see it within a few minutes.
+            Check your spam or junk folder if you do not see it within a few minutes.
           </p>
           <div style={{ marginTop: '4px' }}>
-            {resendStatus === 'sent' && <p style={{ fontSize: '12px', color: '#059669' }}>✓ Confirmation email resent!</p>}
-            {resendStatus === 'error' && <p style={{ fontSize: '12px', color: '#DC2626' }}>Failed to resend.</p>}
+            {resendStatus === 'sent' && <p style={{ fontSize: '12px', color: '#059669' }}>✓ Confirmation email resent.</p>}
+            {resendStatus === 'error' && <p style={{ fontSize: '12px', color: '#DC2626' }}>Unable to resend. Please try again.</p>}
             <button type="button" onClick={handleResendConfirmation}
               disabled={resendCooldown > 0 || resendStatus === 'sending'}
               style={{ fontSize: '13px', fontWeight: 600, color: accent, background: 'none', border: 'none', cursor: 'pointer' }}>
               {resendStatus === 'sending' ? 'Sending...' :
                resendCooldown > 0 ? `Resend in ${resendCooldown}s` :
-               "Didn't receive it? Resend"}
+               "Did not receive it? Resend"}
             </button>
           </div>
           <Link href="/login" style={{ ...linkStyle, fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px', color: accent }}>
@@ -296,8 +296,8 @@ export default function SignUpForm() {
       </h1>
       <p style={{ fontSize: '14px', color: '#6B7F8A', marginBottom: '14px', textAlign: 'center' }}>
         {role === 'employer'
-          ? `Start posting jobs and hiring qualified ${brand.niche.short}s`
-          : `Join thousands of ${brand.niche.short}s finding their perfect role`}
+          ? `Start posting jobs and hiring qualified ${brand.niche.short}s.`
+          : `Join thousands of ${brand.niche.short}s finding their perfect role.`}
       </p>
 
       {/* ═══ ROLE TOGGLE ═══ */}
@@ -405,7 +405,7 @@ export default function SignUpForm() {
           {/* Email */}
           <div>
             <label htmlFor="signup-email" style={labelStyle}>
-              {role === 'employer' ? 'Work Email' : 'Email address'}
+              {role === 'employer' ? 'Work email' : 'Email address'}
             </label>
             {role === 'employer' ? (
               <div style={{ position: 'relative' }}>
@@ -435,7 +435,7 @@ export default function SignUpForm() {
                 onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password"
                 style={inputWithRightIcon} placeholder="Minimum 8 characters" />
               <button type="button" onClick={() => setShowPassword(!showPassword)} style={eyeBtnStyle}
-                aria-label={showPassword ? 'Hide' : 'Show'}>
+                aria-label={showPassword ? 'Hide password' : 'Show password'}>
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
@@ -449,7 +449,7 @@ export default function SignUpForm() {
                 onChange={(e) => setConfirmPassword(e.target.value)} required autoComplete="new-password"
                 style={inputWithRightIcon} placeholder="Re-enter your password" />
               <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={eyeBtnStyle}
-                aria-label={showConfirmPassword ? 'Hide' : 'Show'}>
+                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
@@ -482,7 +482,7 @@ export default function SignUpForm() {
                 <input type="checkbox" checked={newsletterOptIn} onChange={(e) => setNewsletterOptIn(e.target.checked)}
                   style={{ accentColor: '#BE185D', width: '15px', height: '15px', flexShrink: 0 }} />
                 <span style={{ fontSize: '13px', color: '#4B5E68' }}>
-                  Send me career tips, salary insights &amp; market updates
+                  Send me career tips, salary insights, and market updates.
                 </span>
               </label>
             </div>
@@ -492,7 +492,7 @@ export default function SignUpForm() {
                 <input type="checkbox" checked={newsletterOptIn} onChange={(e) => setNewsletterOptIn(e.target.checked)}
                   style={{ accentColor: '#B45309', width: '15px', height: '15px', marginTop: '2px', flexShrink: 0 }} />
                 <span style={{ fontSize: '13px', color: '#4B5E68' }}>
-                  Send me hiring tips, salary benchmarks &amp; {brand.niche.short} market insights
+                  Send me hiring tips, salary benchmarks, and {brand.niche.short} market insights.
                 </span>
               </label>
             </div>
@@ -503,7 +503,7 @@ export default function SignUpForm() {
             {loading ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> Creating account...</>
             ) : (
-              <>{role === 'employer' ? 'Create Employer Account' : 'Create account'} <ArrowRight className="w-4 h-4" /></>
+              <>{role === 'employer' ? 'Create employer account' : 'Create account'} <ArrowRight className="w-4 h-4" /></>
             )}
           </button>
         </form>

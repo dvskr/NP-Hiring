@@ -98,17 +98,17 @@ export async function generateMetadata({ searchParams }: CompaniesPageProps): Pr
   const page = parsePageParam((await searchParams).page);
   const totalPages = totalPageCount(directoryCount);
   const currentPage = Math.min(page, totalPages);
-  const pageSuffix = currentPage > 1 ? ` — Page ${currentPage} of ${totalPages}` : '';
+  const pageSuffix = currentPage > 1 ? ` (Page ${currentPage} of ${totalPages})` : '';
   const companyCountDisplay = totalCompanies > 1000
     ? `${(Math.floor(totalCompanies / 100) * 100).toLocaleString()}+`
     : totalCompanies.toLocaleString();
 
   return {
-    title: `${brand.niche.short} Employers — Companies Hiring ${brand.niche.long}s${pageSuffix}`,
+    title: `${brand.niche.short} Employers: Companies Hiring ${brand.niche.long}s${pageSuffix}`,
     description:
       `Browse companies actively hiring ${brand.niche.short}s. See open positions, salary data, and apply directly. Updated daily with ${companyCountDisplay} employers nationwide.`,
     openGraph: {
-      title: `Companies Hiring ${brand.niche.short}s — ${brand.name}`,
+      title: `Companies Hiring ${brand.niche.short}s | ${brand.name}`,
       description: `Explore employers with open ${brand.niche.descriptor} positions.`,
       url: `${brand.baseUrl}${buildCompaniesPath(currentPage)}`,
       type: 'website',
@@ -315,7 +315,7 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
           <p style={{ fontSize: '16px', color: '#5A4A42', maxWidth: '560px', margin: '0 auto', lineHeight: 1.6 }}>
             {/* Honest range label — never claims to show more than it renders. */}
             Showing {pageRangeLabel(currentPage, listed.length, totalCompanies)} employers with active{' '}
-            {brand.niche.descriptor} positions. Jump to a letter, or browse the full A–Z list below.
+            {brand.niche.descriptor} positions. Jump to a letter, or browse the full A to Z list below.
           </p>
         </section>
 
@@ -330,10 +330,10 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
           <div style={{ fontSize: '15px', color: '#3D3530', lineHeight: 1.75 }}>
             <p style={{ marginBottom: '16px' }}>
               Every employer below has at least one currently published {brand.niche.short} role on
-              {' '}{brand.name}. The list is a mix of <strong>direct employers</strong> —
-              health systems, community health centers, Federally
+              {' '}{brand.name}. The list is a mix of <strong>direct employers</strong>, which
+              include health systems, community health centers, Federally
               Qualified Health Centers (FQHCs), VA medical centers, telehealth
-              platforms, and private practices — alongside <strong>staffing agencies</strong>{' '}
+              platforms, and private practices, alongside <strong>staffing agencies</strong>{' '}
               that place {brand.niche.short}s into locum and travel assignments. We pull active
               postings from each employer&apos;s career pages and ATS feeds twice
               daily, so the company list reflects who is genuinely hiring now, not
@@ -344,7 +344,7 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
               practical: <strong>practice authority</strong> in the states they hire
               for (full vs. reduced vs. restricted, plus Nurse Licensure Compact
               membership), <strong>caseload structure</strong> (15-minute follow-ups
-              vs. 30-60 minute comprehensive visits), <strong>productivity expectations</strong>{' '}
+              vs. 30 to 60 minute comprehensive visits), <strong>productivity expectations</strong>{' '}
               (RVU targets, pace), <strong>collaborative-physician requirements</strong>{' '}
               if your state needs them, and what they cover on{' '}
               <strong>malpractice, CME, and EMR/billing infrastructure</strong>.
@@ -353,11 +353,11 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
               widely.
             </p>
             <p style={{ marginBottom: 0 }}>
-              Compensation patterns differ by employer type too. VA roles bundle
-              federal pension + EDRP loan repayment up to $200K; FQHCs and CMHCs
+              Compensation patterns differ by employer type too. VA roles bundle a
+              federal pension with EDRP loan repayment up to $200K; FQHCs and CMHCs
               qualify for NHSC repayment; telehealth platforms typically offer the
               highest hourly rates but no benefits; hospital systems offer signing
-              bonuses + relocation. Open one of the listings below to see specific
+              bonuses and relocation. Open one of the listings below to see specific
               roles, compensation ranges, and apply paths for that employer.
             </p>
           </div>
@@ -393,7 +393,7 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
             id="a-z"
             style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, color: '#1A2E35', margin: '0 0 16px' }}
           >
-            All employers A–Z
+            All employers A to Z
           </h2>
 
           {/* Jump nav. Letters with no employers on this page render as plain

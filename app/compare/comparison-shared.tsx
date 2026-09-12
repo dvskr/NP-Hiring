@@ -105,7 +105,7 @@ export default function ComparisonPageBody({ profile }: ComparisonPageBodyProps)
                             Claims checked against {profile.competitorName}&apos;s own public pages on {COMPARE_REVIEW_DATE_LABEL}
                         </p>
                         <p className="text-lg text-pink-100">
-                            An honest comparison — including what {profile.competitorName} does better than we do.
+                            An honest comparison, including what {profile.competitorName} does better than we do.
                         </p>
                     </div>
                 </div>
@@ -167,8 +167,8 @@ export default function ComparisonPageBody({ profile }: ComparisonPageBodyProps)
                             </h2>
                             <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
                                 {profile.competitorName} figures are snapshots from {COMPARE_REVIEW_DATE_LABEL}.
-                                &ldquo;Not found on the pages we reviewed&rdquo; means exactly that — see the method note below,
-                                not a claim the capability does not exist anywhere.
+                                &ldquo;Not found on the pages we reviewed&rdquo; means exactly that (see the method note below);
+                                it is not a claim that the capability does not exist anywhere.
                             </p>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
@@ -205,7 +205,7 @@ export default function ComparisonPageBody({ profile }: ComparisonPageBodyProps)
                                                                 rel="nofollow noopener noreferrer"
                                                                 className="font-medium hover:underline whitespace-nowrap"
                                                                 style={{ color: 'var(--color-primary)' }}
-                                                                aria-label={`Source for ${profile.competitorName} — ${row.dimension}`}
+                                                                aria-label={`Source for ${profile.competitorName}: ${row.dimension}`}
                                                             >
                                                                 [source]
                                                             </a>
@@ -294,7 +294,7 @@ export default function ComparisonPageBody({ profile }: ComparisonPageBodyProps)
                                 the public pages listed below on {COMPARE_REVIEW_DATE_LABEL}. Counts and prices are snapshots
                                 from that date and will change. Claims we could not confirm that day were left out. Where a
                                 table cell says a capability was not found, that statement is scoped to these pages on that
-                                date — nothing more.
+                                date and nothing more.
                             </p>
                             <ul className="space-y-1 mb-4">
                                 {profile.pagesReviewed.map((page) => (
@@ -317,7 +317,7 @@ export default function ComparisonPageBody({ profile }: ComparisonPageBodyProps)
                                 the name is used only to identify the service being compared.
                             </p>
                             <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                                Spotted something outdated or wrong? Email{' '}
+                                If you spot something outdated or incorrect, email{' '}
                                 <a href={`mailto:${brand.email.press}`} className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>
                                     {brand.email.press}
                                 </a>{' '}
@@ -336,7 +336,7 @@ export default function ComparisonPageBody({ profile }: ComparisonPageBodyProps)
                             See the product for yourself
                         </h2>
                         <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-                            The fastest way to judge a job board is to use it — no account needed to browse.
+                            The fastest way to judge a job board is to use it. No account is needed to browse.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <Link

@@ -272,7 +272,7 @@ export default function MessagesPage() {
             const res = await fetch('/api/upload/message-attachment', { method: 'POST', body: formData });
             if (!res.ok) {
                 const data = await res.json();
-                notifyToast(data.error || 'Upload failed', 'error');
+                notifyToast(data.error || 'Upload failed.', 'error');
                 return;
             }
             const data = await res.json();
@@ -308,7 +308,7 @@ export default function MessagesPage() {
                 let data: { awaitingReply?: boolean; error?: string } | null = null;
                 try { data = await res.json(); } catch { /* non-JSON error body */ }
                 if (data?.awaitingReply) {
-                    showToast('⏳ Please wait for the employer to respond before sending another message');
+                    showToast('⏳ Please wait for the employer to respond before sending another message.');
                 } else {
                     setSendError(data?.error || 'Failed to send');
                 }
@@ -357,7 +357,7 @@ export default function MessagesPage() {
             const res = await fetch(`/api/conversations/${deleteModal.convId}/messages/${deleteModal.id}`, { method: 'DELETE' });
             if (!res.ok) {
                 const data = await res.json();
-                notifyToast(data.error || 'Failed to delete', 'error');
+                notifyToast(data.error || 'Failed to delete. Please try again.', 'error');
                 return;
             }
             const data = await res.json();
@@ -380,7 +380,7 @@ export default function MessagesPage() {
             const res = await fetch(`/api/conversations/${deleteModal.id}`, { method: 'DELETE' });
             if (!res.ok) {
                 const data = await res.json();
-                notifyToast(data.error || 'Failed to delete', 'error');
+                notifyToast(data.error || 'Failed to delete. Please try again.', 'error');
                 return;
             }
             // Remove from list
@@ -411,7 +411,7 @@ export default function MessagesPage() {
             });
             if (!res.ok) {
                 const data = await res.json();
-                notifyToast(data.error || 'Failed to edit', 'error');
+                notifyToast(data.error || 'Failed to edit. Please try again.', 'error');
                 return;
             }
             const data = await res.json();
@@ -1019,7 +1019,7 @@ export default function MessagesPage() {
                                                 }}>
                                                     <Clock size={16} style={{ color: '#F59E0B', flexShrink: 0 }} />
                                                     <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                                        Awaiting employer reply — you can respond after they message back
+                                                        Awaiting employer reply. You can respond after they message back.
                                                     </span>
                                                 </div>
                                             </div>
@@ -1067,7 +1067,7 @@ export default function MessagesPage() {
                                             border: '1px solid rgba(239,68,68,0.25)',
                                             fontSize: '13px', color: '#EF4444',
                                         }}>
-                                            <span style={{ flex: 1 }}>{sendError} — your message was not delivered.</span>
+                                            <span style={{ flex: 1 }}>{sendError}: your message was not delivered.</span>
                                             <button
                                                 onClick={handleSendReply}
                                                 disabled={sending}
@@ -1219,7 +1219,7 @@ export default function MessagesPage() {
                             {deleteModal.type === 'conversation'
                                 ? 'This conversation will be removed from your inbox. The other person will still be able to see it.'
                                 : deleteModal.isRead
-                                    ? 'This message has already been read. It will only be removed from your view — the recipient will still see it.'
+                                    ? 'This message has already been read. It will only be removed from your view; the recipient will still see it.'
                                     : "This message hasn't been read yet. It will be deleted for everyone."
                             }
                         </p>

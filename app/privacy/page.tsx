@@ -136,7 +136,7 @@ export default function PrivacyPage() {
 
           <h2 id="how-we-use-your-information" style={h2Style}>2. How We Use Your Information</h2>
           <ul style={ulStyle}>
-            <li style={liStyle}><strong>To send job alerts:</strong> Email notifications about jobs matching your criteria (only if you&apos;ve subscribed)</li>
+            <li style={liStyle}><strong>To send job alerts:</strong> Email notifications about jobs matching your criteria (only if you have subscribed)</li>
             <li style={liStyle}><strong>To process job postings:</strong> Publish and manage job listings from employers</li>
             <li style={liStyle}><strong>To improve our service:</strong> Analyze usage patterns to enhance user experience</li>
             <li style={liStyle}><strong>To communicate with you:</strong> Send confirmation emails, dashboard links, renewal reminders</li>
@@ -149,12 +149,12 @@ export default function PrivacyPage() {
           <h3 style={h3Style}>Service Providers (sub-processors)</h3>
           <p style={pStyle}>We use the following sub-processors to operate the service. Each receives only the data necessary for its specific function and is bound by a Data Processing Agreement. The complete current list with processing locations and DPA links is maintained at our <Link href="/sub-processors" style={{ color: '#BE185D', textDecoration: 'underline' }}>sub-processors page</Link>.</p>
           <ul style={ulStyle}>
-            <li style={liStyle}><strong>Vercel:</strong> Application hosting and performance telemetry (Speed Insights — only after analytics consent).</li>
+            <li style={liStyle}><strong>Vercel:</strong> Application hosting and performance telemetry (Speed Insights, enabled only after analytics consent).</li>
             <li style={liStyle}><strong>Supabase:</strong> Database, authentication, and file storage (resumes, profile assets).</li>
-            <li style={liStyle}><strong>Stripe:</strong> Payment processing for employer job postings (hosted Checkout — card data never touches our servers).</li>
+            <li style={liStyle}><strong>Stripe:</strong> Payment processing for employer job postings (hosted Checkout; card data never touches our servers).</li>
             <li style={liStyle}><strong>Resend:</strong> Transactional and marketing email delivery.</li>
             <li style={liStyle}><strong>Google Analytics 4:</strong> Aggregate site analytics. Loads only after explicit analytics consent. IP anonymization and Google Signals are disabled. We honor Global Privacy Control (GPC) signals.</li>
-            <li style={liStyle}><strong>Sentry:</strong> Application error monitoring (build-time wired; client-side reporting currently disabled).</li>
+            <li style={liStyle}><strong>Sentry:</strong> Application error monitoring (configured at build time; client-side reporting currently disabled).</li>
           </ul>
           <h3 style={h3Style}>Legal Requirements</h3>
           <p style={pStyle}>We may disclose your information if required to do so by law or in response to valid requests by public authorities.</p>
@@ -172,7 +172,7 @@ export default function PrivacyPage() {
           <h3 style={h3Style}>Local Storage</h3>
           <ul style={ulStyle}>
             <li style={liStyle}>Save your job searches and filters</li>
-            <li style={liStyle}>Remember jobs you&apos;ve saved or applied to</li>
+            <li style={liStyle}>Remember jobs you have saved or applied to</li>
             <li style={liStyle}>Store draft job posting data</li>
           </ul>
           <p style={pStyle}>You can control cookies through your browser settings. Disabling cookies may limit some features.</p>
@@ -222,9 +222,9 @@ export default function PrivacyPage() {
           <h2 id="data-retention" style={h2Style}>11. Data Retention</h2>
           <p style={pStyle}>We keep personal data only as long as necessary for the purpose for which it was collected, plus any retention required by law:</p>
           <ul style={ulStyle}>
-            <li style={liStyle}><strong>Active job seeker profile:</strong> retained while your account is active. Inactive accounts (no login for 24 months) are anonymized and resumes purged.</li>
+            <li style={liStyle}><strong>Active job seeker profile:</strong> retained while your account is active. Inactive accounts (no login for 24 months) are anonymized and their resumes are purged.</li>
             <li style={liStyle}><strong>Job applications:</strong> retained while the employer&apos;s job posting is active, plus 90 days for dispute resolution, then archived.</li>
-            <li style={liStyle}><strong>Employer postings &amp; billing records:</strong> retained 7 years to satisfy US tax and audit obligations.</li>
+            <li style={liStyle}><strong>Employer postings and billing records:</strong> retained 7 years to satisfy US tax and audit obligations.</li>
             <li style={liStyle}><strong>Email logs (deliverability):</strong> 90 days.</li>
             <li style={liStyle}><strong>Analytics events (Google Analytics):</strong> 14 months (the shortest retention setting GA4 allows).</li>
             <li style={liStyle}><strong>Account deletion:</strong> on request, we soft-delete immediately and hard-purge after a 30-day grace period during which the deletion can be reversed.</li>
@@ -232,7 +232,7 @@ export default function PrivacyPage() {
 
           <h2 id="automated-decisions-and-ai" style={h2Style}>12. Automated Decision-Making and AI</h2>
           <p style={pStyle}>We use a candidate-matching algorithm (an AI model) to suggest jobs that may be a good fit and to surface relevant applicants to employers. The output is a non-binding score; a human (the employer) makes the final hiring decision.</p>
-          <p style={pStyle}>Under GDPR Article 22 you have the right to obtain human review of any decision that is based solely on automated processing. Because our matching is decision-support, not decision-making, this rarely applies — but if you believe the algorithm has produced an unfair outcome, contact <a href={`mailto:${brand.email.privacy}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>{brand.email.privacy}</a> and we will review.</p>
+          <p style={pStyle}>Under GDPR Article 22 you have the right to obtain human review of any decision that is based solely on automated processing. Because our matching is decision support rather than decision making, this rarely applies. If you believe the algorithm has produced an unfair outcome, contact <a href={`mailto:${brand.email.privacy}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>{brand.email.privacy}</a> and we will review it.</p>
 
           <h2 id="sensitive-information" style={h2Style}>13. Sensitive Information</h2>
           <p style={pStyle}>Some fields in your profile are sensitive under GDPR Article 9 or treated as &quot;sensitive personal information&quot; under CPRA. We collect them only when you choose to provide them and only for the specific purpose described:</p>
@@ -256,7 +256,7 @@ export default function PrivacyPage() {
             We do not sell personal information for money. Loading analytics or advertising scripts may meet the
             broader CPRA definition of &quot;sharing&quot;. To opt out, click{' '}
             <Link href="/do-not-sell" style={{ color: '#BE185D', textDecoration: 'underline', fontWeight: 600 }}>Do Not Sell or Share My Personal Information</Link>{' '}
-            or send a Global Privacy Control signal from your browser — we honor both.
+            or send a Global Privacy Control signal from your browser. We honor both.
           </p>
           <p style={pStyle}>To exercise any other CCPA right, file a request through our <Link href="/data-request" style={{ color: '#BE185D', textDecoration: 'underline' }}>Data Request form</Link> or email <a href={`mailto:${brand.email.privacy}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>{brand.email.privacy}</a> with &quot;CCPA Request&quot; in the subject. We respond within 45 days.</p>
 
@@ -264,7 +264,7 @@ export default function PrivacyPage() {
           <ul style={ulStyle}>
             <li style={liStyle}>Access, rectification, erasure, restriction, data portability, and objection.</li>
             <li style={liStyle}>Withdrawal of consent at any time without affecting the lawfulness of processing carried out before withdrawal.</li>
-            <li style={liStyle}>The right to lodge a complaint with your supervisory authority — for the EU, find yours at <a href="https://edpb.europa.eu/about-edpb/about-edpb/members_en" target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'underline' }}>edpb.europa.eu</a>; for the UK, the Information Commissioner&apos;s Office at <a href="https://ico.org.uk" target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'underline' }}>ico.org.uk</a>.</li>
+            <li style={liStyle}>The right to lodge a complaint with your supervisory authority. For the EU, find yours at <a href="https://edpb.europa.eu/about-edpb/about-edpb/members_en" target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'underline' }}>edpb.europa.eu</a>; for the UK, contact the Information Commissioner&apos;s Office at <a href="https://ico.org.uk" target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'underline' }}>ico.org.uk</a>.</li>
           </ul>
           <p style={pStyle}>File requests through our <Link href="/data-request" style={{ color: '#BE185D', textDecoration: 'underline' }}>Data Request form</Link>. We respond within 30 days.</p>
 

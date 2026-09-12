@@ -6,10 +6,6 @@ import Link from 'next/link';
 import { Search, MapPin, Globe, Monitor, Clock, Clock3, GraduationCap } from 'lucide-react';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 
-interface HomepageHeroProps {
-    jobCountDisplay: string;
-}
-
 /* ── "No Sugar" palette (user-approved mock, 2026-07-09) ──
    Oxblood ink + berry accent + soft-green highlight on the site's cream.
    Flat surfaces, hard offset shadows, square corners — no clay here by
@@ -80,7 +76,7 @@ const fadeUp = {
     show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] } },
 };
 
-export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
+export default function HomepageHero() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
     const [locationQuery, setLocationQuery] = useState('');
@@ -165,7 +161,10 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
                     margin: '0 auto',
                 }}
             >
-                {/* ── Headline: REAL <role> JOBS. / REAL NUMBERS. ── */}
+                {/* ── Headline: <role> JOBS. ──
+                    Owner direction 2026-09-11: a single line — the cycling
+                    role stamp and the word "jobs." Nothing under it but the
+                    search bar. */}
                 <m.h1
                     variants={fadeUp}
                     className="font-heading"
@@ -177,10 +176,10 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
                         letterSpacing: '-0.01em',
                         textTransform: 'uppercase',
                         color: OXBLOOD,
-                        margin: 0,
+                        /* headline sits straight on the search bar now — no subline */
+                        margin: '0 0 36px',
                     }}
                 >
-                    Real{' '}
                     <span
                         style={{
                             background: BERRY,
@@ -192,35 +191,9 @@ export default function HomepageHero({ jobCountDisplay }: HomepageHeroProps) {
                     >
                         {/* key remount re-fires the stamp animation each cycle */}
                         <span key={stampedRole} className="ns-stamp">{stampedRole}</span>
-                        {' '}jobs.
                     </span>
-                    <br />
-                    Real{' '}
-                    <span
-                        style={{
-                            background: SOFT_GREEN,
-                            color: OXBLOOD,
-                            padding: '0 12px',
-                            display: 'inline-block',
-                            transform: 'rotate(1deg)',
-                        }}
-                    >
-                        numbers.
-                    </span>
+                    {' '}jobs.
                 </m.h1>
-
-                {/* ── Subline ── */}
-                <m.p
-                    variants={fadeUp}
-                    style={{
-                        fontSize: '16px',
-                        fontWeight: 600,
-                        color: OXBLOOD,
-                        margin: '26px 0 32px',
-                    }}
-                >
-                    {jobCountDisplay} openings. Every specialty. Zero &ldquo;competitive pay&rdquo; nonsense.
-                </m.p>
 
                 {/* ── Search — flat, hard-shadowed ── */}
                 <m.form

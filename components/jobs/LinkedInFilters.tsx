@@ -421,7 +421,7 @@ export default function LinkedInFilters() {
     if (typeof filters.minYearsExperience === 'number') {
       pills.push({
         key: 'minYearsExperience',
-        label: `${filters.minYearsExperience}+ yrs exp`,
+        label: `${filters.minYearsExperience}+ years of experience`,
         onRemove: () => setSingleFilter('minYearsExperience', null),
       });
     }
@@ -433,7 +433,7 @@ export default function LinkedInFilters() {
       });
     }
     if (filters.postedWithin) {
-      const labels: Record<string, string> = { '24h': 'Past 24h', '3d': 'Past 3 days', '7d': 'Past week', '30d': 'Past month' };
+      const labels: Record<string, string> = { '24h': 'Past 24 hours', '3d': 'Past 3 days', '7d': 'Past week', '30d': 'Past month' };
       pills.push({
         key: 'postedWithin',
         label: labels[filters.postedWithin] || filters.postedWithin,
@@ -723,8 +723,8 @@ export default function LinkedInFilters() {
                 <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '6px 6px 0', lineHeight: 1.4 }}>
                   {unclassifiedCount.toLocaleString()}{' '}
                   {unclassifiedCount === 1 ? 'job is' : 'jobs are'} from employers
-                  we haven&rsquo;t classified yet. Picking a type hides them
-                  &mdash; not classified doesn&rsquo;t mean staffing agency.
+                  we have not classified yet. Selecting a type hides them;
+                  not classified does not mean staffing agency.
                 </p>
               )}
             </FilterSection>
@@ -793,7 +793,7 @@ export default function LinkedInFilters() {
                 Your experience
               </p>
               <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '0 6px 8px', lineHeight: 1.4 }}>
-                Pick your years — we&rsquo;ll show the roles you qualify for.
+                Select your years of experience and we will show the roles you qualify for.
               </p>
               <CheckboxFilter
                 label="I have 1+ years"

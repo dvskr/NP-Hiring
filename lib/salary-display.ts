@@ -1,8 +1,8 @@
 /**
  * Generate user-friendly salary display string
  * Examples:
- *  - "$145-$200/hr"
- *  - "$150k-$180k/yr"
+ *  - "$145 to $200/hr"
+ *  - "$150k to $180k/yr"
  *  - "$150k/yr"
  *  - "Competitive"
  */
@@ -23,7 +23,7 @@ export function formatDisplaySalary(
     const hourlyMax = normalizedMax ? Math.round(normalizedMax / 2080) : null;
     
     if (hourlyMin && hourlyMax && hourlyMin !== hourlyMax) {
-      return `$${hourlyMin}-$${hourlyMax}/hr`;
+      return `$${hourlyMin} to $${hourlyMax}/hr`;
     } else if (hourlyMax) {
       return `$${hourlyMax}/hr`;
     } else if (hourlyMin) {
@@ -40,7 +40,7 @@ export function formatDisplaySalary(
   };
   
   if (normalizedMin && normalizedMax && normalizedMin !== normalizedMax) {
-    return `${formatAnnual(normalizedMin)}-${formatAnnual(normalizedMax)}/yr`;
+    return `${formatAnnual(normalizedMin)} to ${formatAnnual(normalizedMax)}/yr`;
   } else if (normalizedMax) {
     return `${formatAnnual(normalizedMax)}/yr`;
   } else if (normalizedMin) {
@@ -48,6 +48,19 @@ export function formatDisplaySalary(
   }
   
   return null;
+}
+
+/**
+ * Stored displaySalary strings written by earlier ingests join the two ends
+ * of a range with a hyphen or a dash ("$112k-$140k/yr", "$58k – $75k").
+ * Owner direction (2026-09-12): no dashes in visible text, so every render
+ * point passes the stored string through this before printing it. New
+ * ingests already write " to "; the helper is idempotent on those. Single
+ * values ("$150k/yr", "$60/hr+") pass through untouched.
+ */
+export function normalizeDisplaySalary(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return value.replace(/(\$?\d[\d,.]*[kK]?)\s*[-\u2013\u2014]\s*(?=\$?\d)/g, '$1 to ');
 }
 
 /**
@@ -61,6 +74,7 @@ export function formatSalaryWithEstimate(
     return 'Competitive';
   }
   
-  return isEstimated ? `~${displaySalary}` : displaySalary;
+  const shown = normalizeDisplaySalary(displaySalary) ?? displaySalary;
+  return isEstimated ? `~${shown}` : shown;
 }
 

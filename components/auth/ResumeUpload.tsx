@@ -104,7 +104,7 @@ export default function ResumeUpload({
 
     /* client‑side validation */
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setError('Invalid file type. Please upload a PDF or Word document (.pdf, .doc, .docx)')
+      setError('Invalid file type. Please upload a PDF or Word document (.pdf, .doc, .docx).')
       return
     }
     if (file.size > MAX_SIZE) {
@@ -134,7 +134,7 @@ export default function ResumeUpload({
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || 'Upload failed')
+        throw new Error(data.error || 'Upload failed.')
       }
 
       const { url, path } = await res.json()
@@ -215,7 +215,7 @@ export default function ResumeUpload({
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok || !body?.parsed) {
-        const baseMsg = body?.error || `Failed to read resume (HTTP ${res.status})`
+        const baseMsg = body?.error || `Failed to read the resume (HTTP ${res.status}).`
         // Append underlying detail when present so the user (and we, in
         // bug reports) see exactly what extraction failed and why,
         // rather than a generic "try a text-based PDF" line.
@@ -228,7 +228,7 @@ export default function ResumeUpload({
       // resume…" badge should disappear without waiting for an apply.
       onAutofillApplied?.()
     } catch (err: unknown) {
-      setReviewError(err instanceof Error ? err.message : 'Failed to read resume')
+      setReviewError(err instanceof Error ? err.message : 'Failed to read the resume.')
     } finally {
       setReviewLoading(false)
     }
@@ -250,7 +250,7 @@ export default function ResumeUpload({
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body?.error || `Failed to apply (HTTP ${res.status})`)
+        throw new Error(body?.error || `Failed to apply the autofill (HTTP ${res.status}).`)
       }
       setReviewOpen(false)
       setToast(true)
@@ -259,7 +259,7 @@ export default function ResumeUpload({
       // — no page reload needed.
       onAutofillApplied?.()
     } catch (err: unknown) {
-      setReviewError(err instanceof Error ? err.message : 'Failed to apply autofill')
+      setReviewError(err instanceof Error ? err.message : 'Failed to apply the autofill.')
     } finally {
       setReviewApplying(false)
     }
@@ -279,10 +279,10 @@ export default function ResumeUpload({
         throw new Error(body?.error || `HTTP ${res.status}`)
       }
       const { url } = await res.json() as { url?: string }
-      if (!url) throw new Error('No download URL returned')
+      if (!url) throw new Error('No download URL was returned.')
       window.open(url, '_blank')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not open resume')
+      setError(err instanceof Error ? err.message : 'The resume could not be opened.')
     } finally {
       setViewing(false)
     }
@@ -296,13 +296,13 @@ export default function ResumeUpload({
       const res = await fetch('/api/profile/resume', { method: 'DELETE' })
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || 'Failed to delete resume')
+        throw new Error(data.error || 'Failed to delete the resume.')
       }
       setLocalMeta(null)
       setConfirmDelete(false)
       onRemove()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete resume. Please try again.')
+      setError(err instanceof Error ? err.message : 'Failed to delete the resume. Please try again.')
     } finally {
       setRemoving(false)
     }
@@ -417,7 +417,7 @@ export default function ResumeUpload({
                 Upload Your Resume
               </p>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                PDF or Word doc, max 5 MB — drag & drop or click to browse
+                PDF or Word document, maximum 5 MB. Drag and drop, or click to browse.
               </p>
             </>
           )}
@@ -445,7 +445,7 @@ export default function ResumeUpload({
           display: 'flex', alignItems: 'center', gap: '5px',
         }}>
           <Shield size={12} style={{ flexShrink: 0 }} />
-          Your resume is only shared when you apply or if you enable &ldquo;Profile visible to employers&rdquo;
+          Your resume is only shared when you apply or if you enable &ldquo;Profile visible to employers&rdquo;.
         </p>
 
         {errorEl}
@@ -617,7 +617,7 @@ export default function ResumeUpload({
           display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
         }}>
           <p style={{ flex: 1, fontSize: '13px', color: '#EF4444', fontWeight: 500, minWidth: '180px' }}>
-            Delete your resume? This can&apos;t be undone.
+            Delete your resume? This cannot be undone.
           </p>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -654,7 +654,7 @@ export default function ResumeUpload({
         display: 'flex', alignItems: 'center', gap: '5px',
       }}>
         <Shield size={12} style={{ flexShrink: 0 }} />
-        Your resume is only shared when you apply or if you enable &ldquo;Profile visible to employers&rdquo;
+        Your resume is only shared when you apply or if you enable &ldquo;Profile visible to employers&rdquo;.
       </p>
 
       {errorEl}

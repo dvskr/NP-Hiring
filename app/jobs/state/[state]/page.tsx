@@ -408,8 +408,8 @@ export async function generateMetadata({ params, searchParams }: StatePageProps)
     const stats = await getStateStats(stateName, stateCode);
 
     const title = stats.avgSalary > 0
-      ? `${stats.totalJobs} ${brand.niche.short} Jobs in ${stateName} (${stateCode}) — $${stats.avgSalary}K Avg Salary`
-      : `${stats.totalJobs} ${brand.niche.short} Jobs in ${stateName} (${stateCode}) — Apply Today`;
+      ? `${stats.totalJobs} ${brand.niche.short} Jobs in ${stateName} (${stateCode}): $${stats.avgSalary}K Avg Salary`
+      : `${stats.totalJobs} ${brand.niche.short} Jobs in ${stateName} (${stateCode}): Apply Today`;
 
     const description = stats.avgSalary > 0
       ? `Find ${stats.totalJobs} ${brand.niche.adjective} nurse practitioner jobs in ${stateName}. Average ${brand.niche.short} salary: $${stats.avgSalary}K. Telehealth, inpatient, outpatient, and private practice positions. New jobs added daily.`
@@ -587,9 +587,9 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
     // unsourced band that used to ship here — and, because this array also
     // feeds the FAQPage JSON-LD below, into structured data.
     // Omit-or-cite: never fabricate a state salary band.
-    { q: `What is the average ${brand.niche.short} salary in ${stateName}?`, a: stats.avgSalary > 0 ? `The average ${brand.niche.short} salary in ${stateName} is $${stats.avgSalary}K/year, based on ${stateName} postings on ${brand.name} that disclose pay. Salaries vary based on experience, setting, and whether the role is W-2 or 1099.` : `Too few ${stateName} postings currently disclose pay to publish a state average. Nationally, ${brand.niche.descriptor}s earn a median of ${STAT_SOURCES.averageSalary.formatted} per year (${STAT_SOURCES.averageSalary.source}); compare ${stateName} offers posting by posting, since setting, experience, and W-2 vs 1099 structure drive most of the spread.` },
+    { q: `What is the average ${brand.niche.short} salary in ${stateName}?`, a: stats.avgSalary > 0 ? `The average ${brand.niche.short} salary in ${stateName} is $${stats.avgSalary}K/year, based on ${stateName} postings on ${brand.name} that disclose pay. Salaries vary based on experience, setting, and whether the role is W-2 or 1099.` : `Too few ${stateName} postings currently disclose pay to publish a state average. Nationally, ${brand.niche.descriptor}s earn a median of ${STAT_SOURCES.averageSalary.formatted} per year (${STAT_SOURCES.averageSalary.source}); compare ${stateName} offers posting by posting, since setting, experience, and W-2 versus 1099 structure drive most of the spread.` },
     { q: `Which cities in ${stateName} have the most ${brand.niche.short} jobs?`, a: citiesWithJobs.length > 0 ? `Top cities for ${brand.niche.short} jobs in ${stateName} include ${citiesWithJobs.slice(0, 4).map(c => `${c.name} (${c.count} jobs)`).join(', ')}.` : `${brand.niche.short} positions in ${stateName} are distributed across multiple cities and include remote telehealth options.` },
-    { q: `Can I work remotely as an ${brand.niche.short} in ${stateName}?`, a: `Yes, many telehealth and remote ${brand.niche.short} positions allow you to practice from ${stateName}. You'll need an active NP license in the state where your patient resides.` },
+    { q: `Can I work remotely as an ${brand.niche.short} in ${stateName}?`, a: `Yes, many telehealth and remote ${brand.niche.short} positions allow you to practice from ${stateName}. You will need an active NP license in the state where your patient resides.` },
   ];
 
   /* Design Tokens */
@@ -843,7 +843,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
               <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>{stateName} Alerts</h3>
-              <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>New listings in {stateName} — delivered daily.</p>
+              <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>New listings in {stateName}, delivered daily.</p>
               <Link href={`/job-alerts?location=${encodeURIComponent(stateName)}`} className="cat-cta-primary" style={{ padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content', boxShadow: '3px 3px 8px rgba(190,24,93,0.15)' }}>
                 Create Alert <ArrowRight size={14} />
               </Link>
@@ -951,7 +951,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                   <DollarSign size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>{stateName} Salary Guide</div>
-                    <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Comp data by setting</div>
+                    <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Compensation data by setting</div>
                   </div>
                 </Link>
                 <Link href="/jobs/locations"

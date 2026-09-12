@@ -164,7 +164,7 @@ describe('review item 5 — BLS growth stat carries the verified 2024–2034 cyc
     it('STAT_SOURCES holds the NP-specific 2024–2034 figure exactly as published', () => {
         expect(STAT_SOURCES.blsGrowth2034.formatted).toBe('40%');
         expect(STAT_SOURCES.blsGrowth2034.value).toBe('40');
-        expect(STAT_SOURCES.blsGrowth2034.source).toContain('2024–2034');
+        expect(STAT_SOURCES.blsGrowth2034.source).toContain('2024 to 2034');
         expect(STAT_SOURCES.blsGrowth2034.source).toContain('Nurse Practitioners');
         expect(STAT_SOURCES.blsGrowth2034.sourceUrl).toMatch(/^https:\/\/www\.bls\.gov\//);
         // The projection cycle renders alongside the number everywhere the

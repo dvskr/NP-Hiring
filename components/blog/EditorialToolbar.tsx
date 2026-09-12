@@ -101,11 +101,11 @@ export default function EditorialToolbar({ slug, title, url }: EditorialToolbarP
               </button>
               <button className="ed-tool-btn" onClick={handleCopyLink} aria-label="Copy link">
                 <Link2 size={14} />
-                {copied ? 'Copied!' : 'Copy Link'}
+                {copied ? 'Copied' : 'Copy Link'}
               </button>
               <button className={`ed-tool-btn ${cited ? 'active' : ''}`} onClick={handleCite} aria-label="Cite this article">
                 <Quote size={14} />
-                {cited ? 'Cited!' : 'Cite This'}
+                {cited ? 'Cited' : 'Cite This'}
               </button>
             </div>
           </div>

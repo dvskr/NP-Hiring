@@ -9,13 +9,13 @@
  * happened. This util forces an explicit `timeZone: 'America/Chicago'`
  * and a consistent " CT" suffix so the timezone is unambiguous.
  *
- * Null-safe by design — returns '—' for null/undefined so admin tables
+ * Null-safe by design — returns 'N/A' for null/undefined so admin tables
  * don't crash on never-contacted leads, unfinished crons, etc.
  *
  *   formatCT(date)            → "May 06, 02:35 PM CT"
  *   formatCT(date, 'date')    → "May 06, 2026 CT"
- *   formatCT(null)            → "—"
- *   formatCT(undefined)       → "—"
+ *   formatCT(null)            → "N/A"
+ *   formatCT(undefined)       → "N/A"
  */
 
 export type FormatCTMode = 'date' | 'datetime' | 'time';
@@ -24,9 +24,9 @@ export function formatCT(
     d: Date | string | null | undefined,
     mode: FormatCTMode = 'datetime',
 ): string {
-    if (d == null) return '—';
+    if (d == null) return 'N/A';
     const date = typeof d === 'string' ? new Date(d) : d;
-    if (Number.isNaN(date.getTime())) return '—';
+    if (Number.isNaN(date.getTime())) return 'N/A';
 
     const baseOpts: Intl.DateTimeFormatOptions = { timeZone: 'America/Chicago' };
     const opts: Intl.DateTimeFormatOptions =

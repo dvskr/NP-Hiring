@@ -406,7 +406,7 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
     setBusy(payload.mode);
 
     if (payload.mode !== 'generate' && visibleLen(description) < 50) {
-      setError({ message: 'Need at least a partial draft before refining.' });
+      setError({ message: 'You need at least a partial draft before refining.' });
       setBusy(null);
       return;
     }
@@ -481,7 +481,7 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
       }
       const body = await res.json();
       if (!body?.description) {
-        setError({ message: 'AI returned an empty draft. Try again.' });
+        setError({ message: 'The AI returned an empty draft. Please try again.' });
         return;
       }
       // Stash the current value so the toolbar Undo can revert to it.
@@ -502,7 +502,7 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
       if (body.usage) setUsage(body.usage as AiUsage);
       setAiDialogOpen(false);
     } catch {
-      setError({ message: 'Network error — please try again.' });
+      setError({ message: 'Network error. Please try again.' });
     } finally {
       setBusy(null);
     }
@@ -556,7 +556,7 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
 
   function openSaveAsTemplate() {
     if (visibleLen(description) < 50) {
-      setError({ message: 'Add more content before saving as a template (need at least 50 visible characters).' });
+      setError({ message: 'Add more content before saving as a template (at least 50 visible characters are required).' });
       return;
     }
     if (customTemplates.length >= customCap) {
@@ -613,7 +613,7 @@ export default function JdStarterPanel({ description, onChange, formContext }: J
   function deleteCustomTemplate(id: string) {
     setConfirmDialog({
       title: 'Delete this saved template?',
-      description: 'This cannot be undone. Built-in skeleton templates aren’t affected.',
+      description: 'This cannot be undone. Built-in skeleton templates are not affected.',
       confirmLabel: 'Delete',
       variant: 'danger',
       onConfirm: async () => {
@@ -766,8 +766,8 @@ function EmptyStateHero({
   onBlank: () => void;
 }) {
   const aiDesc = aiLimitReached
-    ? 'Daily AI limit reached — browse a skeleton or write manually. Resets at midnight CT.'
-    : 'Fresh long-form draft in ~30 seconds from your form inputs and a short facts summary.';
+    ? 'Daily AI limit reached. Browse a skeleton or write manually. Resets at midnight CT.'
+    : 'A fresh long-form draft in about 30 seconds, built from your form inputs and a short facts summary.';
 
   return (
     <div style={sx.hero}>
@@ -776,7 +776,7 @@ function EmptyStateHero({
           <Wand2 size={18} style={{ color: '#BE185D' }} />
           <div>
             <h3 style={sx.heroTitle}>How would you like to start your job description?</h3>
-            <p style={sx.heroSub}>AI is the recommended path. You can switch any time.</p>
+            <p style={sx.heroSub}>AI is the recommended path. You can switch at any time.</p>
           </div>
         </div>
         <UsageBadge usage={usage} />
@@ -916,7 +916,7 @@ function PostGenToolbar({
         style={{ ...sx.pill, ...(customTemplatesAtCap ? sx.pillDisabled : {}) }}
         disabled={customTemplatesAtCap}
         onClick={onSaveAsTemplate}
-        title={customTemplatesAtCap ? 'Template library is full — delete one to save another' : 'Save this draft to your reusable template library'}
+        title={customTemplatesAtCap ? 'Template library is full. Delete one to save another.' : 'Save this draft to your reusable template library.'}
       >
         <Bookmark size={12} />
         Save to my templates
@@ -1012,7 +1012,7 @@ function TemplatePicker({
           <div>
             <h3 style={sx.modalTitle}>Browse {brand.niche.short} skeleton starters</h3>
             <p style={{ ...sx.heroSub, marginTop: 4 }}>
-              {builtInTotal} built-in bullet skeletons plus your saved templates. [bracketed] prompts are where you fill in real specifics.
+              {builtInTotal} built-in bullet skeletons plus your saved templates. The [bracketed] prompts show where to fill in real specifics.
             </p>
           </div>
           <button type="button" style={sx.closeBtn} onClick={onClose} aria-label="Close"><X size={16} /></button>
@@ -1070,10 +1070,10 @@ function TemplatePicker({
                 onClick={onSaveCurrent}
                 title={
                   !canSaveCurrent
-                    ? 'Add more content in the editor before you can save it as a template'
+                    ? 'Add more content in the editor before you can save it as a template.'
                     : customCount >= customCap
-                      ? 'Template library is full — delete one first'
-                      : 'Save the current editor draft as a reusable template'
+                      ? 'Template library is full. Delete one first.'
+                      : 'Save the current editor draft as a reusable template.'
                 }
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -1095,9 +1095,9 @@ function TemplatePicker({
                 background: '#FAFAFA', fontSize: 12, color: '#64748B', textAlign: 'center',
               }}>
                 {canSaveCurrent ? (
-                  <>You haven&apos;t saved any templates yet. Click <strong>Save current draft to my templates</strong> above to reuse your current JD across postings.</>
+                  <>You have not saved any templates yet. Click <strong>Save current draft to my templates</strong> above to reuse your current job description across postings.</>
                 ) : (
-                  <>Once you have a JD draft (50+ characters), click <strong>Save current draft to my templates</strong> above to keep a reusable copy.</>
+                  <>Once you have a job description draft (50+ characters), click <strong>Save current draft to my templates</strong> above to keep a reusable copy.</>
                 )}
               </div>
             ) : (
@@ -1270,9 +1270,9 @@ function TemplateCard({ template, onPick }: { template: JdTemplate; onPick: () =
 const FACTS_SUMMARY_MIN = 60;
 
 const FACTS_SUMMARY_PLACEHOLDER = `• Patient mix: adults + adolescents, chronic disease + preventive care, ~65 visits/week
-• Schedule: M-Th in-clinic, F telehealth; no weekends; 1 admin half-day
+• Schedule: Monday to Thursday in clinic, Friday telehealth; no weekends; 1 admin half-day
 • EHR: Athena with templated notes
-• Comp: $115-135k base + quarterly outcomes bonus; $10k sign-on
+• Comp: $115k to $135k base + quarterly outcomes bonus; $10k sign-on
 • Team: 4 ${brand.niche.short}s, 2 collaborating physicians, 6 MAs/RNs, dedicated front-desk support
 • What's unique: capped panel size, real admin team handles auth/PA`;
 
@@ -1471,7 +1471,7 @@ function AiDialog({
           <div>
             <h3 style={sx.modalTitle}>{title}</h3>
             <p style={{ ...sx.heroSub, marginTop: '4px' }}>
-              The more real facts you give, the less the AI has to invent. Tone and length tune the voice.
+              The more real facts you provide, the less the AI has to invent. Tone and length tune the voice.
             </p>
           </div>
           <button type="button" style={sx.closeBtn} onClick={onClose} aria-label="Close"><X size={16} /></button>
@@ -1491,7 +1491,7 @@ function AiDialog({
                 </span>
               </div>
               <p style={{ fontSize: 12, color: '#64748B', marginBottom: '8px', lineHeight: 1.4 }}>
-                Tell the AI what specifics you have so it doesn&apos;t invent them. Patient mix, schedule, EHR, comp range, team size, anything distinctive about your practice. Bullet points are fine.
+                Tell the AI which specifics you have so it does not invent them: patient mix, schedule, EHR, compensation range, team size, and anything distinctive about your practice. Bullet points are fine.
               </p>
               <textarea
                 value={factsSummary}
@@ -1509,7 +1509,7 @@ function AiDialog({
               />
               {showFactsError && (
                 <p style={{ marginTop: 6, fontSize: 12, color: '#EF4444', fontWeight: 600 }}>
-                  Add at least {FACTS_SUMMARY_MIN} characters of real facts before generating — the AI needs grounding so the draft talks about your actual job.
+                  Add at least {FACTS_SUMMARY_MIN} characters of real facts before generating. The AI needs grounding so the draft describes your actual job.
                 </p>
               )}
             </div>
@@ -1560,12 +1560,12 @@ function AiDialog({
                 </span>
               </div>
               <p style={{ fontSize: 12, color: '#64748B', marginBottom: '8px', lineHeight: 1.4 }}>
-                Specific qualifications or preferences to surface in the Required/Preferred sections. One per line or comma-separated.
+                Specific qualifications or preferences to surface in the Required and Preferred sections. Enter one per line or separate them with commas.
               </p>
               <textarea
                 value={mustHavesText}
                 onChange={(e) => setMustHavesText(e.target.value)}
-                placeholder={'psych ICU background preferred\nSpanish fluency a plus\nopen to new grads with strong placements'}
+                placeholder={'Psych ICU background preferred\nSpanish fluency a plus\nOpen to new graduates with strong placements'}
                 rows={4}
                 style={{
                   width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 13,
@@ -1674,7 +1674,7 @@ function SaveTemplateDialog({
               value={label}
               maxLength={120}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder={`e.g. Outpatient ${brand.niche.short} — North Austin clinic`}
+              placeholder={`e.g. Outpatient ${brand.niche.short}, North Austin clinic`}
               autoFocus
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 14,
@@ -1687,7 +1687,7 @@ function SaveTemplateDialog({
               {labelTrim.length}/120
               {!labelValid && labelTrim.length > 0 && (
                 <span style={{ color: '#EF4444', fontWeight: 600, marginLeft: 8 }}>
-                  Name must be at least 2 characters
+                  Name must be at least 2 characters.
                 </span>
               )}
             </div>
@@ -1702,7 +1702,7 @@ function SaveTemplateDialog({
               value={summary}
               maxLength={300}
               onChange={(e) => setSummary(e.target.value)}
-              placeholder="e.g. Adult outpatient med-management — Athena EHR — 250 panel cap"
+              placeholder="e.g. Adult outpatient med-management, Athena EHR, 250 panel cap"
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 13,
                 border: '1px solid rgba(0,0,0,0.08)', background: '#F5F6F8',
@@ -1711,7 +1711,7 @@ function SaveTemplateDialog({
               }}
             />
             <div style={{ marginTop: 4, fontSize: 11, color: '#94A3B8' }}>
-              {summary.length}/300 — helps you recognize this template later
+              {summary.length}/300 (helps you recognize this template later)
             </div>
           </div>
         </div>

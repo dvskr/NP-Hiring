@@ -43,7 +43,7 @@ export const EMAIL_HEADER_TAGLINE = 'Nurse Practitioner Careers';
  * an unforked PMHNP leftover, corrected here to the NP cohort.)
  */
 export const EMAIL_DEFAULT_PREHEADER =
-    'NP Hiring — The #1 job board for Nurse Practitioners';
+    'NP Hiring: The #1 job board for Nurse Practitioners';
 
 /**
  * Curated niche hashtag set appended to every Facebook/Instagram caption

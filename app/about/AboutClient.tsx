@@ -51,7 +51,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
                 scope" (absolute inventory guarantee falsified by review items
                 1a–1d) were softened to the screening commitment. The absolutes
                 may return only when the WP-1 inventory-invariant test is green. */}
-            <p className="ab-hero-sub" style={{ textAlign: 'center' }}>A job platform built exclusively for {brand.niche.long}s and APRNs. Listings are screened at ingest and removed when flagged out of scope — so your search starts with relevant roles, not generic noise.</p>
+            <p className="ab-hero-sub" style={{ textAlign: 'center' }}>A job platform built exclusively for {brand.niche.long}s and APRNs. Listings are screened at ingest and removed when flagged out of scope, so your search starts with relevant roles rather than generic noise.</p>
             <div className="ab-hero-cta">
               <Link href="/jobs" className="ab-btn ab-btn-primary">Browse open roles <ArrowRight size={16} /></Link>
               <Link href="/resources" className="ab-btn ab-btn-ghost">All Resources</Link>
@@ -66,7 +66,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
                 <div style={{ padding: '16px 20px' }}><div className="label">New&nbsp;Grad<br />friendly</div>{counts.newGrad !== null && <div className="meta" style={{ marginTop: 10 }}>{fmt(counts.newGrad)} roles</div>}</div>
               </div>
               <div className="ab-scene teal" style={{ minHeight: 380, padding: 0 }}>
-                <img src="/images/job-seekers/clinical-inperson.webp" alt="Inpatient & acute care" width={400} height={300} loading="lazy" decoding="async" style={{ width: '100%', flex: 1, objectFit: 'cover', borderRadius: '28px 28px 0 0' }} />
+                <img src="/images/job-seekers/clinical-inperson.webp" alt="Inpatient and acute care" width={400} height={300} loading="lazy" decoding="async" style={{ width: '100%', flex: 1, objectFit: 'cover', borderRadius: '28px 28px 0 0' }} />
                 <div style={{ padding: '16px 20px' }}><div className="label">Acute &amp;<br />inpatient units</div>{counts.inpatient !== null && <div className="meta" style={{ marginTop: 10 }}>{fmt(counts.inpatient)} roles</div>}</div>
               </div>
               <div className="ab-scene coral" style={{ minHeight: 350, padding: 0 }}>
@@ -104,12 +104,12 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
             <h2 style={{ marginTop: 20 }}>Stop scrolling past generic <em>RN postings.</em></h2>
             {/* Live review item 8a variant (WP-5): "only lists" was the same
                 absolute inventory guarantee — restated as the screen. */}
-            <p style={{ marginTop: 22, color: 'var(--ink-soft)', fontSize: 18, maxWidth: 540 }}>General nursing boards bury {brand.niche.short} roles under thousands of RN postings. This site is built for {brand.niche.short} jobs — screened at ingest, and filtered by setting, salary, license, and the actual scope of practice you train in.</p>
+            <p style={{ marginTop: 22, color: 'var(--ink-soft)', fontSize: 18, maxWidth: 540 }}>General nursing boards bury {brand.niche.short} roles under thousands of RN postings. This site is built for {brand.niche.short} jobs: listings are screened at ingest and filtered by setting, salary, license, and the actual scope of practice you train in.</p>
             <div className="ab-feat-list">
               {/* Live review WP-5 sweep: "100%" and "Unmatched" superlatives
                   dropped; "thousands of real-time listings" was an invented
                   inventory count. */}
-              <div className="ab-feat"><div className="ab-feat-ico"><CheckCircle size={22} /></div><div><h4>Specialized Filters</h4><p>Search by clinical setting — Inpatient, Outpatient, Telehealth, Urgent Care, Correctional, Geriatric — instead of typical nursing tags.</p></div></div>
+              <div className="ab-feat"><div className="ab-feat-ico"><CheckCircle size={22} /></div><div><h4>Specialized Filters</h4><p>Search by clinical setting (Inpatient, Outpatient, Telehealth, Urgent Care, Correctional, or Geriatric) instead of typical nursing tags.</p></div></div>
               <div className="ab-feat"><div className="ab-feat-ico coral"><DollarSign size={22} /></div><div><h4>Salary Transparency</h4><p>We show employer-posted pay ranges next to BLS state benchmarks, so you negotiate from published numbers instead of guesses.</p></div></div>
               {/* Live review item 8d (WP-5): "you only ever see roles you can
                   actually accept" promised a license-to-listing eligibility
@@ -155,9 +155,9 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
               {/* Live review WP-5 sweep: "vastly higher conversion rates" was
                   an unmeasured performance promise — no conversion claim until
                   it is measured. Restated as the verifiable context. */}
-              <div className="ab-feat"><div className="ab-feat-ico coral"><Target size={22} /></div><div><h4>Focused Context</h4><p>Your posting appears alongside {brand.niche.short} roles only — never buried in a cross-industry feed.</p></div></div>
+              <div className="ab-feat"><div className="ab-feat-ico coral"><Target size={22} /></div><div><h4>Focused Context</h4><p>Your posting appears alongside {brand.niche.short} roles only, never buried in a cross-industry feed.</p></div></div>
               <div className="ab-feat"><div className="ab-feat-ico" style={{ color: '#6F63C0' }}><BarChart3 size={22} /></div><div><h4>Analytics & Placements</h4><p>Secure featured placements and monitor actionable apply-funnel analytics directly from your verified employer dashboard.</p></div></div>
-              <div className="ab-feat"><div className="ab-feat-ico"><Layers size={22} /></div><div><h4>Calibrated Matching</h4><p>Our taxonomy maps exact specialties — acute care, primary care, geriatrics, women&apos;s health — so you spend less time filtering and more time hiring.</p></div></div>
+              <div className="ab-feat"><div className="ab-feat-ico"><Layers size={22} /></div><div><h4>Calibrated Matching</h4><p>Our taxonomy maps exact specialties (acute care, primary care, geriatrics, and women&apos;s health), so you spend less time filtering and more time hiring.</p></div></div>
             </div>
             <div style={{ display: 'flex', gap: 12, marginTop: 36, flexWrap: 'wrap' }}>
               <Link href="/employers" className="ab-btn ab-btn-primary">Post a role</Link>
@@ -171,7 +171,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
         <div className="ab-method-head">
           <span className="ab-kicker lav"><Layers size={12} /> Our methodology</span>
           <h2 style={{ marginTop: 20 }}>Hard data. <em>No assumptions.</em></h2>
-          <p>Accuracy isn&apos;t optional. Listings are ingested from employer ATS feeds and direct posts, screened against published relevance rules, and swept for expiry on a daily cycle.</p>
+          <p>Accuracy is not optional. Listings are ingested from employer ATS feeds and direct posts, screened against published relevance rules, and swept for expiry on a daily cycle.</p>
         </div>
         <div className="ab-method-grid">
           <div className="ab-method-card featured"><span className="num-tag">01</span><div className="mi"><Layers size={28} /></div><h3>Multi-Vector Aggregation</h3><p>We synthesize endpoints from the Bureau of Labor Statistics, native ATS feeds, and direct employer postings into a single streamlined view.</p></div>
@@ -182,7 +182,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
               REMOVED. A salary-integrity claim ("ranges validated against
               BLS-anchored bounds at ingest") may be added ONLY after the
               WP-2 salary rebuild lands and makes it true. */}
-          <div className="ab-method-card"><span className="num-tag">02</span><div className="mi" style={{ color: 'var(--coral)' }}><Shield size={28} /></div><h3>Editorial Integrity</h3><p>Every listing traces to an employer ATS feed or a direct employer post — screened against our published relevance rules at ingest, and removed when flagged out of scope.</p></div>
+          <div className="ab-method-card"><span className="num-tag">02</span><div className="mi" style={{ color: 'var(--coral)' }}><Shield size={28} /></div><h3>Editorial Integrity</h3><p>Every listing traces to an employer ATS feed or a direct employer post. Each one is screened against our published relevance rules at ingest and removed when flagged out of scope.</p></div>
           <div className="ab-method-card"><span className="num-tag">03</span><div className="mi" style={{ color: '#6F63C0' }}><RefreshCw size={28} /></div><h3>Continuous Sync</h3><p>Stale listings are useless. Our system automatically purges expired opportunities and fetches exact market data on a strict 24-hour cycle.</p></div>
         </div>
       </div></section>
@@ -199,7 +199,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
             <span className="ab-kicker"><Users size={12} /> Who built this</span>
             <h2 style={{ marginTop: 20 }}>One person, one focused job board.</h2>
             <p>I built {brand.name} because every general nursing job site I looked at made {brand.niche.short}s do the same thing over and over: filter out hundreds of unrelated RN postings just to find the handful of {brand.niche.short} roles. There was no good reason for that, so I built something focused on one profession instead.</p>
-            <p>I&apos;m a solo developer who built this entire project end to end, and I&apos;m not a clinician. My job here is the data pipeline — pulling job postings, normalizing salary fields, mapping state licensure rules, and surfacing the result through a fast, ad-light interface. The clinical content on this site is editorial commentary aggregated from public sources, not medical advice.</p>
+            <p>I&apos;m a solo developer who built this entire project end to end, and I&apos;m not a clinician. My job here is the data pipeline: pulling job postings, normalizing salary fields, mapping state licensure rules, and surfacing the result through a fast, ad-light interface. The clinical content on this site is editorial commentary aggregated from public sources, not medical advice.</p>
             <p>If something on the site is wrong, missing, or could be better, the fastest way to reach me is the <Link href="/contact" style={{ color: 'inherit', textDecoration: 'underline' }}>contact page</Link>.</p>
             <div className="ab-sig">
               <div className="ab-sig-mark">SK</div>
@@ -229,7 +229,7 @@ export default function AboutClient({ totalJobs, totalEmployers, dioramaCounts }
           <div>
             <span className="ab-kicker coral" style={{ background: 'rgba(255,255,255,0.28)', color: '#fff', boxShadow: 'inset 2px 2px 4px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(170,80,55,0.2)' }}><CheckCircle size={12} /> Ready when you are</span>
             <h2 style={{ marginTop: 20 }}>Initialize <em>your search.</em></h2>
-            <p>Browse open {brand.niche.short} roles by state, scope, and care setting — or open a direct conduit with our team to talk through a role you&apos;ve had your eye on.</p>
+            <p>Browse open {brand.niche.short} roles by state, scope, and care setting, or reach out to our team to talk through a role you have had your eye on.</p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 32, flexWrap: 'wrap' }}>
               <Link href="/jobs" className="ab-btn ab-btn-dark">Browse all jobs</Link>
             </div>

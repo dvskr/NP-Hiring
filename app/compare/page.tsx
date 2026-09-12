@@ -21,11 +21,11 @@ const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(
 )}&type=page`;
 
 export const metadata: Metadata = {
-    title: `${brand.name} vs Other ${brand.niche.short} Job Boards — Honest Comparisons`,
+    title: `${brand.name} vs Other ${brand.niche.short} Job Boards: Honest Comparisons`,
     description: `Side-by-side comparisons of ${brand.name} with Indeed, the AANP JobCenter, and ENP Network for ${brand.niche.descriptor} job searches and hiring. Every claim dated and checked against each competitor's own pages.`,
     openGraph: {
         title: `${brand.name} vs Other ${brand.niche.short} Job Boards`,
-        description: `Honest, dated, source-checked comparisons — including what each competitor does better than we do.`,
+        description: `Honest, dated, source-checked comparisons, including what each competitor does better than we do.`,
         images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: `${brand.name} comparisons` }],
     },
     twitter: { card: 'summary_large_image', images: [OG_IMAGE] },
@@ -96,8 +96,8 @@ export default function CompareHubPage() {
                                     Every factual claim about a competitor was checked against that competitor&apos;s own public
                                     pages on {COMPARE_REVIEW_DATE_LABEL}; each page lists exactly which pages were reviewed.
                                 </li>
-                                <li>Claims we could not verify on that date were left out — even the flattering-to-us ones.</li>
-                                <li>Each page opens with what the competitor does well, because a comparison that skips that is an ad.</li>
+                                <li>Claims we could not verify on that date were left out, even the ones that flatter us.</li>
+                                <li>Each page opens with what the competitor does well, because a comparison that skips that step is an advertisement.</li>
                                 <li>
                                     Competitor names are used only to identify the services compared; all trademarks belong to
                                     their owners, and none of these companies is affiliated with {brand.name}.
@@ -145,7 +145,7 @@ export default function CompareHubPage() {
                     {/* CTA */}
                     <div className="text-center py-8">
                         <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-                            Or skip the reading and judge the product directly — browsing is open, no account required.
+                            Or skip the reading and judge the product directly. Browsing is open, and no account is required.
                         </p>
                         <Link
                             href="/jobs"

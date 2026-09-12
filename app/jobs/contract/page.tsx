@@ -45,18 +45,18 @@ async function getStats() {
 }
 
 const contractFaqs = [
-  { question: `What is a Contract ${brand.niche.short} role?`, answer: `Contract ${brand.niche.short} positions are fixed-term assignments (3-12 months) with staffing agencies or health systems. They offer higher hourly rates, diverse clinical exposure, and geographic flexibility.` },
+  { question: `What is a Contract ${brand.niche.short} role?`, answer: `Contract ${brand.niche.short} positions are fixed-term assignments (3 to 12 months) with staffing agencies or health systems. They offer higher hourly rates, diverse clinical exposure, and geographic flexibility.` },
   { question: `How much more do contract ${brand.niche.short}s earn?`, answer: `Contract ${brand.niche.short}s usually earn a higher hourly rate than comparable permanent staff, because benefits are lighter or absent. W-2 contracts through agencies may include benefits; 1099 contracts trade benefits for maximum flexibility and tax deductions.` },
-  { question: 'What qualifications are needed for contract work?', answer: 'An active APRN license, national NP certification in your specialty, DEA registration where prescribing is required, and typically 1-2 years of clinical experience. Multi-state licensure is a major advantage.' },
+  { question: 'What qualifications are needed for contract work?', answer: 'An active APRN license, national NP certification in your specialty, DEA registration where prescribing is required, and typically 1 to 2 years of clinical experience. Multi-state licensure is a major advantage.' },
   { question: `Do contract ${brand.niche.short}s get benefits?`, answer: 'W-2 contracts through staffing agencies often include health insurance, malpractice coverage, housing stipends, and travel reimbursement. 1099 contractors arrange their own benefits.' },
-  { question: 'Can contract roles convert to permanent?', answer: 'Yes — many facilities use contract-to-perm arrangements. This lets both parties evaluate fit before committing to a permanent position, reducing hiring risk.' },
+  { question: 'Can contract roles convert to permanent?', answer: 'Yes. Many facilities use contract-to-perm arrangements. This lets both parties evaluate fit before committing to a permanent position, reducing hiring risk.' },
 ];
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Contract ${brand.niche.short} Jobs — Fixed-Term Roles`,
+    title: `${stats.totalJobs} Contract ${brand.niche.short} Jobs: Fixed-Term Roles`,
     description: `Find ${stats.totalJobs} contract ${brand.niche.short} jobs. Fixed-term ${brand.niche.descriptor} positions with premium rates, diverse settings, and contract-to-perm potential.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/contract` },
     ...(page > 1 && { robots: { index: false, follow: true } }),
@@ -165,7 +165,7 @@ export default async function ContractPage({ searchParams }: PageProps) {
             <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
               <div>
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Contract Assignments</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Sign 3-12 month contracts with premium rates, then choose your next adventure. Build a diverse clinical portfolio.</p>
+                <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Sign contracts of 3 to 12 months at premium rates, then choose your next assignment. Build a diverse clinical portfolio.</p>
               </div>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ct_signing.webp`} alt="Contract signing" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
             </div>
@@ -178,7 +178,7 @@ export default async function ContractPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ct_terms.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Flexible Terms</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Choose 3-12 month contract durations that fit your life.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Choose contract durations of 3 to 12 months that fit your life.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ct_rates.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
