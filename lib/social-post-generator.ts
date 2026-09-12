@@ -145,7 +145,7 @@ export function buildFacebookCaption(jobs: SocialJob[]): string {
     jobs.forEach((job, i) => {
         const emoji = JOB_EMOJIS[i] ?? `${i + 1}.`;
         const featured = job.isFeatured ? ' ⭐ FEATURED' : '';
-        const salary = job.displaySalary ? ` — ${job.displaySalary} 💰` : '';
+        const salary = job.displaySalary ? ` · ${job.displaySalary} 💰` : '';
         const loc = job.isRemote ? 'Remote' : job.location;
         const type = job.jobType ? ` | ${job.jobType}` : '';
         const link = `${BASE_URL}/jobs/${job.slug}`;
@@ -176,7 +176,7 @@ export function buildInstagramCaption(jobs: SocialJob[]): string {
 
     jobs.forEach((job, i) => {
         const emoji = JOB_EMOJIS[i] ?? `${i + 1}.`;
-        const salary = job.displaySalary ? ` — ${job.displaySalary}` : '';
+        const salary = job.displaySalary ? ` · ${job.displaySalary}` : '';
         lines.push(`${emoji} ${job.title}${salary}`);
     });
 

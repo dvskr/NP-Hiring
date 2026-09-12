@@ -112,7 +112,7 @@ export function buildCompaniesPath(page: number): string {
 }
 
 /**
- * Human range label ("1–131 of 131") for the page's honest count sentence.
+ * Human range label ("251 to 280 of 280") for the page's honest count sentence.
  * `shown` is the number of rows actually rendered, so the label can never
  * over-claim when the last page is short.
  */
@@ -122,7 +122,7 @@ export function pageRangeLabel(page: number, shown: number, total: number, perPa
   const end = start + shown - 1;
   return start === 1 && end === total
     ? total.toLocaleString()
-    : `${start.toLocaleString()}–${end.toLocaleString()} of ${total.toLocaleString()}`;
+    : `${start.toLocaleString()} to ${end.toLocaleString()} of ${total.toLocaleString()}`;
 }
 
 /**

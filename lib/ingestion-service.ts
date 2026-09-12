@@ -163,7 +163,7 @@ function mergeLlmIntoNormalized(job: any, llm: LLMExtractResult): any {
     // ORIGINAL unit ('hour'/'month'). Storing that period made the detail page
     // render e.g. "$140,000/hr". The values are annual, so the period is 'year'.
     next.salaryPeriod = 'year';
-    next.displaySalary = `$${Math.round(min / 1000)}k - $${Math.round(max / 1000)}k/yr`;
+    next.displaySalary = `$${Math.round(min / 1000)}k to $${Math.round(max / 1000)}k/yr`;
   }
 
   if (llm.job_type && !next.jobType) next.jobType = llm.job_type;

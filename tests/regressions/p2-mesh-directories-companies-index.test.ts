@@ -116,7 +116,7 @@ describe('P2 #11: pagination arithmetic', () => {
 
   it('labels the visible range without over-claiming', () => {
     expect(pageRangeLabel(1, 131, 131)).toBe('131');
-    expect(pageRangeLabel(2, 30, 280, 250)).toBe('251–280 of 280');
+    expect(pageRangeLabel(2, 30, 280, 250)).toBe('251 to 280 of 280');
     expect(pageRangeLabel(1, 0, 0)).toBe('0');
   });
 });
