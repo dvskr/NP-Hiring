@@ -3,13 +3,13 @@ import { LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import {
-  ArrowRight, Briefcase, Building2, Calculator, DollarSign,
-  FileDown, Globe, GraduationCap, MapPin, Rocket, Search, ShieldCheck, Star,
-  TrendingUp, Users, Wrench, type LucideIcon,
+  ArrowRight, BarChart3, Briefcase, Building2, Calculator, ClipboardCheck, Compass, DollarSign,
+  FileDown, Globe, GraduationCap, MapPin, Rocket, Scale, Search, ShieldCheck, Star,
+  TrendingUp, Users, type LucideIcon,
 } from 'lucide-react';
 // P2 tools band — paths come from the registry that renders /tools, so this
 // page can never advertise a tool route the app would 404 on.
-import { TOOLS } from '@/app/tools/tools-registry';
+import { TOOLS, type ToolIconKey } from '@/app/tools/tools-registry';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import ResourceDownloadGate from '@/components/ResourceDownloadGate';
@@ -55,19 +55,35 @@ export const metadata: Metadata = {
   alternates: { canonical: `${brand.baseUrl}/resources` },
 };
 
-/* ─── Clay styles ─── */
-const clayCard: React.CSSProperties = {
-  background: '#FFFFFF', borderRadius: '20px',
-  border: '1px solid rgba(255,255,255,0.5)',
-  boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
+/* ─── Sticker card system (owner direction 2026-09-10; same anatomy as the
+   homepage free-tools band and blog tape): white face, 2px berry border,
+   hard 5px offset shadow, clay chip, Lora title, pinned accent-bar footer.
+   Chip fills and bar widths are the homepage constants. Static CSS lives in
+   the page <style> block below (no interpolations). ─── */
+const STICKER_CHIP_FILLS = ['#D5F5F1', '#FBCFE8', '#FDE3C8', '#B9EBD6'];
+const STICKER_BAR_WIDTHS = ['38%', '64%', '22%', '50%'];
+
+/* Same icon per registry key as the /tools hub (app/tools/page.tsx ICONS). */
+const TOOL_ICONS: Record<ToolIconKey, LucideIcon> = {
+  calculator: Calculator,
+  scale: Scale,
+  clipboard: ClipboardCheck,
+  chart: BarChart3,
+  compass: Compass,
+  building: Building2,
+  briefcase: Briefcase,
 };
 
-/* Rounded tile behind each lucide icon (local-asset pattern, b371b37) */
-const iconTile: React.CSSProperties = {
-  width: '48px', height: '48px', borderRadius: '14px',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  flexShrink: 0,
-};
+function StickerFooter({ index, action }: { index: number; action: string }) {
+  return (
+    <span className="stk-bar" aria-hidden="true">
+      <span className="stk-track">
+        <span className="stk-fill" style={{ width: STICKER_BAR_WIDTHS[index % STICKER_BAR_WIDTHS.length] }} />
+      </span>
+      <span className="stk-action">{action} →</span>
+    </span>
+  );
+}
 
 /* ─── Category config ─── */
 const CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string; icon: LucideIcon }> = {
@@ -220,105 +236,75 @@ export default async function ResourcesPage() {
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 1: HERO (warm cream bg)
           ═══════════════════════════════════════════════════════════════ */}
-      <div style={{ background: 'linear-gradient(180deg, #FFF5EE 0%, #FDE8D8 40%, #FFF5EE 100%)' }}>
-        <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '80px 20px 0', textAlign: 'center' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
+      <div className="stk-stage stk-stage-grid">
+        <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '48px 20px 80px', textAlign: 'center' }}>
+          <p className="stk-eyebrow">
             Free Career Resources
           </p>
-          <h1 className="font-lora" style={{
-            fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, lineHeight: 1.15,
-            color: '#1A2E35', marginBottom: '16px',
-          }}>
+          <h1 className="stk-h1 font-heading">
             {brand.niche.short} Resources & Guides
           </h1>
-          <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto 32px', lineHeight: 1.6 }}>
+          <p className="stk-lede" style={{ margin: '16px auto 32px' }}>
             Everything you need for your {brand.niche.short} career, from licensure requirements to salary negotiation.
           </p>
 
-          {/* Stat Pills — count pills render only when the content actually
-              exists (audit F12: no advertised inventory the page can't deliver) */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', marginBottom: '48px' }}>
+          {/* Stat stickers: count stickers render only when the content actually
+              exists (audit F12: no advertised inventory the page cannot deliver) */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', marginBottom: '56px' }}>
             {[
-              ...(blogPosts.length > 0 ? [{ value: `${blogPosts.length}`, label: 'Articles', bg: '#D4F5E9', color: '#065F46' }] : []),
-              ...(sortedStates.length > 0 ? [{ value: `${sortedStates.length}`, label: 'State Guides', bg: '#E0E7FF', color: '#3730A3' }] : []),
-              { value: '3', label: 'Deep Guides', bg: '#FEF3C7', color: '#92400E' },
-              { value: 'Free', label: 'Always', bg: '#FFE0D3', color: '#7C2D12' },
-            ].map(s => (
-              <div key={s.label} className="sal-stat-pill" style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                padding: '10px 20px 10px 16px', borderRadius: '40px',
-                background: s.bg,
-                boxShadow: '3px 3px 8px rgba(0,0,0,0.04), inset 1px 1px 2px rgba(255,255,255,0.5)',
-              }}>
-                <span style={{ fontSize: '20px', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</span>
-                <span style={{ fontSize: '12px', color: s.color, opacity: 0.7, fontWeight: 500 }}>{s.label}</span>
+              ...(blogPosts.length > 0 ? [{ value: `${blogPosts.length}`, label: 'Articles' }] : []),
+              ...(sortedStates.length > 0 ? [{ value: `${sortedStates.length}`, label: 'State Guides' }] : []),
+              { value: '3', label: 'Deep Guides' },
+              { value: 'Free', label: 'Always' },
+            ].map((s, i) => (
+              <div key={s.label} className="stk-stat" style={{ background: STICKER_CHIP_FILLS[i % STICKER_CHIP_FILLS.length] }}>
+                <span className="stk-stat-value font-heading">{s.value}</span>
+                <span className="stk-stat-label">{s.label}</span>
               </div>
             ))}
           </div>
 
           {/* ─── Section 2: Featured Guides Bento ─── */}
           <div style={{ textAlign: 'left' }}>
-            <div className="res-feat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '14px' }}>
-              {featuredGuides.map(g => (
-                <Link key={g.href} href={g.href} className="emp-bento-card" style={{
-                  ...clayCard, padding: '28px 24px', textDecoration: 'none',
-                  display: 'flex', flexDirection: 'column', gap: '14px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ ...iconTile, background: `${g.badgeColor}15`, color: g.badgeColor }}>
-                      <g.icon size={24} />
-                    </div>
-                    <span style={{
-                      fontSize: '11px', fontWeight: 700, color: g.badgeColor,
-                      background: `${g.badgeColor}15`, padding: '4px 10px', borderRadius: '20px',
-                    }}>{g.badge}</span>
-                  </div>
-                  <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>{g.title}</h2>
-                  <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.55, margin: 0, flex: 1 }}>{g.desc}</p>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    Read Guide <ArrowRight size={14} />
+            <div className="res-feat-grid stk-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: '24px' }}>
+              {featuredGuides.map((g, i) => (
+                <Link key={g.href} href={g.href} className="stk-card">
+                  <span className="stk-top">
+                    <span className="stk-chip" style={{ background: STICKER_CHIP_FILLS[i % STICKER_CHIP_FILLS.length] }}>{g.badge}</span>
+                    <span className="stk-icon" aria-hidden="true"><g.icon size={18} strokeWidth={2.25} /></span>
                   </span>
+                  <h2 className="stk-title font-heading">{g.title}</h2>
+                  <p className="stk-desc">{g.desc}</p>
+                  <StickerFooter index={i} action="Read guide" />
                 </Link>
               ))}
             </div>
 
-            {/* 1099 vs W2 — full-width banner */}
-            <Link href="/resources/1099-vs-w2" className="emp-bento-card" style={{
-              ...clayCard, padding: '0', overflow: 'hidden', textDecoration: 'none',
-              display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center',
-            }}>
-              <div style={{ padding: '24px 28px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#F59E0B', background: '#FEF3C7', padding: '4px 10px', borderRadius: '20px' }}>Compensation</span>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '10px 0 6px' }}>1099 vs W2 for {brand.niche.short}s: Complete Comparison</h2>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.55, margin: 0 }}>
+            {/* 1099 vs W2: full-width sticker banner */}
+            <Link href="/resources/1099-vs-w2" className="stk-card stk-wide">
+              <span className="stk-body">
+                <span className="stk-chip" style={{ background: STICKER_CHIP_FILLS[2] }}>Compensation</span>
+                <h2 className="stk-title font-heading">1099 vs W2 for {brand.niche.short}s: Complete Comparison</h2>
+                <p className="stk-desc">
                   Independent contractor vs employee: tax strategies, income comparison, and which model maximizes your earnings.
                 </p>
-              </div>
-              <div style={{ padding: '24px 28px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ ...iconTile, width: '56px', height: '56px', borderRadius: '16px', background: '#FEF3C7', color: '#F59E0B' }}>
-                  <DollarSign size={26} />
-                </div>
-              </div>
+                <StickerFooter index={1} action="Read guide" />
+              </span>
+              <span className="stk-icon stk-icon-lg" aria-hidden="true"><DollarSign size={26} strokeWidth={2.25} /></span>
             </Link>
 
-            {/* Scope-of-practice hub — full-width banner (P5 sop-hub:
+            {/* Scope-of-practice hub: full-width sticker banner (P5 sop-hub:
                 interactive 51-jurisdiction practice-authority explorer). */}
-            <Link href="/scope-of-practice" className="emp-bento-card" style={{
-              ...clayCard, marginTop: '14px', padding: '0', overflow: 'hidden', textDecoration: 'none',
-              display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center',
-            }}>
-              <div style={{ padding: '24px 28px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#10B981', background: '#D1FAE5', padding: '4px 10px', borderRadius: '20px' }}>Interactive</span>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '10px 0 6px' }}>Scope of Practice by State: All 50 States + DC</h2>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.55, margin: 0 }}>
+            <Link href="/scope-of-practice" className="stk-card stk-wide" style={{ marginTop: '24px' }}>
+              <span className="stk-body">
+                <span className="stk-chip" style={{ background: STICKER_CHIP_FILLS[3] }}>Interactive</span>
+                <h2 className="stk-title font-heading">Scope of Practice by State: All 50 States + DC</h2>
+                <p className="stk-desc">
                   Sortable, filterable practice-authority explorer with board of nursing links, licensure guides, salary data, and open jobs for every state.
                 </p>
-              </div>
-              <div style={{ padding: '24px 28px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ ...iconTile, width: '56px', height: '56px', borderRadius: '16px', background: '#D1FAE5', color: '#10B981' }}>
-                  <MapPin size={26} />
-                </div>
-              </div>
+                <StickerFooter index={0} action="Explore" />
+              </span>
+              <span className="stk-icon stk-icon-lg" aria-hidden="true"><MapPin size={26} strokeWidth={2.25} /></span>
             </Link>
 
             {/* ─── P4: Before you apply — the education wedge ───
@@ -326,28 +312,24 @@ export default async function ResourcesPage() {
                 band disappears entirely rather than linking a post the sync
                 script has not published yet. */}
             {educationWedge.length > 0 && (
-              <div style={{ marginTop: '14px' }}>
-                <p style={{ fontSize: '12px', fontWeight: 700, color: '#A855F7', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 10px' }}>
+              <div style={{ marginTop: '28px' }}>
+                <p style={{ fontSize: '11px', fontWeight: 800, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.2em', margin: '0 0 12px' }}>
                   Before you apply
                 </p>
-                <div className="res-tools-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${educationWedge.length}, 1fr)`, gap: '14px' }}>
-                  {educationWedge.map(post => (
-                    <Link key={post.slug} href={`/blog/${post.slug}`} className="emp-bento-card" style={{
-                      ...clayCard, padding: '24px 22px', textDecoration: 'none',
-                      display: 'flex', flexDirection: 'column', gap: '10px',
-                    }}>
-                      <div style={{ ...iconTile, width: '40px', height: '40px', borderRadius: '12px', background: '#FAF5FF', color: '#A855F7' }}>
-                        <GraduationCap size={20} />
-                      </div>
-                      <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: 0, lineHeight: 1.35 }}>{post.title}</h2>
+                <div className="res-tools-grid stk-grid stk-grid-2" style={{ gridTemplateColumns: `repeat(${educationWedge.length}, 1fr)` }}>
+                  {educationWedge.map((post, i) => (
+                    <Link key={post.slug} href={`/blog/${post.slug}`} className="stk-card">
+                      <span className="stk-top">
+                        <span className="stk-chip" style={{ background: STICKER_CHIP_FILLS[(i + 1) % STICKER_CHIP_FILLS.length] }}>Education</span>
+                        <span className="stk-icon" aria-hidden="true"><GraduationCap size={18} strokeWidth={2.25} /></span>
+                      </span>
+                      <h2 className="stk-title font-heading">{post.title}</h2>
                       {post.metaDescription && (
-                        <p style={{ fontSize: '12.5px', color: '#5A4A42', lineHeight: 1.55, margin: 0, flex: 1 }}>
+                        <p className="stk-desc">
                           {post.metaDescription.length > 140 ? post.metaDescription.slice(0, 140) + '…' : post.metaDescription}
                         </p>
                       )}
-                      <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        Read the guide <ArrowRight size={13} />
-                      </span>
+                      <StickerFooter index={i + 2} action="Read guide" />
                     </Link>
                   ))}
                 </div>
@@ -360,20 +342,22 @@ export default async function ResourcesPage() {
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 3A: LICENSURE CHECKER TOOL (cool slate bg)
           ═══════════════════════════════════════════════════════════════ */}
-      <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)', padding: '80px 20px', marginTop: '24px' }}>
+      <section className="stk-stage stk-stage-mint">
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
-            Interactive Tool
-          </p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '12px' }}>
-            {brand.niche.short} Licensure Checker
-          </h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '550px', margin: '0 auto 44px', lineHeight: 1.6 }}>
-            Select your state to instantly see requirements, practice authority, salary data, and timeline.
-          </p>
+          <div className="stk-head">
+            <p className="stk-eyebrow">
+              Interactive Tool
+            </p>
+            <h2 className="stk-h2 font-heading">
+              {brand.niche.short} Licensure Checker
+            </h2>
+            <p className="stk-lede">
+              Select your state to instantly see requirements, practice authority, salary data, and timeline.
+            </p>
+          </div>
 
-          {/* ─── Licensure Checker Tool ─── */}
-          <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          {/* ─── Licensure Checker Tool, framed as one large sticker ─── */}
+          <div className="stk-frame" style={{ maxWidth: '1000px', margin: '0 auto' }}>
             <LicensureChecker
               stateGuides={sortedStates.filter(Boolean).map(s => ({ name: s!.name, slug: s!.slug }))}
               stateSalaries={stateSalaries}
@@ -390,38 +374,29 @@ export default async function ResourcesPage() {
           Coverage" header over an empty grid advertises missing content.
           ═══════════════════════════════════════════════════════════════ */}
       {sortedStates.length > 0 && (
-      <section style={{ background: 'linear-gradient(180deg, #FDE8D8 0%, #F5D0B5 40%, #FDE8D8 100%)', padding: '80px 20px' }}>
+      <section className="stk-stage stk-stage-peach">
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
-            50-State Coverage
-          </p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '12px' }}>
-            Browse All Licensure Guides
-          </h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '500px', margin: '0 auto 36px', lineHeight: 1.6 }}>
-            Requirements, board links, salary data, and step-by-step instructions for every state.
-          </p>
+          <div className="stk-head">
+            <p className="stk-eyebrow">
+              50-State Coverage
+            </p>
+            <h2 className="stk-h2 font-heading">
+              Browse All Licensure Guides
+            </h2>
+            <p className="stk-lede">
+              Requirements, board links, salary data, and step-by-step instructions for every state.
+            </p>
+          </div>
 
           <div className="res-state-grid" style={{
-            display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px',
+            display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '24px',
           }}>
             {sortedStates.map(s => {
               if (!s) return null;
               const slug = s.name.toLowerCase().replace(/\s+/g, '-');
               return (
-                <Link key={s.name} href={`/blog/${s.slug}`}
-                  className="res-diorama-card"
-                  style={{ textDecoration: 'none', display: 'block' }}
-                >
-                  <div
-                    className="res-diorama-img"
-                    style={{
-                      position: 'relative', overflow: 'hidden', aspectRatio: '1',
-                      borderRadius: '24px', marginBottom: '8px',
-                      boxShadow: 'inset 4px 4px 10px rgba(255,255,255,0.3), inset -3px -3px 8px rgba(0,0,0,0.08), 0 6px 20px rgba(0,0,0,0.1)',
-                      transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                    }}
-                  >
+                <Link key={s.name} href={`/blog/${s.slug}`} className="stk-state">
+                  <span className="stk-state-img">
                     {/* SEO Fix H15: StateImage falls back if per-state webp is missing. */}
                     <StateImage
                       slug={slug}
@@ -430,10 +405,9 @@ export default async function ResourcesPage() {
                       className="object-cover"
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
                     />
-                  </div>
-                  <p style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35', textAlign: 'center', margin: '0 0 2px', transition: 'color 0.2s ease' }}
-                    className="res-diorama-name">{s.name}</p>
-                  <p style={{ fontSize: '11px', color: '#6366F1', textAlign: 'center', margin: 0, fontWeight: 500 }}>Read Guide →</p>
+                  </span>
+                  <span className="stk-state-name font-heading">{s.name}</span>
+                  <span className="stk-action">Read guide →</span>
                 </Link>
               );
             })}
@@ -448,58 +422,48 @@ export default async function ResourcesPage() {
           launches with an empty blog (config/niche/content-map.ts).
           ═══════════════════════════════════════════════════════════════ */}
       {articles.length > 0 && (
-      <div style={{ background: 'linear-gradient(180deg, #FFF5EE 0%, #FDE8D8 50%, #FFF5EE 100%)', padding: '80px 20px' }}>
+      <div className="stk-stage stk-stage-grid">
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
-            Expert Articles
-          </p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
-            Career Guides & Insights
-          </h2>
+          <div className="stk-head">
+            <p className="stk-eyebrow">
+              Expert Articles
+            </p>
+            <h2 className="stk-h2 font-heading">
+              Career Guides & Insights
+            </h2>
+          </div>
 
           {Object.entries(grouped).map(([category, posts]) => {
             const cfg = CATEGORY_CONFIG[category] || { label: category, color: '#64748B', bg: '#F1F5F9', icon: Star };
             return (
-              <div key={category} style={{ marginBottom: '48px' }}>
+              <div key={category} style={{ marginBottom: '56px' }}>
                 {/* Category header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                  <div style={{ ...iconTile, width: '36px', height: '36px', borderRadius: '10px', background: cfg.bg, color: cfg.color }}>
-                    <cfg.icon size={20} />
-                  </div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>{cfg.label}</h3>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#94A3B8', marginLeft: '4px' }}>({posts.length})</span>
+                <div className="stk-cat-head">
+                  <span className="stk-icon" aria-hidden="true"><cfg.icon size={18} strokeWidth={2.25} /></span>
+                  <h3 className="stk-cat-title font-heading">{cfg.label}</h3>
+                  <span className="stk-cat-count">{posts.length}</span>
                 </div>
                 {/* Post grid */}
-                <div className="res-article-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-                  {posts.slice(0, 6).map(post => (
-                    <Link key={post.slug} href={`/blog/${post.slug}`} className="emp-bento-card" style={{
-                      ...clayCard, padding: '24px 22px', textDecoration: 'none',
-                      display: 'flex', flexDirection: 'column', gap: '10px',
-                    }}>
-                      <span style={{
-                        fontSize: '10px', fontWeight: 700, color: cfg.color,
-                        background: cfg.bg, padding: '3px 10px', borderRadius: '20px',
-                        alignSelf: 'flex-start',
-                      }}>{cfg.label}</span>
-                      <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: 0, lineHeight: 1.4 }}>{post.title}</h4>
+                <div className="res-article-grid stk-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                  {posts.slice(0, 6).map((post, i) => (
+                    <Link key={post.slug} href={`/blog/${post.slug}`} className="stk-card">
+                      <span className="stk-top">
+                        <span className="stk-chip" style={{ background: STICKER_CHIP_FILLS[i % STICKER_CHIP_FILLS.length] }}>{cfg.label}</span>
+                      </span>
+                      <h4 className="stk-title font-heading">{post.title}</h4>
                       {post.metaDescription && (
-                        <p style={{ fontSize: '12.5px', color: '#5A4A42', lineHeight: 1.5, margin: 0, flex: 1 }}>
+                        <p className="stk-desc">
                           {post.metaDescription.length > 120 ? post.metaDescription.slice(0, 120) + '…' : post.metaDescription}
                         </p>
                       )}
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        Read more <ArrowRight size={12} />
-                      </span>
+                      <StickerFooter index={i} action="Read" />
                     </Link>
                   ))}
                 </div>
                 {posts.length > 6 && (
-                  <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                    <Link href="/blog" style={{
-                      fontSize: '13px', fontWeight: 600, color: '#BE185D',
-                      textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px',
-                    }}>
-                      View all {cfg.label} articles <ArrowRight size={14} />
+                  <div style={{ textAlign: 'center', marginTop: '28px' }}>
+                    <Link href="/blog" className="stk-link">
+                      View all {cfg.label} articles <ArrowRight size={14} aria-hidden="true" />
                     </Link>
                   </div>
                 )}
@@ -513,83 +477,77 @@ export default async function ResourcesPage() {
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 5: TOOLS & DOWNLOADS (slate bg)
           ═══════════════════════════════════════════════════════════════ */}
-      <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
-            Free Tools
-          </p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '32px' }}>
-            Tools & Downloads
-          </h2>
+      <section className="stk-stage stk-stage-blush">
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <div className="stk-head">
+            <p className="stk-eyebrow">
+              Free Tools
+            </p>
+            <h2 className="stk-h2 font-heading">
+              Tools & Downloads
+            </h2>
+          </div>
 
           {/* P2 #4/#5/#6/#17 — the four interactive tools each have their own
               route under /tools. Cards render from the TOOLS registry so this
               band can never link a tool path that does not exist. */}
-          <div className="res-tools-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', marginBottom: '14px' }}>
-            {TOOLS.map(t => (
-              <Link key={t.path} href={t.path} className="emp-bento-card" style={{
-                ...clayCard, padding: '24px 22px', textDecoration: 'none',
-                display: 'flex', flexDirection: 'column', gap: '10px',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                  <div style={{ ...iconTile, width: '40px', height: '40px', borderRadius: '12px', background: '#FDF2F8', color: '#BE185D' }}>
-                    <Wrench size={20} />
-                  </div>
-                  <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#BE185D', background: '#FDF2F8', padding: '3px 10px', borderRadius: '20px' }}>
-                    {t.badge}
+          <div className="res-tools-grid stk-grid stk-grid-2" style={{ gridTemplateColumns: 'repeat(2, 1fr)', marginBottom: '24px' }}>
+            {TOOLS.map((t, i) => {
+              const ToolIcon = TOOL_ICONS[t.icon];
+              return (
+                <Link key={t.path} href={t.path} className="stk-card">
+                  <span className="stk-top">
+                    <span className="stk-chip" style={{ background: STICKER_CHIP_FILLS[i % STICKER_CHIP_FILLS.length] }}>{t.badge}</span>
+                    <span className="stk-icon" aria-hidden="true"><ToolIcon size={18} strokeWidth={2.25} /></span>
                   </span>
-                </div>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: 0, lineHeight: 1.35 }}>{t.title}</h3>
-                <p style={{ fontSize: '12.5px', color: '#5A4A42', lineHeight: 1.55, margin: 0, flex: 1 }}>{t.blurb}</p>
-                <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  Open the tool <ArrowRight size={13} />
-                </span>
-              </Link>
-            ))}
+                  <h3 className="stk-title font-heading">{t.title}</h3>
+                  <p className="stk-desc">{t.blurb}</p>
+                  <StickerFooter index={i} action="Open tool" />
+                </Link>
+              );
+            })}
           </div>
 
-          <p style={{ textAlign: 'center', marginBottom: '28px' }}>
-            <Link href="/tools" style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textDecoration: 'underline' }}>
-              Browse all free tools
+          <p style={{ textAlign: 'center', margin: '8px 0 32px' }}>
+            <Link href="/tools" className="stk-more">
+              Browse all free tools →
             </Link>
           </p>
 
-          <div className="res-tools-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
-            {/* Salary Calculator */}
-            <Link href="/salary-guide" className="emp-bento-card" style={{
-              ...clayCard, padding: '28px 24px', textDecoration: 'none',
-              background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
-              border: '2px solid rgba(190,24,93,0.12)',
-            }}>
-              <div style={{ ...iconTile, background: 'rgba(190,24,93,0.10)', color: '#BE185D', marginBottom: '12px' }}>
-                <Calculator size={24} />
-              </div>
-              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#831843', margin: '0 0 6px' }}>Salary Calculator</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.5, margin: '0 0 14px' }}>
-                Get a personalized salary estimate based on your state, experience, setting, and specialty.
-              </p>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                Use Calculator <ArrowRight size={14} />
+          <div className="stk-grid" style={{ gridTemplateColumns: '1fr' }}>
+            {/* Salary Calculator: full-width sticker banner */}
+            <Link href="/salary-guide" className="stk-card stk-wide">
+              <span className="stk-body">
+                <span className="stk-chip" style={{ background: STICKER_CHIP_FILLS[1] }}>Interactive</span>
+                <h3 className="stk-title font-heading">Salary Calculator</h3>
+                <p className="stk-desc">
+                  Get a personalized salary estimate based on your state, experience, setting, and specialty.
+                </p>
+                <StickerFooter index={1} action="Use calculator" />
               </span>
+              <span className="stk-icon stk-icon-lg" aria-hidden="true"><Calculator size={26} strokeWidth={2.25} /></span>
             </Link>
 
-            {/* PDF Download */}
-            <div className="emp-bento-card" style={{ ...clayCard, padding: '28px 24px' }}>
-              <div style={{ ...iconTile, background: '#EEF2FF', color: '#6366F1', marginBottom: '12px' }}>
-                <FileDown size={24} />
-              </div>
-              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Free Salary Guide PDF</h3>
+            {/* PDF Download: not a link (it hosts the download form), so no hover lift.
+                Copy on the left, the email gate on the right. */}
+            <div className="stk-card stk-wide stk-static stk-download">
+              <span className="stk-body">
+              <span className="stk-chip" style={{ background: STICKER_CHIP_FILLS[2] }}>Free download</span>
+              <h3 className="stk-title font-heading">Free Salary Guide PDF</h3>
               {/* Edition year comes from the artifact on disk, never from the
                   clock: `currentYear` would advertise a 2027 guide on 1 Jan
                   while the funnel still delivers np-salary-guide-2026.pdf.
                   Contents mirror the PDF's own cover lede — it prints no
                   state-by-state table by design (that data lives on
                   /salary-guide and updates daily). */}
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.5, margin: '0 0 14px' }}>
+              <p className="stk-desc">
                 Download the {SALARY_GUIDE_EDITION_YEAR} salary guide: national wage benchmarks, pay by experience,
                 setting, and specialty, plus what to check before you negotiate.
               </p>
-              <ResourceDownloadGate resourceUrl={SALARY_GUIDE_URL} resourceTitle="Salary Guide PDF" />
+              </span>
+              <span className="stk-download-gate">
+                <ResourceDownloadGate resourceUrl={SALARY_GUIDE_URL} resourceTitle="Salary Guide PDF" />
+              </span>
             </div>
           </div>
 
@@ -599,9 +557,9 @@ export default async function ResourcesPage() {
               link; this is the in-content mention on the resources hub. Href
               matches COMPARE_HUB_PATH in lib/compare-data.ts — pinned by
               tests/regressions/p6-nav-mesh-compare-inbound.test.ts. */}
-          <p style={{ textAlign: 'center', marginTop: '28px', marginBottom: 0 }}>
-            <Link href="/compare" style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textDecoration: 'underline' }}>
-              See how {brand.name} compares to other {brand.niche.short} job boards
+          <p style={{ textAlign: 'center', marginTop: '36px', marginBottom: 0 }}>
+            <Link href="/compare" className="stk-link">
+              See how {brand.name} compares to other {brand.niche.short} job boards <ArrowRight size={14} aria-hidden="true" />
             </Link>
           </p>
         </div>
@@ -610,34 +568,19 @@ export default async function ResourcesPage() {
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 6: CTA
           ═══════════════════════════════════════════════════════════════ */}
-      <div style={{ background: 'linear-gradient(180deg, #FFF5EE 0%, #FDE8D8 50%, #FFF5EE 100%)', padding: '80px 20px' }}>
-        <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-          <div className="emp-bento-card" style={{
-            ...clayCard, padding: '0', overflow: 'hidden', textAlign: 'center',
-            border: '2px solid rgba(190,24,93,0.10)',
-          }}>
-            <div style={{ background: 'linear-gradient(145deg, #BE185D, #9D174D)', padding: '40px 32px', color: '#fff' }}>
-              <div style={{ ...iconTile, width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(255,255,255,0.15)', color: '#fff', margin: '0 auto 16px' }}>
-                <Briefcase size={26} />
-              </div>
-              <h2 className="font-lora" style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px' }}>Ready to Find Your Next {brand.niche.short} Role?</h2>
-              <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.8)', margin: '0 0 24px' }}>
-                Browse hundreds of {brand.niche.descriptor} positions updated daily.
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
-                <Link href="/jobs" className="emp-cta-primary" style={{
-                  padding: '14px 32px', borderRadius: '12px', fontWeight: 700, fontSize: '14px',
-                  background: '#fff', color: '#BE185D', textDecoration: 'none',
-                  display: 'inline-flex', alignItems: 'center', gap: '6px',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                }}>Browse Jobs <ArrowRight size={16} /></Link>
-                <Link href="/job-alerts" className="emp-cta-secondary" style={{
-                  padding: '14px 32px', borderRadius: '12px', fontWeight: 700, fontSize: '14px',
-                  background: 'transparent', color: '#fff', textDecoration: 'none',
-                  border: '2px solid rgba(255,255,255,0.4)',
-                  display: 'inline-flex', alignItems: 'center', gap: '6px',
-                }}>Set Up Job Alerts</Link>
-              </div>
+      <div className="stk-stage stk-stage-cream">
+        <div style={{ maxWidth: '760px', margin: '0 auto' }}>
+          <div className="stk-cta">
+            <span className="stk-icon stk-icon-lg stk-icon-on-berry" aria-hidden="true">
+              <Briefcase size={26} strokeWidth={2.25} />
+            </span>
+            <h2 className="stk-cta-title font-heading">Ready to Find Your Next {brand.niche.short} Role?</h2>
+            <p className="stk-cta-lede">
+              Browse hundreds of {brand.niche.descriptor} positions updated daily.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px' }}>
+              <Link href="/jobs" className="stk-btn">Browse Jobs <ArrowRight size={16} aria-hidden="true" /></Link>
+              <Link href="/job-alerts" className="stk-btn stk-btn-ghost">Set Up Job Alerts</Link>
             </div>
           </div>
         </div>
@@ -645,46 +588,304 @@ export default async function ResourcesPage() {
 
       {/* ─── Styles ─── */}
       <style>{`
-        .emp-cta-primary {
-          transition: transform 0.25s ease, box-shadow 0.25s ease;
+        /* Sticker card system: same anatomy as the homepage tools band */
+        .stk-grid { display: grid; gap: 24px; }
+        .stk-card {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          box-sizing: border-box;
+          background: #fff;
+          border: 2px solid #7A1C2B;
+          box-shadow: 5px 5px 0 #7A1C2B;
+          padding: 20px;
+          text-decoration: none;
+          color: inherit;
+          text-align: left;
+          transition: transform 0.15s ease;
         }
-        .emp-cta-primary:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 10px 32px rgba(0,0,0,0.2) !important;
+        a.stk-card { cursor: pointer; }
+        a.stk-card:hover { transform: translateY(-4px); }
+        a.stk-card:focus-visible { outline: 3px solid #BE185D; outline-offset: 2px; }
+        .stk-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 12px;
         }
-        .emp-cta-secondary {
-          transition: transform 0.25s ease, border-color 0.25s ease;
+        .stk-chip {
+          display: inline-block;
+          align-self: flex-start;
+          padding: 5px 12px;
+          border-radius: 999px;
+          border: 1px solid rgba(255,255,255,0.5);
+          box-shadow: 3px 3px 8px rgba(190,24,93,0.10), -2px -2px 5px rgba(255,255,255,0.8), inset 2px 2px 3px rgba(255,255,255,0.7);
+          font-size: 10.5px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: #7A1C2B;
         }
-        .emp-cta-secondary:hover {
-          transform: translateY(-2px);
-          border-color: rgba(255,255,255,0.7) !important;
+        .stk-icon {
+          flex: none;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #FBF2E6;
+          border: 2px solid #7A1C2B;
+          box-shadow: 3px 3px 0 #7A1C2B;
+          color: #7A1C2B;
         }
-        .emp-bento-card {
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        .stk-icon-lg { width: 60px; height: 60px; box-shadow: 4px 4px 0 #7A1C2B; }
+        .stk-title {
+          font-weight: 700;
+          font-size: 18px;
+          line-height: 1.3;
+          color: #2b1a1e;
+          margin: 0 0 8px;
         }
-        .emp-bento-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 8px 8px 24px rgba(0,0,0,0.1), -4px -4px 12px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important;
+        .stk-desc {
+          font-size: 12.5px;
+          color: #7a6d70;
+          line-height: 1.5;
+          margin: 0 0 14px;
         }
-        .sal-stat-pill {
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        .stk-bar {
+          margin-top: auto;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
-        .sal-stat-pill:hover {
-          transform: translateY(-2px) scale(1.02);
-          box-shadow: 6px 6px 20px rgba(0,0,0,0.1), -3px -3px 10px rgba(255,255,255,0.9) !important;
+        .stk-track {
+          flex: 1;
+          height: 4px;
+          background: rgba(122,28,43,0.12);
+          border-radius: 2px;
+          position: relative;
+          overflow: hidden;
         }
-        .res-diorama-card:hover .res-diorama-img {
-          transform: translateY(-6px) scale(1.03);
-          box-shadow: inset 4px 4px 10px rgba(255,255,255,0.3), inset -3px -3px 8px rgba(0,0,0,0.08), 0 14px 32px rgba(0,0,0,0.16) !important;
+        .stk-fill {
+          position: absolute;
+          top: 0; left: 0; bottom: 0;
+          background: #BE185D;
+          border-radius: 2px;
         }
-        .res-diorama-card:hover .res-diorama-name {
-          color: #BE185D !important;
+        .stk-action {
+          font-size: 11px;
+          font-weight: 800;
+          color: #9b8291;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          white-space: nowrap;
+        }
+        .stk-wide {
+          flex-direction: row;
+          align-items: center;
+          gap: 24px;
+          height: auto;
+        }
+        .stk-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+        .stk-grid-2 > .stk-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+        .stk-download { align-items: flex-start; }
+        .stk-download-gate { flex: 0 1 420px; min-width: 0; }
+        @media (max-width: 900px) {
+          .stk-download { flex-direction: column; align-items: stretch; }
+          .stk-download-gate { flex-basis: auto; width: 100%; }
+        }
+        .stk-body .stk-chip { margin-bottom: 12px; }
+        .stk-more {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 11px 24px;
+          font-size: 13px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: #fff;
+          background: #BE185D;
+          border: 2px solid #7A1C2B;
+          box-shadow: 4px 4px 0 #7A1C2B;
+          text-decoration: none;
+          transition: transform 0.15s ease, background 0.2s ease;
+        }
+        .stk-more:hover { transform: translateY(-2px); background: #9D174D; }
+        .stk-more:focus-visible { outline: 3px solid #BE185D; outline-offset: 2px; }
+        @media (prefers-reduced-motion: reduce) {
+          a.stk-card:hover, .stk-more:hover { transform: none; }
+        }
+        @media (max-width: 560px) {
+          .stk-wide { flex-direction: column; align-items: flex-start; }
+          .stk-wide .stk-icon-lg { display: none; }
+          .stk-download-gate { flex-basis: auto; width: 100%; }
+        }
+        /* Stages: each band keeps its own ground (homepage rule) */
+        .stk-stage { position: relative; padding: 88px 20px; }
+        .stk-stage-grid {
+          background-color: #F5F0EB;
+          background-image: linear-gradient(rgba(122,28,43,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(122,28,43,0.07) 1px, transparent 1px);
+          background-size: 44px 44px;
+        }
+        .stk-stage-mint { background-color: #E9F5EE; }
+        .stk-stage-peach {
+          background-color: #FBF2E6;
+          background-image: radial-gradient(rgba(122,28,43,0.14) 1.2px, transparent 1.4px);
+          background-size: 22px 22px;
+        }
+        .stk-stage-blush {
+          background-color: #FBE7EE;
+          background-image: radial-gradient(rgba(122,28,43,0.18) 1.2px, transparent 1.4px);
+          background-size: 22px 22px;
+        }
+        .stk-stage-cream { background-color: #FDFBF7; }
+
+        /* Headings: pink eyebrow, uppercase berry Lora, muted lede */
+        .stk-head { text-align: center; margin: 0 auto 40px; max-width: 640px; }
+        .stk-eyebrow {
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          color: #BE185D;
+          margin: 0 0 8px;
+        }
+        .stk-h1 {
+          font-weight: 700;
+          font-size: clamp(2.2rem, 5.2vw, 3.6rem);
+          line-height: 1.02;
+          letter-spacing: -0.01em;
+          text-transform: uppercase;
+          color: #7A1C2B;
+          margin: 0;
+          text-wrap: balance;
+        }
+        .stk-h2 {
+          font-weight: 700;
+          font-size: clamp(26px, 3vw, 36px);
+          line-height: 1.1;
+          letter-spacing: -0.01em;
+          text-transform: uppercase;
+          color: #7A1C2B;
+          margin: 0;
+          text-wrap: balance;
+        }
+        .stk-lede { font-size: 15px; color: #5A4A42; line-height: 1.6; max-width: 580px; margin: 12px auto 0; }
+
+        /* Stat stickers in the hero */
+        .stk-stat {
+          display: inline-flex;
+          align-items: baseline;
+          gap: 8px;
+          padding: 10px 18px;
+          border: 2px solid #7A1C2B;
+          box-shadow: 4px 4px 0 #7A1C2B;
+        }
+        .stk-stat-value { font-size: 22px; font-weight: 700; color: #7A1C2B; line-height: 1; }
+        .stk-stat-label { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #7A1C2B; }
+
+        /* Large sticker frame around an embedded tool */
+        .stk-frame { background: #fff; border: 2px solid #7A1C2B; box-shadow: 6px 6px 0 #7A1C2B; overflow: hidden; }
+        /* The embedded checker ships its own rounded, shadowed shell: square it off inside the frame */
+        .stk-frame > * { border-radius: 0 !important; box-shadow: none !important; border: 0 !important; margin: 0 !important; }
+
+        /* State guide tiles: image in a sticker frame, name, action word */
+        .stk-state { display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; transition: transform 0.15s ease; }
+        .stk-state-img {
+          position: relative;
+          display: block;
+          width: 100%;
+          aspect-ratio: 1;
+          overflow: hidden;
+          background: #fff;
+          border: 2px solid #7A1C2B;
+          box-shadow: 5px 5px 0 #7A1C2B;
+          margin-bottom: 8px;
+        }
+        .stk-state-name { font-size: 15px; font-weight: 700; color: #2b1a1e; text-align: center; line-height: 1.25; }
+        .stk-state:hover { transform: translateY(-4px); }
+        .stk-state:focus-visible { outline: 3px solid #BE185D; outline-offset: 4px; }
+
+        /* Article category header */
+        .stk-cat-head { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .stk-cat-title { font-size: 20px; font-weight: 700; color: #7A1C2B; text-transform: uppercase; letter-spacing: -0.01em; margin: 0; }
+        .stk-cat-count {
+          font-size: 11px;
+          font-weight: 800;
+          color: #7A1C2B;
+          background: #FDE3C8;
+          border: 2px solid #7A1C2B;
+          padding: 2px 9px;
+        }
+
+        /* Inline text link */
+        .stk-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          color: #7A1C2B;
+          text-decoration: none;
+          border-bottom: 2px solid #BE185D;
+          padding-bottom: 2px;
+        }
+        .stk-link:hover { color: #BE185D; }
+        .stk-link:focus-visible { outline: 3px solid #BE185D; outline-offset: 3px; }
+
+        /* Closing call to action: one berry sticker */
+        .stk-cta {
+          text-align: center;
+          background: #BE185D;
+          border: 2px solid #7A1C2B;
+          box-shadow: 8px 8px 0 #7A1C2B;
+          padding: 44px 32px;
+          color: #fff;
+        }
+        .stk-icon-on-berry { margin: 0 auto 18px; background: #FBCFE8; }
+        .stk-cta-title {
+          font-size: clamp(22px, 2.6vw, 30px);
+          font-weight: 700;
+          text-transform: uppercase;
+          line-height: 1.15;
+          margin: 0 0 10px;
+          color: #fff;
+          text-wrap: balance;
+        }
+        .stk-cta-lede { font-size: 15px; color: #FDE7F0; margin: 0 0 28px; }
+        .stk-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 13px 26px;
+          font-size: 13px;
+          font-weight: 800;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          color: #7A1C2B;
+          background: #fff;
+          border: 2px solid #7A1C2B;
+          box-shadow: 4px 4px 0 #7A1C2B;
+          text-decoration: none;
+          transition: transform 0.15s ease;
+        }
+        .stk-btn:hover { transform: translateY(-2px); }
+        .stk-btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+        .stk-btn-ghost { background: #9D174D; color: #fff; }
+        @media (prefers-reduced-motion: reduce) {
+          .stk-state:hover, .stk-btn:hover { transform: none; }
         }
         @media (max-width: 768px) {
           .res-feat-grid { grid-template-columns: 1fr !important; }
           .res-state-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .res-article-grid { grid-template-columns: 1fr !important; }
           .res-tools-grid { grid-template-columns: 1fr !important; }
+          .stk-stage { padding: 60px 16px; }
+          .stk-cta { padding: 36px 20px; }
         }
         @media (min-width: 769px) and (max-width: 1024px) {
           .res-feat-grid { grid-template-columns: repeat(2, 1fr) !important; }
