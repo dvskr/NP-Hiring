@@ -7,6 +7,7 @@ import { verifyCsrf } from '@/lib/csrf';
 import { logAudit } from '@/lib/audit-log';
 import { logger } from '@/lib/logger';
 import { CLAIM_SELECT } from '../claim-select';
+import { revalidateCompanySurfaces } from '../../_lib/public-revalidation';
 
 /**
  * PATCH /api/admin/company-claims/:id
@@ -74,7 +75,7 @@ export async function PATCH(
         return NextResponse.json(
             {
                 success: false,
-                error: "Invalid request — pass { action: 'approve' | 'reject' }.",
+                error: "Invalid request. Pass { action: 'approve' | 'reject' }.",
                 details: err instanceof Error ? err.message : 'unknown',
             },
             { status: 400 },
@@ -159,6 +160,12 @@ export async function PATCH(
                 claimVerifiedAt: companyClaimVerifiedAt?.toISOString() ?? null,
             },
         });
+
+        // P10 admin-revalidate #4: Company.claimVerifiedAt renders on the ISR
+        // profile (badge vs "Claim this profile"), the A to Z hub and every
+        // job page's AboutEmployer block; refresh them so the decision is
+        // public now, not after the hourly window.
+        await revalidateCompanySurfaces(existing.companyId, 'Admin Company Claims');
 
         logger.info('[Admin Company Claims] reviewed', {
             claimId: id,

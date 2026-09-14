@@ -137,6 +137,90 @@ const EXPERIENCE_LLM_TO_CANONICAL: Record<string, string> = {
 };
 
 /**
+ * Mutually exclusive work-mode flags for a canonical mode. isRemote means
+ * FULLY remote (what /jobs/remote and JobPosting TELECOMMUTE assert), so a
+ * hybrid job is never also remote. Mirrors flagsForMode in
+ * lib/job-normalizer.ts (reconcileWorkMode), the fresh-ingest path.
+ */
+export function workModeFlagsFor(mode: string | null): { isRemote: boolean; isHybrid: boolean } {
+  if (mode === 'Remote') return { isRemote: true, isHybrid: false };
+  if (mode === 'Hybrid') return { isRemote: false, isHybrid: true };
+  return { isRemote: false, isHybrid: false };
+}
+
+/**
+ * Repair plan for a STORED row whose flags may both be true (written before
+ * workModeFlagsFor existed). A canonical stored mode decides the pair; with no
+ * mode, hybrid wins, matching reconcileWorkMode's location fallback (a hybrid
+ * job is not fully remote, so it must not assert TELECOMMUTE). Returns null
+ * when the row is already consistent. Used by
+ * scripts/backfill-exclusive-work-mode-flags.ts.
+ */
+export function planExclusiveWorkModeRepair(row: {
+  mode: string | null;
+  isRemote: boolean;
+  isHybrid: boolean;
+}): { isRemote: boolean; isHybrid: boolean } | null {
+  if (!(row.isRemote && row.isHybrid)) return null;
+  const canonical = row.mode === 'Remote' || row.mode === 'Hybrid' || row.mode === 'In-Person';
+  return canonical ? workModeFlagsFor(row.mode) : { isRemote: false, isHybrid: true };
+}
+
+/**
+ * US states, DC and the inhabited territories, plus the country-level
+ * catch-alls a multi-jurisdiction posting uses for its "anywhere" variant.
+ * Lowercase, compared after stripping a "Commonwealth of" / "State of" prefix.
+ */
+const TITLE_JURISDICTION_NAMES: ReadonlySet<string> = new Set([
+  ...Object.keys(STATE_NAME_TO_CODE),
+  'washington dc', 'washington d.c.', 'puerto rico', 'guam', 'american samoa',
+  'northern mariana islands', 'the northern mariana islands', 'u.s. virgin islands',
+  'us virgin islands', 'virgin islands', 'usa', 'u.s.a.', 'us', 'u.s.', 'united states',
+  'united states of america', 'nationwide', 'all states', 'multi-state', 'multistate',
+]);
+
+function isJurisdictionSegment(segment: string): boolean {
+  const s = segment
+    .trim()
+    .toLowerCase()
+    .replace(/^(?:the\s+)?(?:commonwealth|state|territory)\s+of\s+/, '')
+    .replace(/\s+/g, ' ');
+  return s.length > 0 && TITLE_JURISDICTION_NAMES.has(s);
+}
+
+/**
+ * Display-safe title for an aggregated posting.
+ *
+ * 1. Em and en dashes become a spaced hyphen (site copy rule: no em/en
+ *    dashes in visible text), so "Nurse Practitioner — Remote" reads "Nurse Practitioner - Remote".
+ * 2. A trailing " | <jurisdiction>" segment is dropped. Multi-state employers
+ *    (Legion Health on Greenhouse) publish one requisition per licensure
+ *    state, every copy geolocated to the company HQ ("Austin, Texas"), so a
+ *    Texas search listed rows titled "... | District of Columbia" and
+ *    "... | Commonwealth of the Northern Mariana Islands". The jurisdiction
+ *    segment is the ONLY difference between the copies; removing it makes
+ *    the title agree with the stored location and gives every copy the same
+ *    title+employer+location identity key, so the dedup pass collapses them
+ *    into one listing instead of inserting N near-identical rows.
+ *
+ * Only a segment that is purely a jurisdiction name is removed, and never the
+ * first segment, so "Nurse Practitioner | Texas Oncology" keeps its employer
+ * words and a bare "Texas" title is left alone.
+ */
+export function normalizeIngestedTitle(title: string): string {
+  if (!title) return title;
+  const dashFree = title
+    .replace(/\s*[–—―]\s*/g, ' - ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  const segments = dashFree.split(/\s*\|\s*/);
+  while (segments.length > 1 && isJurisdictionSegment(segments[segments.length - 1])) {
+    segments.pop();
+  }
+  return segments.join(' | ').trim();
+}
+
+/**
  * Merge LLM-extracted fields into a normalized job WITHOUT overwriting
  * already-present values. Used by the inline-rescue path for borderline-
  * completeness jobs.
@@ -176,9 +260,14 @@ function mergeLlmIntoNormalized(job: any, llm: LLMExtractResult): any {
         : raw === 'Remote' || raw === 'Hybrid' || raw === 'In-Person' ? raw
         : null;
     if (canon) {
+      // Flags are derived from the mode as a pair, never OR-ed onto whatever
+      // the row already carried: setting isHybrid=true while a stale
+      // isRemote=true survived made one job count under BOTH the remote and
+      // hybrid work-mode facets (facet sum > total).
+      const flags = workModeFlagsFor(canon);
       next.mode = canon;
-      if (canon === 'Remote') next.isRemote = true;
-      if (canon === 'Hybrid') next.isHybrid = true;
+      next.isRemote = flags.isRemote;
+      next.isHybrid = flags.isHybrid;
     }
   }
 
@@ -504,7 +593,12 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
           });
           continue;
         }
-        let normalizedJob = normalizeResult.job;
+        // Title normalised BEFORE dedup so per-state copies of one posting
+        // share an identity key (see normalizeIngestedTitle).
+        let normalizedJob = {
+          ...normalizeResult.job,
+          title: normalizeIngestedTitle(normalizeResult.job.title),
+        };
 
         // ── Inline LLM-rescue pass for borderline-completeness jobs ──
         // If completeness score is between the hard floor (20, enforced by
@@ -1160,7 +1254,9 @@ export async function ingestJobs(
       // Identity key only set if all three fields are present — missing
       // fields would produce ambiguous keys ("|employer|") that collide.
       if (job.title && job.employer && job.location) {
-        const key = buildJobIdentityKey(job.title, job.employer, job.location);
+        // Same title normalisation as the insert path, so a fresh copy of a
+        // stored multi-state posting keys onto the stored row.
+        const key = buildJobIdentityKey(normalizeIngestedTitle(job.title), job.employer, job.location);
         // First-write wins so we point new dupes at the original job we'll
         // renew. (Map.set replaces, so guard explicitly.)
         if (!globalTitleKeyMap.has(key)) globalTitleKeyMap.set(key, job.id);

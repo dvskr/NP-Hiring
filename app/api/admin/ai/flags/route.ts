@@ -16,6 +16,23 @@ import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
 import { listFlags, invalidateFlagCache, type AiFeatureFlag } from '@/lib/ai/feature-flags';
 import { logger } from '@/lib/logger';
+import { logAudit } from '@/lib/audit-log';
+import { createClient } from '@/lib/supabase/server';
+
+/**
+ * Supabase id of the admin flipping the switch. requireApiAdmin only answers
+ * pass/fail, so the session is read again rather than trusting the client.
+ */
+async function resolveAdminActorId(): Promise<string | null> {
+    try {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        return user?.id ?? null;
+    } catch (err) {
+        logger.error('[Admin AI flags] could not resolve the acting admin', err);
+        return null;
+    }
+}
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     const auth = await requireApiAdmin(request);
@@ -68,9 +85,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ error: 'non-global override requires tenantId' }, { status: 400 });
     }
 
+    // Fail closed: a kill-switch flip is never recorded without its actor.
+    const actorId = await resolveAdminActorId();
+    if (!actorId) {
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     // Use a delete + create instead of upsert because the unique index uses
     // COALESCE on tenantId — which Prisma's upsert doesn't model cleanly.
-    await prisma.aiFeatureFlagOverride.deleteMany({
+    const replaced = await prisma.aiFeatureFlagOverride.deleteMany({
         where: { flag, tenantType, tenantId },
     });
     const row = await prisma.aiFeatureFlagOverride.create({
@@ -80,12 +103,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             tenantId,
             enabled,
             reason: reason ?? null,
+            setBy: actorId,
             expiresAt: expiresAt ? new Date(expiresAt) : null,
         },
     });
 
     invalidateFlagCache(flag as AiFeatureFlag);
-    logger.info('AI feature flag override updated', { flag, tenantType, tenantId, enabled });
+    await logAudit({
+        action: 'ai.flag_override.set',
+        actorType: 'admin',
+        actorId,
+        targetType: 'ai_feature_flag_override',
+        targetId: row.id,
+        metadata: {
+            flag,
+            tenantType,
+            tenantId,
+            enabled,
+            reason: reason ?? null,
+            expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
+            replacedOverrides: replaced.count,
+        },
+    });
+    logger.info('AI feature flag override updated', { flag, tenantType, tenantId, enabled, setBy: actorId });
 
     return NextResponse.json({ override: row });
 }

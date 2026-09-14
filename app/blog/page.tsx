@@ -336,7 +336,16 @@ export default async function BlogIndexPage({
                                     No posts found
                                 </h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42' }}>
-                                    {categoryFilter
+                                    {/* A page number past the end must not claim nothing
+                                        is published while posts exist on earlier pages. */}
+                                    {totalCount > 0 ? (
+                                        <>
+                                            This page is past the end of the list.{' '}
+                                            <Link href={buildUrl(1, categoryFilter)} style={{ color: '#BE185D', fontWeight: 600 }}>
+                                                Go to the first page
+                                            </Link>
+                                        </>
+                                    ) : categoryFilter
                                         ? 'There are no posts in this category yet. Please check back soon.'
                                         : 'No blog posts have been published yet. Please check back soon.'}
                                 </p>

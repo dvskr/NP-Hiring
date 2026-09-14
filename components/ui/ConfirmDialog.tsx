@@ -37,12 +37,15 @@
  *   - role="dialog" aria-modal="true" so screen readers announce it
  *   - Escape key cancels (matches OS convention)
  *   - Backdrop click cancels (matches OS convention)
- *   - Confirm button gets autoFocus so Enter activates it
+ *   - Confirm button receives focus on open so Enter activates it
+ *   - Tab and Shift+Tab stay inside the dialog (useFocusTrap), and focus
+ *     returns to the control that opened it when the dialog closes
  *   - Cancel renders on the left, confirm on the right (Mac/Win order)
  */
 
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 
 export interface ConfirmConfig {
   title: string;
@@ -183,11 +186,26 @@ export default function ConfirmDialog({
     return () => document.removeEventListener('keydown', handler);
   }, []);
 
+  // Focus trap: Tab and Shift+Tab cycle inside the card, and focus returns to
+  // the control that opened the dialog when it unmounts. Escape stays on the
+  // handler above, so the trap gets no onEscape (it would double fire).
+  const cardRef = useFocusTrap<HTMLDivElement>({ isOpen: true });
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    // The trap focuses the first focusable (the Close button) one tick after
+    // mount. This effect is declared after it, so its timer runs second and
+    // lands focus on the confirm button so Enter activates it. Not using
+    // autoFocus: that fires before the trap records the opener, which would
+    // make focus restore target the dialog's own (unmounted) button.
+    const id = window.setTimeout(() => confirmRef.current?.focus(), 0);
+    return () => window.clearTimeout(id);
+  }, []);
+
   const confirmStyle = variant === 'danger' ? sx.confirmDanger : sx.confirmDefault;
 
   return (
     <div style={sx.backdrop} onClick={onCancel} role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
-      <div style={sx.card} onClick={(e) => e.stopPropagation()}>
+      <div ref={cardRef} style={sx.card} onClick={(e) => e.stopPropagation()}>
         <div style={sx.header}>
           <h3 id="confirm-dialog-title" style={sx.title}>{title}</h3>
           <button type="button" style={sx.closeBtn} onClick={onCancel} aria-label="Close">
@@ -199,7 +217,7 @@ export default function ConfirmDialog({
           <button type="button" style={sx.cancelBtn} onClick={onCancel}>
             {cancelLabel}
           </button>
-          <button type="button" style={confirmStyle} onClick={onConfirm} autoFocus>
+          <button type="button" style={confirmStyle} onClick={onConfirm} ref={confirmRef}>
             {confirmLabel}
           </button>
         </div>

@@ -37,6 +37,9 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 // Mirror of thresholds + staleness window in cities/[batch]/route.ts.
 // If you change either, change both — the two routes must agree exactly.
 const MIN_SITEMAP_JOBS = 3;
+// Setting × State noindex gate (lib/pseo/setting-state-template.tsx renders
+// noindex below 3 jobs). Mirrors cities/[batch]/route.ts.
+const MIN_SETTING_STATE_SITEMAP_JOBS = 3;
 const MIN_SITEMAP_POPULATION = 10000;
 const PSEO_STALENESS_HOURS = 36;
 
@@ -84,11 +87,11 @@ export async function GET() {
       totalUrls++;
     }
 
-    // Setting × State: pseoStats.totalJobs ≥ 1 and fresh.
+    // Setting × State: pseoStats.totalJobs ≥ MIN_SETTING_STATE_SITEMAP_JOBS and fresh.
     const settingStateCount = await prisma.pseoStats.count({
       where: {
         type: 'setting-state',
-        totalJobs: { gte: 1 },
+        totalJobs: { gte: MIN_SETTING_STATE_SITEMAP_JOBS },
         updatedAt: { gte: freshnessThreshold },
       },
     });

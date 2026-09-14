@@ -12,7 +12,8 @@ import { Metadata } from 'next';
  * below is the belt-and-suspenders guard the sibling auth surfaces use.
  */
 export const metadata: Metadata = {
-    title: `Edit Your Job Posting | ${brand.name}`,
+    // Root layout title.template appends " | brand"; hardcoding it here doubled the suffix.
+    title: 'Edit Your Job Posting',
     description: `Update your ${brand.niche.short} job posting on ${brand.name}: details, salary, and application settings.`,
     robots: { index: false, follow: false },
 };

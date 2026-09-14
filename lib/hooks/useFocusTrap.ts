@@ -18,6 +18,26 @@ interface UseFocusTrapOptions {
     onEscape?: () => void;
 }
 
+interface FocusableLike {
+    focus: () => void;
+    isConnected: boolean;
+}
+
+/**
+ * Picks where focus goes when the dialog closes: the element focused when the
+ * trap armed, but only while it is still in the document and is not <body>.
+ * A detached node cannot take focus, so callers that may re-render their
+ * trigger (ApplyButton) restore focus themselves when this returns null.
+ */
+export function resolveReturnFocusTarget<T extends FocusableLike>(
+    previously: T | null,
+    body: unknown,
+): T | null {
+    if (!previously || previously === body) return null;
+    if (!previously.isConnected || typeof previously.focus !== 'function') return null;
+    return previously;
+}
+
 /**
  * Wires a dialog to common a11y expectations:
  *   - Moves focus to the first focusable element inside the dialog on open
@@ -31,6 +51,14 @@ interface UseFocusTrapOptions {
 export function useFocusTrap<T extends HTMLElement = HTMLElement>({ isOpen, onEscape }: UseFocusTrapOptions) {
     const containerRef = useRef<T | null>(null);
     const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+    // The latest onEscape lives in a ref so the trap effect depends on isOpen
+    // only. Callers usually pass an inline arrow; with it as a dependency every
+    // parent re-render tore the trap down (yanking focus out of the dialog to
+    // the trigger) and re-armed it, re-capturing whatever was focused then.
+    const onEscapeRef = useRef(onEscape);
+    useEffect(() => {
+        onEscapeRef.current = onEscape;
+    }, [onEscape]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -49,9 +77,10 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>({ isOpen, onEs
         }, 0);
 
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && onEscape) {
+            const escape = onEscapeRef.current;
+            if (e.key === 'Escape' && escape) {
                 e.stopPropagation();
-                onEscape();
+                escape();
                 return;
             }
             if (e.key !== 'Tab') return;
@@ -79,14 +108,14 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>({ isOpen, onEs
         return () => {
             window.clearTimeout(id);
             document.removeEventListener('keydown', handleKeyDown);
-            const previously = previouslyFocusedRef.current;
-            if (previously && typeof previously.focus === 'function') {
+            const previously = resolveReturnFocusTarget(previouslyFocusedRef.current, document.body);
+            if (previously) {
                 try { previously.focus(); } catch {
                     // restoring focus is best-effort; ignore
                 }
             }
         };
-    }, [isOpen, onEscape]);
+    }, [isOpen]);
 
     return containerRef;
 }

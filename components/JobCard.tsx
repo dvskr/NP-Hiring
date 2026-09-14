@@ -240,7 +240,8 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
             border: '1px solid rgba(255,255,255,0.5)',
             boxShadow: '8px 8px 20px rgba(0,0,0,0.07), -4px -4px 12px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02)',
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            opacity: viewed ? 0.7 : 1,
+            // Viewed state is carried by the Eye icon, not by dimming: opacity
+            // on the whole card pulled every line of text below WCAG AA.
             marginBottom: '12px',
           }}
         >
@@ -488,7 +489,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
           display: 'flex', flexDirection: 'column', gap: '12px',
           width: '100%', height: '100%',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          opacity: viewed ? 0.75 : 1,
+          // Viewed state is carried by the Eye icon, not by dimming (WCAG 1.4.3).
           position: 'relative',
           boxShadow: '8px 8px 20px rgba(0,0,0,0.07), -4px -4px 12px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02)',
         }}

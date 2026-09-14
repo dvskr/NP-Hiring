@@ -114,7 +114,7 @@ function StatRow({ label, value, tone }: { label: string; value: string; tone?: 
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px', fontSize: '13.5px' }}>
       <span style={{ color: '#64748B' }}>{label}</span>
-      <span style={{ fontWeight: 700, color: tone === 'negative' ? '#B91C1C' : tone === 'muted' ? '#94A3B8' : '#1A2E35', fontVariantNumeric: 'tabular-nums' }}>
+      <span style={{ fontWeight: 700, color: tone === 'negative' ? '#B91C1C' : tone === 'muted' ? '#64748B' : '#1A2E35', fontVariantNumeric: 'tabular-nums' }}>
         {value}
       </span>
     </div>
@@ -184,7 +184,7 @@ export default function TakeHomeCalculator() {
         <label htmlFor={inputId} style={labelStyle}>{field.label}</label>
         <div style={{ position: 'relative' }}>
           {field.prefix && (
-            <span aria-hidden="true" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '15px', fontWeight: 600, color: '#94A3B8' }}>
+            <span aria-hidden="true" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '15px', fontWeight: 600, color: '#64748B' }}>
               {field.prefix}
             </span>
           )}
@@ -205,12 +205,12 @@ export default function TakeHomeCalculator() {
             }}
           />
           {field.suffix && (
-            <span aria-hidden="true" style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', fontWeight: 600, color: '#94A3B8' }}>
+            <span aria-hidden="true" style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', fontWeight: 600, color: '#64748B' }}>
               {field.suffix}
             </span>
           )}
         </div>
-        <p id={hintId} style={{ fontSize: '11.5px', color: '#94A3B8', margin: '5px 0 0', lineHeight: 1.45 }}>{field.hint}</p>
+        <p id={hintId} style={{ fontSize: '11.5px', color: '#64748B', margin: '5px 0 0', lineHeight: 1.45 }}>{field.hint}</p>
       </div>
     );
   };
@@ -261,7 +261,7 @@ export default function TakeHomeCalculator() {
                 <option key={status} value={status}>{FILING_STATUS_LABELS[status]}</option>
               ))}
             </select>
-            <p id="takehome-filing-hint" style={{ fontSize: '11.5px', color: '#94A3B8', margin: '5px 0 0' }}>
+            <p id="takehome-filing-hint" style={{ fontSize: '11.5px', color: '#64748B', margin: '5px 0 0' }}>
               Sets the standard deduction and bracket table for tax year {TAX_MODEL_YEAR}.
             </p>
           </div>
@@ -393,7 +393,7 @@ export default function TakeHomeCalculator() {
               <StatRow label="Deduction: self-employed health premium" value={`-${formatUsd(result.contract.healthPremiumDeduction)}`} />
               <StatRow label="Taxable income after standard deduction" value={formatUsd(result.contract.taxableIncome)} />
             </div>
-            <p style={{ fontSize: '12px', color: '#94A3B8', margin: '12px 0 0', lineHeight: 1.55 }}>
+            <p style={{ fontSize: '12px', color: '#64748B', margin: '12px 0 0', lineHeight: 1.55 }}>
               Federal only, tax year {TAX_MODEL_YEAR}. State and local income tax are not modeled; see the
               assumptions below before you rely on any figure here.
             </p>

@@ -174,8 +174,34 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
     normalizedName: true,
     logoUrl: true,
     isVerified: true,
+    // P10 admin-revalidate #5: the hub marks employers whose profile claim an
+    // admin approved, the same signal the profile and AboutEmployer badges read.
+    claimVerifiedAt: true,
     _count: { select: { jobs: { where: activeJobWhere } } },
   } as const;
+  type DirectoryRow = {
+    id: string;
+    name: string;
+    normalizedName: string;
+    logoUrl: string | null;
+    isVerified: boolean;
+    claimVerifiedAt: Date | null;
+    _count: { jobs: number };
+  };
+  const toEntry = (company: DirectoryRow): DirectoryEntry => ({
+    id: company.id,
+    name: company.name,
+    // B30 inverse (app/sitemap.ts): rows inserted before the normalizer
+    // changed still store the space form ("life stance"), which interpolates
+    // to a %20 URL that mismatches the canonical kebab URL the sitemap emits.
+    // Single-space→hyphen is the exact inverse of the profile resolver's
+    // legacy fallback, so the link round-trips.
+    href: `/companies/${company.normalizedName.replace(/ /g, '-')}`,
+    logoUrl: company.logoUrl,
+    isVerified: company.isVerified,
+    isClaimed: company.claimVerifiedAt !== null,
+    activeJobs: company._count.jobs,
+  });
 
   // P2 #11: the hub took a hardcoded 200-row slice with no pagination and no
   // index — see the git history for the original clause. Beyond 200
@@ -199,19 +225,7 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
     take: COMPANIES_PER_PAGE,
   });
 
-  const entries = companies.map((company) => ({
-    id: company.id,
-    name: company.name,
-    // B30 inverse (app/sitemap.ts): rows inserted before the normalizer
-    // changed still store the space form ("life stance"), which interpolates
-    // to a %20 URL that mismatches the canonical kebab URL the sitemap emits.
-    // Single-space→hyphen is the exact inverse of the profile resolver's
-    // legacy fallback, so the link round-trips.
-    href: `/companies/${company.normalizedName.replace(/ /g, '-')}`,
-    logoUrl: company.logoUrl,
-    isVerified: company.isVerified,
-    activeJobs: company._count.jobs,
-  }));
+  const entries = companies.map(toEntry);
 
   // The `some: activeJobWhere` filter guarantees ≥1, but keep the guard so a
   // future relaxation of the where clause can't advertise "0 open positions".
@@ -230,14 +244,7 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
         select: directorySelect,
         orderBy: { jobCount: 'desc' },
         take: SPOTLIGHT_CANDIDATES,
-      })).map((company) => ({
-        id: company.id,
-        name: company.name,
-        href: `/companies/${company.normalizedName.replace(/ /g, '-')}`,
-        logoUrl: company.logoUrl,
-        isVerified: company.isVerified,
-        activeJobs: company._count.jobs,
-      }));
+      })).map(toEntry);
   const spotlight = currentPage === 1 ? topByActiveJobs(spotlightSource, SPOTLIGHT_COUNT) : [];
 
   const canonicalPath = buildCompaniesPath(currentPage);
@@ -562,6 +569,8 @@ interface DirectoryEntry {
   href: string;
   logoUrl: string | null;
   isVerified: boolean;
+  /** Company.claimVerifiedAt is set: an admin approved this employer's profile claim. */
+  isClaimed: boolean;
   activeJobs: number;
 }
 
@@ -631,9 +640,31 @@ function CompanyCard({ entry }: { entry: DirectoryEntry }) {
               </svg>
             )}
           </div>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
-            {entry.activeJobs} open {entry.activeJobs === 1 ? 'position' : 'positions'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
+              {entry.activeJobs} open {entry.activeJobs === 1 ? 'position' : 'positions'}
+            </span>
+            {entry.isClaimed && (
+              // Same wording and palette as the profile page badge, so the
+              // hub never asserts anything the profile does not.
+              <span
+                title="An employer asked to be recognized as the owner of this profile, and our team approved the request."
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  backgroundColor: '#D1FAE5',
+                  color: '#065F46',
+                }}
+              >
+                Claimed by employer
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </Link>

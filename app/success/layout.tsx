@@ -12,7 +12,8 @@ import { Metadata } from 'next';
  * guard the sibling auth surfaces use.
  */
 export const metadata: Metadata = {
-    title: `Job Posting Confirmation | ${brand.name}`,
+    // Root layout title.template appends " | brand"; hardcoding it here doubled the suffix.
+    title: 'Job Posting Confirmation',
     description: `Confirmation for your ${brand.niche.short} job posting on ${brand.name}.`,
     robots: { index: false, follow: false },
 };

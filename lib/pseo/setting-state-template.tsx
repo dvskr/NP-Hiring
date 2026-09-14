@@ -47,6 +47,8 @@ import { buildSettingStateNarrative } from './state-narrative';
 // how the city and state surfaces drift apart. P2 #7: same reasoning for the
 // behavioral-health-HPSA gate, which must agree across both surfaces.
 import { formatStatsBadge, categoryOwnsShortageData } from './category-city-template';
+import { pluralize } from '@/lib/pseo/plural';
+import { withListingQuarantine } from '@/lib/pseo/listing-where';
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -91,7 +93,7 @@ const EMPTY_STATS: Stats = { totalJobs: 0, avgSalary: 0, topEmployers: [], stats
 
 async function getJobs(config: SettingConfig, stateName: string, skip = 0, take = 20) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where = config.buildWhere(stateName) as any;
+  const where = withListingQuarantine(config.buildWhere(stateName) as any);
   return prisma.job.findMany({
     where,
     omit: JOB_LISTING_OMIT, // Perf1: don't pull the multi-KB description for cards
@@ -105,7 +107,7 @@ async function getJobs(config: SettingConfig, stateName: string, skip = 0, take 
 // the page component both call getStats with the same module-level config ref).
 const getStats = cache(async function getStats(config: SettingConfig, stateName: string, stateSlug: string): Promise<Stats> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where = config.buildWhere(stateName) as any;
+  const where = withListingQuarantine(config.buildWhere(stateName) as any);
 
   let totalJobs = 0;
   let avgSalary = 0;
@@ -216,19 +218,19 @@ export async function buildSettingStateMetadata(
   const basePath = `/jobs/${config.slug}/${stateSlug}`;
 
   return {
-    title: `${stats.totalJobs} ${config.label} ${brand.niche.short} Jobs in ${stateName} (${config.salaryRange})`,
-    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${stateName} paying ${config.salaryRange}. ${config.heroSubtitle}. Browse ${config.label.toLowerCase()} ${brand.niche.descriptor} positions in ${stateName} updated daily.`,
+    title: `${stats.totalJobs} ${config.label} ${brand.niche.short} ${pluralize(stats.totalJobs, 'Job')} in ${stateName} (${config.salaryRange})`,
+    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} ${pluralize(stats.totalJobs, 'job')} in ${stateName} paying ${config.salaryRange}. ${config.heroSubtitle}. Browse ${config.label.toLowerCase()} ${brand.niche.descriptor} positions in ${stateName} updated daily.`,
     keywords: [
       ...config.keywords,
       `${config.label.toLowerCase()} ${brand.niche.short.toLowerCase()} jobs ${stateName.toLowerCase()}`,
       `${stateName.toLowerCase()} ${config.label.toLowerCase()} ${brand.niche.descriptor}`,
     ],
     openGraph: {
-      title: `${stats.totalJobs} ${config.label} ${brand.niche.short} Jobs in ${stateName}`,
+      title: `${stats.totalJobs} ${config.label} ${brand.niche.short} ${pluralize(stats.totalJobs, 'Job')} in ${stateName}`,
       description: `Browse ${config.label.toLowerCase()} ${brand.niche.descriptor} positions in ${stateName}. ${config.heroSubtitle}.`,
       type: 'website',
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} ${config.label} ${brand.niche.short} Jobs in ${stateName}`)}&subtitle=${encodeURIComponent(config.heroSubtitle)}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} ${config.label} ${brand.niche.short} ${pluralize(stats.totalJobs, 'Job')} in ${stateName}`)}&subtitle=${encodeURIComponent(config.heroSubtitle)}`,
         width: 1200,
         height: 630,
         alt: `${config.label} ${brand.niche.short} Jobs in ${stateName}`,
@@ -548,7 +550,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
         headlineLine2={brand.niche.short}
         headlineSub={`jobs in ${stateName}.`}
         stats={[
-          { value: `${stats.totalJobs}`, label: 'positions' },
+          { value: `${stats.totalJobs}`, label: pluralize(stats.totalJobs, 'position') },
           // P3 #13: this used to be `salaryRange.split('–')[0]` — an EN DASH,
           // while every salaryRange literal is written with an ASCII hyphen.
           // The split never matched, so the fallback rendered the whole range
@@ -558,7 +560,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
           stats.avgSalary > 0
             ? { value: `$${stats.avgSalary}k`, label: 'avg salary' }
             : { value: config.salaryRange, label: 'typical range' },
-          { value: `${stats.topEmployers.length}`, label: 'employers' },
+          { value: `${stats.topEmployers.length}`, label: pluralize(stats.topEmployers.length, 'employer') },
         ]}
         description={`${config.label} ${brand.niche.short} positions in ${stateName}. ${config.heroSubtitle}.`}
         ctaLabel={`Browse ${config.label} Jobs`}
@@ -766,7 +768,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                     <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growth & Outlook</h3>
                     <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                      {config.label} {brand.niche.short} demand in {stateName} continues to grow with {stats.totalJobs} active positions.
+                      {config.label} {brand.niche.short} demand in {stateName} continues to grow with {stats.totalJobs} active {pluralize(stats.totalJobs, 'position')}.
                     </p>
                   </div>
                   <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
@@ -883,7 +885,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 <div style={{ fontSize: '11px', color: '#7A6A62', marginBottom: '6px' }}>Avg {config.label} Salary</div>
                 <div style={{ fontSize: '28px', fontWeight: 800, color: '#1A2E35' }}>${stats.avgSalary}K</div>
                 <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '4px' }}>
-                  across {stats.totalJobs} active positions
+                  across {stats.totalJobs} active {pluralize(stats.totalJobs, 'position')}
                 </div>
               </div>
             )}

@@ -461,8 +461,9 @@ describe("P9 #2a/#2e — salaryPeriod='unknown' is withheld everywhere, incl. th
     expect(formatSalary(35_000, null, 'unknown')).toBe('');
     expect(formatSalary(null, 45_000, 'unknown')).toBe('');
     // Known periods still render.
-    expect(formatSalary(35_000, 45_000, 'year')).toBe('$35k-$45k/yr');
-    expect(formatSalary(60, 75, 'hourly')).toBe('$60-$75/hr');
+    // Ranges join with " to " under the site-wide no-dash copy rule.
+    expect(formatSalary(35_000, 45_000, 'year')).toBe('$35k to $45k/yr');
+    expect(formatSalary(60, 75, 'hourly')).toBe('$60 to $75/hr');
   });
 
   it('the job-detail header badge renders from formatSalary and hides on empty', () => {

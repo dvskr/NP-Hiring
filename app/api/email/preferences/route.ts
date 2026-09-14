@@ -2,13 +2,14 @@ import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
-
-type JsonInputValue =
-  | string
-  | number
-  | boolean
-  | { [key: string]: JsonInputValue }
-  | JsonInputValue[];
+import {
+  LEAD_SUPPRESSION_SELECT,
+  UNDELIVERABLE_MESSAGE,
+  parsePreferences,
+  resubscribeLead,
+  unsubscribeLead,
+  type EmailPreferences,
+} from '@/app/api/email/_lib/subscription';
 
 // Helper function to mask email (e.g., "s***@email.com")
 function maskEmail(email: string): string {
@@ -76,19 +77,39 @@ export async function POST(request: NextRequest) {
     if (rateLimitResult) return rateLimitResult;
 
   try {
-    const body = await request.json();
-    const { token, isSubscribed, preferences } = body;
+    const body: unknown = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json(
+        { success: false, message: 'Token is required' },
+        { status: 400 }
+      );
+    }
+    const { token, isSubscribed, newsletterOptIn, preferences } = body as Record<string, unknown>;
 
-    if (!token) {
+    if (typeof token !== 'string' || !token) {
       return NextResponse.json(
         { success: false, message: 'Token is required' },
         { status: 400 }
       );
     }
 
-    // Find EmailLead by unsubscribeToken
+    // Only a flat object of known boolean keys is accepted; never store an
+    // arbitrary client payload in EmailLead.preferences.
+    let parsedPreferences: EmailPreferences | undefined;
+    if (preferences !== undefined && preferences !== null) {
+      const parsed = parsePreferences(preferences);
+      if (!parsed) {
+        return NextResponse.json(
+          { success: false, message: 'Preferences must be an object of known boolean settings.' },
+          { status: 400 }
+        );
+      }
+      parsedPreferences = parsed;
+    }
+
     const emailLead = await prisma.emailLead.findUnique({
       where: { unsubscribeToken: token },
+      select: LEAD_SUPPRESSION_SELECT,
     });
 
     if (!emailLead) {
@@ -98,26 +119,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build update data
+    // Subscription state changes go through the same suppression-aware writes
+    // as the unsubscribe endpoints; flipping isSubscribed alone would leave the
+    // send-gates (isEmailSuppressed) out of sync with what the user chose.
+    if (isSubscribed === false) {
+      await unsubscribeLead(token, emailLead);
+    } else if (isSubscribed === true) {
+      const lifted = await resubscribeLead(token, emailLead);
+      if (!lifted) {
+        return NextResponse.json(
+          { success: false, message: UNDELIVERABLE_MESSAGE },
+          { status: 409 }
+        );
+      }
+    }
+
     const updateData: {
-      isSubscribed?: boolean;
       newsletterOptIn?: boolean;
-      preferences?: JsonInputValue;
-    } = {};
+      preferences?: EmailPreferences;
+    } = {
+      ...(typeof newsletterOptIn === 'boolean' ? { newsletterOptIn } : {}),
+      ...(parsedPreferences ? { preferences: parsedPreferences } : {}),
+    };
 
-    if (typeof isSubscribed === 'boolean') {
-      updateData.isSubscribed = isSubscribed;
-    }
-
-    if (typeof body.newsletterOptIn === 'boolean') {
-      updateData.newsletterOptIn = body.newsletterOptIn;
-    }
-
-    if (preferences !== undefined && preferences !== null) {
-      updateData.preferences = preferences as JsonInputValue;
-    }
-
-    // Update EmailLead
     const updatedEmailLead = await prisma.emailLead.update({
       where: { unsubscribeToken: token },
       data: updateData,

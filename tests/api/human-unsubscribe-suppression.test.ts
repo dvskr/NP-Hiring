@@ -112,10 +112,11 @@ describe('POST /api/email/unsubscribe — resubscribe', () => {
     const { POST } = await import('@/app/api/email/unsubscribe/route');
     const res = await POST(postReq('tok-1') as never);
 
-    expect(res.status).toBe(200);
-    const arg = vi.mocked(prisma.emailLead.update).mock.calls[0][0] as { data: Record<string, unknown> };
-    expect(arg.data.isSubscribed).toBe(true);
-    expect(arg.data.isSuppressed).toBeUndefined();
+    // The bounce/complaint suppression is never lifted, and the route now says
+    // so (409) instead of reporting a resubscribe that cannot take effect.
+    expect(res.status).toBe(409);
+    expect(prisma.emailLead.update).not.toHaveBeenCalled();
     expect(prisma.userProfile.updateMany).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

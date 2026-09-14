@@ -60,7 +60,7 @@ function cleanCustomEmails(raw: string[]): {
  * the History tab or its sent counters.
  */
 export async function POST(req: Request) {
-    const authError = await requireApiAdmin();
+    const authError = await requireApiAdmin(req);
     if (authError) return authError;
 
     try {

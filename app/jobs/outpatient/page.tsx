@@ -11,7 +11,7 @@ import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
@@ -120,7 +120,7 @@ export default async function OutpatientJobsPage({ searchParams }: PageProps) {
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v2_outpatient.webp`}
         heroAlt={`Outpatient ${brand.niche.short} clinic setting`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'Outpatient']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Outpatient", url: `${brand.baseUrl}/jobs/outpatient` }])}
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('outpatient') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Outpatient"
         headlineLine2={brand.niche.short}

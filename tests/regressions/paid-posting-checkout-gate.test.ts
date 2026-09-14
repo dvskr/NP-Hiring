@@ -8,7 +8,7 @@
  * Also pins GET /api/create-checkout/availability — the server-checked
  * signal /post-job uses to show "paid posting coming soon" BEFORE the form.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const envMock = vi.hoisted(() => ({ paidPostingEnabled: false }));
@@ -53,6 +53,14 @@ afterEach(() => {
 });
 
 describe('F3 — POST /api/create-checkout flag gate', () => {
+    // The route's cold import (stripe SDK, prisma, supabase) can exceed the 5 s
+    // per-test budget when the full suite saturates the workers. Warm the module
+    // cache here with its own budget; the Stripe client is created per request
+    // and env is read at call time, so this changes no assertion below.
+    beforeAll(async () => {
+        await import('@/app/api/create-checkout/route');
+    }, 60_000);
+
     it('503 PAID_POSTING_DISABLED when the flag is off, even with Stripe configured', async () => {
         process.env.STRIPE_SECRET_KEY = 'sk_test_x';
         const { POST } = await import('@/app/api/create-checkout/route');

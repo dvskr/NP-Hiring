@@ -7,6 +7,7 @@
  * in the client JS bundle for routes that only need the schema.
  */
 
+import { pluralize, isAre } from '@/lib/pseo/plural';
 import { brand } from '@/config/brand';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 
@@ -154,7 +155,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     remote: ({ totalJobs, avgSalary }) => [
         {
             question: `How many remote ${brand.niche.short} jobs are available?`,
-            answer: `There are currently ${totalJobs} remote ${brand.niche.short} job openings. These include fully remote, hybrid, and telehealth positions from leading healthcare companies and private practices. New remote positions are added daily.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} remote ${brand.niche.short} ${pluralize(totalJobs, 'job opening', 'job openings')}. These include fully remote, hybrid, and telehealth positions from leading healthcare companies and private practices. New remote positions are added daily.`,
         },
         {
             question: `What is the average salary for remote ${brand.niche.short} jobs?`,
@@ -174,7 +175,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     telehealth: ({ totalJobs, avgSalary }) => [
         {
             question: `How many telehealth ${brand.niche.short} positions are available?`,
-            answer: `There are currently ${totalJobs} telehealth ${brand.niche.short} positions available. Telehealth positions include video visits, phone consultations, and asynchronous virtual care roles across major telehealth platforms and health systems.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} telehealth ${brand.niche.short} ${pluralize(totalJobs, 'position', 'positions')} available. Telehealth positions include video visits, phone consultations, and asynchronous virtual care roles across major telehealth platforms and health systems.`,
         },
         {
             question: `What is the difference between telehealth and remote ${brand.niche.short} jobs?`,
@@ -194,7 +195,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     travel: ({ totalJobs }) => [
         {
             question: `How many travel ${brand.niche.short} jobs are currently available?`,
-            answer: `There are currently ${totalJobs} travel and locum tenens ${brand.niche.short} positions available nationwide. These positions offer short-term contracts (typically 8-26 weeks) in various healthcare settings across the country.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} travel and locum tenens ${brand.niche.short} ${pluralize(totalJobs, 'position', 'positions')} available nationwide. These positions offer short-term contracts (typically 8-26 weeks) in various healthcare settings across the country.`,
         },
         {
             question: `How much do travel ${brand.niche.short} positions pay?`,
@@ -212,7 +213,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'new-grad': ({ totalJobs }) => [
         {
             question: `How many entry-level ${brand.niche.short} jobs are available for new graduates?`,
-            answer: `There are currently ${totalJobs} ${brand.niche.short} positions that welcome new graduates. These include fellowship programs, residency positions, and employer-sponsored training programs designed for recent ${brand.niche.short} graduates.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} ${brand.niche.short} ${pluralize(totalJobs, 'position', 'positions')} that welcome new graduates. These include fellowship programs, residency positions, and employer-sponsored training programs designed for recent ${brand.niche.short} graduates.`,
         },
         {
             question: `Can new graduate ${brand.niche.short}s find jobs easily?`,
@@ -230,7 +231,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'per-diem': ({ totalJobs }) => [
         {
             question: `How many per diem ${brand.niche.short} positions are available?`,
-            answer: `There are currently ${totalJobs} per diem and PRN ${brand.niche.short} positions available. Per diem roles offer maximum flexibility, allowing you to set your own schedule and work as needed.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} per diem and PRN ${brand.niche.short} ${pluralize(totalJobs, 'position', 'positions')} available. Per diem roles offer maximum flexibility, allowing you to set your own schedule and work as needed.`,
         },
         {
             question: `How much do per diem ${brand.niche.short}s earn?`,
@@ -248,7 +249,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     inpatient: ({ totalJobs, avgSalary }) => [
         {
             question: `How many inpatient ${brand.niche.short} jobs are available?`,
-            answer: `There are currently ${totalJobs} inpatient ${brand.niche.short} positions available. These include hospitalist and hospital medicine teams, acute care units, step-down units, and specialty inpatient services across the country.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} inpatient ${brand.niche.short} ${pluralize(totalJobs, 'position', 'positions')} available. These include hospitalist and hospital medicine teams, acute care units, step-down units, and specialty inpatient services across the country.`,
         },
         {
             question: `What is the average salary for inpatient ${brand.niche.short}s?`,
@@ -268,7 +269,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     outpatient: ({ totalJobs, avgSalary }) => [
         {
             question: `How many outpatient ${brand.niche.short} jobs are available?`,
-            answer: `There are currently ${totalJobs} outpatient ${brand.niche.short} positions available. These include private practices, community health centers, group practices, and integrated care clinics across the country.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} outpatient ${brand.niche.short} ${pluralize(totalJobs, 'position', 'positions')} available. These include private practices, community health centers, group practices, and integrated care clinics across the country.`,
         },
         {
             question: `What is the average outpatient ${brand.niche.short} salary?`,
@@ -288,7 +289,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'community-health': ({ totalJobs, avgSalary }) => [
         {
             question: `How many community health ${brand.niche.short} jobs are available?`,
-            answer: `There are currently ${totalJobs} community health ${brand.niche.short} positions available. These include roles at Federally Qualified Health Centers (FQHCs), community health centers, public health clinics, and integrated primary-care settings serving underserved populations.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} community health ${brand.niche.short} ${pluralize(totalJobs, 'position', 'positions')} available. These include roles at Federally Qualified Health Centers (FQHCs), community health centers, public health clinics, and integrated primary-care settings serving underserved populations.`,
         },
         {
             question: `What is the average salary for community health ${brand.niche.short}s?`,
@@ -310,7 +311,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'full-time': ({ totalJobs, avgSalary }) => [
         {
             question: `How many full-time ${brand.niche.short} jobs are available?`,
-            answer: `There are currently ${totalJobs} full-time ${brand.niche.short} positions available. Full-time roles span outpatient clinics, hospitals, health systems, and telehealth employers, and new positions are added daily.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} full-time ${brand.niche.short} ${pluralize(totalJobs, 'position', 'positions')} available. Full-time roles span outpatient clinics, hospitals, health systems, and telehealth employers, and new positions are added daily.`,
         },
         {
             question: `What does a typical full-time ${brand.niche.short} schedule look like?`,
@@ -330,7 +331,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'part-time': ({ totalJobs }) => [
         {
             question: `How many part-time ${brand.niche.short} jobs are available?`,
-            answer: `There are currently ${totalJobs} part-time ${brand.niche.short} positions available, spanning outpatient clinics, telehealth panels, and hospital coverage shifts. New listings are added daily.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} part-time ${brand.niche.short} ${pluralize(totalJobs, 'position', 'positions')} available, spanning outpatient clinics, telehealth panels, and hospital coverage shifts. New listings are added daily.`,
         },
         {
             question: `What does part-time ${brand.niche.short} work usually look like?`,
@@ -352,7 +353,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     contract: ({ totalJobs }) => [
         {
             question: `How many contract ${brand.niche.short} jobs are available?`,
-            answer: `There are currently ${totalJobs} contract ${brand.niche.short} positions available, including fixed-term assignments and temp-to-perm openings. New contracts are posted daily.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} contract ${brand.niche.short} ${pluralize(totalJobs, 'position', 'positions')} available, including fixed-term assignments and temp-to-perm openings. New contracts are posted daily.`,
         },
         {
             question: `What is a contract ${brand.niche.short} position?`,
@@ -370,7 +371,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     '1099': ({ totalJobs }) => [
         {
             question: `How many 1099 ${brand.niche.short} jobs are available?`,
-            answer: `There are currently ${totalJobs} independent-contractor (1099) ${brand.niche.short} positions available, spanning telehealth panels, practice coverage, and consulting engagements. New listings are added daily.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} independent-contractor (1099) ${brand.niche.short} ${pluralize(totalJobs, 'position', 'positions')} available, spanning telehealth panels, practice coverage, and consulting engagements. New listings are added daily.`,
         },
         {
             question: `What is the difference between W-2 and 1099 ${brand.niche.short} work?`,
@@ -392,7 +393,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'locum-tenens': ({ totalJobs }) => [
         {
             question: `How many locum tenens ${brand.niche.short} jobs are available?`,
-            answer: `There are currently ${totalJobs} locum tenens ${brand.niche.short} assignments available. Locum roles provide temporary coverage for vacancies, leave, or peak demand, typically arranged through staffing agencies.`,
+            answer: `There ${isAre(totalJobs)} currently ${totalJobs} locum tenens ${brand.niche.short} ${pluralize(totalJobs, 'assignment', 'assignments')} available. Locum roles provide temporary coverage for vacancies, leave, or peak demand, typically arranged through staffing agencies.`,
         },
         {
             question: `What does locum tenens mean for ${brand.niche.short}s?`,
@@ -432,13 +433,13 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `What is the job outlook for family practice ${brand.niche.short}s?`,
-            answer: `The outlook is strong. The BLS projects ${NP_GROWTH_CITED} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, and primary care is where much of that demand lands. There are currently ${totalJobs} family practice positions listed here, with new openings added daily.`,
+            answer: `The outlook is strong. The BLS projects ${NP_GROWTH_CITED} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, and primary care is where much of that demand lands. There ${isAre(totalJobs)} currently ${totalJobs} family practice ${pluralize(totalJobs, 'position', 'positions')} listed here, with new openings added daily.`,
         },
     ],
     'adult-gerontology': ({ totalJobs, avgSalary }) => [
         {
             question: `What does an adult-gerontology ${brand.niche.short} (AGNP) do?`,
-            answer: `AGNPs care for patients from adolescence through advanced age. The primary care track (AGPCNP) manages prevention and chronic disease in outpatient settings, while the acute care track (AGACNP) manages complex and critically ill adults in hospitals. There are currently ${totalJobs} adult-gerontology positions listed here.`,
+            answer: `AGNPs care for patients from adolescence through advanced age. The primary care track (AGPCNP) manages prevention and chronic disease in outpatient settings, while the acute care track (AGACNP) manages complex and critically ill adults in hospitals. There ${isAre(totalJobs)} currently ${totalJobs} adult-gerontology ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What certification do adult-gerontology ${brand.niche.short}s need?`,
@@ -460,7 +461,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     pediatric: ({ totalJobs, avgSalary }) => [
         {
             question: `What does a pediatric ${brand.niche.short} (PNP) do?`,
-            answer: `Pediatric nurse practitioners care for infants, children, adolescents, and young adults: well-child visits, immunizations, developmental screening, and management of acute and chronic childhood conditions. There are currently ${totalJobs} pediatric positions listed here.`,
+            answer: `Pediatric nurse practitioners care for infants, children, adolescents, and young adults: well-child visits, immunizations, developmental screening, and management of acute and chronic childhood conditions. There ${isAre(totalJobs)} currently ${totalJobs} pediatric ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What certification do pediatric ${brand.niche.short}s need?`,
@@ -482,7 +483,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'women-health': ({ totalJobs, avgSalary }) => [
         {
             question: `What does a women's health ${brand.niche.short} (WHNP) do?`,
-            answer: `WHNPs provide gynecologic, reproductive, prenatal, and postpartum care, along with menopause management and the primary care needs of women across the lifespan. There are currently ${totalJobs} women's health positions listed here.`,
+            answer: `WHNPs provide gynecologic, reproductive, prenatal, and postpartum care, along with menopause management and the primary care needs of women across the lifespan. There ${isAre(totalJobs)} currently ${totalJobs} women's health ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What certification do women's health ${brand.niche.short}s need?`,
@@ -504,7 +505,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'acute-care': ({ totalJobs, avgSalary }) => [
         {
             question: `What does an acute care ${brand.niche.short} (ACNP) do?`,
-            answer: `Acute care NPs manage adults with complex, acute, and critical illness in ICUs, step-down units, and emergency and hospital specialty services. The role includes rapid assessment, ordering and interpreting diagnostics, managing treatment plans, and performing procedures within granted privileges. There are currently ${totalJobs} acute care positions listed here.`,
+            answer: `Acute care NPs manage adults with complex, acute, and critical illness in ICUs, step-down units, and emergency and hospital specialty services. The role includes rapid assessment, ordering and interpreting diagnostics, managing treatment plans, and performing procedures within granted privileges. There ${isAre(totalJobs)} currently ${totalJobs} acute care ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What certification do acute care ${brand.niche.short}s need?`,
@@ -528,7 +529,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     emergency: ({ totalJobs, avgSalary }) => [
         {
             question: `What does an emergency ${brand.niche.short} (ENP) do?`,
-            answer: `Emergency NPs evaluate and treat patients across the full acuity spectrum of the emergency department, from fast-track injuries and infections to supporting higher-acuity resuscitation care. ENPs work in hospital EDs, freestanding emergency centers, and urgent care. There are currently ${totalJobs} emergency positions listed here.`,
+            answer: `Emergency NPs evaluate and treat patients across the full acuity spectrum of the emergency department, from fast-track injuries and infections to supporting higher-acuity resuscitation care. ENPs work in hospital EDs, freestanding emergency centers, and urgent care. There ${isAre(totalJobs)} currently ${totalJobs} emergency ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `How do I become an emergency ${brand.niche.short}?`,
@@ -552,7 +553,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     anesthesia: ({ totalJobs, avgSalary }) => [
         {
             question: `What does a certified registered nurse anesthetist (CRNA) do?`,
-            answer: `CRNAs plan and deliver anesthesia care, including general, regional, and sedation, across surgical, obstetric, and procedural settings, managing patients before, during, and after anesthesia. In many rural facilities, CRNAs are the primary anesthesia providers. There are currently ${totalJobs} CRNA positions listed here.`,
+            answer: `CRNAs plan and deliver anesthesia care, including general, regional, and sedation, across surgical, obstetric, and procedural settings, managing patients before, during, and after anesthesia. In many rural facilities, CRNAs are the primary anesthesia providers. There ${isAre(totalJobs)} currently ${totalJobs} CRNA ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What certification do CRNAs need?`,
@@ -576,7 +577,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     midwifery: ({ totalJobs, avgSalary }) => [
         {
             question: `What does a certified nurse midwife (CNM) do?`,
-            answer: `CNMs provide prenatal care, attend labor and birth, and deliver postpartum, newborn, gynecologic, and well-person care. Many also provide contraceptive counseling and primary care services for women across the lifespan. There are currently ${totalJobs} CNM positions listed here.`,
+            answer: `CNMs provide prenatal care, attend labor and birth, and deliver postpartum, newborn, gynecologic, and well-person care. Many also provide contraceptive counseling and primary care services for women across the lifespan. There ${isAre(totalJobs)} currently ${totalJobs} CNM ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What certification do nurse midwives need?`,
@@ -602,7 +603,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'urgent-care': ({ totalJobs, avgSalary }) => [
         {
             question: `What does an urgent care ${brand.niche.short} do?`,
-            answer: `Urgent care ${brand.niche.short}s treat episodic, walk-in complaints, including infections, minor injuries, lacerations, and sprains, for patients of all ages, handling assessment, treatment, and disposition within a single visit. There are currently ${totalJobs} urgent care positions listed here.`,
+            answer: `Urgent care ${brand.niche.short}s treat episodic, walk-in complaints, including infections, minor injuries, lacerations, and sprains, for patients of all ages, handling assessment, treatment, and disposition within a single visit. There ${isAre(totalJobs)} currently ${totalJobs} urgent care ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What certification do urgent care ${brand.niche.short}s need?`,
@@ -624,7 +625,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'home-health': ({ totalJobs, avgSalary }) => [
         {
             question: `What does a home health ${brand.niche.short} do?`,
-            answer: `Home health ${brand.niche.short}s deliver primary and transitional care during home visits: assessments, medication reconciliation, chronic disease management, and annual wellness visits for homebound and medically complex patients. There are currently ${totalJobs} home health positions listed here.`,
+            answer: `Home health ${brand.niche.short}s deliver primary and transitional care during home visits: assessments, medication reconciliation, chronic disease management, and annual wellness visits for homebound and medically complex patients. There ${isAre(totalJobs)} currently ${totalJobs} home health ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What qualifications do home health ${brand.niche.short} roles require?`,
@@ -646,7 +647,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     neonatal: ({ totalJobs, avgSalary }) => [
         {
             question: `What does a neonatal ${brand.niche.short} (NNP) do?`,
-            answer: `NNPs manage premature and critically ill newborns in Level II to IV NICUs, attending high-risk deliveries, leading resuscitations, performing procedures such as line placement and intubation, and guiding families through intensive care. There are currently ${totalJobs} neonatal positions listed here.`,
+            answer: `NNPs manage premature and critically ill newborns in Level II to IV NICUs, attending high-risk deliveries, leading resuscitations, performing procedures such as line placement and intubation, and guiding families through intensive care. There ${isAre(totalJobs)} currently ${totalJobs} neonatal ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What certification do neonatal ${brand.niche.short}s need?`,
@@ -664,7 +665,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     oncology: ({ totalJobs, avgSalary }) => [
         {
             question: `What does an oncology ${brand.niche.short} do?`,
-            answer: `Oncology ${brand.niche.short}s manage patients through cancer treatment and survivorship: symptom management, treatment monitoring, toxicity checks for chemotherapy and immunotherapy, and long-term follow-up in partnership with medical oncologists. There are currently ${totalJobs} oncology positions listed here.`,
+            answer: `Oncology ${brand.niche.short}s manage patients through cancer treatment and survivorship: symptom management, treatment monitoring, toxicity checks for chemotherapy and immunotherapy, and long-term follow-up in partnership with medical oncologists. There ${isAre(totalJobs)} currently ${totalJobs} oncology ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What certification do oncology ${brand.niche.short}s need?`,
@@ -686,7 +687,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     cardiology: ({ totalJobs, avgSalary }) => [
         {
             question: `What does a cardiology ${brand.niche.short} do?`,
-            answer: `Cardiology ${brand.niche.short}s manage cardiovascular disease across clinic and hospital settings: heart failure management, guideline-directed medication titration, device checks, stress-test supervision, and pre/post-procedure care with cath lab and EP teams. There are currently ${totalJobs} cardiology positions listed here.`,
+            answer: `Cardiology ${brand.niche.short}s manage cardiovascular disease across clinic and hospital settings: heart failure management, guideline-directed medication titration, device checks, stress-test supervision, and pre/post-procedure care with cath lab and EP teams. There ${isAre(totalJobs)} currently ${totalJobs} cardiology ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What certification do cardiology ${brand.niche.short}s need?`,
@@ -704,7 +705,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'primary-care': ({ totalJobs, avgSalary }) => [
         {
             question: `What does a primary care ${brand.niche.short} do?`,
-            answer: `Primary care ${brand.niche.short}s provide first-contact care for a continuity panel: prevention, chronic disease management, acute visits, and care coordination. There are currently ${totalJobs} primary care positions listed here, across private practices, health systems, FQHCs, and value-based care groups.`,
+            answer: `Primary care ${brand.niche.short}s provide first-contact care for a continuity panel: prevention, chronic disease management, acute visits, and care coordination. There ${isAre(totalJobs)} currently ${totalJobs} primary care ${pluralize(totalJobs, 'position', 'positions')} listed here, across private practices, health systems, FQHCs, and value-based care groups.`,
         },
         {
             question: `What certification do primary care ${brand.niche.short}s need?`,
@@ -726,7 +727,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     hospitalist: ({ totalJobs, avgSalary }) => [
         {
             question: `What does a hospitalist ${brand.niche.short} do?`,
-            answer: `Hospitalist ${brand.niche.short}s practice inpatient medicine (admissions, daily rounding, cross-cover, and discharge planning), co-managing adult general medicine patients with physician hospitalists. There are currently ${totalJobs} hospitalist positions listed here.`,
+            answer: `Hospitalist ${brand.niche.short}s practice inpatient medicine (admissions, daily rounding, cross-cover, and discharge planning), co-managing adult general medicine patients with physician hospitalists. There ${isAre(totalJobs)} currently ${totalJobs} hospitalist ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What certification do hospitalist ${brand.niche.short}s need?`,
@@ -744,7 +745,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     dermatology: ({ totalJobs, avgSalary }) => [
         {
             question: `What does a dermatology ${brand.niche.short} do?`,
-            answer: `Dermatology ${brand.niche.short}s manage medical dermatology, including acne, psoriasis, eczema, and skin cancer surveillance, plus procedures such as biopsies and cryotherapy, and cosmetic services in many practices. There are currently ${totalJobs} dermatology positions listed here.`,
+            answer: `Dermatology ${brand.niche.short}s manage medical dermatology, including acne, psoriasis, eczema, and skin cancer surveillance, plus procedures such as biopsies and cryotherapy, and cosmetic services in many practices. There ${isAre(totalJobs)} currently ${totalJobs} dermatology ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What certification do dermatology ${brand.niche.short}s need?`,
@@ -762,7 +763,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     orthopedic: ({ totalJobs, avgSalary }) => [
         {
             question: `What does an orthopedic ${brand.niche.short} do?`,
-            answer: `Orthopedic ${brand.niche.short}s work across sports medicine, joint replacement, and spine practices: fracture care, joint injections, pre- and post-operative management, and first-assist duties in the OR for surgical roles. There are currently ${totalJobs} orthopedic positions listed here.`,
+            answer: `Orthopedic ${brand.niche.short}s work across sports medicine, joint replacement, and spine practices: fracture care, joint injections, pre- and post-operative management, and first-assist duties in the OR for surgical roles. There ${isAre(totalJobs)} currently ${totalJobs} orthopedic ${pluralize(totalJobs, 'position', 'positions')} listed here.`,
         },
         {
             question: `What certification do orthopedic ${brand.niche.short}s need?`,
@@ -780,7 +781,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'clinical-nurse-specialist': ({ totalJobs }) => [
         {
             question: `What does a clinical nurse specialist (CNS) do?`,
-            answer: `CNSs are APRNs who work at three levels at once: direct specialty patient care, advancing nursing practice at the bedside, and driving system-level quality and safety outcomes. There are currently ${totalJobs} CNS positions listed here across critical care, medical-surgical, pediatric, and other specialty lines.`,
+            answer: `CNSs are APRNs who work at three levels at once: direct specialty patient care, advancing nursing practice at the bedside, and driving system-level quality and safety outcomes. There ${isAre(totalJobs)} currently ${totalJobs} CNS ${pluralize(totalJobs, 'position', 'positions')} listed here across critical care, medical-surgical, pediatric, and other specialty lines.`,
         },
         {
             question: `How is a CNS different from a nurse practitioner?`,
@@ -799,7 +800,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     aesthetics: ({ totalJobs, avgSalary }) => [
         {
             question: `What does an aesthetic ${brand.niche.short} do?`,
-            answer: `Aesthetic ${brand.niche.short}s deliver cosmetic and medical aesthetic care: neuromodulator and dermal filler injections, laser and energy-based treatments, skin rejuvenation, and medical-grade skincare planning. There are currently ${totalJobs} aesthetics positions listed here across medical spas, dermatology and plastic surgery practices, and NP-owned clinics.`,
+            answer: `Aesthetic ${brand.niche.short}s deliver cosmetic and medical aesthetic care: neuromodulator and dermal filler injections, laser and energy-based treatments, skin rejuvenation, and medical-grade skincare planning. There ${isAre(totalJobs)} currently ${totalJobs} aesthetics ${pluralize(totalJobs, 'position', 'positions')} listed here across medical spas, dermatology and plastic surgery practices, and NP-owned clinics.`,
         },
         {
             question: `What certification do aesthetic ${brand.niche.short}s need?`,
@@ -817,7 +818,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'pain-management': ({ totalJobs, avgSalary }) => [
         {
             question: `What does a pain management ${brand.niche.short} do?`,
-            answer: `Pain management ${brand.niche.short}s evaluate and treat acute, chronic, and cancer-related pain with multimodal plans: medication management, interventional procedures, rehabilitation, and behavioral approaches. There are currently ${totalJobs} pain management positions listed here across interventional pain clinics, spine and orthopedic groups, cancer centers, and hospital pain services.`,
+            answer: `Pain management ${brand.niche.short}s evaluate and treat acute, chronic, and cancer-related pain with multimodal plans: medication management, interventional procedures, rehabilitation, and behavioral approaches. There ${isAre(totalJobs)} currently ${totalJobs} pain management ${pluralize(totalJobs, 'position', 'positions')} listed here across interventional pain clinics, spine and orthopedic groups, cancer centers, and hospital pain services.`,
         },
         {
             question: `What certification do pain management ${brand.niche.short}s need?`,
@@ -835,7 +836,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
     'palliative-hospice': ({ totalJobs, avgSalary }) => [
         {
             question: `What does a palliative care or hospice ${brand.niche.short} do?`,
-            answer: `Palliative and hospice ${brand.niche.short}s manage symptoms and goals of care for patients with serious, advanced, or life-limiting illness: pain and dyspnea control, advance care planning, and family support alongside interdisciplinary teams. There are currently ${totalJobs} positions listed here across hospital consult services, clinics, home-based programs, and inpatient hospice units.`,
+            answer: `Palliative and hospice ${brand.niche.short}s manage symptoms and goals of care for patients with serious, advanced, or life-limiting illness: pain and dyspnea control, advance care planning, and family support alongside interdisciplinary teams. There ${isAre(totalJobs)} currently ${totalJobs} ${pluralize(totalJobs, 'position', 'positions')} listed here across hospital consult services, clinics, home-based programs, and inpatient hospice units.`,
         },
         {
             question: `What is the difference between palliative care and hospice?`,

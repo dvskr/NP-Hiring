@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { X, ChevronDown, ChevronUp, Search, MapPin } from 'lucide-react';
-import { FilterState, FilterCounts, DEFAULT_FILTERS } from '@/types/filters';
+import { FilterCounts, DEFAULT_FILTERS } from '@/types/filters';
 import {
   filtersToParams,
   parseFiltersFromParams,
@@ -69,7 +69,7 @@ function CheckboxFilter({ label, count, checked, onChange, disabled }: CheckboxF
         <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{label}</span>
       </div>
       {typeof count === 'number' && (
-        <span style={{
+        <span className="li-count-badge" style={{
           fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '12px',
           backgroundColor: count === 0 ? '#F3F4F6' : '#FCE7F3',
           color: count === 0 ? '#9CA3AF' : '#9D174D',
@@ -135,11 +135,30 @@ export default function LinkedInFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [filters, setFilters] = useState<RecruitmentFilterState>(DEFAULT_RECRUITMENT_FILTERS);
-  const [counts, setCounts] = useState<FilterCounts | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchInput, setSearchInput] = useState('');
-  const [locationInput, setLocationInput] = useState('');
+  // Filters are DERIVED from the URL (the single source of truth) on every
+  // render rather than mirrored into state by an effect.
+  const paramsKey = searchParams.toString();
+  const filters = useMemo<RecruitmentFilterState>(
+    () => ({ ...DEFAULT_RECRUITMENT_FILTERS, ...parseFiltersFromParams(new URLSearchParams(paramsKey)) }),
+    [paramsKey],
+  );
+  const [countsEntry, setCounts] = useState<{ key: string; data: FilterCounts } | null>(null);
+  // `isLoading` is true until counts for the CURRENT URL arrive. While it is,
+  // the results total shows the loading placeholder (never the previous
+  // filter set's total) and the option badges stay dimmed and aria-busy
+  // (see the filter content wrapper) so they cannot read as current.
+  const counts = countsEntry?.data ?? null;
+  const isLoading = countsEntry === null || countsEntry.key !== paramsKey;
+  // Editable inputs seeded from the URL and re-seeded whenever it changes
+  // (React's "adjust state while rendering" pattern, not a sync effect).
+  const [searchInput, setSearchInput] = useState(filters.search || '');
+  const [locationInput, setLocationInput] = useState(filters.location || '');
+  const [inputsKey, setInputsKey] = useState(paramsKey);
+  if (inputsKey !== paramsKey) {
+    setInputsKey(paramsKey);
+    setSearchInput(filters.search || '');
+    setLocationInput(filters.location || '');
+  }
   // Honest facet arithmetic for the employer-type filter. `unclassifiedCount`
   // is how many jobs (under the CURRENT other filters) come from employers no
   // human has classified yet — surfaced in the facet so selecting "Direct
@@ -152,32 +171,29 @@ export default function LinkedInFilters() {
   const [unclassifiedCount, setUnclassifiedCount] = useState<number | null>(null);
   const [recruitmentTotal, setRecruitmentTotal] = useState<number | null>(null);
 
-  // Sync filters from URL params
-  useEffect(() => {
-    const parsed = parseFiltersFromParams(new URLSearchParams(searchParams.toString()));
-    setFilters(parsed);
-    setSearchInput(parsed.search || '');
-    setLocationInput(parsed.location || '');
-  }, [searchParams]);
-
-  // Fetch filter counts (includes category param for accurate counts)
+  // Fetch filter counts (includes category param for accurate counts).
+  // Counts are stamped with the query string they were computed for, and
+  // only the LATEST request may write them: a slow response for an older
+  // filter set can no longer overwrite a newer one, and the sidebar shows a
+  // loading state (not the previous total) until counts for the current URL
+  // arrive (P10 jobs #1).
+  const latestCountsKey = useRef<string | null>(null);
   const fetchCounts = useCallback(async () => {
+    const key = searchParams.toString();
+    latestCountsKey.current = key;
     try {
-      setIsLoading(true);
-      const parsed = parseFiltersFromParams(new URLSearchParams(searchParams.toString()));
+      const parsed = parseFiltersFromParams(new URLSearchParams(key));
       const response = await fetch('/api/jobs/filter-counts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(parsed),
       });
       if (response.ok) {
-        const data = await response.json();
-        setCounts(data);
+        const data: FilterCounts = await response.json();
+        if (latestCountsKey.current === key) setCounts({ key, data });
       }
     } catch (error) {
       console.error('Failed to fetch filter counts:', error);
-    } finally {
-      setIsLoading(false);
     }
   }, [searchParams]);
 
@@ -535,8 +551,9 @@ export default function LinkedInFilters() {
           </p>
         </div>
 
-        {/* Scrollable Filter Content */}
-        <div>
+        {/* Scrollable Filter Content — aria-busy and dimmed badges while the
+            counts for the current filter set are still loading. */}
+        <div aria-busy={isLoading} className={isLoading ? 'li-counts-loading' : undefined}>
           <div style={{ padding: '12px 20px' }}>
             {/* Search */}
             <form onSubmit={handleSearchSubmit} style={{ marginBottom: '12px' }}>
@@ -843,6 +860,9 @@ export default function LinkedInFilters() {
       <style>{`
         .li-filter-row:hover {
           background: var(--bg-tertiary) !important;
+        }
+        .li-counts-loading .li-count-badge {
+          opacity: 0.45;
         }
         .li-filter-disabled {
           opacity: 0.5;

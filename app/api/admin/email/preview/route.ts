@@ -7,7 +7,7 @@ import { buildBroadcastHtml } from '@/lib/email-service';
  * Renders the email HTML with sample data for preview.
  */
 export async function POST(req: Request) {
-    const authError = await requireApiAdmin();
+    const authError = await requireApiAdmin(req);
     if (authError) return authError;
 
     try {

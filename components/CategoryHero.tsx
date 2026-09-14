@@ -1,11 +1,63 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
+import { brand } from '@/config/brand';
 
 /* ═══════════════════════════════════════════════════════════════
    CategoryHero — Layout 5: Oversized type / asymmetric collage
    Fonts: Lora (heading), Inter (body/ui)
    ═══════════════════════════════════════════════════════════════ */
+
+export type CategoryHeroCrumb = string | { label: string; href?: string };
+
+interface NormalizedCrumb {
+  label: string;
+  href: string | null;
+}
+
+/**
+ * Site-relative href for a crumb. BreadcrumbSchema items carry absolute
+ * `${brand.baseUrl}/...` URLs; the visible link is rendered relative so it
+ * stays on the current origin (preview and local builds included). Only
+ * same-site paths are accepted: anything else renders as plain text rather
+ * than an off-site link.
+ */
+export function crumbHref(href: string | undefined, baseUrl: string): string | null {
+  if (!href) return null;
+  if (href.startsWith('/') && !href.startsWith('//')) return href;
+  const base = baseUrl.replace(/\/+$/, '');
+  if (href === base) return '/';
+  if (href.startsWith(`${base}/`)) return href.slice(base.length);
+  return null;
+}
+
+/** Normalise the trail; the current page (last item) is never a link. */
+export function normalizeCrumbs(crumbs: readonly CategoryHeroCrumb[], baseUrl: string): NormalizedCrumb[] {
+  return crumbs.map((crumb, i) => {
+    const isLast = i === crumbs.length - 1;
+    if (typeof crumb === 'string') return { label: crumb, href: null };
+    return { label: crumb.label, href: isLast ? null : crumbHref(crumb.href, baseUrl) };
+  });
+}
+
+/** One BreadcrumbList item, as the page hands it to components/BreadcrumbSchema. */
+export interface SchemaCrumb {
+  name: string;
+  url: string;
+}
+
+/**
+ * Hero trail from the page's BreadcrumbSchema items, so the visible crumbs
+ * carry exactly the labels and URLs the JSON-LD declares (Google requires
+ * breadcrumb structured data to describe visible content). P10 pseo-jobs #2:
+ * the per-route category landings, the state hub, the city hub and the metro
+ * guides still passed label-only string arrays ('Careers', 'By State', ...)
+ * after the shared template was converted, so those pages rendered plain
+ * spans whose labels did not even match their schema.
+ */
+export function crumbsFromSchema(items: readonly SchemaCrumb[]): CategoryHeroCrumb[] {
+  return items.map(({ name, url }) => ({ label: name, href: url }));
+}
 
 interface CategoryHeroProps {
   /** Category background color (from the watercolor asset) */
@@ -16,8 +68,12 @@ interface CategoryHeroProps {
   heroAlt: string;
   /** Live badge text, e.g. "395 live roles · updated 4 min ago" */
   badgeText: string;
-  /** Breadcrumb trail labels */
-  breadcrumbs: string[];
+  /**
+   * Breadcrumb trail. Pass `{ label, href }` items built from the same array
+   * as the page's BreadcrumbSchema so the visible trail links to exactly the
+   * URLs the JSON-LD declares. A bare string renders as unlinked text.
+   */
+  breadcrumbs: CategoryHeroCrumb[];
   /** Category index label, e.g. "№ 04 / 26" */
   indexLabel?: string;
   /** Line 1 of the oversized heading */
@@ -124,6 +180,7 @@ export default function CategoryHero({
   // See stripUnverifiableFreshness above: the count survives, an unverifiable
   // freshness claim does not.
   const badge = stripUnverifiableFreshness(badgeText ?? '');
+  const crumbs = normalizeCrumbs(breadcrumbs ?? [], brand.baseUrl);
 
   return (
     <section className="cath5" style={{ background: '#faf6ef', padding: '48px 56px 0', position: 'relative', overflow: 'hidden' }}>
@@ -143,11 +200,12 @@ export default function CategoryHero({
 
             The breadcrumb trail keeps its own contract: BreadcrumbSchema emits
             the JSON-LD, this renders the same hierarchy in the DOM so users can
-            orient themselves (WCAG 2.4.8). The prop is `string[]` of labels
-            only, so these are spans, not links; the last item carries
-            aria-current="page". Callers that render their own linked breadcrumb
-            band pass [] and only the pill shows. */}
-        {(badge || indexLabel || (breadcrumbs && breadcrumbs.length > 0)) && (
+            orient themselves (WCAG 2.4.8). Ancestor crumbs given an href render
+            as links to the same URLs the JSON-LD declares; the last item is
+            the current page, carries aria-current="page" and is not a link.
+            Callers that render their own linked breadcrumb band pass [] and
+            only the pill shows. */}
+        {(badge || indexLabel || crumbs.length > 0) && (
           <div className="cath5-row1">
             {badge && (
               <span className="cath5-badge">
@@ -155,16 +213,20 @@ export default function CategoryHero({
                 {badge}
               </span>
             )}
-            {breadcrumbs && breadcrumbs.length > 0 && (
+            {crumbs.length > 0 && (
               <nav aria-label="Breadcrumb" className="cath5-crumbs-slot">
                 <ol className="cath5-crumbs" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap' }}>
-                  {breadcrumbs.map((label, i) => {
-                    const isLast = i === breadcrumbs.length - 1;
+                  {crumbs.map(({ label, href }, i) => {
+                    const isLast = i === crumbs.length - 1;
                     return (
                       <li key={`${label}-${i}`}>
-                        <span aria-current={isLast ? 'page' : undefined} className={isLast ? 'cath5-crumb-now' : undefined}>
-                          {label}
-                        </span>
+                        {href ? (
+                          <Link href={href} className="cath5-crumb-link">{label}</Link>
+                        ) : (
+                          <span aria-current={isLast ? 'page' : undefined} className={isLast ? 'cath5-crumb-now' : undefined}>
+                            {label}
+                          </span>
+                        )}
                       </li>
                     );
                   })}
@@ -344,6 +406,19 @@ export default function CategoryHero({
           content: "·"; margin-left: 14px;
         }
         .cath5-crumb-now { color: var(--ink) !important; opacity: 1; }
+        .cath5-crumb-link {
+          color: inherit;
+          text-decoration: underline;
+          text-decoration-color: transparent;
+          text-underline-offset: 4px;
+          transition: text-decoration-color 0.2s ease, color 0.2s ease;
+        }
+        .cath5-crumb-link:hover { color: var(--teal-deep); text-decoration-color: currentColor; }
+        .cath5-crumb-link:focus-visible {
+          outline: 2px solid var(--teal);
+          outline-offset: 3px;
+          border-radius: 2px;
+        }
         .cath5-index {
           font: 500 12px/1 'Inter', var(--font-inter), monospace;
           letter-spacing: .1em;

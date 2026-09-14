@@ -11,7 +11,7 @@ import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
@@ -180,7 +180,7 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_communityhealth_v2.webp`}
         heroAlt={`Community health ${brand.niche.short} integrated care`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'Community Health']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Community Health", url: `${brand.baseUrl}/jobs/community-health` }])}
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('community-health') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Community Health"
         headlineLine2={brand.niche.short}

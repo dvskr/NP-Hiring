@@ -67,19 +67,29 @@ export const leftIconStyle: React.CSSProperties = {
   pointerEvents: 'none',
 };
 
-/* ─── Toggle eye button ─── */
+/* ─── Toggle eye button ───
+   44x44 hit area (WCAG 2.5.5, Apple HIG) pinned to the input's right edge,
+   inside the 44px that inputWithRightIcon reserves; the 16px glyph is
+   centred, so it sits where it did before. The old 16px glyph + 4px padding
+   measured 24x24 on mobile. Glyph colour clears 3:1 non-text contrast
+   (WCAG 1.4.11) on the white input. */
+export const EYE_BTN_TAP_TARGET_PX = 44;
+
 export const eyeBtnStyle: React.CSSProperties = {
   position: 'absolute',
-  right: '12px',
+  right: 0,
   top: '50%',
   transform: 'translateY(-50%)',
+  width: `${EYE_BTN_TAP_TARGET_PX}px`,
+  height: `${EYE_BTN_TAP_TARGET_PX}px`,
   background: 'none',
   border: 'none',
   cursor: 'pointer',
-  color: '#94A3B0',
-  padding: '4px',
+  color: '#64748B',
+  padding: 0,
   display: 'flex',
   alignItems: 'center',
+  justifyContent: 'center',
 };
 
 /* ─── Error banner ─── */

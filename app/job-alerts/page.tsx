@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Bell, MapPin, Briefcase, Zap, CheckCircle, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
@@ -126,6 +126,7 @@ function JobAlertsContent() {
   const [minYears, setMinYears] = useState('');
   const [frequency, setFrequency] = useState('daily');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitInFlightRef = useRef(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | ''; text: string }>({ type: '', text: '' });
   const [emailError, setEmailError] = useState('');
 
@@ -155,6 +156,10 @@ function JobAlertsContent() {
   // Form submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // In-flight guard. `disabled={isSubmitting}` only lands after React
+    // re-renders, so two clicks in the same task (a fast double click) would
+    // both reach fetch. A ref flips synchronously and blocks the second one.
+    if (submitInFlightRef.current) return;
     setEmailError('');
     setMessage({ type: '', text: '' });
 
@@ -168,6 +173,7 @@ function JobAlertsContent() {
       return;
     }
 
+    submitInFlightRef.current = true;
     setIsSubmitting(true);
 
     try {
@@ -193,7 +199,7 @@ function JobAlertsContent() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setMessage({ type: 'success', text: 'Job alert created! Check your email to confirm.' });
+        setMessage({ type: 'success', text: 'Job alert created! Your alert is active, and matching jobs will arrive in your inbox.' });
         // Reset form
         setEmail('');
         setKeyword('');
@@ -210,6 +216,7 @@ function JobAlertsContent() {
     } catch {
       setMessage({ type: 'error', text: 'Network error. Please try again.' });
     } finally {
+      submitInFlightRef.current = false;
       setIsSubmitting(false);
     }
   };

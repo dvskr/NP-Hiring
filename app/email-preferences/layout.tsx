@@ -12,7 +12,8 @@ import { Metadata } from 'next';
  * belt-and-suspenders guard the sibling auth surfaces use.
  */
 export const metadata: Metadata = {
-    title: `Email Preferences | ${brand.name}`,
+    // Root layout title.template appends " | brand"; hardcoding it here doubled the suffix.
+    title: 'Email Preferences',
     description: `Choose which emails you receive from ${brand.name}: job alerts, reminders, and the newsletter.`,
     robots: { index: false, follow: false },
 };

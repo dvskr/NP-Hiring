@@ -328,7 +328,8 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
 
           {/* Editorial block — internal-linking mesh into the category hubs */}
           <section aria-labelledby="jobs-hub-editorial" style={{ maxWidth: '1000px', margin: '0 auto', padding: '56px 20px 8px' }}>
-            <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
+            {/* #C2410C (5.01:1 on #FDFBF7, the .badge-peach ink); the brighter orange was 3.07:1. */}
+            <p style={{ fontSize: '13px', fontWeight: 600, color: '#C2410C', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
               About This Board
             </p>
             <h2 id="jobs-hub-editorial" className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 32px)', fontWeight: 700, color: '#1A2E35', marginBottom: '18px' }}>

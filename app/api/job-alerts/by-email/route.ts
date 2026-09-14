@@ -14,6 +14,8 @@ type JobAlertRow = {
   jobType: string | null;
   minSalary: number | null;
   maxSalary: number | null;
+  newGradFriendly: boolean | null;
+  minYearsExperience: number | null;
   frequency: string;
   isActive: boolean;
   lastSentAt: Date | null;
@@ -81,6 +83,10 @@ export async function GET(request: NextRequest) {
         jobType: alert.jobType,
         minSalary: alert.minSalary,
         maxSalary: alert.maxSalary,
+        // Experience criteria: the same fields the ?token= path (GET
+        // /api/job-alerts) returns, so the signed-in manage page shows them.
+        newGradFriendly: alert.newGradFriendly,
+        minYearsExperience: alert.minYearsExperience,
         frequency: alert.frequency,
         isActive: alert.isActive,
         lastSentAt: alert.lastSentAt,

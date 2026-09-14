@@ -21,6 +21,7 @@ import Link from 'next/link';
 import { ArrowRight, Info, ShieldCheck } from 'lucide-react';
 import { brand } from '@/config/brand';
 import ToolStyles from './ToolStyles';
+import { parsePlainAmount } from './parse-amount';
 import { TOOL_ACCENT, clayCard, controlStyle, formatUsd, labelStyle } from './tool-theme';
 import {
     DEFAULT_INPUTS,
@@ -59,10 +60,10 @@ function toDraft(inputs: CostPerHireInputs): Draft {
 // Owner direction (2026-09-12): no dashes in visible text, so not an em dash.
 const EMPTY_VALUE = 'n/a';
 
-const num = (raw: string): number => {
-    const parsed = Number.parseFloat(raw.replace(/[^0-9.]/g, ''));
-    return Number.isFinite(parsed) ? parsed : 0;
-};
+// A negative or malformed entry is not an amount: it reads as 0, which the
+// model treats as a missing input (for sponsored spend, "Not comparable")
+// instead of pricing "-500" as $500 the way a minus-stripping parse did.
+const num = (raw: string): number => parsePlainAmount(raw) ?? 0;
 
 interface FieldProps {
     id: string;

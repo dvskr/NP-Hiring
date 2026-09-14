@@ -8,6 +8,15 @@ import { inngest } from '@/lib/inngest/client';
 import { normalizeSalary } from '@/lib/salary-normalizer';
 import { formatDisplaySalary } from '@/lib/salary-display';
 import { parseLocation } from '@/lib/location-parser';
+import {
+  WORK_MODES,
+  normalizeWorkMode,
+  deriveWorkModeFlags,
+  validateBenefits,
+  validateSetting,
+  validatePopulation,
+  classifyEmployerJob,
+} from '../post-free/_lib/job-attributes';
 
 interface ScreeningQuestionInput {
   text: string;
@@ -97,6 +106,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const currentJob = await prisma.job.findUnique({
+      where: { id: employerJob.jobId },
+      select: { mode: true, setting: true, population: true },
+    });
+    if (!currentJob) {
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
+
+    // Typed-field validation (same rules as post-free). Absent fields keep the
+    // stored value; a stored legacy setting/population may be resubmitted.
+    const modeProvided = rawJobData.mode !== undefined && rawJobData.mode !== null && rawJobData.mode !== '';
+    const workMode = modeProvided ? normalizeWorkMode(rawJobData.mode) : null;
+    if (modeProvided && !workMode) {
+      return NextResponse.json(
+        { error: `Work mode must be one of: ${WORK_MODES.join(', ')}` },
+        { status: 400 }
+      );
+    }
+    const benefitsResult = rawJobData.benefits !== undefined ? validateBenefits(rawJobData.benefits) : null;
+    if (benefitsResult && !benefitsResult.ok) {
+      return NextResponse.json({ error: benefitsResult.error }, { status: 400 });
+    }
+    const settingResult = rawJobData.setting !== undefined
+      ? validateSetting(rawJobData.setting, currentJob.setting)
+      : null;
+    if (settingResult && !settingResult.ok) {
+      return NextResponse.json({ error: settingResult.error }, { status: 400 });
+    }
+    const populationResult = rawJobData.population !== undefined
+      ? validatePopulation(rawJobData.population, currentJob.population)
+      : null;
+    if (populationResult && !populationResult.ok) {
+      return NextResponse.json({ error: populationResult.error }, { status: 400 });
+    }
+
     // Apply-on-platform: clear applyLink when switching to in-platform.
     const applyOnPlatform = rawJobData.applyOnPlatform === true;
 
@@ -123,6 +167,12 @@ export async function POST(request: NextRequest) {
     );
 
     const parsedLoc = parseLocation(jobData.location);
+    // Work mode (submitted, else stored) decides remote/hybrid; the location
+    // string is only a fallback when no recognised mode exists.
+    const effectiveMode = workMode ?? normalizeWorkMode(currentJob.mode);
+    const workModeFlags = deriveWorkModeFlags(effectiveMode, parsedLoc);
+    // Title/description edits can change who the posting recruits.
+    const profession = classifyEmployerJob(jobData.title, jobData.description);
 
     // Update job
     const updatedJob = await prisma.job.update({
@@ -130,7 +180,7 @@ export async function POST(request: NextRequest) {
       data: {
         title: jobData.title,
         location: jobData.location,
-        mode: jobData.mode,
+        mode: workMode ?? undefined,
         jobType: jobData.jobType,
         description: jobData.description,
         descriptionSummary: summarizeForMeta(jobData.description),
@@ -147,11 +197,13 @@ export async function POST(request: NextRequest) {
         city: parsedLoc.city,
         state: parsedLoc.state,
         stateCode: parsedLoc.stateCode,
-        isRemote: parsedLoc.isRemote,
-        isHybrid: parsedLoc.isHybrid,
-        benefits: Array.isArray(rawJobData.benefits) ? rawJobData.benefits : undefined,
-        setting: rawJobData.setting !== undefined ? (rawJobData.setting || null) : undefined,
-        population: rawJobData.population !== undefined ? (rawJobData.population || null) : undefined,
+        isRemote: workModeFlags.isRemote,
+        isHybrid: workModeFlags.isHybrid,
+        professionClass: profession.professionClass,
+        professionConfidence: profession.professionConfidence,
+        benefits: benefitsResult?.ok ? benefitsResult.value : undefined,
+        setting: settingResult?.ok ? settingResult.value : undefined,
+        population: populationResult?.ok ? populationResult.value : undefined,
         updatedAt: new Date(),
       },
     });

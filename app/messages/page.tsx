@@ -13,6 +13,19 @@ import { useToast } from '@/components/ui/ToastProvider';
 // Job titles and employer names are employer-authored and often carry dashes
 // as separators; they render through normalizeDisplayText (lib/display-text.ts).
 import { normalizeDisplayText } from '@/lib/display-text';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+
+/** Query param carrying the open thread, so browser Back closes it in place. */
+const THREAD_PARAM = 'c';
+
+function readThreadParam(): string | null {
+    if (typeof window === 'undefined') return null;
+    return new URL(window.location.href).searchParams.get(THREAD_PARAM);
+}
+
+function messagesUrl(convId: string | null): string {
+    return convId ? `/messages?${THREAD_PARAM}=${encodeURIComponent(convId)}` : '/messages';
+}
 
 /** Format date as actual date/time for messaging (not relative like "Just posted") */
 function formatMessageDate(date: string | Date): string {
@@ -163,11 +176,56 @@ export default function MessagesPage() {
     const [deleting, setDeleting] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
     const [convMenuId, setConvMenuId] = useState<string | null>(null);
+    // Synchronous double-submit guard: two Enter keydowns in one tick both see
+    // `sending === false` because state has not re-rendered yet.
+    const sendingRef = useRef(false);
+    // True while the open thread owns a history entry we pushed, so the
+    // in-app Back button can pop it instead of stacking another entry.
+    const threadHistoryPushedRef = useRef(false);
 
     // Edit state
     const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
     const [editText, setEditText] = useState('');
     const [saving, setSaving] = useState(false);
+
+    // Focus the options trigger for a conversation (after its popup or the
+    // delete confirmation closes) so keyboard focus is never dropped on <body>.
+    const focusConvMenuTrigger = useCallback((convId: string) => {
+        window.requestAnimationFrame(() => {
+            const trigger = Array.from(
+                document.querySelectorAll<HTMLButtonElement>('[data-conv-menu-trigger]'),
+            ).find(el => el.dataset.convMenuTrigger === convId);
+            trigger?.focus();
+        });
+    }, []);
+
+    const dismissDeleteModal = useCallback(() => {
+        if (deleting) return;
+        const current = deleteModal;
+        setDeleteModal(null);
+        if (current?.type === 'conversation') focusConvMenuTrigger(current.id);
+    }, [deleteModal, deleting, focusConvMenuTrigger]);
+
+    // Delete confirmation is a modal dialog: focus moves inside, Tab is
+    // trapped, Escape dismisses (not while a delete is in flight).
+    const deleteDialogRef = useFocusTrap<HTMLDivElement>({
+        isOpen: deleteModal !== null,
+        onEscape: dismissDeleteModal,
+    });
+
+    // Conversation options popup closes on Escape and hands focus back to
+    // its trigger.
+    useEffect(() => {
+        if (!convMenuId) return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            e.preventDefault();
+            setConvMenuId(null);
+            focusConvMenuTrigger(convMenuId);
+        };
+        document.addEventListener('keydown', onKeyDown);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [convMenuId, focusConvMenuTrigger]);
 
     // Auth check
     useEffect(() => {
@@ -175,7 +233,8 @@ export default function MessagesPage() {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
-                router.push('/login?redirect=/messages');
+                // /login honours ?next= (and ?redirectTo=) as the post-sign-in target.
+                router.push('/login?next=/messages');
             }
         })();
     }, [router]);
@@ -209,7 +268,7 @@ export default function MessagesPage() {
     }, [fetchConversations]);
 
     // Fetch thread messages
-    const openConversation = useCallback(async (convId: string) => {
+    const loadConversation = useCallback(async (convId: string) => {
         setActiveConvId(convId);
         setThreadLoading(true);
         setThreadError(false);
@@ -242,6 +301,63 @@ export default function MessagesPage() {
             setThreadLoading(false);
         }
     }, [conversations, notifyToast]);
+
+    const closeThread = useCallback(() => {
+        setActiveConvId(null);
+        setThreadError(false);
+        setConvDetail(null);
+        setThread([]);
+    }, []);
+
+    // The open thread lives in the URL (?c=<id>). Opening from the list pushes
+    // a history entry, so the browser or hardware Back gesture closes the
+    // thread and stays inside Messages; switching threads replaces the entry.
+    const openConversation = useCallback((convId: string) => {
+        if (readThreadParam() !== convId) {
+            const url = messagesUrl(convId);
+            if (threadHistoryPushedRef.current) {
+                window.history.replaceState(null, '', url);
+            } else {
+                window.history.pushState(null, '', url);
+                threadHistoryPushedRef.current = true;
+            }
+        }
+        loadConversation(convId);
+    }, [loadConversation]);
+
+    // In-app "Back to conversations": pop our own history entry when we made
+    // one (popstate then closes the thread); otherwise close in place.
+    const leaveThread = useCallback(() => {
+        if (threadHistoryPushedRef.current && readThreadParam()) {
+            window.history.back();
+            return;
+        }
+        closeThread();
+    }, [closeThread]);
+
+    const loadConversationRef = useRef(loadConversation);
+    useEffect(() => {
+        loadConversationRef.current = loadConversation;
+    }, [loadConversation]);
+
+    useEffect(() => {
+        // A reload starts from a clean inbox: drop a stale thread param.
+        if (readThreadParam()) {
+            window.history.replaceState(null, '', messagesUrl(null));
+        }
+        const onPopState = () => {
+            const convId = readThreadParam();
+            if (convId) {
+                threadHistoryPushedRef.current = true;
+                loadConversationRef.current(convId);
+            } else {
+                threadHistoryPushedRef.current = false;
+                closeThread();
+            }
+        };
+        window.addEventListener('popstate', onPopState);
+        return () => window.removeEventListener('popstate', onPopState);
+    }, [closeThread]);
 
     useEffect(() => {
         if (threadEndRef.current) {
@@ -291,7 +407,8 @@ export default function MessagesPage() {
     // Send reply — on failure the composer text and attachment are kept so the
     // user can retry from the inline error banner without retyping.
     const handleSendReply = async () => {
-        if ((!replyText.trim() && !pendingAttachment) || !activeConvId || sending) return;
+        if ((!replyText.trim() && !pendingAttachment) || !activeConvId || sending || sendingRef.current) return;
+        sendingRef.current = true;
         setSending(true);
         setSendError(null);
         try {
@@ -335,6 +452,7 @@ export default function MessagesPage() {
             console.error('Error sending reply:', err);
             setSendError('Failed to send');
         } finally {
+            sendingRef.current = false;
             setSending(false);
         }
     };
@@ -389,9 +507,12 @@ export default function MessagesPage() {
             // Remove from list
             setConversations(prev => prev.filter(c => c.id !== deleteModal.id));
             if (activeConvId === deleteModal.id) {
-                setActiveConvId(null);
-                setConvDetail(null);
-                setThread([]);
+                // The deleted thread must not be reachable via Back/Forward.
+                if (readThreadParam()) {
+                    window.history.replaceState(null, '', messagesUrl(null));
+                }
+                threadHistoryPushedRef.current = false;
+                closeThread();
             }
             showToast('Conversation deleted');
         } catch (err) {
@@ -568,6 +689,7 @@ export default function MessagesPage() {
                                                     aria-label="Conversation options"
                                                     aria-haspopup="true"
                                                     aria-expanded={convMenuId === conv.id}
+                                                    data-conv-menu-trigger={conv.id}
                                                     onClick={(e) => { e.stopPropagation(); setConvMenuId(convMenuId === conv.id ? null : conv.id); }}
                                                     style={{
                                                         background: 'none', border: 'none',
@@ -705,7 +827,7 @@ export default function MessagesPage() {
                                     Try Again
                                 </button>
                                 <button
-                                    onClick={() => { setActiveConvId(null); setThreadError(false); setConvDetail(null); setThread([]); }}
+                                    onClick={leaveThread}
                                     style={{
                                         background: 'none', border: 'none', cursor: 'pointer',
                                         color: 'var(--text-secondary)', fontSize: '13px',
@@ -727,7 +849,7 @@ export default function MessagesPage() {
                                 }}>
                                     <button
                                         aria-label="Back to conversations"
-                                        onClick={() => { setActiveConvId(null); setConvDetail(null); setThread([]); }}
+                                        onClick={leaveThread}
                                         style={{
                                             background: 'none', border: 'none', cursor: 'pointer',
                                             color: 'var(--text-tertiary)', padding: '4px',
@@ -1191,9 +1313,14 @@ export default function MessagesPage() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         zIndex: 9999,
                     }}
-                    onClick={() => setDeleteModal(null)}
+                    onClick={dismissDeleteModal}
                 >
                     <div
+                        ref={deleteDialogRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="delete-confirm-title"
+                        aria-describedby="delete-confirm-desc"
                         onClick={(e) => e.stopPropagation()}
                         style={{
                             backgroundColor: 'var(--bg-primary)',
@@ -1211,14 +1338,14 @@ export default function MessagesPage() {
                                 backgroundColor: 'rgba(239,68,68,0.1)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                                <Trash2 size={20} color="#EF4444" />
+                                <Trash2 size={20} color="#EF4444" aria-hidden="true" />
                             </div>
-                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            <h3 id="delete-confirm-title" style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
                                 {deleteModal.type === 'conversation' ? 'Delete conversation?' : 'Delete message?'}
                             </h3>
                         </div>
 
-                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '0 0 24px', lineHeight: 1.6 }}>
+                        <p id="delete-confirm-desc" style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '0 0 24px', lineHeight: 1.6 }}>
                             {deleteModal.type === 'conversation'
                                 ? 'This conversation will be removed from your inbox. The other person will still be able to see it.'
                                 : deleteModal.isRead
@@ -1229,7 +1356,10 @@ export default function MessagesPage() {
 
                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                             <button
-                                onClick={() => setDeleteModal(null)}
+                                onClick={dismissDeleteModal}
+                                // Safe default for a destructive confirm; focus lands
+                                // in the dialog on mount, before the trap's deferred focus.
+                                autoFocus
                                 style={{
                                     padding: '10px 20px', borderRadius: '10px',
                                     border: borderVal, background: 'none',

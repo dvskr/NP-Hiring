@@ -1,14 +1,36 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Search, Home, Briefcase, ChevronRight, MapPin, Stethoscope, Compass } from 'lucide-react';
 import { brand } from '@/config/brand';
 import { CATEGORY_LABELS } from '@/lib/pseo/category-faq-data';
 
 /**
+ * P10 pseo-jobs #5: without its own metadata the 404 inherited the root
+ * layout's homepage title ("NP Hiring | Nurse Practitioner Job Board"), so a
+ * dead URL's tab, history entry and any crawler snapshot read as the job
+ * board's home page. The root title template appends the brand. Next also
+ * emits noindex for the 404 status; it is declared here too so the page is
+ * never indexable even when served outside that status path.
+ */
+export const metadata: Metadata = {
+    title: 'Page Not Found',
+    description: `The page you requested could not be found. Search current ${brand.niche.short} jobs on ${brand.name}.`,
+    robots: { index: false, follow: true },
+};
+
+/**
  * 404 — the single highest-traffic error surface on the board.
  *
  * Every retired donor URL, every expired job, every mistyped pSEO slug and
- * every stale backlink lands here (middleware 410s a few donor slugs, the
- * rest fall through app/[...catchall]/page.tsx). P3 #13: it previously
+ * every stale backlink lands here (middleware 410s a few donor slugs; every
+ * other unmatched URL is served this page by Next's own not-found handling,
+ * prerendered as /_not-found with the full root layout). P10
+ * platform-routing-db #2/#4: there is deliberately NO catch-all route. Both
+ * app/[...catchall]/page.tsx and the single-segment app/[indexnow]/route.ts
+ * matched unmatched URLs and forced notFound() through a render that, under
+ * `next start`, emitted the bare __next_error__ shell (or a 0-byte body
+ * from the Route Handler). The IndexNow key file is now answered by
+ * middleware.ts. Do not reintroduce a catch-all. P3 #13: it previously
  * offered two generic buttons and two marketing cards — no way to actually
  * find what the visitor came for. It now carries a real search entry point
  * plus the three navigational axes the site is organized around

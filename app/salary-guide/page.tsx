@@ -249,10 +249,10 @@ const experienceData = [
 
 const settingData = [
   { setting: 'Private Practice (Owner)', range: '$180,000 to $300,000+', notes: 'Highest earning potential, requires business skills', color: '#BE185D' },
-  { setting: 'Travel / Locum Tenens', range: '$150,000 to $250,000', notes: 'Includes housing, travel, higher hourly rates', color: '#8B5CF6' },
-  { setting: 'Telehealth / Remote', range: '$130,000 to $180,000', notes: 'Growing rapidly, flexible schedules', color: '#3B82F6' },
-  { setting: 'Outpatient Clinic', range: '$120,000 to $160,000', notes: 'Most common setting, steady patient load', color: '#F59E0B' },
-  { setting: 'Hospital / Inpatient', range: '$115,000 to $150,000', notes: 'Often includes shift differentials, benefits', color: '#EF4444' },
+  { setting: 'Travel / Locum Tenens', range: '$150,000 to $250,000', notes: 'Includes housing, travel, higher hourly rates', color: '#7C3AED' },
+  { setting: 'Telehealth / Remote', range: '$130,000 to $180,000', notes: 'Growing rapidly, flexible schedules', color: '#2563EB' },
+  { setting: 'Outpatient Clinic', range: '$120,000 to $160,000', notes: 'Most common setting, steady patient load', color: '#B45309' },
+  { setting: 'Hospital / Inpatient', range: '$115,000 to $150,000', notes: 'Often includes shift differentials, benefits', color: '#DC2626' },
   { setting: 'Community Health (FQHC)', range: '$100,000 to $130,000', notes: 'May qualify for loan forgiveness programs', color: '#6B7280' },
 ];
 
@@ -446,7 +446,7 @@ export default async function SalaryGuidePage() {
                     boxShadow: '3px 3px 8px rgba(0,0,0,0.04), inset 1px 1px 2px rgba(255,255,255,0.5)',
                   }}>
                     <span style={{ fontSize: '20px', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</span>
-                    <span style={{ fontSize: '12px', color: s.color, opacity: 0.7, fontWeight: 500 }}>{s.label}</span>
+                    <span style={{ fontSize: '12px', color: s.color, fontWeight: 500 }}>{s.label}</span>
                   </div>
                 ))}
               </div>
@@ -469,7 +469,7 @@ export default async function SalaryGuidePage() {
                       were named here but appear nowhere in the artifact —
                       unsourced attribution on a YMYL page. Guarded by
                       tests/regressions/p1-salary-pdf-copy-truth.test.ts. */}
-                  <p style={{ fontSize: '10px', color: '#94A3B8', marginTop: '8px', marginBottom: 0 }}>
+                  <p style={{ fontSize: '10px', color: '#64748B', marginTop: '8px', marginBottom: 0 }}>
                     Sources: BLS OEWS, BLS Employment Projections, AANP, HRSA, and live {brand.name} postings
                   </p>
                 </div>
@@ -500,7 +500,7 @@ export default async function SalaryGuidePage() {
                       ranges beside it are not, and were reading as though
                       they were. Mirrored in scripts/generate-salary-pdf.ts,
                       which prints the identical paragraph. */}
-                  <p style={{ fontSize: '12px', color: '#8A7A72', lineHeight: 1.6, margin: '10px 0 0' }}>
+                  <p style={{ fontSize: '12px', color: '#6B5B53', lineHeight: 1.6, margin: '10px 0 0' }}>
                     {SALARY_FIGURE_PROVENANCE}
                   </p>
                   {/* A4 (teardown parity): the Vivian/Indeed-style
@@ -512,7 +512,7 @@ export default async function SalaryGuidePage() {
                     cited={[NATIONAL_SALARY]}
                     live={{ count: overallStats.jobsWithSalary, minimum: 1 }}
                     reviewedOn={LAST_REVIEWED_DATE}
-                    style={{ fontSize: '11px', color: '#94A3B8', marginTop: '6px' }}
+                    style={{ fontSize: '11px', color: '#64748B', marginTop: '6px' }}
                   />
                 </div>
               </div>
@@ -523,12 +523,12 @@ export default async function SalaryGuidePage() {
                 {[
                   { value: NATIONAL_SALARY.formatted, label: 'National Median (BLS)', color: '#BE185D' },
                   { value: '$165,000+', label: 'Top 10% Earn', color: '#BE185D' },
-                  { value: NP_GROWTH.formatted, label: 'Job Growth by 2034', color: '#F59E0B' },
-                  { value: overallStats.jobsWithSalary.toLocaleString('en-US'), label: 'Live Postings Analyzed', color: '#F59E0B' },
+                  { value: NP_GROWTH.formatted, label: 'Job Growth by 2034', color: '#B45309' },
+                  { value: overallStats.jobsWithSalary.toLocaleString('en-US'), label: 'Live Postings Analyzed', color: '#B45309' },
                 ].map(s => (
                   <div key={s.label} style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '20px', fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                    <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>{s.label}</div>
+                    <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>{s.label}</div>
                   </div>
                 ))}
               </div>
@@ -578,7 +578,7 @@ export default async function SalaryGuidePage() {
                   copy (B54 — live-data freshness is the query's own basis). */}
               <SalaryProvenance
                 live={{ count: overallStats.jobsWithSalary, minimum: 1 }}
-                style={{ fontSize: '11px', color: '#831843', opacity: 0.7, marginTop: '6px' }}
+                style={{ fontSize: '11px', color: '#831843', marginTop: '6px' }}
               />
             </div>
 
@@ -610,7 +610,7 @@ export default async function SalaryGuidePage() {
                             <Link href={`/salary-guide/${state.slug}`} className="sal-state-link" style={{ fontWeight: 600, color: '#1A2E35', textDecoration: 'none' }}>
                               {state.state}
                             </Link>
-                            <span style={{ fontSize: '11px', color: '#94A3B8', marginLeft: '6px' }}>{state.stateCode}</span>
+                            <span style={{ fontSize: '11px', color: '#64748B', marginLeft: '6px' }}>{state.stateCode}</span>
                           </div>
                         </div>
                       </td>
@@ -648,7 +648,7 @@ export default async function SalaryGuidePage() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>
                   {smallSampleStates.map((s) => (
                     <Link key={s.state} href={`/salary-guide/${s.slug}`} className="sal-state-link" style={{ fontSize: '12.5px', fontWeight: 600, color: '#1A2E35', textDecoration: 'none' }}>
-                      {s.state} <span style={{ color: '#94A3B8', fontWeight: 500 }}>({s.jobCount})</span>
+                      {s.state} <span style={{ color: '#64748B', fontWeight: 500 }}>({s.jobCount})</span>
                     </Link>
                   ))}
                 </div>
@@ -728,7 +728,7 @@ export default async function SalaryGuidePage() {
                   }}>
                     <div>
                       <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#1A2E35' }}>{item.setting}</div>
-                      <div style={{ fontSize: '10.5px', color: '#94A3B8', marginTop: '1px' }}>{item.notes}</div>
+                      <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '1px' }}>{item.notes}</div>
                     </div>
                     <span style={{ fontSize: '11.5px', fontWeight: 700, color: item.color, whiteSpace: 'nowrap', marginLeft: '8px' }}>{item.range}</span>
                   </div>
@@ -924,7 +924,7 @@ export default async function SalaryGuidePage() {
             <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>📋 Cite This Page</h3>
             <p style={{ fontSize: '13px', color: '#5A4A42', marginBottom: '14px' }}>Use the following citation when referencing data from this salary guide:</p>
             <CopyCitation citation={`${brand.name}. "2026 ${brand.niche.short} Salary Guide: ${brand.niche.long} Pay by State." ${brand.name}, February 2026, ${brand.domain}/salary-guide.`} />
-            <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '10px' }}>For media inquiries or custom data requests, contact {brand.email.press}</p>
+            <p style={{ fontSize: '11px', color: '#64748B', marginTop: '10px' }}>For media inquiries or custom data requests, contact {brand.email.press}</p>
           </div>
 
           {/* Data Sources */}

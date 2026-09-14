@@ -33,14 +33,17 @@ export function getAdminCreds(): AuthCreds | null {
   return email && password ? { email, password } : null;
 }
 
-export async function loginAtPath(page: Page, path: string, creds: AuthCreds) {
+export async function loginAtPath(page: Page, path: string, creds: AuthCreds, opts: { timeout?: number } = {}) {
   await page.goto(path);
   await page.locator('input[type="email"]').first().fill(creds.email);
   await page.locator('input[type="password"]').first().fill(creds.password);
   await page.locator('button[type="submit"]').first().click();
-  // Wait until we leave the login page (or hit a known post-login route)
-  await page.waitForURL((url) => !url.pathname.startsWith(path), {
-    timeout: 20_000,
+  // Wait until we leave the login page (or hit a known post-login route).
+  // /employer/login is a server redirect to /login?role=employer, so also
+  // require leaving /login — otherwise the wait resolves before sign-in.
+  await page.waitForURL((url) => !url.pathname.startsWith(path) && !url.pathname.startsWith('/login'), {
+    // E2E_BOOT_TIMEOUT_MS widens the post-login redirect budget on a slow/shared server.
+    timeout: opts.timeout ?? Number(process.env.E2E_BOOT_TIMEOUT_MS ?? 20_000),
     waitUntil: 'domcontentloaded',
   });
 }

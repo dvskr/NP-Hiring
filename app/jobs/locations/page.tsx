@@ -4,9 +4,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, MapPinned, Wifi, TrendingUp, Globe, Video, Plane, GraduationCap, Calendar } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
 import { METRO_CITIES } from '@/lib/metro-data';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import StateImage from '@/components/StateImage';
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 import { STATE_CODES } from '@/lib/pseo/setting-state-config';
@@ -72,7 +73,7 @@ async function getLocationStats() {
   const stateData = await prisma.job.groupBy({
     by: ['state', 'stateCode'],
     where: {
-      isPublished: true,
+      ...PUBLISHED_LISTING_WHERE,
       state: { not: null },
     },
     _count: {
@@ -88,7 +89,7 @@ async function getLocationStats() {
   // Remote jobs count
   const remoteCount = await prisma.job.count({
     where: {
-      isPublished: true,
+      ...PUBLISHED_LISTING_WHERE,
       isRemote: true,
     },
   });
@@ -97,7 +98,7 @@ async function getLocationStats() {
   const topCities = await prisma.job.groupBy({
     by: ['city', 'state', 'stateCode'],
     where: {
-      isPublished: true,
+      ...PUBLISHED_LISTING_WHERE,
       city: { not: null },
       state: { not: null },
     },
@@ -114,7 +115,7 @@ async function getLocationStats() {
 
   // Total jobs
   const totalJobs = await prisma.job.count({
-    where: { isPublished: true },
+    where: PUBLISHED_LISTING_WHERE,
   });
 
   // P2 #12: which states earn a /jobs/locations/<state> city directory.
@@ -296,7 +297,7 @@ export default async function LocationsPage() {
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp`}
         heroAlt={`${brand.niche.short} Jobs by Location`}
         badgeText="Nationwide"
-        breadcrumbs={['Home', 'Jobs', 'Locations']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Locations", url: `${brand.baseUrl}/jobs/locations` }])}
         indexLabel="№ 02"
         headlineLine1={brand.niche.short}
         headlineLine2="Locations"

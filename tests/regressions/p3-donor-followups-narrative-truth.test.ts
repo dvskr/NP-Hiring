@@ -416,8 +416,11 @@ describe('P3 #5 — CategoryHero renders every prop it accepts', () => {
             for (const rel of callSites) {
                 // Still hardcoded upstream (foreign files); the component is
                 // what has to be safe.
-                expect(read(rel), rel).toContain('live roles · updated today');
+                // P10 pseo-jobs #4: the state and metro hubs pluralize the noun
+                // ("1 live role"); the freshness suffix is unchanged.
+                expect(read(rel), rel).toMatch(/live (?:roles|\$\{pluralize\([^)]*'role'\)\}) · updated today/);
             }
+            expect(stripUnverifiableFreshness('1 live role · updated today')).toBe('1 live role');
             expect(read('lib/pseo/category-landing-template.tsx'))
                 .toContain('live roles · updated daily');
             expect(stripUnverifiableFreshness('1247 live roles · updated today'))

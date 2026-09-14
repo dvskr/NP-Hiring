@@ -1,290 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
-import { FilterState, FilterCounts } from '@/types/filters';
-import { buildWhereClause, freshnessClause, minYearsQualifyClause, newGradWhereClause } from '@/lib/filters';
+import type { FilterCounts, FilterState } from '@/types/filters';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import {
+  COUNT_ROW_SELECT,
+  computeFilterCounts,
+  normalizeFilterCountsBody,
+  type FilterCountsDataSource,
+} from './compute-counts';
+import type { MemoryRow } from './where-evaluator';
+
+/**
+ * Short-lived per-instance result cache + in-flight coalescing. The sidebar
+ * re-requests identical filter sets constantly (every /jobs visit, back/forward,
+ * several tabs), and each computation holds a pooled connection. Counts may
+ * lag a fresh ingest by at most CACHE_TTL_MS.
+ */
+const CACHE_TTL_MS = 60_000;
+const CACHE_MAX_ENTRIES = 200;
+const countsCache = new Map<string, { expiresAt: number; value: Promise<FilterCounts> }>();
+
+const dataSource: FilterCountsDataSource = {
+  findRows: async (where) =>
+    (await prisma.job.findMany({ where, select: COUNT_ROW_SELECT })) as unknown as MemoryRow[],
+  findIds: async (where) =>
+    (await prisma.job.findMany({ where, select: { id: true } })).map((row) => row.id),
+};
+
+function cachedFilterCounts(filters: FilterState): Promise<FilterCounts> {
+  const key = JSON.stringify(filters);
+  const now = Date.now();
+  const hit = countsCache.get(key);
+  if (hit && hit.expiresAt > now) return hit.value;
+
+  const value = computeFilterCounts(filters, dataSource);
+  countsCache.set(key, { expiresAt: now + CACHE_TTL_MS, value });
+  // A failed computation must not be served from cache.
+  value.catch(() => {
+    if (countsCache.get(key)?.value === value) countsCache.delete(key);
+  });
+  if (countsCache.size > CACHE_MAX_ENTRIES) {
+    for (const [k, entry] of countsCache) {
+      if (entry.expiresAt <= now || countsCache.size > CACHE_MAX_ENTRIES) countsCache.delete(k);
+      if (countsCache.size <= CACHE_MAX_ENTRIES) break;
+    }
+  }
+  return value;
+}
 
 export async function POST(request: NextRequest) {
-    // Rate limiting
-    const rateLimitResult = await rateLimit(request, 'filter-counts', RATE_LIMITS.general);
-    if (rateLimitResult) return rateLimitResult;
+  const rateLimitResult = await rateLimit(request, 'filter-counts', RATE_LIMITS.general);
+  if (rateLimitResult) return rateLimitResult;
+
+  // Client-input errors are 400s, parsed outside the computation's catch-all.
+  let raw: unknown;
+  try {
+    raw = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Request body must be valid JSON' }, { status: 400 });
+  }
+  const filters = normalizeFilterCountsBody(raw);
+  if (!filters) {
+    return NextResponse.json({ error: 'Request body must be a JSON object' }, { status: 400 });
+  }
 
   try {
-    const raw = await request.json();
-    // Normalize: ensure all array fields exist (handles old clients without experienceLevel)
-    const filters: FilterState = {
-      search: raw.search || '',
-      workMode: raw.workMode || [],
-      jobType: raw.jobType || [],
-      specialty: raw.specialty || [],
-      experienceLevel: raw.experienceLevel || [],
-      newGradFriendly: raw.newGradFriendly === true ? true : null,
-      minYearsExperience:
-        typeof raw.minYearsExperience === 'number' && raw.minYearsExperience >= 0
-          ? raw.minYearsExperience
-          : null,
-      salaryMin: raw.salaryMin ?? null,
-      postedWithin: raw.postedWithin ?? null,
-      location: raw.location ?? null,
-      cityExact: raw.cityExact ?? null,
-      stateCode: raw.stateCode ?? null,
-      employer: raw.employer ?? null,
-      category: raw.category ?? null,
-    };
-
-    // Base filters for all counts (excludes the specific category being counted)
-    const baseFilters = { ...filters };
-
-    // Work Mode counts
-    // We want to see counts for other work modes given current filters, 
-    // BUT satisfying the other active filters (like jobType, salary, etc)
-    const workModeFilters = { ...baseFilters, workMode: [] };
-    const workModeBase = buildWhereClause(workModeFilters);
-
-    // Job Type counts
-    const jobTypeFilters = { ...baseFilters, jobType: [] };
-    const jobTypeBase = buildWhereClause(jobTypeFilters);
-
-    // Salary counts
-    const salaryFilters = { ...baseFilters, salaryMin: null };
-    const salaryBase = buildWhereClause(salaryFilters);
-
-    // Posted Within counts
-    const postedFilters = { ...baseFilters, postedWithin: null };
-    const postedBase = buildWhereClause(postedFilters);
-
-    const now = new Date();
-
-    const [
-      remoteCount, hybridCount, onsiteCount,
-      jobTypeCounts,
-      anySalary, over100k, over150k, over200k,
-      day, threeDays, week, month,
-      total
-    ] = await Promise.all([
-      // Work Mode
-      prisma.job.count({ where: { AND: [workModeBase, { isRemote: true }] } }),
-      prisma.job.count({ where: { AND: [workModeBase, { isHybrid: true }] } }),
-      prisma.job.count({ where: { AND: [workModeBase, { isRemote: false, isHybrid: false }] } }),
-
-      // Job Type
-      prisma.job.groupBy({
-        by: ['jobType'],
-        where: jobTypeBase,
-        _count: { _all: true },
-      }),
-
-      // Salary
-      prisma.job.count({
-        where: {
-          AND: [
-            salaryBase,
-            {
-              OR: [
-                { normalizedMinSalary: { not: null } },
-                { normalizedMaxSalary: { not: null } },
-              ],
-            },
-          ],
-        },
-      }),
-      prisma.job.count({
-        where: {
-          AND: [
-            salaryBase,
-            {
-              OR: [
-                { normalizedMinSalary: { gte: 100000 } },
-                { normalizedMaxSalary: { gte: 100000 } },
-              ],
-            },
-          ],
-        },
-      }),
-      prisma.job.count({
-        where: {
-          AND: [
-            salaryBase,
-            {
-              OR: [
-                { normalizedMinSalary: { gte: 150000 } },
-                { normalizedMaxSalary: { gte: 150000 } },
-              ],
-            },
-          ],
-        },
-      }),
-      prisma.job.count({
-        where: {
-          AND: [
-            salaryBase,
-            {
-              OR: [
-                { normalizedMinSalary: { gte: 200000 } },
-                { normalizedMaxSalary: { gte: 200000 } },
-              ],
-            },
-          ],
-        },
-      }),
-
-      // Posted Within — see lib/filters.ts:freshnessClause for semantics.
-      // Past 24h
-      prisma.job.count({
-        where: { AND: [postedBase, freshnessClause(now, '24h')] },
-      }),
-      // Past 3 days
-      prisma.job.count({
-        where: { AND: [postedBase, freshnessClause(now, '3d')] },
-      }),
-      // Past week
-      prisma.job.count({
-        where: { AND: [postedBase, freshnessClause(now, '7d')] },
-      }),
-      // Past month
-      prisma.job.count({
-        where: { AND: [postedBase, freshnessClause(now, '30d')] },
-      }),
-
-      // Total
-      prisma.job.count({
-        where: buildWhereClause(filters),
-      }),
-    ]);
-
-    const jobTypeMap: Record<string, number> = {};
-    let knownTypeTotal = 0;
-    for (const jt of jobTypeCounts) {
-      if (jt.jobType) {
-        jobTypeMap[jt.jobType] = jt._count._all;
-        knownTypeTotal += jt._count._all;
-      }
-    }
-    // Count jobs with NULL jobType as "Other"
-    const nullTypeCount = jobTypeCounts.find((jt: { jobType: string | null }) => jt.jobType === null);
-    const otherCount = nullTypeCount ? nullTypeCount._count._all : 0;
-
-    // Specialty counts (keyword-based)
-    // Exclude specialty filter from base so counts don't self-filter
-    const specialtyFilters = { ...baseFilters, specialty: [] };
-    const specialtyBase = buildWhereClause(specialtyFilters);
-    // Wrap the keyword OR inside the AND envelope so it composes with
-    // `specialtyBase`'s own AND-conditions instead of overriding them
-    // when other filters are active. Mirrors how /jobs adds specialty
-    // via `andConditions.push({OR:[...]})`.
-    const [telehealthCount, travelCount] = await Promise.all([
-      prisma.job.count({
-        where: {
-          AND: [
-            specialtyBase,
-            {
-              OR: [
-                { title: { contains: 'telehealth', mode: 'insensitive' } },
-                { title: { contains: 'telemedicine', mode: 'insensitive' } },
-                { title: { contains: 'telepsychiatry', mode: 'insensitive' } },
-                { description: { contains: 'telehealth', mode: 'insensitive' } },
-                { description: { contains: 'telemedicine', mode: 'insensitive' } },
-              ],
-            },
-          ],
-        },
-      }),
-      prisma.job.count({
-        where: {
-          AND: [
-            specialtyBase,
-            {
-              OR: [
-                { title: { contains: 'travel', mode: 'insensitive' } },
-                { title: { contains: 'locum', mode: 'insensitive' } },
-              ],
-            },
-          ],
-        },
-      }),
-    ]);
-
-    // Experience Level counts (from DB column, not keyword matching)
-    // Exclude experienceLevel filter from base so counts don't self-filter
-    const expFilters = { ...baseFilters, experienceLevel: [] };
-    const expBase = buildWhereClause(expFilters);
-    const expLevelCounts = await prisma.job.groupBy({
-      by: ['experienceLevel'],
-      where: expBase,
-      _count: { _all: true },
-    });
-    const expMap: Record<string, number> = {};
-    for (const el of expLevelCounts) {
-      if (el.experienceLevel) {
-        expMap[el.experienceLevel] = el._count._all;
-      }
-    }
-
-    // Phase 1 structured experience counts. We exclude each respective
-    // filter from its own base so the badge count doesn't self-filter.
-    const newGradBase = buildWhereClause({ ...baseFilters, newGradFriendly: null });
-    const minYearsBase = buildWhereClause({ ...baseFilters, minYearsExperience: null });
-    // Candidate-qualifies clause + null handling are shared with
-    // buildWhereClause via minYearsQualifyClause / EXPERIENCE_NULL_QUALIFIES,
-    // so the badge counts and the actual filter predicate can never diverge.
-    // New-grad match is the SAME shared clause buildWhereClause uses
-    // (newGradFriendly OR minYearsExperience=0 OR title keywords, minus
-    // exclusions), so the badge count can never disagree with the filter.
-    const newGradMatchClause = newGradWhereClause();
-
-    // Only the live candidate buckets {1,2,5} — 7+/10+ were provably identical
-    // to 5+ (no job states a minimum above 5 years) and were removed.
-    const [newGradCount, minY1, minY2, minY5] = await Promise.all([
-      prisma.job.count({ where: { AND: [newGradBase, newGradMatchClause] } }),
-      prisma.job.count({ where: { AND: [minYearsBase, minYearsQualifyClause(1)] } }),
-      prisma.job.count({ where: { AND: [minYearsBase, minYearsQualifyClause(2)] } }),
-      prisma.job.count({ where: { AND: [minYearsBase, minYearsQualifyClause(5)] } }),
-    ]);
-
-    const counts: FilterCounts = {
-      workMode: {
-        remote: remoteCount,
-        hybrid: hybridCount,
-        onsite: onsiteCount,
-      },
-      jobType: {
-        'Full-Time': jobTypeMap['Full-Time'] || 0,
-        'Part-Time': jobTypeMap['Part-Time'] || 0,
-        'Contract': jobTypeMap['Contract'] || 0,
-        'Per Diem': jobTypeMap['Per Diem'] || 0,
-        'Other': otherCount,
-      },
-      salary: {
-        any: anySalary,
-        over100k,
-        over150k,
-        over200k,
-      },
-      postedWithin: {
-        '24h': day,
-        '3d': threeDays,
-        '7d': week,
-        '30d': month,
-      },
-      specialty: {
-        Telehealth: telehealthCount,
-        Travel: travelCount,
-      },
-      experienceLevel: {
-        'New Grad': expMap['New Grad'] || 0,
-        'Mid-Level': expMap['Mid-Level'] || 0,
-        'Senior': expMap['Senior'] || 0,
-      },
-      newGradFriendly: newGradCount,
-      minYears: {
-        1: minY1,
-        2: minY2,
-        5: minY5,
-      },
-      total,
-    };
-
+    const counts = await cachedFilterCounts(filters);
     return NextResponse.json(counts);
   } catch (error) {
     logger.error('Error calculating filter counts:', error);

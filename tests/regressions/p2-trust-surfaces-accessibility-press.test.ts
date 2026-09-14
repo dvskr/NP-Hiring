@@ -154,11 +154,12 @@ describe('P2 #9 — /accessibility exists and is honest about conformance', () =
             expect(a11yPage).not.toContain('Focus is not trapped in every dialog.');
         }
 
-        // The shipped-controls entry says "The five dialogs". If a sixth file
+        // The shipped-controls entry says "The nine dialogs". If a tenth file
         // adopts the hook (or one drops it), this fails and forces the copy to
         // be re-verified rather than silently drifting again.
-        expect(trapped.length, `files importing useFocusTrap: ${trapped.join(', ')}`).toBe(5);
-        expect(a11yPage).toContain('The five dialogs in the search-and-apply path');
+        expect(trapped.length, `files importing useFocusTrap: ${trapped.join(', ')}`).toBe(9);
+        expect(a11yPage).toContain('The nine dialogs built on our shared focus-trap hook');
+        expect(a11yPage).toContain('Nine dialogs share our focus-trap hook');
     });
 
     it('scopes the aria-modal claim to the dialogs that actually carry it', () => {
@@ -208,10 +209,9 @@ describe('P2 #9 — /accessibility exists and is honest about conformance', () =
 
         // The copy states both counts. If either moves, this fails and forces
         // the claim to be re-verified instead of silently going stale.
-        expect(gated.length, `gated: ${gated.join(', ')}`).toBe(3);
-        expect(ungated.length, `ungated: ${ungated.join(', ')}`).toBe(2);
-        expect(a11yPage).toContain('Three of the JavaScript-animated sections');
-        expect(a11yPage).toContain('Two JavaScript-driven animations ignore reduced motion.');
+        expect(gated.length, `gated: ${gated.join(', ')}`).toBe(5);
+        expect(ungated.length, `ungated: ${ungated.join(', ')}`).toBe(0);
+        expect(a11yPage).toContain('All five of the JavaScript-animated sections');
     });
 
     it('carries a review date and canonical metadata, and links the sibling policies', () => {

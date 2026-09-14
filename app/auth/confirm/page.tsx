@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { safeInternalPath } from '@/lib/auth/safe-redirect'
+import { classifyCodeExchangeFailure, confirmHeading } from './confirm-state'
 
 /**
  * /auth/confirm
@@ -104,18 +105,22 @@ export default function AuthConfirmPage() {
           if (error) {
             console.warn('PKCE code exchange failed:', error.message)
 
-            // PKCE verifier mismatch — happens when the confirmation email
-            // opens in a different tab/browser than where signup occurred.
-            // Supabase already confirmed the user server-side during the
-            // redirect (before appending ?code=), so the email IS confirmed.
-            // We just can't establish a client session without the verifier.
-            // Carry the return target into login so the intent survives.
-            setMessage('Your email is confirmed. Please log in to continue.')
-            setStatus('success')
-            const loginUrl = nextPath !== '/dashboard'
-              ? `/login?confirmed=true&redirectTo=${encodeURIComponent(nextPath)}`
-              : '/login?confirmed=true'
-            setTimeout(() => router.push(loginUrl), 2000)
+            // Only a well formed code with no PKCE verifier in THIS browser
+            // is the "opened the email in a different browser" case. Even
+            // then the code cannot be checked here, so the page never claims
+            // the email is confirmed (a garbage ?code= used to be reported
+            // as a successful confirmation). Carry the return target into
+            // login so the intent survives; login offers a resend when the
+            // account is in fact still unconfirmed.
+            const loginUrl = `/login?redirectTo=${encodeURIComponent(nextPath)}`
+            setStatus('error')
+            if (classifyCodeExchangeFailure(code, error) === 'other_browser') {
+              setMessage('We could not finish signing you in on this browser. If the link was opened in a different browser than the one you signed up with, please log in to continue.')
+              setTimeout(() => router.push(loginUrl), 4000)
+            } else {
+              setMessage('This link is invalid or has expired. Redirecting to login...')
+              setTimeout(() => router.push('/login'), 3000)
+            }
             return
           }
 
@@ -284,7 +289,18 @@ export default function AuthConfirmPage() {
         {status === 'expired' && (
           <div style={{ fontSize: '40px', marginBottom: '16px' }}>⏳</div>
         )}
+        <h1
+          style={{
+            color: 'var(--text-primary, #F1F5F9)',
+            fontSize: '22px',
+            fontWeight: 700,
+            margin: '0 0 10px',
+          }}
+        >
+          {confirmHeading(status)}
+        </h1>
         <p
+          role="status"
           style={{
             color: status === 'error' ? '#EF4444' : 'var(--text-primary, #F1F5F9)',
             fontSize: '16px',

@@ -34,12 +34,14 @@ function makeQuery() {
     const neqs: Array<[string, unknown]> = [];
     let likeCol: string | null = null;
     let likePrefix = '';
+    const ins: Array<[string, unknown[]]> = [];
 
     const matched = (): Row[] =>
         db.rows.filter(
             (r) =>
                 eqs.every(([c, v]) => r[c] === v) &&
                 neqs.every(([c, v]) => r[c] !== v) &&
+                ins.every(([c, vs]) => vs.includes(r[c])) &&
                 (likeCol === null || String(r[likeCol] ?? '').startsWith(likePrefix)),
         );
 
@@ -50,6 +52,7 @@ function makeQuery() {
         limit: () => q,
         eq: (c: string, v: unknown) => { eqs.push([c, v]); return q; },
         neq: (c: string, v: unknown) => { neqs.push([c, v]); return q; },
+        in: (c: string, vs: unknown[]) => { ins.push([c, vs]); return q; },
         like: (c: string, pattern: string) => {
             likeCol = c;
             likePrefix = pattern.replace(/%$/, '');
@@ -74,6 +77,7 @@ vi.mock('@supabase/supabase-js', () => ({
 
 import { getPostBySlug, getAllPublishedSlugs } from '@/lib/blog';
 import { getAllLicenseGuideSlugs, LICENSE_GUIDE_STATES } from '@/lib/blog-license-guides';
+import { getAllMdxPosts } from '@/lib/blog-mdx-posts';
 import { LICENSE_GUIDE_SERIES_PUBLISHED } from '@/config/niche/content-map';
 
 const SLUG = 'np-license-new-mexico';
@@ -109,29 +113,35 @@ describe('license-guide fallback vs editorial control', () => {
         expect(post!.title).toBe('Editorially rewritten New Mexico guide');
     });
 
-    it('non-license slugs get no fallback', async () => {
-        expect(await getPostBySlug('np-salary-guide')).toBeNull();
+    // Authored content/blog/*.mdx guides (np-salary-guide among them) now
+    // have their own code fallback, pinned by
+    // tests/regressions/p10-blog-mdx-fallback.test.ts. A slug with neither a
+    // license match nor an .mdx file still gets nothing.
+    it('slugs with no license match and no .mdx file get no fallback', async () => {
+        expect(await getPostBySlug('no-such-authored-post')).toBeNull();
     });
 });
 
 describe('slug listing (sitemap + listings)', () => {
-    it('lists all 51 generated slugs when the DB is empty', async () => {
+    it('lists all 51 generated slugs (plus the .mdx guides) when the DB is empty', async () => {
         const slugs = (await getAllPublishedSlugs()).map((r) => r.slug);
-        expect(slugs).toHaveLength(LICENSE_GUIDE_STATES.length);
-        expect(new Set(slugs)).toEqual(new Set(getAllLicenseGuideSlugs()));
+        const license = slugs.filter((s) => s.startsWith('np-license-'));
+        expect(license).toHaveLength(LICENSE_GUIDE_STATES.length);
+        expect(new Set(license)).toEqual(new Set(getAllLicenseGuideSlugs()));
+        expect(slugs).toHaveLength(LICENSE_GUIDE_STATES.length + getAllMdxPosts().length);
     });
 
     it('does not list a license guide that was unpublished', async () => {
         db.rows = [{ slug: SLUG, status: 'draft', id: 'row-1', updated_at: 'x' }];
         const slugs = (await getAllPublishedSlugs()).map((r) => r.slug);
         expect(slugs).not.toContain(SLUG);
-        expect(slugs).toHaveLength(LICENSE_GUIDE_STATES.length - 1);
+        expect(slugs).toHaveLength(LICENSE_GUIDE_STATES.length - 1 + getAllMdxPosts().length);
     });
 
     it('does not double-list a guide that was synced into the DB', async () => {
         db.rows = [{ slug: SLUG, status: 'published', id: 'row-1', updated_at: '2026-07-29' }];
         const slugs = (await getAllPublishedSlugs()).map((r) => r.slug);
         expect(slugs.filter((s) => s === SLUG)).toHaveLength(1);
-        expect(slugs).toHaveLength(LICENSE_GUIDE_STATES.length);
+        expect(slugs).toHaveLength(LICENSE_GUIDE_STATES.length + getAllMdxPosts().length);
     });
 });

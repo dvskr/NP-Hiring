@@ -2,6 +2,12 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import {
+  LEAD_SUPPRESSION_SELECT,
+  UNDELIVERABLE_MESSAGE,
+  resubscribeLead,
+  unsubscribeLead,
+} from '@/app/api/email/_lib/subscription';
 
 // GET - Unsubscribe
 export async function GET(request: NextRequest) {
@@ -16,9 +22,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Find EmailLead by unsubscribeToken
     const emailLead = await prisma.emailLead.findUnique({
       where: { unsubscribeToken: token },
+      select: LEAD_SUPPRESSION_SELECT,
     });
 
     if (!emailLead) {
@@ -28,29 +34,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Honor the opt-out everywhere. Every marketing send-gate checks
-    // isEmailSuppressed() (EmailLead.isSuppressed / UserProfile.emailSuppressed),
-    // NOT isSubscribed — so unsubscribing without setting suppression leaves
-    // broadcasts, candidate alerts, saved-job reminders, and digests still
-    // sending. Set suppression on the lead and mirror it onto the registered
-    // profile (broadcast audiences are built from UserProfile).
-    const now = new Date();
-    await prisma.$transaction([
-      prisma.emailLead.update({
-        where: { unsubscribeToken: token },
-        data: {
-          isSubscribed: false,
-          newsletterOptIn: false,
-          isSuppressed: true,
-          suppressedAt: now,
-          suppressionReason: 'unsubscribe',
-        },
-      }),
-      prisma.userProfile.updateMany({
-        where: { email: emailLead.email },
-        data: { emailSuppressed: true, emailSuppressedAt: now },
-      }),
-    ]);
+    // Honor the opt-out everywhere: every marketing send-gate checks
+    // isEmailSuppressed(), not isSubscribed. See _lib/subscription.ts.
+    await unsubscribeLead(token, emailLead);
 
     return NextResponse.json({
       success: true,
@@ -67,24 +53,23 @@ export async function GET(request: NextRequest) {
 
 // POST - Resubscribe
 export async function POST(request: NextRequest) {
-    // Rate limiting
-    const rateLimitResult = await rateLimit(request, 'email-unsub', RATE_LIMITS.general);
-    if (rateLimitResult) return rateLimitResult;
+  const rateLimitResult = await rateLimit(request, 'email-unsub', RATE_LIMITS.general);
+  if (rateLimitResult) return rateLimitResult;
 
   try {
-    const body = await request.json();
-    const { token } = body;
+    const body: unknown = await request.json().catch(() => null);
+    const token = body && typeof body === 'object' ? (body as { token?: unknown }).token : undefined;
 
-    if (!token) {
+    if (typeof token !== 'string' || !token) {
       return NextResponse.json(
         { success: false, message: 'Token is required' },
         { status: 400 }
       );
     }
 
-    // Find EmailLead by unsubscribeToken
     const emailLead = await prisma.emailLead.findUnique({
       where: { unsubscribeToken: token },
+      select: LEAD_SUPPRESSION_SELECT,
     });
 
     if (!emailLead) {
@@ -94,29 +79,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Re-enable sending. Only lift suppression when it came from an explicit
-    // unsubscribe — never resurrect an address suppressed by a hard bounce or
-    // spam complaint (those keep isSuppressed set with a different reason).
-    const clearSuppression = emailLead.suppressionReason === 'unsubscribe';
-    await prisma.$transaction([
-      prisma.emailLead.update({
-        where: { unsubscribeToken: token },
-        data: {
-          isSubscribed: true,
-          ...(clearSuppression
-            ? { isSuppressed: false, suppressedAt: null, suppressionReason: null }
-            : {}),
-        },
-      }),
-      ...(clearSuppression
-        ? [
-            prisma.userProfile.updateMany({
-              where: { email: emailLead.email },
-              data: { emailSuppressed: false, emailSuppressedAt: null },
-            }),
-          ]
-        : []),
-    ]);
+    // Lifts unsubscribe suppression only; bounce/complaint stays suppressed.
+    const lifted = await resubscribeLead(token, emailLead);
+    if (!lifted) {
+      return NextResponse.json(
+        { success: false, message: UNDELIVERABLE_MESSAGE },
+        { status: 409 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -130,4 +100,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

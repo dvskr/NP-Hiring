@@ -33,6 +33,15 @@ describe('F5 — root layout stays static/ISR-compatible', () => {
   });
 
   it('no layout.tsx anywhere in app/ imports next/headers', () => {
+    // Single, narrowly scoped exemption: the admin layout is auth-gated and
+    // was already fully dynamic (requireAdmin() reads cookies()). It reads
+    // the middleware's pathname header only to build the /login?next= return
+    // path (P10 platform-routing-db #6), so it opts nothing new into dynamic
+    // rendering, and a nested layout's Dynamic API does not reach the public
+    // segments whose ISR this guard protects.
+    const EXEMPT = new Set([path.join('app', 'admin', 'layout.tsx')]);
+    const adminLayout = read('app/admin/layout.tsx');
+    expect(adminLayout).toMatch(/await requireAdmin\(/);
     const offenders: string[] = [];
     const walk = (dir: string) => {
       const abs = path.join(ROOT, dir);
@@ -40,7 +49,7 @@ describe('F5 — root layout stays static/ISR-compatible', () => {
       for (const e of fs.readdirSync(abs, { withFileTypes: true })) {
         const rel = path.join(dir, e.name);
         if (e.isDirectory()) walk(rel);
-        else if (e.name === 'layout.tsx' && NEXT_HEADERS_IMPORT.test(read(rel))) {
+        else if (e.name === 'layout.tsx' && !EXEMPT.has(rel) && NEXT_HEADERS_IMPORT.test(read(rel))) {
           offenders.push(rel);
         }
       }

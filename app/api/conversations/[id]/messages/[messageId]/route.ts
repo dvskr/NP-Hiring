@@ -50,16 +50,22 @@ export async function DELETE(
             return NextResponse.json({ error: 'You can only delete your own messages' }, { status: 403 });
         }
 
-        // Business rule: if unread → delete for both; if read → delete for sender only
-        const deletedForBoth = !message.readAt;
+        // Business rule: if unread → delete for both; if read → delete for
+        // sender only. The unread branch is conditional on readAt still being
+        // null in the same statement, so a recipient who opens the thread
+        // between our read and this write keeps the message (never deleted
+        // for everyone after it was read).
+        const deletedForBoth = !message.readAt && (await prisma.employerMessage.updateMany({
+            where: { id: messageId, readAt: null },
+            data: { deletedBySender: true, deletedByRecipient: true },
+        })).count > 0;
 
-        await prisma.employerMessage.update({
-            where: { id: messageId },
-            data: {
-                deletedBySender: true,
-                ...(deletedForBoth && { deletedByRecipient: true }),
-            },
-        });
+        if (!deletedForBoth) {
+            await prisma.employerMessage.update({
+                where: { id: messageId },
+                data: { deletedBySender: true },
+            });
+        }
 
         return NextResponse.json({
             deleted: true,

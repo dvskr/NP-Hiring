@@ -125,7 +125,8 @@ export default function AssumptionsPanel({
       )}
 
       {reviewedOn && (
-        <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0 }}>
+        // --text-tertiary clears 5.90:1 on white; the old slate literal was 2.56:1 (axe color-contrast).
+        <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: 0 }}>
           Model last reviewed {formatReviewed(reviewedOn)}. This is an estimate for planning, not tax,
           legal, or financial advice. Verify anything you act on with a qualified professional.
         </p>

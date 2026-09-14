@@ -3,6 +3,12 @@ import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
 import { logAudit } from '@/lib/audit-log';
 import { createClient } from '@/lib/supabase/server';
+import { parsePagingParam, resolveAdminActorId, validateJobCreate, withOrderedSalary } from './_lib/job-input';
+
+const DEFAULT_PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 100;
+/** Keeps (page - 1) * limit inside Prisma's safe skip range. */
+const MAX_PAGE = 1_000_000;
 
 /**
  * GET /api/admin/jobs
@@ -23,8 +29,10 @@ export async function GET(request: NextRequest) {
 
     try {
         const { searchParams } = new URL(request.url);
-        const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-        const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '25', 10)));
+        // Non-numeric or out-of-range paging falls back to the defaults
+        // instead of feeding NaN into skip/take (which made Prisma throw).
+        const page = parsePagingParam(searchParams.get('page'), 1, MAX_PAGE);
+        const limit = parsePagingParam(searchParams.get('limit'), DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
         const search = searchParams.get('search')?.trim();
         const source = searchParams.get('source');
         const published = searchParams.get('published'); // 'true' | 'false' | null
@@ -147,17 +155,27 @@ export async function POST(request: NextRequest) {
     const authError = await requireApiAdmin(request);
     if (authError) return authError;
 
+    let body: unknown;
     try {
-        const body = await request.json();
-        const { title, employer, location, description, applyLink, ...rest } = body;
+        body = await request.json();
+    } catch {
+        return NextResponse.json({ success: false, error: 'Request body must be valid JSON' }, { status: 400 });
+    }
 
-        if (!title || !employer || !location || !description || !applyLink) {
-            return NextResponse.json(
-                { success: false, error: 'Missing required fields: title, employer, location, description, applyLink' },
-                { status: 400 },
-            );
-        }
+    // Type and shape validation: wrong-typed numbers and non-http(s) apply
+    // links are refused with 400 before anything reaches Prisma.
+    const validated = validateJobCreate(body);
+    if (!validated.ok) {
+        return NextResponse.json({ success: false, error: validated.error }, { status: 400 });
+    }
+    const input = withOrderedSalary(validated.data);
+    const title = input.title as string;
+    const employer = input.employer as string;
+    const str = (key: string) => (input[key] as string | null | undefined) ?? null;
+    const int = (key: string) => (input[key] as number | null | undefined) ?? null;
+    const bool = (key: string, fallback: boolean) => (input[key] as boolean | undefined) ?? fallback;
 
+    try {
         // Generate slug
         const baseSlug = `${title}-${employer}`
             .toLowerCase()
@@ -170,29 +188,39 @@ export async function POST(request: NextRequest) {
             data: {
                 title,
                 employer,
-                location,
-                description,
-                applyLink,
+                location: input.location as string,
+                description: input.description as string,
+                applyLink: input.applyLink as string,
                 slug,
                 sourceType: 'direct',
                 sourceProvider: 'admin',
-                isPublished: rest.isPublished ?? true,
-                isFeatured: rest.isFeatured ?? false,
-                jobType: rest.jobType || null,
-                mode: rest.mode || null,
-                city: rest.city || null,
-                state: rest.state || null,
-                salaryRange: rest.salaryRange || null,
-                minSalary: rest.minSalary || null,
-                maxSalary: rest.maxSalary || null,
-                salaryPeriod: rest.salaryPeriod || null,
-                displaySalary: rest.displaySalary || null,
-                isRemote: rest.isRemote ?? false,
-                isHybrid: rest.isHybrid ?? false,
-                benefits: rest.benefits || [],
-                setting: rest.setting || null,
-                population: rest.population || null,
+                isPublished: bool('isPublished', true),
+                isFeatured: bool('isFeatured', false),
+                jobType: str('jobType'),
+                mode: str('mode'),
+                city: str('city'),
+                state: str('state'),
+                salaryRange: str('salaryRange'),
+                minSalary: int('minSalary'),
+                maxSalary: int('maxSalary'),
+                salaryPeriod: str('salaryPeriod'),
+                displaySalary: str('displaySalary'),
+                isRemote: bool('isRemote', false),
+                isHybrid: bool('isHybrid', false),
+                benefits: (input.benefits as string[] | undefined) ?? [],
+                setting: str('setting'),
+                population: str('population'),
             },
+        });
+
+        const actorId = await resolveAdminActorId();
+        await logAudit({
+            action: 'admin.job.create',
+            actorType: 'admin',
+            actorId,
+            targetType: 'job',
+            targetId: job.id,
+            metadata: { createdByAdminId: actorId, jobTitle: title, employer, isPublished: job.isPublished },
         });
 
         return NextResponse.json({ success: true, job }, { status: 201 });

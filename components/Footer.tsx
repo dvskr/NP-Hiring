@@ -116,9 +116,17 @@ const columnTitleStyle: React.CSSProperties = {
   textTransform: 'uppercase' as const,
 };
 
+/**
+ * WCAG 1.4.3 AA: every secondary footer text colour sits on #1c1917.
+ * The legal row, tagline and copyright used stone-500 (3.65:1) and
+ * stone-600 (2.29:1), which axe flagged on every page. #a8a29e measures 6.93:1.
+ * Pinned by tests/regressions/p10-site-chrome-a11y-contrast.test.ts.
+ */
+export const FOOTER_LEGAL_TEXT = '#a8a29e';
+
 const linkStyle: React.CSSProperties = {
   fontSize: '14px',
-  color: '#a8a29e',
+  color: FOOTER_LEGAL_TEXT,
   textDecoration: 'none',
   display: 'block',
   paddingTop: '4px',
@@ -227,46 +235,46 @@ export default function Footer() {
               borderTop: '1px solid rgba(255,255,255,0.08)',
             }}
           >
-            <Link href="/privacy" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
+            <Link href="/privacy" style={{ fontSize: '13px', color: FOOTER_LEGAL_TEXT, textDecoration: 'none', whiteSpace: 'nowrap' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = FOOTER_LEGAL_TEXT; }}
             >Privacy</Link>
-            <Link href="/terms" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
+            <Link href="/terms" style={{ fontSize: '13px', color: FOOTER_LEGAL_TEXT, textDecoration: 'none', whiteSpace: 'nowrap' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = FOOTER_LEGAL_TEXT; }}
             >Terms</Link>
-            <Link href="/security" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
+            <Link href="/security" style={{ fontSize: '13px', color: FOOTER_LEGAL_TEXT, textDecoration: 'none', whiteSpace: 'nowrap' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = FOOTER_LEGAL_TEXT; }}
             >Security</Link>
             {/* Content audit P2 #9: the accessibility statement belongs in the
                 legal/compliance row, and it was previously reachable from no
                 page on the site despite being `robots: index`. */}
-            <Link href="/accessibility" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
+            <Link href="/accessibility" style={{ fontSize: '13px', color: FOOTER_LEGAL_TEXT, textDecoration: 'none', whiteSpace: 'nowrap' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = FOOTER_LEGAL_TEXT; }}
             >Accessibility</Link>
-            <Link href="/sub-processors" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
+            <Link href="/sub-processors" style={{ fontSize: '13px', color: FOOTER_LEGAL_TEXT, textDecoration: 'none', whiteSpace: 'nowrap' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = FOOTER_LEGAL_TEXT; }}
             >Sub-processors</Link>
-            <Link href="/data-request" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
+            <Link href="/data-request" style={{ fontSize: '13px', color: FOOTER_LEGAL_TEXT, textDecoration: 'none', whiteSpace: 'nowrap' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = FOOTER_LEGAL_TEXT; }}
             >Data Request</Link>
-            <Link href="/do-not-sell" style={{ fontSize: '13px', color: '#78716c', textDecoration: 'none', whiteSpace: 'nowrap' }}
+            <Link href="/do-not-sell" style={{ fontSize: '13px', color: FOOTER_LEGAL_TEXT, textDecoration: 'none', whiteSpace: 'nowrap' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = FOOTER_LEGAL_TEXT; }}
             >Do Not Sell or Share</Link>
             <button
               type="button"
               onClick={reopenConsentBanner}
               style={{
-                fontSize: '13px', color: '#78716c', background: 'none', border: 'none',
+                fontSize: '13px', color: FOOTER_LEGAL_TEXT, background: 'none', border: 'none',
                 padding: 0, cursor: 'pointer', font: 'inherit', whiteSpace: 'nowrap',
               }}
               onMouseEnter={(e) => { e.currentTarget.style.color = '#F9A8D4'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#78716c'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = FOOTER_LEGAL_TEXT; }}
             >Cookie Settings</button>
           </nav>
 
@@ -291,7 +299,7 @@ export default function Footer() {
                 </span>
               </Link>
               <span className="footer-pipe" style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)' }} />
-              <p className="footer-tagline" style={{ fontSize: '13px', color: '#78716c', margin: 0, whiteSpace: 'nowrap' }}>
+              <p className="footer-tagline" style={{ fontSize: '13px', color: FOOTER_LEGAL_TEXT, margin: 0, whiteSpace: 'nowrap' }}>
                 The #1 specialized job board for {brand.niche.descriptor}s.
               </p>
             </div>
@@ -349,9 +357,9 @@ export default function Footer() {
                 signal for E-E-A-T (a real LLC operates this site, with a
                 real registered address). */}
             <div className="footer-bar-right" style={{ display: 'flex', alignItems: 'center' }}>
-              <p style={{ fontSize: '13px', color: '#57534e', margin: 0, lineHeight: 1.6, textAlign: 'right' }}>
+              <p style={{ fontSize: '13px', color: FOOTER_LEGAL_TEXT, margin: 0, lineHeight: 1.6, textAlign: 'right' }}>
                 © {new Date().getFullYear()} {brand.name} · operated by {brand.legal.entityName}
-                <span className="footer-address-sep" style={{ margin: '0 8px', opacity: 0.4 }}>·</span>
+                <span className="footer-address-sep" aria-hidden="true" style={{ margin: '0 8px' }}>·</span>
                 <span style={{ whiteSpace: 'nowrap' }}>{brand.legal.addressLine}, {brand.legal.addressCity}, {brand.legal.addressRegion} {brand.legal.addressPostalCode}</span>
               </p>
             </div>

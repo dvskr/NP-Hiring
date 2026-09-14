@@ -119,7 +119,7 @@ export default function SalaryGuideForm() {
           padding: '8px 14px',
           borderRadius: '6px',
           border: 'none',
-          background: '#059669',
+          background: '#047857',
           color: 'white',
           fontWeight: 600,
           fontSize: '0.8rem',

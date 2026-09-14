@@ -35,6 +35,8 @@ import JobCard from '@/components/JobCard';
 // see. It replaces the schema-only BreadcrumbSchema that used to sit here —
 // do not add both, or the page emits two BreadcrumbList graphs.
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { pluralize } from '@/lib/pseo/plural';
+import { withListingQuarantine } from '@/lib/pseo/listing-where';
 import CategoryHero from '@/components/CategoryHero';
 import { Job } from '@/lib/types';
 import { CityData } from './city-data/types';
@@ -893,7 +895,7 @@ export function getAllCategorySlugs(): string[] {
 async function getCityJobs(config: CategoryConfig, city: CityData, skip = 0, take = 10) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where = config.buildWhere(city.state, city.name) as any;
+    const where = withListingQuarantine(config.buildWhere(city.state, city.name) as any);
     return await prisma.job.findMany({
       where,
       omit: JOB_LISTING_OMIT, // Perf1: don't pull the multi-KB description for cards
@@ -962,7 +964,7 @@ const getCityStats = cache(async function getCityStats(config: CategoryConfig, c
     // A stale positive row is NOT trusted — if the live count is 0 the page
     // correctly redirects instead of rendering frozen counts.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where = config.buildWhere(city.state, city.name) as any;
+    const where = withListingQuarantine(config.buildWhere(city.state, city.name) as any);
     const liveCount = await prisma.job.count({ where });
     if (liveCount > 0) {
       // Compute rough avg salary from live data
@@ -1018,7 +1020,7 @@ export function formatStatsBadge(totalJobs: number, statsAsOf: Date | null): str
   const freshness = isToday
     ? 'updated today'
     : `updated ${asOf.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}`;
-  return `${totalJobs} live roles · ${freshness}`;
+  return `${totalJobs} live ${pluralize(totalJobs, 'role')} · ${freshness}`;
 }
 
 // ─── Qualification facts per category (P2 #8) ─────────────────────────────────
@@ -1311,7 +1313,7 @@ export async function buildCategoryCityMetadata(
     // cardiology and aesthetics city page. Gated, not just labelled.
     // The leading space lives INSIDE the conditional so a withheld claim
     // leaves no trailing whitespace on the ~1,485 unflagged cities either.
-    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${city.name}, ${city.stateCode}. ${config.heroSubtitle}. Population: ${city.population.toLocaleString()}. COL index: ${city.costOfLivingIndex}.${shortageMatchesCategory ? ' Federally designated behavioral-health HPSA.' : ''}`,
+    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} ${pluralize(stats.totalJobs, 'job')} in ${city.name}, ${city.stateCode}. ${config.heroSubtitle}. Population: ${city.population.toLocaleString()}. COL index: ${city.costOfLivingIndex}.${shortageMatchesCategory ? ' Federally designated behavioral-health HPSA.' : ''}`,
     keywords: [
       `${config.label.toLowerCase()} ${brand.niche.short.toLowerCase()} jobs ${city.name}`,
       `${city.name} ${config.label.toLowerCase()} ${brand.niche.descriptor}`,
@@ -1699,7 +1701,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
         headlineLine2={brand.niche.short}
         headlineSub={`jobs in ${city!.name}, ${city!.stateCode}.`}
         stats={[
-          { value: `${stats.totalJobs}`, label: 'positions' },
+          { value: `${stats.totalJobs}`, label: pluralize(stats.totalJobs, 'position') },
           // P3 #13: this used to be `salaryRange.split('–')[0]` — an EN DASH,
           // while every salaryRange literal is written with an ASCII hyphen.
           // The split never matched, so the fallback rendered the whole range

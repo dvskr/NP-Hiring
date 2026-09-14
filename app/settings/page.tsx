@@ -30,6 +30,9 @@ import ReferencesSection from '@/components/settings/ReferencesSection'
 // Niche specialty vocabulary — see config/niche/credentials.ts for FORK NOTEs.
 import { SPECIALTY_PRESETS } from '@/config/niche/credentials'
 
+// Signed-out bounce keeps the return target: LoginContent honours ?next=
+// (validated by safeInternalPath), so the visitor lands back on /settings.
+const SETTINGS_LOGIN_PATH = '/login?next=/settings'
 
 // ── Preset data ──
 
@@ -97,6 +100,39 @@ interface Profile {
   deaExpirationDate: string | null
 }
 
+
+// ── Toast ──
+// Opaque tints so the text contrast is fixed regardless of what scrolls
+// beneath the fixed toast: #065F46 on #ECFDF5 and #B91C1C on #FEF2F2 both
+// clear WCAG AA 4.5:1 (the old #10B981 / #EF4444 on 15% tints did not).
+const TOAST_TONES = {
+  success: { background: '#ECFDF5', border: 'rgba(6,95,70,0.25)', color: '#065F46' },
+  error: { background: '#FEF2F2', border: 'rgba(185,28,28,0.25)', color: '#B91C1C' },
+} as const
+
+function SettingsToast({ type, text }: { type: 'success' | 'error'; text: string }) {
+  const tone = TOAST_TONES[type]
+  return (
+    <div
+      style={{
+        position: 'fixed', top: '80px', right: '20px', zIndex: 100,
+        padding: '14px 20px', borderRadius: '12px',
+        display: 'flex', alignItems: 'center', gap: '10px',
+        background: tone.background,
+        border: `1px solid ${tone.border}`,
+        color: tone.color,
+        fontSize: '14px', fontWeight: 500,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+        animation: 'fadeIn 0.3s',
+      }}
+    >
+      {type === 'success'
+        ? <CheckCircle size={18} aria-hidden="true" />
+        : <AlertTriangle size={18} aria-hidden="true" />}
+      {text}
+    </div>
+  )
+}
 
 // ── Shared card styles (Clay Design System) ──
 const cardStyle: React.CSSProperties = {
@@ -173,7 +209,7 @@ function SettingsPageInner() {
     const fetchProfile = async () => {
       try {
         const res = await fetch('/api/auth/profile')
-        if (res.status === 401) { router.push('/login'); return }
+        if (res.status === 401) { router.push(SETTINGS_LOGIN_PATH); return }
         if (!res.ok) throw new Error('Failed to fetch profile')
         const data = await res.json()
 
@@ -198,7 +234,7 @@ function SettingsPageInner() {
         }
       } catch (error) {
         console.error('Error fetching profile:', error)
-        router.push('/login')
+        router.push(SETTINGS_LOGIN_PATH)
       } finally {
         setLoading(false)
       }
@@ -471,25 +507,17 @@ function SettingsPageInner() {
       ]} />
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '32px 16px' }}>
 
-        {/* ── Toast message ── */}
-        {message && (
-          <div
-            style={{
-              position: 'fixed', top: '80px', right: '20px', zIndex: 100,
-              padding: '14px 20px', borderRadius: '12px',
-              display: 'flex', alignItems: 'center', gap: '10px',
-              background: message.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-              border: `1px solid ${message.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
-              color: message.type === 'success' ? '#10B981' : '#EF4444',
-              fontSize: '14px', fontWeight: 500,
-              backdropFilter: 'blur(12px)',
-              animation: 'fadeIn 0.3s',
-            }}
-          >
-            {message.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
-            {message.text}
-          </div>
-        )}
+        {/* ── Toast message ──
+            Screen readers: both live regions stay mounted for the life of
+            the page so insertions are announced reliably. Success goes
+            through role="status" (polite), errors through role="alert"
+            (assertive). */}
+        <div role="status" aria-live="polite" aria-atomic="true">
+          {message?.type === 'success' && <SettingsToast type="success" text={message.text} />}
+        </div>
+        <div role="alert" aria-live="assertive" aria-atomic="true">
+          {message?.type === 'error' && <SettingsToast type="error" text={message.text} />}
+        </div>
 
         {/* Header: title + actions row.
             Mobile (< sm): two-row stack so the buttons get full breathing

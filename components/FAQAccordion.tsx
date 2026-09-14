@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 interface FAQItem {
@@ -12,7 +12,19 @@ interface FAQAccordionProps {
   items: FAQItem[];
 }
 
+/**
+ * Panel id for one item. /faq mounts several accordions on one page, so the
+ * id is namespaced per instance (React useId, stripped to id-safe characters);
+ * the item index alone repeated across groups and pointed every aria-controls
+ * at the first group's panel.
+ */
+export function faqAnswerId(instanceId: string, index: number): string {
+  const namespace = instanceId.replace(/[^A-Za-z0-9_-]/g, '');
+  return `faq-answer-${namespace}-${index}`;
+}
+
 export default function FAQAccordion({ items }: FAQAccordionProps) {
+  const instanceId = useId();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const toggleItem = (index: number) => {
@@ -41,7 +53,7 @@ export default function FAQAccordion({ items }: FAQAccordionProps) {
               onKeyDown={(e) => handleKeyDown(e, index)}
               className="w-full flex items-center justify-between py-4 text-left font-medium text-gray-900 hover:text-primary-600 transition-colors duration-200 focus:text-primary-600"
               aria-expanded={isOpen}
-              aria-controls={`faq-answer-${index}`}
+              aria-controls={faqAnswerId(instanceId, index)}
             >
               <span className="flex-1 pr-4">{item.question}</span>
               <ChevronDown
@@ -60,7 +72,7 @@ export default function FAQAccordion({ items }: FAQAccordionProps) {
                 and (b) prevents tab focus on any child. The visual transition
                 is preserved by only animating when open. */}
             <div
-              id={`faq-answer-${index}`}
+              id={faqAnswerId(instanceId, index)}
               hidden={!isOpen}
               className={isOpen ? 'overflow-hidden transition-all duration-300 ease-in-out max-h-96 opacity-100' : ''}
             >

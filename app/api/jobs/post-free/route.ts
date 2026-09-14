@@ -6,7 +6,7 @@ import { config, PricingTier } from '@/lib/config';
 import { expiresFromNow } from '@/lib/expires-at';
 import { sendConfirmationEmail } from '@/lib/email-service';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
-import { sanitizeJobPosting, sanitizeUrl, sanitizeEmail, sanitizeText, normalizeContentWhitespace } from '@/lib/sanitize';
+import { sanitizeJobPosting, sanitizeText, normalizeContentWhitespace } from '@/lib/sanitize';
 import { logger } from '@/lib/logger';
 import { slugify } from '@/lib/utils';
 import { pingAllSearchEngines } from '@/lib/search-indexing';
@@ -18,6 +18,15 @@ import { parseLocation } from '@/lib/location-parser';
 import { summarizeForMeta } from '@/lib/description-cleaner';
 import { normalizeExperienceFromInput } from '@/lib/experience-label';
 import { brand } from '@/config/brand';
+import {
+  WORK_MODES,
+  normalizeWorkMode,
+  deriveWorkModeFlags,
+  validateBenefits,
+  validateSetting,
+  validatePopulation,
+  classifyEmployerJob,
+} from './_lib/job-attributes';
 
 class FreeQuotaExceededError extends Error {
   constructor(public readonly usedCount: number) {
@@ -80,6 +89,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Typed-field validation before auth, quota or any database work.
+    const workMode = normalizeWorkMode(mode);
+    if (!workMode) {
+      return NextResponse.json(
+        { error: `Work mode must be one of: ${WORK_MODES.join(', ')}` },
+        { status: 400 }
+      );
+    }
+    const benefitsResult = validateBenefits(benefits);
+    if (!benefitsResult.ok) {
+      return NextResponse.json({ error: benefitsResult.error }, { status: 400 });
+    }
+    const settingResult = validateSetting(setting);
+    if (!settingResult.ok) {
+      return NextResponse.json({ error: settingResult.error }, { status: 400 });
+    }
+    const populationResult = validatePopulation(population);
+    if (!populationResult.ok) {
+      return NextResponse.json({ error: populationResult.error }, { status: 400 });
+    }
+
     // Sanitize all inputs
     const sanitized = sanitizeJobPosting({
       title,
@@ -92,7 +122,7 @@ export async function POST(request: NextRequest) {
       description: normalizeContentWhitespace(description ?? ''),
       applyLink,
       contactEmail,
-      mode,
+      mode: workMode,
       jobType,
       companyWebsite,
       minSalary,
@@ -249,6 +279,12 @@ export async function POST(request: NextRequest) {
 
     // Parse location into structured fields
     const parsedLoc = parseLocation(sanitized.location);
+    // The submitted work mode decides remote/hybrid; the location string
+    // ("Remote", "Austin, TX") is only a fallback signal.
+    const workModeFlags = deriveWorkModeFlags(workMode, parsedLoc);
+    // Same deterministic profession classifier ingestion stores, so employer
+    // posts are not left NULL (the legacy unclassified exemption).
+    const profession = classifyEmployerJob(sanitized.title, sanitized.description);
 
     // Audit #6 + #7: gate-check + writes wrapped in a single Serializable
     // transaction. Postgres aborts the second transaction if two requests
@@ -294,8 +330,10 @@ export async function POST(request: NextRequest) {
             city: parsedLoc.city,
             state: parsedLoc.state,
             stateCode: parsedLoc.stateCode,
-            isRemote: parsedLoc.isRemote,
-            isHybrid: parsedLoc.isHybrid,
+            isRemote: workModeFlags.isRemote,
+            isHybrid: workModeFlags.isHybrid,
+            professionClass: profession.professionClass,
+            professionConfidence: profession.professionConfidence,
             // isFeatured reserved for a future premium tier ($299+). Regular
             // employer posts (free + paid $199) get top placement via the
             // EmployerJob relation now, not via this flag (see job-sort.ts).
@@ -305,9 +343,9 @@ export async function POST(request: NextRequest) {
             sourceType: 'employer',
             expiresAt,
             qualityScore,
-            benefits: Array.isArray(benefits) ? benefits : [],
-            setting: setting || null,
-            population: population || null,
+            benefits: benefitsResult.value,
+            setting: settingResult.value,
+            population: populationResult.value,
             minYearsExperience: experienceFields.minYearsExperience,
             maxYearsExperience: experienceFields.maxYearsExperience,
             newGradFriendly: experienceFields.newGradFriendly,

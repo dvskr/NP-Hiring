@@ -55,6 +55,10 @@ export default function InPlatformApplyForm({
     const [consentGiven, setConsentGiven] = useState(false);
     const [similarJobs, setSimilarJobs] = useState<Array<{ id: string; title: string; employer: string; location: string; slug: string | null }>>([]);
     const [screeningQuestions, setScreeningQuestions] = useState<ScreeningQuestion[]>([]);
+    // Submit stays disabled until the screening-question request settles, so
+    // the client-side required check below always runs against the real
+    // question list (it loads independently of the profile).
+    const [loadingQuestions, setLoadingQuestions] = useState(true);
     const [screeningAnswers, setScreeningAnswers] = useState<Record<string, string>>({});
     const [screeningErrors, setScreeningErrors] = useState<Record<string, string>>({});
     // Employer-authored title rendered through displayText so a dash used as
@@ -121,7 +125,10 @@ export default function InPlatformApplyForm({
                     }
                 }
             } catch {
-                // Non-critical — form works without questions
+                // Non-critical — form works without questions; the server
+                // still enforces required answers.
+            } finally {
+                setLoadingQuestions(false);
             }
         }
         loadScreeningQuestions();
@@ -219,6 +226,9 @@ export default function InPlatformApplyForm({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // Enter in a text field can submit even while the button is disabled
+        // in some browsers; never validate against a list still loading.
+        if (loadingQuestions) return;
 
         // Client-side required-question validation. The API enforces the same
         // rule with a 400, but catching it here gives inline, per-question
@@ -458,6 +468,12 @@ export default function InPlatformApplyForm({
                 </div>
 
                 {/* Screening Questions */}
+                {loadingQuestions && (
+                    <div role="status" className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                        <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                        Loading screening questions...
+                    </div>
+                )}
                 {screeningQuestions.length > 0 && (
                     <div>
                         <label className="block text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>
@@ -691,7 +707,7 @@ export default function InPlatformApplyForm({
                 {/* Submit Button */}
                 <button
                     type="submit"
-                    disabled={submitting || uploadingResume || !consentGiven}
+                    disabled={submitting || uploadingResume || loadingQuestions || !consentGiven}
                     className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                         background: 'linear-gradient(135deg, #BE185D, #9D174D)',

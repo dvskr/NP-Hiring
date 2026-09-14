@@ -9,6 +9,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, TrendingUp, Building2, Bell, MapPinned, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
+import { pluralize } from '@/lib/pseo/plural';
 import { JOB_LISTING_OMIT } from '@/lib/pseo/job-listing-omit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import JobCard from '@/components/JobCard';
@@ -16,7 +18,7 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { Job } from '@/lib/types';
 import { getMetroCity } from '@/lib/metro-data';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryFAQ from '@/components/CategoryFAQ';
 import { getCityBySlug } from '@/lib/pseo/city-data/cities';
 import { buildCityFacts, buildCityNarrative } from '@/lib/pseo/city-narrative';
@@ -110,7 +112,7 @@ async function resolveAmbiguousSlug(slug: string): Promise<string | null> {
     // Find the first published job in a city matching this name
     const match = await prisma.job.findFirst({
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: cityName, mode: 'insensitive' },
             stateCode: { not: null },
         },
@@ -140,7 +142,7 @@ interface ProcessedEmployer {
 async function getCityJobs(cityName: string, stateName: string, stateCode: string) {
     const jobs = await prisma.job.findMany({
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: cityName, mode: 'insensitive' },
             OR: [
                 { state: stateName },
@@ -158,7 +160,7 @@ async function getCityJobs(cityName: string, stateName: string, stateCode: strin
 async function getCityStats(cityName: string, stateName: string, stateCode: string) {
     const totalJobs = await prisma.job.count({
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: cityName, mode: 'insensitive' },
             OR: [
                 { state: stateName },
@@ -169,7 +171,7 @@ async function getCityStats(cityName: string, stateName: string, stateCode: stri
 
     const salaryData = await prisma.job.aggregate({
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: cityName, mode: 'insensitive' },
             OR: [
                 { state: stateName },
@@ -203,7 +205,7 @@ async function getCityStats(cityName: string, stateName: string, stateCode: stri
     const topEmployers = await prisma.job.groupBy({
         by: ['employer'],
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: cityName, mode: 'insensitive' },
             OR: [
                 { state: stateName },
@@ -229,7 +231,7 @@ async function getCityStats(cityName: string, stateName: string, stateCode: stri
     // True unique employer count (not limited by take:5)
     const uniqueEmployerRows = await prisma.job.findMany({
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: cityName, mode: 'insensitive' },
             OR: [
                 { state: stateName },
@@ -261,7 +263,7 @@ async function getRelatedCities(
     const cityData = await prisma.job.groupBy({
         by: ['city'],
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { not: null },
             OR: [
                 { state: stateName },
@@ -563,7 +565,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                 heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp`}
                 heroAlt={`${brand.niche.short} jobs in ${cityName}, ${stateCode}`}
                 badgeText={`${stats.totalJobs} live roles · updated today`}
-                breadcrumbs={['Careers', stateName, cityName]}
+                breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: stateName, url: `${brand.baseUrl}/jobs/state/${stateSlug}` }, { name: cityName, url: `${brand.baseUrl}/jobs/city/${slug}` }])}
                 headlineLine1={cityName}
                 headlineLine2={brand.niche.short}
                 headlineSub={`jobs in ${stateCode}. Find your fit.`}
@@ -866,7 +868,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                     }}>
                                         <div>
                                             <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35', display: 'block' }}>{city.name}</span>
-                                            <span style={{ fontSize: '12px', color: '#7A6A62' }}>{city.count} jobs</span>
+                                            <span style={{ fontSize: '12px', color: '#7A6A62' }}>{city.count} {pluralize(city.count, 'job')}</span>
                                         </div>
                                         <ArrowRight size={14} style={{ color: '#BE185D' }} />
                                     </Link>

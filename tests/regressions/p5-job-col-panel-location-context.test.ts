@@ -236,9 +236,11 @@ describe('P5 A5 (4) — page integration: main column, every breakpoint, ISR int
 
     it('the inventory count mirrors the city page predicate and stays inside the fan-out', () => {
         const src = pageSrc();
-        // Same shape getCityStats uses on app/jobs/city/[slug]/page.tsx.
+        // Same shape getCityStats uses on app/jobs/city/[slug]/page.tsx. P10
+        // pseo-jobs #1: both sides now spread the quarantined listing base in
+        // place of the bare isPublished flag, so they still count alike.
         expect(src).toMatch(
-            /isPublished:\s*true,\s*city:\s*\{\s*equals:\s*job\.city,\s*mode:\s*'insensitive'\s*\},\s*OR:\s*\[\s*\{\s*state:\s*locationCityRecord\.state\s*\},\s*\{\s*stateCode:\s*locationCityRecord\.stateCode\s*\},?\s*\]/,
+            /\.\.\.PUBLISHED_LISTING_WHERE,\s*city:\s*\{\s*equals:\s*job\.city,\s*mode:\s*'insensitive'\s*\},\s*OR:\s*\[\s*\{\s*state:\s*locationCityRecord\.state\s*\},\s*\{\s*stateCode:\s*locationCityRecord\.stateCode\s*\},?\s*\]/,
         );
     });
 

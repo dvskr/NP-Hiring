@@ -1,8 +1,10 @@
 import { brand } from '@/config/brand';
-import { cache } from 'react';
+import { cache, Suspense } from 'react';
 import Image from 'next/image';
 import { formatSalary, slugify, getJobFreshness, getExpiryStatus, expandInlineBullets, splitAtSectionMarkers } from '@/lib/utils';
 import { sanitizeHtmlContent } from '@/lib/sanitize';
+import { normalizeDisplaySalary } from '@/lib/salary-display';
+import StickyApplyBar from './StickyApplyBar';
 import { MapPin, Briefcase, Monitor, BadgeCheck, ArrowRight, Search, Laptop, Video, Plane, Building2, BedDouble, DollarSign, type LucideIcon } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import { Job, Company } from '@/lib/types';
@@ -36,6 +38,7 @@ import JobLocationContext, {
 import { classifyProfession, type ProfessionClass } from '@/lib/profession-classifier';
 import { CareerPulseCard, ApplicationTipsCard } from '@/components/jobs/SidebarVisualCards';
 import { prisma } from '@/lib/prisma';
+import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
 // P3 #9: the city breadcrumb is both an internal link and a BreadcrumbList
 // ListItem, so it must not carry a URL the city route cannot resolve.
@@ -87,7 +90,8 @@ interface JobPageProps {
 type JobResult =
   | { status: 'found'; job: Job }
   | { status: 'expired'; employer?: string; title?: string }
-  | { status: 'gone' };
+  | { status: 'gone' }
+  | { status: 'quarantined' };
 
 const getJob = cache(async function getJob(id: string): Promise<JobResult> {
   try {
@@ -122,15 +126,25 @@ const getJob = cache(async function getJob(id: string): Promise<JobResult> {
     }
 
     // Job is published — fetch full data with employer info
-    const jobWithRelation = await prisma.job.findUnique({
-      where: { id },
+    //
+    // P10 pseo-jobs #1: the fetch carries the site-wide profession quarantine
+    // (GLOBAL_EXCLUSIONS via PUBLISHED_LISTING_WHERE). A published, unexpired
+    // row it rejects is a non-NP listing (e.g. professionClass other_clinical)
+    // that every browse surface already hides; its slug-plus-UUID URL must not
+    // be the one place it still renders as a live, indexable 200. Middleware
+    // answers such a row with a real 410 first (P10 not-found-status #1, the
+    // same GLOBAL_EXCLUSIONS via lib/pseo/listing-gates-edge.ts); this branch
+    // is the fallback when that gate cannot run. Its notFound() alone cannot
+    // set the status: this route streams behind loading.tsx.
+    const jobWithRelation = await prisma.job.findFirst({
+      where: { id, ...PUBLISHED_LISTING_WHERE },
       include: {
         employerJobs: {
           select: { companyLogoUrl: true, companyWebsite: true, userId: true },
         },
       },
     });
-    if (!jobWithRelation) return { status: 'gone' };
+    if (!jobWithRelation) return { status: 'quarantined' };
 
     // Increment view count AND create view event for analytics funnel
     Promise.all([
@@ -190,7 +204,7 @@ export async function getInternalLinkBuckets(params: {
   newGradFriendly?: boolean;
 }) {
   const { currentJobId, employer, city, state, newGradFriendly } = params;
-  const baseWhere = { id: { not: currentJobId }, isPublished: true } as const;
+  const baseWhere = { id: { not: currentJobId }, ...PUBLISHED_LISTING_WHERE };
   const baseOrder = { createdAt: 'desc' as const };
 
   const [moreFromEmployer, moreInCity, moreNewGrad] = await Promise.all([
@@ -234,7 +248,7 @@ async function getRelatedJobs({
   // detail render. Parallelizing fetches up to `limit` candidates per
   // bucket (slightly more bytes) but cuts wall-clock latency by ~3x on
   // a typical render. Dedup happens in-memory below in priority order.
-  const baseWhere = { id: { not: currentJobId }, isPublished: true } as const;
+  const baseWhere = { id: { not: currentJobId }, ...PUBLISHED_LISTING_WHERE };
   const baseOrder = { createdAt: 'desc' as const };
 
   const [sameEmployerJobs, sameCityJobs, sameStateJobs, sameModeJobs] = await Promise.all([
@@ -320,7 +334,7 @@ async function getCompanyInfo(companyId: string | null, employerName: string, jo
   // No Company record — synthesize one from the EmployerJob fields.
   if (employerJobRow && (employerJobRow.companyLogoUrl || employerJobRow.companyDescription)) {
     const jobCount = await prisma.job.count({
-      where: { employer: employerName, isPublished: true },
+      where: { employer: employerName, ...PUBLISHED_LISTING_WHERE },
     });
     return {
       id: 'employer-' + (jobId ?? 'unknown'),
@@ -344,7 +358,7 @@ async function getEmployerJobCount(employerName: string, currentJobId: string) {
   const count = await prisma.job.count({
     where: {
       employer: { equals: employerName, mode: 'insensitive' },
-      isPublished: true,
+      ...PUBLISHED_LISTING_WHERE,
       id: { not: currentJobId },
     },
   });
@@ -424,7 +438,7 @@ export async function generateMetadata({ params }: JobPageProps) {
   // the page body. Metadata here only matters if Next.js skips the body
   // render (it doesn't, but defensive). The old 'X-Status: 410' meta tag
   // was misleading — it claimed 410 while the actual response was 200.
-  if (result.status === 'gone') {
+  if (result.status === 'gone' || result.status === 'quarantined') {
     return {
       title: 'Page Not Found',
       // Live-review fix #1 (copy honesty): the row is deleted, so its
@@ -715,6 +729,11 @@ export default async function JobPage({ params }: JobPageProps) {
   // indexation (the page is treated as valid but de-prioritized,
   // burning crawl budget on dead URLs). notFound() returns 404 and
   // Next.js renders our app/not-found.tsx template.
+  // A quarantined non-NP row answers the same 404: it is not a listing on
+  // this board, and a noindexed Position Filled shell would misstate why.
+  if (result.status === 'quarantined') {
+    notFound();
+  }
   if (result.status === 'gone') {
     notFound();
   }
@@ -804,7 +823,7 @@ export default async function JobPage({ params }: JobPageProps) {
     locationCityRecord && job.city
       ? prisma.job.count({
           where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: job.city, mode: 'insensitive' },
             OR: [
               { state: locationCityRecord.state },
@@ -841,7 +860,9 @@ export default async function JobPage({ params }: JobPageProps) {
     locationCityJobCount,
   );
 
-  const salary = formatSalary(job.minSalary, job.maxSalary, job.salaryPeriod);
+  // normalizeDisplaySalary is idempotent on formatSalary's " to " output; it
+  // is the render-point guard that keeps any dashed range off the hero badge.
+  const salary = normalizeDisplaySalary(formatSalary(job.minSalary, job.maxSalary, job.salaryPeriod)) ?? '';
   const freshness = getJobFreshness(job.createdAt);
   const expiryStatus = getExpiryStatus(job.expiresAt);
 
@@ -991,7 +1012,11 @@ export default async function JobPage({ params }: JobPageProps) {
                       // White-disc background under the bluecheck so it
                       // reads cleanly on any avatar color. Same treatment
                       // as the JobCard avatar bluecheck.
+                      // role="img" makes aria-label permitted (axe
+                      // aria-prohibited-attr: a generic div may not carry
+                      // one); the decorative svg inside is hidden.
                       <div
+                        role="img"
                         aria-label="Verified employer"
                         style={{
                           position: 'absolute', bottom: '-2px', right: '-2px',
@@ -1001,7 +1026,7 @@ export default async function JobPage({ params }: JobPageProps) {
                           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                         }}
                       >
-                        <BadgeCheck size={18} fill="#1d9bf0" color="#ffffff" />
+                        <BadgeCheck size={18} fill="#1d9bf0" color="#ffffff" aria-hidden="true" />
                       </div>
                     )}
                   </div>
@@ -1233,7 +1258,9 @@ export default async function JobPage({ params }: JobPageProps) {
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                  <ApplyButton jobId={job.id} applyLink={job.applyLink} jobTitle={job.title} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />
+                  <Suspense fallback={<ApplyButtonPlaceholder />}>
+                    <ApplyButton jobId={job.id} applyLink={job.applyLink} jobTitle={job.title} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />
+                  </Suspense>
                   <div style={{ display: 'grid', gridTemplateColumns: job.sourceType === 'employer' ? '1fr 1fr' : '1fr', gap: '8px' }}>
                     <SaveJobButton jobId={job.id} />
                     {job.sourceType === 'employer' && (
@@ -1369,10 +1396,12 @@ export default async function JobPage({ params }: JobPageProps) {
       </div>
 
       {/* Sticky Apply Button - Mobile Only */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-[60] shadow-lg safe-bottom" style={{ backgroundColor: '#FFFFFF', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+      <StickyApplyBar>
         <div className="px-4 py-2 pb-safe">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <ApplyButton jobId={job.id} applyLink={job.applyLink} jobTitle={job.title} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />
+            <Suspense fallback={<ApplyButtonPlaceholder />}>
+              <ApplyButton jobId={job.id} applyLink={job.applyLink} jobTitle={job.title} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />
+            </Suspense>
             <div style={{ display: 'grid', gridTemplateColumns: job.sourceType === 'employer' ? '1fr 1fr' : '1fr', gap: '8px' }}>
               <SaveJobButton jobId={job.id} />
               {job.sourceType === 'employer' && (
@@ -1381,8 +1410,20 @@ export default async function JobPage({ params }: JobPageProps) {
             </div>
           </div>
         </div>
-      </div>
+      </StickyApplyBar>
     </>
   );
+}
+
+/**
+ * Server-rendered stand-in for ApplyButton while its Suspense boundary is
+ * pending. ApplyButton reads useSearchParams() (the ?apply=1 auto-open), and
+ * on this ISR route an unwrapped search-param read bails the WHOLE page out
+ * to client rendering: the SSR HTML then carries no H1 and no JobPosting
+ * JSON-LD. The boundary confines the bailout to the button; the placeholder
+ * reserves the button's 52px min-height so hydration causes no layout shift.
+ */
+function ApplyButtonPlaceholder() {
+  return <div aria-hidden="true" style={{ minHeight: '52px', width: '100%' }} />;
 }
 

@@ -329,7 +329,7 @@ export default function PreviewPage() {
     : 'Looks Good, Post Job';
 
   return (
-    <div style={{ background: '#F5F0EB', minHeight: '100vh', padding: '0 16px 80px' }}>
+    <div className="preview-page" style={{ background: '#F5F0EB', minHeight: '100vh', paddingLeft: '16px', paddingRight: '16px' }}>
       <div style={{ maxWidth: '780px', margin: '0 auto' }}>
 
         {/* Header */}
@@ -624,11 +624,16 @@ export default function PreviewPage() {
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div style={{
+        {/* Action Buttons. position: sticky never engaged here: app/globals.css
+            gives body overflow-x: hidden, which makes body a scroll container
+            that never scrolls, so the bar stayed at the end of the page and
+            sat below the fold on phones. Below md the bar is fixed just above
+            the BottomNav instead; from md up it stays in normal flow at the
+            end of the preview (the footer is visible there and must not be
+            covered). */}
+        <div className="preview-action-bar" style={{
           ...cardBase, padding: '16px 20px',
           display: 'flex', flexDirection: 'row', gap: '12px',
-          position: 'sticky', bottom: '16px',
         }}>
           <button onClick={handleBack} disabled={isLoading} className="preview-btn" style={{
             ...clayBtn, flex: 1, justifyContent: 'center',
@@ -652,6 +657,21 @@ export default function PreviewPage() {
       </div>
 
       <style>{`
+        .preview-page { padding-bottom: 80px; }
+        @media (max-width: 767.98px) {
+          /* BottomNav is fixed at 64px plus the safe area below md. */
+          .preview-action-bar {
+            position: fixed;
+            left: 16px;
+            right: 16px;
+            bottom: calc(76px + env(safe-area-inset-bottom));
+            z-index: 40;
+          }
+          /* Clearance so the last preview card scrolls clear of the fixed bar
+             (bar with wrapped button labels plus its gap). MainContent's
+             pb-20 already clears the BottomNav itself. */
+          .preview-page { padding-bottom: 140px; }
+        }
         .preview-btn:hover { transform: translateY(-1px); }
         .preview-btn-primary:hover { transform: translateY(-1px); box-shadow: 6px 6px 16px rgba(190,24,93,0.3), inset 1px 1px 2px rgba(255,255,255,0.15) !important; }
       `}</style>

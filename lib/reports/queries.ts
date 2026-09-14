@@ -14,11 +14,15 @@
  *   - "Disclosed pay" means the pay range came from the posting itself:
  *     a normalized range present AND salaryIsEstimated=false. Figures the
  *     enrichment pipeline inferred count as NOT disclosed.
- *   - Every loader returns null on failure so callers OMIT the block (the
- *     /press pattern) — a report must never quote a fallback constant.
+ *   - A report must never quote a fallback constant. A loader retries a
+ *     failed aggregation, then THROWS at request time so ISR keeps the
+ *     previous good render instead of caching a degraded one for the whole
+ *     revalidate window (lib/reports/live-load.ts). Only during `next build`
+ *     does it resolve to null, and callers then OMIT the block.
  */
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { loadLiveReportData } from './live-load';
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 import { CATEGORY_AXES } from '@/lib/pseo/taxonomy-registry';
 import { CATEGORY_LABELS, isCategoryFaqSlug } from '@/lib/pseo/category-faq-data';
@@ -131,65 +135,68 @@ async function loadSalarySummary(now: Date): Promise<BenchmarkSummary> {
     return summarizeBenchmarks(rows);
 }
 
+async function aggregateHiringReportSnapshot(): Promise<HiringReportSnapshot> {
+    const now = new Date();
+    const where = activeIndexableJobWhere(now);
+    const [
+        totalActive,
+        employerGroups,
+        bySpecialty,
+        byState,
+        remote,
+        hybridNotRemote,
+        newGradFriendly,
+        salary,
+        disclosed,
+    ] = await Promise.all([
+        prisma.job.count({ where }),
+        prisma.job.groupBy({ by: ['employer'], where }),
+        countBySpecialty(now),
+        countByState(now),
+        prisma.job.count({ where: { ...where, isRemote: true } }),
+        prisma.job.count({ where: { ...where, isHybrid: true, isRemote: false } }),
+        prisma.job.count({ where: { ...where, newGradFriendly: true } }),
+        loadSalarySummary(now),
+        prisma.job.count({
+            where: {
+                ...where,
+                salaryIsEstimated: false,
+                normalizedMinSalary: { not: null },
+            },
+        }),
+    ]);
+    return {
+        asOf: now.toISOString(),
+        inventory: {
+            totalActive,
+            totalEmployers: employerGroups.length,
+            totalStates: byState.length,
+        },
+        bySpecialty,
+        byState,
+        modes: {
+            remote,
+            hybrid: hybridNotRemote,
+            onSite: totalActive - remote - hybridNotRemote,
+            total: totalActive,
+        },
+        newGradFriendly,
+        salary,
+        disclosure: { total: totalActive, disclosed },
+    };
+}
+
 /**
- * The full State of Hiring aggregate snapshot, or null on any failure —
- * the page then renders its "live data unavailable" note instead of any
- * number.
+ * The full State of Hiring aggregate snapshot. Retries, then throws at
+ * request time so ISR keeps the last good render; resolves to null only
+ * during `next build`, where the page renders its "live data unavailable"
+ * note instead of any number.
  */
 export async function loadHiringReportSnapshot(): Promise<HiringReportSnapshot | null> {
-    try {
-        const now = new Date();
-        const where = activeIndexableJobWhere(now);
-        const [
-            totalActive,
-            employerGroups,
-            bySpecialty,
-            byState,
-            remote,
-            hybridNotRemote,
-            newGradFriendly,
-            salary,
-            disclosed,
-        ] = await Promise.all([
-            prisma.job.count({ where }),
-            prisma.job.groupBy({ by: ['employer'], where }),
-            countBySpecialty(now),
-            countByState(now),
-            prisma.job.count({ where: { ...where, isRemote: true } }),
-            prisma.job.count({ where: { ...where, isHybrid: true, isRemote: false } }),
-            prisma.job.count({ where: { ...where, newGradFriendly: true } }),
-            loadSalarySummary(now),
-            prisma.job.count({
-                where: {
-                    ...where,
-                    salaryIsEstimated: false,
-                    normalizedMinSalary: { not: null },
-                },
-            }),
-        ]);
-        return {
-            asOf: now.toISOString(),
-            inventory: {
-                totalActive,
-                totalEmployers: employerGroups.length,
-                totalStates: byState.length,
-            },
-            bySpecialty,
-            byState,
-            modes: {
-                remote,
-                hybrid: hybridNotRemote,
-                onSite: totalActive - remote - hybridNotRemote,
-                total: totalActive,
-            },
-            newGradFriendly,
-            salary,
-            disclosure: { total: totalActive, disclosed },
-        };
-    } catch (error) {
-        logger.error('[reports] hiring snapshot aggregation failed — omitting live sections', error);
-        return null;
-    }
+    return loadLiveReportData(aggregateHiringReportSnapshot, {
+        onFailure: (attempt, error) =>
+            logger.error(`[reports] hiring snapshot aggregation failed (attempt ${attempt})`, error),
+    });
 }
 
 /**
@@ -200,25 +207,27 @@ export async function loadHiringReportSnapshot(): Promise<HiringReportSnapshot |
  * rate. Gating to publishable months happens in report-model.
  */
 export async function loadDisclosureCohort(): Promise<MonthlyDisclosureRow[] | null> {
-    try {
-        const rows = await prisma.$queryRaw<
-            Array<{ month: string; total: number; disclosed: number }>
-        >`
-            SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month,
-                   COUNT(*)::int AS total,
-                   COUNT(*) FILTER (
-                       WHERE normalized_min_salary IS NOT NULL
-                         AND salary_is_estimated = false
-                   )::int AS disclosed
-            FROM jobs
-            WHERE created_at >= date_trunc('month', now()) - interval '12 months'
-              AND created_at < date_trunc('month', now())
-            GROUP BY 1
-            ORDER BY 1
-        `;
-        return rows.map((r) => ({ month: r.month, total: r.total, disclosed: r.disclosed }));
-    } catch (error) {
-        logger.error('[reports] disclosure cohort query failed — omitting the trend', error);
-        return null;
-    }
+    return loadLiveReportData(queryDisclosureCohort, {
+        onFailure: (attempt, error) =>
+            logger.error(`[reports] disclosure cohort query failed (attempt ${attempt})`, error),
+    });
+}
+
+async function queryDisclosureCohort(): Promise<MonthlyDisclosureRow[]> {
+    const rows = await prisma.$queryRaw<
+        Array<{ month: string; total: number; disclosed: number }>
+    >`
+        SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month,
+               COUNT(*)::int AS total,
+               COUNT(*) FILTER (
+                   WHERE normalized_min_salary IS NOT NULL
+                     AND salary_is_estimated = false
+               )::int AS disclosed
+        FROM jobs
+        WHERE created_at >= date_trunc('month', now()) - interval '12 months'
+          AND created_at < date_trunc('month', now())
+        GROUP BY 1
+        ORDER BY 1
+    `;
+    return rows.map((r) => ({ month: r.month, total: r.total, disclosed: r.disclosed }));
 }

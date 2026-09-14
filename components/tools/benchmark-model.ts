@@ -20,6 +20,8 @@
  * returns per-employer rows, neither of which belongs on a public page.
  */
 
+import { parsePlainAmount } from './parse-amount';
+
 /** Minimum salaried postings before a state is shown. */
 export const BENCHMARK_MIN_POSTINGS = 5;
 
@@ -116,6 +118,33 @@ export function summarizeBenchmarks(rows: readonly BenchmarkInputRow[]): Benchma
       : null;
 
   return { national, states };
+}
+
+/**
+ * The public benchmark over one analytics pool, aligned with the salary
+ * guide: state rows exactly as /salary-guide gates them (rows without a
+ * state are dropped), and a national row over EVERY pool row, stateless
+ * ones included, exactly as /salary-guide/<state> computes its national
+ * base. The placeholder scope never leaks: only `national` is read from
+ * the stateless pass.
+ */
+export function summarizeBenchmarkPool(rows: readonly BenchmarkInputRow[]): BenchmarkSummary {
+  const { states } = summarizeBenchmarks(rows);
+  const { national } = summarizeBenchmarks(
+    rows.map((row) => ({ ...row, state: row.state ?? 'Unknown' })),
+  );
+  return { national, states };
+}
+
+/**
+ * Parse the planned-offer field. Only a plain positive amount counts: a
+ * negative, zero, blank, or malformed entry is not an offer, so it returns
+ * null and the widget shows no standing. Stripping every non-digit (the
+ * previous parser) turned "-120000" into 120000 and graded it.
+ */
+export function parseOfferInput(raw: string): number | null {
+  const value = parsePlainAmount(raw);
+  return value !== null && value > 0 ? value : null;
 }
 
 /** Where a proposed offer sits against a benchmark row. */

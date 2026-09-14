@@ -31,6 +31,11 @@ const ADMIN_SETTABLE_STATUSES = [
   'no_response',
 ] as const
 
+/** Prisma "record to update does not exist" (P2025). */
+function isRecordNotFound(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 'P2025'
+}
+
 const BODY_SCHEMA = z
   .object({
     id: z.string().uuid(),
@@ -81,8 +86,12 @@ export async function PATCH(req: Request): Promise<NextResponse> {
 
     return NextResponse.json({ success: true, lead: updated })
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Unknown error'
+    // Details stay server-side; the client never sees Prisma internals.
+    if (isRecordNotFound(err)) {
+      logger.warn('[pd-campaign] lead not found', { id: parsed.id, status: parsed.status })
+      return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+    }
     logger.error('[pd-campaign] failed to update lead', err, { id: parsed.id, status: parsed.status })
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to update lead' }, { status: 500 })
   }
 }

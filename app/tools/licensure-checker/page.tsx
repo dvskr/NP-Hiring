@@ -9,7 +9,8 @@
  * DATA PROVENANCE (all read-only imports — nothing is re-typed here)
  *  - Practice authority: lib/state-practice-authority.ts (AANP).
  *  - State salary: live aggregation over published postings.
- *  - State guide slugs: published state_spotlight posts.
+ *  - State guide slugs: published state_spotlight posts plus the live
+ *    code-generated license guide series (lib/blog.ts fallback rule).
  *
  * NOT USED HERE, DELIBERATELY: LICENSE_GUIDE_NLC_NON_MEMBERS from
  * lib/blog-license-guides.ts. This page used to derive a per-state compact
@@ -31,7 +32,8 @@ import LicensureChecker from '@/components/LicensureChecker';
 import AssumptionsPanel from '@/components/tools/AssumptionsPanel';
 import MultiStatePlanner, { type PlannerState } from '@/components/tools/MultiStatePlanner';
 import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard } from '@/components/tools/tool-theme';
-import { LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
+import { LICENSE_GUIDE_SLUG_PREFIX, LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
+import { licenseGuideFallbackSlugs } from '@/lib/blog';
 import { prisma } from '@/lib/prisma';
 import { getGatedStateBenchmarks } from '@/lib/salary-analytics';
 import { logger } from '@/lib/logger';
@@ -102,13 +104,43 @@ function titleCaseSlugFragment(fragment: string): string {
     .join(' ');
 }
 
+/**
+ * Slug fragment to the practice-authority state name, so "district-of-columbia"
+ * resolves to "District of Columbia" (the checker and planner match guides by
+ * that exact name) rather than a naive title-case.
+ */
+const STATE_NAME_BY_SLUG = new Map(
+  Object.keys(STATE_PRACTICE_AUTHORITY).map((name) => [name.toLowerCase().replace(/\s+/g, '-'), name]),
+);
+
+/**
+ * Every live state licensure-guide slug: published state_spotlight rows plus
+ * the code-generated series that /blog/np-license-<state> renders without a
+ * row (licenseGuideFallbackSlugs, the rule lib/blog.ts serves and lists by).
+ * Reading only blog_posts omitted every guide link while all 51 guides were
+ * live.
+ */
+async function loadGuideSlugs(): Promise<string[]> {
+  const [publishedGuides, licenseRows] = await Promise.all([
+    prisma.blogPost.findMany({
+      where: { status: 'published', category: 'state_spotlight' },
+      select: { slug: true },
+    }),
+    prisma.blogPost.findMany({
+      where: { slug: { startsWith: LICENSE_GUIDE_SLUG_PREFIX } },
+      select: { slug: true },
+    }),
+  ]);
+  return [
+    ...publishedGuides.map((post) => post.slug),
+    ...licenseGuideFallbackSlugs(licenseRows.map((row) => row.slug)),
+  ];
+}
+
 async function loadCheckerData(): Promise<CheckerData> {
   try {
-    const [guidePosts, benchmarkRows] = await Promise.all([
-      prisma.blogPost.findMany({
-        where: { status: 'published', category: 'state_spotlight' },
-        select: { slug: true },
-      }),
+    const [guideSlugs, benchmarkRows] = await Promise.all([
+      loadGuideSlugs(),
       // P9 #2c/#2d: gated per-state medians — replaces the old `_avg`
       // mean-of-min/max over every published row (psychiatrist/PA pay and
       // estimated rows included), which this tool then divided by 2080 and
@@ -118,11 +150,12 @@ async function loadCheckerData(): Promise<CheckerData> {
 
     // Deduplicate: some states carry a "-2" copy of their guide.
     const guideByState = new Map<string, string>();
-    for (const post of guidePosts) {
-      const match = post.slug.match(LICENSE_GUIDE_SLUG_REGEX);
+    for (const slug of guideSlugs) {
+      const match = slug.match(LICENSE_GUIDE_SLUG_REGEX);
       if (!match) continue;
-      const name = titleCaseSlugFragment(match[1].replace(/-\d+$/, ''));
-      if (!guideByState.has(name)) guideByState.set(name, post.slug);
+      const fragment = match[1].replace(/-\d+$/, '');
+      const name = STATE_NAME_BY_SLUG.get(fragment) ?? titleCaseSlugFragment(fragment);
+      if (!guideByState.has(name)) guideByState.set(name, slug);
     }
 
     const stateSalaries: StateSalaryRow[] = benchmarkRows

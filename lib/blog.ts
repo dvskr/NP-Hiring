@@ -12,6 +12,7 @@ import {
     getLicenseGuidePost,
     LICENSE_GUIDE_REVIEWED_AT,
 } from '@/lib/blog-license-guides';
+import { getAllMdxPosts, getMdxPost } from '@/lib/blog-mdx-posts';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -69,6 +70,131 @@ function getSupabaseServiceClient() {
 
 const POSTS_PER_PAGE = 12;
 
+/** Upper bound on DB rows merged in memory with the license-guide series. */
+const MERGED_LISTING_MAX_ROWS = 1000;
+
+type SupabaseClient = ReturnType<typeof getSupabaseClient>;
+
+/**
+ * Code-generated license-guide slugs that are live WITHOUT a blog_posts row.
+ *
+ * getPostBySlug serves every 'np-license-<state>' slug from
+ * lib/blog-license-guides.ts when no published row exists, and serves
+ * nothing when an UNPUBLISHED row exists (editorial takedown). So a slug is
+ * a live fallback exactly when the series is published and the slug has no
+ * DB row of any status: a published row is listed from the DB already, and
+ * an unpublished one is suppressed. Every listing surface (blog index, post
+ * count, sitemap, licensure checker) derives from this one rule so none of
+ * them can disagree with what /blog/<slug> actually renders.
+ */
+export function licenseGuideFallbackSlugs(
+    dbLicenseSlugs: Iterable<string>,
+    seriesPublished: boolean = LICENSE_GUIDE_SERIES_PUBLISHED,
+): string[] {
+    if (!seriesPublished) return [];
+    const inDb = new Set(dbLicenseSlugs);
+    return getAllLicenseGuideSlugs().filter((slug) => !inDb.has(slug));
+}
+
+/** True when a blog index filter can contain the license-guide series. */
+export function categoryIncludesLicenseGuides(category?: string): boolean {
+    return !category || category === 'all' || category === 'state_spotlight';
+}
+
+/**
+ * Merge DB listing rows with the live fallback guides, newest first (null
+ * publish dates last, as the DB query orders them). A fallback slug that
+ * also appears in the DB rows is dropped, so nothing is listed twice.
+ */
+export function mergeListingWithLicenseGuides(
+    dbRows: readonly BlogPost[],
+    fallbackSlugs: readonly string[],
+): BlogPost[] {
+    const guides = fallbackSlugs.flatMap((slug) => {
+        const match = slug.match(LICENSE_GUIDE_SLUG_REGEX);
+        const post = match ? getLicenseGuidePost(match[1]) : null;
+        return post ? [post] : [];
+    });
+    return mergeListingWithFallbackPosts(dbRows, guides);
+}
+
+/**
+ * Merge DB listing rows with code-served fallback posts (license guides and
+ * .mdx guides), newest first, null publish dates last. A fallback post whose
+ * slug is already among the DB rows is dropped, and bodies are blanked
+ * because the index never renders them.
+ */
+export function mergeListingWithFallbackPosts(
+    dbRows: readonly BlogPost[],
+    fallbackPosts: readonly BlogPost[],
+): BlogPost[] {
+    const listed = new Set(dbRows.map((row) => row.slug));
+    const extra = fallbackPosts
+        .filter((post) => !listed.has(post.slug))
+        .map((post) => ({ ...post, content: '' }));
+    const time = (row: BlogPost) => (row.publish_date ? Date.parse(row.publish_date) : Number.NEGATIVE_INFINITY);
+    return [...dbRows, ...extra].sort((a, b) => time(b) - time(a));
+}
+
+/**
+ * Authored content/blog/*.mdx posts that are live WITHOUT a blog_posts row,
+ * restricted to a blog index category filter.
+ *
+ * Same rule as licenseGuideFallbackSlugs: getPostBySlug serves an .mdx post
+ * from code only when no DB row of any status exists (a published row is the
+ * editorial version and is listed from the DB; an unpublished row is a
+ * takedown). The index, the post count and the sitemap all derive from this
+ * one rule, so none of them can disagree with what /blog/<slug> renders.
+ */
+export function mdxFallbackPosts(
+    dbSlugs: Iterable<string>,
+    category?: string,
+    posts: readonly BlogPost[] = getAllMdxPosts(),
+): BlogPost[] {
+    const inDb = new Set(dbSlugs);
+    return posts.filter(
+        (post) => !inDb.has(post.slug) && (!category || category === 'all' || post.category === category),
+    );
+}
+
+/** Slugs of the .mdx posts that could be listed under a category filter. */
+function mdxCandidateSlugs(category?: string): string[] {
+    return mdxFallbackPosts([], category).map((post) => post.slug);
+}
+
+/**
+ * Slugs from `slugs` that have a blog_posts row of any status. On a query
+ * error this fails OPEN (no rows), matching hasSuppressedRow: the fallback
+ * posts still render, so they should still be listed.
+ */
+async function fetchDbSlugsIn(supabase: SupabaseClient, slugs: readonly string[]): Promise<string[]> {
+    if (slugs.length === 0) return [];
+    const { data, error } = await supabase.from('blog_posts').select('slug').in('slug', [...slugs]);
+    if (error) {
+        console.error('Error fetching blog rows for MDX guides:', error);
+        return [];
+    }
+    return (data ?? []).map((row: { slug: string }) => row.slug);
+}
+
+/**
+ * Slugs of every blog_posts row (any status) in the license-guide series.
+ * On a query error this fails OPEN (no rows), matching
+ * hasSuppressedRow: the fallback guides still render, so they should
+ * still be listed.
+ */
+async function fetchLicenseGuideDbSlugs(supabase: SupabaseClient): Promise<string[]> {
+    const { data, error } = await supabase
+        .from('blog_posts')
+        .select('slug')
+        .like('slug', `${LICENSE_GUIDE_SLUG_PREFIX}%`);
+    if (error) {
+        console.error('Error fetching license guide rows:', error);
+        return [];
+    }
+    return (data ?? []).map((row: { slug: string }) => row.slug);
+}
+
 export async function getPublishedPosts(
     page = 1,
     limit = POSTS_PER_PAGE,
@@ -76,28 +202,51 @@ export async function getPublishedPosts(
 ) {
     const supabase = getSupabaseClient();
     const offset = (page - 1) * limit;
+    const includeGuides = categoryIncludesLicenseGuides(category) && LICENSE_GUIDE_SERIES_PUBLISHED;
+    const mdxSlugs = mdxCandidateSlugs(category);
+    const mergeFallbacks = includeGuides || mdxSlugs.length > 0;
 
     let query = supabase
         .from('blog_posts')
         .select('id, title, slug, meta_description, category, publish_date, created_at, image_url, youtube_video_id')
         .eq('status', 'published')
-        .order('publish_date', { ascending: false, nullsFirst: false })
-        .range(offset, offset + limit - 1);
+        .order('publish_date', { ascending: false, nullsFirst: false });
+    // With code-served guides merged in, paging happens after the merge.
+    query = mergeFallbacks
+        ? query.limit(MERGED_LISTING_MAX_ROWS)
+        : query.range(offset, offset + limit - 1);
 
     if (category && category !== 'all') {
         query = query.eq('category', category);
     }
 
-    const { data, error } = await query;
+    const [{ data, error }, licenseDbSlugs, mdxDbSlugs] = await Promise.all([
+        query,
+        includeGuides ? fetchLicenseGuideDbSlugs(supabase) : Promise.resolve([]),
+        fetchDbSlugsIn(supabase, mdxSlugs),
+    ]);
     if (error) {
         console.error('Error fetching blog posts:', error);
-        return [];
+        // Fail OPEN for the code-served guides: getPostBySlug still renders
+        // them when blog_posts is unreadable (it treats the error as a miss),
+        // so the index must still list them rather than claim "No posts found".
+        if (!mergeFallbacks) return [];
     }
-    return data as BlogPost[];
+    const rows = (error ? [] : (data ?? [])) as BlogPost[];
+    if (!mergeFallbacks) return rows;
+
+    // Live code-served guides belong in the index: without them /blog read
+    // "No posts found" while the license guides and the .mdx guides were
+    // live and in the sitemap.
+    const licenseSlugs = includeGuides ? licenseGuideFallbackSlugs(licenseDbSlugs) : [];
+    const withGuides = mergeListingWithLicenseGuides(rows, licenseSlugs);
+    const merged = mergeListingWithFallbackPosts(withGuides, mdxFallbackPosts(mdxDbSlugs, category));
+    return merged.slice(offset, offset + limit);
 }
 
 export async function getPostCount(category?: string): Promise<number> {
     const supabase = getSupabaseClient();
+    const includeGuides = categoryIncludesLicenseGuides(category) && LICENSE_GUIDE_SERIES_PUBLISHED;
 
     let query = supabase
         .from('blog_posts')
@@ -108,12 +257,17 @@ export async function getPostCount(category?: string): Promise<number> {
         query = query.eq('category', category);
     }
 
-    const { count, error } = await query;
-    if (error) {
-        console.error('Error counting blog posts:', error);
-        return 0;
-    }
-    return count ?? 0;
+    const [{ count, error }, licenseDbSlugs, mdxDbSlugs] = await Promise.all([
+        query,
+        includeGuides ? fetchLicenseGuideDbSlugs(supabase) : Promise.resolve([]),
+        fetchDbSlugsIn(supabase, mdxCandidateSlugs(category)),
+    ]);
+    // On a count error, count zero DB rows but still count the live
+    // code-served guides, matching getPublishedPosts and getPostBySlug.
+    if (error) console.error('Error counting blog posts:', error);
+    const dbCount = error ? 0 : (count ?? 0);
+    const guideCount = includeGuides ? licenseGuideFallbackSlugs(licenseDbSlugs).length : 0;
+    return dbCount + guideCount + mdxFallbackPosts(mdxDbSlugs, category).length;
 }
 
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
@@ -135,9 +289,16 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
         // same slug (editorial override via admin) takes precedence above.
         const licenseMatch = slug.match(LICENSE_GUIDE_SLUG_REGEX);
         if (licenseMatch && LICENSE_GUIDE_SERIES_PUBLISHED) {
-            return (await hasSuppressedLicenseRow(slug))
+            return (await hasSuppressedRow(slug))
                 ? null
                 : getLicenseGuidePost(licenseMatch[1]);
+        }
+        // Authored .mdx guide fallback (content/blog/): same contract as the
+        // license series, so a guide wired into the content map never 404s
+        // just because scripts/sync-blog-to-db.ts has not run.
+        const mdxPost = getMdxPost(slug);
+        if (mdxPost) {
+            return (await hasSuppressedRow(slug)) ? null : mdxPost;
         }
         return null;
     }
@@ -147,7 +308,7 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
 /**
  * True when blog_posts holds a row for `slug` that is NOT published.
  *
- * The generator fallback above must not resurrect a guide an editor
+ * The code fallbacks above (license generator and .mdx guides) must not resurrect a guide an editor
  * deliberately took down: without this check the admin publish/unpublish
  * toggle (and any editorial retraction) is a silent no-op on all 51
  * license slugs, because the unpublished row simply fails the
@@ -157,7 +318,7 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
  * Only runs on the miss path for license slugs, so the extra round-trip
  * never touches the normal published-post render.
  */
-async function hasSuppressedLicenseRow(slug: string): Promise<boolean> {
+async function hasSuppressedRow(slug: string): Promise<boolean> {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .from('blog_posts')
@@ -233,11 +394,10 @@ export async function getAllPublishedSlugs(): Promise<
         .eq('status', 'published')
         .order('publish_date', { ascending: false, nullsFirst: false });
 
-    if (error) {
-        console.error('Error fetching blog slugs:', error);
-        return [];
-    }
-    const rows = data ?? [];
+    // On a query error keep going with zero DB rows: the code-served guides
+    // below still render via getPostBySlug, so the sitemap still lists them.
+    if (error) console.error('Error fetching blog slugs:', error);
+    const rows: { slug: string; updated_at: string }[] = error ? [] : [...(data ?? [])];
 
     // Append the 51 code-generated license-guide slugs (sitemap + listing
     // coverage) once the series is published. Deduped against DB rows so
@@ -259,6 +419,13 @@ export async function getAllPublishedSlugs(): Promise<
                 rows.push({ slug, updated_at: LICENSE_GUIDE_REVIEWED_AT });
             }
         }
+    }
+
+    // Authored .mdx guides served from code (getPostBySlug fallback): listed
+    // exactly when no DB row of any status exists for the slug.
+    const mdxDbSlugs = await fetchDbSlugsIn(supabase, mdxCandidateSlugs());
+    for (const post of mdxFallbackPosts(mdxDbSlugs)) {
+        rows.push({ slug: post.slug, updated_at: post.updated_at });
     }
     return rows;
 }

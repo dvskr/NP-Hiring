@@ -94,7 +94,10 @@ describe('F26 — /auth/confirm honors ?next= via safeInternalPath', () => {
   it('carries the target into login on the cross-browser PKCE-mismatch path', () => {
     const src = read(CONFIRM_PAGE);
     // eslint-disable-next-line no-template-curly-in-string
-    expect(src).toContain('/login?confirmed=true&redirectTo=${encodeURIComponent(nextPath)}');
+    expect(src).toContain('/login?redirectTo=${encodeURIComponent(nextPath)}');
+    // P10: an unverifiable code must not be reported as a confirmed email,
+    // so the login redirect no longer carries confirmed=true.
+    expect(src).not.toContain('confirmed=true');
   });
 });
 

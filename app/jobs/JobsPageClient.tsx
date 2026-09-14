@@ -5,8 +5,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
-import { LayoutGrid, List, SlidersHorizontal, ChevronDown, Briefcase, Search, Sparkles } from 'lucide-react';
+import { LayoutGrid, List, SlidersHorizontal, ChevronDown, Search, Sparkles } from 'lucide-react';
 import JobCard from '@/components/JobCard';
 import LinkedInFilters from '@/components/jobs/LinkedInFilters';
 import CreateAlertForm from '@/components/CreateAlertForm';
@@ -20,6 +19,15 @@ import { parseFiltersFromParams, filtersToParams, countActiveFilters, categoryFi
 import { useViewMode } from '@/lib/hooks/useViewMode';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { resolveAiSearchMode } from '@/lib/jobs/resolve-search-mode';
+import { formatZeroResultHint, readZeroResultHint, type ZeroResultSearchHint } from '@/components/jobs/zero-result-hint';
+
+interface JobsApiResponse {
+  jobs: Job[];
+  total: number;
+  totalPages: number;
+  page: number;
+  search?: unknown;
+}
 
 interface JobsContentProps {
   initialJobs: Job[];
@@ -64,9 +72,14 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
 
 
 
-  // Read sort from URL params (persists across navigation)
-  const urlSort = searchParams.get('sort') || 'best';
-  const [sortOption, setSortOption] = useState(urlSort);
+  // Sort is DERIVED from the URL on every render, never copied into state: a
+  // useState(urlSort) snapshot kept the abandoned sort after Back/Forward, so
+  // the control and the refetch disagreed with the URL.
+  const sortOption = searchParams.get('sort') || 'best';
+
+  // Which extracted search constraint emptied a zero-result search
+  // (/api/jobs search.zeroResultHint). null = none to show.
+  const [zeroResultHint, setZeroResultHint] = useState<ZeroResultSearchHint | null>(null);
 
   // ── AI / Smart Search (inline; does NOT navigate away) ─────────────
   // Submits to /api/jobs/search/semantic and replaces the rendered job list
@@ -118,8 +131,9 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
         const errorText = await response.text().catch(() => 'Unknown error');
         throw new Error(`Failed to fetch jobs (${response.status}): ${errorText}`);
       }
-      const data: { jobs: Job[]; total: number; totalPages: number; page: number } = await response.json();
+      const data: JobsApiResponse = await response.json();
       setJobs(data.jobs);
+      setZeroResultHint(data.jobs.length === 0 ? readZeroResultHint(data.search) : null);
       setTotal(data.total);
       setTotalPages(data.totalPages);
       setCurrentPage(data.page);
@@ -196,19 +210,32 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
     // Skip fetch on initial load - we already have server-rendered data
     if (isInitialLoad) {
       setIsInitialLoad(false);
+      // The SSR payload carries jobs but not the zero-result hint; a search
+      // landing with no results asks the API for it without blanking the
+      // server-rendered empty state.
+      if (initialJobs.length === 0 && filters.search.trim()) {
+        const hintParams = filtersToParams(filters);
+        hintParams.set('limit', '1');
+        fetch(`/api/jobs?${hintParams.toString()}`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data: JobsApiResponse | null) => {
+            if (data && data.jobs.length === 0) setZeroResultHint(readZeroResultHint(data.search));
+          })
+          .catch(() => undefined);
+      }
       return;
     }
 
-    // URL is the single source of truth for page. Page-change clicks now write
-    // ?page=N via router.push, which lands here and drives the fetch.
+    // URL is the single source of truth for page AND sort. Page-change clicks
+    // and sort changes write the URL via router.push, which lands here and
+    // drives the fetch; Back/Forward restore both the same way.
     setCurrentPage(pageFromUrl);
-    fetchJobs(filters, pageFromUrl, sortOption);
+    fetchJobs(filters, pageFromUrl, params.get('sort') || 'best');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]); // Only depend on searchParams, not fetchJobs
 
-  // Handle sort change - persist in URL
+  // Handle sort change - persist in URL (the searchParams effect refetches)
   const handleSortChange = (newSort: string) => {
-    setSortOption(newSort);
     // Update URL to persist sort
     const params = new URLSearchParams(searchParams.toString());
     if (newSort === 'best') {
@@ -356,8 +383,9 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                     letterSpacing: '-0.015em',
                   }}
                 >{brand.niche.long} &amp; APRN Jobs</h1>
+                {/* --text-tertiary (#596579, 5.21:1 on --bg-primary); the old grey literal was 3.68:1. */}
                 <p style={{
-                  fontSize: '13px', color: '#6B7F8A', margin: 0, fontWeight: 500,
+                  fontSize: '13px', color: 'var(--text-tertiary)', margin: 0, fontWeight: 500,
                 }}>Browse fresh {brand.niche.short} roles across the US: telehealth, on-site, hybrid, and locum.</p>
               </header>
               {/* Empty right column mirrors the breadcrumb column so the
@@ -670,7 +698,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                 border: '1px solid rgba(239,68,68,0.2)',
                 borderRadius: '12px', padding: '16px', marginBottom: '20px',
               }}>
-                <p style={{ color: '#EF4444', fontSize: '14px', margin: 0 }}>{error}</p>
+                <p style={{ color: '#B91C1C', fontSize: '14px', margin: 0 }}>{error}</p>
               </div>
             )}
 
@@ -681,6 +709,14 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
             {!loading && !error && !aiResults && jobs.length === 0 && (
               <div style={{ textAlign: 'center', padding: '64px 20px' }}>
                 <p style={{ fontSize: '18px', color: 'var(--text-secondary)', fontWeight: 600 }}>No jobs found</p>
+                {zeroResultHint && (
+                  <p
+                    role="status"
+                    style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '8px' }}
+                  >
+                    {formatZeroResultHint(zeroResultHint)}
+                  </p>
+                )}
                 {activeFilterCount > 0 ? (
                   <>
                     <p style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginTop: '8px' }}>

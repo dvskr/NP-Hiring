@@ -171,7 +171,11 @@ html.dark select:-webkit-autofill {
   --text-primary: #2D3748;
   --text-primary-rgb: 45, 55, 72;
   --text-secondary: #4A5568;
-  --text-tertiary: #718096;
+  /* WCAG 1.4.3 AA fix: #718096 measured 4.02:1 on white and 3.55:1 on
+     --bg-primary, so axe flagged every consumer (breadcrumb links, job card
+     freshness and metadata lines). #596579 gives 5.90:1 on white, 5.21:1 on
+     --bg-primary and 4.80:1 on the #EDE7E0 chip tint. */
+  --text-tertiary: #596579;
   /* WCAG 1.4.3 AA fix: previous value #A0AEC0 had ~2.86:1 contrast on
      --bg-primary, failing AA for any non-large text (placeholders,
      floating-label idle state, optional metadata in forms). #64748B
@@ -713,6 +717,35 @@ html:not([data-scroll-behavior]) {
 
 .safe-top {
   padding-top: env(safe-area-inset-top);
+}
+
+/* ===== COOKIE BANNER vs MOBILE BOTTOM NAV =====
+   Below md the BottomNav (components/BottomNav.tsx) is fixed to the viewport
+   bottom and publishes its measured height as --bottom-nav-h. The banner ends
+   exactly where the nav begins. The old static calc(64px + safe-area) was
+   about 17px short of the real 81.5px nav, so the banner covered the nav's
+   top edge. The fallback mirrors BOTTOM_NAV_FALLBACK_HEIGHT for the frames
+   before the first measurement. Unlayered, so it outranks the banner's
+   Tailwind bottom-0 below md; md+ keeps bottom-0. */
+@media (max-width: 767.98px) {
+  .cookie-consent-banner {
+    bottom: var(--bottom-nav-h, calc(82px + env(safe-area-inset-bottom)));
+  }
+}
+
+/* ===== COOKIE BANNER vs JOB DETAIL STICKY APPLY BAR =====
+   Below lg the job detail page pins its apply bar (class
+   job-detail-apply-bar, see app/jobs/[slug]/sticky-apply-bar.ts) to the
+   viewport bottom. The cookie banner normally sits just above the 64px
+   BottomNav, which placed it on top of the Easy Apply button and swallowed
+   the tap. While that bar is mounted the banner lifts to the bar's measured
+   height (published as --job-apply-bar-h), falling back to the same static
+   estimate the bar's body clearance uses. Unlayered, so it outranks the
+   Tailwind bottom utilities on the banner. */
+@media (max-width: 1023.98px) {
+  body:has(.job-detail-apply-bar) .cookie-consent-banner {
+    bottom: var(--job-apply-bar-h, calc(140px + env(safe-area-inset-bottom)));
+  }
 }
 
 .pt-safe {
@@ -1743,8 +1776,11 @@ textarea::placeholder {
     animation: none;
   }
 
-  /* Skeleton shimmer — keep the static placeholder gradient, stop the sweep */
-  .animate-shimmer {
+  /* Skeleton shimmer and pulse: keep the static placeholder, stop the loop.
+     animate-pulse covers every loading skeleton (HeaderAuth, the login
+     Suspense fallback and the rest); it is an infinite opacity animation. */
+  .animate-shimmer,
+  .animate-pulse {
     animation: none;
   }
 

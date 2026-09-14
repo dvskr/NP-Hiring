@@ -148,7 +148,18 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
     } catch { }
   };
 
+  // An Easy Apply click that lands before the /api/auth/me probe settles is
+  // held here instead of flashing the sign-in gate. Showing the gate swapped
+  // the Apply button out of the DOM; the safety net below then opened the
+  // modal with focus already on <body>, so closing it lost keyboard focus.
+  const [pendingPlatformApply, setPendingPlatformApply] = useState(false);
+
   const handleApply = () => {
+    if (applyOnPlatform && !authResolved) {
+      setPendingPlatformApply(true);
+      return;
+    }
+
     // If user is not authenticated, show auth gate
     if (!authed) {
       setShowAuthModal(true);
@@ -177,6 +188,24 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
     }
   };
 
+  // Resume the held Easy Apply click once auth is known: the gate for a
+  // signed-out visitor, the modal for a signed-in one. Deferred a tick like
+  // the other auth transitions above.
+  useEffect(() => {
+    if (!pendingPlatformApply || !authResolved) return;
+    const resume = setTimeout(() => {
+      setPendingPlatformApply(false);
+      if (!authed) {
+        setShowAuthModal(true);
+        return;
+      }
+      // Same click tracking as fireApplyClick (inlined to keep deps exact).
+      fetch(`/api/jobs/${jobId}/track-apply`, { method: 'POST' }).catch(() => { });
+      setShowPlatformApply(true);
+    }, 0);
+    return () => clearTimeout(resume);
+  }, [pendingPlatformApply, authResolved, authed, jobId]);
+
   /** User explicitly confirms they completed the application on the employer's site. */
   const handleConfirmApplied = () => {
     // The hook handles both localStorage and server persistence (when the
@@ -190,10 +219,39 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
     setAwaitingApplyConfirm(false);
   };
 
+  // The modal stays mounted on success: InPlatformApplyForm swaps to its
+  // "Application Submitted!" confirmation and the user dismisses it with Done
+  // or Close (onClose). Closing here unmounted the confirmation the instant
+  // it rendered, so candidates never saw that the submit went through.
   const handlePlatformApplySuccess = () => {
     markApplied(jobId);
-    setShowPlatformApply(false);
+    // Show the "already applied" notice once the confirmation is dismissed,
+    // then settle on the server's record (status, appliedAt).
+    setServerApplied({ applied: true, appliedAt: new Date().toISOString() });
+    fetch(`/api/applications/check?jobId=${jobId}`)
+      .then(r => r.json())
+      .then(data => setServerApplied(data))
+      .catch(() => { });
   };
+
+  // Focus restore backstop for the apply modal. useFocusTrap returns focus to
+  // the element focused when the trap armed; if that node was replaced while
+  // the modal was open, focus would drop to <body>. The ref always points at
+  // the live Apply button, so land keyboard users back on it instead.
+  const applyButtonRef = useRef<HTMLButtonElement>(null);
+  const platformApplyWasOpen = useRef(false);
+  useEffect(() => {
+    if (showPlatformApply) {
+      platformApplyWasOpen.current = true;
+      return;
+    }
+    if (!platformApplyWasOpen.current) return;
+    platformApplyWasOpen.current = false;
+    const active = document.activeElement;
+    if (!active || active === document.body) {
+      applyButtonRef.current?.focus();
+    }
+  }, [showPlatformApply]);
 
   // F26: build the post-auth return target from pathname + search (not just
   // pathname) so ?apply=1 survives the login/signup round trip. For
@@ -315,7 +373,7 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
             </button>
             <button
               onClick={handleSignIn}
-              className="w-full py-2.5 rounded-xl font-semibold transition-all text-sm"
+              className="w-full py-3 min-h-[44px] rounded-xl font-semibold transition-all text-sm"
               style={{
                 backgroundColor: '#EDF2EE',
                 color: 'var(--text-primary)',
@@ -404,6 +462,7 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
         <>
           <div className="flex items-center gap-3">
             <button
+              ref={applyButtonRef}
               onClick={handleApply}
               className="apply-btn inline-flex items-center justify-center gap-2 text-white px-8 py-4 lg:py-3 font-bold transition-all text-lg w-full lg:w-auto touch-manipulation"
               style={{

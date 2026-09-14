@@ -11,7 +11,7 @@ import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
@@ -118,7 +118,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_veterans.webp`}
         heroAlt={`${brand.niche.short} serving veteran patients`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'Veterans']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Veterans", url: `${brand.baseUrl}/jobs/veterans` }])}
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('veterans') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Veterans"
         headlineLine2={brand.niche.short}

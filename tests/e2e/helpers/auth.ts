@@ -46,11 +46,15 @@ export async function playwrightAuth(page: Page, role: Role, options: AuthOption
         );
     }
 
-    await page.goto('/auth/login');
+    // The app serves the sign-in form at /login (there is no /auth/login page;
+    // app/auth/ only holds the callback + confirm routes). ?role=employer
+    // preselects the employer toggle so the post-login default lands on
+    // /employer/dashboard instead of /dashboard.
+    await page.goto(role === 'employer' ? '/login?role=employer' : '/login');
     await page.fill('input[type="email"]', creds.email);
     await page.fill('input[type="password"]', creds.password);
     await page.click('button[type="submit"]');
-    await page.waitForURL((url) => !url.pathname.startsWith('/auth/login'));
+    await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 20_000 });
 
     if (options.landingPath) {
         await page.goto(options.landingPath);

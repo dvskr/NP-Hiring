@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { brand } from '@/config/brand';
 import { enforceApiCsrf } from '@/lib/csrf';
+import { hostnameFromHostHeader, isLoopbackHostname } from '@/lib/csrf';
+import { matchIndexNowKeyPath } from '@/lib/indexnow-key-file';
+import { REQUEST_PATHNAME_HEADER } from '@/lib/auth/admin-return-path';
 import { CONSENT_COOKIE, CONSENT_MIRROR_COOKIE } from '@/lib/consent';
 import { updateSession } from '@/lib/supabase/middleware';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
@@ -8,6 +11,14 @@ import { isKnownCitySlug } from '@/lib/pseo/city-data/city-slugs-edge';
 import { resolveStateSlug } from '@/lib/pseo/setting-state-config';
 import { getAllMetroSlugs } from '@/lib/metro-data';
 import { JOBS_TOP_SEGMENTS, isUnknownJobsTaxonomy } from '@/lib/pseo/jobs-segments-edge';
+import {
+    LISTING_GATE_SELECT,
+    NOT_FOUND_REWRITE_PATH,
+    cityGateLookup,
+    cityGateVerdict,
+    passesListingQuarantine,
+    type ListingGateRow,
+} from '@/lib/pseo/listing-gates-edge';
 import {
     STATE_ELIGIBLE_CATEGORY_SLUGS,
     CITY_ELIGIBLE_CATEGORY_SLUGS,
@@ -269,6 +280,89 @@ function gone410(reason: string): NextResponse {
     });
 }
 
+function removedJob410(): NextResponse {
+    return styled410({
+        badge: 'Position Removed',
+        heading: 'This position is no longer available',
+        subtext: `This job listing has been permanently removed. Hundreds of similar ${brand.niche.short} positions are open right now.`,
+        title: `Position Removed | ${brand.name}`,
+    });
+}
+
+/**
+ * P10 not-found-status #1: the row exists but is outside the roles this board
+ * lists (profession quarantine). Honest copy: it was never a listing here, so
+ * it must not claim the position was filled or removed.
+ */
+function quarantinedJob410(): NextResponse {
+    return styled410({
+        badge: 'Not Listed',
+        heading: `This role is not listed on ${brand.name}`,
+        subtext: `This posting is outside the ${brand.niche.short} roles this board lists. Browse current ${brand.niche.short} openings instead.`,
+        title: `Not Listed | ${brand.name}`,
+    });
+}
+
+/**
+ * P10 not-found-status #2: serve a known not-found URL through app/not-found.tsx
+ * by rewriting to a path no route matches. Next renders the branded 404 with a
+ * real 404 status, exactly as for any unmatched URL, instead of the segment's
+ * bare `__next_error__` shell. Carries the site CSP and noindex.
+ */
+function notFoundRewrite(request: NextRequest, cspHeader: string): NextResponse {
+    const target = request.nextUrl.clone();
+    target.pathname = NOT_FOUND_REWRITE_PATH;
+    target.search = '';
+    // No explicit status: the unmatched render sets 404 itself, the same
+    // path /foo/bar answers through.
+    const response = NextResponse.rewrite(target);
+    response.headers.set('Content-Security-Policy', cspHeader);
+    response.headers.set('X-Robots-Tag', 'noindex, follow');
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    return response;
+}
+
+/**
+ * P10 not-found-status #2: whether /jobs/city/{slug} is a URL the city page
+ * would notFound(). False (let the page render) for metro slugs, slugs this
+ * gate does not model, missing Supabase env, and any failed lookup: the page
+ * stays the authority whenever the evidence is incomplete.
+ */
+async function isKnownCityHubNotFound(slug: string): Promise<boolean> {
+    const lookup = cityGateLookup(slug, (s) => METRO_SLUG_SET.has(s));
+    if (!lookup) return false;
+
+    const cacheKey = `city:${slug}`;
+    const cached = cacheLookupGet(cacheKey);
+    if (cached) return cached.gone;
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.PROD_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.PROD_SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) return false;
+
+    try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/jobs?${lookup.query}`, {
+            headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` },
+        });
+        if (!res.ok) {
+            console.error('[middleware:city-404] Supabase non-OK response', { status: res.status, slug });
+            return false;
+        }
+        const rows: unknown = await res.json();
+        if (!Array.isArray(rows)) return false;
+        const gone = cityGateVerdict(lookup, rows as ListingGateRow[]) === 'not-found';
+        cacheLookupSet(cacheKey, gone);
+        return gone;
+    } catch (err) {
+        console.error('[middleware:city-404] DB check failed', {
+            slug,
+            error: err instanceof Error ? err.message : String(err),
+        });
+        return false;
+    }
+}
+
 function unavailable503(): NextResponse {
     return new NextResponse(
         `<!DOCTYPE html><html><head><meta name="robots" content="noindex"><title>Service Unavailable</title></head><body><h1>503 Service Unavailable</h1><p>This URL's status could not be verified. Please retry.</p></body></html>`,
@@ -365,6 +459,8 @@ const MIDDLEWARE_CACHE_MAX = 500;
 
 interface CachedLookup {
     gone: boolean;
+    /** Why a gone ruling was made, so a cached hit serves the same copy. */
+    reason?: 'quarantined';
     expiresAt: number;
 }
 
@@ -383,7 +479,7 @@ function cacheLookupGet(key: string): CachedLookup | null {
     return entry;
 }
 
-function cacheLookupSet(key: string, gone: boolean): void {
+function cacheLookupSet(key: string, gone: boolean, reason?: CachedLookup['reason']): void {
     if (middlewareLookupCache.size >= MIDDLEWARE_CACHE_MAX) {
         // Evict oldest (insertion-order first key).
         const oldest = middlewareLookupCache.keys().next().value;
@@ -391,6 +487,7 @@ function cacheLookupSet(key: string, gone: boolean): void {
     }
     middlewareLookupCache.set(key, {
         gone,
+        ...(reason ? { reason } : {}),
         expiresAt: Date.now() + MIDDLEWARE_CACHE_TTL_MS,
     });
 }
@@ -436,6 +533,33 @@ export async function middleware(request: NextRequest) {
         if (csrfError) return csrfError;
     }
 
+    // ── IndexNow key file (P10 platform-routing-db #2) ────────────────
+    // Answered here for the exact key path only. It used to be a catch-all
+    // single-segment Route Handler (app/[indexnow]/route.ts) whose notFound()
+    // turned every unknown top-level URL into a 0-byte 404. Runs before the
+    // case-fold redirect so a mixed-case key is served verbatim.
+    if (request.method === 'GET' || request.method === 'HEAD') {
+        const indexNowKey = matchIndexNowKeyPath(pathname, process.env);
+        if (indexNowKey) {
+            return new NextResponse(indexNowKey, {
+                headers: {
+                    'Content-Type': 'text/plain; charset=utf-8',
+                    'X-Content-Type-Options': 'nosniff',
+                    'Cache-Control': 'public, max-age=3600',
+                },
+            });
+        }
+    }
+
+    // ── Request pathname for server layouts (P10 platform-routing-db #6) ──
+    // Layouts cannot read the URL, so guards such as app/admin/layout.tsx
+    // lost the deep link when bouncing a signed-out visitor to /login.
+    // ALWAYS overwrite, so a client-sent value can never reach a layout.
+    // updateSession() forwards these request headers via
+    // NextResponse.next({ request }). Consumers must still validate it
+    // (it only ever feeds a same-site ?next= return path).
+    request.headers.set(REQUEST_PATHNAME_HEADER, pathname);
+
     // ── Trailing Slash Stripping (MUST run before the 410 gates) ─────
     // Fixes "Duplicate, Google chose different canonical than user" GSC issue.
     // /jobs/remote/ and /jobs/remote are the same page but different URLs.
@@ -476,12 +600,7 @@ export async function middleware(request: NextRequest) {
             const cacheKey = `job:${jobId}`;
             const cached = cacheLookupGet(cacheKey);
             if (cached?.gone) {
-                return styled410({
-                    badge: 'Position Removed',
-                    heading: 'This position is no longer available',
-                    subtext: `This job listing has been permanently removed. Hundreds of similar ${brand.niche.short} positions are open right now.`,
-                    title: `Position Removed | ${brand.name}`,
-                });
+                return cached.reason === 'quarantined' ? quarantinedJob410() : removedJob410();
             }
             // Cached "live" result short-circuits the DB call entirely.
             if (cached && !cached.gone) {
@@ -492,7 +611,7 @@ export async function middleware(request: NextRequest) {
                 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.PROD_SUPABASE_SERVICE_ROLE_KEY;
                 if (supabaseUrl && supabaseKey) {
                     const res = await fetch(
-                        `${supabaseUrl}/rest/v1/jobs?id=eq.${jobId}&select=id,is_published,expires_at`,
+                        `${supabaseUrl}/rest/v1/jobs?id=eq.${jobId}&select=id,is_published,expires_at,${LISTING_GATE_SELECT}`,
                         {
                             headers: {
                                 'apikey': supabaseKey,
@@ -521,12 +640,18 @@ export async function middleware(request: NextRequest) {
                         const dateExpired = !!row?.expires_at && new Date(row.expires_at).getTime() < Date.now();
                         if (rows.length === 0 || !row.is_published || dateExpired) {
                             cacheLookupSet(cacheKey, true);
-                            return styled410({
-                                badge: 'Position Removed',
-                                heading: 'This position is no longer available',
-                                subtext: `This job listing has been permanently removed. Hundreds of similar ${brand.niche.short} positions are open right now.`,
-                                title: `Position Removed | ${brand.name}`,
-                            });
+                            return removedJob410();
+                        }
+                        // P10 not-found-status #1: a published, unexpired row the
+                        // profession quarantine rejects (non-NP professionClass, or
+                        // an unclassified non-NP title) is not a listing on this
+                        // board. The page's PUBLISHED_LISTING_WHERE fetch misses it
+                        // and calls notFound(), but that route streams behind
+                        // loading.tsx, so the status was already a cached 200
+                        // (soft 404). Rule here with the same GLOBAL_EXCLUSIONS.
+                        if (passesListingQuarantine(row) === false) {
+                            cacheLookupSet(cacheKey, true, 'quarantined');
+                            return quarantinedJob410();
                         }
                         // Live — cache the negative so subsequent requests skip the round-trip.
                         cacheLookupSet(cacheKey, false);
@@ -722,6 +847,7 @@ export async function middleware(request: NextRequest) {
     // can never resolve to a real page. Empty-but-structurally-valid pages
     // (e.g. /jobs/remote/florida with 0 jobs today) stay at the page-level 404
     // since they may legitimately come back when new jobs are posted.
+    let cityNotFound = false;
     if (pathname.startsWith('/jobs/')) {
         const segs = pathname.split('/').filter(Boolean); // ['jobs', ...]
         // /jobs/state/{x} — state listing
@@ -779,13 +905,28 @@ export async function middleware(request: NextRequest) {
             }
         }
         // /jobs/city/{slug} — generic city listing
-        // Skip strict validation: page handler does ambiguous-slug DB resolution
-        // (e.g., "virginia-beach" without state code → resolves to "virginia-beach-va").
-        // 404 stays at page level for now; legacy 404s will be drained via P2 cron.
+        // No structural 410: the page does ambiguous-slug DB resolution
+        // (e.g., "virginia-beach" without state code → 308 to "virginia-beach-va"),
+        // so an unknown slug is a 404, not a permanent gone.
+        //
+        // P10 not-found-status #2: the page's own notFound() (unknown city, or
+        // below its MIN_JOBS gate) answers 404 with the bare __next_error__
+        // shell on this on-demand ISR route. Rule here with the page's own
+        // predicates (lib/pseo/listing-gates-edge.ts) and rewrite a known
+        // not-found to the branded app/not-found.tsx. Only a complete,
+        // successful lookup rules; any failure lets the page render.
+        else if (segs.length === 3 && segs[1] === 'city' && (request.method === 'GET' || request.method === 'HEAD')) {
+            cityNotFound = await isKnownCityHubNotFound(segs[2]);
+        }
     }
 
     // ── Content-Security-Policy ───────────────────────────────────────
-    const isLocalhost = request.headers.get('host')?.includes('localhost');
+    // P10 platform-routing-db #7: loopback by exact hostname. The old
+    // `host.includes('localhost')` missed 127.0.0.1 / [::1] (so the CSP
+    // added upgrade-insecure-requests and local client fetches failed with
+    // ERR_SSL_PROTOCOL_ERROR) and matched any host merely containing the
+    // word, e.g. localhost.attacker.example.
+    const isLocalhost = isLoopbackHostname(hostnameFromHostHeader(request.headers.get('host')));
 
     // P7 runtime fix D1: the per-request CSP nonce is GONE — it could
     // never work on this app. ~164 routes are prerendered/ISR: their HTML
@@ -847,6 +988,10 @@ export async function middleware(request: NextRequest) {
     }
 
     const cspHeader = cspDirectives.join('; ');
+
+    if (cityNotFound) {
+        return notFoundRewrite(request, cspHeader);
+    }
 
     // ── Trailing-slash + case normalization moved ABOVE the 410 gates ─
     // (B26) — see the top of this function. Keeping the section marker here

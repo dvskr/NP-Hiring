@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Search } from 'lucide-react'
 import UserMenu from './UserMenu'
 import { User } from '@supabase/supabase-js'
 import { calculateCompleteness, ProfileData } from '@/lib/profile-completeness'
+import { loadHeaderProfile, clearHeaderProfile } from './header-profile-store'
 
 interface UserProfile {
   email: string
@@ -87,76 +87,72 @@ export default function HeaderAuth({ onNavigate, onRoleChange }: HeaderAuthProps
 
   useEffect(() => {
     const supabase = createClient()
+    let active = true
+
+    // Every HeaderAuth instance (and UserMenu) shares one in-flight
+    // /api/auth/profile request and its cached result via loadHeaderProfile.
+    const applyProfile = async (authUser: User, force = false) => {
+      const profileData = await loadHeaderProfile(authUser.id, { force })
+      if (!active || !profileData) return
+      setProfile({
+        email: authUser.email ?? '',
+        role: profileData.role,
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        avatarUrl: profileData.avatarUrl,
+      })
+      onRoleChange?.(profileData.role)
+      if (profileData.role === 'job_seeker') {
+        setProfileCompleteness(calculateCompleteness(profileData as unknown as ProfileData).percentage)
+      }
+    }
 
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-
-      if (user) {
-        try {
-          const res = await fetch('/api/auth/profile')
-          if (res.ok) {
-            const profileData = await res.json()
-            setProfile({
-              email: user.email!,
-              role: profileData.role,
-              firstName: profileData.firstName,
-              lastName: profileData.lastName,
-              avatarUrl: profileData.avatarUrl,
-            })
-            onRoleChange?.(profileData.role)
-            if (profileData.role === 'job_seeker') {
-              setProfileCompleteness(calculateCompleteness(profileData as ProfileData).percentage)
-            }
-          }
-        } catch (err) {
-          console.error('Failed to fetch profile:', err)
-        }
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!active) return
+        setUser(user)
+        if (user) await applyProfile(user)
+      } catch (err) {
+        console.error('Failed to load the signed-in user:', err)
+      } finally {
+        if (active) setLoading(false)
       }
-
-      setLoading(false)
     }
 
     getUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
+      (event, session) => {
+        // INITIAL_SESSION and TOKEN_REFRESHED carry no profile change; the
+        // mount-time getUser above already loads the profile.
+        if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return
 
-        if (session?.user) {
-          try {
-            const res = await fetch('/api/auth/profile')
-            if (res.ok) {
-              const profileData = await res.json()
-              setProfile({
-                email: session.user.email!,
-                role: profileData.role,
-                firstName: profileData.firstName,
-                lastName: profileData.lastName,
-                avatarUrl: profileData.avatarUrl,
-              })
-              onRoleChange?.(profileData.role)
-              if (profileData.role === 'job_seeker') {
-                setProfileCompleteness(calculateCompleteness(profileData as ProfileData).percentage)
-              }
-            }
-          } catch (err) {
-            console.error('Failed to fetch profile:', err)
-          }
+        const authUser = session?.user ?? null
+        setUser(authUser)
+
+        if (authUser) {
+          // SIGNED_IN for an already-loaded user resolves from the cache;
+          // USER_UPDATED means name/avatar may have changed, so refetch.
+          void applyProfile(authUser, event === 'USER_UPDATED')
         } else {
+          clearHeaderProfile()
           setProfile(null)
           onRoleChange?.(null)
         }
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   if (loading) {
     return (
       <div className="flex items-center gap-3">
-        <div className="w-16 h-8 animate-pulse rounded-xl" style={{
+        <div className="w-16 h-8 motion-safe:animate-pulse rounded-xl" style={{
           backgroundColor: '#EDF2EE',
           boxShadow: '4px 4px 10px rgba(0,0,0,0.04), inset 2px 2px 4px rgba(255,255,255,0.7)',
         }} />

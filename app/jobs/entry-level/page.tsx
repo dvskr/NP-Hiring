@@ -11,7 +11,7 @@ import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
@@ -70,7 +70,7 @@ export default async function EntryLevelPage({ searchParams }: PageProps) {
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_entrylevel.webp`}
         heroAlt={`Entry-level ${brand.niche.short} new graduate careers`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'Entry-Level']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Entry Level", url: `${brand.baseUrl}/jobs/entry-level` }])}
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('entry-level') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Entry-Level"
         headlineLine2={brand.niche.short}

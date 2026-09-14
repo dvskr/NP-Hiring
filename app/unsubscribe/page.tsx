@@ -29,16 +29,20 @@ function UnsubscribeContent() {
             try {
                 setLoading(true);
                 const response = await fetch(`/api/email/unsubscribe?token=${encodeURIComponent(token)}`);
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
 
                 if (response.ok && data.success) {
                     setSuccess(true);
                     setError(null);
                 } else {
                     setSuccess(false);
-                    setError(data.error || 'This unsubscribe link may be invalid or expired.');
+                    // The API returns `message`, but its raw wording ("Invalid token")
+                    // is not user facing; keep the friendly copy for a bad link.
+                    setError(response.status === 404 || response.status === 400
+                        ? 'This unsubscribe link may be invalid or expired.'
+                        : data.message || 'This unsubscribe link may be invalid or expired.');
                 }
-            } catch (err) {
+            } catch {
                 setSuccess(false);
                 setError('An unexpected error occurred. Please try again later.');
             } finally {
@@ -58,22 +62,23 @@ function UnsubscribeContent() {
         setResubscribeError(null);
 
         try {
-            // Try the preferences API first
-            const response = await fetch('/api/email/preferences', {
+            // The canonical resubscribe endpoint: restores isSubscribed AND lifts
+            // the unsubscribe suppression the send-gates check.
+            const response = await fetch('/api/email/unsubscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, isSubscribed: true }),
+                body: JSON.stringify({ token }),
             });
 
-            const data = await response.json();
+            const data = await response.json().catch(() => ({}));
 
             if (response.ok && data.success) {
                 setResubscribed(true);
                 setSuccess(false);
             } else {
-                setResubscribeError(data.error || 'Failed to resubscribe. Please try again.');
+                setResubscribeError(data.message || 'We could not resubscribe you. Please try again.');
             }
-        } catch (err) {
+        } catch {
             setResubscribeError('An unexpected error occurred. Please try again later.');
         } finally {
             setResubscribing(false);

@@ -54,7 +54,7 @@ const FAQS = [
   },
   {
     q: 'Where does this benchmark data come from?',
-    a: `Published listings on this board that disclose a salary range. We take each posting's range midpoint, then report the median and the 25th and 75th percentiles per state. Listings whose pay was inferred rather than posted by the employer are excluded, so every figure traces to a range a real employer chose to publish.`,
+    a: `Published listings on this board that disclose a salary range. We take each posting's range midpoint, then report the median and the 25th and 75th percentiles per state. Listings whose pay was inferred rather than posted by the employer are excluded, as are expired listings, hourly or contract rates, and roles that are not ${brand.niche.short} positions, so every figure traces to an annual range a real employer chose to publish. It is the same pool the salary guide uses, and a state gets a figure here only when it clears the same sample gate there.`,
   },
   {
     q: 'Why is my state missing from the dropdown?',
@@ -145,7 +145,7 @@ export default function SalaryBenchmarkPage() {
             assumptions={[
               'Each posting contributes the midpoint of its disclosed salary range. We report the median plus the 25th and 75th percentiles of those midpoints.',
               `A state is published only when it has at least ${BENCHMARK_MIN_POSTINGS} salaried postings from at least ${BENCHMARK_MIN_EMPLOYERS} distinct employers, so no single employer's pay scale can be read out of an aggregate.`,
-              'Listings whose pay was inferred rather than posted by the employer are excluded entirely.',
+              `The pool is the same one the salary guide publishes from: live ${brand.niche.descriptor} titles with an annual salary range the employer posted. Listings whose pay was inferred rather than posted, expired listings, hourly or contract rates, and roles that are not ${brand.niche.short} positions are excluded entirely.`,
               'Figures refresh daily from live published listings on this board.',
               `National context comes from ${STAT_SOURCES.averageSalary.source}: a median annual wage of ${STAT_SOURCES.averageSalary.formatted}.`,
             ]}

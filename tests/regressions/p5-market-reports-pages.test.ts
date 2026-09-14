@@ -84,9 +84,16 @@ describe('P5 reports — live figures derive, never hand-typed', () => {
         expect(payPage).toContain('loadDisclosureCohort');
     });
 
-    it('queries omit on failure (return null) instead of falling back', () => {
-        expect(queries).toContain('catch (error)');
-        expect(queries).toContain('return null;');
+    it('queries never fall back to a constant: retry, throw at request time, omit only at build', () => {
+        // P10: a caught failure returned null at request time and ISR cached
+        // the degraded render for the whole revalidate window. The loaders now
+        // go through loadLiveReportData (lib/reports/live-load.ts), which
+        // throws so the previous good render is kept, and resolves null
+        // (the honest omission below) only during `next build`.
+        expect(queries).toContain('loadLiveReportData(');
+        const liveLoad = read('lib/reports/live-load.ts');
+        expect(liveLoad).toContain('if (isBuildPhase) return null;');
+        expect(liveLoad).toContain('throw lastError');
         // …and the pages handle the omission honestly.
         expect(reportPage).toContain('{!snapshot && (');
         expect(payPage).toContain('unavailable right now');

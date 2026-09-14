@@ -57,3 +57,39 @@ export function parseReviewedAt(
     }
     return { ok: true, value: date };
 }
+
+/** The only post states the editor, the public pages and the sync script use. */
+export const BLOG_STATUSES = ['draft', 'published'] as const;
+export type BlogStatus = (typeof BLOG_STATUSES)[number];
+
+/**
+ * Validate a status payload. An unknown value used to be persisted verbatim,
+ * which silently hid the post from every `status: 'published'` read.
+ */
+export function parseBlogStatus(
+    input: unknown,
+): { ok: true; value: BlogStatus } | { ok: false; error: string } {
+    if (typeof input === 'string' && (BLOG_STATUSES as readonly string[]).includes(input)) {
+        return { ok: true, value: input as BlogStatus };
+    }
+    return { ok: false, error: `status must be one of ${BLOG_STATUSES.map((s) => `'${s}'`).join(', ')}` };
+}
+
+/** Validate a title payload: a non-blank string, stored trimmed. */
+export function parseBlogTitle(
+    input: unknown,
+): { ok: true; value: string } | { ok: false; error: string } {
+    if (typeof input !== 'string' || !input.trim()) {
+        return { ok: false, error: 'title must be a non-empty string' };
+    }
+    return { ok: true, value: input.trim() };
+}
+
+/** True for Prisma's "record to update/delete does not exist" error (P2025). */
+export function isRecordNotFound(err: unknown): boolean {
+    return (
+        typeof err === 'object' &&
+        err !== null &&
+        (err as { code?: unknown }).code === 'P2025'
+    );
+}

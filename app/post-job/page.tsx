@@ -3,7 +3,6 @@
 import { brand } from '@/config/brand';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
@@ -27,88 +26,12 @@ import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 
-const FREE_EMAIL_DOMAINS = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com', 'icloud.com', 'mail.com', 'protonmail.com', 'ymail.com', 'live.com', 'msn.com', 'googlemail.com'];
-
-const jobPostingSchema = z.object({
-  title: z.string().min(10, 'Job title must be at least 10 characters'),
-  companyName: z.string().min(1, 'Company name is required'),
-  companyWebsite: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  contactEmail: z.string().email('Must be a valid email address').refine(
-    (email) => {
-      const domain = email.toLowerCase().split('@')[1];
-      return !FREE_EMAIL_DOMAINS.includes(domain);
-    },
-    { message: 'Please use your company email (not Gmail, Yahoo, etc.)' }
-  ),
-  location: z.string().min(1, 'Location is required'),
-  mode: z.enum(['Remote', 'Hybrid', 'In-Person']),
-  jobType: z.enum(['Full-Time', 'Part-Time', 'Contract', 'Per Diem']),
-  salaryPeriod: z.enum(['hourly', 'weekly', 'monthly', 'annual']).optional(),
-  salaryMin: z.number().positive('Minimum salary must be a positive number').optional().nullable(),
-  salaryMax: z.number().positive('Maximum salary must be a positive number').optional().nullable(),
-  salaryCompetitive: z.boolean().optional(),
-  // Validation operates on visible-text length (HTML stripped) to match the
-  // character counter shown in the UI. Quill stores formatted HTML, so a
-  // raw .length() check on the field includes <p>/<ul>/<li>/<strong>/etc.
-  // markup that the user can't see — leading to the bug where the counter
-  // showed 4,880/5,000 but the form refused to advance because the HTML
-  // was ~6,000+ chars.
-  description: z.string()
-    .refine(
-      (html) => html.replace(/<[^>]*>/g, '').length >= 200,
-      { message: 'Job description must be at least 200 characters' }
-    )
-    .refine(
-      (html) => html.replace(/<[^>]*>/g, '').length <= 25000,
-      { message: 'Job description cannot exceed 25,000 characters' }
-    ),
-  applyUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  applyOnPlatform: z.boolean().optional(),
-  pricingTier: z.enum(['pro']),
-  benefits: z.array(z.string()).optional(),
-  specialty: z.string().optional(),
-  setting: z.string().optional(),
-  population: z.string().optional(),
-  companyLogoUrl: z.string().optional(),
-  // Experience requirements — picker is required so we can't accept a job
-  // with no experience signal at all. minYearsExperience must match one of
-  // the EXPERIENCE_BUCKETS values; maxYearsExperience comes from the same
-  // table (paired with the picked min). newGradFriendly is the independent
-  // "we'll also consider exceptional new grads" flag.
-  minYearsExperience: z
-    .number()
-    .int()
-    .refine((v) => EXPERIENCE_BUCKETS.some((b) => b.min === v), {
-      message: 'Please select an experience level',
-    }),
-  maxYearsExperience: z.number().int().nullable(),
-  newGradFriendly: z.boolean().optional(),
-  experienceQualifier: z
-    .string()
-    .max(80, 'Experience note must be 80 characters or fewer')
-    .optional()
-    .or(z.literal('')),
-}).superRefine((data, ctx) => {
-  if (!data.salaryCompetitive) {
-    if (!data.salaryPeriod) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Please select a pay period', path: ['salaryPeriod'] });
-    }
-    if (!data.salaryMin || data.salaryMin <= 0) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Minimum salary is required', path: ['salaryMin'] });
-    }
-    if (!data.salaryMax || data.salaryMax <= 0) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Maximum salary is required', path: ['salaryMax'] });
-    }
-    if (data.salaryMin && data.salaryMax && data.salaryMin > data.salaryMax) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Minimum salary cannot be greater than maximum', path: ['salaryMin'] });
-    }
-  }
-  if (!data.applyOnPlatform && (!data.applyUrl || data.applyUrl.trim() === '')) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Apply URL is required when not using platform applications', path: ['applyUrl'] });
-  }
-});
-
-type JobPostingFormData = z.infer<typeof jobPostingSchema>;
+import { jobPostingSchema, type JobPostingFormData } from './_lib/job-posting-schema';
+import {
+  hasMeaningfulDraftContent,
+  shouldDismissResumeBanner,
+  type DraftValues,
+} from './_lib/draft-hydration';
 
 const workModes = ['Remote', 'Hybrid', 'In-Person'] as const;
 const jobTypes = ['Full-Time', 'Part-Time', 'Contract', 'Per Diem'] as const;
@@ -379,11 +302,14 @@ function PostJobContent() {
   // draft. Used to gate the "Welcome back" banner so it never shows on
   // a fresh empty session.
   const [hydratedFromExisting, setHydratedFromExisting] = useState(false);
-  // Banner dismissal is sticky — flips true the first time auto-save
-  // fires after hydration, and stays true. Without this latch, the
-  // banner blinked in/out on every save because the visibility was
-  // gated on `saveStatus !== 'saving'`.
+  // Banner dismissal is sticky: flips true the first time an auto-save
+  // carries an actual edit after hydration, and stays true. Without this
+  // latch, the banner blinked in/out on every save because the visibility
+  // was gated on `saveStatus !== 'saving'`.
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  // Values as they stood right after a draft was restored. An auto-save
+  // that only echoes these back (no employer edit) leaves the banner up.
+  const restoredSnapshotRef = useRef<DraftValues | null>(null);
   // Auto-save state. Mirrors LinkedIn/Indeed:
   //   idle    — nothing to save yet (form empty, or auto-save disabled)
   //   saving  — request in flight
@@ -470,8 +396,14 @@ function PostJobContent() {
           setUserRole(role);
           // Only employers and admins proceed to the form (auto-fill, etc.).
           if (role === 'employer' || role === 'admin') {
-            if (user.email) {
+            // Suggest the sign-in email only while the field is empty, so a
+            // restored draft's contact email is never overwritten when this
+            // check resolves after hydration.
+            if (user.email && !getValues('contactEmail')) {
               setValue('contactEmail', user.email);
+              if (restoredSnapshotRef.current) {
+                restoredSnapshotRef.current = { ...restoredSnapshotRef.current, contactEmail: user.email };
+              }
             }
           }
           // For all other roles (job_seeker / null / unknown) the render
@@ -484,7 +416,7 @@ function PostJobContent() {
       }
     }
     checkUser();
-  }, [setValue, router]);
+  }, [setValue, getValues, router]);
 
   // F3: resolve the paid-posting gate once auth/role are known. Fails OPEN on
   // any fetch error — the checkout APIs still return a stable 503 code, and
@@ -530,6 +462,14 @@ function PostJobContent() {
   //   3. localStorage cache (offline / fast-path before /api/job-draft round-trip)
   // Whichever wins, fields get prefilled and `draftLoaded` flips true.
   useEffect(() => {
+    // Every restore path runs through here so the resume banner and its
+    // dismissal snapshot can never drift apart between paths.
+    const markRestored = (restored: DraftValues) => {
+      if (!hasMeaningfulDraftContent(restored)) return;
+      restoredSnapshotRef.current = getValues() as DraftValues;
+      setHydratedFromExisting(true);
+    };
+
     const loadFormData = async () => {
       const resumeToken = searchParams.get('resume');
 
@@ -547,7 +487,7 @@ function PostJobContent() {
             if (formData.companyLogoUrl) setLogoPreview(formData.companyLogoUrl);
             setLastSavedAt(new Date());
             setSaveStatus('saved');
-            setHydratedFromExisting(true);
+            markRestored(formData);
             setDraftLoaded(true);
             return;
           }
@@ -571,6 +511,7 @@ function PostJobContent() {
             if (formData.companyLogoUrl) setLogoPreview(formData.companyLogoUrl);
             setLastSavedAt(new Date(data.draft.savedAt));
             setSaveStatus('saved');
+            markRestored(formData);
             setDraftLoaded(true);
             return;
           }
@@ -585,18 +526,14 @@ function PostJobContent() {
       if (savedData) {
         try {
           const parsedData: JobPostingFormData = JSON.parse(savedData);
-          // Only treat this as "restored" if it has meaningful content,
-          // not just defaults that the form would set anyway.
-          const isMeaningful =
-            (parsedData.title || '').trim().length > 0 ||
-            (parsedData.companyName || '').trim().length > 0 ||
-            ((parsedData.description || '').replace(/<[^>]*>/g, '').trim().length > 0);
           Object.keys(parsedData).forEach((key: string) => {
             setValue(key as keyof JobPostingFormData, parsedData[key as keyof JobPostingFormData]);
           });
           if (parsedData.salaryCompetitive) setSalaryCompetitive(true);
           if (parsedData.companyLogoUrl) setLogoPreview(parsedData.companyLogoUrl);
-          if (isMeaningful) setHydratedFromExisting(true);
+          // Only treated as restored when it has meaningful content, not
+          // just defaults that the form would set anyway.
+          markRestored(parsedData);
         } catch (err) {
           console.error('Error loading saved form data:', err);
         }
@@ -604,7 +541,7 @@ function PostJobContent() {
       setDraftLoaded(true);
     };
     loadFormData();
-  }, [setValue, searchParams]);
+  }, [setValue, getValues, searchParams]);
 
   // Auto-save loop. Watches the live form state and POSTs the entire
   // form data to /api/job-draft a few seconds after typing stops.
@@ -659,9 +596,12 @@ function PostJobContent() {
       const payload = JSON.stringify(watchedFormData);
       if (payload === lastSavedPayloadRef.current) return;
       setSaveStatus('saving');
-      // Permanently dismiss the resume banner on the first user-driven
-      // save — keeps the banner from blinking on every subsequent save.
-      setBannerDismissed(true);
+      // Permanently dismiss the resume banner on the first save that
+      // carries an employer edit. A save that only echoes the restored
+      // draft back (the first debounce after a reload) leaves it up.
+      if (shouldDismissResumeBanner(restoredSnapshotRef.current, watchedFormData as DraftValues)) {
+        setBannerDismissed(true);
+      }
       try {
         const res = await fetch('/api/job-draft', {
           method: 'POST',
@@ -708,9 +648,17 @@ function PostJobContent() {
         if (cancelled || !data?.found || !data.profile) return;
 
         const current = getValues();
+        // A prefill is not an employer edit: fold it into the restored
+        // snapshot so it does not dismiss the resume banner.
+        const foldIntoSnapshot = (field: keyof JobPostingFormData, value: string) => {
+          if (restoredSnapshotRef.current) {
+            restoredSnapshotRef.current = { ...restoredSnapshotRef.current, [field]: value };
+          }
+        };
         const fill = (field: keyof JobPostingFormData, value: string | undefined) => {
           if (value && !current[field]) {
             setValue(field, value as never, { shouldDirty: false, shouldValidate: false });
+            foldIntoSnapshot(field, value);
           }
         };
 
@@ -719,6 +667,7 @@ function PostJobContent() {
 
         if (data.profile.companyLogoUrl && !current.companyLogoUrl) {
           setValue('companyLogoUrl', data.profile.companyLogoUrl, { shouldDirty: false });
+          foldIntoSnapshot('companyLogoUrl', data.profile.companyLogoUrl);
           setLogoPreview(data.profile.companyLogoUrl);
         }
       } catch { /* silent — pre-fill is best-effort */ }

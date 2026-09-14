@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Send, Loader2, CheckCircle, AlertCircle, Mail } from 'lucide-react';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+
+/** Mirrors the server cap in POST /api/employer/messages. */
+const SUBJECT_MAX_LENGTH = 200;
 
 interface ComposeMessageModalProps {
     recipientId: string;
@@ -23,10 +26,14 @@ export default function ComposeMessageModal({
     onSent,
 }: ComposeMessageModalProps) {
     const [subject, setSubject] = useState(
-        initialJobTitle ? `Regarding: ${initialJobTitle}` : ''
+        (initialJobTitle ? `Regarding: ${initialJobTitle}` : '').slice(0, SUBJECT_MAX_LENGTH)
     );
     const [body, setBody] = useState('');
     const [sending, setSending] = useState(false);
+    // Synchronous in-flight guard: `sending` state has not re-rendered between
+    // two clicks dispatched in the same tick, so only a ref stops a second POST.
+    // It stays set after a success so nothing can resend during the close delay.
+    const inFlightRef = useRef(false);
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
     const [inmailUsage, setInmailUsage] = useState<{ used: number; limit: number | null; unlimited: boolean } | null>(null);
@@ -51,8 +58,9 @@ export default function ComposeMessageModal({
     const inmailRemaining = inmailUsage && !inmailUsage.unlimited && inmailUsage.limit !== null ? inmailUsage.limit - inmailUsage.used : null;
 
     const handleSend = async () => {
-        if (!subject.trim() || !body.trim()) return;
+        if (!subject.trim() || !body.trim() || inFlightRef.current) return;
 
+        inFlightRef.current = true;
         setSending(true);
         setStatus('idle');
         setErrorMsg('');
@@ -75,6 +83,7 @@ export default function ComposeMessageModal({
                 try { msg = JSON.parse(text).error || msg; } catch { /* */ }
                 setErrorMsg(msg);
                 setStatus('error');
+                inFlightRef.current = false;
                 return;
             }
 
@@ -86,12 +95,13 @@ export default function ComposeMessageModal({
         } catch {
             setErrorMsg('Network error. Please try again.');
             setStatus('error');
+            inFlightRef.current = false;
         } finally {
             setSending(false);
         }
     };
 
-    const canSend = subject.trim().length > 0 && body.trim().length > 0 && !sending && !inmailLimitReached;
+    const canSend = subject.trim().length > 0 && body.trim().length > 0 && !sending && status !== 'success' && !inmailLimitReached;
 
     return (
         <div
@@ -185,6 +195,7 @@ export default function ComposeMessageModal({
                             type="text"
                             value={subject}
                             onChange={(e) => setSubject(e.target.value)}
+                            maxLength={SUBJECT_MAX_LENGTH}
                             placeholder="Enter subject..."
                             className="w-full px-3 py-2.5 rounded-lg text-base"
                             style={{

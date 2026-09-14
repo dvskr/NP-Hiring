@@ -7,8 +7,8 @@ import { requireApiAdmin } from '@/lib/auth/require-api-admin';
  * POST /api/admin/email/templates — Create/update a template
  * DELETE /api/admin/email/templates?id=xxx — Delete a template
  */
-export async function GET() {
-    const authError = await requireApiAdmin();
+export async function GET(req: Request) {
+    const authError = await requireApiAdmin(req);
     if (authError) return authError;
 
     try {
@@ -31,7 +31,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-    const authError = await requireApiAdmin();
+    const authError = await requireApiAdmin(req);
     if (authError) return authError;
 
     try {
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-    const authError = await requireApiAdmin();
+    const authError = await requireApiAdmin(req);
     if (authError) return authError;
 
     const { searchParams } = new URL(req.url);

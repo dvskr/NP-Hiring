@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { config } from '@/lib/config';
+import { logger } from '@/lib/logger';
 
 const FREE_EMAIL_DOMAINS = [
   'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
@@ -28,8 +29,14 @@ export async function GET() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
+    // Anonymous callers get the same 401 JSON as every other
+    // /api/employer/* route. Every in-app consumer treats !res.ok as
+    // "no quota information" and falls back to neutral copy.
     if (!user || !user.email) {
-      return NextResponse.json({ eligible: false, reason: 'unauthenticated' });
+      return NextResponse.json(
+        { error: 'Unauthorized', eligible: false, reason: 'unauthenticated' },
+        { status: 401 },
+      );
     }
 
     const profile = await prisma.userProfile.findUnique({
@@ -62,8 +69,11 @@ export async function GET() {
       freeDurationDays: config.freeDurationDays,
     });
   } catch (err) {
+    // Log the detail server-side; never echo err.message (it can carry
+    // Prisma query text or connection details) to the client.
+    logger.error('Error checking employer free quota status', err);
     return NextResponse.json(
-      { eligible: false, reason: 'server-error', error: err instanceof Error ? err.message : 'unknown' },
+      { eligible: false, reason: 'server-error', error: 'Unable to check free posting status' },
       { status: 500 },
     );
   }

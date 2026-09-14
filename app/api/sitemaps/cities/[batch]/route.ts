@@ -50,11 +50,14 @@ const SITEMAP_CATEGORY_SET = new Set(SITEMAP_CATEGORIES);
 // gates exactly so we never advertise a URL that renders noindex:
 //   • Category × City: pseoStats.totalJobs ≥ MIN_SITEMAP_JOBS (matches
 //     MIN_JOBS_FOR_INDEX = 3 in lib/pseo/category-city-template.tsx)
-//   • Setting × State: pseoStats.totalJobs ≥ 1 (state pages render content
-//     even at low counts since state-level demand is broader)
+//   • Setting × State: pseoStats.totalJobs ≥ MIN_SETTING_STATE_SITEMAP_JOBS
+//     (matches the `stats.totalJobs < 3` noindex gate in
+//     lib/pseo/setting-state-template.tsx generateMetadata: 1 or 2 job
+//     pages render noindex,follow, so they must not be advertised)
 //   • City population ≥ MIN_SITEMAP_POPULATION (defense-in-depth)
 //   • pseoStats row must be fresh (≤ 36h since last aggregator run)
 const MIN_SITEMAP_JOBS = 3;
+const MIN_SETTING_STATE_SITEMAP_JOBS = 3;
 const MIN_SITEMAP_POPULATION = 10000;
 
 // 36h = 6x the 6h aggregate-pseo cron cadence ("15 0,6,12,18 * * *" in
@@ -119,12 +122,14 @@ async function getActiveCategoryCityUrls(): Promise<SitemapEntry[]> {
   // Setting × State URLs — quality-gated via pseoStats.
   // GSC Fix (P1.1): previously emitted all 13 settings × 51 states = 663 URLs
   // unconditionally. Most had 0 matching jobs and 404'd, polluting GSC with
-  // "Not found" entries. Now only emit URLs where ≥1 active job exists.
+  // "Not found" entries. P10 platform-routing-db #5: the gate was then ≥ 1,
+  // but the page noindexes below 3 jobs, so 1 and 2 job pages were
+  // advertised while rendering noindex,follow. Now ≥ 3, same as the page.
   try {
     const settingStateRows = await prisma.pseoStats.findMany({
       where: {
         type: 'setting-state',
-        totalJobs: { gte: 1 },
+        totalJobs: { gte: MIN_SETTING_STATE_SITEMAP_JOBS },
         updatedAt: { gte: freshnessThreshold },
       },
       select: { categorySlug: true, locationSlug: true, updatedAt: true },

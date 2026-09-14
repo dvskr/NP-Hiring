@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
-import { Settings, LayoutDashboard, LogOut, ChevronDown, Shield, MessageSquare } from 'lucide-react'
+import { Settings, LogOut, ChevronDown, Shield } from 'lucide-react'
 
 interface UserMenuProps {
   user: {
@@ -22,7 +22,9 @@ interface UserMenuProps {
 export default function UserMenu({ user, profileCompleteness = 100, isMobile = false }: UserMenuProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(user.avatarUrl || null)
+  // HeaderAuth already loads the profile (shared, deduplicated) and passes
+  // avatarUrl in; UserMenu no longer issues its own profile request.
+  const avatarUrl = user.avatarUrl || null
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -33,22 +35,6 @@ export default function UserMenu({ user, profileCompleteness = 100, isMobile = f
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const profileRes = await fetch('/api/auth/profile')
-        if (profileRes.ok) {
-          const profile = await profileRes.json()
-          setAvatarUrl(profile.avatarUrl)
-        }
-      } catch (error) {
-        console.error('Failed to fetch profile:', error)
-      }
-    }
-
-    fetchProfile()
   }, [])
 
   const handleSignOut = async () => {

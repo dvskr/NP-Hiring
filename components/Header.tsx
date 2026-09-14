@@ -2,18 +2,20 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Menu, X, LayoutDashboard, Briefcase, MessageSquare, Settings, Calculator, DollarSign, Building2, BookOpen, Search, HelpCircle, Info, Mail, MapPin, PenSquare, GraduationCap, UserCheck, Users, Bookmark, FileText, Activity, Workflow, Plus } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Menu, X, LayoutDashboard, Briefcase, MessageSquare, Calculator, DollarSign, Building2, BookOpen, Search, HelpCircle, Info, Mail, MapPin, PenSquare, GraduationCap, UserCheck, Users, Bookmark, FileText, Activity, Workflow, Plus } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 // SEO Fix H5: use LazyMotion + the lightweight `m` namespace instead of the
 // full `motion` import. Header renders on every page, so importing the full
 // framer-motion namespace bloats every page's JS bundle. LazyMotion ships
 // only the animation features used and is the recommended pattern (matches
 // HomepageHero.tsx).
-import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
+import { LazyMotion, domAnimation, m, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import HeaderAuth from '@/components/auth/HeaderAuth';
 import { WORDMARK } from '@/config/niche/copy';
 import { brand } from '@/config/brand';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { getMobileMenuMotion } from '@/components/header-nav-motion';
 
 /*
  * Header — Floating claymorphic navbar.
@@ -25,6 +27,14 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const pathname = usePathname();
+  const toggleRef = useRef<HTMLButtonElement | null>(null);
+  const closeMenu = useCallback(() => setIsMenuOpen(false), []);
+  // The mobile menu is role=dialog aria-modal, so it must own keyboard focus:
+  // focus moves to its first link on open, Tab / Shift+Tab cycle inside it,
+  // Escape closes it, and focus returns to the element that opened it.
+  const menuRef = useFocusTrap<HTMLDivElement>({ isOpen: isMenuOpen, onEscape: closeMenu });
+  const reduceMotion = useReducedMotion();
+  const menuMotion = getMobileMenuMotion(reduceMotion);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -49,10 +59,6 @@ export default function Header() {
     const prevHtml = document.documentElement.style.overflow;
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsMenuOpen(false);
-    };
-    document.addEventListener('keydown', onKey);
     return () => {
       if (document.body.style.overflow === 'hidden') {
         document.body.style.overflow = prevBody;
@@ -60,8 +66,27 @@ export default function Header() {
       if (document.documentElement.style.overflow === 'hidden') {
         document.documentElement.style.overflow = prevHtml;
       }
-      document.removeEventListener('keydown', onKey);
     };
+  }, [isMenuOpen]);
+
+  // Focus return fallback. useFocusTrap restores focus to whatever was
+  // focused when the menu opened, but browsers that do not focus a button on
+  // click (Safari) leave that as <body>. When the menu closes and focus is
+  // stranded on <body> or inside the exiting overlay, hand it to the toggle.
+  const wasMenuOpen = useRef(false);
+  useEffect(() => {
+    if (isMenuOpen) {
+      wasMenuOpen.current = true;
+      return;
+    }
+    if (!wasMenuOpen.current) return;
+    wasMenuOpen.current = false;
+    const id = window.setTimeout(() => {
+      const active = document.activeElement;
+      const stranded = !active || active === document.body || !!document.getElementById('mobile-nav-menu')?.contains(active);
+      if (stranded) toggleRef.current?.focus();
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [isMenuOpen]);
 
   useEffect(() => {
@@ -210,6 +235,7 @@ export default function Header() {
                 44×44px tap target (Apple HIG / Google ≥48 informal).
                 With the 20px icon: 12px*2 + 20 = 44px. */}
             <button
+              ref={toggleRef}
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="lg:hidden transition-all"
               data-icon-btn
@@ -274,44 +300,7 @@ export default function Header() {
                   key={link.href}
                   href={link.href}
                   className="nav-pill-floating"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '7px 16px',
-                    borderRadius: '12px',
-                    fontSize: '13.5px',
-                    fontWeight: active ? 600 : 500,
-                    color: active ? '#BE185D' : '#5A4A42',
-                    backgroundColor: active ? 'rgba(190,24,93,0.10)' : 'transparent',
-                    border: active
-                      ? '1px solid rgba(190,24,93,0.15)'
-                      : '1px solid transparent',
-                    boxShadow: active
-                      ? 'inset 1px 1px 3px rgba(190,24,93,0.06), 2px 2px 6px rgba(190,24,93,0.06)'
-                      : 'none',
-                    textDecoration: 'none',
-                    transition: 'all 0.2s ease',
-                    whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={e => {
-                    if (!active) {
-                      e.currentTarget.style.backgroundColor = '#B9EBD6';
-                      e.currentTarget.style.color = '#5A4A42';
-                      e.currentTarget.style.border = '1px solid rgba(255,255,255,0.5)';
-                      e.currentTarget.style.boxShadow = '3px 3px 8px rgba(90,74,66,0.10), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 3px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02)';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (!active) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = '#5A4A42';
-                      e.currentTarget.style.border = '1px solid transparent';
-                      e.currentTarget.style.boxShadow = 'none';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }
-                  }}
+                  aria-current={active ? 'page' : undefined}
                 >
                   <NavIcon size={15} style={{ opacity: 0.85 }} />
                   {link.label}
@@ -349,10 +338,11 @@ export default function Header() {
             role="dialog"
             aria-modal="true"
             aria-label="Mobile navigation menu"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            ref={menuRef}
+            initial={menuMotion.initial}
+            animate={menuMotion.animate}
+            exit={menuMotion.exit}
+            transition={menuMotion.transition}
             className="fixed inset-0 z-[99] lg:hidden"
             style={{ top: 100 }}
           >
@@ -456,8 +446,50 @@ export default function Header() {
 
       {/* Floating nav hover styles */}
       <style>{`
+        /* Desktop nav pills. Every state lives here rather than in inline
+           styles set from mouse handlers: an inline box-shadow beats any
+           stylesheet rule, which erased the keyboard focus ring. The ring is
+           an outline so it never competes with the pill's own shadows. */
+        .nav-pill-floating {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 16px;
+          border-radius: 12px;
+          font-size: 13.5px;
+          font-weight: 500;
+          color: #5A4A42;
+          background-color: transparent;
+          border: 1px solid transparent;
+          box-shadow: none;
+          text-decoration: none;
+          white-space: nowrap;
+          transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+        .nav-pill-floating:hover:not([aria-current="page"]) {
+          background-color: #B9EBD6;
+          color: #5A4A42;
+          border-color: rgba(255,255,255,0.5);
+          box-shadow: 3px 3px 8px rgba(90,74,66,0.10), -2px -2px 5px rgba(255,255,255,0.7), inset 1px 1px 3px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02);
+          transform: translateY(-1px);
+        }
+        .nav-pill-floating[aria-current="page"] {
+          font-weight: 600;
+          color: #9D174D;
+          background-color: rgba(190,24,93,0.10);
+          border-color: rgba(190,24,93,0.15);
+          box-shadow: inset 1px 1px 3px rgba(190,24,93,0.06), 2px 2px 6px rgba(190,24,93,0.06);
+        }
+        .nav-pill-floating:focus-visible {
+          outline: 2px solid #BE185D;
+          outline-offset: 2px;
+        }
         .nav-pill-floating:active {
           transform: translateY(0) scale(0.98) !important;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .nav-pill-floating { transition: none; }
+          .nav-pill-floating:hover:not([aria-current="page"]) { transform: none; }
         }
         /* Mobile menu scroll container. 100px == the fixed overlay's top
            offset (the nav footprint), so the cap matches the visible box.
@@ -466,10 +498,17 @@ export default function Header() {
            whose visible viewport shrinks under the URL bar. overscroll-behavior
            keeps the rubber-band from chaining to the locked page behind. */
         /* "Create alert" (portaled from /jobs): icon-only below the desktop nav
-           breakpoint so it fits beside the auth controls. */
+           breakpoint so it fits beside the auth controls. The 26px bell pebble
+           plus padding and border comes to 42px, so a 44px floor keeps the
+           icon-only control at the touch minimum (content stays centered). */
         @media (max-width: 1023px) {
           #nav-alert-slot .jp-alert-btn .jp-alert-label { display: none; }
-          #nav-alert-slot .jp-alert-btn { padding: 7px 9px !important; }
+          #nav-alert-slot .jp-alert-btn {
+            padding: 7px 9px !important;
+            min-height: 44px;
+            min-width: 44px;
+            justify-content: center;
+          }
         }
 
         .mobile-menu-scroll {

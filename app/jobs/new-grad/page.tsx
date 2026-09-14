@@ -10,11 +10,15 @@ import { buildCategoryWhereClause } from '@/lib/filters';
 import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
-
+import { pluralize, cappedCount } from '@/lib/pseo/plural';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
+
+/** Top-employer groupBy cap; a list that hits it renders as "8+". The hero
+ *  shows the exact job count (the title states it exactly too). */
+const TOP_EMPLOYERS_TAKE = 8;
 
 const STORAGE_BASE = brand.assets.storageBase;
 
@@ -87,7 +91,7 @@ async function getNewGradStats() {
                 employer: 'desc',
             },
         },
-        take: 8,
+        take: TOP_EMPLOYERS_TAKE,
     });
 
     // Process with explicit typing
@@ -166,8 +170,17 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
 
     const totalPages = Math.ceil(stats.totalJobs / limit);
 
+    // One trail drives the BreadcrumbList JSON-LD and the hero's linked crumbs
+    // (P10 pseo-jobs #2), so the two can never disagree on labels or URLs.
+    const breadcrumbTrail = [
+        { name: 'Home', url: brand.baseUrl },
+        { name: 'Jobs', url: `${brand.baseUrl}/jobs` },
+        { name: 'New Grad', url: `${brand.baseUrl}/jobs/new-grad` },
+    ];
+
     return (
         <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <BreadcrumbSchema items={breadcrumbTrail} />
       {jobs.length > 0 && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `New Grad ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
@@ -176,16 +189,16 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
         bgColor="#99a7d4"
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_newgrad.webp`}
         heroAlt={`New grad ${brand.niche.short} career launch`}
-        badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'New Grad']}
+        badgeText={`${stats.totalJobs} live ${pluralize(stats.totalJobs, 'role')} · updated today`}
+        breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('new-grad') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="New Grad"
         headlineLine2={brand.niche.short}
         headlineSub="jobs to launch your career."
         stats={[
-          { value: `${stats.totalJobs}+`, label: 'positions' },
+          { value: `${stats.totalJobs}`, label: pluralize(stats.totalJobs, 'position') },
           { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$100K+', label: 'median salary' },
-          { value: `${stats.topEmployers.length}+`, label: 'employers' },
+          { value: cappedCount(stats.topEmployers.length, TOP_EMPLOYERS_TAKE), label: pluralize(stats.topEmployers.length, 'employer') },
         ]}
         description="Entry-level positions with structured mentorship, clinical supervision, fellowships, and clear paths to independent practice."
         ctaLabel="Browse New Grad Jobs"
@@ -260,8 +273,8 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
             </div>
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FEF3C7, #FDE68A)', textAlign: 'center' }}>
               <GraduationCap size={36} style={{ color: '#D97706', marginBottom: '14px' }} />
-              <div style={{ fontSize: '36px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>{stats.totalJobs}+</div>
-              <div style={{ fontSize: '13px', color: '#92400E', fontWeight: 600, marginTop: '6px' }}>Entry-Level Openings</div>
+              <div style={{ fontSize: '36px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>{stats.totalJobs}</div>
+              <div style={{ fontSize: '13px', color: '#92400E', fontWeight: 600, marginTop: '6px' }}>Entry-Level {pluralize(stats.totalJobs, 'Opening')}</div>
             </div>
 
             {/* ROW 2: Icon Cards */}

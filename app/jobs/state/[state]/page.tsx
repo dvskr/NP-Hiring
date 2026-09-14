@@ -4,9 +4,11 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, TrendingUp, Building2, Bell, DollarSign, Users, ArrowRight, Video, Stethoscope, Hospital, Briefcase } from 'lucide-react';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import { stateDioramaSrc, stateDioramaBg } from '@/components/StateImage';
 import { prisma } from '@/lib/prisma';
+import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
+import { pluralize, isAre } from '@/lib/pseo/plural';
 import { JOB_LISTING_OMIT } from '@/lib/pseo/job-listing-omit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import JobCard from '@/components/JobCard';
@@ -197,7 +199,7 @@ function parseStateParam(stateParam: string): { name: string; code: string } | n
 async function getStateJobs(stateName: string, stateCode: string, skip = 0, take = 10) {
   return prisma.job.findMany({
     where: {
-      isPublished: true,
+      ...PUBLISHED_LISTING_WHERE,
       OR: [
         { state: stateName },
         { stateCode: stateCode },
@@ -217,7 +219,7 @@ async function getStateStats(stateName: string, stateCode: string) {
   // Total jobs
   const totalJobs = await prisma.job.count({
     where: {
-      isPublished: true,
+      ...PUBLISHED_LISTING_WHERE,
       OR: [
         { state: stateName },
         { stateCode: stateCode },
@@ -228,7 +230,7 @@ async function getStateStats(stateName: string, stateCode: string) {
   // Average salary
   const salaryData = await prisma.job.aggregate({
     where: {
-      isPublished: true,
+      ...PUBLISHED_LISTING_WHERE,
       OR: [
         { state: stateName },
         { stateCode: stateCode },
@@ -250,7 +252,7 @@ async function getStateStats(stateName: string, stateCode: string) {
   const topEmployers = await prisma.job.groupBy({
     by: ['employer'],
     where: {
-      isPublished: true,
+      ...PUBLISHED_LISTING_WHERE,
       OR: [
         { state: stateName },
         { stateCode: stateCode },
@@ -276,7 +278,7 @@ async function getStateStats(stateName: string, stateCode: string) {
   // Unique employer count (for hero stat — not limited to top 5)
   const uniqueEmployerCount = await prisma.job.findMany({
     where: {
-      isPublished: true,
+      ...PUBLISHED_LISTING_WHERE,
       OR: [
         { state: stateName },
         { stateCode: stateCode },
@@ -307,7 +309,7 @@ async function getNearbyStatesWithJobs(stateName: string): Promise<{ name: strin
       const code = STATE_CODES[neighborState];
       const count = await prisma.job.count({
         where: {
-          isPublished: true,
+          ...PUBLISHED_LISTING_WHERE,
           OR: [
             { state: neighborState },
             { stateCode: code },
@@ -336,7 +338,7 @@ async function getCitiesWithJobs(stateName: string, stateCode: string): Promise<
   const cityData = await prisma.job.groupBy({
     by: ['city'],
     where: {
-      isPublished: true,
+      ...PUBLISHED_LISTING_WHERE,
       city: { not: null },
       OR: [
         { state: stateName },
@@ -408,24 +410,24 @@ export async function generateMetadata({ params, searchParams }: StatePageProps)
     const stats = await getStateStats(stateName, stateCode);
 
     const title = stats.avgSalary > 0
-      ? `${stats.totalJobs} ${brand.niche.short} Jobs in ${stateName} (${stateCode}): $${stats.avgSalary}K Avg Salary`
-      : `${stats.totalJobs} ${brand.niche.short} Jobs in ${stateName} (${stateCode}): Apply Today`;
+      ? `${stats.totalJobs} ${brand.niche.short} ${pluralize(stats.totalJobs, 'Job')} in ${stateName} (${stateCode}): $${stats.avgSalary}K Avg Salary`
+      : `${stats.totalJobs} ${brand.niche.short} ${pluralize(stats.totalJobs, 'Job')} in ${stateName} (${stateCode}): Apply Today`;
 
     const description = stats.avgSalary > 0
-      ? `Find ${stats.totalJobs} ${brand.niche.adjective} nurse practitioner jobs in ${stateName}. Average ${brand.niche.short} salary: $${stats.avgSalary}K. Telehealth, inpatient, outpatient, and private practice positions. New jobs added daily.`
-      : `Find ${stats.totalJobs} ${brand.niche.adjective} nurse practitioner jobs in ${stateName}. Telehealth, inpatient, outpatient, and private practice ${brand.niche.short} positions. New jobs added daily.`;
+      ? `Find ${stats.totalJobs} ${brand.niche.adjective} nurse practitioner ${pluralize(stats.totalJobs, 'job')} in ${stateName}. Average ${brand.niche.short} salary: $${stats.avgSalary}K. Telehealth, inpatient, outpatient, and private practice positions. New jobs added daily.`
+      : `Find ${stats.totalJobs} ${brand.niche.adjective} nurse practitioner ${pluralize(stats.totalJobs, 'job')} in ${stateName}. Telehealth, inpatient, outpatient, and private practice ${brand.niche.short} positions. New jobs added daily.`;
 
     return {
       title,
       description,
       openGraph: {
         title: stats.avgSalary > 0
-          ? `${stats.totalJobs} ${brand.niche.short} Jobs in ${stateName} | $${stats.avgSalary}k Average`
-          : `${stats.totalJobs} ${brand.niche.short} Jobs in ${stateName}`,
+          ? `${stats.totalJobs} ${brand.niche.short} ${pluralize(stats.totalJobs, 'Job')} in ${stateName} | $${stats.avgSalary}k Average`
+          : `${stats.totalJobs} ${brand.niche.short} ${pluralize(stats.totalJobs, 'Job')} in ${stateName}`,
         description,
         type: 'website',
         images: [{
-          url: `/api/og?type=page&title=${encodeURIComponent(`${brand.niche.short} Jobs in ${stateName}`)}&subtitle=${encodeURIComponent(`${stats.totalJobs} ${brand.niche.adjective} NP positions in ${stateCode}`)}`,
+          url: `/api/og?type=page&title=${encodeURIComponent(`${brand.niche.short} Jobs in ${stateName}`)}&subtitle=${encodeURIComponent(`${stats.totalJobs} ${brand.niche.adjective} NP ${pluralize(stats.totalJobs, 'position')} in ${stateCode}`)}`,
           width: 1200,
           height: 630,
           alt: `${brand.niche.short} Jobs in ${stateName}`,
@@ -581,14 +583,14 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
   // answers (same single-source pattern as app/jobs/metro/[slug]/page.tsx
   // and the B48/B52 regression guards).
   const stateFaqs = [
-    { q: `How many ${brand.niche.short} jobs are in ${stateName}?`, a: `There are currently ${stats.totalJobs} ${brand.niche.adjective} nurse practitioner positions available in ${stateName}${stats.avgSalary > 0 ? `, with an average salary of $${stats.avgSalary}K/year` : ''}. New positions are added daily.` },
+    { q: `How many ${brand.niche.short} jobs are in ${stateName}?`, a: `There ${isAre(stats.totalJobs)} currently ${stats.totalJobs} ${brand.niche.adjective} nurse practitioner ${pluralize(stats.totalJobs, 'position')} available in ${stateName}${stats.avgSalary > 0 ? `, with an average salary of $${stats.avgSalary}K/year` : ''}. New positions are added daily.` },
     { q: `What is the practice authority in ${stateName}?`, a: practiceAuthority ? practiceAuthority.details : `Practice authority in ${stateName} varies. Check state-specific NP practice regulations for the most current requirements.` },
     // No-live-data branch cites the BLS national median instead of the
     // unsourced band that used to ship here — and, because this array also
     // feeds the FAQPage JSON-LD below, into structured data.
     // Omit-or-cite: never fabricate a state salary band.
     { q: `What is the average ${brand.niche.short} salary in ${stateName}?`, a: stats.avgSalary > 0 ? `The average ${brand.niche.short} salary in ${stateName} is $${stats.avgSalary}K/year, based on ${stateName} postings on ${brand.name} that disclose pay. Salaries vary based on experience, setting, and whether the role is W-2 or 1099.` : `Too few ${stateName} postings currently disclose pay to publish a state average. Nationally, ${brand.niche.descriptor}s earn a median of ${STAT_SOURCES.averageSalary.formatted} per year (${STAT_SOURCES.averageSalary.source}); compare ${stateName} offers posting by posting, since setting, experience, and W-2 versus 1099 structure drive most of the spread.` },
-    { q: `Which cities in ${stateName} have the most ${brand.niche.short} jobs?`, a: citiesWithJobs.length > 0 ? `Top cities for ${brand.niche.short} jobs in ${stateName} include ${citiesWithJobs.slice(0, 4).map(c => `${c.name} (${c.count} jobs)`).join(', ')}.` : `${brand.niche.short} positions in ${stateName} are distributed across multiple cities and include remote telehealth options.` },
+    { q: `Which cities in ${stateName} have the most ${brand.niche.short} jobs?`, a: citiesWithJobs.length > 0 ? `Top cities for ${brand.niche.short} jobs in ${stateName} include ${citiesWithJobs.slice(0, 4).map(c => `${c.name} (${c.count} ${pluralize(c.count, 'job')})`).join(', ')}.` : `${brand.niche.short} positions in ${stateName} are distributed across multiple cities and include remote telehealth options.` },
     { q: `Can I work remotely as an ${brand.niche.short} in ${stateName}?`, a: `Yes, many telehealth and remote ${brand.niche.short} positions allow you to practice from ${stateName}. You will need an active NP license in the state where your patient resides.` },
   ];
 
@@ -640,20 +642,20 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
         heroAlt={dioramaSrc
           ? `Illustrated diorama representing ${stateName}`
           : `${brand.niche.short} jobs across the United States`}
-        badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'By State', stateName]}
+        badgeText={`${stats.totalJobs} live ${pluralize(stats.totalJobs, 'role')} · updated today`}
+        breadcrumbs={crumbsFromSchema([{ name: 'Home', url: brand.baseUrl }, { name: 'Jobs', url: `${brand.baseUrl}/jobs` }, { name: stateName, url: `${brand.baseUrl}/jobs/state/${stateSlug}` }])}
         headlineLine1={brand.niche.short}
         headlineLine2="Jobs"
         headlineSub={`in ${stateName}.`}
         stats={[
-          { value: `${stats.totalJobs}`, label: 'positions' },
+          { value: `${stats.totalJobs}`, label: pluralize(stats.totalJobs, 'position') },
           // Drop the stat rather than fabricate a floor when no posting in
           // the state discloses pay (omit-not-fabricate — the placeholder
           // that used to sit here traced to no source in the repo).
           ...(stats.avgSalary > 0
             ? [{ value: `$${stats.avgSalary}k`, label: 'avg salary' }]
             : []),
-          { value: `${stats.uniqueEmployerCount}`, label: 'employers' },
+          { value: `${stats.uniqueEmployerCount}`, label: pluralize(stats.uniqueEmployerCount, 'employer') },
         ]}
         description={`Browse all ${brand.niche.adjective} NP positions in ${stateName}. Remote telehealth, outpatient clinics, inpatient facilities, and private practice opportunities.`}
         ctaLabel={`Browse ${stateName} Jobs`}
@@ -832,7 +834,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
               <div style={{ padding: '32px 28px' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growth & Outlook</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>{brand.niche.short} demand in {stateName} continues to grow with {stats.totalJobs} active positions.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>{brand.niche.short} demand in {stateName} continues to grow with {stats.totalJobs} active {pluralize(stats.totalJobs, 'position')}.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>

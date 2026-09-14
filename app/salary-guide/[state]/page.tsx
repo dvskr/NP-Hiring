@@ -25,7 +25,7 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 import StateImage, { hasStateDiorama } from '@/components/StateImage';
 // P3 #9: /jobs/city/[slug] resolves by re-parsing the slug into a city NAME, so a
 // link built from a lossy slug can be a guaranteed 404 — guard before emitting.
-import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
+import { buildCitySlug, cityLinkResolves, MIN_CITY_JOBS_FOR_LINK } from '@/app/jobs/locations/[state]/directory';
 import {
     DollarSign,
     MapPin,
@@ -185,12 +185,17 @@ async function getTopCities(stateName: string) {
     const stateCode = STATE_CODES[stateName] || '';
     return cities
         .filter((c) => c.city)
-        // P3 #9: every row becomes a /jobs/city/<slug> link in the sidebar. That
-        // route rebuilds a city NAME from the slug and matches the DB `city`
-        // column, so "St. Louis" → st-louis-mo → "St Louis" finds nothing and
-        // hard-404s. Reject those with the same guard the state city directories
-        // use, and build the survivors with the shared builder rather than a
-        // fifth inline copy of the sanitizer.
+        // Every row becomes a /jobs/city/<slug> link, and that page calls
+        // notFound() below MIN_JOBS postings (MIN_CITY_JOBS_FOR_LINK is the
+        // constant drift-guarded against it). This count (published, exact city,
+        // state name) never exceeds the city page's own count (published,
+        // case-insensitive city, state name or code), so clearing it here means
+        // the page renders. Without this gate most of the sidebar linked 404s.
+        .filter((c) => c._count.id >= MIN_CITY_JOBS_FOR_LINK)
+        // P3 #9: that route rebuilds a city NAME from the slug and matches the DB
+        // `city` column, so "St. Louis" to st-louis-mo to "St Louis" finds nothing
+        // and hard-404s. Reject those with the same guard the state city
+        // directories use, and build the survivors with the shared builder.
         .filter((c) => cityLinkResolves(c.city!, stateCode))
         .map((c) => ({
             name: c.city!,

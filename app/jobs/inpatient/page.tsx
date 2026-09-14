@@ -12,7 +12,7 @@ import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CategoryFAQ from '@/components/CategoryFAQ';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
@@ -107,7 +107,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
         heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v3_inpatient.webp`}
         heroAlt={`${brand.niche.short} working in inpatient hospital setting`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'Inpatient']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Inpatient", url: `${brand.baseUrl}/jobs/inpatient` }])}
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('inpatient') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Inpatient"
         headlineLine2={brand.niche.short}

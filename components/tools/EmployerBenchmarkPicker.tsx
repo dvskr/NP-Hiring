@@ -17,7 +17,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, BarChart3, Info } from 'lucide-react';
 import { brand } from '@/config/brand';
-import { classifyOffer, type BenchmarkRow, type OfferStanding } from './benchmark-model';
+import { classifyOffer, parseOfferInput, type BenchmarkRow, type OfferStanding } from './benchmark-model';
 import ToolStyles from './ToolStyles';
 import { TOOL_ACCENT, clayCard, controlStyle, formatUsd, labelStyle, selectStyle } from './tool-theme';
 
@@ -62,10 +62,7 @@ export default function EmployerBenchmarkPicker({ national, states, compact = fa
     return states.find((s) => s.scope === scope) ?? national;
   }, [scope, states, national]);
 
-  const offerValue = useMemo(() => {
-    const parsed = Number.parseFloat(offer.replace(/[^0-9.]/g, ''));
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-  }, [offer]);
+  const offerValue = useMemo(() => parseOfferInput(offer), [offer]);
 
   const standing = row && offerValue ? classifyOffer(offerValue, row) : null;
 

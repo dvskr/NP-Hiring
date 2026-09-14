@@ -90,19 +90,9 @@ export default async function Home() {
       {/* Note: Organization schema is rendered site-wide in layout.tsx @graph.
           Removed standalone duplicate here to prevent conflicting signals in GSC. */}
       <VideoJsonLd pathname="/" />
-      {/* BreadcrumbList schema — homepage */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'BreadcrumbList',
-            itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: brand.baseUrl },
-            ],
-          }),
-        }}
-      />
+      {/* No BreadcrumbList here: the root page IS the top of the hierarchy,
+          and a one-item trail ("Home") carries no navigational meaning and is
+          flagged by rich-result validators. Child pages emit their own. */}
       {/* FAQ schema + visible FAQ content now live together in
           components/HomepageFAQ.tsx (audit F11): one array feeds both the
           JSON-LD and the rendered accordion so they cannot diverge, and every
@@ -387,7 +377,7 @@ const FREE_TOOLS_CSS = `
   .tool-card__open {
     font-size: 11px;
     font-weight: 800;
-    color: #9b8291;
+    color: #7A5C6B;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     white-space: nowrap;

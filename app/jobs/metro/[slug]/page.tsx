@@ -4,6 +4,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, Building2, Shield, TrendingUp, Users, Briefcase, ArrowRight, Bell, DollarSign, Video, Stethoscope } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
+import { pluralize } from '@/lib/pseo/plural';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import {
   getMetroCity,
@@ -18,7 +20,7 @@ import {
 import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryFAQ from '@/components/CategoryFAQ';
 import { stateDioramaSrc, stateDioramaBg } from '@/components/StateImage';
 import { notFound } from 'next/navigation';
@@ -124,7 +126,7 @@ function truncateOnWord(text: string, max: number): string {
 async function getMetroStats(metro: MetroCity) {
   const { city, stateCode } = metro;
   const where = {
-    isPublished: true,
+    ...PUBLISHED_LISTING_WHERE,
     OR: [
       { city: { contains: city, mode: 'insensitive' as const } },
       // Query list, not display list: it carries alternate spellings
@@ -171,11 +173,11 @@ async function getMetroStats(metro: MetroCity) {
 /** Also fetch statewide stats for comparison */
 async function getStateStats(stateCode: string) {
   const stateJobs = await prisma.job.count({
-    where: { isPublished: true, stateCode: { equals: stateCode, mode: 'insensitive' } },
+    where: { ...PUBLISHED_LISTING_WHERE, stateCode: { equals: stateCode, mode: 'insensitive' } },
   });
   const stateSalary = await prisma.job.aggregate({
     where: {
-      isPublished: true,
+      ...PUBLISHED_LISTING_WHERE,
       stateCode: { equals: stateCode, mode: 'insensitive' },
       normalizedMinSalary: { not: null },
       normalizedMaxSalary: { not: null },
@@ -331,13 +333,13 @@ export default async function MetroLandingPage({ params }: PageProps) {
         bgColor={heroBgColor}
         heroImage={heroImage}
         heroAlt={`${brand.niche.short} jobs in ${metro.city}, ${metro.stateCode}`}
-        badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', metro.state, metro.city]}
+        badgeText={`${stats.totalJobs} live ${pluralize(stats.totalJobs, 'role')} · updated today`}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: metro.state, url: `${brand.baseUrl}/jobs/state/${metro.stateSlug}` }, { name: `${metro.city} ${brand.niche.short} Jobs`, url: `${brand.baseUrl}/jobs/metro/${slug}` }])}
         headlineLine1={metro.city}
         headlineLine2={brand.niche.short}
         headlineSub={`jobs in ${metro.stateCode}. Find your fit.`}
         stats={[
-          { value: `${stats.totalJobs}`, label: 'positions' },
+          { value: `${stats.totalJobs}`, label: pluralize(stats.totalJobs, 'position') },
           // TRUTH RULE: no invented fallback salary. When this metro's live
           // listings carry no posted pay, show the statewide inventory instead
           // of a made-up band.

@@ -64,19 +64,12 @@ export async function POST(request: NextRequest) {
 
   // Fail fast with a precise status if server config is missing — avoids
   // the opaque 500s we were seeing when the Node module booted without
-  // the keys it needs and crashed mid-request.
+  // the keys it needs and crashed mid-request. Only the Supabase URL is
+  // needed to authenticate; the remaining keys are checked AFTER auth so
+  // an anonymous caller always gets 401, never a configuration hint.
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseServiceKey || !process.env.OPENAI_API_KEY) {
-    logger.error('Resume parse misconfigured: missing required env vars', {
-      hasSupabaseUrl: Boolean(supabaseUrl),
-      hasServiceKey: Boolean(supabaseServiceKey),
-      hasOpenAi: Boolean(process.env.OPENAI_API_KEY),
-    });
-    return NextResponse.json(
-      { error: 'Resume parsing is temporarily unavailable. Please try again later.' },
-      { status: 503 }
-    );
+  if (!supabaseUrl) {
+    return misconfigured({ hasSupabaseUrl: false });
   }
 
   let userId: string | null = null;
@@ -89,6 +82,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     userId = user.id;
+
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.OPENAI_API_KEY) {
+      return misconfigured({
+        hasSupabaseUrl: true,
+        hasServiceKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+        hasOpenAi: Boolean(process.env.OPENAI_API_KEY),
+      });
+    }
 
     // Kill switch (audit V7): the resume parser ships behind
     // 'ai.candidate.resume_parser' like every other AI feature —
@@ -104,15 +105,6 @@ export async function POST(request: NextRequest) {
         { status: 503 },
       );
     }
-
-    // Mark profile as parsing-in-progress.
-    // updateMany doesn't throw P2025 ("record not found") if the profile row
-    // doesn't exist yet — previously the missing-profile case crashed the
-    // route with a hard 500 before the file was even read.
-    await prisma.userProfile.updateMany({
-      where: { supabaseId: user.id },
-      data: { resumeParseStatus: 'pending' },
-    });
 
     let buffer: Buffer;
     let contentType: string;
@@ -143,7 +135,6 @@ export async function POST(request: NextRequest) {
       // and bypassing the employer route's visibility/unlock gates.
       const requestedPath = toBareResumePath(rawResumeUrl);
       if (!requestedPath) {
-        await markProfileFailed(user.id);
         return NextResponse.json(
           { error: 'resumeUrl is not a valid storage path' },
           { status: 400 },
@@ -152,7 +143,6 @@ export async function POST(request: NextRequest) {
 
       if (containsPathTraversal(requestedPath)) {
         logger.warn('Resume parse blocked: traversal attempt in resumeUrl', { userId: user.id });
-        await markProfileFailed(user.id);
         return NextResponse.json({ error: 'Invalid resume path' }, { status: 403 });
       }
 
@@ -167,12 +157,15 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           hasStoredResume: Boolean(ownedPath),
         });
-        await markProfileFailed(user.id);
         return NextResponse.json(
           { error: 'You can only parse your own uploaded resume.' },
           { status: 403 },
         );
       }
+
+      // The request is valid and targets the caller's own resume: only now
+      // does the profile state change. Rejected requests above leave it alone.
+      await markProfilePending(user.id);
 
       const reqCtx = extractRequestContext(request);
       // ownedPath is verified above to be the caller's own document, so
@@ -214,19 +207,19 @@ export async function POST(request: NextRequest) {
       }
 
       if (file.size > MAX_FILE_BYTES) {
-        await markProfileFailed(user.id);
         return NextResponse.json({ error: 'Resume file is too large (max 5MB)' }, { status: 413 });
       }
 
       contentType = file.type || inferContentTypeFromPath(file.name || '');
 
       if (!SUPPORTED_RESUME_CONTENT_TYPES.has(contentType)) {
-        await markProfileFailed(user.id);
         return NextResponse.json(
           { error: 'Unsupported file type. Upload a PDF or Word document.' },
           { status: 415 }
         );
       }
+
+      await markProfilePending(user.id);
 
       const arrayBuffer = await file.arrayBuffer();
       buffer = Buffer.from(arrayBuffer);
@@ -334,6 +327,26 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+function misconfigured(flags: Record<string, boolean>): NextResponse {
+  logger.error('Resume parse misconfigured: missing required env vars', flags);
+  return NextResponse.json(
+    { error: 'Resume parsing is temporarily unavailable. Please try again later.' },
+    { status: 503 }
+  );
+}
+
+/**
+ * Mark profile as parsing-in-progress. Called only once a request has
+ * passed validation. updateMany doesn't throw P2025 ("record not found")
+ * if the profile row doesn't exist yet.
+ */
+async function markProfilePending(supabaseId: string): Promise<void> {
+  await prisma.userProfile.updateMany({
+    where: { supabaseId },
+    data: { resumeParseStatus: 'pending' },
+  });
 }
 
 async function markProfileFailed(supabaseId: string): Promise<void> {

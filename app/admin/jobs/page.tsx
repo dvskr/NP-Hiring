@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { formatCT } from '@/lib/format-ct';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { readApiError } from './api-feedback';
 import {
-  Search, Filter, ChevronLeft, ChevronRight, Eye, MousePointerClick,
-  FileCheck, MoreHorizontal, Trash2, Star, StarOff, Globe, GlobeLock,
-  RefreshCw, X, Check, Pencil, Plus,
+  Search, ChevronLeft, ChevronRight, Eye, MousePointerClick,
+  FileCheck, Trash2, Star, StarOff, Globe, GlobeLock,
+  RefreshCw, X, Pencil,
 } from 'lucide-react';
 
 /* ─── Types ─── */
@@ -51,15 +53,6 @@ const inputStyle: React.CSSProperties = {
   color: '#1A2E35', outline: 'none',
 };
 
-function badge(text: string, color: string, bg: string) {
-  return (
-    <span style={{
-      padding: '3px 10px', borderRadius: '20px', fontSize: '11px',
-      fontWeight: 600, backgroundColor: bg, color, whiteSpace: 'nowrap',
-    }}>{text}</span>
-  );
-}
-
 export default function AdminJobsPage() {
   const [jobs, setJobs] = useState<AdminJob[]>([]);
   const [total, setTotal] = useState(0);
@@ -83,6 +76,7 @@ export default function AdminJobsPage() {
   const [editingJob, setEditingJob] = useState<AdminJob | null>(null);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
   const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Action feedback
   const [actionMsg, setActionMsg] = useState<{ text: string; isError: boolean } | null>(null);
@@ -131,23 +125,27 @@ export default function AdminJobsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [field]: value }),
       });
-      if (res.ok) {
-        setJobs(prev => prev.map(j => j.id === jobId ? { ...j, [field]: value } : j));
-        showMsg(`${field === 'isPublished' ? (value ? 'Published' : 'Unpublished') : (value ? 'Featured' : 'Unfeatured')}`, false);
+      if (!res.ok) {
+        showMsg(await readApiError(res, 'Failed to update job'), true);
+        return;
       }
-    } catch { showMsg('Failed to update', true); }
+      setJobs(prev => prev.map(j => j.id === jobId ? { ...j, [field]: value } : j));
+      showMsg(`${field === 'isPublished' ? (value ? 'Published' : 'Unpublished') : (value ? 'Featured' : 'Unfeatured')}`, false);
+    } catch { showMsg('Failed to update job. Check your connection and try again.', true); }
   };
 
   const deleteJob = async (jobId: string, hard = false) => {
     if (!confirm(hard ? 'Permanently delete this job? This cannot be undone.' : 'Unpublish this job?')) return;
     try {
       const res = await fetch(`/api/admin/jobs/${jobId}?hard=${hard}`, { method: 'DELETE' });
-      if (res.ok) {
-        if (hard) setJobs(prev => prev.filter(j => j.id !== jobId));
-        else setJobs(prev => prev.map(j => j.id === jobId ? { ...j, isPublished: false } : j));
-        showMsg(hard ? 'Job permanently deleted' : 'Job unpublished', false);
+      if (!res.ok) {
+        showMsg(await readApiError(res, hard ? 'Failed to delete job' : 'Failed to unpublish job'), true);
+        return;
       }
-    } catch { showMsg('Failed to delete', true); }
+      if (hard) setJobs(prev => prev.filter(j => j.id !== jobId));
+      else setJobs(prev => prev.map(j => j.id === jobId ? { ...j, isPublished: false } : j));
+      showMsg(hard ? 'Job permanently deleted' : 'Job unpublished', false);
+    } catch { showMsg('Failed to delete job. Check your connection and try again.', true); }
   };
 
   // Bulk actions
@@ -163,19 +161,22 @@ export default function AdminJobsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, jobIds: Array.from(selected) }),
       });
-      const data = await res.json();
-      if (data.success) {
-        showMsg(`${data.action}: ${data.affected} job(s)`, false);
-        setSelected(new Set());
-        fetchJobs();
+      if (!res.ok) {
+        showMsg(await readApiError(res, 'Bulk action failed'), true);
+        return;
       }
-    } catch { showMsg('Bulk action failed', true); }
+      const data = await res.json();
+      showMsg(`${data.action}: ${data.affected} job(s)`, false);
+      setSelected(new Set());
+      fetchJobs();
+    } catch { showMsg('Bulk action failed. Check your connection and try again.', true); }
     finally { setBulkLoading(false); }
   };
 
   // Edit modal
   const openEdit = (job: AdminJob) => {
     setEditingJob(job);
+    setEditError(null);
     setEditForm({
       title: job.title,
       employer: job.employer,
@@ -187,8 +188,11 @@ export default function AdminJobsPage() {
     });
   };
 
+  const closeEdit = useCallback(() => setEditingJob(null), []);
+  const editDialogRef = useFocusTrap<HTMLDivElement>({ isOpen: editingJob !== null, onEscape: closeEdit });
+
   const saveEdit = async () => {
-    if (!editingJob) return;
+    if (!editingJob || editLoading) return;
     try {
       setEditLoading(true);
       const res = await fetch(`/api/admin/jobs/${editingJob.id}`, {
@@ -196,12 +200,19 @@ export default function AdminJobsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm),
       });
-      if (res.ok) {
-        showMsg('Job updated', false);
-        setEditingJob(null);
-        fetchJobs();
+      if (!res.ok) {
+        // Keep the dialog open with the admin's edits so they can retry.
+        const message = await readApiError(res, 'Failed to update job');
+        setEditError(message);
+        return;
       }
-    } catch { showMsg('Failed to update', true); }
+      showMsg('Job updated', false);
+      setEditingJob(null);
+      fetchJobs();
+    } catch {
+      const message = 'Failed to update job. Check your connection and try again.';
+      setEditError(message);
+    }
     finally { setEditLoading(false); }
   };
 
@@ -241,7 +252,7 @@ export default function AdminJobsPage() {
 
       {/* Action message */}
       {actionMsg && (
-        <div style={{
+        <div role={actionMsg.isError ? 'alert' : 'status'} style={{
           marginBottom: '16px', padding: '12px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
           backgroundColor: actionMsg.isError ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
           color: actionMsg.isError ? '#F87171' : '#22C55E',
@@ -423,16 +434,22 @@ export default function AdminJobsPage() {
       {/* Edit Modal */}
       {editingJob && (
         <>
-          <div onClick={() => setEditingJob(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 50 }} />
-          <div style={{
+          <div onClick={closeEdit} aria-hidden="true" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 50 }} />
+          <div
+            ref={editDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-job-dialog-title"
+            tabIndex={-1}
+            style={{
             position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
             zIndex: 51, width: '90%', maxWidth: '600px', maxHeight: '85vh', overflowY: 'auto',
             backgroundColor: '#FAFBF9', borderRadius: '16px', boxShadow: '8px 8px 20px rgba(0,0,0,0.05), -6px -6px 16px rgba(255,255,255,0.9), inset 3px 3px 6px rgba(255,255,255,0.7), inset -2px -2px 4px rgba(0,0,0,0.02)',
             border: '1px solid rgba(255,255,255,0.5)', padding: '28px',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ ...s.heading, fontSize: '20px' }}>Edit Job</h2>
-              <button onClick={() => setEditingJob(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8' }}>
+              <h2 id="edit-job-dialog-title" style={{ ...s.heading, fontSize: '20px' }}>Edit Job</h2>
+              <button onClick={closeEdit} aria-label="Close" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8' }}>
                 <X size={20} />
               </button>
             </div>
@@ -448,8 +465,9 @@ export default function AdminJobsPage() {
                 { key: 'applyLink', label: 'Apply Link' },
               ].map(f => (
                 <div key={f.key}>
-                  <label style={{ display: 'block', ...s.muted, fontWeight: 600, marginBottom: '6px' }}>{f.label}</label>
+                  <label htmlFor={`edit-job-${f.key}`} style={{ display: 'block', ...s.muted, fontWeight: 600, marginBottom: '6px' }}>{f.label}</label>
                   <input
+                    id={`edit-job-${f.key}`}
                     type="text"
                     value={editForm[f.key] || ''}
                     onChange={e => setEditForm(prev => ({ ...prev, [f.key]: e.target.value }))}
@@ -459,8 +477,14 @@ export default function AdminJobsPage() {
               ))}
             </div>
 
+            {editError && (
+              <p role="alert" style={{ marginTop: '16px', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: 'rgba(239,68,68,0.1)', color: '#B91C1C' }}>
+                {editError}
+              </p>
+            )}
+
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setEditingJob(null)}
+              <button onClick={closeEdit}
                 style={{ padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', backgroundColor: '#F8FAF9', border: '1px solid rgba(255,255,255,0.5)', color: '#1A2E35', fontWeight: 600, fontSize: '13px' }}>
                 Cancel
               </button>

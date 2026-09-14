@@ -86,9 +86,16 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar
+          Layout contract (P10 admin-revalidate #1/#2): the aside is a flex
+          column of header / scrolling nav / footer. The nav is the only
+          scroll container, so every link stays reachable at short viewports
+          (1280x720 cannot fit all links), and the footer sits in normal flow
+          instead of being absolutely positioned over the lowest links. Below
+          lg the drawer starts under the fixed 65px mobile bar (z-50) rather
+          than behind it, and skips its own duplicate "Admin Panel" header. */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 z-40 transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        className={`fixed top-[65px] lg:top-0 left-0 bottom-0 z-40 flex flex-col transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
         style={{
           width: '260px',
           background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAF9 100%)',
@@ -98,10 +105,9 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
       >
         {/* Sidebar Header */}
         <div
+          className="hidden lg:flex items-center shrink-0"
           style={{
             height: '68px',
-            display: 'flex',
-            alignItems: 'center',
             padding: '0 24px',
             borderBottom: '1px solid #E8ECF0',
           }}
@@ -131,7 +137,11 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
         </div>
 
         {/* Navigation */}
-        <nav style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <nav
+          aria-label="Admin navigation"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+          style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px' }}
+        >
           {navItems.map((item: typeof navItems[number]) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -145,10 +155,12 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
-                  padding: '11px 16px',
+                  padding: '8px 14px',
+                  flexShrink: 0,
                   borderRadius: '14px',
                   textDecoration: 'none',
                   fontSize: '14px',
+                  lineHeight: '20px',
                   fontWeight: active ? 600 : 450,
                   transition: 'all 0.2s',
                   backgroundColor: active ? '#FDF2F8' : 'transparent',
@@ -168,12 +180,9 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
 
         {/* Sidebar Footer */}
         <div
+          className="shrink-0"
           style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '16px 12px',
+            padding: '12px',
             borderTop: '1px solid #E8ECF0',
           }}
         >
@@ -183,8 +192,9 @@ export default function AdminSidebar({ children }: { children: React.ReactNode }
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
-              padding: '11px 16px',
+              padding: '9px 16px',
               fontSize: '14px',
+              lineHeight: '20px',
               color: '#6B7F8A',
               textDecoration: 'none',
               borderRadius: '14px',
