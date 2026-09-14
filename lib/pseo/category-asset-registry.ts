@@ -1,14 +1,21 @@
-// Category → visual assets for the pSEO templates (category-city and
-// setting-state). 2026-07 dead-asset purge: every URL here previously
-// pointed at a retired remote storage bucket and 404'd on every indexed
-// page. The registry now maps every taxonomy slug
-// (lib/pseo/taxonomy-registry.ts) to the closest-matching LOCAL
-// illustration in public/images/** — the sage-green flat set that already
-// ships on /for-job-seekers, /for-employers, and the homepage.
-// Coverage of ALL slugs is pinned by
-// tests/regressions/p1-assets-dead-refs-local-assets.test.ts: a slug
-// without an entry falls back to a DEAD remote hero URL hardcoded in the
-// two templates — when adding a taxonomy slug, add an entry here.
+// Category → visual assets for the pSEO templates (category-city,
+// setting-state and the category landing template).
+//
+// History: in 2026-07 every URL here pointed at a retired remote storage
+// bucket and 404'd, so the registry moved to the local sage-green set in
+// public/images/job-seekers/**. In 2026-09 the category artwork from the
+// reference board was ported into public/images/categories/** by
+// scripts/port-category-art.mjs (neutral file names, board text and
+// psych-only scenes excluded or retouched). Slugs with category-relevant art
+// now use it; the rest keep the sage set until new art is commissioned
+// (urgent-care, neonatal, women-health, emergency, oncology, cardiology,
+// dermatology, orthopedic, aesthetics, pain-management, anesthesia,
+// midwifery).
+//
+// Coverage of ALL slugs and on-disk existence are pinned by
+// tests/regressions/p1-assets-dead-refs-local-assets.test.ts and
+// tests/regressions/category-art-coverage.test.ts. When adding a taxonomy
+// slug, add an entry here.
 //
 // CONSUMER CONTRACT (category-city-template.tsx / setting-state-template.tsx):
 //   - heroImage + bgColor feed <CategoryHero>. The hero renders
@@ -16,12 +23,17 @@
 //     each illustration's baked background color for a seamless blend.
 //   - bentoImages[0] and [1] render UNCONDITIONALLY whenever an entry
 //     exists — every entry MUST provide both. bentoImages[2] is guarded.
-//   - bentoIcons[i] is truthiness-guarded — an empty array renders clean
-//     text-only benefit cards (no per-benefit icon art exists locally).
+//   - bentoIcons[i] is truthiness-guarded and indexed by the position of
+//     the config benefit it sits beside. The ported benefit icons were drawn
+//     for the bespoke landings' own cards, not for these config benefits, so
+//     the arrays stay empty (clean text-only cards) until the cards carry an
+//     icon key of their own.
 //   - exploreCards: an EMPTY array makes the city template fall back to
 //     its dynamic, DB-gated "other categories in this city" text cards —
 //     better links than the old static list. Keep it empty unless real
 //     local icon artwork lands for the card set.
+//   - Psych-only art (PSYCH_ONLY_ART) may appear only on the psych
+//     specialty entry (pinned by category-art-coverage.test.ts).
 
 export interface ExploreCard { href: string; label: string; sub: string; icon: string; }
 
@@ -41,35 +53,70 @@ interface Art {
   bg: string;
 }
 
-/** Local illustration library. Keys describe the scene, not a category. */
-const ART = {
+/** Legacy local sage illustrations, kept for slugs without category art. */
+const LEGACY = {
   telehealthVisit: { src: '/images/job-seekers/remote-telehealth.webp', bg: '#bfd4c2' },
   clinicBuilding: { src: '/images/job-seekers/clinical-inperson.webp', bg: '#bfd4c2' },
-  flexSchedule: { src: '/images/job-seekers/parttime-prn.webp', bg: '#c0d5c3' },
   practiceSign: { src: '/images/job-seekers/private-practice.webp', bg: '#c3d7c0' },
   celebrateNurse: { src: '/images/job-seekers/cta-dream-role.webp', bg: '#cad8c7' },
-  profileMatch: { src: '/images/job-seekers/bento-match.webp', bg: '#bfd2c1' },
-  salaryCard: { src: '/images/job-seekers/bento-salary.webp', bg: '#bbd3bd' },
-  statesMap: { src: '/images/job-seekers/bento-guides.webp', bg: '#c2d3c2' },
-  growthChart: { src: '/images/employers/bento-analytics.webp', bg: '#bed3be' },
-  hiredCalendar: { src: '/images/employers/bento-60day.webp', bg: '#bfd5c0' },
-  buildProfile: { src: '/images/how-it-works/seeker-step1-v2.webp', bg: '#c7d8c4' },
-  browseRoles: { src: '/images/how-it-works/seeker-step2-v2.webp', bg: '#c8d7c4' },
-  applyMobile: { src: '/images/how-it-works/seeker-step3-v2.webp', bg: '#c8d6c6' },
-  firstDay: { src: '/images/how-it-works/seeker-step4-v2.webp', bg: '#c7d7c6' },
 } satisfies Record<string, Art>;
 
+const hero = (name: string, bg: string): Art => ({ src: `/images/categories/heroes/${name}.webp`, bg });
+const bentoArt = (name: string, bg: string): Art => ({ src: `/images/categories/bento/${name}.webp`, bg });
+const bento = (name: string): string => `/images/categories/bento/${name}.webp`;
+
+/** Ported heroes. Some scenes are clay bento art used at hero size. */
+const HERO = {
+  remote: hero('remote', '#fbf5ec'),
+  telehealth: hero('telehealth', '#f0d39b'),
+  inpatient: hero('inpatient', '#a2b7c4'),
+  outpatient: hero('outpatient', '#9fd2ba'),
+  travel: hero('travel', '#84c0d9'),
+  fullTime: hero('full-time', '#88a8c4'),
+  partTime: hero('part-time', '#c7be7b'),
+  contract: hero('contract', '#adc3d9'),
+  perDiem: hero('per-diem', '#dbbb74'),
+  locumTenens: hero('locum-tenens', '#95c9e7'),
+  geriatric: hero('geriatric', '#d4c6e6'),
+  hospital: hero('hospital', '#a0c4d8'),
+  therapySession: hero('therapy-session', '#bda4cc'),
+  midCareer: hero('mid-career', '#adcdb9'),
+  entryLevel: hero('entry-level', '#cbdab9'),
+  newGrad: hero('new-grad', '#99a9d3'),
+  privatePractice: hero('private-practice', '#d2a997'),
+  communityHealth: hero('community-health', '#5a7455'),
+  va: hero('va', '#98b1cb'),
+  correctional: hero('correctional', '#97aabd'),
+  veterans: hero('veterans', '#f0fcfa'),
+  lgbtq: hero('lgbtq', '#dfc7a8'),
+  homeVisits: bentoArt('community-health-impact', '#fdcb95'),
+  taxDesk: bentoArt('1099-tax', '#f6dfa7'),
+  familyClinic: bentoArt('family-clinic', '#fce9b6'),
+  pediatricPlayroom: bentoArt('pediatric-playroom', '#b0ebd0'),
+  careTeamTable: bentoArt('care-team-table', '#bce8d3'),
+  seniorLeadership: bentoArt('senior-leadership', '#dac6a6'),
+} satisfies Record<string, Art>;
+
+/** Art allowed only on the psych specialty entry. */
+export const PSYCH_ONLY_ART: ReadonlySet<string> = new Set([
+  HERO.therapySession.src,
+  bento('community-clinic-sign'),
+]);
+
+/** Shared US map art beside the practice-authority / state-salary card. */
+const MULTISTATE_MAP = bento('multistate-map');
+
 /**
- * Builds one registry entry. bentoImages[1] sits beside the
- * practice-authority / state-salary card (US map art) and bentoImages[2]
- * beside the salary & growth card (salary chart art) in both templates.
+ * Builds one registry entry. bentoImages[0] sits in the lead card,
+ * [1] beside the practice-authority / state-salary card and [2] beside the
+ * salary card in both templates.
  */
-function categoryAssets(bentoSectionLabel: string, hero: Art, bento: Art): CategoryAssets {
+function categoryAssets(bentoSectionLabel: string, heroArt: Art, leadBento: string, payBento: string): CategoryAssets {
   return {
-    heroImage: hero.src,
-    bgColor: hero.bg,
+    heroImage: heroArt.src,
+    bgColor: heroArt.bg,
     bentoSectionLabel,
-    bentoImages: [bento.src, ART.statesMap.src, ART.salaryCard.src],
+    bentoImages: [bento(leadBento), MULTISTATE_MAP, bento(payBento)],
     bentoIcons: [],
     exploreCards: [],
   };
@@ -77,55 +124,58 @@ function categoryAssets(bentoSectionLabel: string, hero: Art, bento: Art): Categ
 
 export const CATEGORY_ASSET_REGISTRY: Record<string, CategoryAssets> = {
   // ── setting ──────────────────────────────────────────────────────────
-  'remote': categoryAssets('Why Go Remote', ART.telehealthVisit, ART.buildProfile),
-  'telehealth': categoryAssets('Why Choose Telehealth', ART.telehealthVisit, ART.browseRoles),
-  'inpatient': categoryAssets('Why Choose Inpatient', ART.clinicBuilding, ART.firstDay),
-  'outpatient': categoryAssets('Why Choose Outpatient', ART.practiceSign, ART.browseRoles),
-  'travel': categoryAssets('Why Choose Travel', ART.celebrateNurse, ART.flexSchedule),
-  'urgent-care': categoryAssets('Why Choose Urgent Care', ART.clinicBuilding, ART.applyMobile),
-  'home-health': categoryAssets('Why Choose Home Health', ART.firstDay, ART.flexSchedule),
+  'remote': categoryAssets('Why Go Remote', HERO.remote, 'remote-office', 'remote-salary-growth'),
+  'telehealth': categoryAssets('Why Choose Telehealth', HERO.telehealth, 'telehealth-videocall', 'telehealth-salary'),
+  'inpatient': categoryAssets('Why Choose Inpatient', HERO.inpatient, 'inpatient-ward', 'inpatient-pay'),
+  'outpatient': categoryAssets('Why Choose Outpatient', HERO.outpatient, 'outpatient-clinic', 'outpatient-salary'),
+  'travel': categoryAssets('Why Choose Travel', HERO.travel, 'travel-adventure', 'travel-compensation'),
+  'urgent-care': categoryAssets('Why Choose Urgent Care', LEGACY.clinicBuilding, 'rapid-response-team', 'rapid-response-salary'),
+  'home-health': categoryAssets('Why Choose Home Health', HERO.homeVisits, 'geriatric-snf', 'state-salary'),
   // ── jobType ──────────────────────────────────────────────────────────
-  'full-time': categoryAssets('Why Choose Full-Time', ART.firstDay, ART.hiredCalendar),
-  'part-time': categoryAssets('Why Choose Part-Time', ART.flexSchedule, ART.browseRoles),
-  'contract': categoryAssets('Why Choose Contract', ART.applyMobile, ART.flexSchedule),
-  'per-diem': categoryAssets('Why Choose Per Diem', ART.flexSchedule, ART.applyMobile),
-  'locum-tenens': categoryAssets('Why Choose Locum Tenens', ART.flexSchedule, ART.celebrateNurse),
-  '1099': categoryAssets('Why Choose 1099', ART.celebrateNurse, ART.flexSchedule),
+  'full-time': categoryAssets('Why Choose Full-Time', HERO.fullTime, 'full-time-benefits', 'full-time-salary'),
+  'part-time': categoryAssets('Why Choose Part-Time', HERO.partTime, 'part-time-flex', 'part-time-salary'),
+  'contract': categoryAssets('Why Choose Contract', HERO.contract, 'contract-signing', 'locum-salary'),
+  'per-diem': categoryAssets('Why Choose Per Diem', HERO.perDiem, 'per-diem-shifts', 'per-diem-salary'),
+  'locum-tenens': categoryAssets('Why Choose Locum Tenens', HERO.locumTenens, 'locum-travel', 'locum-salary'),
+  '1099': categoryAssets('Why Choose 1099', HERO.taxDesk, 'contract-flexibility', '1099-salary'),
   // ── specialty ────────────────────────────────────────────────────────
-  'family-practice': categoryAssets('Why Choose Family Practice', ART.clinicBuilding, ART.buildProfile),
-  'adult-gerontology': categoryAssets('Why Choose Adult-Gerontology', ART.telehealthVisit, ART.clinicBuilding),
-  'pediatric': categoryAssets('Why Choose Pediatric', ART.celebrateNurse, ART.clinicBuilding),
-  'neonatal': categoryAssets('Why Choose Neonatal', ART.clinicBuilding, ART.profileMatch),
-  'women-health': categoryAssets("Why Choose Women's Health", ART.celebrateNurse, ART.practiceSign),
-  'acute-care': categoryAssets('Why Choose Acute Care', ART.clinicBuilding, ART.firstDay),
-  'emergency': categoryAssets('Why Choose Emergency', ART.clinicBuilding, ART.applyMobile),
-  'psychiatric-mental-health': categoryAssets('Why Choose Psychiatric Care', ART.telehealthVisit, ART.browseRoles),
-  'oncology': categoryAssets('Why Choose Oncology', ART.clinicBuilding, ART.profileMatch),
-  'cardiology': categoryAssets('Why Choose Cardiology', ART.clinicBuilding, ART.growthChart),
-  'primary-care': categoryAssets('Why Choose Primary Care', ART.practiceSign, ART.buildProfile),
-  'hospitalist': categoryAssets('Why Choose Hospitalist', ART.clinicBuilding, ART.hiredCalendar),
-  'dermatology': categoryAssets('Why Choose Dermatology', ART.practiceSign, ART.profileMatch),
-  'orthopedic': categoryAssets('Why Choose Orthopedic', ART.clinicBuilding, ART.browseRoles),
-  'aesthetics': categoryAssets('Why Choose Aesthetics', ART.practiceSign, ART.profileMatch),
-  'pain-management': categoryAssets('Why Choose Pain Management', ART.clinicBuilding, ART.browseRoles),
-  'palliative-hospice': categoryAssets('Why Choose Palliative & Hospice', ART.telehealthVisit, ART.clinicBuilding),
+  'family-practice': categoryAssets('Why Choose Family Practice', HERO.familyClinic, 'care-team-table', 'state-salary'),
+  'adult-gerontology': categoryAssets('Why Choose Adult-Gerontology', HERO.geriatric, 'geriatric-snf', 'geriatric-salary'),
+  'pediatric': categoryAssets('Why Choose Pediatric', HERO.pediatricPlayroom, 'community-health-impact', 'pediatric-salary'),
+  'neonatal': categoryAssets('Why Choose Neonatal', LEGACY.clinicBuilding, 'hospital-acute', 'hospital-salary'),
+  'women-health': categoryAssets("Why Choose Women's Health", LEGACY.celebrateNurse, 'outpatient-clinic', 'outpatient-salary'),
+  'acute-care': categoryAssets('Why Choose Acute Care', HERO.hospital, 'hospital-acute', 'hospital-salary'),
+  'emergency': categoryAssets('Why Choose Emergency', LEGACY.clinicBuilding, 'rapid-response-team', 'rapid-response-salary'),
+  'psychiatric-mental-health': categoryAssets('Why Choose Psychiatric Care', HERO.therapySession, 'community-clinic-sign', 'rapid-response-salary'),
+  'oncology': categoryAssets('Why Choose Oncology', LEGACY.clinicBuilding, 'hospital-team', 'hospital-salary'),
+  'cardiology': categoryAssets('Why Choose Cardiology', LEGACY.clinicBuilding, 'hospital-acute', 'hospital-salary'),
+  'primary-care': categoryAssets('Why Choose Primary Care', HERO.careTeamTable, 'family-clinic', 'state-salary'),
+  'hospitalist': categoryAssets('Why Choose Hospitalist', HERO.inpatient, 'inpatient-ward', 'inpatient-pay'),
+  'dermatology': categoryAssets('Why Choose Dermatology', LEGACY.practiceSign, 'private-practice-office', 'private-practice-salary'),
+  'orthopedic': categoryAssets('Why Choose Orthopedic', LEGACY.clinicBuilding, 'hospital-team', 'hospital-salary'),
+  'aesthetics': categoryAssets('Why Choose Aesthetics', LEGACY.practiceSign, 'private-practice-office', 'private-practice-salary'),
+  'pain-management': categoryAssets('Why Choose Pain Management', LEGACY.clinicBuilding, 'outpatient-panel', 'outpatient-salary'),
+  'palliative-hospice': categoryAssets('Why Choose Palliative & Hospice', HERO.geriatric, 'geriatric-snf', 'geriatric-salary'),
   // ── aprn ─────────────────────────────────────────────────────────────
-  'anesthesia': categoryAssets('Why Choose Anesthesia', ART.clinicBuilding, ART.hiredCalendar),
-  'midwifery': categoryAssets('Why Choose Midwifery', ART.celebrateNurse, ART.clinicBuilding),
-  'clinical-nurse-specialist': categoryAssets('Why Choose CNS Roles', ART.profileMatch, ART.buildProfile),
+  'anesthesia': categoryAssets('Why Choose Anesthesia', LEGACY.clinicBuilding, 'hospital-acute', 'hospital-salary'),
+  'midwifery': categoryAssets('Why Choose Midwifery', LEGACY.celebrateNurse, 'outpatient-clinic', 'outpatient-salary'),
+  'clinical-nurse-specialist': categoryAssets('Why Choose CNS Roles', HERO.midCareer, 'mid-career-specialize', 'mid-career-salary'),
   // ── experience ───────────────────────────────────────────────────────
-  'entry-level': categoryAssets('Why Choose Entry Level', ART.buildProfile, ART.profileMatch),
-  'new-grad': categoryAssets('Why Choose New Grad', ART.buildProfile, ART.firstDay),
-  'mid-career': categoryAssets('Why Choose Mid-Career', ART.browseRoles, ART.growthChart),
-  'senior': categoryAssets('Why Choose Senior', ART.profileMatch, ART.growthChart),
+  'entry-level': categoryAssets('Why Choose Entry Level', HERO.entryLevel, 'entry-level-mentorship', 'entry-level-salary'),
+  'new-grad': categoryAssets('Why Choose New Grad', HERO.newGrad, 'entry-level-growth', 'new-grad-salary'),
+  'mid-career': categoryAssets('Why Choose Mid-Career', HERO.midCareer, 'mid-career-lead', 'mid-career-salary'),
+  'senior': categoryAssets('Why Choose Senior', HERO.seniorLeadership, 'senior-strategy', 'senior-compensation'),
   // ── employerType ─────────────────────────────────────────────────────
-  'hospital': categoryAssets('Why Choose Hospital', ART.clinicBuilding, ART.buildProfile),
-  'private-practice': categoryAssets('Why Choose Private Practice', ART.practiceSign, ART.celebrateNurse),
-  'community-health': categoryAssets('Why Choose Community Health', ART.practiceSign, ART.clinicBuilding),
-  'va': categoryAssets('Why Choose VA & Government', ART.clinicBuilding, ART.hiredCalendar),
-  'correctional': categoryAssets('Why Choose Correctional', ART.clinicBuilding, ART.firstDay),
+  'hospital': categoryAssets('Why Choose Hospital', HERO.hospital, 'hospital-team', 'hospital-salary'),
+  'private-practice': categoryAssets('Why Choose Private Practice', HERO.privatePractice, 'private-practice-group', 'private-practice-salary'),
+  'community-health': categoryAssets('Why Choose Community Health', HERO.communityHealth, 'community-health-fqhc', 'community-health-salary'),
+  'va': categoryAssets('Why Choose VA & Government', HERO.va, 'full-time-benefits', 'state-salary'),
+  'correctional': categoryAssets('Why Choose Correctional', HERO.correctional, 'correctional-facility', 'correctional-salary'),
   // ── population ───────────────────────────────────────────────────────
-  'geriatric': categoryAssets('Why Choose Geriatric', ART.telehealthVisit, ART.flexSchedule),
-  'veterans': categoryAssets('Why Choose Veterans Care', ART.celebrateNurse, ART.clinicBuilding),
-  'lgbtq': categoryAssets('Why Choose LGBTQ+ Care', ART.celebrateNurse, ART.profileMatch),
+  'geriatric': categoryAssets('Why Choose Geriatric', HERO.geriatric, 'geriatric-memory', 'geriatric-salary'),
+  'veterans': categoryAssets('Why Choose Veterans Care', HERO.veterans, 'full-time-stability', 'state-salary'),
+  'lgbtq': categoryAssets('Why Choose LGBTQ+ Care', HERO.lgbtq, 'lgbtq-inclusive', 'pediatric-salary'),
 };
+
+/** Hero for pages with no registry entry (both template fallbacks). */
+export const DEFAULT_HERO_IMAGE = '/images/categories/heroes/us-map.webp';

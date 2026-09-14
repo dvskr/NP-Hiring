@@ -23,7 +23,6 @@ import CategoryFAQ from '@/components/CategoryFAQ';
 import { getCityBySlug } from '@/lib/pseo/city-data/cities';
 import { buildCityFacts, buildCityNarrative } from '@/lib/pseo/city-narrative';
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 // Force dynamic rendering - don't try to statically generate during build
 // force-dynamic removed: it overrides revalidate and defeats ISR caching
@@ -561,8 +560,8 @@ export default async function CityJobsPage({ params }: CityPageProps) {
 
             {/* ═══ HERO ═══ */}
             <CategoryHero
-                bgColor="#7eb8c9"
-                heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp`}
+                bgColor="#fbf8ee"
+                heroImage="/images/categories/heroes/us-map.webp"
                 heroAlt={`${brand.niche.short} jobs in ${cityName}, ${stateCode}`}
                 badgeText={`${stats.totalJobs} live roles · updated today`}
                 breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: stateName, url: `${brand.baseUrl}/jobs/state/${stateSlug}` }, { name: cityName, url: `${brand.baseUrl}/jobs/city/${slug}` }])}
@@ -723,13 +722,13 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                 </p>
                             </div>
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_practice.webp`} alt={`${cityName} ${brand.niche.short} market`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                                <Image src="/images/categories/bento/state-practice.webp" alt={`${cityName} ${brand.niche.short} market`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
                             </div>
                         </div>
 
                         <div className="city-bento-hero-2" style={{ gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
                             <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_growth.webp`} alt="Career growth" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
+                                <Image src="/images/categories/bento/state-growth.webp" alt="Career growth" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
                             </div>
                             <div style={{ padding: '24px 22px', flex: 1 }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Top Employers</h3>
@@ -741,10 +740,10 @@ export default async function CityJobsPage({ params }: CityPageProps) {
 
                         {/* ROW 2: 4 compact cards */}
                         {[
-                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp`, text: `Average salary of ${stats.avgSalary > 0 ? `$${stats.avgSalary}k per year` : '$130K+'} for ${brand.niche.short}s in ${cityName}.` },
-                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_hospital.webp`, text: `${stats.uniqueEmployerCount}+ healthcare employers are actively hiring in ${cityName}.` },
-                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_community.webp`, text: `Inpatient, outpatient, community health, and private practice settings are available.` },
-                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp`, text: `Telehealth and remote opportunities are expanding in ${stateName}.` },
+                            { icon: '/images/categories/nav/salary.webp', text: `Average salary of ${stats.avgSalary > 0 ? `$${stats.avgSalary}k per year` : '$130K+'} for ${brand.niche.short}s in ${cityName}.` },
+                            { icon: '/images/categories/nav/hospital.webp', text: `${stats.uniqueEmployerCount}+ healthcare employers are actively hiring in ${cityName}.` },
+                            { icon: '/images/categories/nav/community-health.webp', text: `Inpatient, outpatient, community health, and private practice settings are available.` },
+                            { icon: '/images/categories/nav/telehealth.webp', text: `Telehealth and remote opportunities are expanding in ${stateName}.` },
                         ].map((card, i) => (
                             <div key={i} style={{ gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
                                 <Image src={card.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -762,7 +761,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                 </p>
                             </div>
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_salary.webp`} alt={`${cityName} ${brand.niche.short} salary`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+                                <Image src="/images/categories/bento/state-salary.webp" alt={`${cityName} ${brand.niche.short} salary`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
                             </div>
                         </div>
 
@@ -827,12 +826,12 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                     </h2>
                     <div className="city-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                         {[
-                            { href: `/jobs/state/${stateSlug}`, label: `${stateName} Jobs`, sub: `All ${stateCode} positions`, icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
-                            { href: '/jobs/remote', label: 'Remote', sub: 'Work from anywhere', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-                            { href: '/jobs/new-grad', label: 'New Grad', sub: 'Entry-level roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_newgrad.webp` },
-                            { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual patient care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-                            { href: `/salary-guide/${stateSlug}`, label: 'Salary Guide', sub: `${stateName} pay data`, icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-                            { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
+                            { href: `/jobs/state/${stateSlug}`, label: `${stateName} Jobs`, sub: `All ${stateCode} positions`, icon: '/images/categories/nav/location.webp' },
+                            { href: '/jobs/remote', label: 'Remote', sub: 'Work from anywhere', icon: '/images/categories/nav/remote.webp' },
+                            { href: '/jobs/new-grad', label: 'New Grad', sub: 'Entry-level roles', icon: '/images/categories/nav/new-grad.webp' },
+                            { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual patient care', icon: '/images/categories/nav/telehealth.webp' },
+                            { href: `/salary-guide/${stateSlug}`, label: 'Salary Guide', sub: `${stateName} pay data`, icon: '/images/categories/nav/salary.webp' },
+                            { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: '/images/categories/nav/location.webp' },
                         ].map(c => (
                             <Link key={c.href} href={c.href} className="city-card" style={{ background: '#FFF', borderRadius: '18px', padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)', transition: 'transform 0.3s ease, box-shadow 0.3s ease' }}>
                                 <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />

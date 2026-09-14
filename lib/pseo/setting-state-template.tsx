@@ -40,7 +40,7 @@ import {
   getAllStateSlugs,
   STATE_CODES,
 } from './setting-state-config';
-import { CATEGORY_ASSET_REGISTRY } from './category-asset-registry';
+import { CATEGORY_ASSET_REGISTRY, DEFAULT_HERO_IMAGE } from './category-asset-registry';
 import { getStatePracticeAuthority, getAuthorityLabel } from '@/lib/state-practice-authority';
 import { buildSettingStateNarrative } from './state-narrative';
 // P2 #15: ONE freshness formatter for both pSEO templates — a local copy is
@@ -50,7 +50,6 @@ import { formatStatsBadge, categoryOwnsShortageData } from './category-city-temp
 import { pluralize } from '@/lib/pseo/plural';
 import { withListingQuarantine } from '@/lib/pseo/listing-where';
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -538,7 +537,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
       {/* Hero */}
       <CategoryHero
         bgColor={assets?.bgColor || '#BE185D'}
-        heroImage={assets?.heroImage || `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
+        heroImage={assets?.heroImage || DEFAULT_HERO_IMAGE}
         heroAlt={`${config.label} ${brand.niche.short} jobs in ${stateName}`}
         // P2 #15: freshness comes from when the counts were actually computed
         // (shared formatter with the city template) — this used to assert

@@ -19,7 +19,6 @@ import {
   MIN_CITY_JOBS_FOR_LINK,
 } from './[state]/directory';
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 // Force dynamic rendering - don't try to statically generate during build
 // force-dynamic removed: it overrides revalidate and defeats ISR caching
@@ -293,8 +292,8 @@ export default async function LocationsPage() {
       />
       {/* ═══ HERO ═══ */}
       <CategoryHero
-        bgColor="#BE185D"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp`}
+        bgColor="#fbf8ee"
+        heroImage="/images/categories/heroes/us-map.webp"
         heroAlt={`${brand.niche.short} Jobs by Location`}
         badgeText="Nationwide"
         breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Locations", url: `${brand.baseUrl}/jobs/locations` }])}
@@ -337,7 +336,7 @@ export default async function LocationsPage() {
                         border: '1px solid rgba(255,255,255,0.6)',
                         boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 3px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02)',
                       }}>
-                        <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp`} alt="" width={52} height={52} sizes="52px" style={{ objectFit: 'contain' }} />
+                        <Image src="/images/categories/nav/remote.webp" alt="" width={52} height={52} sizes="52px" style={{ objectFit: 'contain' }} />
                       </div>
 
                       <div>
@@ -400,7 +399,7 @@ export default async function LocationsPage() {
           {/* ═══ Browse by Job Type — Clay Icon Grid ═══ */}
           <div className="mb-12">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp`} alt="" width={28} height={28} sizes="28px" style={{ objectFit: 'contain' }} />
+              <Image src="/images/categories/nav/location.webp" alt="" width={28} height={28} sizes="28px" style={{ objectFit: 'contain' }} />
               <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 800, fontFamily: 'var(--font-lora, Georgia, serif)', color: '#1A2E35', margin: 0 }}>
                 Browse by Job Type
               </h2>
@@ -408,11 +407,11 @@ export default async function LocationsPage() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {[
-                { href: '/jobs/remote',     icon: 'clay_icon_remote.png',     label: 'Remote',     sub: 'Work from anywhere' },
-                { href: '/jobs/telehealth', icon: 'clay_icon_telehealth.png', label: 'Telehealth', sub: 'Virtual patient care' },
-                { href: '/jobs/travel',     icon: 'clay_icon_travel.png',     label: 'Travel',     sub: 'Locum tenens' },
-                { href: '/jobs/new-grad',   icon: 'clay_icon_newgrad.png',    label: 'New Grad',   sub: 'Entry-level friendly' },
-                { href: '/jobs/per-diem',   icon: 'clay_icon_perdiem.png',    label: 'Per Diem',   sub: 'Flexible scheduling' },
+                { href: '/jobs/remote',     icon: '/images/categories/nav/remote.webp', label: 'Remote',     sub: 'Work from anywhere' },
+                { href: '/jobs/telehealth', icon: '/images/categories/nav/telehealth.webp', label: 'Telehealth', sub: 'Virtual patient care' },
+                { href: '/jobs/travel',     icon: '/images/categories/nav/travel.webp', label: 'Travel',     sub: 'Locum tenens' },
+                { href: '/jobs/new-grad',   icon: '/images/categories/nav/new-grad.webp', label: 'New Grad',   sub: 'Entry-level friendly' },
+                { href: '/jobs/per-diem',   icon: '/images/categories/nav/per-diem.webp', label: 'Per Diem',   sub: 'Flexible scheduling' },
               ].map((cat) => (
                 <Link key={cat.href} href={cat.href} className="group">
                   <div
@@ -427,7 +426,7 @@ export default async function LocationsPage() {
                       border: '1px solid rgba(255,255,255,0.6)',
                       boxShadow: '3px 3px 8px rgba(0,0,0,0.04), -2px -2px 5px rgba(255,255,255,0.8), inset 1px 1px 3px rgba(255,255,255,0.6)',
                     }}>
-                      <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/${cat.icon.replace('.png', '.webp')}`} alt="" width={34} height={34} sizes="34px" style={{ objectFit: 'contain' }} />
+                      <Image src={cat.icon} alt="" width={34} height={34} sizes="34px" style={{ objectFit: 'contain' }} />
                     </div>
                     <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 4px' }}>{cat.label}</h3>
                     <p style={{ fontSize: '12px', color: '#7A6A62', margin: '0 0 12px', lineHeight: 1.4 }}>{cat.sub}</p>
@@ -446,7 +445,7 @@ export default async function LocationsPage() {
           {/* ═══ Browse by State — Diorama Cards ═══ */}
           <div className="mb-12">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp`} alt="" width={28} height={28} sizes="28px" style={{ objectFit: 'contain' }} />
+              <Image src="/images/categories/nav/location.webp" alt="" width={28} height={28} sizes="28px" style={{ objectFit: 'contain' }} />
               <h2 style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 800, fontFamily: 'var(--font-lora, Georgia, serif)', color: '#1A2E35', margin: 0 }}>
                 Browse by State
               </h2>

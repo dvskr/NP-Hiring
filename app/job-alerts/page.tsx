@@ -10,7 +10,6 @@ import { SALARY_FILTER_BUCKETS } from '@/config/niche/stats';
 import { EXPERIENCE_FILTER_BUCKETS } from '@/lib/filters';
 import { ALERT_KEYWORD_SUGGESTIONS, ALERT_KEYWORD_PLACEHOLDER } from '@/config/niche/alert-keywords';
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 /**
  * P2 #3 — query params this page accepts as prefill, so any surface that
@@ -244,8 +243,8 @@ function JobAlertsContent() {
     <div style={{ minHeight: '100vh', background: '#FBEFE4' }}>
       {/* ═══ Hero Section ═══ */}
       <CategoryHero
-        bgColor="#BE185D"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_alerts.webp`}
+        bgColor="#1b9688"
+        heroImage="/images/categories/heroes/job-alerts.webp"
         heroAlt="Job Alerts"
         badgeText="Job Alerts"
         breadcrumbs={['Home', 'Job Alerts']}

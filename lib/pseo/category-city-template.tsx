@@ -42,7 +42,7 @@ import { Job } from '@/lib/types';
 import { CityData } from './city-data/types';
 import { getCityBySlug } from './city-data/cities';
 import { SETTING_CONFIGS, SettingConfig, stateToSlug } from './setting-state-config';
-import { CATEGORY_ASSET_REGISTRY } from './category-asset-registry';
+import { CATEGORY_ASSET_REGISTRY, DEFAULT_HERO_IMAGE } from './category-asset-registry';
 import {
   getStatePracticeAuthority,
   getAuthorityLabel,
@@ -67,7 +67,6 @@ import { PSYCH_SPECIALTY_SLUG } from './taxonomy-registry';
 // hub for them instead of emitting a guaranteed-410 URL.
 const STATE_ELIGIBLE_SET = new Set<string>(STATE_ELIGIBLE_CATEGORY_SLUGS);
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 // ─── Category Configuration (extends SettingConfig for specialties) ────────────
 
@@ -1693,7 +1692,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
       {/* ═══ D2: HERO — CategoryHero with category's watercolor ═══ */}
       <CategoryHero
         bgColor={assets?.bgColor || '#BE185D'}
-        heroImage={assets?.heroImage || `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
+        heroImage={assets?.heroImage || DEFAULT_HERO_IMAGE}
         heroAlt={`${config.label} ${brand.niche.short} working in ${city!.name}, ${city!.stateCode}`}
         badgeText={formatStatsBadge(stats.totalJobs, stats.statsAsOf)}
         breadcrumbs={[]}
