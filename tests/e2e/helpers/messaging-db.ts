@@ -8,8 +8,9 @@
  * helper owned by another journey) so the two can evolve independently.
  *
  * Same Prisma + pg-adapter stack as lib/prisma.ts with a private two-slot
- * pool. DATABASE_URL comes from the env Playwright already loaded
- * (.env.test then .env) — the checked-out DEV database.
+ * pool. DATABASE_URL comes from .env.test, the only file Playwright loads,
+ * and must name a separate test database; the production guard refuses a
+ * production DATABASE_URL before any connection opens.
  *
  * Guard rails:
  *   - `dbAvailable()` is false when DATABASE_URL is unset or the run targets
@@ -20,6 +21,7 @@
 
 import type { PrismaClient } from '@prisma/client';
 import { brand } from '../../../config/brand';
+import { assertNotProduction } from '../../support/production-db-guard';
 
 type Pool = import('pg').Pool;
 
@@ -38,6 +40,7 @@ export async function getDb(): Promise<PrismaClient> {
   if (!dbAvailable()) {
     throw new Error('getDb(): DATABASE_URL missing or run targets production');
   }
+  assertNotProduction({ context: 'e2e messaging db helper', mutating: true });
   const [{ PrismaClient: Client }, { PrismaPg }, { Pool: PgPool }] = await Promise.all([
     import('@prisma/client'),
     import('@prisma/adapter-pg'),

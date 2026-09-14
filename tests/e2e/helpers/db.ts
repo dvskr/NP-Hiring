@@ -4,9 +4,9 @@
  * need to seed/clean their own fixtures.
  *
  * Mirrors lib/prisma.ts (PrismaPg adapter over a tiny pg Pool) so the spec
- * talks to the same schema the app does. playwright.config.ts loads .env.test
- * then .env, so DATABASE_URL is the checked-out DEV database — never point
- * this at production.
+ * talks to the same schema the app does. playwright.config.ts loads ONLY
+ * .env.test, which must name a separate test database; the production guard
+ * refuses a production DATABASE_URL before any connection opens.
  *
  * Every export is lazy: importing this module never opens a connection, so
  * specs that only need the browser pay nothing. Call `hasDb()` and
@@ -15,6 +15,7 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
+import { assertNotProduction } from '../../support/production-db-guard';
 
 let pool: Pool | null = null;
 let client: PrismaClient | null = null;
@@ -27,8 +28,9 @@ export function db(): PrismaClient {
     if (client) return client;
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
-        throw new Error('DATABASE_URL is not set — the E2E db helper needs the dev database');
+        throw new Error('DATABASE_URL is not set: the E2E db helper needs the separate test database from .env.test');
     }
+    assertNotProduction({ context: 'e2e db helper', mutating: true });
     pool = new Pool({ connectionString, max: 2, idleTimeoutMillis: 20_000, connectionTimeoutMillis: 10_000 });
     client = new PrismaClient({ adapter: new PrismaPg(pool), log: ['error'] });
     return client;

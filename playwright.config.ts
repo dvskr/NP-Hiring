@@ -2,9 +2,10 @@ import { defineConfig, devices } from '@playwright/test';
 import { config as dotenvConfig } from 'dotenv';
 import path from 'path';
 
-// Load credentials from .env.test (gitignored). Falls back to .env if present.
+// Load ONLY .env.test (gitignored). The checkout's .env is the PRODUCTION
+// database (incident 2026-09-15, tests/support/production-db-guard.ts), so it
+// is never a fallback here. .env.test must carry a separate test database.
 dotenvConfig({ path: path.resolve(__dirname, '.env.test') });
-dotenvConfig({ path: path.resolve(__dirname, '.env') });
 
 /**
  * Playwright config for PMHNP Job Board E2E tests.
@@ -26,6 +27,8 @@ const IS_LOCAL = BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1'
 
 export default defineConfig({
   testDir: './tests/e2e',
+  // Refuses to run against production before any test starts.
+  globalSetup: './tests/e2e/global-setup.ts',
   fullyParallel: false, // mutation tests share state; serialize for reliability
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 1,
@@ -46,13 +49,17 @@ export default defineConfig({
     navigationTimeout: 30_000,
     actionTimeout: 20_000,
   },
-  // Auto-start the Next.js dev server when running against localhost.
-  // Reuses an already-running server (so `npm run dev` in another terminal works).
+  // Auto-start the Next.js dev server when running against localhost. The
+  // server inherits this process's env, and Next.js never overrides variables
+  // that are already set, so it uses the .env.test database instead of the
+  // checkout's .env. A server someone started by hand may be on production
+  // data, so reuse is opt-in: set E2E_REUSE_SERVER=1 only for a server you
+  // started with the test env.
   webServer: IS_LOCAL
     ? {
         command: 'npm run dev:nomigrate',
         url: BASE_URL,
-        reuseExistingServer: true,
+        reuseExistingServer: process.env.E2E_REUSE_SERVER === '1',
         timeout: 180_000, // first compile of a Next.js app can take a while
         stdout: 'ignore',
         stderr: 'pipe',

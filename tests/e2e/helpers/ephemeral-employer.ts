@@ -46,6 +46,8 @@ export function ephemeralSupportAvailable(): boolean {
 async function serviceClient(): Promise<SupabaseClient> {
     const env = serviceEnv();
     if (!env) throw new Error('ephemeral-employer: no service-role credentials in env');
+    const { assertNotProduction } = await import('../../support/production-db-guard');
+    assertNotProduction({ context: 'e2e ephemeral employer', mutating: true });
     const { createClient } = await import('@supabase/supabase-js');
     return createClient(env.url, env.key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
