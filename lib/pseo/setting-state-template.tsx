@@ -560,9 +560,11 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
           // ("$110K-150K") under an "avg salary" label. Splitting correctly
           // would be worse: the low end of an estimated band is not an
           // average. Show the band, and label it as a band.
-          stats.avgSalary > 0
-            ? { value: `$${stats.avgSalary}k`, label: 'avg salary' }
-            : { value: config.salaryRange, label: 'typical range' },
+          ...(stats.avgSalary > 0
+            ? [{ value: `${stats.avgSalary}k`, label: 'avg salary' }]
+            : config.salaryRange
+              ? [{ value: config.salaryRange, label: 'typical range' }]
+              : []),
           { value: `${stats.topEmployers.length}`, label: pluralize(stats.topEmployers.length, 'employer') },
         ]}
         description={`${config.label} ${brand.niche.short} positions in ${stateName}. ${config.heroSubtitle}.`}

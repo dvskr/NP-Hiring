@@ -238,11 +238,11 @@ describe('P3 #3 — city narrative makes no false designation claim in either po
         }
     });
 
-    it('on topic and flagged, the claim names its discipline and the site rule', () => {
+    it('on topic and flagged, no designation claim is published at all', () => {
+        // Thin plan T0-4 (2026-09): the shortage column has no citable source,
+        // so the narrative no longer names a designation in either polarity.
         const text = buildTaxonomyCityNarrative(flagged(), PSYCH_SPECIALTY_SLUG!, 12);
-        expect(text).toContain('behavioral-health Health Professional Shortage Area (HPSA)');
-        expect(text).toContain('NHSC-approved sites');
-        // The over-broad promise is gone.
+        expect(text).not.toMatch(/HPSA|Health Professional Shortage|NHSC|shortage area/i);
         expect(text).not.toMatch(/typically (eligible|qualify) for NHSC/i);
     });
 
@@ -272,10 +272,10 @@ describe('P3 #2 — state narrative makes no false designation claim in either p
         }
     });
 
-    it('on topic with a positive count, the claim names discipline and site rule', () => {
+    it('on topic with a positive count, no designation claim is published at all', () => {
+        // Thin plan T0-4 (2026-09): the count column has no citable source.
         const text = buildSettingStateNarrative(PSYCH_SPECIALTY_SLUG!, ...args(3));
-        expect(text).toContain('behavioral-health Health Professional Shortage Area (HPSA)');
-        expect(text).toContain('NHSC-approved sites');
+        expect(text).not.toMatch(/HPSA|Health Professional Shortage|NHSC|shortage area/i);
         expect(text).not.toMatch(/typically qualify for NHSC/i);
     });
 
@@ -299,16 +299,13 @@ describe('P3 #2/#3 — NHSC copy explains mechanics and quotes no award', () => 
                 .not.toMatch(/\$\s?\d[^.]{0,160}(NHSC|National Health Service Corps)/);
         });
 
-        it(`${rel} qualifies every shortage/HPSA claim with its discipline`, () => {
+        it(`${rel} makes no shortage/HPSA designation claim`, () => {
+            // Thin plan T0-4 (2026-09): the designation columns have no citable
+            // source, so the narratives stopped surfacing them altogether.
             const lines = readCode(rel)
                 .split('\n')
                 .filter((l) => /HPSA|Health Professional Shortage|shortage-area/i.test(l));
-            expect(lines.length, `${rel} should still surface the designation`)
-                .toBeGreaterThan(0);
-            for (const line of lines) {
-                expect(line, `${rel}: claim must name its discipline → ${line.trim()}`)
-                    .toMatch(/behavioral[- ]health/i);
-            }
+            expect(lines, `${rel} still surfaces a designation`).toEqual([]);
         });
 
         it(`${rel} never promises blanket NHSC eligibility`, () => {
@@ -319,11 +316,10 @@ describe('P3 #2/#3 — NHSC copy explains mechanics and quotes no award', () => 
         });
     }
 
-    it('the gate lives in one place and the state narrative imports it', () => {
+    it('the discipline gate has one definition and the state narrative does not copy it', () => {
         expect(readCode(CITY_NARRATIVE)).toContain('export function shortageColumnAppliesTo');
-        expect(readCode(STATE_NARRATIVE))
-            .toMatch(/import \{ shortageColumnAppliesTo \} from '\.\/city-narrative'/);
-        // No second copy of the predicate body.
+        // No second copy of the predicate body (the state narrative no longer
+        // needs it at all since the designation sentence was removed).
         expect(
             (readCode(STATE_NARRATIVE).match(/function shortageColumnAppliesTo/g) ?? []).length,
         ).toBe(0);

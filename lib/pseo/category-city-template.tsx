@@ -76,7 +76,8 @@ export interface CategoryConfig {
   label: string;
   fullLabel: string;
   heroSubtitle: string;
-  salaryRange: string;
+  /** @deprecated hand-typed band; removed by the template rewrite (thin plan T0-3). */
+  salaryRange?: string;
   keywords: string[];
   faqCategory: string;
   buildWhere: (stateName: string, cityName?: string) => Record<string, unknown>;
@@ -1708,9 +1709,11 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
           // ("$110K-150K") under an "avg salary" label. Splitting correctly
           // would be worse: the low end of an estimated band is not an
           // average. Show the band, and label it as a band.
-          stats.rawAvgSalary > 0
-            ? { value: `$${stats.rawAvgSalary}k`, label: 'avg salary' }
-            : { value: config.salaryRange, label: 'typical range' },
+          ...(stats.rawAvgSalary > 0
+            ? [{ value: `${stats.rawAvgSalary}k`, label: 'avg salary' }]
+            : config.salaryRange
+              ? [{ value: config.salaryRange, label: 'typical range' }]
+              : []),
           { value: demand.label, label: 'demand' },
         ]}
         description={`${config.label} ${brand.niche.short} positions in ${city!.name}. ${config.heroSubtitle}.`}

@@ -356,6 +356,9 @@ describe('P3 #13 — hero salary stat no longer depends on an en-dash split', ()
 
     it('every salaryRange literal is a parseable ASCII-hyphen band', () => {
         for (const config of Object.values(ALL_CATEGORY_CONFIGS)) {
+            // Configs derived from the [state] tier carry no band any more
+            // (thin plan T0-3); only the city template's own literals remain.
+            if (config.salaryRange === undefined) continue;
             expect(config.salaryRange, config.slug).not.toContain('–');
             expect(config.salaryRange, config.slug).not.toContain('—');
             expect(config.salaryRange, config.slug).toMatch(/^\$[\d.]+K?-\$?[\d.]+K?\+?(\/hr)?$/);

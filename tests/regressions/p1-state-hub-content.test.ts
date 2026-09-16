@@ -27,7 +27,7 @@ const baseInput = {
   stateName: 'Texas',
   stateCode: 'TX',
   totalJobs: 42,
-  avgSalaryK: 128,
+  medianSalaryK: 128,
   uniqueEmployerCount: 17,
   topCategoryLabels: ['Remote', 'Family Practice', 'Telehealth'],
   topCityNames: ['Houston', 'Dallas', 'Austin'],
@@ -55,7 +55,7 @@ describe('P1 #11: buildPlainStateNarrative', () => {
 
   it('uses the live salary aggregate and never invents a figure', () => {
     expect(buildPlainStateNarrative({ ...baseInput })).toContain('$128K');
-    const withoutSalary = buildPlainStateNarrative({ ...baseInput, avgSalaryK: 0 });
+    const withoutSalary = buildPlainStateNarrative({ ...baseInput, medianSalaryK: 0 });
     // No disclosed-pay data → no dollar figure of any kind.
     expect(withoutSalary).not.toContain('$');
     expect(withoutSalary).not.toContain('NaN');

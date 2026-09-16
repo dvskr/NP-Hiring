@@ -1,20 +1,26 @@
 /**
- * City Narrative — deterministic per-(city, taxonomy) content snippets.
+ * City Narrative: deterministic per-(city, taxonomy) content snippets.
  *
- * Goal: defeat Google's "Crawled — currently not indexed" thin-content flag
- * by giving every indexable pSEO page a substantively unique 2–4 sentence
- * paragraph driven by structured facts. Two pages with the same (city,
- * taxonomy) pair will read the same; any other pair produces measurably
- * different text because the fact mix differs.
+ * Goal: defeat Google's "Crawled, currently not indexed" thin-content flag
+ * by giving every indexable pSEO page a substantively unique short paragraph
+ * driven by structured facts. Two pages with the same (city, taxonomy) pair
+ * read the same; any other pair produces measurably different text because
+ * the fact mix differs.
  *
  * Layer 1 (this file): zero-LLM, deterministic templates assembled from
- *   - city facts (population, COL, MH shortage, healthcare systems, income)
- *   - state facts (practice authority + state-specific details)
- *   - taxonomy-specific lead phrase
+ *   - city facts (2020 Census population tier)
+ *   - state facts (AANP practice authority)
+ *   - a taxonomy-specific lead phrase
  *
  * Layer 2 (DB override, see prisma CitySnippet/CategoryCitySnippet models):
  *   - Optional Claude-generated richer prose for top cities
  *   - Renderer prefers DB override; falls back to Layer 1
+ *
+ * TRUTH RULES (pSEO truth sweep, PLAN.md T0-4, thin-spec 2 P3 and P4): no
+ * pay figure, cost-of-living index, median income, shortage designation, or
+ * trend claim is composed here. The static healthcareSystems list has no
+ * surviving source and is no longer rendered; live employers come from
+ * lib/pseo/listing-facts.ts on the page. Professional English, no dashes.
  */
 import { CityData } from './city-data/types';
 import { brand } from '@/config/brand';
@@ -27,7 +33,6 @@ import {
 // ─── Tiers (used by templates to pick phrasing) ─────────────────────────────
 
 type PopulationTier = 'major-metro' | 'large-city' | 'mid-size' | 'small-city';
-type CostTier = 'high-cost' | 'above-avg' | 'average' | 'below-avg' | 'low-cost';
 
 function populationTier(pop: number): PopulationTier {
     if (pop >= 1_000_000) return 'major-metro';
@@ -36,23 +41,20 @@ function populationTier(pop: number): PopulationTier {
     return 'small-city';
 }
 
-function costTier(col: number): CostTier {
-    if (col >= 130) return 'high-cost';
-    if (col >= 110) return 'above-avg';
-    if (col >= 95) return 'average';
-    if (col >= 85) return 'below-avg';
-    return 'low-cost';
-}
-
 // ─── Fact provider ──────────────────────────────────────────────────────────
 
 export interface CityNarrativeFacts {
     city: CityData;
     populationTier: PopulationTier;
-    costTier: CostTier;
     practiceAuthority: PracticeAuthority | null;
     practiceDetails: string | null;
+    /**
+     * The donor behavioral-health HPSA column (see ./city-data/types.ts).
+     * Carried for the snippet generator's fact block and the parity tests;
+     * nothing in this file renders it any more.
+     */
     shortage: boolean;
+    /** Static healthcareSystems names; prompt input only, never rendered here. */
     topEmployers: string[];
 }
 
@@ -61,7 +63,6 @@ export function buildCityFacts(city: CityData): CityNarrativeFacts {
     return {
         city,
         populationTier: populationTier(city.population),
-        costTier: costTier(city.costOfLivingIndex),
         practiceAuthority: auth?.authority ?? null,
         practiceDetails: auth?.details ?? null,
         shortage: city.mentalHealthShortage,
@@ -81,14 +82,6 @@ const POPULATION_PHRASES: Record<PopulationTier, string> = {
     'small-city': 'smaller community',
 };
 
-const COST_PHRASES: Record<CostTier, string> = {
-    'high-cost': 'high cost of living relative to the national average',
-    'above-avg': 'above-average cost of living',
-    'average': 'cost of living near the national average',
-    'below-avg': 'below-average cost of living',
-    'low-cost': 'low cost of living relative to the national average',
-};
-
 const AUTHORITY_PHRASES: Record<PracticeAuthority, string> = {
     full: 'full practice authority',
     reduced: 'reduced practice authority requiring a collaborative agreement',
@@ -101,36 +94,20 @@ const AUTHORITY_PHRASES: Record<PracticeAuthority, string> = {
  * Does the donor shortage column describe THIS page's specialty at all?
  *
  * `CityData.mentalHealthShortage` is the donor board's BEHAVIORAL-HEALTH
- * -discipline HRSA HPSA column (see ./city-data/types.ts) — not an all-NP or
- * primary-care signal. Naming the discipline in the copy is necessary but not
- * sufficient: 2,650 of the 4,135 cities carry the flag, so an ungated
- * sentence publishes a behavioral-health designation on every category from
- * dermatology to anesthesia. Both polarities have to be gated, because
- * "not designated" is equally a behavioral-health statement.
- *
- * This mirrors `categoryOwnsShortageData` in ./category-city-template.tsx,
- * which cannot be imported here: that module imports THIS one, and routing
- * the narrative through a React template would also drag Next/Prisma into
- * the plain-node snippet scripts (scripts/preview-narrative.ts,
- * scripts/diff-snippets.ts). The two predicates are pinned in agreement for
- * every registered category slug by
- * tests/regressions/p3-donor-followups-narrative-truth.test.ts.
+ * -discipline HRSA column (see ./city-data/types.ts), not an all-NP or
+ * primary-care signal. The narratives no longer publish the designation on
+ * any category (its generator and source dataset are gone, so neither the
+ * vintage nor the designation type can be re-verified from this repo), but
+ * the predicate stays exported: `categoryOwnsShortageData` in
+ * ./category-city-template.tsx is pinned in agreement with it for every
+ * registered category slug by
+ * tests/regressions/p3-donor-followups-narrative-truth.test.ts, and that
+ * module cannot be imported here (it imports THIS one, and routing the
+ * narrative through a React template would drag Next/Prisma into the
+ * plain-node snippet scripts).
  */
 export function shortageColumnAppliesTo(categorySlug: string | undefined): boolean {
     return PSYCH_SPECIALTY_SLUG !== undefined && categorySlug === PSYCH_SPECIALTY_SLUG;
-}
-
-/**
- * The one sentence allowed to state the designation, for the one category it
- * describes. Explains the MECHANICS of NHSC Loan Repayment rather than
- * promising eligibility: the program matches the applicant's discipline to
- * the designation type and pays only for service at an NHSC-approved site,
- * so a city's HPSA status alone never establishes that a given posting
- * qualifies. Wording mirrors the corrected FAQ answer in
- * category-city-template.tsx so the two surfaces cannot drift.
- */
-function behavioralHealthShortageSentence(cityName: string): string {
-    return `HRSA designates ${cityName} a federal behavioral-health Health Professional Shortage Area (HPSA), which is what puts National Health Service Corps Loan Repayment within reach for behavioral-health clinicians at NHSC-approved sites in the area. Awards follow the site's approval and the applicant's discipline, not the city alone.`;
 }
 
 // ─── Base city narrative (used by /jobs/city/{slug}) ────────────────────────
@@ -138,141 +115,92 @@ function behavioralHealthShortageSentence(cityName: string): string {
 export function buildCityNarrative(
     facts: CityNarrativeFacts,
     totalJobs: number,
-    /**
-     * Category slug when this narrative is composed for a category×city page.
-     * Omitted on the all-specialty /jobs/city/{slug} hub, where the donor
-     * behavioral-health shortage column is by definition off topic.
-     */
-    categorySlug?: string,
 ): string {
-    const { city, populationTier: pt, costTier: ct, practiceAuthority, shortage, topEmployers } = facts;
+    const { city, populationTier: pt, practiceAuthority } = facts;
     const parts: string[] = [];
 
-    // Sentence 1: position + state context.
+    // Sentence 1: position (2020 Census population tier) plus the state's
+    // AANP classification.
     const popPhrase = POPULATION_PHRASES[pt];
     const authPhrase = practiceAuthority ? AUTHORITY_PHRASES[practiceAuthority] : 'state-specific practice rules';
     parts.push(
-        `Demand for ${brand.niche.descriptor}s in ${city.name}, ${city.stateCode} reflects the area's status as a ${popPhrase} within ${city.state}, where ${brand.niche.short}s operate under ${authPhrase}.`,
+        `${city.name}, ${city.stateCode} is a ${popPhrase} in ${city.state} by 2020 Census population, where ${brand.niche.short}s practice under ${authPhrase}.`,
     );
 
-    // Sentence 2: economic context. Unconditional and designation-free.
-    //
-    // WAS: a two-branch sentence, both branches false. The affirmative branch
-    // called the city "a Health Professional Shortage Area" (unqualified — the
-    // repo holds only the behavioral-health column) and said positions there
-    // "are typically eligible for NHSC Loan Repayment", which is not how the
-    // program works: NHSC LRP is discipline-matched and paid per
-    // NHSC-approved SITE, so no city-level fact makes a posting eligible. The
-    // negative branch asserted the city "is not currently a federally
-    // designated health professional shortage area" — a claim about ALL HRSA
-    // disciplines derived from a behavioral-health-only column, i.e. the same
-    // falsehood inverted. Neither polarity belongs in prose that ships on all
-    // 42 categories, so the economic framing stands alone here and the
-    // designation moved to the gated sentence below.
-    const colPhrase = COST_PHRASES[ct];
+    // Sentence 2: the live count, stated as page inventory. The verb agrees
+    // with the count.
     parts.push(
-        `Regional demand for ${brand.niche.short}s and the local ${colPhrase} (index ${city.costOfLivingIndex}) shape ${brand.niche.short} compensation in the ${city.name} market.`,
+        `${totalJobs} active ${brand.niche.short} ${totalJobs === 1 ? 'position is' : 'positions are'} currently listed on this page.`,
     );
-
-    // Sentence 2b: the designation — only where it is both true and on topic.
-    if (shortage && shortageColumnAppliesTo(categorySlug)) {
-        parts.push(behavioralHealthShortageSentence(city.name));
-    }
-
-    // Sentence 3: employer landscape + counts (only when we have a non-empty list).
-    if (topEmployers.length > 0) {
-        const employerPhrase = topEmployers.length === 1
-            ? topEmployers[0]
-            : topEmployers.length === 2
-                ? `${topEmployers[0]} and ${topEmployers[1]}`
-                : `${topEmployers.slice(0, -1).join(', ')}, and ${topEmployers[topEmployers.length - 1]}`;
-        parts.push(
-            `Major healthcare employers in the ${city.name} area include ${employerPhrase}, alongside ${totalJobs} active ${brand.niche.short} ${totalJobs === 1 ? 'position' : 'positions'} listed on this page.`,
-        );
-    } else {
-        parts.push(
-            `${totalJobs} active ${brand.niche.short} ${totalJobs === 1 ? 'position is' : 'positions are'} currently listed on this page from a mix of regional employers.`,
-        );
-    }
 
     return parts.join(' ');
 }
 
 // ─── Taxonomy-specific lead phrases ─────────────────────────────────────────
-// One per taxonomy. Each is keyed off CityNarrativeFacts so the lead is also
-// (slightly) city-aware where that's useful (e.g. major-metro VAs differ
-// from rural ones in compensation profile).
+// One per taxonomy slug. Each says what the category means on this board and
+// what to check in a listing, keyed off CityNarrativeFacts so the lead is
+// city-aware. No figures, no market-size claims, no trend words.
 
 type TaxonomyLeadFn = (facts: CityNarrativeFacts) => string;
 
+const NP = brand.niche.short;
+
 const TAXONOMY_LEADS: Record<string, TaxonomyLeadFn> = {
-    'remote': (f) => `Remote ${brand.niche.short} positions covering patients in ${f.city.stateCode} typically pay $110K to $170K and require active state licensure plus a HIPAA-compliant home setup. Many roles offer DEA-registered prescribing across multiple states via the Nurse Licensure Compact.`,
-    'telehealth': (f) => `Telehealth ${brand.niche.short} roles serving ${f.city.name} and the wider ${f.city.state} market generally combine asynchronous documentation with scheduled video visits. Most employers require HIPAA-compliant equipment and at least one state license; multi-state Compact licensure expands earning potential.`,
-    'inpatient': (f) => `Inpatient ${brand.niche.short} positions in ${f.city.name} cover acute inpatient units, hospitalist services, and step-down roles. Shift differentials, weekend premiums, and on-call stipends are common in addition to base salary.`,
-    'outpatient': (f) => `Outpatient ${brand.niche.short} roles in ${f.city.name} span community health centers, group practices, and integrated primary-care settings. Typical caseloads run 12 to 18 patients per day with documentation time built in.`,
-    'travel': (f) => `Travel ${brand.niche.short} assignments routed through ${f.city.name} are usually 8 to 26 weeks with tax-free housing stipends, completion bonuses, and 20 to 50% premium pay over permanent equivalents. Most agencies handle multi-state licensure logistics.`,
-    'full-time': (f) => `Full-time ${brand.niche.short} positions in ${f.city.name} typically offer comprehensive benefits (health, dental, vision, retirement match, malpractice coverage, and 4 to 6 weeks of PTO) alongside base salaries calibrated to the area's ${COST_PHRASES[f.costTier]}.`,
-    'part-time': (f) => `Part-time ${brand.niche.short} roles in ${f.city.name} commonly run 16 to 32 hours per week with prorated benefits or a 1099 contractor structure. Many providers stack part-time roles across telehealth and in-person sites for schedule flexibility.`,
-    'contract': (f) => `Contract ${brand.niche.short} positions in ${f.city.name} are typically 1099 engagements paying $70 to $130 per hour. Contractors handle their own self-employment tax, malpractice insurance, and quarterly estimated payments, but they retain higher take-home pay than equivalent W-2 roles.`,
-    'new-grad': (f) => `New-graduate ${brand.niche.short} openings in ${f.city.name} typically include 6 to 12 months of structured supervision, dedicated preceptor time, and a slower initial caseload ramp. Most employers in ${f.city.state} accept applicants within 6 months of board certification.`,
-    '1099': (f) => `1099 / independent-contractor ${brand.niche.short} arrangements in ${f.city.name} pay $60 to $150+ per hour with no benefits but full schedule autonomy. Contractors must carry their own tail-coverage malpractice and budget approximately 30% for self-employment tax.`,
+    'remote': (f) => `Remote ${NP} listings with a ${f.city.name} address are roles the employer marks as remote, and each names the state licensure it requires to treat patients there. Check the technology, schedule, and coverage expectations in each listing, because employers define remote work differently.`,
+    'telehealth': (f) => `Telehealth ${NP} listings for ${f.city.name} describe care delivered by video or phone from a ${f.city.state}-licensed clinician, and each names its platform and visit model. Read the documentation and scheduling expectations, which telehealth employers set in their own way.`,
+    'inpatient': (f) => `Inpatient ${NP} listings in ${f.city.name} come from hospitals and hospital-based services, with the unit, shift pattern, and differentials named in each posting. Facility credentialing defines the day-to-day scope, so ask about privileging timelines early.`,
+    'outpatient': (f) => `Outpatient ${NP} listings in ${f.city.name} come from clinics, group practices, and community health centers. Panel size, visit length, and documentation time vary by practice, so confirm each before comparing offers.`,
+    'travel': (f) => `Travel ${NP} assignments routed through ${f.city.name} have a stated length and are usually arranged through a staffing agency. Compare the full package, including housing and travel terms, and confirm the ${f.city.state} licensure timeline before accepting a start date.`,
+    'full-time': (f) => `Full-time ${NP} listings in ${f.city.name} are permanent roles where benefits, paid time off, and continuing education support form part of the offer. Compare the whole package rather than base pay alone, and get on-call expectations in writing.`,
+    'part-time': (f) => `Part-time ${NP} listings in ${f.city.name} state a reduced weekly schedule on a fixed basis, distinct from as-needed shifts. Ask where the benefits threshold sits and whether the role can expand to full-time.`,
+    'contract': (f) => `Contract ${NP} listings in ${f.city.name} are fixed-term engagements, either as an agency W-2 employee or as an independent contractor. The structure decides who handles taxes, malpractice, and benefits, so confirm it before comparing the rate to a permanent offer.`,
+    'new-grad': (f) => `New-graduate ${NP} listings in ${f.city.name} say the employer is open to newly certified clinicians, and the better ones spell out onboarding, preceptorship, and supervision. Ask how the caseload ramps and who provides clinical backup in the first months.`,
+    '1099': (f) => `Independent-contractor (1099) ${NP} listings in ${f.city.name} quote a rate before self-employment tax, malpractice, and the benefits you fund yourself. Model the after-tax figure, and confirm who holds any collaborative agreement ${f.city.state} requires.`,
     // NHSC framing in the two leads below explains the program's MECHANICS
-    // instead of promising eligibility or quoting an award. The prior copy
-    // asserted "$50,000+ over a 2-year commitment" (and the state file quoted
-    // a different figure for the same program) — neither traces to
-    // lib/stats-sources.ts, and HRSA resets award tiers and eligible
-    // disciplines each cycle. Eligibility runs through the specific site's
-    // active NHSC approval, so that is what the copy points at.
-    'correctional': (f) => `Correctional ${brand.niche.short} roles serving facilities in or near ${f.city.name} often offer state-employee benefits and pension eligibility, plus loan-repayment help through state-run programs. Correctional facilities are one of HRSA's eligible NHSC site types, so federal loan repayment depends on whether the individual facility holds an active NHSC site approval.`,
-    'community-health': (f) => `Community-health ${brand.niche.short} roles in ${f.city.name} are based at FQHCs and similar safety-net providers, where 340B drug-pricing infrastructure widens medication access for patients. FQHCs are among the site types HRSA treats as automatically eligible for NHSC approval, so ask any prospective employer for its current NHSC site status. Loan repayment follows the approved site and the applicant's discipline, and HRSA sets the award tiers each cycle.`,
-    'entry-level': (f) => `Entry-level ${brand.niche.short} openings in ${f.city.name} usually accept applicants within 1 to 2 years of board certification and include structured onboarding plus access to senior ${brand.niche.short} mentorship for the first year.`,
-    'geriatric': (f) => `Geriatric ${brand.niche.short} roles in ${f.city.name} commonly serve long-term care facilities, memory-care units, and home-based primary care. Reimbursement leans on Medicare structures and often includes per-visit RVU bonuses.`,
-    'hospital': (f) => `Hospital-based ${brand.niche.short} positions in ${f.city.name} include hospitalist, specialty service, and emergency department roles. Most carry shift differentials, on-call stipends, and CME funding.`,
-    'lgbtq': (f) => `LGBTQ-affirming ${brand.niche.short} roles in ${f.city.name} typically focus on gender-affirming care, preventive health, and integrated behavioral health within community-centered practices.`,
-    'locum-tenens': (f) => `Locum tenens ${brand.niche.short} coverage in ${f.city.name} pays $80 to $150 per hour with malpractice and travel costs covered by the agency. Assignments range from 4 to 26 weeks and are common for filling permanent-hire gaps.`,
-    'mid-career': (f) => `Mid-career ${brand.niche.short} openings in ${f.city.name} target providers with 3 to 7 years of post-certification experience and typically include leadership-track compensation, lead-clinician roles, or expanded scope responsibilities.`,
-    'per-diem': (f) => `Per-diem ${brand.niche.short} shifts in ${f.city.name} pay $60 to $110 per hour without a scheduled commitment. Most providers stack per-diem coverage with a primary employer for income smoothing.`,
-    'private-practice': (f) => `Private-practice ${brand.niche.short} opportunities in ${f.city.name} include solo, group, and concierge models. Self-employed practitioners typically retain 65 to 75% of collected revenue after overhead, billing, and malpractice.`,
-    'senior': (f) => `Senior ${brand.niche.short} roles in ${f.city.name} target providers with 7+ years of experience and typically include clinical leadership, supervisory authority over new graduates, and stipends for protocol development or quality improvement.`,
-    'va': (f) => `VA ${brand.niche.short} positions in ${f.city.name} fall on the federal GS-12 to GS-14 pay scale with FEHB health coverage, the Thrift Savings Plan retirement match, and 26 days of paid leave annually. Federal practice authority generally supersedes state restrictions for VA-employed providers.`,
-    'veterans': (f) => `Veterans-focused ${brand.niche.short} roles in ${f.city.name} span VA medical centers, community-based outpatient clinics, and Vet Centers. Roles emphasize service-connected conditions such as PTSD and traumatic brain injury alongside general primary care.`,
-    // ── 2026-07 NP taxonomy categories (settings + specialties + APRN roles) ──
-    // Covers the 19 NP_CATEGORY_CONFIGS slugs so every city-eligible taxonomy
-    // gets a distinct lead instead of falling back to the bare city narrative
-    // (which reads near-identical to /jobs/city/{slug} — the thin-content
-    // pattern this file exists to defeat).
-    'urgent-care': (f) => `Urgent care ${brand.niche.short} roles in ${f.city.name} staff walk-in clinics and retail health sites with extended evening and weekend hours. Positions emphasize episodic acute care (suturing, splinting, and radiograph interpretation) on shift-based schedules, often with volume incentives.`,
-    'home-health': (f) => `Home-health ${brand.niche.short} positions serving ${f.city.name} center on house calls, transitional care, and annual wellness visits. Compensation is commonly per-visit or RVU-based, with mileage reimbursement and flexible scheduling as standard components.`,
-    'family-practice': (f) => `Family practice ${brand.niche.short} (FNP) openings in ${f.city.name} cover primary care across the lifespan, typically paying $110K to $150K. FNP remains the most widely held ${brand.niche.short} certification, and ${f.city.state} employers range from group practices to health systems and community clinics.`,
-    'adult-gerontology': (f) => `Adult-gerontology ${brand.niche.short} roles in ${f.city.name} split between primary-care (AGPCNP) and acute-care (AGACNP) tracks. Demand tracks the aging patient base: long-term care, internal medicine, and hospital services all recruit this certification.`,
-    'pediatric': (f) => `Pediatric ${brand.niche.short} openings in ${f.city.name} span primary-care pediatrics, school-based health, and specialty children's services. PNP-PC and PNP-AC certifications map to clinic and hospital settings respectively.`,
-    'neonatal': (f) => `Neonatal ${brand.niche.short} positions in ${f.city.name} concentrate in Level II to IV NICUs and typically expect prior NICU nursing experience before certification. Night and weekend coverage carries meaningful shift differentials.`,
-    'women-health': (f) => `Women's health ${brand.niche.short} (WHNP) roles in ${f.city.name} sit in OB/GYN practices, family-planning clinics, and prenatal programs. Many positions work alongside certified nurse midwives in collaborative women's health teams.`,
-    'acute-care': (f) => `Acute care ${brand.niche.short} positions in ${f.city.name} staff ICUs, step-down units, and rapid-response teams. AGACNP certification is the usual requirement, and scheduling commonly follows hospital 13-hour shift patterns.`,
-    'emergency': (f) => `Emergency ${brand.niche.short} roles in ${f.city.name} place providers in emergency departments and fast-track units, typically paying $115K to $160K. Prior emergency or acute-care experience plus procedural skills are standard expectations.`,
-    'oncology': (f) => `Oncology ${brand.niche.short} openings in ${f.city.name} support infusion centers, hematology-oncology practices, and survivorship programs. The role blends symptom management, treatment monitoring, and care coordination alongside oncologists.`,
-    'cardiology': (f) => `Cardiology ${brand.niche.short} roles in ${f.city.name} span heart-failure clinics, procedural support, and inpatient cardiology services. Device-clinic coverage and anticoagulation management are common practice components.`,
-    'primary-care': (f) => `Primary care ${brand.niche.short} positions in ${f.city.name} anchor internal-medicine and family practices, with panels typically running 15 to 20 patients per day. Value-based-care incentives increasingly supplement base compensation.`,
-    'hospitalist': (f) => `Hospitalist ${brand.niche.short} roles in ${f.city.name} manage inpatient admissions, rounding, and discharge planning, frequently on 7-on/7-off block schedules. ACNP or AGACNP certification is the common requirement.`,
-    'dermatology': (f) => `Dermatology ${brand.niche.short} openings in ${f.city.name} combine medical dermatology with procedural work such as biopsies and lesion removal. Productivity bonuses on top of base salary are common in this specialty.`,
-    'orthopedic': (f) => `Orthopedic ${brand.niche.short} roles in ${f.city.name} split between clinic, surgical first-assist, and inpatient orthopedic services. First-assist experience or RNFA credentials widen both the opportunity set and pay.`,
-    'anesthesia': (f) => `CRNA positions in ${f.city.name} carry the highest APRN compensation, typically $180K to $250K+, across hospital ORs, ambulatory surgery centers, and office-based practices. Call structure and supervision model materially affect total pay.`,
-    'midwifery': (f) => `Certified nurse midwife (CNM) roles in ${f.city.name} span hospital labor-and-delivery units, birth centers, and OB/GYN practices. Call frequency and delivery volume drive most compensation differences.`,
-    'clinical-nurse-specialist': (f) => `Clinical nurse specialist (CNS) positions in ${f.city.name} focus on quality improvement, staff education, and specialty consultation within health systems. The focus is program-level impact rather than a personal patient panel.`,
+    // instead of promising eligibility or quoting an award. HRSA resets award
+    // tiers and eligible disciplines each cycle, and eligibility runs through
+    // the specific site's active NHSC approval, so that is what the copy
+    // points at.
+    'correctional': (f) => `Correctional ${NP} listings serving facilities in or near ${f.city.name} come from state, county, and contracted health services, and many describe public-employee benefits. Correctional facilities are one of HRSA's eligible NHSC site types, so federal loan repayment depends on whether the specific facility holds an active NHSC site approval.`,
+    'community-health': (f) => `Community-health ${NP} listings in ${f.city.name} are based at FQHCs and similar safety-net providers. FQHCs are among the site types HRSA treats as automatically eligible for NHSC approval, so ask any prospective employer for its current NHSC site status; loan repayment follows the approved site and the applicant's discipline.`,
+    'entry-level': (f) => `Entry-level ${NP} listings in ${f.city.name} describe roles open to clinicians early in practice, with the years of experience the employer expects stated in each posting. Read the onboarding and supervision details rather than relying on the label alone.`,
+    'geriatric': (f) => `Geriatric ${NP} listings in ${f.city.name} commonly serve long-term care facilities, memory-care units, and home-based primary care. Ask how many buildings or visits a role covers and how visit-based pay, if any, is structured.`,
+    'hospital': (f) => `Hospital-based ${NP} listings in ${f.city.name} include hospitalist, specialty service, and emergency department roles. Each names its shift pattern and any differentials or call stipends, so read the schedule section before comparing base pay.`,
+    'lgbtq': (f) => `LGBTQ-affirming ${NP} listings in ${f.city.name} describe practices that center gender-affirming care, preventive health, and integrated behavioral health. Read each listing for the services offered and the training the employer expects.`,
+    'locum-tenens': (f) => `Locum tenens ${NP} coverage in ${f.city.name} fills a practice or facility for a defined period, usually through an agency that covers malpractice and handles credentialing paperwork. Each assignment still requires ${f.city.state} APRN licensure, so confirm the licensing timeline before the start date.`,
+    'mid-career': (f) => `Mid-career ${NP} listings in ${f.city.name} target clinicians with several years of post-certification practice and often carry lead-clinician or expanded-scope responsibilities. Check how the listing defines the experience level and what leadership duties come with it.`,
+    'per-diem': (f) => `Per-diem ${NP} listings in ${f.city.name} are as-needed shifts without guaranteed hours, credentialed facility by facility. Clarify cancellation terms and any weekend or holiday differentials up front.`,
+    'private-practice': (f) => `Private-practice ${NP} listings in ${f.city.name} include solo, group, and concierge models. Ask how compensation is split between base pay and collections, and what overhead, billing, and malpractice arrangements the practice covers.`,
+    'senior': (f) => `Senior ${NP} listings in ${f.city.name} describe roles with clinical leadership, supervisory responsibility for newer clinicians, or protocol and quality work. Confirm how much of the week is clinical versus administrative.`,
+    'va': (f) => `VA ${NP} listings in ${f.city.name} are federal positions, with the federal pay scale, benefits, and leave structure stated in each posting. The VA sets its own practice standards for its clinicians, so ask how the role's scope is defined.`,
+    'veterans': (f) => `Veterans-focused ${NP} listings in ${f.city.name} span VA medical centers, community-based outpatient clinics, and Vet Centers. Postings emphasize service-connected conditions such as PTSD and traumatic brain injury alongside general care, so read the population and setting details closely.`,
+    'urgent-care': (f) => `Urgent care ${NP} listings in ${f.city.name} staff walk-in clinics and retail health sites with extended evening and weekend hours. Positions center on episodic acute care on shift schedules, so confirm the rotation and the procedures ${NP}s own at that site.`,
+    'home-health': (f) => `Home-health ${NP} listings serving ${f.city.name} center on house calls, transitional care, and annual wellness visits. Ask whether pay is per visit or salaried, how mileage is handled, and how large the territory is.`,
+    'family-practice': (f) => `Family practice ${NP} (FNP) listings in ${f.city.name} cover primary care across the lifespan, from group practices to health systems and community clinics. Check each listing for panel size, walk-in coverage, and the collaboration terms ${f.city.state} applies.`,
+    'adult-gerontology': (f) => `Adult-gerontology ${NP} listings in ${f.city.name} split between the primary care (AGPCNP) and acute care (AGACNP) tracks, across internal medicine, long-term care, and hospital services. Match the listing's certification requirement to your own track before applying.`,
+    'pediatric': (f) => `Pediatric ${NP} listings in ${f.city.name} span primary-care pediatrics, school-based health, and children's specialty services; PNP-PC and PNP-AC certifications map to clinic and hospital settings respectively. Confirm the acuity mix and any after-hours expectations.`,
+    'neonatal': (f) => `Neonatal ${NP} listings in ${f.city.name} concentrate in NICUs, and employers expect prior NICU nursing experience alongside NNP certification. Night and weekend coverage is part of the role, so ask how call and post-call time are structured.`,
+    'women-health': (f) => `Women's health ${NP} (WHNP) listings in ${f.city.name} sit in OB/GYN practices, family-planning clinics, and prenatal programs, often alongside certified nurse midwives. Confirm whether the scope is gynecology only or includes prenatal and postpartum panels.`,
+    'acute-care': (f) => `Acute care ${NP} listings in ${f.city.name} staff ICUs, step-down units, and rapid-response teams, with AGACNP certification the usual requirement. Listings name the shift pattern; ask about orientation length and procedure training before comparing offers.`,
+    'emergency': (f) => `Emergency ${NP} listings in ${f.city.name} place clinicians in emergency departments and fast-track units on shift schedules. Ask which procedures ${NP}s own in that department and what prior emergency or acute-care experience the employer expects.`,
+    'oncology': (f) => `Oncology ${NP} listings in ${f.city.name} support infusion centers, hematology-oncology practices, and survivorship programs. The role blends symptom management, treatment monitoring, and care coordination, so confirm the treatment-phase focus in each listing.`,
+    'cardiology': (f) => `Cardiology ${NP} listings in ${f.city.name} span heart-failure clinics, procedural support, and inpatient cardiology services, with device-clinic coverage and anticoagulation management as common components. Confirm whether the role is clinic-only, inpatient-only, or hybrid.`,
+    'primary-care': (f) => `Primary care ${NP} listings in ${f.city.name} anchor internal-medicine and family practices with a continuity panel of your own. Panel size, documentation time, and quality-incentive structure are the practical differences to compare between offers.`,
+    'hospitalist': (f) => `Hospitalist ${NP} listings in ${f.city.name} manage inpatient admissions, rounding, and discharge planning, commonly on block schedules, with ACNP or AGACNP certification the usual requirement. Clarify the night-shift share of each block before signing.`,
+    'dermatology': (f) => `Dermatology ${NP} listings in ${f.city.name} combine medical dermatology with procedural work such as biopsies and lesion removal, and many add cosmetic services. Confirm the medical-to-cosmetic mix and how any productivity bonus is calculated.`,
+    'orthopedic': (f) => `Orthopedic ${NP} listings in ${f.city.name} split between clinic, surgical first-assist, and inpatient orthopedic services. Listings state whether first-assisting is expected, so match the mix to your training and credentials.`,
+    'anesthesia': (f) => `CRNA listings in ${f.city.name} come from hospital operating rooms, ambulatory surgery centers, and office-based practices, and each states whether the practice model is independent, care-team, or supervised. Call structure and supervision model change what an offer is worth, so compare them alongside the rate.`,
+    'midwifery': (f) => `Certified nurse midwife (CNM) listings in ${f.city.name} span hospital labor-and-delivery units, birth centers, and OB/GYN practices. Call frequency and delivery volume are the main differences to compare between offers, so ask about both.`,
+    'clinical-nurse-specialist': (f) => `Clinical nurse specialist (CNS) listings in ${f.city.name} focus on quality improvement, staff education, and specialty consultation within health systems. The work is program-level rather than a personal patient panel, so read how each listing splits direct care from system work.`,
     // ── 2026-07 P1 #15 verticals ──
-    'aesthetics': (f) => `Aesthetic ${brand.niche.short} roles in ${f.city.name} center on medical spas, cosmetic practices, and plastic-surgery groups, with neuromodulator and dermal-filler injection as core procedures. Compensation frequently pairs a base rate with per-service commission, and employers typically expect hands-on injectables training.`,
-    'pain-management': (f) => `Pain management ${brand.niche.short} positions in ${f.city.name} support interventional pain practices, spine centers, and rehabilitation clinics. The work combines medication management with procedure support, and controlled-substance prescribing under ${f.city.state} rules is central to the role.`,
-    'palliative-hospice': (f) => `Palliative care and hospice ${brand.niche.short} roles in ${f.city.name} span hospital consult services, home hospice agencies, and long-term-care settings. Positions emphasize symptom management, goals-of-care conversations, and interdisciplinary team collaboration, with per-visit or mileage components common in community-based roles.`,
+    'aesthetics': (f) => `Aesthetic ${NP} listings in ${f.city.name} center on medical spas, cosmetic practices, and plastic-surgery groups, with neuromodulator and dermal-filler injection as core procedures. Employers expect hands-on injectables training, and pay often pairs a base rate with per-service commission, so confirm both.`,
+    'pain-management': (f) => `Pain management ${NP} listings in ${f.city.name} support interventional pain practices, spine centers, and rehabilitation clinics. The work combines medication management with procedure support, and controlled-substance prescribing under ${f.city.state} rules is central to the role.`,
+    'palliative-hospice': (f) => `Palliative care and hospice ${NP} listings in ${f.city.name} span hospital consult services, home hospice agencies, and long-term-care settings. Roles emphasize symptom management and goals-of-care conversations; community-based roles often add per-visit or mileage components, so ask.`,
     // Keyed via the registry-derived constant so the specialty slug literal
     // stays confined to taxonomy-registry.ts (niche-copy debt ratchet).
     ...(PSYCH_SPECIALTY_SLUG
         ? {
-            // The shortage clause names its DISCIPLINE: the flag behind it is
-            // the behavioral-health HPSA column, and an unqualified "federal
-            // shortage-area designation" reads as an all-NP claim the repo
-            // cannot source. This lead only ever renders on the category the
-            // column describes, which is what makes the claim on topic here.
-            [PSYCH_SPECIALTY_SLUG]: ((f) => `Behavioral-health ${brand.niche.short} roles in ${f.city.name} span outpatient clinics, telehealth platforms, and integrated care settings, typically paying $120K to $170K. ${f.shortage ? `Federal behavioral-health shortage-area designation keeps demand for prescribing clinicians in ${f.city.name} especially strong.` : 'Demand for prescribing behavioral-health clinicians remains strong nationwide.'}`) as TaxonomyLeadFn,
+            [PSYCH_SPECIALTY_SLUG]: ((f) => `Behavioral-health ${NP} listings in ${f.city.name} span outpatient clinics, telehealth platforms, and integrated care settings. Clarify the caseload mix between medication management and therapy time, and the controlled-substance prescribing workflow ${f.city.state} requires.`) as TaxonomyLeadFn,
         }
         : {}),
 };
@@ -291,9 +219,7 @@ export function buildTaxonomyCityNarrative(
     totalJobs: number,
 ): string {
     const lead = getTaxonomyLead(taxonomy, facts);
-    // Pass the taxonomy through: it is what lets the base narrative decide
-    // whether the donor behavioral-health shortage column is on topic.
-    const cityCtx = buildCityNarrative(facts, totalJobs, taxonomy);
+    const cityCtx = buildCityNarrative(facts, totalJobs);
     if (!lead) return cityCtx;
     return `${lead} ${cityCtx}`;
 }

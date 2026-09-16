@@ -148,13 +148,13 @@ describe('P1 #14 — [state] tier extension', () => {
     }
   });
 
-  it('state/city salary bands agree between the two template config maps', () => {
-    // The [state] template (SETTING_CONFIGS) and the city template
-    // (ALL_CATEGORY_CONFIGS) both surface salaryRange in metadata titles —
-    // the same slug must never advertise two different bands.
+  it('the state tier carries no hand-typed salary band', () => {
+    // Thin plan T0-3 (2026-09): hand-typed bands were removed from the
+    // [state] configs; pay renders only through the gated helpers. The city
+    // template drops its own bands with its rewrite.
     for (const slug of NEW_STATE_TIER) {
       expect(ALL_CATEGORY_CONFIGS[slug], `${slug} missing city config`).toBeDefined();
-      expect(SETTING_CONFIGS[slug].salaryRange).toBe(ALL_CATEGORY_CONFIGS[slug].salaryRange);
+      expect(SETTING_CONFIGS[slug].salaryRange, `${slug} still carries a band`).toBeUndefined();
     }
   });
 

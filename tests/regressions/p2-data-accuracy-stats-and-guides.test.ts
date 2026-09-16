@@ -133,12 +133,8 @@ const UNMIGRATED_SALARY_BAND_SURFACES: readonly string[] = [
     'components/HomepageFAQ.tsx',
     'lib/blog-formatter.ts',
     'lib/pseo/category-city-template.tsx',
-    'lib/pseo/category-faq-data.ts',
     'lib/pseo/category-landing-content.ts',
-    'lib/pseo/city-narrative.ts',
-    'lib/pseo/setting-state-config.ts',
     'lib/pseo/setting-state-template.tsx',
-    'lib/pseo/state-narrative.ts',
     'scripts/generate-salary-pdf.ts',
 ];
 

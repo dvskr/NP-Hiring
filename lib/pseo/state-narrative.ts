@@ -1,60 +1,32 @@
 /**
- * State Narrative — deterministic per-(setting, state) content snippets.
+ * State Narrative: deterministic per-(setting, state) content snippets.
  *
  * Mirrors the city-narrative pattern at lib/pseo/city-narrative.ts so every
- * indexable /jobs/{setting}/{state} page gets a substantively unique 2-3
- * sentence paragraph driven by structured facts. Two state pages with the
- * same (setting, state) pair will read the same; any other pair produces
- * measurably different prose because the fact mix differs.
+ * indexable /jobs/{setting}/{state} page gets a substantively unique short
+ * paragraph driven by structured facts. Two state pages with the same
+ * (setting, state) pair read the same; any other pair produces measurably
+ * different prose because the fact mix differs.
  *
- * Goal: defeat Google's "Crawled — currently not indexed" thin-content flag
- * for pSEO state pages, where previously the only state-specific content
- * was stat interpolation (counts, COL, shortage count) wrapped in a shared
- * template. Two cats (e.g. remote/CA vs telehealth/CA) read 95% identical
- * to GoogleBot. This file fixes that.
+ * TRUTH RULES (pSEO truth sweep, PLAN.md T0-4, thin-spec 1 T6 to T8): no
+ * pay figure, cost-of-living index, demand tier, shortage designation, or
+ * compact claim is composed here. Practice authority comes from
+ * lib/state-practice-authority.ts, compact status from
+ * lib/pseo/practice-environment.ts, and the only number is the live
+ * posting count the caller passes in. Professional English, no dashes.
  *
- * Also exports buildPlainStateNarrative — the same idea for the 51 plain
+ * Also exports buildPlainStateNarrative, the same idea for the 51 plain
  * /jobs/state/[state] hubs (see the section at the bottom of this file).
  */
 import { brand } from '@/config/brand';
 import { PSYCH_SPECIALTY_SLUG } from './taxonomy-registry';
-// One shortage-claim gate for both narrative modules — defined in the city
-// narrative because that is the leaf module both templates already import.
-import { shortageColumnAppliesTo } from './city-narrative';
+import { getCategoryAxis } from './category-axis-guide';
+import { getPracticeEnvironment, nlcSentence } from './practice-environment';
 import {
     getStatePracticeAuthority,
     PracticeAuthority,
 } from '@/lib/state-practice-authority';
 
-// ─── Tiers ──────────────────────────────────────────────────────────────────
-
-type COLTier = 'high-cost' | 'above-avg' | 'average' | 'below-avg' | 'low-cost';
-type DemandTier = 'very-high' | 'high' | 'moderate' | 'low';
-
-function colTier(col: number): COLTier {
-    if (col >= 130) return 'high-cost';
-    if (col >= 110) return 'above-avg';
-    if (col >= 95) return 'average';
-    if (col >= 85) return 'below-avg';
-    return 'low-cost';
-}
-
-function demandTier(totalJobs: number): DemandTier {
-    if (totalJobs >= 100) return 'very-high';
-    if (totalJobs >= 30) return 'high';
-    if (totalJobs >= 10) return 'moderate';
-    return 'low';
-}
-
 // ─── Phrase fragments ───────────────────────────────────────────────────────
-
-const COST_PHRASES: Record<COLTier, string> = {
-    'high-cost': 'high cost of living relative to the national average',
-    'above-avg': 'above-average cost of living',
-    'average': 'cost of living near the national average',
-    'below-avg': 'below-average cost of living',
-    'low-cost': 'low cost of living relative to the national average',
-};
 
 const AUTHORITY_PHRASES: Record<PracticeAuthority, string> = {
     full: 'full practice authority, meaning independent prescribing without physician oversight',
@@ -62,223 +34,138 @@ const AUTHORITY_PHRASES: Record<PracticeAuthority, string> = {
     restricted: 'restricted practice authority requiring physician supervision',
 };
 
-const DEMAND_PHRASES: Record<DemandTier, string> = {
-    'very-high': 'consistently high demand',
-    'high': 'strong demand',
-    'moderate': 'moderate demand',
-    'low': 'a smaller pool of openings',
-};
-
-// ─── NLC (Nurse Licensure Compact) membership ───────────────────────────────
-// Compact lets RNs hold one multistate license valid across member states
-// (RN/LPN layer only — never the APRN license itself). CANONICAL sets —
-// mirrored in lib/blog-license-guides.ts and kept in sync by the drift test
-// in tests/regressions/p1-content-library-license-guides.test.ts; update all
-// copies together when membership shifts.
+// ─── NLC (Nurse Licensure Compact) roster mirrors ───────────────────────────
+// The compact lets RNs hold one multistate license valid across member states
+// (the RN layer only, never the APRN license itself). The read model for every
+// compact sentence is lib/pseo/practice-environment.ts, which derives status
+// from LICENSE_GUIDE_STATES in lib/blog-license-guides.ts; nothing in this
+// file reads the two sets below. They stay as the reference literals that
+// tests/regressions/p1-content-library-license-guides.test.ts extracts from
+// this file's source to guard the license-guide mirror against drift, and
+// W4-INTEGRATE deletes them together with that extractor.
 //
 // Verified against the live NCSBN roster (nursecompact.com implementation
-// table) on 2026-08-11 — the same date as NLC_ROSTER_VERIFIED_AT in
-// lib/blog-license-guides.ts. The pre-2026-08 revision wrongly listed
-// Connecticut (implemented 2025-10-01), Rhode Island (2024-01-08), and
-// Washington (2024-01-31) as non-members, omitted Alaska, and carried
-// Massachusetts as a plain non-member.
+// table) on 2026-08-11, the same date as NLC_ROSTER_VERIFIED_AT in
+// lib/blog-license-guides.ts.
 
-/** No enacted compact legislation — a separate state license is required. */
-const NLC_NON_MEMBER_STATES: ReadonlySet<string> = new Set([
+/** No enacted compact legislation: a separate state license is required. */
+export const NLC_NON_MEMBER_STATES: ReadonlySet<string> = new Set([
     'Alaska', 'California', 'District of Columbia', 'Hawaii', 'Illinois',
     'Michigan', 'Minnesota', 'Nevada', 'New York', 'Oregon',
 ]);
 
-// Enacted the compact but not yet implemented it (NCSBN implementation
-// date: to-be-determined). Until implementation, multistate licenses are
-// neither issued nor honored there — a boolean member/non-member flag
-// cannot represent this, so every narrative renders a distinct
-// "enacted, implementation pending — verify with the board" branch.
-const NLC_ENACTED_PENDING_STATES: ReadonlySet<string> = new Set([
+/** Enacted the compact but not yet implemented it (NCSBN date to be determined). */
+export const NLC_ENACTED_PENDING_STATES: ReadonlySet<string> = new Set([
     'Massachusetts',
 ]);
 
-type NlcStatus = 'member' | 'pending' | 'non-member';
-
-function nlcStatusOf(stateName: string): NlcStatus {
-    if (NLC_ENACTED_PENDING_STATES.has(stateName)) return 'pending';
-    return NLC_NON_MEMBER_STATES.has(stateName) ? 'non-member' : 'member';
-}
-
 // ─── Setting-specific lead phrases ──────────────────────────────────────────
-// One per SETTING_CONFIGS key. Each takes the state context so the lead is
-// (slightly) state-aware where relevant (e.g. Compact-state remote roles).
+// One per SETTING_CONFIGS key. Each lead says what the category means on this
+// board and what to check in a listing; it never states a figure, a market
+// size, or a compact claim (compact status renders once, in the licensure
+// section the template builds from practice-environment.ts).
 
 interface StateCtx {
     stateName: string;
     stateCode: string;
-    practiceAuthority: PracticeAuthority | null;
-    avgCOL: number;
-    shortageCityCount: number;
-    totalJobs: number;
 }
 
 type SettingLeadFn = (ctx: StateCtx) => string;
 
+const NP = brand.niche.short;
+
 const SETTING_LEADS: Record<string, SettingLeadFn> = {
-    'remote': (c) => {
-        const lead = `Remote ${brand.niche.short} positions covering patients in ${c.stateName} typically pay $110K to $170K and require active ${c.stateCode} state licensure plus a HIPAA-compliant home setup.`;
-        switch (nlcStatusOf(c.stateName)) {
-            case 'member':
-                return `${lead} Most postings welcome multi-state Compact licensure to broaden caseload reach.`;
-            case 'pending':
-                return `${lead} ${c.stateName} has enacted the Nurse Licensure Compact but has not yet implemented it, so a separate ${c.stateCode} license is still required until the state board of nursing announces an implementation date.`;
-            case 'non-member':
-                return `${lead} ${c.stateName} is not a Nurse Licensure Compact member, so a separate ${c.stateCode} license is required even if you already hold a multistate license elsewhere.`;
-        }
-    },
-    'telehealth': (c) => {
-        const lead = `Telehealth ${brand.niche.short} roles serving the ${c.stateName} market combine asynchronous documentation with scheduled video visits.`;
-        switch (nlcStatusOf(c.stateName)) {
-            case 'member':
-                return `${lead} Employers require HIPAA-compliant equipment and at least a ${c.stateCode} license; multi-state Compact licensure expands earning potential.`;
-            case 'pending':
-                return `${lead} Employers require HIPAA-compliant equipment and a ${c.stateCode} license. ${c.stateName} has enacted the Nurse Licensure Compact, but implementation is pending, so multistate-licensed clinicians still need a separate ${c.stateCode} credential until the board completes implementation.`;
-            case 'non-member':
-                return `${lead} Employers require HIPAA-compliant equipment and a ${c.stateCode} license. ${c.stateName} is not a Compact member, so multistate-licensed clinicians still need a separate ${c.stateCode} credential.`;
-        }
-    },
-    'inpatient': (c) => `Inpatient ${brand.niche.short} positions across ${c.stateName} cover acute inpatient units, hospitalist services, and step-down roles. Shift differentials, weekend premiums, and on-call stipends are standard alongside base salary.`,
-    'outpatient': (c) => `Outpatient ${brand.niche.short} roles in ${c.stateName} span community health centers, group practices, and integrated primary-care settings. Caseloads typically run 12 to 18 patients per day with documentation time built in.`,
-    'travel': (c) => `Travel ${brand.niche.short} assignments in ${c.stateName} are usually 8 to 26 weeks with tax-free housing stipends, completion bonuses, and 20 to 50% premium pay over permanent equivalents. Most agencies handle multi-state licensure logistics.`,
-    'contract': (c) => `Contract ${brand.niche.short} positions in ${c.stateName} are typically defined-term W-2 engagements (90 days to 24 months) booked through staffing agencies, paying $70 to $130 per hour with agency-provided malpractice. Distinct from 1099 independent contracting, contract roles preserve employer payroll-tax handling and often include short-term health coverage.`,
-    // NHSC framing here and in 'new-grad' below explains the program's
-    // MECHANICS instead of asserting eligibility or quoting an award. The
-    // prior copy claimed blanket "NHSC eligibility" for correctional roles
-    // and "up to $75K for a two-year commitment" for FQHC new-grad roles —
-    // a figure that traces to nothing in lib/stats-sources.ts and disagreed
-    // with the different amount the city narrative used to quote for the same
-    // program. HRSA resets award tiers and eligible disciplines each cycle,
-    // and eligibility runs through a specific site's active NHSC approval.
-    'correctional': (c) => `Correctional ${brand.niche.short} roles in ${c.stateName} facilities often offer state-employee benefits, robust pension plans, and loan-repayment help through state-run programs. Correctional facilities are one of HRSA's eligible NHSC site types, so federal loan repayment turns on whether the individual facility holds an active NHSC site approval.`,
-    'full-time': (c) => `Full-time ${brand.niche.short} positions in ${c.stateName} typically bundle employer-sponsored health insurance, 401(k) match, CME allowance, malpractice coverage, and 3 to 4 weeks of PTO into a $110K to $170K base. Total compensation comparisons against contract or per-diem rates should net out the benefits that those arrangements leave clinicians to fund themselves.`,
-    'part-time': (c) => `Part-time ${brand.niche.short} roles in ${c.stateName} generally pay $60 to $100 per hour and run 16 to 32 scheduled hours weekly, with prorated benefits at larger health systems and none at smaller practices. The structure is popular for clinicians maintaining a private practice on the side or stepping down from a full caseload.`,
-    'new-grad': (c) => `New-grad ${brand.niche.short} positions in ${c.stateName} typically start at $95K to $140K and emphasize structured onboarding: formal preceptorship, a gradual caseload ramp over 3 to 6 months, and protected supervision time. Community health centers and FQHCs are among the site types HRSA treats as automatically eligible for NHSC approval, so ask a prospective employer for its current NHSC site status: loan repayment follows the approved site and the applicant's discipline, on award tiers HRSA sets each cycle.`,
-    '1099': (c) => `Independent-contractor (1099) ${brand.niche.short} roles in ${c.stateName} pay $60 to $150+ per hour without benefits or employer-paid malpractice. Clinicians self-fund quarterly estimated taxes, occurrence-based malpractice, and any LLC or PLLC structure, so net take-home pay depends heavily on those offsets and ${c.stateCode} self-employment tax exposure.`,
-    // ── 2026-07 NP taxonomy state pages (job types + specialties + APRN) ──
-    // Covers the remaining SETTING_CONFIGS keys so every /jobs/{setting}/{state}
-    // page type gets a distinct lead instead of only the shared authority/COL
-    // sentences (the near-duplicate pattern this file exists to defeat).
-    'per-diem': (c) => `Per-diem ${brand.niche.short} shifts across ${c.stateName} pay premium hourly rates in exchange for zero guaranteed hours, and most clinicians credential at two or three facilities to smooth volume. Each site onboards separately, so current licensure and certification paperwork shortens the time to a first shift.`,
-    'locum-tenens': (c) => {
-        const lead = `Locum tenens ${brand.niche.short} assignments in ${c.stateName} typically run 4 to 26 weeks with agency-covered malpractice, travel, and housing.`;
-        switch (nlcStatusOf(c.stateName)) {
-            case 'member':
-                return `${lead} ${c.stateName}'s Nurse Licensure Compact membership lets multistate-licensed clinicians start assignments with minimal licensing lead time.`;
-            case 'pending':
-                return `${lead} ${c.stateName} has enacted the Nurse Licensure Compact but implementation is pending, so budget extra lead time for a separate ${c.stateCode} license until the state board announces an implementation date.`;
-            case 'non-member':
-                return `${lead} ${c.stateName} is not a Nurse Licensure Compact member, so budget extra lead time for a separate ${c.stateCode} license before your start date.`;
-        }
-    },
-    'family-practice': (c) => `Family practice ${brand.niche.short} (FNP) roles across ${c.stateName} anchor primary-care access, from urban group practices to rural health clinics. FNP is the most widely recognized ${brand.niche.short} certification among ${c.stateName} employers.`,
-    'adult-gerontology': (c) => `Adult-gerontology ${brand.niche.short} demand in ${c.stateName} tracks the aging patient base: AGPCNPs staff primary-care and long-term-care settings while AGACNPs cover hospital and specialty services.`,
-    'pediatric': (c) => `Pediatric ${brand.niche.short} roles in ${c.stateName} span primary-care pediatrics, children's hospitals, and school-based programs. Acute-care PNP positions cluster around the state's larger children's facilities.`,
-    'women-health': (c) => `Women's health ${brand.niche.short} (WHNP) positions across ${c.stateName} sit in OB/GYN groups, family-planning programs, and prenatal clinics, often working alongside certified nurse midwives.`,
-    'acute-care': (c) => `Acute care ${brand.niche.short} positions across ${c.stateName} concentrate in ICUs, step-down units, and hospitalist services, generally on 13-hour shift patterns with differentials for nights and weekends.`,
-    'emergency': (c) => `Emergency ${brand.niche.short} roles across ${c.stateName} staff emergency departments and fast-track units. Employers typically expect prior emergency or acute-care experience plus procedural competency.`,
-    'anesthesia': (c) => `CRNA positions across ${c.stateName} carry the highest APRN pay bands, typically $180K to $250K+. Compensation varies with call burden and with whether the practice runs a supervision-based or independent CRNA model.`,
-    'midwifery': (c) => `Certified nurse midwife (CNM) roles in ${c.stateName} cover hospital labor-and-delivery services, birth centers, and OB/GYN practices; call frequency and delivery volume drive most compensation differences.`,
-    // ── 2026-07 P1 #14 [state] tier extension ──
-    // One lead per config added in setting-state-config.ts's P1 #14 block.
-    // Salary bands mirror those configs' salaryRange values exactly so the
-    // narrative and hero stats never disagree on the same page.
-    'primary-care': (c) => `Primary care ${brand.niche.short} positions across ${c.stateName} span internal-medicine groups, FQHCs, and value-based-care organizations, typically paying $100K to $140K. Panel size, documentation time, and quality-incentive structure drive most of the practical differences between offers in the state.`,
-    'oncology': (c) => `Oncology ${brand.niche.short} roles in ${c.stateName} concentrate around the state's cancer centers and hematology-oncology groups, typically paying $110K to $150K. ${brand.niche.short}-led survivorship programs are an expanding share of the state's oncology hiring as survivor populations grow.`,
-    'cardiology': (c) => `Cardiology ${brand.niche.short} openings across ${c.stateName} split between heart-failure and device clinics and inpatient consult services, typically paying $110K to $150K. Hybrid clinic-plus-hospital roles usually add call stipends and weekend differentials on top of base pay.`,
-    'hospitalist': (c) => `Hospitalist ${brand.niche.short} positions in ${c.stateName} run on block schedules, commonly seven-on/seven-off, covering admissions, rounding, and cross-cover, typically paying $110K to $150K. Acute care certification (AGACNP) is the preferred credential at most of the state's hospital medicine programs.`,
-    'dermatology': (c) => `Dermatology ${brand.niche.short} roles in ${c.stateName} pair medical dermatology with procedural clinic work, typically paying $110K to $155K on weekday schedules without inpatient call. Appointment demand outstrips supply in most ${c.stateName} markets, making productivity bonuses a common negotiation lever.`,
-    'urgent-care': (c) => `Urgent care ${brand.niche.short} roles across ${c.stateName} run on defined shift schedules with no after-hours panel obligations, typically paying $105K to $140K. Statewide clinic expansion keeps hiring continuous, and employers screen for episodic acute-care skills across the lifespan.`,
-    'home-health': (c) => `Home health ${brand.niche.short} roles in ${c.stateName} put clinicians on the road for house calls, transitional-care visits, and annual wellness assessments, typically paying $100K to $135K. Territory size, daily visit expectations, and mileage terms vary widely between programs and materially change effective pay.`,
+    'remote': (c) => `Remote ${NP} listings for ${c.stateName} are roles the employer marks as remote, usually with a requirement to hold ${c.stateCode} licensure to treat patients located there. Check each listing for technology, schedule, and licensure expectations, because employers describe remote work differently.`,
+    'telehealth': (c) => `Telehealth ${NP} listings for ${c.stateName} describe care delivered by video or phone, and each names the platform, the visit model, and the state licensure it requires. Read the scheduling and documentation expectations closely; telehealth employers structure both in their own way.`,
+    'inpatient': (c) => `Inpatient ${NP} listings for ${c.stateName} come from hospitals and hospital-based services, where the posting names the unit, the shift pattern, and any differentials. Credentialing and privileging at the facility define the day-to-day scope, so ask about both timelines early.`,
+    'outpatient': (c) => `Outpatient ${NP} listings for ${c.stateName} come from clinics, group practices, and community health centers. Panel size, visit length, and documentation time vary by practice, so confirm each before comparing offers.`,
+    'travel': (c) => `Travel ${NP} listings for ${c.stateName} are assignments with a stated length, usually arranged through a staffing agency. Compare the full package, including housing and travel terms, and confirm the ${c.stateName} licensure timeline with the agency before accepting a start date.`,
+    'full-time': (c) => `Full-time ${NP} listings for ${c.stateName} are permanent roles where benefits, paid time off, and continuing education support are part of the offer. Compare the whole package rather than base pay alone, and confirm on-call expectations in writing.`,
+    'part-time': (c) => `Part-time ${NP} listings for ${c.stateName} state a reduced weekly schedule on a fixed basis, distinct from as-needed shifts. Ask where the benefits eligibility threshold sits and whether the role can expand to full-time.`,
+    'contract': (c) => `Contract ${NP} listings for ${c.stateName} are fixed-term engagements, either as an agency W-2 employee or as an independent contractor. The structure decides who handles taxes, malpractice, and benefits, so confirm it before you compare the rate to a permanent offer.`,
+    'new-grad': (c) => `New-graduate ${NP} listings for ${c.stateName} say the employer is open to clinicians who are newly certified, and the better ones spell out onboarding, preceptorship, and supervision. Ask how the caseload ramps and who provides clinical backup during the first months.`,
+    '1099': (c) => `Independent-contractor (1099) ${NP} listings for ${c.stateName} quote a rate before self-employment tax, malpractice, and the benefits you fund yourself. Model the after-tax figure, and confirm who holds any collaborative agreement ${c.stateName} requires before signing.`,
+    'per-diem': (c) => `Per-diem ${NP} listings for ${c.stateName} are as-needed shifts without guaranteed hours, credentialed facility by facility. Keep licensure and certification paperwork current, and clarify cancellation terms and any weekend or holiday differentials up front.`,
+    'locum-tenens': (c) => `Locum tenens ${NP} listings for ${c.stateName} cover a practice or facility for a defined period, usually through an agency that handles scheduling and credentialing paperwork. Each assignment still requires ${c.stateName} APRN licensure, so confirm the licensing timeline before the start date.`,
+    'family-practice': (c) => `Family practice ${NP} (FNP) listings for ${c.stateName} cover primary care across the lifespan, from group practices to rural health clinics. Check each listing for panel size, walk-in coverage, and the collaboration terms ${c.stateName} applies.`,
+    'adult-gerontology': (c) => `Adult-gerontology ${NP} listings for ${c.stateName} split between the primary care track (AGPCNP) in clinics and long-term care and the acute care track (AGACNP) in hospital services. Match the listing's certification requirement to your own track before applying.`,
+    'pediatric': (c) => `Pediatric ${NP} listings for ${c.stateName} span primary-care pediatrics, school-based programs, and children's hospital services. Confirm the acuity mix and any after-hours nurse-line or call expectations in each listing.`,
+    'women-health': (c) => `Women's health ${NP} (WHNP) listings for ${c.stateName} sit in OB/GYN groups, family-planning programs, and prenatal clinics. Confirm whether the scope is gynecology only or includes prenatal and postpartum panels, and whether obstetric call is expected.`,
+    'acute-care': (c) => `Acute care ${NP} listings for ${c.stateName} come from ICUs, step-down units, and hospital specialty services. Listings name the shift pattern and differentials; orientation length and procedure training are worth asking about before comparing offers.`,
+    'emergency': (c) => `Emergency ${NP} listings for ${c.stateName} staff emergency departments and fast-track units on shift schedules. Ask which procedures ${NP}s own in that department, how the day and overnight mix works, and what prior experience the employer expects.`,
+    'anesthesia': (c) => `CRNA listings for ${c.stateName} come from hospital operating rooms, surgery centers, and procedural suites, and each states whether the practice model is independent, care-team, or supervised. Call burden and post-call time change what an offer is worth, so compare them alongside the rate. CRNA supervision rules in ${c.stateName} are set by state law and facility policy, separate from ${NP} practice authority.`,
+    'midwifery': (c) => `Certified nurse midwife (CNM) listings for ${c.stateName} cover hospital labor-and-delivery services, birth centers, and OB/GYN practices. Ask about call frequency, backup arrangements, and expected birth volume; CNM practice rules in ${c.stateName} are set separately from ${NP} practice authority.`,
+    'primary-care': (c) => `Primary care ${NP} listings for ${c.stateName} come from internal-medicine groups, family practices, community health centers, and value-based care organizations. Panel size, documentation time, and quality-incentive structure are the practical differences to compare between offers.`,
+    'oncology': (c) => `Oncology ${NP} listings for ${c.stateName} come from cancer centers, hematology-oncology groups, and infusion clinics. Confirm the treatment-phase focus, whether active treatment, infusion oversight, or survivorship, and what oncology-specific training the employer provides.`,
+    'cardiology': (c) => `Cardiology ${NP} listings for ${c.stateName} split between clinic work, such as heart-failure and device clinics, and inpatient consult services. Hybrid roles name their call and weekend expectations, so read the schedule section before comparing pay.`,
+    'hospitalist': (c) => `Hospitalist ${NP} listings for ${c.stateName} run on block schedules covering admissions, rounding, and cross-cover. Clarify the night-shift share of each block and the expected census per shift before signing.`,
+    'dermatology': (c) => `Dermatology ${NP} listings for ${c.stateName} pair medical dermatology with procedural clinic work, and many add cosmetic services. Confirm the medical-to-cosmetic mix and how productivity bonuses are calculated in each practice.`,
+    'urgent-care': (c) => `Urgent care ${NP} listings for ${c.stateName} run on defined shifts with no patient panel to carry between them. Clarify the evening, weekend, and holiday rotation and the procedures ${NP}s own at that site.`,
+    'home-health': (c) => `Home health ${NP} listings for ${c.stateName} put clinicians on the road for house calls, transitional-care visits, and annual wellness assessments. Territory size, daily visit expectations, and mileage terms change effective pay, so confirm all three.`,
     // Keyed via the registry-derived constant so the specialty slug literal
     // stays confined to taxonomy-registry.ts (niche-copy debt ratchet).
     ...(PSYCH_SPECIALTY_SLUG
         ? {
-            [PSYCH_SPECIALTY_SLUG]: ((c) => `Behavioral-health ${brand.niche.short} roles across ${c.stateName} span outpatient clinics, telehealth platforms, and integrated care settings, typically paying $120K to $170K, with demand elevated by nationwide prescriber shortages.`) as SettingLeadFn,
+            [PSYCH_SPECIALTY_SLUG]: ((c) => `Behavioral-health ${NP} listings for ${c.stateName} span outpatient clinics, telehealth platforms, and integrated care settings. Clarify the caseload mix between medication management and therapy time, and the controlled-substance prescribing workflow ${c.stateName} requires.`) as SettingLeadFn,
         }
         : {}),
 };
 
 // ─── Composite narrative ────────────────────────────────────────────────────
 
+/**
+ * Category-state paragraph: the setting lead, the AANP practice-authority
+ * sentence (skipped on the APRN axis, whose roles are regulated separately),
+ * and the live posting count.
+ *
+ * The two `_` parameters are the retired cost-of-living index and the
+ * retired behavioral-health shortage count. Neither renders any more (thin
+ * spec 1 T6 and T11: the dataset behind each has no citation), but the
+ * positional signature is kept for the template and the pinned tests until
+ * W2-STATE and W4-INTEGRATE drop the arguments together.
+ */
 export function buildSettingStateNarrative(
     settingKey: string,
     stateName: string,
     stateCode: string,
-    avgCOL: number,
-    shortageCityCount: number,
+    _avgCOL: number,
+    _shortageCityCount: number,
     totalJobs: number,
 ): string {
-    const auth = getStatePracticeAuthority(stateName);
-    const ctx: StateCtx = {
-        stateName,
-        stateCode,
-        practiceAuthority: auth?.authority ?? null,
-        avgCOL,
-        shortageCityCount,
-        totalJobs,
-    };
-
-    const lead = SETTING_LEADS[settingKey]?.(ctx);
     const parts: string[] = [];
+
+    const lead = SETTING_LEADS[settingKey]?.({ stateName, stateCode });
     if (lead) parts.push(lead);
 
-    // Sentence 2: practice authority + COL anchor.
-    const authPhrase = ctx.practiceAuthority
-        ? AUTHORITY_PHRASES[ctx.practiceAuthority]
-        : 'state-specific practice rules';
-    parts.push(
-        `${stateName} grants ${authPhrase}, and the state's ${COST_PHRASES[colTier(avgCOL)]} (index ${avgCOL}) directly shapes ${brand.niche.short} compensation expectations.`,
-    );
-
-    // Sentence 3: live demand. Unconditional and designation-free.
-    //
-    // WAS: a two-branch sentence in which BOTH branches published something
-    // false. The affirmative branch called the metros' designation "federal
-    // Health Professional Shortage Area designation" with no discipline named
-    // — `shortageCityCount` is computed from `CityData.mentalHealthShortage`,
-    // the donor board's BEHAVIORAL-HEALTH HPSA column (see
-    // ./city-data/types.ts) — and then concluded that "positions in those
-    // areas typically qualify for NHSC Loan Repayment". They do not: NHSC LRP
-    // matches the applicant's discipline to the designation type and pays
-    // only for service at an NHSC-approved site, so a metro's HPSA status
-    // establishes nothing about a given posting. The negative branch inverted
-    // the same error, asserting the metros are "not currently federally
-    // designated health professional shortage areas" across ALL disciplines
-    // on the strength of one discipline's column. Passing 0 therefore only
-    // swapped one false claim for the other, so the fix is here in the
-    // sentence rather than in the caller's input.
-    const demandPhrase = DEMAND_PHRASES[demandTier(totalJobs)];
-    parts.push(
-        `The ${totalJobs} active ${totalJobs === 1 ? 'posting reflects' : 'postings reflect'} ${demandPhrase} for ${brand.niche.descriptor}s across ${stateName}, alongside the state's reimbursement structure and employer mix.`,
-    );
-
-    // Sentence 3b: the designation — named by discipline, scoped to the one
-    // category whose specialty that discipline describes (the same gate the
-    // city template applies to its own shortage surfaces, P2 #7), and framed
-    // as the program's mechanics rather than a promise of eligibility.
-    if (shortageCityCount > 0 && shortageColumnAppliesTo(settingKey)) {
+    // Sentence 2: practice authority (lib/state-practice-authority data). The
+    // NP framework does not govern CRNA or CNM practice, so the APRN axis
+    // carries its own regulatory clause inside the lead instead.
+    if (getCategoryAxis(settingKey) !== 'aprn') {
+        const auth = getStatePracticeAuthority(stateName);
         parts.push(
-            `${shortageCityCount} of the state's top metros carry a federal HRSA behavioral-health Health Professional Shortage Area (HPSA) designation, which is what puts National Health Service Corps Loan Repayment within reach for behavioral-health clinicians at NHSC-approved sites in those areas. Awards follow the site's approval and the applicant's discipline, not the metro alone.`,
+            auth
+                ? `${stateName} grants ${AUTHORITY_PHRASES[auth.authority]}.`
+                : `${stateName} applies state-specific practice rules; confirm current requirements with the ${stateCode} board of nursing before applying.`,
         );
     }
+
+    // Sentence 3: the live count, stated as inventory rather than as a market
+    // signal. The verb agrees with the count.
+    parts.push(
+        `The ${totalJobs} active ${totalJobs === 1 ? 'posting reflects' : 'postings reflect'} what employers currently list on ${brand.name} for ${stateName} in this category, not an estimate of the wider market.`,
+    );
 
     return parts.join(' ');
 }
 
 // ─── Plain state-hub narrative ──────────────────────────────────────────────
-// /jobs/state/[state] — the 51 plain state hubs previously shared one
+// /jobs/state/[state]: the 51 plain state hubs previously shared one
 // templated sentence, so every hub read near-identical to GoogleBot (the same
 // thin-content failure mode the setting-state narrative above exists to
-// defeat). This variant composes practice-authority context, the live salary
-// aggregate, live category/city inventory, and the NLC membership note into a
+// defeat). This variant composes practice-authority context, the gated pay
+// median, live category and city inventory, and the compact status into a
 // deterministic per-state paragraph. Every figure is caller-supplied from
-// live DB aggregation or repo regulatory data — nothing here invents numbers.
+// live DB aggregation or repo regulatory data; nothing here invents numbers.
 
 /** Authority-tier consequence clauses for the plain state hubs. */
 const AUTHORITY_IMPLICATIONS: Record<PracticeAuthority, string> = {
@@ -292,8 +179,22 @@ export interface PlainStateNarrativeInput {
     stateCode: string;
     /** Live count of published jobs in the state. */
     totalJobs: number;
-    /** Live average of disclosed salary bounds, in $K; 0 = insufficient data. */
-    avgSalaryK: number;
+    /**
+     * Gated median of disclosed annual pay across the state's postings, in
+     * $K (lib/salary-analytics.ts getGatedLocationSalary). Pass 0 when the
+     * publishing gate fails: the pay sentence then says no median is
+     * published and prints no figure. Omit it entirely and no pay sentence
+     * renders at all.
+     */
+    medianSalaryK?: number;
+    /**
+     * @deprecated The retired arithmetic mean (PLAN.md T0-3: gated median or
+     * nothing). Accepted so the state hub still compiles, and ignored: it
+     * never renders, and it never stands in for `medianSalaryK`. W2-HUB
+     * switches the caller to the gated median and W4-INTEGRATE deletes
+     * this field.
+     */
+    avgSalaryK?: number;
     /** Live distinct-employer count for the state. */
     uniqueEmployerCount: number;
     /** Display labels of the top live-inventory categories, best-first. */
@@ -302,20 +203,40 @@ export interface PlainStateNarrativeInput {
     topCityNames: readonly string[];
 }
 
+/**
+ * Serial-comma list ("Houston, Dallas, and Austin"). lib/display-text.ts
+ * joinWithAnd deliberately drops the serial comma for count lists; this
+ * narrative's city list is pinned with it, so the helper stays local.
+ */
 function joinWithAnd(items: readonly string[]): string {
     if (items.length <= 1) return items[0] ?? '';
     if (items.length === 2) return `${items[0]} and ${items[1]}`;
     return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
 }
 
+/** Compact sentence for the hub; the member branch keeps the pinned "membership" phrasing. */
+function plainStateCompactSentence(stateName: string, stateCode: string): string {
+    const env = getPracticeEnvironment(stateName);
+    if (!env) {
+        return `Confirm licensure requirements with the ${stateCode} board of nursing before applying.`;
+    }
+    if (env.nlcStatus === 'member') {
+        return `${stateName}'s Nurse Licensure Compact membership covers the RN license beneath the APRN credential; the APRN license itself is still issued by ${stateName}.`;
+    }
+    return nlcSentence(stateName) ?? `Confirm licensure requirements with the ${env.boardName} before applying.`;
+}
+
 export function buildPlainStateNarrative(input: PlainStateNarrativeInput): string {
     const {
-        stateName, stateCode, totalJobs, avgSalaryK,
+        stateName, stateCode, totalJobs,
         uniqueEmployerCount, topCategoryLabels, topCityNames,
     } = input;
+    // The deprecated `avgSalaryK` is deliberately not read: a mean relabelled
+    // as a median would be a false sentence on every hub.
+    const medianK = input.medianSalaryK;
     const parts: string[] = [];
 
-    // Sentence 1: live inventory + geography (DB aggregates only).
+    // Sentence 1: live inventory and geography (DB aggregates only).
     const employerClause = uniqueEmployerCount > 0
         ? ` from ${uniqueEmployerCount} ${uniqueEmployerCount === 1 ? 'employer' : 'employers'}`
         : '';
@@ -323,7 +244,7 @@ export function buildPlainStateNarrative(input: PlainStateNarrativeInput): strin
         ? `, with hiring concentrated in ${joinWithAnd(topCityNames.slice(0, 3))}`
         : '';
     parts.push(
-        `${stateName} currently has ${totalJobs} active ${brand.niche.descriptor} ${totalJobs === 1 ? 'posting' : 'postings'}${employerClause}${cityClause}. That inventory reflects ${DEMAND_PHRASES[demandTier(totalJobs)]} for ${brand.niche.short}s statewide.`,
+        `${stateName} currently has ${totalJobs} active ${brand.niche.descriptor} ${totalJobs === 1 ? 'posting' : 'postings'}${employerClause}${cityClause}.`,
     );
 
     // Sentence 2: top live-inventory categories (pseoStats setting-state rows).
@@ -344,23 +265,19 @@ export function buildPlainStateNarrative(input: PlainStateNarrativeInput): strin
             : `On the regulatory side, ${stateName} applies state-specific practice rules; confirm current requirements with the ${stateCode} board of nursing before applying.`,
     );
 
-    // Sentence 4: salary — the live state aggregate only, never an invented band.
-    parts.push(
-        avgSalaryK > 0
-            ? `Postings that disclose pay currently average $${avgSalaryK}K per year across settings and experience levels.`
-            : `Not enough ${stateName} postings disclose pay to compute a live average, so compare compensation posting by posting.`,
-    );
+    // Sentence 4: pay. Renders only when the caller passed the gated median;
+    // below the gate the sentence says so and prints no figure of any kind,
+    // and a caller that passes nothing gets no pay sentence.
+    if (medianK !== undefined) {
+        parts.push(
+            medianK > 0
+                ? `Across ${stateName} postings that disclose annual pay, the median is $${medianK}K per year.`
+                : `Not enough ${stateName} postings disclose pay to publish a state median, so compare compensation posting by posting.`,
+        );
+    }
 
-    // Sentence 5: NLC status (NCSBN-sourced sets above — member, enacted-
-    // pending-implementation, and non-member each get an honest sentence).
-    const nlcStatus = nlcStatusOf(stateName);
-    parts.push(
-        nlcStatus === 'member'
-            ? `${stateName}'s Nurse Licensure Compact membership shortens licensing lead time for multistate-licensed clinicians taking ${stateCode} roles.`
-            : nlcStatus === 'pending'
-                ? `${stateName} has enacted the Nurse Licensure Compact but has not yet implemented it, so until the state board of nursing announces an implementation date, clinicians licensed elsewhere should still budget time for a separate ${stateCode} license.`
-                : `${stateName} is not a Nurse Licensure Compact member, so clinicians licensed elsewhere should budget extra time for a separate ${stateCode} license through the state board of nursing.`,
-    );
+    // Sentence 5: compact status (practice-environment.ts, NCSBN roster).
+    parts.push(plainStateCompactSentence(stateName, stateCode));
 
     return parts.join(' ');
 }
