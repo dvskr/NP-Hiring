@@ -2,6 +2,7 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import MedianFigure from '@/components/MedianFigure';
 import ImmersiveImage from '@/components/ImmersiveImage';
 import { GraduationCap, TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
@@ -247,7 +248,7 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
             {stats.medianSalaryK > 0 && (
               <div style={{ ...clayCard, padding: '24px' }}>
                 <TrendingUp size={20} style={{ color: '#34D399', marginBottom: '8px' }} />
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}>${stats.medianSalaryK}k</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}><MedianFigure k={stats.medianSalaryK} /></div>
                 <div style={{ fontSize: '13px', color: '#7A6A62' }}>Median salary</div>
               </div>
             )}
@@ -302,7 +303,7 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
                 <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <TrendingUp size={24} style={{ color: '#BE185D', marginBottom: '10px' }} />
                   <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Starting Salary</h3>
-                  <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>New grad {brand.niche.short}s typically earn ${stats.medianSalaryK}k+, with rapid salary growth after year one. Many roles include signing bonuses and loan repayment.</p>
+                  <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>{stats.medianSalaryK > 0 ? `New grad ${brand.niche.short}s post a median of ${stats.medianSalaryK}k on current listings, with rapid salary growth after year one.` : `New grad ${brand.niche.short} pay grows quickly after year one.`} Many roles include signing bonuses and loan repayment.</p>
                 </div>
                 <ImmersiveImage src="/images/categories/bento/new-grad-salary.webp" alt={`New grad ${brand.niche.short} salary`} minHeight={240} />
             </div>
