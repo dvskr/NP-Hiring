@@ -2,6 +2,7 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { GraduationCap, TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -261,14 +262,12 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Built for New Graduates</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1 */}
-            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-                <div>
+            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Mentorship Programs</h3>
                   <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>Structured clinical supervision with experienced {brand.niche.adjective} providers. Graduate from supervised practice to independent caseload management.</p>
                 </div>
-                <Image src="/images/categories/bento/entry-level-mentorship.webp" alt={`${brand.niche.short} mentorship`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
-              </div>
+                <ImmersiveImage src="/images/categories/bento/entry-level-mentorship.webp" alt={`${brand.niche.short} mentorship`} minHeight={240} />
             </div>
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FEF3C7, #FDE68A)', textAlign: 'center' }}>
               <GraduationCap size={36} style={{ color: '#D97706', marginBottom: '14px' }} />
@@ -299,15 +298,13 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
             </div>
 
             {/* ROW 3 */}
-            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-                <div>
+            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <TrendingUp size={24} style={{ color: '#BE185D', marginBottom: '10px' }} />
                   <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Starting Salary</h3>
                   <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>New grad {brand.niche.short}s typically earn ${stats.medianSalaryK}k+, with rapid salary growth after year one. Many roles include signing bonuses and loan repayment.</p>
                 </div>
-                <Image src="/images/categories/bento/new-grad-salary.webp" alt={`New grad ${brand.niche.short} salary`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
-              </div>
+                <ImmersiveImage src="/images/categories/bento/new-grad-salary.webp" alt={`New grad ${brand.niche.short} salary`} minHeight={240} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', textAlign: 'center' }}>
               <Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} />

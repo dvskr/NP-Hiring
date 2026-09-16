@@ -2,6 +2,7 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -128,17 +129,19 @@ export default async function FullTimePage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Stability & Benefits</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1 */}
-            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div>
+            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Full Benefits Package</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Health, dental, vision, 401k matching, PTO, CME allowances, malpractice coverage, and student loan repayment at qualifying employers.</p>
               </div>
-              <Image src="/images/categories/bento/full-time-benefits.webp" alt="Benefits package" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <ImmersiveImage src="/images/categories/bento/full-time-benefits.webp" alt="Benefits package" minHeight={240} />
             </div>
-            <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <Image src="/images/categories/bento/full-time-stability.webp" alt="Job stability" width={200} height={140} style={{ width: '100%', maxWidth: '180px', height: 'auto', borderRadius: '12px', marginBottom: '16px' }} />
-              <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Long-Term Security</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Permanent positions with predictable income and career advancement.</p>
+            <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', textAlign: 'center' }}>
+              <ImmersiveImage src="/images/categories/bento/full-time-stability.webp" alt="Job stability" minHeight={200} />
+              <div style={{ padding: '22px 22px 26px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Long-Term Security</h3>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Permanent positions with predictable income and career advancement.</p>
+              </div>
             </div>
             {/* ROW 2: Icon Cards */}
             {[
@@ -154,14 +157,14 @@ export default async function FullTimePage({ searchParams }: PageProps) {
               </div>
             ))}
             {/* ROW 3 */}
-            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div>
+            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} />
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Competitive Salary</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Median full-time {brand.niche.short} salary:</p>
                 <p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.medianSalaryK}k</p>
               </div>
-              <Image src="/images/categories/bento/full-time-salary.webp" alt="Full-time salary" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <ImmersiveImage src="/images/categories/bento/full-time-salary.webp" alt="Full-time salary" minHeight={240} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)' }}>
               <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />

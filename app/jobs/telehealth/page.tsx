@@ -2,6 +2,7 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -250,17 +251,19 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1 */}
-            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div>
+            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Virtual Patient Sessions</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Conduct HIPAA-compliant video visits from home, handle follow-ups and refills remotely, and build lasting patient relationships.</p>
               </div>
-              <Image src="/images/categories/bento/telehealth-videocall.webp" alt="Telehealth video consultation" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <ImmersiveImage src="/images/categories/bento/telehealth-videocall.webp" alt="Telehealth video consultation" minHeight={240} />
             </div>
-            <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <Image src="/images/categories/bento/telehealth-multistate.webp" alt="Multi-state telehealth reach" width={200} height={140} style={{ width: '100%', maxWidth: '180px', height: 'auto', borderRadius: '12px', marginBottom: '16px' }} />
-              <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Multi-State Licensure</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Practice across state lines. Many employers sponsor additional state licenses.</p>
+            <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', textAlign: 'center' }}>
+              <ImmersiveImage src="/images/categories/bento/telehealth-multistate.webp" alt="Multi-state telehealth reach" minHeight={200} />
+              <div style={{ padding: '22px 22px 26px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Multi-State Licensure</h3>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Practice across state lines. Many employers sponsor additional state licenses.</p>
+              </div>
             </div>
             {/* ROW 2: Icons */}
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -284,14 +287,14 @@ export default async function TelehealthJobsPage({ searchParams }: PageProps) {
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Schedule sessions around your life: early mornings, evenings, or weekends.</p>
             </div>
             {/* ROW 3 */}
-            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div>
+            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} />
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Salary & Benefits</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Median telehealth {brand.niche.short} salary:</p>
                 <p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.medianSalaryK}k</p>
               </div>
-              <Image src="/images/categories/bento/telehealth-salary.webp" alt={`Telehealth ${brand.niche.short} salary`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <ImmersiveImage src="/images/categories/bento/telehealth-salary.webp" alt={`Telehealth ${brand.niche.short} salary`} minHeight={240} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)' }}>
               <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />

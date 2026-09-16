@@ -2,6 +2,7 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -169,17 +170,19 @@ export default async function SeniorPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Built for Leaders</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1 */}
-            <div className="cat-bento-card cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '28px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'center' }}>
-              <div>
+            <div className="cat-bento-card cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Lead Clinical Programs</h3>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>Direct {brand.niche.adjective} programs, mentor {brand.niche.short} teams, and drive quality improvement initiatives as a clinical leader.</p>
               </div>
-              <Image src="/images/categories/bento/mid-career-specialize.webp" alt={`${brand.niche.short} leadership diorama`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+              <ImmersiveImage src="/images/categories/bento/mid-career-specialize.webp" alt={`${brand.niche.short} leadership diorama`} minHeight={240} />
             </div>
-            <div className="cat-bento-card cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <Image src="/images/categories/bento/senior-strategy.webp" alt="Strategic planning diorama" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '12px', marginBottom: '14px' }} />
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Strategic Impact</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Shape {brand.niche.category} policy and organizational strategy at the executive level.</p>
+            <div className="cat-bento-card cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', textAlign: 'center' }}>
+              <ImmersiveImage src="/images/categories/bento/senior-strategy.webp" alt="Strategic planning diorama" minHeight={200} />
+              <div style={{ padding: '22px 22px 26px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Strategic Impact</h3>
+                <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Shape {brand.niche.category} policy and organizational strategy at the executive level.</p>
+              </div>
             </div>
             {/* ROW 2: 4 icon cards */}
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -203,8 +206,8 @@ export default async function SeniorPage({ searchParams }: PageProps) {
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Shape {brand.niche.category} policy and best practices.</p>
             </div>
             {/* ROW 3 */}
-            <div className="cat-bento-card cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '28px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'center' }}>
-              <div>
+            <div className="cat-bento-card cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                   <TrendingUp size={20} style={{ color: '#34D399' }} />
                   <span style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35' }}>Salary + Benefits</span>
@@ -212,7 +215,7 @@ export default async function SeniorPage({ searchParams }: PageProps) {
                 <div style={{ fontSize: '36px', fontWeight: 800, color: '#1A2E35', marginBottom: '6px' }}>${`${stats.medianSalaryK}k`}</div>
                 <p style={{ fontSize: '13px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Median senior {brand.niche.short} salary with executive bonuses, equity packages, and comprehensive benefits.</p>
               </div>
-              <Image src="/images/categories/bento/senior-compensation.webp" alt="Senior compensation diorama" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+              <ImmersiveImage src="/images/categories/bento/senior-compensation.webp" alt="Senior compensation diorama" minHeight={240} />
             </div>
             <div className="cat-bento-card cat-bento-cta" style={{ gridColumn: 'span 4', padding: '28px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(145deg, #831843, #BE185D)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.15)' }}>
               <Bell size={28} style={{ color: '#fff', marginBottom: '12px' }} />

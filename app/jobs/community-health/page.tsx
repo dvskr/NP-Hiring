@@ -2,6 +2,7 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -274,22 +275,18 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: FQHC Settings (8) + Community Impact (4) */}
-            <div className="cat-bento-hero-1 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="cat-bento-hero-1 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>FQHC Settings</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                   Work in Federally Qualified Health Centers with integrated primary care teams, sliding-scale patient access, and federal grant funding.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                <Image src="/images/categories/bento/community-health-fqhc.webp" alt="FQHC community health center" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/community-health-fqhc.webp" alt="FQHC community health center" minHeight={240} />
             </div>
 
             <div className="cat-bento-hero-2 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image src="/images/categories/bento/community-health-impact.webp" alt="Community health impact" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/community-health-impact.webp" alt="Community health impact" minHeight={200} />
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Community Impact</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>Make a direct impact on underserved populations. Reduce health disparities in your community.</p>
@@ -319,16 +316,14 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
             </div>
 
             {/* ROW 3: Integrated Care (8) + Alert CTA (4) */}
-            <div className="cat-bento-hero-3 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="cat-bento-hero-3 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary + Benefits</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Community health {brand.niche.short}s earn {stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$95K to $150K'} annually, and many roles add NHSC loan repayment, generous PTO, and PSLF-eligible nonprofit employment.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src="/images/categories/bento/community-health-salary.webp" alt={`Community health ${brand.niche.short} salary and benefits`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/community-health-salary.webp" alt={`Community health ${brand.niche.short} salary and benefits`} minHeight={240} />
             </div>
 
             <div className="cat-bento-cta cat-bento-card" style={{

@@ -2,6 +2,7 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { Home, Globe, TrendingUp, Building2, Bell, ArrowRight, Briefcase, DollarSign } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -350,22 +351,18 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
 
           <div className="remote-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Work From Anywhere (8) + Multi-State (4) */}
-            <div className="remote-bento-hero-1 remote-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="remote-bento-hero-1 remote-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Location Independence</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                   Practice from home, a private office, or anywhere with secure internet. No commute is required.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                <Image src="/images/categories/bento/remote-office.webp" alt={`Remote ${brand.niche.short} home office setup`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/remote-office.webp" alt={`Remote ${brand.niche.short} home office setup`} minHeight={240} />
             </div>
 
             <div className="remote-bento-hero-2 remote-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image src="/images/categories/bento/multistate-map.webp" alt="Multi-state licensure map" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/multistate-map.webp" alt="Multi-state licensure map" minHeight={200} />
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Multi-State Licensure</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
@@ -397,16 +394,14 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
             </div>
 
             {/* ROW 3: Salary (8) + Alert CTA (4) */}
-            <div className="remote-bento-hero-3 remote-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="remote-bento-hero-3 remote-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Parity</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Remote {brand.niche.short}s {stats.medianSalaryK > 0 ? `post a median of $${stats.medianSalaryK}k on current listings` : 'typically earn $95K to $160K'}, which is competitive with comparable in-office roles.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src="/images/categories/bento/remote-salary-growth.webp" alt={`Remote ${brand.niche.short} salary growth chart`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/remote-salary-growth.webp" alt={`Remote ${brand.niche.short} salary growth chart`} minHeight={240} />
             </div>
 
             <div className="remote-bento-cta remote-bento-card" style={{

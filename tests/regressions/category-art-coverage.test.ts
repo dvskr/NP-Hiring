@@ -39,7 +39,9 @@ function walk(dir: string): string[] {
 const rel = (file: string) => path.relative(ROOT, file).split(path.sep).join('/');
 const SOURCE_FILES = ['app', 'lib', 'components']
   .flatMap((d) => walk(path.join(ROOT, d)))
-  .filter((f) => /\.(ts|tsx)$/.test(f));
+  .filter((f) => /\.(ts|tsx)$/.test(f))
+  // The generated ground-color table names every file; it is data, not a usage.
+  .filter((f) => !rel(f).endsWith('lib/pseo/category-art-ground.ts'));
 const PSEO_SURFACES = SOURCE_FILES.filter((f) => /^(app\/jobs\/|lib\/pseo\/|app\/job-alerts\/|app\/privacy\/)/.test(rel(f)));
 const LOCAL_ART_RE = /\/images\/(?:categories|pages)\/[a-z0-9/-]+\.webp/g;
 
@@ -120,6 +122,24 @@ describe('category art port', () => {
     ]) {
       expect(script.DENIED).toHaveProperty([denied]);
     }
+  });
+
+  it('every picture ImmersiveImage or CategoryHero can letterbox has a sampled ground color', async () => {
+    const { ART_GROUND } = await import('../../lib/pseo/category-art-ground');
+    const missing: string[] = [];
+    for (const group of ['heroes', 'bento']) {
+      for (const file of walk(path.join(ART_DIR, group))) {
+        const publicPath = '/' + path.relative(path.join(ROOT, 'public'), file).split(path.sep).join('/');
+        if (!/^#[0-9a-f]{6}$/.test(ART_GROUND[publicPath] ?? '')) missing.push(publicPath);
+      }
+    }
+    // The state hub and metro cards letterbox the sage bento set.
+    for (const p of ['/images/job-seekers/bento-guides.webp', '/images/job-seekers/bento-salary.webp', '/images/employers/bento-analytics.webp']) {
+      if (!ART_GROUND[p]) missing.push(p);
+    }
+    expect(missing, 'run node scripts/sample-art-ground.mjs').toEqual([]);
+    const stale = Object.keys(ART_GROUND).filter((p) => !fs.existsSync(path.join(ROOT, 'public', p)));
+    expect(stale).toEqual([]);
   });
 
   it('niche text in ported heroes is retouched', async () => {

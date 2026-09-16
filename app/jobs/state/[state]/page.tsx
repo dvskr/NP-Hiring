@@ -2,7 +2,7 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { MapPin, TrendingUp, Building2, Bell, DollarSign, Users, ArrowRight, Video, Stethoscope, Hospital, Briefcase } from 'lucide-react';
 import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import { stateDioramaSrc, stateDioramaBg } from '@/components/StateImage';
@@ -774,8 +774,8 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Practice Authority (8col) + Salary (4col) */}
-            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Practice Authority</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: '0 0 12px', lineHeight: 1.6 }}>
                   {practiceAuthority ? practiceAuthority.details : `${stateName} offers opportunities for ${brand.niche.short}s across multiple practice settings.`}
@@ -786,15 +786,11 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                   </span>
                 )}
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                <Image src={ART_PRACTICE} alt="" width={280} height={280} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src={ART_PRACTICE} alt="" minHeight={240} />
             </div>
 
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image src={ART_SALARY} alt="" width={280} height={280} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
-              </div>
+              <ImmersiveImage src={ART_SALARY} alt="" minHeight={200} />
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Salary & Compensation</h3>
                 {/* Cite the BLS national median when the state has no
@@ -830,16 +826,14 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
             ))}
 
             {/* ROW 3: Growth (8col) + Alert CTA (4col) */}
-            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growth & Outlook</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>{brand.niche.short} demand in {stateName} continues to grow with {stats.totalJobs} active {pluralize(stats.totalJobs, 'position')}.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={ART_GROWTH} alt="" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src={ART_GROWTH} alt="" minHeight={240} />
             </div>
 
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>

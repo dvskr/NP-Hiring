@@ -507,7 +507,9 @@ describe('P2 #13 — metro page wiring', () => {
     });
 
     it('sources every image from public/images and the state diorama set', () => {
-        const srcs = [...METRO_PAGE_CODE.matchAll(/<Image\s+src=\{([^}]+)\}/g)].map((m) => m[1].trim());
+        // The bento pictures render through ImmersiveImage (edge-to-edge cells);
+        // both element names carry the same local constants.
+        const srcs = [...METRO_PAGE_CODE.matchAll(/<(?:Image|ImmersiveImage)\s+src=\{([^}]+)\}/g)].map((m) => m[1].trim());
         expect(srcs.length).toBeGreaterThan(0);
         for (const src of srcs) {
             expect(

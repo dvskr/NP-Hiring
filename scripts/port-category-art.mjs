@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Ports category artwork from the PMHNP board's site-assets into
  * public/images/categories/** under neutral names.

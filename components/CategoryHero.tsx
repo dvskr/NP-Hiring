@@ -3,6 +3,9 @@ import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
 import { brand } from '@/config/brand';
 
+/** The hero art is square and letterboxed to the panel height (380px, 240px under 900px). */
+const HERO_ART_SIZES = '(max-width: 900px) 240px, 380px';
+
 /* ═══════════════════════════════════════════════════════════════
    CategoryHero — Layout 5: Oversized type / asymmetric collage
    Fonts: Lora (heading), Inter (body/ui)
@@ -218,8 +221,13 @@ export default function CategoryHero({
                 <ol className="cath5-crumbs" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap' }}>
                   {crumbs.map(({ label, href }, i) => {
                     const isLast = i === crumbs.length - 1;
+                    // The current page is announced to assistive technology
+                    // but not shown: the H1 directly below names it, so the
+                    // visible trail ends at the parent (owner request,
+                    // 2026-09-16). The parent therefore draws no separator.
+                    const liClass = isLast ? 'cath5-crumb-current' : i === crumbs.length - 2 ? 'cath5-crumb-tail' : undefined;
                     return (
-                      <li key={`${label}-${i}`}>
+                      <li key={`${label}-${i}`} className={liClass}>
                         {href ? (
                           <Link href={href} className="cath5-crumb-link">{label}</Link>
                         ) : (
@@ -246,14 +254,24 @@ export default function CategoryHero({
             </span>
           </h1>
           <div className="cath5-photo">
-            <Image
-              src={heroImage}
-              alt={heroAlt}
-              width={560}
-              height={560}
-              priority
-              style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center bottom', display: 'block' }}
-            />
+            {/* The art is letterboxed so nothing is cropped. The bands beside
+                it are painted by the art's own outermost columns, stretched
+                across the band (one copy clamped to each edge), so the color
+                at the seam is exactly the picture's edge, row by row: flat
+                grounds stay flat and the state dioramas' vignettes continue
+                outward (owner request, 2026-09-16). All three layers share
+                one URL, so the panel costs one download. The art is square
+                and renders at the panel height, so the size hint is the
+                panel height, not the column width. */}
+            <div aria-hidden="true" className="cath5-photo-edge" style={{ left: 0, transformOrigin: 'left center' }}>
+              <Image src={heroImage} alt="" fill sizes={HERO_ART_SIZES} style={{ objectFit: 'fill' }} />
+            </div>
+            <div aria-hidden="true" className="cath5-photo-edge" style={{ right: 0, transformOrigin: 'right center' }}>
+              <Image src={heroImage} alt="" fill sizes={HERO_ART_SIZES} style={{ objectFit: 'fill' }} />
+            </div>
+            <div className="cath5-photo-art">
+              <Image src={heroImage} alt={heroAlt} fill priority sizes={HERO_ART_SIZES} style={{ objectFit: 'contain' }} />
+            </div>
             {/* Same defect as the badge: both photo-tag props were
                 destructured and dropped while .cath5-photo-tag sat unused in
                 the stylesheet. No caller passes them today, so this renders
@@ -405,6 +423,13 @@ export default function CategoryHero({
         .cath5-crumbs li:not(:last-child)::after {
           content: "·"; margin-left: 14px;
         }
+        /* The current page stays in the list for assistive technology but is
+           not drawn (the H1 names it), so its parent draws no separator. */
+        .cath5-crumbs li.cath5-crumb-tail::after { content: none; margin-left: 0; }
+        .cath5-crumbs li.cath5-crumb-current {
+          position: absolute; width: 1px; height: 1px; overflow: hidden;
+          clip: rect(0 0 0 0); white-space: nowrap;
+        }
         .cath5-crumb-now { color: var(--ink) !important; opacity: 1; }
         .cath5-crumb-link {
           color: inherit;
@@ -463,6 +488,14 @@ export default function CategoryHero({
           height: clamp(260px, 28vw, 380px);
           background: var(--cat-color);
         }
+        /* Square boxes the height of the panel: the art centered, and one
+           copy clamped to each edge with its outermost columns stretched
+           across the band beside the art. */
+        .cath5-photo-edge, .cath5-photo-art {
+          position: absolute; top: 0; bottom: 0; height: auto; aspect-ratio: 1 / 1;
+        }
+        .cath5-photo-edge { transform: scaleX(40); }
+        .cath5-photo-art { left: 50%; transform: translateX(-50%); max-width: 100%; }
         .cath5-photo-tag {
           position: absolute;
           left: 16px; bottom: 16px;

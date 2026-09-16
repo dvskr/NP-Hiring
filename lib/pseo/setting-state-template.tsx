@@ -8,6 +8,7 @@
 import { cache } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { getCitiesByState } from './city-data/cities';
 import { MIN_JOBS_FOR_CATEGORY_CITY } from './render-gate';
 import { Metadata } from 'next';
@@ -429,6 +430,9 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
            (48px 56px 0, dropping to 32px 24px 0 under 900px). */
         .pseo-crumb-band { background: #faf6ef; padding: 24px 56px 0; }
         .pseo-crumb-band nav { margin-bottom: 0; }
+        /* The current page is the H1 directly below, so its crumb is kept for
+           assistive technology but not drawn (owner request, 2026-09-16). */
+        .pseo-crumb-band nav ol li:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
         @media (max-width: 900px) {
           .pseo-crumb-band { padding: 16px 24px 0; }
         }
@@ -723,8 +727,8 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
 
             <div className="state-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
               {/* ROW 1: Hero card (8col) + Side card (4col) */}
-              <div style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-                <div style={{ padding: '32px 28px' }}>
+              <div style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>
                     {config.label} in {stateName}
                   </h3>
@@ -732,15 +736,11 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     {config.heroSubtitle}. {config.tips[0] ? `${config.tips[0]}.` : ''}
                   </p>
                 </div>
-                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                  <Image src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-                </div>
+                <ImmersiveImage src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} minHeight={240} />
               </div>
 
               <div style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Image src={assets.bentoImages[1]} alt={`${config.label} growth`} width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
-                </div>
+                <ImmersiveImage src={assets.bentoImages[1]} alt={`${config.label} growth`} minHeight={200} />
                 <div style={{ padding: '24px 22px', flex: 1 }}>
                   <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>
                     Salary & Compensation
@@ -762,17 +762,15 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
 
               {/* ROW 3: Salary card (8col) + Alert CTA (4col) */}
               {assets.bentoImages[2] && (
-                <div style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-                  <div style={{ padding: '32px 28px' }}>
+                <div style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                  <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                     <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growth & Outlook</h3>
                     <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                       {config.label} {brand.niche.short} demand in {stateName} continues to grow with {stats.totalJobs} active {pluralize(stats.totalJobs, 'position')}.
                     </p>
                   </div>
-                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                    <Image src={assets.bentoImages[2]} alt="Career growth" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-                  </div>
+                  <ImmersiveImage src={assets.bentoImages[2]} alt="Career growth" minHeight={240} />
                 </div>
               )}
 

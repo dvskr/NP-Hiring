@@ -7,6 +7,7 @@ import { selectEligibleCities } from '@/lib/pseo/related-cities';
 import { cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
 import Link from 'next/link';
 import Image from 'next/image';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { MapPin, TrendingUp, Building2, Bell, MapPinned, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
@@ -714,22 +715,18 @@ export default async function CityJobsPage({ params }: CityPageProps) {
 
                     <div className="city-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
                         {/* ROW 1: Job Market (8) + Employers (4) */}
-                        <div className="city-bento-hero-1" style={{ gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                            <div style={{ padding: '32px 28px' }}>
+                        <div className="city-bento-hero-1" style={{ gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
+                            <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growing {brand.niche.short} Market</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                                     {cityName}, {stateName} has {stats.totalJobs} active {brand.niche.short} positions across {stats.uniqueEmployerCount}+ employers, with roles in outpatient, inpatient, and telehealth settings.
                                 </p>
                             </div>
-                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                                <Image src="/images/categories/bento/state-practice.webp" alt={`${cityName} ${brand.niche.short} market`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-                            </div>
+                            <ImmersiveImage src="/images/categories/bento/state-practice.webp" alt={`${cityName} ${brand.niche.short} market`} minHeight={240} />
                         </div>
 
                         <div className="city-bento-hero-2" style={{ gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                            <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Image src="/images/categories/bento/state-growth.webp" alt="Career growth" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
-                            </div>
+                            <ImmersiveImage src="/images/categories/bento/state-growth.webp" alt="Career growth" minHeight={200} />
                             <div style={{ padding: '24px 22px', flex: 1 }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Top Employers</h3>
                                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
@@ -752,17 +749,15 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                         ))}
 
                         {/* ROW 3: Salary (8) + Alert CTA (4) */}
-                        <div className="city-bento-hero-3" style={{ gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                            <div style={{ padding: '32px 28px' }}>
+                        <div className="city-bento-hero-3" style={{ gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
+                            <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Outlook</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                                     {cityName} {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K to $200K'} annually. {salaryRange ? `Range: ${salaryRange} per year.` : 'Competitive compensation with benefits.'}
                                 </p>
                             </div>
-                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                                <Image src="/images/categories/bento/state-salary.webp" alt={`${cityName} ${brand.niche.short} salary`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-                            </div>
+                            <ImmersiveImage src="/images/categories/bento/state-salary.webp" alt={`${cityName} ${brand.niche.short} salary`} minHeight={240} />
                         </div>
 
                         <div className="city-bento-cta" style={{
