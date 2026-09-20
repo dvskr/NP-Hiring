@@ -7,8 +7,11 @@
  * which can never match this board's 'np-license-<state>' series (see
  * LICENSE_GUIDE_SLUG_PREFIX), plus a hardcoded FAQ map keyed to three
  * donor slugs whose answers quoted fabricated donor-era stats. The
- * series is unpublished (LICENSE_GUIDE_SERIES_PUBLISHED=false), so the
- * branch was removed; FAQ schema now comes only from post.faq_json.
+ * branch was removed; FAQ schema now comes only from post.faq_json, and
+ * the one HowTo the template emits (LIC-L4, license guides only) comes
+ * from buildLicenseGuideHowTo in lib/blog-license-guides.ts, which
+ * derives from the same steps array the visible "How to apply" list
+ * renders, so the template never builds a HowTo inline.
  *
  * B54: the template fabricated freshness — the current year was
  * auto-appended to every metadata title and an always-current
@@ -34,9 +37,12 @@ describe('B45 — donor license-guide schema branch removed', () => {
         expect(blogSrc).not.toMatch(/slug\.match\(\/\^how-to-get-your/);
     });
 
-    it('no HowTo schema remains in the template', () => {
+    it('HowTo schema is never built inline; the license branch emits the shared builder only', () => {
         expect(blogSrc).not.toContain("'@type': 'HowTo'");
         expect(blogSrc).not.toContain('HowToStep');
+        // LIC-L4: one HowTo, from the visible steps, only on a license guide.
+        expect(blogSrc).toMatch(/licenseSlugMatch \? buildLicenseGuideHowTo\(licenseSlugMatch\[1\]\) : null/);
+        expect(blogSrc).toMatch(/\{howTo && \(\s*<script type="application\/ld\+json" dangerouslySetInnerHTML=\{\{ __html: toJsonLd\(howTo\) \}\} \/>/);
     });
 
     it('no hardcoded donor-slug FAQ map remains', () => {

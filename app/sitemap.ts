@@ -1,70 +1,75 @@
 import { brand } from '@/config/brand'
 import { MetadataRoute } from 'next'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { getAllPublishedSlugs } from '@/lib/blog'
-import { METRO_CITIES } from '@/lib/metro-data'
+import { METRO_CITIES, type MetroCity } from '@/lib/metro-data'
 import { activeIndexableJobWhere } from '@/lib/active-job-filter'
+// pSEO index gates (PLAN C.2): every inventory-gated section below reads
+// the SAME pure function its page's robots call, over counts taken with the
+// canonical predicate (lib/canonical-counts.ts) that lib/pseo/listing-facts.ts
+// feeds every page with, so a sitemap URL can never be one the page renders
+// noindex (outside the PSEO_STATS_MAX_AGE_HOURS window accepted for stored
+// stats).
+import { canonicalBucketWhere } from '@/lib/canonical-counts'
+import {
+  pseoStatsFreshnessThreshold,
+  shouldIndexCompanyProfile,
+  shouldIndexListingPage,
+  shouldIndexLocalListingPage,
+  shouldIndexMetro,
+  shouldIndexStateCityDirectory,
+  shouldIndexStateHub,
+} from '@/lib/pseo/render-gate'
+import { metroScopeWhere, selectEmployers, tallyListingFacts, type ListingFactRow } from '@/lib/pseo/listing-facts'
+import {
+  buildHubCategoriesSentence,
+  buildHubCitiesSentences,
+  buildHubEmployersSentence,
+  buildHubRecencySentence,
+  buildHubSettingsSentence,
+  buildHubWorkModeSentence,
+} from '@/lib/pseo/listing-narrative'
+import { getPublishableSalaryGuideStates } from '@/lib/salary-analytics'
+import { getAllLicenseGuideSlugs, LICENSE_GUIDE_REVIEWED_AT } from '@/lib/blog-license-guides'
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry'
-// P1 #7: by-specialty salary pages — slugs derive from the same config
-// array that renders the pages, so the sitemap can never advertise a
-// specialty the route would 404. Plain-data import (no components).
+// Drift-proof registries (P1 #7, P1 #18, P2 #4/#5/#6/#17, P5 A2/A7/A8):
+// specialty slugs, JD-template ids, tool paths, comparison paths and report
+// editions come from the same plain-data modules the pages render from, so
+// the sitemap can never advertise a path the app would 404 on.
 import { SALARY_SPECIALTY_SLUGS } from '@/app/salary-guide/specialty/specialty-config'
-// P1 #18: employer JD-template detail pages. Same drift-proof pattern as the
-// specialty slugs above — ids come from the frozen registry that
-// generateStaticParams() renders from, so the sitemap can never advertise a
-// template id the route would notFound() on. Plain-data module (its only
-// import is config/brand), so this is safe to pull into the sitemap route.
 import { JD_TEMPLATES } from '@/lib/jd-templates'
-// P2 #4/#5/#6/#17: the free-tools cluster. Same drift-proof pattern as the
-// specialty slugs and JD-template ids above — paths come from the registry the
-// /tools hub and the /resources tools band render from, so the sitemap can
-// never advertise a tool path the app would 404 on. Plain-data module (its
-// only import is config/brand), so this is safe to pull into the sitemap route.
 import { TOOL_PATHS, TOOLS_HUB_PATH } from '@/app/tools/tools-registry'
-// P2 #12: per-state city directories (/jobs/locations/<state>). These helpers
-// ARE the render gate — app/jobs/locations/[state]/page.tsx notFound()s on
-// !shouldRenderStateCityDirectory, and app/jobs/locations/page.tsx decides
-// which states to link with the identical call. Reading the same functions here
-// is what keeps the sitemap from submitting a directory that 404s.
+import { COMPARE_HUB_PATH, COMPARE_PAGE_PATHS, COMPARE_REVIEW_DATE } from '@/lib/compare-data'
+import { REPORTS_HUB_PATH, ALL_REPORTS } from '@/lib/reports/editions'
+// P2 #12: per-state city directories. These helpers ARE the render gate:
+// app/jobs/locations/[state]/page.tsx notFound()s on
+// !shouldRenderStateCityDirectory and the locations hub links with the
+// identical call, so reading them here keeps 404s out of the sitemap.
 import {
   buildCitySlug,
   buildStateCityDirectory,
   cityLinkResolves,
   shouldRenderStateCityDirectory,
 } from '@/app/jobs/locations/[state]/directory'
-// Name→code map used by BOTH the directory page and the locations hub when
-// resolving a state's code. Using the same source here means same input →
-// same verdict on all three surfaces.
+// Name to code map shared with the directory page and the locations hub.
 import { STATE_CODES } from '@/lib/pseo/setting-state-config'
-// P2 #21: the sitemap budget guard below pages the team channel instead of
-// only writing a log line nobody reads.
+// P2 #21: the budget guard pages the team channel, not only a log line.
 import { sendDiscordMessage } from '@/lib/discord-notifier'
-// P5 A2: vs-competitor comparison pages. Same drift-proof pattern as the
-// tools/specialty/JD-template registries above — COMPARE_PAGE_PATHS maps over
-// the COMPETITOR_PROFILES array the hub's cards render from, and
-// tests/regressions/p5-comparison-pages-routes.test.ts pins a physical route
-// folder per slug in both directions, so the sitemap can never advertise a
-// comparison the app would 404 on. Plain-data module (its imports are the
-// same registries this file already pulls in).
-import { COMPARE_HUB_PATH, COMPARE_PAGE_PATHS, COMPARE_REVIEW_DATE } from '@/lib/compare-data'
-// P5 A7/A8: market reports. Paths come from the edition registry the /reports
-// hub renders from (tests/regressions/p5-market-reports-model.test.ts pins a
-// route folder per edition). Plain-data module (imports config/brand only).
-import { REPORTS_HUB_PATH, ALL_REPORTS } from '@/lib/reports/editions'
 
 // GSC Fix: Cache sitemap for 1 hour. Without this, every Googlebot request to
 // /sitemap.xml triggers a full DB scan across jobs, companies, and blog tables.
 export const revalidate = 3600;
 
-// SEO fix (B28): activeIndexableJobWhere() bakes `now` into the returned
-// Prisma where-clause. It used to be frozen here at MODULE scope, so a warm
-// serverless instance kept comparing expiresAt against its cold-start time —
-// jobs that expired since then stayed in the sitemap while middleware served
-// their URLs as 410. It is now computed per-request inside sitemap().
+// SEO fix (B28): activeIndexableJobWhere() bakes `now` into its where clause,
+// so it is computed per request inside sitemap(), never at module scope (a
+// warm instance kept expired jobs in the sitemap that middleware served 410).
+
+type SitemapEntry = MetadataRoute.Sitemap[number]
 
 // ── Sitemap budget guard (P2 #21) ────────────────────────────────────────────
-// Google rejects a sitemap over 50,000 URLs — the WHOLE file, not the excess —
+// Google rejects a sitemap over 50,000 URLs (the WHOLE file, not the excess),
 // so crossing the cap silently stops recrawls sitewide. Thresholds are named
 // here because the alert copy quotes them.
 const SITEMAP_BUDGET_WARN = 40000;
@@ -78,8 +83,7 @@ const SITEMAP_ALERT_COOLDOWN_MS = 60 * 60 * 1000;
  * Page the team channel when the primary sitemap approaches (or crosses) the
  * 50k cap. Fire-and-forget: a Discord outage must never break /sitemap.xml,
  * so the promise is voided and its rejection swallowed into a log line.
- * sendDiscordMessage() already no-ops (with a console warning) when
- * DISCORD_WEBHOOK_URL is unset, so dev and preview stay silent.
+ * sendDiscordMessage() already no-ops when DISCORD_WEBHOOK_URL is unset.
  */
 function notifySitemapBudget(severity: 'warn' | 'critical', entryCount: number): void {
   const last = sitemapBudgetAlertSeen.get(severity) ?? 0
@@ -91,23 +95,13 @@ function notifySitemapBudget(severity: 'warn' | 'critical', entryCount: number):
     {
       title: critical ? '🚨 Sitemap over budget' : '⚠️ Sitemap approaching budget',
       description: critical
-        ? `Primary sitemap is ${entryCount.toLocaleString()} entries (cap 50,000). Google may reject the whole file — split job pages into /api/sitemaps/jobs/[batch] now.`
+        ? `Primary sitemap is ${entryCount.toLocaleString()} entries (cap 50,000). Google may reject the whole file: split job pages into /api/sitemaps/jobs/[batch] now.`
         : `Primary sitemap is ${entryCount.toLocaleString()} entries (cap 50,000). Plan the split into /api/sitemaps/jobs/[batch] before ${SITEMAP_BUDGET_CRITICAL.toLocaleString()}.`,
       color: critical ? 0xff0000 : 0xffaa00,
     },
   ]).catch((err) =>
     logger.warn('[sitemap] budget Discord alert failed', { error: err instanceof Error ? err.message : String(err) }),
   )
-}
-
-// B33: metro-page adjacency sets — MUST mirror getMetroStats in
-// app/jobs/metro/[slug]/page.tsx, which widens these three metros to
-// adjacent cities when counting inventory. Only used to decide whether a
-// metro has ≥1 active job before advertising it in the sitemap.
-const METRO_ADJACENT_CITIES: Record<string, string[]> = {
-  'New York': ['Brooklyn', 'Queens', 'Bronx'],
-  'Tampa': ['St. Petersburg', 'Clearwater'],
-  'Dallas': ['Fort Worth', 'Plano', 'Arlington'],
 }
 
 // All 50 US states + DC
@@ -123,12 +117,6 @@ const US_STATES = [
   'tennessee', 'texas', 'utah', 'vermont', 'virginia', 'washington',
   'west-virginia', 'wisconsin', 'wyoming', 'district-of-columbia'
 ]
-
-// Category landing-page slugs come from the drift-guarded registry
-// (lib/pseo/taxonomy-registry.ts). Registry adoption also fixed a real
-// drift bug: /jobs/behavioral-health existed as a page but was missing
-// from the hand-maintained axis arrays this replaced, so it was never
-// advertised in the sitemap.
 
 // State name-to-code lookup for slug generation
 const STATE_NAME_TO_CODE: Record<string, string> = {
@@ -147,23 +135,200 @@ const STATE_NAME_TO_CODE: Record<string, string> = {
   'Wisconsin': 'WI', 'Wyoming': 'WY', 'District of Columbia': 'DC',
 }
 
+/** The sitemap's slug form of a Job.state name ("New York" to "new-york"). */
+const slugify = (s: string): string => s.toLowerCase().replace(/\s+/g, '-')
+
 /**
- * Primary sitemap — core pages, jobs, blog, state pages, category×state pages.
- * Category × City pages are served via /api/sitemaps/cities/[batch] (see API routes).
+ * Company profiles: shouldIndexCompanyProfile indexes at 5 or more active
+ * jobs, but this sitemap keeps the stricter floor of 8 it has carried until
+ * the first re-crawl after the robots change ships (PLAN C.2). Delete this
+ * constant and its clause then, so the gate function alone decides.
+ */
+const SITEMAP_COMPANY_MIN_JOBS_UNTIL_RECRAWL = 8
+
+// ── pSEO gate reads ──────────────────────────────────────────────────────────
+
+/**
+ * A gate read that fails on its own omits its section (omitting a URL can
+ * never advertise a noindex page) instead of degrading the whole sitemap to
+ * static pages. The inventory queries the sections were already built on
+ * keep the outer fail-fast behaviour.
+ */
+async function gateRead<T>(label: string, fallback: T, read: () => Promise<T>): Promise<T> {
+  try {
+    return await read()
+  } catch (error) {
+    logger.warn(`[sitemap] ${label} unavailable; omitting its pSEO URLs`, {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return fallback
+  }
+}
+
+/** A fresh 'category-landing' PseoStats row (locationSlug 'all', PLAN C.2). */
+interface LandingStatsRow {
+  categorySlug: string
+  totalJobs: number
+  updatedAt: Date
+}
+
+/**
+ * Category landings: one 'category-landing' row per slug written by
+ * aggregate-pseo from the canonical predicate, read inside the
+ * PSEO_STATS_MAX_AGE_HOURS window. The landing indexes through
+ * shouldIndexListingPage over that count, the same function its robots call
+ * (lib/pseo/category-metadata.ts); no fresh row means not advertised.
+ */
+async function fetchFreshLandingRows(): Promise<Map<string, LandingStatsRow>> {
+  const rows = await prisma.pseoStats.findMany({
+    where: { type: 'category-landing', locationSlug: 'all', updatedAt: { gte: pseoStatsFreshnessThreshold() } },
+    select: { categorySlug: true, totalJobs: true, updatedAt: true },
+  })
+  return new Map((Array.isArray(rows) ? rows : []).map((row) => [row.categorySlug, row]))
+}
+
+/**
+ * States whose /salary-guide/[state] publishes a gated median, as sitemap
+ * slugs. getPublishableSalaryGuideStates() returns Job.state names and is
+ * the same gate over the same pool as the page's shouldIndexSalaryGuideState
+ * (lib/salary-analytics.ts), so the guide and the sitemap cannot disagree.
+ */
+async function fetchPublishableSalaryStateSlugs(): Promise<Set<string>> {
+  const names = await getPublishableSalaryGuideStates()
+  return new Set([...names].map((name) => slugify(name.trim())))
+}
+
+/**
+ * Mirror of the private LISTING_FACT_SELECT in lib/pseo/listing-facts.ts:
+ * the projection tallyListingFacts() consumes for the state hub gate.
+ */
+const HUB_FACT_SELECT = {
+  employer: true,
+  companyId: true,
+  city: true,
+  state: true,
+  stateCode: true,
+  isRemote: true,
+  isHybrid: true,
+  jobType: true,
+  setting: true,
+  categoryTags: true,
+  originalPostedAt: true,
+  createdAt: true,
+  newGradFriendly: true,
+  salaryIsEstimated: true,
+  normalizedMinSalary: true,
+} as const satisfies Prisma.JobSelect
+
+/** Memory guard; the canonical pool is about one thousand rows today. */
+const HUB_FACT_ROW_CAP = 10_000
+
+/** Newest-first canonical rows with a state, bucketed by the state's slug. */
+async function fetchHubFactRowsByState(now: Date): Promise<Map<string, ListingFactRow[]>> {
+  const rows: ListingFactRow[] = await prisma.job.findMany({
+    where: canonicalBucketWhere({ state: { not: null } }, now),
+    select: HUB_FACT_SELECT,
+    orderBy: { createdAt: 'desc' },
+    take: HUB_FACT_ROW_CAP,
+  })
+  const byState = new Map<string, ListingFactRow[]>()
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (typeof row.state !== 'string' || row.state.trim() === '') continue
+    const slug = slugify(row.state.trim())
+    const bucket = byState.get(slug)
+    if (bucket) bucket.push(row)
+    else byState.set(slug, [row])
+  }
+  return byState
+}
+
+/**
+ * How many of the hub's live data sections (thin-spec-3 S1 to S7) render
+ * for a state. Each is decided by the sentence builder the page renders it
+ * with (null means the section is omitted), so this is the page's own count;
+ * S7 (posted pay) counts only when the state publishes a gated median.
+ */
+function countHubLiveDataSections(
+  rows: readonly ListingFactRow[],
+  activeJobs: number,
+  publishesMedian: boolean,
+  now: Date,
+): number {
+  const tally = tallyListingFacts(rows, now)
+  const stateName = rows[0]?.state?.trim() ?? ''
+  const employerFacts = {
+    total: activeJobs,
+    distinctEmployers: tally.distinctEmployers,
+    topEmployers: tally.topEmployers.map(({ name, count }) => ({ name, count, companyPath: null })),
+  }
+  return [
+    buildHubEmployersSentence({ stateName, facts: employerFacts }) !== null, // S1
+    buildHubCitiesSentences(tally.cities) !== null, // S2
+    buildHubCategoriesSentence(tally.categoryTop) !== null, // S3
+    buildHubWorkModeSentence(tally.workMode) !== null, // S4
+    buildHubSettingsSentence(tally.settings) !== null, // S5
+    buildHubRecencySentence(tally.recency) !== null, // S6
+    publishesMedian, // S7
+  ].filter(Boolean).length
+}
+
+/** Canonical inventory inside the shared metro scope (thin-spec-3 M3). */
+async function metroInventory(metro: MetroCity, now: Date): Promise<{ activeJobs: number; newest: Date | null }> {
+  const agg = await prisma.job.aggregate({
+    where: canonicalBucketWhere(metroScopeWhere(metro), now),
+    _count: { _all: true },
+    _max: { updatedAt: true },
+  })
+  return { activeJobs: agg?._count?._all ?? 0, newest: agg?._max?.updatedAt ?? null }
+}
+
+/** Lookup key for a (state, city) bucket, case-insensitive like the page query. */
+const cityEmployerKey = (state: string, city: string): string =>
+  `${state.trim().toLowerCase()}|${city.trim().toLowerCase()}`
+
+/**
+ * Distinct employers per (state, city) from one grouped query, merged with
+ * the same selectEmployers() alias rule the city page's facts use, so the
+ * sitemap's shouldIndexLocalListingPage input is the page's own.
+ */
+async function fetchDistinctEmployersByCity(now: Date): Promise<Map<string, number>> {
+  const groups = await prisma.job.groupBy({
+    by: ['city', 'state', 'employer'],
+    where: canonicalBucketWhere({ city: { not: null }, state: { not: null } }, now),
+    _count: { _all: true },
+  })
+  const rowsByCity = new Map<string, { employer: string | null; companyId: null }[]>()
+  for (const group of Array.isArray(groups) ? groups : []) {
+    if (!group.city || !group.state) continue
+    const key = cityEmployerKey(group.state, group.city)
+    const bucket = rowsByCity.get(key)
+    const row = { employer: group.employer, companyId: null }
+    if (bucket) bucket.push(row)
+    else rowsByCity.set(key, [row])
+  }
+  return new Map([...rowsByCity].map(([key, rows]) => [key, selectEmployers(rows).distinct]))
+}
+
+/**
+ * Primary sitemap: core pages, blog, state pages, category landings, metros,
+ * cities, directories and companies. Category x City and Category x State
+ * pages are served via /api/sitemaps/cities/[batch] (see API routes).
  * This keeps each sitemap under Google's 50K URL limit.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl
+  const now = new Date()
 
   // Shared filter: published, not expired, and not a repeated dead link (S6).
   // Computed per-request (B28) so `now` is never stale on warm instances.
+  // Used by the company block (the profile page gates on this same helper
+  // until W2-COMPANY moves it onto the canonical predicate) and the sanity
+  // floor; the pSEO gates count with canonicalBucketWhere, which today is
+  // numerically identical (both carry GLOBAL_EXCLUSIONS).
   const ACTIVE_JOB_WHERE = activeIndexableJobWhere()
 
-  // GSC Fix (P1.4): use the actual latest job date, or "now" as a safe live
-  // fallback. Previously hard-coded "2026-03-01" — a stale stamp made every
-  // sitemap entry look 2+ months old and signaled "this site isn't being
-  // maintained" to Google. The outer try/catch at the bottom of this function
-  // still catches DB-wide failure and returns a static-only sitemap.
+  // GSC Fix (P1.4): the newest job date, or "now" as a safe live fallback,
+  // instead of a hard-coded stamp that made every entry look months old.
   let latestJobDate = new Date();
   const latestJob = await prisma.job.findFirst({
     where: { isPublished: true },
@@ -174,82 +339,67 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const STATIC_CONTENT_DATE = new Date('2026-05-04');
 
-  // Static pages
+  // Static pages. Deliberately NOT listed: /post-job (thin-spec-4 O1: its
+  // server HTML is an empty client form, so app/post-job/layout.tsx renders
+  // `noindex, follow`; /for-employers and /pricing carry the intent),
+  // /job-alerts (noindexed bare subscription form, audit 15), /testimonials
+  // (notFound()s until a consented testimonial is featured) and
+  // /jobs/new-grad (a registry category slug: categoryLandingPages emits it
+  // when its landing indexes; a second static entry duplicated the <loc>).
   const staticPages: MetadataRoute.Sitemap = [
     { url: baseUrl, lastModified: latestJobDate, changeFrequency: 'daily', priority: 1.0 },
     { url: `${baseUrl}/jobs`, lastModified: latestJobDate, changeFrequency: 'hourly', priority: 0.9 },
     { url: `${baseUrl}/blog`, lastModified: latestJobDate, changeFrequency: 'weekly', priority: 0.9 },
-    { url: `${baseUrl}/post-job`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/for-employers`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${baseUrl}/for-job-seekers`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${baseUrl}/about`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.5 },
-    // P1 #8 (E-E-A-T): /editorial-policy is the trust page every stat-bearing
-    // article and salary page cites via brand.editorial.policyPath. It is
-    // explicitly `robots: { index: true, follow: true }` and is the target of
-    // sitewide byline links, so it must be advertised — an authorship/sourcing
-    // policy Google never crawls does nothing for E-E-A-T.
+    // P1 #8 (E-E-A-T): /editorial-policy is the indexable trust page every
+    // stat-bearing article cites via brand.editorial.policyPath.
     { url: `${baseUrl}/editorial-policy`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/faq`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/contact`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.4 },
-    // /job-alerts removed from sitemap (audit 15 thin-pages CRITICAL):
-    // page is a bare subscription form (~240 words of UI labels). Now
-    // noindexed via app/job-alerts/layout.tsx. Leaving the sitemap entry
-    // in place would surface as a "Submitted URL marked noindex" warning
-    // in GSC. Footer link on every page provides the discovery path.
     { url: `${baseUrl}/terms`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${baseUrl}/privacy`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${baseUrl}/pricing`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.7 },
-    // Content audit P0 #7: these four indexable pages were missing from the
-    // sitemap entirely. /companies is the employer-directory hub (DB-driven,
-    // refreshed as inventory changes — company detail pages are emitted
-    // further down, but the hub itself was never advertised); /for-programs
-    // is the program-director funnel (footer-linked from every page);
-    // /security and /sub-processors are trust/legal pages that get the same
-    // treatment as /terms and /privacy.
+    // Content audit P0 #7: the employer-directory hub, the program-director
+    // funnel and the two trust/legal pages were indexable but unadvertised.
     { url: `${baseUrl}/companies`, lastModified: latestJobDate, changeFrequency: 'daily', priority: 0.7 },
     { url: `${baseUrl}/for-programs`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${baseUrl}/security`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${baseUrl}/sub-processors`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'yearly', priority: 0.3 },
-    // Content audit P2 #9 (trust cluster): /accessibility and /press are both
-    // `robots: { index: true, follow: true }`. Declaring a page indexable and
-    // then advertising it nowhere — no sitemap entry, no inbound link — is the
-    // same orphan defect P0 #7 fixed for /for-programs. Footer links added in
-    // components/Footer.tsx alongside these entries.
-    //
-    // /testimonials is deliberately NOT listed: it notFound()s until an
-    // employer testimonial has been consented to AND featured, so a sitemap
-    // entry would submit a URL that 404s on an empty board.
+    // Content audit P2 #9 (trust cluster): both `index: true`, footer-linked
+    // from components/Footer.tsx; same orphan class as P0 #7.
     { url: `${baseUrl}/accessibility`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${baseUrl}/press`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.4 },
-    // Content hub pages
-    // /jobs/new-grad is NOT listed here: 'new-grad' is a registry category
-    // slug, so categoryLandingPages below already emits it (daily, 0.9).
-    // A second static entry produced a duplicate <loc> in the same sitemap
-    // — the exact duplicate-URL quality hit the categoryStatePages comment
-    // warns about. (The /new-grad → /jobs/new-grad redirect note lives on:
-    // sitemaps must submit the canonical destination, which the registry
-    // entry does.)
   ]
 
-  // Metro landing pages — DB-gated below (B33) so metros with zero active
-  // inventory are not advertised (their pages render an editorial shell with
-  // an empty job list — a soft-404 magnet when submitted via sitemap). This
-  // `let`-bound default (all metros) is the degraded-mode fallback used by
-  // the outer catch when the DB is unhealthy.
-  let metroPages: MetadataRoute.Sitemap = METRO_CITIES.map(m => ({
-    url: `${baseUrl}/jobs/metro/${m.slug}`,
-    lastModified: latestJobDate,
-    changeFrequency: 'weekly' as const,
-    priority: 0.8,
-  }))
+  // Inventory-gated sections default to EMPTY. Each of these page types
+  // renders `noindex, follow` below its index gate (lib/pseo/render-gate.ts),
+  // and with the DB down we cannot tell which pass, so the degraded-mode
+  // fallback used by the outer catch advertises none of them rather than a
+  // noindex page (the GSC defect the gates exist to remove). Directories
+  // additionally hard-404 below their render gate.
+  let metroPages: MetadataRoute.Sitemap = []
+  let categoryLandingPages: MetadataRoute.Sitemap = []
+  let statePages: MetadataRoute.Sitemap = []
+  let salaryGuideStatePages: MetadataRoute.Sitemap = []
+  let stateCityDirectoryPages: MetadataRoute.Sitemap = []
 
-  // Category landing pages
-  const categoryLandingPages: MetadataRoute.Sitemap = ALL_CATEGORY_SLUGS.map(slug => ({
-    url: `${baseUrl}/jobs/${slug}`,
-    lastModified: latestJobDate,
-    changeFrequency: 'daily',
-    priority: 0.9,
-  }))
+  // License guides (PLAN C.2, thin-spec-4 3C): all 51 come from the registry
+  // that renders them (lib/blog-license-guides.ts), so the count cannot
+  // depend on the blog table being readable, and they always index. A guide
+  // an editor synced into blog_posts takes its DB updated_at as lastmod
+  // (applied inside the try block); the rest carry the series review date.
+  const licenseGuideSlugs = getAllLicenseGuideSlugs()
+  const licenseGuideSlugSet = new Set(licenseGuideSlugs)
+  const licenseGuideReviewedAt = new Date(LICENSE_GUIDE_REVIEWED_AT)
+  const licenseGuidePage = (slug: string, lastModified: Date): SitemapEntry => ({
+    url: `${baseUrl}/blog/${slug}`,
+    lastModified,
+    changeFrequency: 'monthly',
+    priority: 0.7,
+  })
+  let licenseGuidePages: MetadataRoute.Sitemap = licenseGuideSlugs.map((slug) => licenseGuidePage(slug, licenseGuideReviewedAt))
 
   // Other landing pages
   const landingPages: MetadataRoute.Sitemap = [
@@ -261,13 +411,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/resources/1099-vs-w2`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
   ]
 
-  // Free-tools cluster (P2 #4, #5, #6, #17) — the /tools hub plus one page per
-  // registry entry. NOT DB-gated, for the same reason as the specialty and
-  // employer-resource pages: every tool is a repo-authored page whose shell
-  // always renders in full (the live-pay sections gate themselves at render
-  // time), so there is no soft-404 risk. All five set an explicit self-canonical
-  // and none carry `robots: { index: false }`, so declaring them indexable and
-  // advertising them nowhere would be the orphan defect P0 #7 fixed.
+  // Repo-authored clusters that always render in full (no soft-404 risk),
+  // each with a self canonical and no `robots: { index: false }`: the tools
+  // hub and its pages (P2 #4/#5/#6/#17), the comparison cluster (P5 A2),
+  // the scope-of-practice hub (P5 A4), the market reports (P5 A7/A8, whose
+  // bodies recompute from live inventory so the newest-job date is the
+  // honest lastmod), the salary specialty pages (P1 #7, config-derived
+  // bands) and the employer content hub (P1 #18). Leaving any of them out
+  // would be the orphan defect P0 #7 fixed. /admin/companies and
+  // /api/admin/* from the same waves are deliberately NOT here.
   const toolPages: MetadataRoute.Sitemap = [
     { url: `${baseUrl}${TOOLS_HUB_PATH}`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
     ...TOOL_PATHS.map(path => ({
@@ -277,15 +429,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     })),
   ]
-
-  // P5 A2/A4/A7/A8: comparison cluster, scope-of-practice hub, and market
-  // reports. NOT DB-gated, same reasoning as the tools cluster above: every
-  // page is repo-authored and always renders in full (the report pages
-  // degrade to their editorial shell when the live snapshot is unavailable —
-  // they never notFound()), so there is no soft-404 risk. All set explicit
-  // self-canonicals and none carry `robots: { index: false }`, so leaving
-  // them out would be the orphan defect P0 #7 fixed. /admin/companies and
-  // /api/admin/* from the same wave are deliberately NOT here.
   const P5_CONTENT_DATE = new Date(COMPARE_REVIEW_DATE)
   const comparePages: MetadataRoute.Sitemap = [
     { url: `${baseUrl}${COMPARE_HUB_PATH}`, lastModified: P5_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.6 },
@@ -299,8 +442,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const scopeOfPracticePages: MetadataRoute.Sitemap = [
     { url: `${baseUrl}/scope-of-practice`, lastModified: P5_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.8 },
   ]
-  // Report bodies recompute from live inventory on each revalidate, so the
-  // newest-job date is the honest lastmod (B27), not the publish date.
   const reportPages: MetadataRoute.Sitemap = [
     { url: `${baseUrl}${REPORTS_HUB_PATH}`, lastModified: latestJobDate, changeFrequency: 'weekly', priority: 0.7 },
     ...ALL_REPORTS.map(report => ({
@@ -310,12 +451,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     })),
   ]
-
-  // Salary-guide specialty pages (P1 #7). NOT DB-gated on purpose: unlike
-  // the state pages (which notFound() with zero inventory), a specialty
-  // page's premium-band content is config-derived and always renders, so
-  // there is no soft-404 risk when a category has no salary-bearing jobs.
-  // Live sections gate themselves at render time.
   const salarySpecialtyPages: MetadataRoute.Sitemap = [
     { url: `${baseUrl}/salary-guide/specialty`, lastModified: latestJobDate, changeFrequency: 'weekly', priority: 0.7 },
     ...SALARY_SPECIALTY_SLUGS.map(slug => ({
@@ -325,12 +460,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     })),
   ]
-
-  // Employer content hub (P1 #18) — /for-employers/resources, its three
-  // editorial guides, and one detail page per JD-template skeleton.
-  // NOT DB-gated: every page here is repo-authored static content that
-  // always renders in full, so there is no soft-404 risk (unlike the
-  // inventory-driven state/metro/city pages gated in the try block).
   const employerResourcePages: MetadataRoute.Sitemap = [
     { url: `${baseUrl}/for-employers/resources`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${baseUrl}/for-employers/resources/how-to-hire`, lastModified: STATIC_CONTENT_DATE, changeFrequency: 'monthly', priority: 0.7 },
@@ -344,149 +473,118 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ]
 
-  // State pages — DB-gated below in the try block so empty states never
-  // ship to Google. These `let`-bound defaults are the degraded-mode
-  // fallback used by the outer catch when the DB is unhealthy.
-  let statePages: MetadataRoute.Sitemap = US_STATES.map(state => ({
-    url: `${baseUrl}/jobs/state/${state}`,
-    lastModified: latestJobDate,
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }))
-
-  // Salary guide state pages — same gating treatment.
-  let salaryGuideStatePages: MetadataRoute.Sitemap = US_STATES.map(state => ({
-    url: `${baseUrl}/salary-guide/${state}`,
-    lastModified: latestJobDate,
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }))
-
-  // Per-state city directories (P2 #12) — DB-gated below in the try block.
-  //
-  // Unlike statePages/metroPages above, the degraded-mode default here is
-  // EMPTY, not "all of them": whether /jobs/locations/<state> renders at all is
-  // a pure function of live inventory (≥1 linkable city AND ≥3 tracked cities),
-  // and roughly half the states fail it. With the DB down we cannot tell which,
-  // and the page hard-404s on the ones that fail — so the safe fallback is to
-  // advertise none rather than submit ~25 URLs that 404.
-  let stateCityDirectoryPages: MetadataRoute.Sitemap = []
-
-  // Category × State pages — handled by /api/sitemaps/cities/[batch] (which
-  // emits both category×city AND setting×state URLs via pseoStats with
-  // totalJobs ≥ 1). Keep this empty here to avoid duplicating URLs across
-  // sitemaps — Google treats duplicate <loc> entries across sitemap files as
-  // a quality signal hit.
+  // Category x State pages are handled by /api/sitemaps/cities/[batch] (which
+  // emits both category x city AND setting x state URLs from the PseoStats
+  // index-gate columns). Kept empty here so no <loc> is duplicated across
+  // sitemap files.
   const categoryStatePages: MetadataRoute.Sitemap = [];
 
   try {
-    // Blog pages
+    // Blog pages. The license guides are emitted from the registry above,
+    // so they are filtered out here and a guide is never listed twice; a
+    // DB-synced guide only lends its updated_at to the registry entry.
     const blogSlugs = await getAllPublishedSlugs();
-    const blogPages: MetadataRoute.Sitemap = blogSlugs.map((post) => ({
-      url: `${baseUrl}/blog/${post.slug}`,
-      lastModified: new Date(post.updated_at),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    }));
+    const blogUpdatedAt = new Map(blogSlugs.map((post) => [post.slug, new Date(post.updated_at)]));
+    licenseGuidePages = licenseGuideSlugs.map((slug) => licenseGuidePage(slug, blogUpdatedAt.get(slug) ?? licenseGuideReviewedAt));
+    const blogPages: MetadataRoute.Sitemap = blogSlugs
+      .filter((post) => !licenseGuideSlugSet.has(post.slug))
+      .map((post) => ({
+        url: `${baseUrl}/blog/${post.slug}`,
+        lastModified: new Date(post.updated_at),
+        changeFrequency: 'weekly',
+        priority: 0.8,
+      }));
 
-    // GSC Fix (P3.8): Job-detail URLs are now served by /api/sitemaps/jobs/[batch]
-    // (BATCH_SIZE=25000) and listed in /api/sitemaps/index. Keeping them out of
-    // the primary sitemap leaves headroom under Google's 50K-URL cap regardless
-    // of ingestion-volume bumps. We still need an active-jobs count for the
-    // per-section sanity floor below.
+    // GSC Fix (P3.8): job-detail URLs live in /api/sitemaps/jobs/[batch];
+    // the count feeds only the sanity floor at the bottom.
     const activeJobCount = await prisma.job.count({ where: ACTIVE_JOB_WHERE });
 
-    // GSC Fix: gate state and salary-guide-state URLs on actual job presence.
-    // The page handlers now notFound() on empty states, but the sitemap also
-    // needs to stop advertising them — otherwise Google keeps re-crawling
-    // and the URL bounces between "indexed → 404 → not indexed" until the
-    // state has data again. The state.toLowerCase().replace pattern matches
-    // US_STATES slugs (e.g. "Wyoming" → "wyoming", "New York" → "new-york").
-    // B27: each groupBy also pulls _max.updatedAt so every section carries a
-    // REAL per-page lastmod (the newest job feeding that page) instead of
-    // flattening everything to one site-wide date — over-claiming freshness
-    // erodes Google's trust in lastmod across the whole property.
+    // Category landings (thin-spec-1 8.3): gated on the cron's fresh
+    // 'category-landing' row through shouldIndexListingPage.
+    const landingRows = await gateRead('category-landing stats', new Map<string, LandingStatsRow>(), fetchFreshLandingRows)
+    categoryLandingPages = ALL_CATEGORY_SLUGS.flatMap((slug) => {
+      const row = landingRows.get(slug)
+      if (!row || !shouldIndexListingPage(row.totalJobs)) return []
+      return [{ url: `${baseUrl}/jobs/${slug}`, lastModified: row.updatedAt, changeFrequency: 'daily' as const, priority: 0.9 }]
+    })
+
+    // State inventory: canonical jobs per state, plus the newest job feeding
+    // each page (B27: real per-page lastmod instead of one site-wide date,
+    // because over-claiming freshness erodes Google's trust in lastmod).
+    // The slugify pattern matches US_STATES slugs ("New York" to "new-york").
     const stateJobCounts = await prisma.job.groupBy({
       by: ['state'],
-      where: { ...ACTIVE_JOB_WHERE, state: { not: null } },
+      where: canonicalBucketWhere({ state: { not: null } }, now),
       _count: { state: true },
       _max: { updatedAt: true },
     });
-    const slugify = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
     const stateLastmod = new Map<string, Date>();
+    const stateActiveJobs = new Map<string, number>();
     for (const r of stateJobCounts) {
-      if (r._max.updatedAt) stateLastmod.set(slugify((r.state || '').trim()), r._max.updatedAt);
+      const slug = slugify((r.state || '').trim());
+      stateActiveJobs.set(slug, (stateActiveJobs.get(slug) ?? 0) + r._count.state);
+      const seen = stateLastmod.get(slug);
+      if (r._max.updatedAt && (!seen || r._max.updatedAt > seen)) stateLastmod.set(slug, r._max.updatedAt);
     }
-    const statesWithJobs = new Set(stateJobCounts.map(r => slugify((r.state || '').trim())));
-    statePages = US_STATES.filter(s => statesWithJobs.has(s)).map(state => ({
+    const statesWithJobs = new Set(stateActiveJobs.keys());
+    const publishableSalaryStates = await gateRead('salary benchmarks', new Set<string>(), fetchPublishableSalaryStateSlugs);
+
+    // State hubs (thin-spec-3 section 7): the page renders at 1 or more jobs
+    // and indexes through shouldIndexStateHub over its canonical count and
+    // the live data sections it renders, counted here with the same
+    // builders. A hub that misses the gate renders `noindex, follow`.
+    const hubRowsByState = await gateRead('state hub facts', new Map<string, ListingFactRow[]>(), () => fetchHubFactRowsByState(now));
+    statePages = US_STATES.filter((state) => {
+      const rows = hubRowsByState.get(state) ?? [];
+      const activeJobs = stateActiveJobs.get(state) ?? 0;
+      if (rows.length === 0) return false;
+      const liveDataSections = countHubLiveDataSections(rows, activeJobs, publishableSalaryStates.has(state), now);
+      return shouldIndexStateHub({ activeJobs, liveDataSections });
+    }).map(state => ({
       url: `${baseUrl}/jobs/state/${state}`,
       lastModified: stateLastmod.get(state) ?? latestJobDate,
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     }));
-    // /salary-guide/[state] gates on the SAME set as /jobs/state/[state]:
-    // ≥ 1 active job (ACTIVE_JOB_WHERE), which is predicate-identical to
-    // that page's own notFound() (getStateActiveJobCount). A state whose
-    // disclosed salaries are all hourly/estimated/non-NP renders its
-    // below-gate branch (BLS figure, "sample too small") rather than 404,
-    // so gating here on disclosed salary would only under-advertise — and
-    // the PREVIOUS disclosed-salary predicate (looser than the page's old
-    // analytics-pool 404 gate) advertised URLs that hard-404'd: the exact
-    // indexed → 404 bounce this gate exists to prevent. Sitemap gate and
-    // page 404 gate must always read the same predicate.
-    salaryGuideStatePages = US_STATES.filter(s => statesWithJobs.has(s)).map(state => ({
+
+    // /salary-guide/[state] renders at 1 or more active jobs (its own 404
+    // gate, getStateActiveJobCount) and indexes only when it publishes a
+    // gated median (shouldIndexSalaryGuideState). The active-job set keeps
+    // 404s out; the publishable set keeps noindex pages out.
+    salaryGuideStatePages = US_STATES.filter(s => statesWithJobs.has(s) && publishableSalaryStates.has(s)).map(state => ({
       url: `${baseUrl}/salary-guide/${state}`,
       lastModified: stateLastmod.get(state) ?? latestJobDate,
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     }));
 
-    // B33: metro sitemap gate — only advertise metros with ≥1 active job.
-    // Mirrors the inventory match in app/jobs/metro/[slug]/page.tsx
-    // getMetroStats (city `contains` + stateCode match, widened by the
-    // METRO_ADJACENT_CITIES sets above), on top of the indexable-job filter.
-    const metroCityRows = await prisma.job.groupBy({
-      by: ['city', 'stateCode'],
-      where: { ...ACTIVE_JOB_WHERE, city: { not: null }, stateCode: { not: null } },
-      _count: { _all: true },
-      _max: { updatedAt: true },
+    // Metro guides (thin-spec-3 M3): one inventory predicate for page and
+    // sitemap, canonicalBucketWhere over the shared metroScopeWhere, gated
+    // by shouldIndexMetro. The former in-sitemap adjacency copy and its
+    // `contains` matcher are gone with it (B33 drift resolved).
+    const metroInventories = await Promise.all(METRO_CITIES.map((metro) => metroInventory(metro, now)));
+    metroPages = METRO_CITIES.flatMap((metro, i) => {
+      const inventory = metroInventories[i];
+      if (!shouldIndexMetro({ activeJobs: inventory.activeJobs })) return [];
+      return [{
+        url: `${baseUrl}/jobs/metro/${metro.slug}`,
+        lastModified: inventory.newest ?? latestJobDate,
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      }];
     });
-    metroPages = METRO_CITIES
-      .map(m => {
-        const cityNeedles = [m.city, ...(METRO_ADJACENT_CITIES[m.city] ?? [])].map(c => c.toLowerCase());
-        const matching = metroCityRows.filter(row =>
-          (row.stateCode || '').toLowerCase() === m.stateCode.toLowerCase() &&
-          cityNeedles.some(needle => (row.city || '').toLowerCase().includes(needle))
-        );
-        if (matching.length === 0) return null;
-        const newest = matching.reduce<Date | null>((acc, row) =>
-          row._max.updatedAt && (!acc || row._max.updatedAt > acc) ? row._max.updatedAt : acc, null);
-        return {
-          url: `${baseUrl}/jobs/metro/${m.slug}`,
-          lastModified: newest ?? latestJobDate,
-          changeFrequency: 'weekly' as const,
-          priority: 0.8,
-        };
-      })
-      .filter((m): m is NonNullable<typeof m> => m !== null);
 
-    // P2 #12: which states earn a /jobs/locations/<state> city directory.
-    //
-    // Deliberately a SEPARATE groupBy from `topCities` below: that one carries
-    // `take: 2000` and a volume ordering, and a truncated tail would understate
-    // `trackedCities` — the exact input to the ≥3 gate — so a qualifying state
-    // could silently drop out of the sitemap as the dataset grows.
-    //
-    // Grouped and gated identically to app/jobs/locations/page.tsx: same
-    // active-indexable predicate, same STATE_CODES lookup, same cityLinkResolves
-    // veto, same shouldRenderStateCityDirectory verdict. The directory page
-    // matches `state = name OR stateCode = code`, a superset of this grouping,
-    // so a state that qualifies here always qualifies there — the sitemap can
-    // never submit a directory that 404s, and never advertises one the hub
-    // itself declines to link.
+    // P2 #12: per-state city directories. A SEPARATE groupBy from
+    // `topCities` below (that one is capped and volume-ordered; a truncated
+    // tail would understate `trackedCities`, the render gate's input).
+    // Grouped and gated like app/jobs/locations/page.tsx: canonical
+    // predicate, STATE_CODES, cityLinkResolves, shouldRenderStateCityDirectory,
+    // plus the shouldIndexStateCityDirectory index gate the page robots read.
+    // The page matches `state = name OR stateCode = code`, a superset, so a
+    // state that qualifies here always renders there.
     const directoryCityRows = await prisma.job.groupBy({
       by: ['city', 'state'],
-      where: { ...ACTIVE_JOB_WHERE, city: { not: null }, state: { not: null } },
+      where: canonicalBucketWhere({ city: { not: null }, state: { not: null } }, now),
       _count: { city: true },
       _max: { updatedAt: true },
     });
@@ -499,15 +597,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const entry = { city: row.city, count: row._count.city };
       if (bucket) bucket.push(entry);
       else directoryRowsByState.set(stateName, [entry]);
-      // B27-style real per-page freshness: newest job anywhere in that state.
       const seen = directoryLastmod.get(stateName);
       if (row._max.updatedAt && (!seen || row._max.updatedAt > seen)) {
         directoryLastmod.set(stateName, row._max.updatedAt);
       }
     }
-    // US_STATES is the sitemap's existing US-only slug whitelist — it keeps
-    // non-US groupings ("British Columbia") out, the same job the hub's inline
-    // set does for its links.
+    // US_STATES keeps non-US groupings ("British Columbia") out.
     const usStateSlugs = new Set(US_STATES);
     stateCityDirectoryPages = Object.entries(STATE_CODES)
       .map(([stateName, stateCode]) => {
@@ -517,6 +612,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           canLink: (row) => cityLinkResolves(row.city, stateCode),
         });
         if (!shouldRenderStateCityDirectory(directory)) return null;
+        if (!shouldIndexStateCityDirectory({ linkableCities: directory.linkable.length })) return null;
         return {
           url: `${baseUrl}/jobs/locations/${slug}`,
           lastModified: directoryLastmod.get(stateName) ?? latestJobDate,
@@ -526,44 +622,34 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })
       .filter((s): s is NonNullable<typeof s> => s !== null);
 
-    // Top city pages (DB-driven, only active non-expired jobs).
-    //
-    // Bounded with `take: 2000` so cold-cache sitemap regeneration can't
-    // pull an unbounded city/state distribution into memory if the dataset
-    // grows. 2000 is well above the 28 city-eligible taxonomies × any
-    // plausible per-city threshold and still loads in milliseconds; pages
-    // beyond the cap are extremely thin (<3 jobs) and would be filtered
-    // out anyway by the downstream `_count.city >= 3` guard.
+    // City pages, bounded with `take: 2000` so cold-cache regeneration never
+    // pulls an unbounded distribution into memory; the tail beyond the cap
+    // is under the index floor anyway.
     const topCities = await prisma.job.groupBy({
       by: ['city', 'state'],
-      where: { ...ACTIVE_JOB_WHERE, city: { not: null }, state: { not: null } },
+      where: canonicalBucketWhere({ city: { not: null }, state: { not: null } }, now),
       _count: { city: true },
       _max: { updatedAt: true },
       orderBy: { _count: { city: 'desc' } },
       take: 2000,
     })
+    const cityEmployers = await fetchDistinctEmployersByCity(now)
 
-    // P7 runtime fix D4 — three defects lived in this block:
-    //   1. Metro-consolidated cities: /jobs/city/<slug> permanentRedirect()s
-    //      (308) to /jobs/metro/<slug> when the slug matches a curated metro
-    //      (app/jobs/city/[slug]/page.tsx), and metroPages above already emits
-    //      the metro twin — so 13 sitemap entries were redirecting duplicates.
-    //   2. Slug derivation was a local re-implementation that left a doubled
-    //      hyphen when the DB city value ends in space/punctuation
-    //      ("Boston " → boston--ma → 404). buildCitySlug is the canonical,
-    //      trim-safe form the city route actually parses.
-    //   3. Dirty twins ("Boston" + "Boston ") now collapse to one slug, so
-    //      entries are deduped by slug, keeping the freshest lastModified.
-    // cityLinkResolves additionally drops slugs whose lossy round-trip can
-    // never match their stored city name ("St. Louis" → st-louis → "St Louis"
-    // → 0 rows → hard 404) — same veto the state directories already apply.
+    // P7 runtime fix D4: slugs go through buildCitySlug (trim-safe, the form
+    // the city route parses), metro-consolidated slugs are dropped (their
+    // /jobs/city URL 308s to the metro twin metroPages already emits),
+    // cityLinkResolves vetoes slugs whose lossy round-trip cannot match the
+    // stored name ("St. Louis"), and dirty twins ("Boston" + "Boston ")
+    // dedupe by slug keeping the freshest lastModified.
     const metroTwinSlugs = new Set(METRO_CITIES.map(m => m.slug));
     const cityPageBySlug = new Map<string, { url: string; lastModified: Date; changeFrequency: 'weekly'; priority: number }>();
     for (const c of topCities) {
       if (!c.city || !c.state) continue;
-      // GSC Fix: Only include cities with ≥3 active jobs to prevent submitting
-      // thin city pages that get flagged as soft 404 or crawled-not-indexed.
-      if (c._count.city < 3) continue;
+      // City page index gate (PLAN C.2): MIN_JOBS_FOR_INDEX or more canonical
+      // jobs from MIN_EMPLOYERS_FOR_INDEX or more distinct employers, the
+      // same shouldIndexLocalListingPage call the page robots make.
+      const distinctEmployers = cityEmployers.get(cityEmployerKey(c.state, c.city)) ?? 0;
+      if (!shouldIndexLocalListingPage({ activeJobs: c._count.city, distinctEmployers })) continue;
       const stateVal = c.state.trim();
       const code = stateVal.length === 2 ? stateVal.toUpperCase() : STATE_NAME_TO_CODE[stateVal] || null;
       if (!code) continue;
@@ -571,7 +657,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       if (!slug) continue;
       if (metroTwinSlugs.has(slug)) continue;
       if (!cityLinkResolves(c.city, code)) continue;
-      // B27: real per-city freshness — newest job in that city.
+      // B27: real per-city freshness, the newest job in that city.
       const lastModified = c._max.updatedAt ?? latestJobDate;
       const existing = cityPageBySlug.get(slug);
       if (!existing || lastModified > existing.lastModified) {
@@ -585,11 +671,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
     const cityPages: MetadataRoute.Sitemap = [...cityPageBySlug.values()]
 
-    // Company pages — only include companies that:
-    // 1. Actually exist in the Company table (so normalizedName matches what the page uses)
-    // 2. Have ≥5 active jobs (fewer = thin page → GSC soft 404)
-    // GSC Fix: Previously generated slugs from job.employer via regex, causing slug mismatches
-    // with Company.normalizedName → 2,265 dead 404s in GSC.
+    // Company pages: rows that exist in the Company table (so normalizedName
+    // matches what the page resolves; regex slugs from job.employer once
+    // produced 2,265 dead 404s in GSC) and clear the profile index gate.
     const companiesWithJobs = await prisma.company.findMany({
       where: {
         jobs: {
@@ -608,8 +692,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         },
       },
     });
-    // B27: per-company lastmod — newest active job per company in ONE query
-    // instead of flattening every company page to the site-wide date.
+    // B27: per-company lastmod, the newest active job per company in ONE query.
     const companyLastmodRows = await prisma.job.groupBy({
       by: ['companyId'],
       where: { ...ACTIVE_JOB_WHERE, companyId: { not: null } },
@@ -620,15 +703,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       if (r.companyId && r._max.updatedAt) companyLastmod.set(r.companyId, r._max.updatedAt);
     }
     const companyPages: MetadataRoute.Sitemap = companiesWithJobs
-      .filter(c => c._count.jobs >= 8) // Only companies with ≥8 active jobs (tightened from 5 to reduce thin pages)
+      // Company index gate (PLAN C.2): shouldIndexCompanyProfile (5 or more
+      // active jobs, the profile's robots) plus the stricter floor this
+      // sitemap keeps until the first re-crawl.
+      .filter(c => shouldIndexCompanyProfile(c._count.jobs) && c._count.jobs >= SITEMAP_COMPANY_MIN_JOBS_UNTIL_RECRAWL)
       .map(c => ({
-        // B30: emit the canonical kebab form only. Legacy rows still store
-        // space-form normalizedName ("life stance") — a raw interpolation
-        // produced literal-space URLs that are invalid in sitemap XML and
-        // that middleware 410'd in kebab form. Single-space→hyphen is the
-        // exact inverse of the page resolver's legacy fallback
-        // (app/companies/[slug]/page.tsx: slug.replace(/-/g, ' ')), so the
-        // emitted URL always round-trips to the stored row.
+        // B30: canonical kebab form only. Legacy rows store space-form
+        // normalizedName ("life stance"); single-space to hyphen is the exact
+        // inverse of the page resolver's legacy fallback, so the URL always
+        // round-trips to the stored row.
         url: `${baseUrl}/companies/${c.normalizedName.replace(/ /g, '-')}`,
         lastModified: companyLastmod.get(c.id) ?? latestJobDate,
         changeFrequency: 'weekly' as const,
@@ -652,33 +735,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...stateCityDirectoryPages,
       ...cityPages,
       ...companyPages,
+      ...licenseGuidePages,
       ...blogPages,
-      // jobPages intentionally omitted — served by /api/sitemaps/jobs/[batch]
+      // jobPages intentionally omitted: served by /api/sitemaps/jobs/[batch]
     ]
 
-    // GSC Fix (P3.8): sitemap budget guard. Google's per-sitemap limit is
-    // 50,000 URLs. We exceed it silently, the entire sitemap is rejected and
-    // ALL pages stop being recrawled. Log loudly when we approach the cap so
-    // ops can split into batches before that happens.
-    //
-    // P2 #21: the log lines alone were invisible — nobody reads Vercel
-    // function logs for a route that renders once an hour, and by the time
-    // anyone noticed the cap had been crossed the whole sitemap would already
-    // be rejected. Both thresholds now also page the team channel.
+    // GSC Fix (P3.8) and P2 #21: the 50k cap rejects the whole file, so both
+    // thresholds log and page the team channel before it is reached.
     if (all.length > SITEMAP_BUDGET_WARN) {
-      logger.warn(`[sitemap] Primary sitemap is ${all.length} entries — approaching Google's 50k limit. Plan to split job pages into /api/sitemaps/jobs/[batch] before exceeding ${SITEMAP_BUDGET_CRITICAL}.`);
+      logger.warn(`[sitemap] Primary sitemap is ${all.length} entries, approaching Google's 50k limit. Plan to split job pages into /api/sitemaps/jobs/[batch] before exceeding ${SITEMAP_BUDGET_CRITICAL}.`);
       notifySitemapBudget('warn', all.length);
     }
     if (all.length > SITEMAP_BUDGET_CRITICAL) {
-      logger.error(`[sitemap] Primary sitemap is ${all.length} entries — Google may reject the whole sitemap (50k cap). Splitting job pages into batches is now mandatory.`);
+      logger.error(`[sitemap] Primary sitemap is ${all.length} entries. Google may reject the whole sitemap (50k cap). Splitting job pages into batches is now mandatory.`);
       notifySitemapBudget('critical', all.length);
     }
-    // Per-section sanity floors — if any of these collapse to 0 unexpectedly,
-    // the DB query likely silently failed and we'd be poisoning Google with
-    // a near-empty sitemap. Better to fail-fast and let the outer catch return
-    // the static-only sitemap.
+    // Sanity floor: zero active jobs means the DB silently failed; fail fast
+    // and let the outer catch return the static-only sitemap.
     if (activeJobCount === 0) {
-      throw new Error('Sitemap: 0 active jobs returned — DB likely degraded; aborting to avoid empty sitemap.');
+      throw new Error('Sitemap: 0 active jobs returned. DB likely degraded; aborting to avoid empty sitemap.');
     }
 
     return all
@@ -698,8 +773,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...salaryGuideStatePages,
       ...salarySpecialtyPages,
       ...categoryStatePages,
-      // stateCityDirectoryPages intentionally omitted — see its declaration:
-      // it is empty in degraded mode by design.
+      ...licenseGuidePages,
+      // stateCityDirectoryPages intentionally omitted: empty in degraded
+      // mode by design (see its declaration).
     ]
   }
 }

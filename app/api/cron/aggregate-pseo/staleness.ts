@@ -10,9 +10,10 @@
  */
 import { prisma } from '@/lib/prisma'
 import { sendDiscordMessage } from '@/lib/discord-notifier'
+import { PSEO_STATS_MAX_AGE_HOURS } from '@/lib/pseo/render-gate'
 
-/** Must stay in sync with PSEO_STALENESS_HOURS in the sitemap routes. */
-const PSEO_STALENESS_HOURS = 36
+/** The one copy of the freshness window the sitemap routes read too. */
+const PSEO_STALENESS_HOURS = PSEO_STATS_MAX_AGE_HOURS
 const MS_PER_HOUR = 60 * 60 * 1000
 
 export interface StalenessReport {

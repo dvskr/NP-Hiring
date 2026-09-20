@@ -150,12 +150,15 @@ describe('#5 setting x state sitemap entries clear the noindex gate', () => {
         expect(read('lib/pseo/setting-state-template.tsx')).toMatch(/stats\.totalJobs < 3/);
     });
 
+    // The gate moved from a count floor to the cron's stored verdict
+    // (PseoStats.indexable, written from shouldIndexSettingState); both
+    // sitemap routes read the flag through the same raw projection.
     for (const file of ['app/api/sitemaps/cities/[batch]/route.ts', 'app/api/sitemaps/index/route.ts']) {
-        it(`${file} gates setting-state rows at 3`, () => {
+        it(`${file} gates setting-state rows on the stored indexable verdict`, () => {
             const src = read(file);
-            expect(src).toMatch(/const MIN_SETTING_STATE_SITEMAP_JOBS = 3;/);
-            const block = src.match(/type: 'setting-state',[\s\S]{0,120}?totalJobs: \{ gte: (\w+) \}/);
-            expect(block?.[1]).toBe('MIN_SETTING_STATE_SITEMAP_JOBS');
+            expect(src).toContain('"indexable"');
+            expect(src).toContain('if (!row.indexable) continue;');
+            expect(src).not.toContain('MIN_SETTING_STATE_SITEMAP_JOBS');
         });
     }
 });

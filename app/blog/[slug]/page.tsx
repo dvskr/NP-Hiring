@@ -4,18 +4,39 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import { cache, type CSSProperties } from 'react';
 import { prisma } from '@/lib/prisma';
 import {
     getPostBySlug,
     getRelatedPosts,
-    getAllPublishedSlugs,
     markdownToHtml,
     autoLinkStates,
     resanitizeBlogHtml,
     extractHeadings,
     BLOG_CATEGORIES,
+    type BlogPost,
 } from '@/lib/blog';
 import { autoLinkCategories } from '@/lib/autoLink';
+import { buildLicenseGuideHowTo, getLicenseGuideState } from '@/lib/blog-license-guides';
+import {
+    buildLicenseGuideDescription,
+    buildLicenseGuideTitle,
+    getNearbyStates,
+    getPracticeEnvironment,
+    isLicenseGuideLive,
+    type PracticeEnvironment,
+} from '@/lib/pseo/practice-environment';
+import { getListingFacts, type ListingFacts } from '@/lib/pseo/listing-facts';
+import { getGatedLocationSalary, summarizeGatedSalary, type GatedSalary } from '@/lib/salary-analytics';
+import {
+    MIN_ACTIVE_JOBS_FOR_MARKET_SNAPSHOT,
+    MIN_JOBS_FOR_LINK_LIST_ROW,
+    pseoStatsFreshnessThreshold,
+    shouldIndexSalaryGuideState,
+} from '@/lib/pseo/render-gate';
+import { COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
+import { formatCount } from '@/lib/display-text';
+import { LicenseGuideBands, type LicenseGuideNearbyRow } from '@/components/blog/LicenseGuideMarketSnapshot';
 import { ArrowRight } from 'lucide-react';
 import EditorialByline, { editorialSchemaFields } from '@/components/EditorialByline';
 import EditorialTOC from '@/components/blog/EditorialTOC';
@@ -23,7 +44,6 @@ import EditorialToolbar from '@/components/blog/EditorialToolbar';
 import EditorialShare from '@/components/blog/EditorialShare';
 import EditorialStickyFix from '@/components/blog/EditorialStickyFix';
 import VideoLightbox from '@/components/blog/VideoLightbox';
-import BlogEmailSignup from '@/components/BlogEmailSignup';
 import '@/app/editorial.css';
 
 // ISR: blog post bodies change infrequently; 1-hour revalidate is appropriate.
@@ -47,6 +67,171 @@ interface Props {
     params: Promise<{ slug: string }>;
 }
 
+// ─── License-guide branch (LIC-L2, LIC-L3, LIC-L4, LIC-meta) ──────────────────
+//
+// The static markdown of a license guide is synced into the DB, so nothing
+// live can live there. Everything inventory-dependent (the bands, the linked
+// state pages, the live clause of the description) is loaded here from the
+// shared data layer and rendered between the article and "Read Next".
+
+const NP = brand.niche.short;
+
+/** Category x state pages the CTA row may link, in display order. */
+const LICENSE_GUIDE_SETTINGS = [{ slug: 'remote', label: 'Remote' }, { slug: 'telehealth', label: 'Telehealth' }, { slug: 'outpatient', label: 'Outpatient' }] as const;
+
+/** buildLicenseGuideDescription's own ceiling (it drops the board clause past it). */
+const LICENSE_DESCRIPTION_MAX = 160;
+
+interface LicenseGuideContext {
+    env: PracticeEnvironment;
+    facts: ListingFacts;
+    /** The salary guide's own gated figure for the state (one helper, one verdict). */
+    salary: GatedSalary;
+    salaryGuideIndexable: boolean;
+    /** Nearby jurisdictions with a live-guide flag for the sibling link. */
+    nearby: readonly LicenseGuideNearbyRow[];
+    /** Setting slugs whose category x state page renders and is not noindex for count. */
+    settingSlugs: ReadonlySet<string>;
+}
+
+/**
+ * The state hub renders at 1 or more canonical jobs (PLAN C.2), the same
+ * floor as the market snapshot, so the hub link and the snapshot share it.
+ */
+function stateHubRenders(activeJobs: number): boolean {
+    return activeJobs >= MIN_ACTIVE_JOBS_FOR_MARKET_SNAPSHOT;
+}
+
+/**
+ * Category x state pages worth linking from the CTA row: fresh PseoStats
+ * rows at MIN_JOBS_FOR_LINK_LIST_ROW or more (1 to 2 job pages are noindex,
+ * 0 job pages 410). A failed read links nothing, never a dead page.
+ */
+async function loadSettingSlugs(stateSlug: string): Promise<ReadonlySet<string>> {
+    try {
+        const rows = await prisma.pseoStats.findMany({
+            where: {
+                type: 'setting-state',
+                locationSlug: stateSlug,
+                totalJobs: { gte: MIN_JOBS_FOR_LINK_LIST_ROW },
+                categorySlug: { in: LICENSE_GUIDE_SETTINGS.map((s) => s.slug) },
+                updatedAt: { gte: pseoStatsFreshnessThreshold() },
+            },
+            select: { categorySlug: true },
+        });
+        return new Set(rows.map((r) => r.categorySlug));
+    } catch (error) {
+        console.error(`[blog/license-guide] setting-state lookup failed for ${stateSlug}:`, error);
+        return new Set();
+    }
+}
+
+/** The salary guide's gate; a failed read is "below the gate", never a 5xx. */
+async function loadStateSalary(stateName: string): Promise<GatedSalary> {
+    try {
+        return await getGatedLocationSalary({ state: stateName });
+    } catch (error) {
+        console.error(`[blog/license-guide] salary lookup failed for ${stateName}:`, error);
+        return summarizeGatedSalary([]);
+    }
+}
+
+/**
+ * Everything the license branch needs, loaded once per request (React
+ * cache) so generateMetadata and the page body share the queries. Null for
+ * a slug that matches the pattern but names no jurisdiction (the page 404s
+ * through getPostBySlug anyway).
+ */
+const loadLicenseGuideContext = cache(async (stateSlug: string): Promise<LicenseGuideContext | null> => {
+    const state = getLicenseGuideState(stateSlug);
+    const env = state ? getPracticeEnvironment(state.name) : null;
+    if (!state || !env) return null;
+    // Same bucket as the state hub: rows keyed by either the full name or the code.
+    const bucket = { OR: [{ state: state.name }, { stateCode: state.code }] };
+    const [facts, salary, settingSlugs, nearby] = await Promise.all([
+        getListingFacts(`license-guide:${stateSlug}`, bucket),
+        loadStateSalary(state.name),
+        loadSettingSlugs(stateSlug),
+        Promise.all(
+            getNearbyStates(state.name).map(async (near) => ({
+                env: near,
+                guideLive: await isLicenseGuideLive(near.stateSlug),
+            })),
+        ),
+    ]);
+    const salaryGuideIndexable = shouldIndexSalaryGuideState({
+        activeJobs: facts.total,
+        salaryGatePassed: salary.gatePassed,
+    });
+    return { env, facts, salary, salaryGuideIndexable, nearby, settingSlugs };
+});
+
+/**
+ * LIC-meta description: the dataset description plus a live count clause at
+ * COUNT_DISPLAY_FLOOR or more open roles, kept only while it fits. Computed
+ * here, never synced into the DB.
+ */
+function licenseGuideDescription(env: PracticeEnvironment, openRoles: number): string {
+    const base = buildLicenseGuideDescription(env);
+    if (openRoles < COUNT_DISPLAY_FLOOR) return base;
+    const withLive = `${base} ${formatCount(openRoles, `open ${NP} role`)} listed.`;
+    return withLive.length <= LICENSE_DESCRIPTION_MAX ? withLive : base;
+}
+
+interface CtaLink { href: string; label: string; primary?: boolean }
+interface JobsCta { intro: string; links: CtaLink[] }
+
+/** License guide CTA row: only pages that render (hub, settings) or index (salary guide). */
+function licenseGuideCta(license: LicenseGuideContext): JobsCta {
+    const { env, facts, settingSlugs, salaryGuideIndexable } = license;
+    const links: CtaLink[] = [];
+    if (stateHubRenders(facts.total)) {
+        links.push({ href: `/jobs/state/${env.stateSlug}`, label: `All jobs in ${env.stateName}` });
+    }
+    for (const setting of LICENSE_GUIDE_SETTINGS) {
+        if (settingSlugs.has(setting.slug)) {
+            links.push({ href: `/jobs/${setting.slug}/${env.stateSlug}`, label: setting.label });
+        }
+    }
+    if (salaryGuideIndexable) {
+        links.push({ href: `/salary-guide/${env.stateSlug}`, label: 'Salary guide' });
+    }
+    if (links.length === 0) {
+        return {
+            intro: `Get an alert when the next ${NP} role in ${env.stateName} is posted:`,
+            links: [{ href: '/job-alerts', label: 'Create a job alert', primary: true }],
+        };
+    }
+    return { intro: `Ready to start your career? Browse ${NP} positions:`, links };
+}
+
+/** Career posts: the all-jobs link plus up to four category links matched on the copy. */
+function careerPostCta(post: BlogPost): JobsCta {
+    const categoryLinks = [
+        { match: /remote|work.from.home/i, label: 'Remote Jobs', href: '/jobs/remote' },
+        { match: /telehealth|virtual/i, label: 'Telehealth Jobs', href: '/jobs/telehealth' },
+        { match: /new.grad|first.job|entry.level/i, label: 'New Grad Jobs', href: '/jobs/new-grad' },
+        { match: /salary|compensation|pay/i, label: 'Salary Guide', href: '/salary-guide' },
+        { match: /travel|locum/i, label: 'Travel Jobs', href: '/jobs/travel' },
+        { match: /private.practice/i, label: 'Private Practice', href: '/jobs/private-practice' },
+        { match: /inpatient|hospital/i, label: 'Inpatient Jobs', href: '/jobs/inpatient' },
+        { match: /outpatient|clinic/i, label: 'Outpatient Jobs', href: '/jobs/outpatient' },
+    ];
+    const fullText = `${post.title} ${post.content.slice(0, 500)}`;
+    const matched = categoryLinks.filter((l) => l.match.test(fullText)).slice(0, 4);
+    return {
+        intro: 'Looking for your next role?',
+        links: [
+            { href: '/jobs', label: `Browse All ${NP} Jobs`, primary: true },
+            ...matched.map((l) => ({ href: l.href, label: l.label })),
+        ],
+    };
+}
+
+const CTA_LINK_STYLE: CSSProperties = { padding: '6px 14px', borderRadius: '10px', textDecoration: 'none', fontSize: '13px', fontWeight: 600 };
+const CTA_PRIMARY_STYLE: CSSProperties = { ...CTA_LINK_STYLE, background: '#BE185D', color: '#fff' };
+const CTA_SECONDARY_STYLE: CSSProperties = { ...CTA_LINK_STYLE, background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.15)', color: '#BE185D' };
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
     const post = await getPostBySlug(slug);
@@ -54,6 +239,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     if (!post) {
         return { title: 'Article Not Found' };
     }
+
+    // LIC-meta: "{State} NP License Guide: {Authority}, {Compact status}" with
+    // the live clause computed here; the DB copy of the guide never carries it.
+    // Other posts: the description describes the post, never echoes the title
+    // (audit 09 M-24), with a generic fallback when meta_description is absent.
+    const licenseMatch = slug.match(LICENSE_GUIDE_SLUG_REGEX);
+    const license = licenseMatch ? await loadLicenseGuideContext(licenseMatch[1]) : null;
+    const title = license ? buildLicenseGuideTitle(license.env) : post.title;
+    const description = license
+        ? licenseGuideDescription(license.env, license.facts.total)
+        : post.meta_description || `Read this ${brand.niche.short} career article on ${brand.name}: guides, salary insights, and licensure updates for ${brand.niche.descriptor}s.`;
 
     const ogImage = post.image_url || `${brand.baseUrl}/api/og`;
     const url = `${brand.baseUrl}/blog/${slug}`;
@@ -63,15 +259,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         // title fabricates freshness (a 2026 badge on an unrevised post,
         // silently rolling to 2027) — a YMYL trust hit. If a year belongs
         // in a title, the author writes it into post.title.
-        title: post.title,
-        // Description should describe the post, not echo the title (audit
-        // 09 M-24). Generic-but-relevant fallback when meta_description
-        // is absent — log so editorial can backfill the missing field.
-        description: post.meta_description || `Read this ${brand.niche.short} career article on ${brand.name}: guides, salary insights, and licensure updates for ${brand.niche.descriptor}s.`,
+        title,
+        description,
         keywords: post.target_keyword ? [post.target_keyword] : undefined,
         openGraph: {
-            title: post.title,
-            description: post.meta_description || post.title,
+            title,
+            description,
             type: 'article',
             publishedTime: post.publish_date || post.created_at,
             modifiedTime: post.updated_at,
@@ -81,14 +274,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                     url: ogImage,
                     width: 1200,
                     height: 630,
-                    alt: post.title,
+                    alt: title,
                 },
             ],
         },
         twitter: {
             card: 'summary_large_image',
-            title: post.title,
-            description: post.meta_description || post.title,
+            title,
+            description,
             images: [ogImage],
         },
         alternates: {
@@ -108,29 +301,13 @@ export default async function BlogPostPage({ params }: Props) {
     const relatedPosts = await getRelatedPosts(post.category, post.slug);
     const currentUrl = `${brand.baseUrl}/blog/${slug}`;
 
-    // GSC Fix (P1.5): for state-license blog posts (slug like "<prefix>{state}",
-    // see config/niche/content-map.ts), we render CTA links to /jobs/{cat}/{state}
-    // pages. If a setting-state combo has 0 jobs, that page now 410s — so don't
-    // render the link at all.
+    // License guides (slug like "<prefix>{state}", see config/niche/content-map.ts)
+    // get the live branch: nearby-states table, market snapshot, HowTo schema
+    // and a CTA row that links only pages which render or index.
     const licenseSlugMatch = slug.match(LICENSE_GUIDE_SLUG_REGEX);
-    const validBlogStateSettings = new Set<string>();
-    if (licenseSlugMatch) {
-        const stateSlugFromBlog = licenseSlugMatch[1];
-        try {
-            const rows = await prisma.pseoStats.findMany({
-                where: {
-                    type: 'setting-state',
-                    locationSlug: stateSlugFromBlog,
-                    totalJobs: { gte: 1 },
-                    categorySlug: { in: ['remote', 'telehealth', 'outpatient'] },
-                },
-                select: { categorySlug: true },
-            });
-            for (const r of rows) validBlogStateSettings.add(r.categorySlug);
-        } catch {
-            // On DB failure, render no setting CTAs (safer than linking to 410s)
-        }
-    }
+    const license = licenseSlugMatch ? await loadLicenseGuideContext(licenseSlugMatch[1]) : null;
+    const howTo = licenseSlugMatch ? buildLicenseGuideHowTo(licenseSlugMatch[1]) : null;
+    const jobsCta = license ? licenseGuideCta(license) : careerPostCta(post);
 
     // Convert markdown to HTML and auto-link states
     let contentHtml = markdownToHtml(post.content);
@@ -339,22 +516,12 @@ export default async function BlogPostPage({ params }: Props) {
         publisher: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
     } : null;
 
-    // B45: the donor board's slug-keyed FAQ/HowTo structures were removed.
-    // This template previously carried:
-    //   - a hardcoded blogFaqData map keyed to three donor PMHNP slugs
-    //     ('how-to-become-a-pmhnp', 'new-grad-pmhnp-first-job',
-    //     'pmhnp-vs-psychiatrist') whose answers quoted donor-era claims
-    //     ("10,000+ open positions", PMHNP salary bands);
-    //   - a HowTo + dynamic FAQ branch keyed to the donor slug pattern
-    //     /^how-to-get-your-pmhnp-license-in-(.+)-2026/, which can never
-    //     match this board's license-guide slugs ('np-license-<state>',
-    //     see LICENSE_GUIDE_SLUG_PREFIX) — and the series is unpublished
-    //     anyway (LICENSE_GUIDE_SERIES_PUBLISHED=false, zero posts).
-    // All of it was dead code that would have emitted psych-specific,
-    // fabricated schema if a slug ever collided. FAQ data now comes ONLY
-    // from post.faq_json (n8n content pipeline). When the NP license
-    // series is authored, add an NP-specific HowTo keyed to
-    // LICENSE_GUIDE_SLUG_REGEX alongside it.
+    // B45: the donor board's slug-keyed FAQ and HowTo maps were removed; a
+    // hardcoded FAQ map and a HowTo branch keyed to a donor slug pattern
+    // could only ever emit fabricated schema. FAQ data comes ONLY from
+    // post.faq_json, and the one HowTo (LIC-L4) comes from
+    // buildLicenseGuideHowTo above, which derives from the same steps array
+    // the visible "How to apply" list renders.
     const faqQuestions = (post.faq_json && post.faq_json.length > 0)
         ? post.faq_json
         : null;
@@ -380,6 +547,9 @@ export default async function BlogPostPage({ params }: Props) {
             />
             {faqSchema && (
                 <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: toJsonLd(faqSchema) }} />
+            )}
+            {howTo && (
+                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: toJsonLd(howTo) }} />
             )}
             {videoSchema && (
                 <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: toJsonLd(videoSchema) }} />
@@ -566,6 +736,18 @@ export default async function BlogPostPage({ params }: Props) {
                 </aside>
             </div>
 
+            {/* -- LICENSE GUIDE: nearby states (LIC-L2) and market snapshot (LIC-L3),
+                clay bands matching the host page -- */}
+            {license && (
+                <LicenseGuideBands
+                    env={license.env}
+                    nearby={license.nearby}
+                    facts={license.facts}
+                    salary={license.salary}
+                    salaryGuideIndexable={license.salaryGuideIndexable}
+                />
+            )}
+
             {/* -- READ NEXT -- */}
             {relatedPosts.length > 0 && (
                 <section className="ed-read-next">
@@ -596,77 +778,18 @@ export default async function BlogPostPage({ params }: Props) {
                 </section>
             )}
 
-            {/* ══ CONTEXTUAL pSEO LINKS (Phase 7.5) ══ */}
+            {/* ══ CONTEXTUAL pSEO LINKS (Phase 7.5) ══
+                License guides link only pages that render or index (spec4 B2);
+                career posts get category links matched on their copy. */}
             <div className="ed-jobs-cta" style={{ textAlign: 'center' }}>
-                {(() => {
-                    // State license guide → link to that state's job pages
-                    const licenseMatch = slug.match(LICENSE_GUIDE_SLUG_REGEX);
-                    if (licenseMatch) {
-                        const stateSlug = licenseMatch[1];
-                        return (
-                            <>
-                                <p className="ed-jobs-cta-text" style={{ marginBottom: '12px' }}>
-                                    Ready to start your career? Browse {brand.niche.short} positions:
-                                </p>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
-                                    <Link href={`/jobs/state/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
-                                        All Jobs in {stateSlug.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ')} →
-                                    </Link>
-                                    {validBlogStateSettings.has('remote') && (
-                                        <Link href={`/jobs/remote/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
-                                            Remote →
-                                        </Link>
-                                    )}
-                                    {validBlogStateSettings.has('telehealth') && (
-                                        <Link href={`/jobs/telehealth/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
-                                            Telehealth →
-                                        </Link>
-                                    )}
-                                    {validBlogStateSettings.has('outpatient') && (
-                                        <Link href={`/jobs/outpatient/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
-                                            Outpatient →
-                                        </Link>
-                                    )}
-                                    <Link href={`/salary-guide/${stateSlug}`} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
-                                        Salary Guide →
-                                    </Link>
-                                </div>
-                            </>
-                        );
-                    }
-
-                    // Career-related posts → relevant category links
-                    const categoryLinks = [
-                        { match: /remote|work.from.home/i, label: 'Remote Jobs', href: '/jobs/remote' },
-                        { match: /telehealth|virtual/i, label: 'Telehealth Jobs', href: '/jobs/telehealth' },
-                        { match: /new.grad|first.job|entry.level/i, label: 'New Grad Jobs', href: '/jobs/new-grad' },
-                        { match: /salary|compensation|pay/i, label: 'Salary Guide', href: '/salary-guide' },
-                        { match: /travel|locum/i, label: 'Travel Jobs', href: '/jobs/travel' },
-                        { match: /private.practice/i, label: 'Private Practice', href: '/jobs/private-practice' },
-                        { match: /inpatient|hospital/i, label: 'Inpatient Jobs', href: '/jobs/inpatient' },
-                        { match: /outpatient|clinic/i, label: 'Outpatient Jobs', href: '/jobs/outpatient' },
-                    ];
-                    const fullText = `${post.title} ${post.content.slice(0, 500)}`;
-                    const matched = categoryLinks.filter(l => l.match.test(fullText)).slice(0, 4);
-
-                    return (
-                        <>
-                            <p className="ed-jobs-cta-text" style={{ marginBottom: '12px' }}>
-                                Looking for your next role?
-                            </p>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
-                                <Link href="/jobs" className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#BE185D', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#fff' }}>
-                                    Browse All {brand.niche.short} Jobs →
-                                </Link>
-                                {matched.map(l => (
-                                    <Link key={l.href} href={l.href} className="ed-jobs-cta-link" style={{ padding: '6px 14px', borderRadius: '10px', background: '#FDF2F8', border: '1px solid rgba(190,24,93,0.15)', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
-                                        {l.label} →
-                                    </Link>
-                                ))}
-                            </div>
-                        </>
-                    );
-                })()}
+                <p className="ed-jobs-cta-text" style={{ marginBottom: '12px' }}>{jobsCta.intro}</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+                    {jobsCta.links.map((l) => (
+                        <Link key={l.href} href={l.href} className="ed-jobs-cta-link" style={l.primary ? CTA_PRIMARY_STYLE : CTA_SECONDARY_STYLE}>
+                            {l.label} →
+                        </Link>
+                    ))}
+                </div>
             </div>
         </div>
     );

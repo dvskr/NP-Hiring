@@ -14,6 +14,8 @@ import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 import { CITIES } from '@/lib/pseo/city-data/cities';
 import { brand } from '@/config/brand';
 import { CITY_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
+import { getAllSettingSlugs, getAllStateSlugs } from '@/lib/pseo/setting-state-config';
+import { pseoStatsFreshnessThreshold, shouldIndexLocalListingPage } from '@/lib/pseo/render-gate';
 
 // Category set comes from the drift-guarded registry and MUST be the same
 // CITY_ELIGIBLE_CATEGORY_SLUGS export that cities/[batch]/route.ts emits
@@ -34,14 +36,34 @@ const BATCH_SIZE = 10000;
 const JOB_BATCH_SIZE = 25000;
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 
-// Mirror of thresholds + staleness window in cities/[batch]/route.ts.
-// If you change either, change both — the two routes must agree exactly.
-const MIN_SITEMAP_JOBS = 3;
-// Setting × State noindex gate (lib/pseo/setting-state-template.tsx renders
-// noindex below 3 jobs). Mirrors cities/[batch]/route.ts.
-const MIN_SETTING_STATE_SITEMAP_JOBS = 3;
+// Mirror of the gating in cities/[batch]/route.ts. If you change either,
+// change both: the two routes must agree exactly, or the index advertises
+// batches the batch route never fills (or hides ones it does).
 const MIN_SITEMAP_POPULATION = 10000;
-const PSEO_STALENESS_HOURS = 36;
+
+/** The PseoStats columns the gates read, typed locally (see readFreshStatsRows). */
+interface PseoStatsRow {
+  categorySlug: string;
+  locationSlug: string;
+  totalJobs: number;
+  distinctEmployers: number;
+  indexable: boolean;
+}
+
+/**
+ * Fresh PseoStats rows of one type. WHY RAW: the generated Prisma client
+ * predates the distinctEmployers and indexable columns and must not be
+ * regenerated on this branch, so the gate columns are only reachable through
+ * a $queryRaw tagged template (parameterized; column names are literals).
+ */
+async function readFreshStatsRows(type: 'category-city' | 'setting-state'): Promise<PseoStatsRow[]> {
+  const rows = await prisma.$queryRaw<PseoStatsRow[]>`
+    SELECT "categorySlug", "locationSlug", "totalJobs", "distinctEmployers", "indexable"
+    FROM "PseoStats"
+    WHERE "type" = ${type}
+      AND "updatedAt" >= ${pseoStatsFreshnessThreshold()}`;
+  return Array.isArray(rows) ? rows : [];
+}
 
 export async function GET() {
   // SEO Fix #17: lastmod must reflect actual freshness, not "today". Using
@@ -64,38 +86,31 @@ export async function GET() {
   }
 
   // DB-driven: count how many URLs the batch route will actually emit.
-  // Must match the pruning logic in cities/[batch]/route.ts exactly — both
-  // routes now query pseoStats with identical thresholds so the index never
-  // over- or under-reports batch count.
-  const freshnessThreshold = new Date(Date.now() - PSEO_STALENESS_HOURS * 60 * 60 * 1000);
+  // Must match the pruning logic in cities/[batch]/route.ts exactly: both
+  // routes read the same fresh PseoStats rows and apply the same gates
+  // (shouldIndexLocalListingPage for category x city, the stored indexable
+  // verdict for setting x state), so the index never over- or under-reports
+  // the batch count.
   let totalUrls = 0;
   try {
-    // Category × City: pseoStats.totalJobs ≥ MIN_SITEMAP_JOBS, fresh, valid
-    // category, city population ≥ floor.
-    const categoryCityRows = await prisma.pseoStats.findMany({
-      where: {
-        type: 'category-city',
-        totalJobs: { gte: MIN_SITEMAP_JOBS },
-        updatedAt: { gte: freshnessThreshold },
-      },
-      select: { categorySlug: true, locationSlug: true },
-    });
+    const categoryCityRows = await readFreshStatsRows('category-city');
     for (const row of categoryCityRows) {
+      if (!shouldIndexLocalListingPage({ activeJobs: row.totalJobs, distinctEmployers: row.distinctEmployers })) continue;
       if (!SITEMAP_CATEGORY_SET.has(row.categorySlug)) continue;
       const population = CITY_POPULATION_LOOKUP.get(row.locationSlug);
       if (population === undefined || population < MIN_SITEMAP_POPULATION) continue;
       totalUrls++;
     }
 
-    // Setting × State: pseoStats.totalJobs ≥ MIN_SETTING_STATE_SITEMAP_JOBS and fresh.
-    const settingStateCount = await prisma.pseoStats.count({
-      where: {
-        type: 'setting-state',
-        totalJobs: { gte: MIN_SETTING_STATE_SITEMAP_JOBS },
-        updatedAt: { gte: freshnessThreshold },
-      },
-    });
-    totalUrls += settingStateCount;
+    const validStateSlugs = new Set(getAllStateSlugs());
+    const settingSlugs = new Set(getAllSettingSlugs());
+    const settingStateRows = await readFreshStatsRows('setting-state');
+    for (const row of settingStateRows) {
+      if (!row.indexable) continue;
+      if (!settingSlugs.has(row.categorySlug)) continue;
+      if (!validStateSlugs.has(row.locationSlug)) continue;
+      totalUrls++;
+    }
   } catch {
     // Fallback: conservative estimate. Better to under-list batches than
     // to advertise empty ones.

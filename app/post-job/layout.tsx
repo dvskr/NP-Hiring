@@ -8,14 +8,20 @@ import { Metadata } from 'next';
 //
 // Live-review item 7-vi: this description used to advertise a three-tier
 // pricing ladder that has never existed on this board (a ghost inherited
-// from the donor board's copy — /for-employers explicitly says 'No tiers').
+// from the donor board's copy: /for-employers explicitly says 'No tiers').
 // The real model is first-post-free + a flat per-post price; both derive
 // from lib/config so the metadata cannot drift from the checkout again.
 // (The regression test bans the old tier names from this file, so they are
 // deliberately not quoted here.)
+//
+// pSEO index gate (PLAN C.2, thin-spec-4 O1): the form is a tool whose
+// server HTML is an empty client shell, so it renders `noindex, follow`,
+// keeps its self canonical, and app/sitemap.ts no longer lists it.
+// /for-employers and /pricing carry the employer search intent.
 export const metadata: Metadata = {
     title: 'Post a Job',
     description: `Post your ${brand.niche.short} job opening. Your first post is free with every feature included, then a flat $${config.postingPrice} per post. Every listing includes email alerts to subscribed candidates.`,
+    robots: { index: false, follow: true },
     alternates: {
         canonical: `${brand.baseUrl}/post-job`,
     },

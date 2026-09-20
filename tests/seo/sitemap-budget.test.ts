@@ -20,6 +20,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // generates the sitemap once per revalidate, where ~hundreds of ms for
 // no-404/no-redirect submissions is the right trade.
 vi.setConfig({ testTimeout: 30_000 });
+// The sitemap lists blog slugs; keep the test off the network.
+vi.mock('@/lib/blog', () => ({ getAllPublishedSlugs: vi.fn().mockResolvedValue([]) }));
 import { prisma } from '@/lib/prisma';
 import sitemapHandler from '@/app/sitemap';
 import robotsHandler from '@/app/robots';
@@ -83,7 +85,8 @@ describe('P4.1: sitemap budget guard', () => {
         expect(urls).toContain(baseUrl);
         expect(urls).toContain(`${baseUrl}/jobs`);
         expect(urls).toContain(`${baseUrl}/blog`);
-        expect(urls).toContain(`${baseUrl}/post-job`);
+        // /post-job is noindex and out of the sitemap (thin plan O1).
+        expect(urls).not.toContain(`${baseUrl}/post-job`);
 
         // Total count should be substantial but well under cap
         expect(sitemap.length).toBeGreaterThan(100);

@@ -6,14 +6,22 @@ import { ArrowRight, BookOpen, Newspaper, PenLine, DollarSign, Search } from 'lu
 import {
     getPublishedPosts,
     getPostCount,
+    getAllPublishedSlugs,
     BLOG_CATEGORIES,
 } from '@/lib/blog';
+import { LICENSE_GUIDE_SERIES_PUBLISHED, LICENSE_GUIDE_SLUG_REGEX } from '@/config/niche/content-map';
+import { LICENSE_GUIDE_STATES, type LicenseGuideState } from '@/lib/blog-license-guides';
+import { AUTHORITY_TITLE, isLicenseGuideLive } from '@/lib/pseo/practice-environment';
+import type { PracticeAuthority } from '@/lib/state-practice-authority';
+import { formatCount, joinWithAnd } from '@/lib/display-text';
 import VideoJsonLd from '@/components/VideoJsonLd';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 
+const NP = brand.niche.short;
+
 // P0 OG sweep: edge-generated card via /api/og — the previous Supabase
 // page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
-const BLOG_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Career Blog`)}&type=page`;
+const BLOG_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${NP} Career Guides`)}&type=page`;
 
 // ISR: blog index changes when posts publish/unpublish; 1-hour revalidate is
 // well within the editorial cadence. Previously force-dynamic meant every
@@ -21,20 +29,56 @@ const BLOG_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${bra
 // editorial surface.
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-    title: `${brand.niche.short} Career Blog | Expert Guides & Insights`,
-    description:
-        `${brand.niche.short} career guides, salary insights, and job market trends from the #1 ${brand.niche.short} job board.`,
-    openGraph: {
-        images: [{ url: BLOG_OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} career blog with expert guides on salary negotiation, state spotlights, and job market insights` }],
-    },
-    twitter: { card: 'summary_large_image', images: [BLOG_OG_IMAGE] },
-    alternates: {
-        canonical: `${brand.baseUrl}/blog`,
-    },
-};
-
 const POSTS_PER_PAGE = 12;
+
+/**
+ * Rows scanned to learn which categories have at least one live post, so the
+ * filter row hides donor-era categories with nothing behind them. One merged
+ * listing read (lib/blog.ts caps the merge at 1000 rows) instead of one
+ * count query per category.
+ */
+const CATEGORY_SCAN_LIMIT = 1000;
+
+/** Group order for the licensure section: the AANP tiers, most permissive first. */
+const AUTHORITY_ORDER: readonly PracticeAuthority[] = ['full', 'reduced', 'restricted'];
+
+const LICENSURE_HEADING_ID = 'blog-licensure-guides';
+
+/**
+ * Meta description (thin-spec-4 section 4): the live post count and the live
+ * guide count, each clause omitted at zero. Counts come from
+ * getAllPublishedSlugs(), the same list the sitemap advertises.
+ */
+function buildBlogDescription(authoredPosts: number, licenseGuides: number): string {
+    const subjects = [
+        authoredPosts > 0 ? formatCount(authoredPosts, `${NP} career guide`) : null,
+        licenseGuides > 0 ? formatCount(licenseGuides, 'state licensure guide') : null,
+    ].filter((s): s is string => s !== null);
+    const lead = subjects.length > 0 ? joinWithAnd(subjects) : `${NP} career guides`;
+    return `${lead} covering certification, interviews, salary negotiation and practice rules by state.`;
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+    const slugs = await getAllPublishedSlugs();
+    const licenseGuides = slugs.filter((row) => LICENSE_GUIDE_SLUG_REGEX.test(row.slug)).length;
+    const description = buildBlogDescription(slugs.length - licenseGuides, licenseGuides);
+    return {
+        title: `${NP} Career Guides: Licensure, Salary and Job Search`,
+        description,
+        openGraph: {
+            images: [{
+                url: BLOG_OG_IMAGE,
+                width: 1200,
+                height: 630,
+                alt: `${NP} career guides on salary negotiation, state licensure and job search`,
+            }],
+        },
+        twitter: { card: 'summary_large_image', images: [BLOG_OG_IMAGE] },
+        alternates: {
+            canonical: `${brand.baseUrl}/blog`,
+        },
+    };
+}
 
 /* ─── Clay Design Tokens ─── */
 const clayCard: React.CSSProperties = {
@@ -63,6 +107,75 @@ const CATEGORY_COLORS: Record<string, { color: string; bg: string }> = {
     tech_tools: { color: '#0EA5E9', bg: '#F0F9FF' },
 };
 
+/**
+ * License guides whose slug is actually published (C.0: every link to a
+ * guide is gated by isLicenseGuideLive, one cached slug read per request).
+ */
+async function loadLiveLicenseGuides(): Promise<LicenseGuideState[]> {
+    if (!LICENSE_GUIDE_SERIES_PUBLISHED) return [];
+    const flags = await Promise.all(LICENSE_GUIDE_STATES.map((s) => isLicenseGuideLive(s.stateSlug)));
+    return LICENSE_GUIDE_STATES.filter((_, i) => flags[i]);
+}
+
+/**
+ * State licensure guides grouped by AANP tier, links gated on publication.
+ * Clay, like the rest of this page (owner decision 2026-09-20: new blocks on
+ * a clay page are clay): one clay card per tier, a pastel count chip, and
+ * state pills styled like the category filter pills above.
+ */
+function LicensureGuidesBand({ guides }: { guides: readonly LicenseGuideState[] }) {
+    if (guides.length === 0) return null;
+    return (
+        <section
+            aria-labelledby={LICENSURE_HEADING_ID}
+            style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FFF3E8 50%, #FFF8F0 100%)', padding: '64px 20px' }}
+        >
+            <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+                <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+                    State licensure guides
+                </p>
+                <h2 id={LICENSURE_HEADING_ID} className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', margin: '0 0 8px' }}>
+                    {NP} license guides by state
+                </h2>
+                <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '600px', margin: '0 auto 40px', lineHeight: 1.6 }}>
+                    One guide per jurisdiction: practice authority, Nurse Licensure Compact status, the board you apply through and the current {NP} job market there. Grouped by the AANP practice-authority classification.
+                </p>
+                {AUTHORITY_ORDER.map((tier) => {
+                    const states = guides.filter((s) => s.authority === tier);
+                    if (states.length === 0) return null;
+                    return (
+                        <div key={tier} style={{ ...clayCard, padding: '24px 24px 20px', marginBottom: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>{AUTHORITY_TITLE[tier]}</h3>
+                                <span style={{ padding: '3px 10px', borderRadius: '999px', background: '#FDF2F8', color: '#BE185D', fontSize: '12px', fontWeight: 700 }}>
+                                    {states.length}
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                {states.map((s) => (
+                                    <Link
+                                        key={s.slug}
+                                        href={`/blog/${s.slug}`}
+                                        className="blog-state-pill"
+                                        style={{
+                                            padding: '8px 16px', borderRadius: '40px', fontSize: '13px', fontWeight: 600,
+                                            textDecoration: 'none', background: '#FDFBF7', color: '#5A4A42',
+                                            border: '1px solid #EAE6DF',
+                                            boxShadow: '3px 3px 8px rgba(0,0,0,0.03), -2px -2px 5px rgba(255,255,255,0.8)',
+                                        }}
+                                    >
+                                        {s.name}
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
 export default async function BlogIndexPage({
     searchParams,
 }: {
@@ -73,12 +186,19 @@ export default async function BlogIndexPage({
     const currentPage = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
     const categoryFilter = category || undefined;
 
-    const [posts, totalCount] = await Promise.all([
+    const [posts, totalCount, categoryScan, liveGuides] = await Promise.all([
         getPublishedPosts(currentPage, POSTS_PER_PAGE, categoryFilter),
         getPostCount(categoryFilter),
+        getPublishedPosts(1, CATEGORY_SCAN_LIMIT),
+        loadLiveLicenseGuides(),
     ]);
 
     const totalPages = Math.ceil(totalCount / POSTS_PER_PAGE);
+
+    // Donor-era categories with nothing behind them imply content that does
+    // not exist, so only categories with at least one live post get a pill.
+    const categoriesWithPosts = new Set(categoryScan.map((post) => post.category));
+    const visibleCategories = BLOG_CATEGORIES.filter((c) => categoriesWithPosts.has(c.id));
 
     const categoryLabels: Record<string, string> = {};
     BLOG_CATEGORIES.forEach((c) => {
@@ -118,7 +238,8 @@ export default async function BlogIndexPage({
                 no signal that this is a blog index — losing eligibility for
                 blog-style rich result treatment. The Blog node carries the
                 publisher / mainEntity link to Organization defined in
-                app/layout.tsx, and ItemList stays as the listing payload. */}
+                app/layout.tsx, and ItemList stays as the listing payload.
+                Both list exactly the posts rendered on this page. */}
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -127,12 +248,12 @@ export default async function BlogIndexPage({
                         {
                             '@type': 'Blog',
                             '@id': `${brand.baseUrl}/blog#blog`,
-                            name: `${brand.niche.short} Career Blog`,
-                            description: `Career guides, salary insights, and job market trends for ${brand.niche.descriptor}s.`,
+                            name: `${NP} Career Blog`,
+                            description: `Career guides, salary insights, and licensure guides for ${brand.niche.descriptor}s.`,
                             url: `${brand.baseUrl}/blog`,
                             inLanguage: 'en-US',
                             publisher: { '@id': `${brand.baseUrl}/#organization` },
-                            blogPost: posts.slice(0, 10).map((post) => ({
+                            blogPost: posts.map((post) => ({
                                 '@type': 'BlogPosting',
                                 headline: post.title,
                                 url: `${brand.baseUrl}/blog/${post.slug}`,
@@ -142,9 +263,9 @@ export default async function BlogIndexPage({
                         {
                             '@type': 'ItemList',
                             '@id': `${brand.baseUrl}/blog#postlist`,
-                            name: `${brand.niche.short} Career Blog`,
+                            name: `${NP} Career Blog`,
                             numberOfItems: totalCount,
-                            itemListElement: posts.slice(0, 10).map((post, i) => ({
+                            itemListElement: posts.map((post, i) => ({
                                 '@type': 'ListItem',
                                 position: i + 1,
                                 name: post.title,
@@ -165,10 +286,10 @@ export default async function BlogIndexPage({
                         fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, lineHeight: 1.15,
                         color: '#1A2E35', marginBottom: '16px',
                     }}>
-                        {brand.niche.short} Career Blog
+                        {NP} Career Guides
                     </h1>
                     <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto 32px', lineHeight: 1.6 }}>
-                        Data-driven guides, salary negotiation tips, and career strategies
+                        Data-driven guides, salary negotiation tips, state licensure rules and career strategies
                         for {brand.niche.descriptor}s.
                     </p>
 
@@ -176,7 +297,7 @@ export default async function BlogIndexPage({
                     <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', marginBottom: '0' }}>
                         {[
                             { value: `${totalCount}`, label: 'Articles', bg: '#D4F5E9', color: '#065F46', icon: <Newspaper size={16} /> },
-                            { value: `${BLOG_CATEGORIES.length}`, label: 'Categories', bg: '#E0E7FF', color: '#3730A3', icon: <BookOpen size={16} /> },
+                            { value: `${visibleCategories.length}`, label: 'Categories', bg: '#E0E7FF', color: '#3730A3', icon: <BookOpen size={16} /> },
                             { value: 'Free', label: 'Always', bg: '#FFE0D3', color: '#7C2D12', icon: <PenLine size={16} /> },
                         ].map(s => (
                             <div key={s.label} className="blog-stat-pill" style={{
@@ -215,7 +336,7 @@ export default async function BlogIndexPage({
                         >
                             All
                         </Link>
-                        {BLOG_CATEGORIES.map((cat) => {
+                        {visibleCategories.map((cat) => {
                             const isActive = categoryFilter === cat.id;
                             const cs = getCatStyle(cat.id);
                             return (
@@ -346,8 +467,8 @@ export default async function BlogIndexPage({
                                             </Link>
                                         </>
                                     ) : categoryFilter
-                                        ? 'There are no posts in this category yet. Please check back soon.'
-                                        : 'No blog posts have been published yet. Please check back soon.'}
+                                        ? 'There are no posts in this category yet.'
+                                        : 'No articles are listed yet.'}
                                 </p>
                             </div>
                         )}
@@ -430,6 +551,9 @@ export default async function BlogIndexPage({
                 </div>
             </div>
 
+            {/* ═══ STATE LICENSURE GUIDES (clay band; links gated on publication) ═══ */}
+            <LicensureGuidesBand guides={liveGuides} />
+
             {/* ═══ BROWSE MORE — Clay CTA Section ═══ */}
             <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)', padding: '64px 20px' }}>
                 <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
@@ -441,9 +565,9 @@ export default async function BlogIndexPage({
                     </h2>
                     <div className="blog-cta-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                         {[
-                            { href: '/salary-guide', IconComp: DollarSign, title: 'Salary Guide', desc: '2026 data with state breakdowns' },
-                            // P0 #5: evergreen cadence claim — was a fabricated five-digit inventory count.
-                            { href: '/jobs', IconComp: Search, title: 'Browse Jobs', desc: `New ${brand.niche.short} positions daily` },
+                            { href: '/salary-guide', IconComp: DollarSign, title: 'Salary Guide', desc: 'Median posted pay by state and specialty' },
+                            // P0 #5: no inventory count or cadence claim here; counts live on the listing pages.
+                            { href: '/jobs', IconComp: Search, title: 'Browse Jobs', desc: `Open ${NP} positions by state and setting` },
                             { href: '/resources', IconComp: BookOpen, title: 'Resources', desc: 'Licensure guides and tools' },
                         ].map(item => {
                             const IconC = item.IconComp;
@@ -502,6 +626,18 @@ export default async function BlogIndexPage({
                 .blog-card:hover .blog-card-arrow {
                     transform: translateX(3px);
                     transition: transform 0.2s ease;
+                }
+                .blog-state-pill {
+                    transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+                }
+                .blog-state-pill:hover {
+                    transform: translateY(-2px);
+                    color: #BE185D !important;
+                    box-shadow: 6px 6px 16px rgba(0,0,0,0.08), -3px -3px 10px rgba(255,255,255,0.9) !important;
+                }
+                .blog-state-pill:focus-visible {
+                    outline: 3px solid #BE185D;
+                    outline-offset: 3px;
                 }
                 .blog-page-btn {
                     transition: transform 0.2s ease, box-shadow 0.2s ease;

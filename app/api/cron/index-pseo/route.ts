@@ -22,6 +22,8 @@ import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { withCronTracking } from '@/lib/cron/track';
 import { brand } from '@/config/brand';
 import { PSEO_INDEXING_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
+import { Prisma } from '@prisma/client';
+import { pseoStatsFreshnessThreshold, shouldIndexLocalListingPage } from '@/lib/pseo/render-gate';
 
 export const maxDuration = 300;
 
@@ -31,12 +33,37 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 // the subset choice lives in the drift-guarded registry.
 const PSEO_INDEXING_CATEGORIES = PSEO_INDEXING_CATEGORY_SLUGS;
 
-const MIN_JOBS = 3;
+// Mirrors MIN_SITEMAP_POPULATION in the sitemap routes; the job and employer
+// floors and the freshness window come from lib/pseo/render-gate.ts, the same
+// module those routes read, so this cron never submits a URL the sitemap
+// would not advertise (a page that renders noindex wastes the daily quota).
 const MIN_POPULATION = 10000;
 const GOOGLE_PSEO_CAP = 100; // Reserve 100 of Google's 200/day quota for pSEO
-// Mirror the cities-sitemap freshness gate: only submit pages whose stats are
-// current enough to still be advertised in the sitemap.
-const PSEO_STALENESS_HOURS = 36;
+
+/** The PseoStats columns the sitemap gate reads (see readCandidateRows). */
+interface CandidateRow {
+  categorySlug: string;
+  locationSlug: string;
+  totalJobs: number;
+  distinctEmployers: number;
+}
+
+/**
+ * Fresh category-city rows for the submittable categories. WHY RAW: the gate
+ * reads distinctEmployers, a column the generated Prisma client predates and
+ * that must not be regenerated on this branch (see aggregate-pseo/route.ts).
+ * Tagged template: the slug list and the cutoff are bound parameters.
+ */
+async function readCandidateRows(): Promise<CandidateRow[]> {
+  if (PSEO_INDEXING_CATEGORIES.length === 0) return [];
+  const rows = await prisma.$queryRaw<CandidateRow[]>`
+    SELECT "categorySlug", "locationSlug", "totalJobs", "distinctEmployers"
+    FROM "PseoStats"
+    WHERE "type" = 'category-city'
+      AND "categorySlug" IN (${Prisma.join([...PSEO_INDEXING_CATEGORIES])})
+      AND "updatedAt" >= ${pseoStatsFreshnessThreshold()}`;
+  return Array.isArray(rows) ? rows : [];
+}
 
 interface ScoredUrl {
   url: string;
@@ -58,21 +85,13 @@ export async function GET(request: NextRequest) {
     // filter), so a city with 10 jobs but 0 in a given category still got
     // /jobs/{category}/city/{slug} submitted — a URL its own render gate 404s —
     // burning the 100/day Google quota on guaranteed 404s.
-    const freshnessThreshold = new Date(Date.now() - PSEO_STALENESS_HOURS * 60 * 60 * 1000);
-    const categoryCityRows = await prisma.pseoStats.findMany({
-      where: {
-        type: 'category-city',
-        categorySlug: { in: [...PSEO_INDEXING_CATEGORIES] },
-        totalJobs: { gte: MIN_JOBS },
-        updatedAt: { gte: freshnessThreshold },
-      },
-      select: { categorySlug: true, locationSlug: true, totalJobs: true },
-    });
+    const categoryCityRows = await readCandidateRows();
 
-    // 2. Build scored URL list — only pages meeting quality thresholds
+    // 2. Build scored URL list — only pages the sitemap gate admits
     const scoredUrls: ScoredUrl[] = [];
 
     for (const row of categoryCityRows) {
+      if (!shouldIndexLocalListingPage({ activeJobs: row.totalJobs, distinctEmployers: row.distinctEmployers })) continue;
       const city = getCityBySlug(row.locationSlug);
       if (!city || city.population < MIN_POPULATION) continue;
 

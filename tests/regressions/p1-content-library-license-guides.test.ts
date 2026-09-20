@@ -21,31 +21,72 @@
  *      and both reflect the NCSBN roster verified on
  *      NLC_ROSTER_VERIFIED_AT (2026-08-11): CT/RI/WA are members, Alaska
  *      is a non-member, Massachusetts is enacted-pending.
+ *   5. THIN-CONTENT SECTIONS (PLAN C.4 item 4, thin-spec-4 3C): LIC-L1
+ *      quotes each state's own rule text, LIC-L2 tables the nearby
+ *      states, LIC-L3 renders a live market snapshot that links a state
+ *      page only when it renders or indexes, LIC-L4 emits the HowTo from
+ *      the visible steps, and no two guides share their L1 plus L2 text.
+ *      The static markdown links no live page (spec4 B2). The new blocks
+ *      are clay, matching the host blog pages, never the sticker kit
+ *      (owner decision 2026-09-20).
+ *   6. ACCURACY PASS (T0-9, spec4 B1(d)): the seven posts that printed
+ *      hand-typed salary bands serve again with every figure cited from
+ *      lib/stats-sources.ts inline or removed, "median" never "average",
+ *      ranges reading "to", and every homepage "From the blog" card
+ *      resolving. No draft mechanism exists in the .mdx loader or the sync
+ *      script, so the parity test has nothing to mirror.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import {
     LICENSE_GUIDE_STATES,
     LICENSE_GUIDE_NLC_NON_MEMBERS,
     LICENSE_GUIDE_NLC_ENACTED_PENDING,
+    LICENSE_GUIDE_REVIEWED_AT,
     NLC_ROSTER_VERIFIED_AT,
     getAllLicenseGuideSlugs,
     getLicenseGuidePost,
+    getLicenseGuideNearbyStates,
+    buildLicenseGuideRuleText,
     buildLicenseGuideSteps,
     buildLicenseGuideFaq,
     buildLicenseGuideHowTo,
+    nlcTableLabel,
 } from '@/lib/blog-license-guides';
 import {
+    HOMEPAGE_FEATURED_POSTS,
     LICENSE_GUIDE_SERIES_PUBLISHED,
     licenseGuideSlug,
     LICENSE_GUIDE_SLUG_REGEX,
 } from '@/config/niche/content-map';
 import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
 import { STAT_SOURCES } from '@/lib/stats-sources';
+import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
+import { emptyListingFacts, type ListingFacts } from '@/lib/pseo/listing-facts';
+import { summarizeGatedSalary, type GatedSalary } from '@/lib/salary-analytics';
+import { getAllMdxPosts, getMdxPost, parseMdxFrontmatter } from '@/lib/blog-mdx-posts';
+import LicenseGuideMarketSnapshot, {
+    LicenseGuideNearbyStates,
+    SNAPSHOT_LIST_LIMIT,
+    buildSnapshotPaySentence,
+    type LicenseGuideMarketSnapshotProps,
+} from '@/components/blog/LicenseGuideMarketSnapshot';
+import { NLC_VERIFIED_LABEL, getNearbyStates, getPracticeEnvironment } from '@/lib/pseo/practice-environment';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+/** U+2013, U+2014 or a spaced hyphen: banned in every rendered string (PLAN C.5). */
+const DASH_RULE = /[–—]| - /;
+
+/** The sticker kit: new blocks on the clay blog pages must not use it (owner decision 2026-09-20). */
+const STICKER_RULE = /stk-|@\/components\/sticker/;
+
+/** Visible text of rendered markup, for copy assertions that must ignore inline CSS. */
+const textOf = (html: string): string => html.replace(/<[^>]+>/g, ' ');
 
 const allPosts = LICENSE_GUIDE_STATES.map((s) => ({
     state: s,
@@ -210,10 +251,28 @@ describe('truth rules', () => {
         }
     });
 
-    it('salary tie-in links the live state salary page instead of restating state figures', () => {
+    /**
+     * spec4 B2: eight states have no active jobs, so /jobs/state/<s> and
+     * /salary-guide/<s> 404 there. The static markdown (synced into the DB,
+     * so it cannot carry a live condition) therefore links neither; the
+     * live pointers render in the market snapshot, gated on the target.
+     */
+    it('the static markdown links no /salary-guide or /jobs/state page (live pointers moved to the snapshot)', () => {
         for (const { state, post } of allPosts) {
-            expect(post.content).toContain(`/salary-guide/${state.stateSlug}`);
-            expect(post.content).toContain(`/jobs/state/${state.stateSlug}`);
+            expect(post.content, `${state.name}: static salary-guide link`).not.toContain('/salary-guide/');
+            expect(post.content, `${state.name}: static state-hub link`).not.toContain('/jobs/state/');
+            expect(post.content).toContain(`The ${state.name} job market snapshot further down this page`);
+        }
+    });
+
+    it('the pay FAQ is data free: the cited BLS median plus the publishing gate, never averages or ranges', () => {
+        for (const { state, post } of allPosts) {
+            const payFaq = post.faq_json!.find((f) => f.name.startsWith('How much'))!;
+            expect(payFaq, `${state.name}: pay FAQ missing`).toBeTruthy();
+            expect(payFaq.text).toContain(STAT_SOURCES.averageSalary.formatted);
+            expect(payFaq.text).toContain(`at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers`);
+            expect(payFaq.text).not.toMatch(/averages?|ranges/i);
+            expect(post.content, `${state.name}: calls a median an average`).not.toMatch(/\baverages?\b/i);
         }
     });
 
@@ -493,5 +552,355 @@ describe('NLC status drift guard', () => {
         expect(LICENSE_GUIDE_NLC_NON_MEMBERS.has('Alaska'), 'Alaska is a non-member').toBe(true);
         expect(LICENSE_GUIDE_NLC_ENACTED_PENDING.has('Massachusetts'), 'Massachusetts is enacted-pending').toBe(true);
         expect(LICENSE_GUIDE_NLC_NON_MEMBERS.has('Massachusetts')).toBe(false);
+    });
+});
+
+// ─── Thin-content sections (PLAN C.4 item 4) ────────────────────────────────
+
+describe('LIC-L1: state rule text in the static markdown', () => {
+    it('every guide quotes its own dataset entry inside the practice-authority section, with the board pointer', () => {
+        for (const { state, post } of allPosts) {
+            const details = STATE_PRACTICE_AUTHORITY[state.name].details;
+            const rule = buildLicenseGuideRuleText(state);
+            expect(rule).toContain(details);
+            expect(rule).toContain(state.boardUrl);
+            const start = post.content.indexOf(`## Practice authority in ${state.name}`);
+            const end = post.content.indexOf('## The Nurse Licensure Compact');
+            expect(start, `${state.name}: practice-authority heading`).toBeGreaterThan(-1);
+            expect(end).toBeGreaterThan(start);
+            expect(post.content.slice(start, end), `${state.name}: rule text outside its section`).toContain(rule);
+        }
+    });
+
+    it('the 51 dataset entries are distinct, so same-tier guides no longer read identically', () => {
+        const details = LICENSE_GUIDE_STATES.map((s) => STATE_PRACTICE_AUTHORITY[s.name].details);
+        expect(new Set(details).size).toBe(LICENSE_GUIDE_STATES.length);
+    });
+
+    it('adding the section did not bump the review date (bump only on a real editorial review)', () => {
+        expect(LICENSE_GUIDE_REVIEWED_AT).toBe('2026-07-29T00:00:00.000Z');
+    });
+});
+
+describe('LIC-L2: nearby states', () => {
+    it('every jurisdiction has at least two nearby guides, none of them itself', () => {
+        for (const s of LICENSE_GUIDE_STATES) {
+            const nearby = getLicenseGuideNearbyStates(s.name);
+            expect(nearby.length, `${s.name}: nearby states`).toBeGreaterThanOrEqual(2);
+            for (const near of nearby) {
+                expect(near.name).not.toBe(s.name);
+                expect(LICENSE_GUIDE_STATES).toContain(near);
+            }
+        }
+        expect(getLicenseGuideNearbyStates('Atlantis')).toEqual([]);
+    });
+
+    it('the compact status has one table label per branch, none of them claiming membership for a pending state', () => {
+        expect(nlcTableLabel('member')).toBe('Member');
+        expect(nlcTableLabel('pending')).toBe('Enacted, implementation pending');
+        expect(nlcTableLabel('non-member')).toBe('Not a member');
+    });
+
+    it('the rendered table links a sibling guide only when it is published, and cites the roster date', () => {
+        const env = getPracticeEnvironment('Texas')!;
+        const nearby = getNearbyStates('Texas').map((near) => ({ env: near, guideLive: near.stateName !== 'Oklahoma' }));
+        expect(nearby.length).toBeGreaterThanOrEqual(2);
+        const html = renderToStaticMarkup(React.createElement(LicenseGuideNearbyStates, { env, nearby }));
+        const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+        expect(hrefs).toContain('/blog/np-license-new-mexico');
+        expect(hrefs).not.toContain('/blog/np-license-oklahoma');
+        expect(html).toContain('Oklahoma');
+        expect(html).toContain(NLC_VERIFIED_LABEL);
+        expect(html).toMatch(/<caption[\s>]/);
+        // Proximity list, so the copy says "nearby", never "bordering".
+        expect(textOf(html)).not.toMatch(/border/i);
+        expect(html).not.toMatch(DASH_RULE);
+        expect(html).not.toMatch(STICKER_RULE);
+    });
+
+    it('no two guides share both their rule text (L1) and their nearby-states table (L2)', () => {
+        const keyOf = (name: string) => {
+            const s = LICENSE_GUIDE_STATES.find((g) => g.name === name)!;
+            const rows = getLicenseGuideNearbyStates(name).map((n) => `${n.name}:${n.authority}:${n.nlcStatus}`);
+            return `${buildLicenseGuideRuleText(s)}|${rows.join(',')}`;
+        };
+        const keys = LICENSE_GUIDE_STATES.map((s) => keyOf(s.name));
+        expect(new Set(keys).size).toBe(LICENSE_GUIDE_STATES.length);
+        // The group the crawl found identical apart from the state name.
+        const formerlyIdentical = ['Colorado', 'Delaware', 'Idaho', 'Iowa', 'Maryland', 'Montana', 'Nebraska'];
+        expect(new Set(formerlyIdentical.map(keyOf)).size).toBe(formerlyIdentical.length);
+    });
+});
+
+describe('LIC-L3: market snapshot (components/blog/LicenseGuideMarketSnapshot.tsx)', () => {
+    const NOW = new Date('2026-09-17T00:00:00.000Z');
+    const facts = (overrides: Partial<ListingFacts> = {}): ListingFacts => ({ ...emptyListingFacts(NOW), ...overrides });
+    const BELOW_GATE: GatedSalary = summarizeGatedSalary([]);
+    const GATED: GatedSalary = {
+        postings: 6, employers: 3, gatePassed: true,
+        median: 130000, p25: 120000, p75: 140000, medianK: 130, p25K: 120, p75K: 140,
+    };
+    const render = (props: Partial<LicenseGuideMarketSnapshotProps> = {}): string =>
+        renderToStaticMarkup(React.createElement(LicenseGuideMarketSnapshot, {
+            stateName: 'Texas', stateCode: 'TX', stateSlug: 'texas',
+            facts: facts(), salary: BELOW_GATE, salaryGuideIndexable: false,
+            ...props,
+        }));
+    const hrefs = (html: string): string[] => [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+
+    it('a zero-job state links no /jobs/state or /salary-guide page and offers the alert with an absolute date', () => {
+        const html = render();
+        expect(hrefs(html)).toEqual(['/job-alerts']);
+        expect(html).toContain('September 17, 2026');
+        expect(html).not.toContain('$');
+    });
+
+    it('below the pay gate it links the hub, prints no dollar figure and names the gate', () => {
+        const html = render({ facts: facts({ total: 4, distinctEmployers: 2 }) });
+        expect(hrefs(html)).toContain('/jobs/state/texas');
+        expect(hrefs(html)).not.toContain('/salary-guide/texas');
+        expect(html).not.toContain('$');
+        expect(html).toContain(`fewer than ${BENCHMARK_MIN_POSTINGS} postings from ${BENCHMARK_MIN_EMPLOYERS} employers`);
+        // Clay stat pills split the figure and the label into two spans.
+        expect(html).toMatch(/>4<\/span><span[^>]*>open roles</);
+        expect(html).toMatch(/>2<\/span><span[^>]*>employers</);
+    });
+
+    it('is clay, not the sticker kit, in every branch', () => {
+        expect(render()).not.toMatch(STICKER_RULE);
+        expect(render({ facts: facts({ total: 6, distinctEmployers: 3 }), salary: GATED, salaryGuideIndexable: true })).not.toMatch(STICKER_RULE);
+    });
+
+    it('the median prints only from a gate-passed salary, and the salary guide link only when that page indexes', () => {
+        const live = facts({ total: 8, distinctEmployers: 3 });
+        const indexed = render({ facts: live, salary: GATED, salaryGuideIndexable: true });
+        expect(indexed).toContain('$130,000');
+        expect(indexed).toContain('across 6 postings with disclosed pay from 3 employers');
+        expect(hrefs(indexed)).toContain('/salary-guide/texas');
+        const unindexed = render({ facts: live, salary: GATED, salaryGuideIndexable: false });
+        expect(hrefs(unindexed)).not.toContain('/salary-guide/texas');
+        expect(buildSnapshotPaySentence('Texas', BELOW_GATE)).not.toContain('$');
+    });
+
+    it('cities link only when the city page renders (3 or more jobs) and the slug round-trips', () => {
+        const html = render({ facts: facts({
+            total: 10, distinctEmployers: 4,
+            cities: [
+                { name: 'Austin', stateCode: 'TX', count: 4 },
+                { name: 'St. Louis', stateCode: 'MO', count: 4 },
+                { name: 'Waco', stateCode: 'TX', count: 2 },
+            ],
+        }) });
+        const cityHrefs = hrefs(html).filter((h) => h.startsWith('/jobs/city/'));
+        expect(cityHrefs).toEqual(['/jobs/city/austin-tx']);
+        expect(html).toContain('St. Louis (4)');
+        expect(html).toContain('Waco (2)');
+    });
+
+    it('employers link only when the company profile indexes (5 or more in-state jobs and a live company path)', () => {
+        const html = render({ facts: facts({
+            total: 15, distinctEmployers: 3,
+            topEmployers: [
+                { name: 'Alpha Health', count: 5, companyPath: '/companies/alpha-health' },
+                { name: 'Beta Clinic', count: 4, companyPath: '/companies/beta-clinic' },
+                { name: 'Gamma Group', count: 6, companyPath: null },
+            ],
+        }) });
+        const companyHrefs = hrefs(html).filter((h) => h.startsWith('/companies/'));
+        expect(companyHrefs).toEqual(['/companies/alpha-health']);
+        expect(html).toContain('Beta Clinic (4)');
+        expect(html).toContain('Gamma Group (6)');
+    });
+
+    it('omits every clause whose facts are missing instead of padding with zeros', () => {
+        const html = render({ facts: facts({ total: 2, distinctEmployers: 0 }) });
+        expect(html).not.toMatch(/\b0 employers?\b/);
+        expect(html).not.toContain('The cities named');
+        expect(html).not.toContain('Employers with the most');
+        expect(html).not.toContain('open roles are');
+    });
+
+    it('caps the named cities and employers at SNAPSHOT_LIST_LIMIT', () => {
+        const cities = Array.from({ length: 8 }, (_, i) => ({ name: `City${i}`, stateCode: 'TX', count: 8 - i }));
+        const html = render({ facts: facts({ total: 30, distinctEmployers: 5, cities }) });
+        expect(SNAPSHOT_LIST_LIMIT).toBe(5);
+        expect(html.match(/City\d \(\d\)/g)).toHaveLength(SNAPSHOT_LIST_LIMIT);
+    });
+
+    it('renders no en dash, em dash or spaced hyphen in either branch', () => {
+        expect(render()).not.toMatch(DASH_RULE);
+        expect(render({ facts: facts({ total: 6, distinctEmployers: 3 }), salary: GATED, salaryGuideIndexable: true })).not.toMatch(DASH_RULE);
+    });
+});
+
+describe('page wiring (app/blog/[slug]/page.tsx)', () => {
+    const page = read('app/blog/[slug]/page.tsx');
+
+    it('LIC-L4: emits the HowTo from the shared builder inside the license branch only', () => {
+        expect(page).toMatch(/licenseSlugMatch \? buildLicenseGuideHowTo\(licenseSlugMatch\[1\]\) : null/);
+        expect(page).toContain('toJsonLd(howTo)');
+    });
+
+    it('renders the nearby table and the market snapshot from the shared data layer', () => {
+        const bands = read('components/blog/LicenseGuideMarketSnapshot.tsx');
+        expect(page).toContain('<LicenseGuideBands');
+        expect(bands).toContain('<LicenseGuideNearbyStates');
+        expect(bands).toContain('<LicenseGuideMarketSnapshot');
+        expect(bands).toContain('<table');
+        expect(bands).toContain('<caption');
+        expect(page).toContain('getListingFacts(');
+        expect(page).toContain('getGatedLocationSalary(');
+        expect(page).toContain('getNearbyStates(');
+        expect(page).toContain('isLicenseGuideLive(');
+    });
+
+    it('the new blocks are clay: no sticker import, no stk- class, no <style jsx>', () => {
+        const bands = read('components/blog/LicenseGuideMarketSnapshot.tsx');
+        for (const [name, src] of [['page', page], ['bands', bands]] as const) {
+            expect(src, `${name}: sticker kit`).not.toMatch(STICKER_RULE);
+            expect(src, `${name}: style jsx`).not.toContain('<style jsx');
+        }
+        // The one static style string carries no interpolation (styled-jsx deadlock rule).
+        const css = bands.match(/const LICENSE_BANDS_CSS = `([\s\S]*?)`;/);
+        expect(css, 'static css string').not.toBeNull();
+        expect(css![1]).not.toContain('${');
+    });
+
+    it('gates every state link on a render or index predicate (no unconditional salary or hub link)', () => {
+        expect(page).toContain('shouldIndexSalaryGuideState(');
+        expect(page).toContain('MIN_JOBS_FOR_LINK_LIST_ROW');
+        expect(page).not.toMatch(/totalJobs: \{ gte: 1 \}/);
+        expect(page).toMatch(/if \(salaryGuideIndexable\)/);
+        expect(page).toMatch(/if \(stateHubRenders\(facts\.total\)\)/);
+    });
+
+    it('LIC-meta: title and description come from the practice environment, live clause computed in generateMetadata', () => {
+        expect(page).toContain('buildLicenseGuideTitle(');
+        expect(page).toContain('buildLicenseGuideDescription(');
+        expect(page).toContain('COUNT_DISPLAY_FLOOR');
+        expect(page).not.toContain('<style jsx');
+    });
+});
+
+describe('/blog index (app/blog/page.tsx)', () => {
+    const index = read('app/blog/page.tsx');
+
+    it('lists the licensure series gated on publication and hides categories with no posts', () => {
+        expect(index).toContain('LICENSE_GUIDE_SERIES_PUBLISHED');
+        expect(index).toContain('isLicenseGuideLive(');
+        expect(index).toContain('blog-state-pill');
+        expect(index).toContain('categoriesWithPosts');
+    });
+
+    it('the licensure band is clay like the rest of the page', () => {
+        expect(index).not.toMatch(STICKER_RULE);
+        expect(index).not.toContain('<style jsx');
+        expect(index).toMatch(/\.\.\.clayCard, padding: '24px 24px 20px'/);
+    });
+
+    it('makes no ranking, expertise or cadence claim', () => {
+        // "#1" as a ranking claim, not the leading digit of a hex color.
+        expect(index).not.toMatch(/#1(?![0-9A-Fa-f])/);
+        expect(index).not.toMatch(/expert/i);
+        expect(index).not.toMatch(/\bdaily\b/i);
+        expect(index).not.toContain('No blog posts have been published yet');
+    });
+});
+
+describe('accuracy pass on the posts that printed hand-typed salary bands (T0-9, spec4 B1(d))', () => {
+    const REVIEWED = [
+        'np-salary-guide',
+        'highest-paying-np-specialties',
+        'fnp-vs-pmhnp-vs-agacnp',
+        'new-grad-np-first-job',
+        'np-1099-vs-w2',
+        'remote-telehealth-np-jobs-guide',
+        'np-salary-negotiation-guide',
+    ];
+    const ACCURACY_PASS_DATE = '2026-09-20';
+    const MDX_FILES = fs.readdirSync(path.join(ROOT, 'content', 'blog')).filter((f) => f.endsWith('.mdx'));
+    const posts = REVIEWED.map((slug) => {
+        const { data, content } = parseMdxFrontmatter(read(`content/blog/${slug}.mdx`));
+        return { slug, data, body: content, text: `${String(data.title)} ${String(data.description)} ${content}` };
+    });
+    const MEDIAN = STAT_SOURCES.averageSalary.formatted;
+    const GROWTH = STAT_SOURCES.blsGrowth2034.formatted;
+
+    it('every post serves again: no takedown flag, and neither loader carries a draft mechanism', () => {
+        for (const { slug, data, body } of posts) {
+            expect(data.draft, `${slug}: draft flag`).toBeUndefined();
+            expect(getMdxPost(slug), `${slug}: not served`).not.toBeNull();
+            expect(body.trim().startsWith('**Quick answer:**'), `${slug}: quick answer`).toBe(true);
+        }
+        expect(getAllMdxPosts()).toHaveLength(MDX_FILES.length);
+        for (const rel of ['lib/blog-mdx-posts.ts', 'scripts/sync-blog-to-db.ts']) {
+            expect(read(rel), `${rel}: draft mechanism`).not.toMatch(/\bdraft\b/i);
+        }
+    });
+
+    it('every homepage "From the blog" card resolves to a served post', () => {
+        expect(HOMEPAGE_FEATURED_POSTS.length).toBeGreaterThan(0);
+        for (const { href } of HOMEPAGE_FEATURED_POSTS) {
+            const slug = href.replace('/blog/', '');
+            expect(getMdxPost(slug), `${slug}: homepage card would 404`).not.toBeNull();
+        }
+    });
+
+    it('every dollar figure is the cited BLS median and every percentage the cited BLS projection', () => {
+        for (const { slug, body } of posts) {
+            const dollars = body.match(/\$[\d][\d,.]*[KkMm]?\+?/g) ?? [];
+            for (const figure of dollars) expect(figure, `${slug}: uncited dollar figure`).toBe(MEDIAN);
+            if (dollars.length > 0) expect(body, `${slug}: median without its BLS OEWS citation`).toMatch(/BLS OEWS/);
+            const percents = body.match(/\b\d+(?:\.\d+)?\s?%/g) ?? [];
+            for (const figure of percents) expect(figure, `${slug}: uncited percentage`).toBe(GROWTH);
+            if (percents.length > 0) {
+                expect(body, `${slug}: projection without its cycle`).toContain('from 2024 to 2034');
+                expect(body, `${slug}: projection without BLS`).toMatch(/BLS/);
+            }
+            if (body.includes(STAT_SOURCES.fullPracticeStates.formatted)) {
+                expect(body, `${slug}: FPA count without AANP`).toMatch(/AANP/);
+            }
+            if (body.includes(STAT_SOURCES.hrsaShortagePopulation.formatted)) {
+                expect(body, `${slug}: shortage figure without HRSA`).toMatch(/HRSA/);
+                expect(body, `${slug}: shortage figure must say primary care`).toMatch(/primary.care/i);
+            }
+        }
+    });
+
+    it('says median, never average; ranges read "to"; no dash, trend word or freshness claim', () => {
+        for (const { slug, text } of posts) {
+            expect(text, `${slug}: dash`).not.toMatch(DASH_RULE);
+            expect(text, `${slug}: "average" as a pay word`).not.toMatch(/\baverages?\b/i);
+            expect(text, `${slug}: trend word`).not.toMatch(/\bgrowing\b|\bcontinues? to grow\b|\bfastest\b/i);
+            expect(text, `${slug}: freshness claim`).not.toMatch(/\b(?:added|updated|refreshed) daily\b/i);
+            expect(text, `${slug}: band presented as a market statistic`).not.toMatch(/commonly post(?:s|ing)? in/i);
+            expect(text, `${slug}: hand-typed band`).not.toMatch(/\$\d+K|\$\d+ to \$\d+|\$\d[\d,.]*K?\s*-\s*\$?\d/);
+            expect(text, `${slug}: uncited "cost of living"`).not.toMatch(/\bcost[- ]of[- ]living\b/i);
+        }
+    });
+
+    it('the review date moved with the rewrite, on or after the accuracy pass and never before the publish date', () => {
+        for (const { slug, data } of posts) {
+            const reviewed = Date.parse(String(data.reviewed));
+            expect(Number.isFinite(reviewed), `${slug}: reviewed`).toBe(true);
+            expect(reviewed, `${slug}: reviewed before the accuracy pass`).toBeGreaterThanOrEqual(Date.parse(ACCURACY_PASS_DATE));
+            expect(reviewed, `${slug}: reviewed before published`).toBeGreaterThanOrEqual(Date.parse(String(data.date)));
+        }
+    });
+});
+
+describe('copy rules (PLAN C.5)', () => {
+    it('no generated guide, description, FAQ or HowTo step carries an en dash, em dash or spaced hyphen', () => {
+        for (const { state, post } of allPosts) {
+            expect(post.content, state.name).not.toMatch(DASH_RULE);
+            expect(post.meta_description, state.name).not.toMatch(DASH_RULE);
+            expect(post.title, state.name).not.toMatch(DASH_RULE);
+            for (const f of post.faq_json!) {
+                expect(`${f.name} ${f.text}`, state.name).not.toMatch(DASH_RULE);
+            }
+            for (const step of buildLicenseGuideSteps(state)) {
+                expect(`${step.name} ${step.text}`, state.name).not.toMatch(DASH_RULE);
+            }
+        }
     });
 });

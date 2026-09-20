@@ -48,6 +48,9 @@ import {
 import { buildSettingStateNarrative } from '@/lib/pseo/state-narrative';
 import { categoryOwnsShortageData, formatStatsBadge } from '@/lib/pseo/category-city-template';
 import { stripUnverifiableFreshness } from '@/components/CategoryHero';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import CategoryFAQAccordion from '@/components/CategoryFAQAccordion';
 import { getCityBySlug } from '@/lib/pseo/city-data/cities';
 import { ALL_CATEGORY_SLUGS, PSYCH_SPECIALTY_SLUG } from '@/lib/pseo/taxonomy-registry';
 import { scanNicheCopyDebt } from './brand-leak-scan';
@@ -334,6 +337,26 @@ describe('P3 #4 — CategoryFAQAccordion answers carry the Speakable class', () 
         expect(src).toContain('className="faq-answer"');
         // On the answer <p>, not somewhere decorative.
         expect(src).toMatch(/<p className="faq-answer"[\s\S]{0,200}\{faq\.answer\}/);
+    });
+
+    // W1B-SHARED: the accordion is a server component over native <details>,
+    // so the class is pinned on the rendered HTML as well as the source:
+    // every answer is in the server output, no client JS, first item open.
+    it('renders native details with every answer under faq-answer in server HTML', () => {
+        const faqs = [
+            { question: 'First question?', answer: 'First answer in the HTML.' },
+            { question: 'Second question?', answer: 'Second answer, also in the HTML.' },
+        ];
+        const html = renderToStaticMarkup(React.createElement(CategoryFAQAccordion, { faqs }));
+        expect(html.match(/<details /g)).toHaveLength(2);
+        expect(html.match(/<summary /g)).toHaveLength(2);
+        // Only the first item starts open.
+        expect(html.match(/<details [^>]*\bopen\b[^>]*>/g)).toHaveLength(1);
+        expect(html).toContain('<p class="faq-answer">First answer in the HTML.</p>');
+        expect(html).toContain('<p class="faq-answer">Second answer, also in the HTML.</p>');
+        expect(html).not.toContain('<button');
+        expect(read(FAQ_ACCORDION)).not.toContain("'use client'");
+        expect(renderToStaticMarkup(React.createElement(CategoryFAQAccordion, { faqs: [] }))).toBe('');
     });
 
     it('the class matches the selector the other FAQ surfaces already declare', () => {

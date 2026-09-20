@@ -232,9 +232,13 @@ describe('staleness alert (static guards)', () => {
     const src = () => read('app/api/cron/aggregate-pseo/staleness.ts');
 
     it('matches the 36h window used by the sitemap consumers', () => {
-        expect(src()).toContain('PSEO_STALENESS_HOURS = 36');
-        // and the sitemap side still uses the same constant value
-        expect(read('app/api/sitemaps/cities/[batch]/route.ts')).toContain('PSEO_STALENESS_HOURS = 36');
+        // One copy of the window: lib/pseo/render-gate.ts owns it and both
+        // the probe and the sitemap routes read it from there.
+        expect(read('lib/pseo/render-gate.ts')).toContain('PSEO_STATS_MAX_AGE_HOURS = 36');
+        expect(src()).toContain("import { PSEO_STATS_MAX_AGE_HOURS } from '@/lib/pseo/render-gate'");
+        expect(src()).toContain('const PSEO_STALENESS_HOURS = PSEO_STATS_MAX_AGE_HOURS');
+        expect(read('app/api/sitemaps/cities/[batch]/route.ts')).toContain('pseoStatsFreshnessThreshold()');
+        expect(read('app/api/sitemaps/index/route.ts')).toContain('pseoStatsFreshnessThreshold()');
     });
 
     it('alerts through the existing Discord webhook helper', () => {
@@ -254,6 +258,6 @@ describe('sentinel row cannot leak into downstream surfaces (static guards)', ()
     });
 
     it('index-pseo cron filters on the category-city type', () => {
-        expect(read('app/api/cron/index-pseo/route.ts')).toMatch(/type: 'category-city'/);
+        expect(read('app/api/cron/index-pseo/route.ts')).toMatch(/"type" = 'category-city'/);
     });
 });

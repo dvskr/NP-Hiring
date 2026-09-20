@@ -18,7 +18,12 @@ import Link from 'next/link';
 import { CITIES } from '@/lib/pseo/city-data/cities';
 import { GSC_DIMENSION_ROW_LIMIT, type GscSitemapEntry } from '@/lib/gsc-client';
 import { extractSnapshotDimensions, computeMovers, type Movers, type SnapshotDimensions } from '@/lib/gsc-movers';
-import { computeCategoryCityCoverage, computeSettingStateCoverage } from '@/lib/gsc-coverage';
+import {
+    computeCategoryCityCoverage,
+    computeSettingStateCoverage,
+    type PseoCoverageRow,
+    type SettingStateCoverageRow,
+} from '@/lib/gsc-coverage';
 import { MIN_JOBS_FOR_CATEGORY_CITY } from '@/lib/pseo/render-gate';
 
 export const dynamic = 'force-dynamic';
@@ -162,19 +167,23 @@ async function getData() {
         // Coverage panel (P1 gsc-ops): full combo count per category is a
         // cheap groupBy; the renderable subset (totalJobs ≥ render gate) is
         // fetched pre-filtered so we never load the full ~165K-row surface.
+        // WHY RAW for the two row reads: the sitemap gates read the
+        // distinctEmployers and indexable columns, which the generated
+        // Prisma client predates (see app/api/cron/aggregate-pseo/route.ts).
+        // Tagged templates, so the one variable is a bound parameter.
         prisma.pseoStats.groupBy({
             by: ['categorySlug'],
             where: { type: 'category-city' },
             _count: { _all: true },
         }),
-        prisma.pseoStats.findMany({
-            where: { type: 'category-city', totalJobs: { gte: MIN_JOBS_FOR_CATEGORY_CITY } },
-            select: { categorySlug: true, locationSlug: true, totalJobs: true, updatedAt: true },
-        }),
-        prisma.pseoStats.findMany({
-            where: { type: 'setting-state' },
-            select: { totalJobs: true, updatedAt: true },
-        }),
+        prisma.$queryRaw<PseoCoverageRow[]>`
+            SELECT "categorySlug", "locationSlug", "totalJobs", "distinctEmployers", "updatedAt"
+            FROM "PseoStats"
+            WHERE "type" = 'category-city' AND "totalJobs" >= ${MIN_JOBS_FOR_CATEGORY_CITY}`,
+        prisma.$queryRaw<SettingStateCoverageRow[]>`
+            SELECT "totalJobs", "indexable", "updatedAt"
+            FROM "PseoStats"
+            WHERE "type" = 'setting-state'`,
     ]);
 
     const pendingApproval = await prisma.citySnippet.count({ where: { approvedAt: null } })
