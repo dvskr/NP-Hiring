@@ -1,46 +1,144 @@
+/**
+ * /salary-guide/[state]: one page per jurisdiction.
+ *
+ * THIN-CONTENT PROGRAM (PLAN C.4 item 5, thin-spec-4 3A). Deletions first:
+ * the hero summary that promised a setting breakdown on all 43 rendered
+ * states, the "ingested daily" claim, and the duplicate "Typical Range:
+ * Pending" card below the gate. Then SAL-S1 practice environment, SAL-S2
+ * pay by work arrangement and employment type, SAL-S3 employers and
+ * cities, SAL-S4 what employers are hiring for, SAL-S5 nearby states and
+ * SAL-S6 FAQ additions, each rendered only when its own facts clear their
+ * floor.
+ *
+ * TRUTH RULES
+ *   1. Every posting-derived figure is a GATED MEDIAN from
+ *      lib/salary-analytics.ts (the npSalaryAnalyticsWhere pool scoped to
+ *      NP-eligible titles, published only at n of BENCHMARK_MIN_POSTINGS
+ *      or more from BENCHMARK_MIN_EMPLOYERS or more employers). Below the
+ *      gate there is no figure, only the cited BLS median from
+ *      lib/stats-sources.ts.
+ *   2. The board-wide median is labelled BOARD_MEDIAN_LABEL, never
+ *      "national" (thin-spec-4 B8). "National median" is reserved for the
+ *      cited BLS wage, and the comparison clause names its base.
+ *   3. Counts come from getListingFacts, which composes the canonical
+ *      predicate, so employer and city rows can no longer count expired or
+ *      dead-link postings (thin-spec-4 B3).
+ *   4. The provenance line renders only when the gate passed (B7).
+ *   5. No editorial review date and no Article date keys: this page
+ *      regenerates from live postings and has no human review event.
+ *
+ * STYLE: clay (owner decision 2026-09-20). The page ground is CLAY_GROUND,
+ * cards are the shared clayCard token, sections come from
+ * components/seo/pseo, and the one stylesheet is a static string with no
+ * interpolation (a template interpolation inside a style block deadlocks
+ * the route compile under Turbopack).
+ */
 import { brand } from '@/config/brand';
-import { licenseGuideSlug, LICENSE_GUIDE_SERIES_PUBLISHED } from '@/config/niche/content-map';
 import { Metadata } from 'next';
+import { cache, type ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import SalaryProvenance from '@/components/SalaryProvenance';
-// Review P9 #2c/#2d: gated-median aggregation (see the data-fetching note below).
+import CategoryFAQAccordion from '@/components/CategoryFAQAccordion';
+import StateImage, { hasStateDiorama } from '@/components/StateImage';
 import {
-    summarizeBenchmarks,
     BENCHMARK_MIN_POSTINGS,
     BENCHMARK_MIN_EMPLOYERS,
+    type BenchmarkRow,
 } from '@/components/tools/benchmark-model';
 import {
-    npSalaryAnalyticsWhere,
-    NP_SALARY_ANALYTICS_SELECT,
-    filterNpEligibleRows,
-} from '@/lib/salary-utils';
-// Empty-state 404 gate: the SAME predicate the sitemap's per-state gate uses
-// (activeIndexableJobWhere), so a URL the sitemap advertises can never land
-// on this page's notFound() — see the alignment note above the page handler.
+    ClayCard,
+    ClayHead,
+    ClayStyles,
+    ClayTable,
+    EmployerRoster,
+    NearbyStatesTable,
+    PracticeCard,
+    CLAY_ACCENT,
+    CLAY_BODY,
+    CLAY_GROUND,
+    CLAY_INK,
+    CLAY_MUTED,
+    CLAY_TRACK,
+    clayButton,
+    clayCard,
+    clayChip,
+    clayCta,
+    clayDesc,
+    clayEyebrow,
+    clayFill,
+    clayLink,
+    clayList,
+    clayMeta,
+    clayRow,
+    clayStat,
+    clayTile,
+    FAQ_SCHEMA_MIN_ENTRIES,
+    type NearbyStateRow,
+} from '@/components/seo/pseo';
+// Empty-state 404 gate: the SAME predicate the sitemap's per-state gate
+// uses, so a URL the sitemap advertises can never land on this page's
+// notFound(). canonicalActiveJobWhere is the same set with GLOBAL_EXCLUSIONS
+// restructured into an AND, which is what getListingFacts composes, so the
+// gate count and facts.total always agree.
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
+import { canonicalActiveJobWhere } from '@/lib/canonical-counts';
+import { categoryLabelOf, getListingFacts, type ListingFacts } from '@/lib/pseo/listing-facts';
+import {
+    BOARD_MEDIAN_LABEL,
+    buildHiringForSentence,
+    buildHubPayParagraph,
+    buildSalaryStateDescription,
+    buildSalaryStateFaqAdditions,
+    buildSalaryStateSummary,
+    buildSalaryStateTitle,
+    formatDollars,
+    formatK,
+} from '@/lib/pseo/listing-narrative';
+import {
+    getNearbyStates,
+    getPracticeEnvironment,
+    isLicenseGuideLive,
+    NLC_VERIFIED_LABEL,
+} from '@/lib/pseo/practice-environment';
+import {
+    MIN_JOBS_FOR_LINK_LIST_ROW,
+    pseoStatsFreshnessThreshold,
+    shouldIndexSalaryGuideState,
+} from '@/lib/pseo/render-gate';
+import {
+    getGatedBenchmarkRows,
+    getGatedCitySalaries,
+    getGatedLocationSalary,
+    getGatedStateBenchmarks,
+    type GatedSalary,
+    type LabeledBenchmarkRow,
+} from '@/lib/salary-analytics';
+import { withTagFallback, type CategoryTag } from '@/lib/pseo/category-tagger';
+import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
+import { DESCRIPTION_MAX } from '@/lib/pseo/category-metadata';
+import { formatCount, truncateOnWord } from '@/lib/display-text';
 import { STAT_SOURCES } from '@/lib/stats-sources';
-import StateImage, { hasStateDiorama } from '@/components/StateImage';
 // P3 #9: /jobs/city/[slug] resolves by re-parsing the slug into a city NAME, so a
-// link built from a lossy slug can be a guaranteed 404 — guard before emitting.
+// link built from a lossy slug can be a guaranteed 404. Guard before emitting.
 import { buildCitySlug, cityLinkResolves, MIN_CITY_JOBS_FOR_LINK } from '@/app/jobs/locations/[state]/directory';
 import {
-    DollarSign,
-    MapPin,
-    Briefcase,
-    TrendingUp,
-    Building2,
     ArrowRight,
+    Banknote,
     BarChart3,
-    Stethoscope,
-    BookOpen,
+    Briefcase,
+    Building2,
+    Layers,
+    MapPin,
+    ShieldCheck,
 } from 'lucide-react';
 
-// P0 OG sweep: per-state OG/schema image rendered by the board's own
-// /api/og edge route — the previous shared Supabase page-screenshot lived
-// in an unpopulated bucket and 400'd on every share (pattern:
+// P0 OG sweep: per-state OG and schema image rendered by the board's own
+// /api/og edge route. The previous shared Supabase page screenshot lived in
+// an unpopulated bucket and 400'd on every share (pattern:
 // app/for-employers/page.tsx). Absolute URL because it also feeds the
 // Article JSON-LD `image`.
 const salaryGuideOgImage = (stateName: string, code: string): string =>
@@ -74,85 +172,110 @@ Object.keys(STATE_CODES).forEach((name) => {
 const ALL_STATE_SLUGS = Object.keys(SLUG_TO_STATE);
 
 // ── Data fetching ───────────────────────────────────────────────────────────
-// Review P9 #2c/#2d rebuild: every posting-derived figure on this page runs
-// over the gated analytics pool (npSalaryAnalyticsWhere: published,
-// non-expired, non-estimated, confidence ≥ 0.8, annual-cadence) scoped to
-// NP-eligible titles (interim deterministic heuristic until the
-// professionClass column lands), and publishes ONLY under the benchmark
-// widget's policy: true median + p25/p75, n ≥ 5 postings from ≥ 3
-// employers. Below the gate the page renders "sample too small" plus the
-// cited BLS national median — never a posting mean.
+// generateMetadata and the page handler run in the same request, so every
+// loader below is cached: getListingFacts keys on its primitive scope key,
+// and the salary loaders are wrapped in React cache() here. Metadata
+// therefore costs no extra query.
 
-interface StateSalaryData {
-    /** NP-eligible analytics rows in this state (drives the publishing gate). */
-    jobCount: number;
-    /** Distinct employers behind those rows. */
-    employers: number;
-    /** True when the n ≥ 5 / 3-employer publishing gate passed. */
-    gatePassed: boolean;
-    median: number | null;
-    p25: number | null;
-    p75: number | null;
+/** Facts over the canonical pool for the state (B3: no expired or dead-link rows). */
+function loadFacts(stateName: string, slug: string): Promise<ListingFacts> {
+    return getListingFacts(`salary-state:${slug}`, { state: stateName });
 }
 
-async function getStateSalaryData(stateName: string): Promise<StateSalaryData> {
-    const rows = await prisma.job.findMany({
-        where: { ...npSalaryAnalyticsWhere(), state: stateName },
-        select: NP_SALARY_ANALYTICS_SELECT,
-    });
-    const npRows = filterNpEligibleRows(rows);
-    // summarizeBenchmarks enforces the n≥5 / ≥3-employer gate and computes
-    // median/p25/p75 — reusing the benchmark widget's exact policy.
-    const { states } = summarizeBenchmarks(npRows.map((r) => ({ ...r, state: stateName })));
-    const gated = states[0] ?? null;
-    const employers = new Set(npRows.map((r) => r.employer).filter(Boolean)).size;
+/** The state's own gated figure, from the pool getPublishableSalaryGuideStates reads. */
+const loadSalary = cache((stateName: string): Promise<GatedSalary> =>
+    getGatedLocationSalary({ state: stateName }));
 
+/** Board-wide gated median (BOARD_MEDIAN_LABEL), never called "national". */
+const loadBoardMedian = cache((): Promise<GatedSalary> => getGatedLocationSalary());
+
+/** A GatedSalary in the BenchmarkRow shape the narrative builders take. */
+function toBenchmarkRow(scope: string, salary: GatedSalary): BenchmarkRow | null {
+    if (!salary.gatePassed || salary.median === null || salary.p25 === null || salary.p75 === null) {
+        return null;
+    }
     return {
-        jobCount: npRows.length,
-        employers,
-        gatePassed: gated != null,
-        median: gated?.median ?? null,
-        p25: gated?.p25 ?? null,
-        p75: gated?.p75 ?? null,
+        scope,
+        median: salary.median,
+        p25: salary.p25,
+        p75: salary.p75,
+        postings: salary.postings,
+        employers: salary.employers,
     };
 }
 
-async function getStateSalaryBySetting(stateName: string) {
-    const settings = ['Telehealth', 'Outpatient', 'Inpatient', 'Remote'];
-    const results = await Promise.all(
-        settings.map(async (setting) => {
-            const rows = await prisma.job.findMany({
-                where: {
-                    ...npSalaryAnalyticsWhere(),
-                    state: stateName,
-                    OR: [
-                        { title: { contains: setting, mode: 'insensitive' } },
-                        { jobType: { contains: setting, mode: 'insensitive' } },
-                    ],
-                },
-                select: NP_SALARY_ANALYTICS_SELECT,
-            });
-            const npRows = filterNpEligibleRows(rows);
-            // Same publishing gate per setting — a one-posting "average"
-            // for a setting is the same defect as a one-posting state.
-            const { states } = summarizeBenchmarks(npRows.map((r) => ({ ...r, state: setting })));
-            const gated = states[0] ?? null;
-            return gated
-                ? { setting, medianSalary: gated.median, jobCount: gated.postings }
-                : null;
-        })
-    );
-    return results.filter((r): r is { setting: string; medianSalary: number; jobCount: number } => r != null);
+/**
+ * SAL-S2 sub-pools. The employment-type rows use the SAME tag predicate
+ * `/jobs/{slug}/{state}` uses (withTagFallback), so this table and the
+ * setting pages can no longer disagree. The previous
+ * `title contains 'Telehealth'` substring match counted any posting whose
+ * title happened to mention the word. Each extra is scoped to the state
+ * through a top-level AND, because both sides carry their own OR trees and
+ * an object spread would silently drop clauses.
+ */
+interface PayRowSpec {
+    label: string;
+    /** Category slug whose `/jobs/{slug}/{state}` page this row may link. */
+    slug: CategoryTag | null;
+    where: Prisma.JobWhereInput;
+}
+
+function payRowSpecs(stateName: string): PayRowSpec[] {
+    const inState = (bucket: Prisma.JobWhereInput): Prisma.JobWhereInput => ({
+        AND: [{ state: stateName }, bucket],
+    });
+    const tag = (slug: CategoryTag): Prisma.JobWhereInput => withTagFallback(slug) as Prisma.JobWhereInput;
+    return [
+        { label: 'Remote', slug: 'remote', where: inState({ isRemote: true }) },
+        { label: 'On site', slug: null, where: inState({ isRemote: false }) },
+        { label: 'Full time', slug: 'full-time', where: inState(tag('full-time')) },
+        { label: 'Part time', slug: 'part-time', where: inState(tag('part-time')) },
+        { label: 'Per diem', slug: 'per-diem', where: inState(tag('per-diem')) },
+    ];
+}
+
+/** Gated rows only, in spec order. The caller renders nothing below two rows. */
+async function getPayRows(stateName: string): Promise<LabeledBenchmarkRow[]> {
+    const extras: Record<string, Prisma.JobWhereInput> = {};
+    for (const spec of payRowSpecs(stateName)) extras[spec.label] = spec.where;
+    return getGatedBenchmarkRows(extras);
 }
 
 /**
- * Total active jobs in the state — the 404 gate and the "open positions"
- * copy. MUST stay predicate-identical to the sitemap's per-state gate
- * (activeIndexableJobWhere + state), so the two surfaces render the same
- * verdict: sitemap advertises ⇒ this count ≥ 1 ⇒ the page renders. The
- * ANALYTICS pool (getStateSalaryData) is deliberately narrower — a state
- * whose disclosed salaries are all hourly/estimated/non-NP still renders
- * the below-gate branch (BLS figure, "sample too small"), never a 404.
+ * Fresh setting-state stats rows for this state, with the index verdict the
+ * aggregate-pseo cron wrote. RAW because `indexable` postdates the
+ * generated Prisma client (same reason as app/admin/seo-health/page.tsx);
+ * the variables are bound parameters of a tagged template.
+ */
+interface SettingStateStatsRow {
+    categorySlug: string;
+    totalJobs: number;
+    indexable: boolean;
+}
+
+async function getSettingStateRows(stateSlug: string): Promise<SettingStateStatsRow[]> {
+    try {
+        return await prisma.$queryRaw<SettingStateStatsRow[]>`
+            SELECT "categorySlug", "totalJobs", "indexable"
+            FROM "PseoStats"
+            WHERE "type" = 'setting-state'
+              AND "locationSlug" = ${stateSlug}
+              AND "totalJobs" >= ${MIN_JOBS_FOR_LINK_LIST_ROW}
+              AND "updatedAt" >= ${pseoStatsFreshnessThreshold()}
+            ORDER BY "totalJobs" DESC`;
+    } catch (error) {
+        console.error(`[salary-guide] setting-state rows failed for "${stateSlug}":`, error);
+        return [];
+    }
+}
+
+/**
+ * Total active jobs in the state: the 404 gate. MUST stay predicate
+ * identical to the sitemap's per-state gate (activeIndexableJobWhere plus
+ * state), so the two surfaces render the same verdict. The ANALYTICS pool
+ * (loadSalary) is deliberately narrower: a state whose disclosed salaries
+ * are all hourly, estimated or non-NP still renders the below-gate branch
+ * with the cited BLS figure, never a 404.
  */
 async function getStateActiveJobCount(stateName: string): Promise<number> {
     return prisma.job.count({
@@ -160,74 +283,32 @@ async function getStateActiveJobCount(stateName: string): Promise<number> {
     });
 }
 
-async function getTopEmployers(stateName: string) {
-    const employers = await prisma.job.groupBy({
-        by: ['employer'],
-        where: { isPublished: true, state: stateName },
-        _count: { id: true },
-        orderBy: { _count: { id: 'desc' } },
-        take: 10,
-    });
-    return employers.map((e) => ({
-        name: e.employer,
-        jobCount: e._count.id,
-    }));
-}
-
-async function getTopCities(stateName: string) {
-    const cities = await prisma.job.groupBy({
-        by: ['city'],
-        where: { isPublished: true, state: stateName, city: { not: null } },
-        _count: { id: true },
-        orderBy: { _count: { id: 'desc' } },
-        take: 10,
-    });
-    const stateCode = STATE_CODES[stateName] || '';
-    return cities
-        .filter((c) => c.city)
-        // Every row becomes a /jobs/city/<slug> link, and that page calls
-        // notFound() below MIN_JOBS postings (MIN_CITY_JOBS_FOR_LINK is the
-        // constant drift-guarded against it). This count (published, exact city,
-        // state name) never exceeds the city page's own count (published,
-        // case-insensitive city, state name or code), so clearing it here means
-        // the page renders. Without this gate most of the sidebar linked 404s.
-        .filter((c) => c._count.id >= MIN_CITY_JOBS_FOR_LINK)
-        // P3 #9: that route rebuilds a city NAME from the slug and matches the DB
-        // `city` column, so "St. Louis" to st-louis-mo to "St Louis" finds nothing
-        // and hard-404s. Reject those with the same guard the state city
-        // directories use, and build the survivors with the shared builder.
-        .filter((c) => cityLinkResolves(c.city!, stateCode))
-        .map((c) => ({
-            name: c.city!,
-            jobCount: c._count.id,
-            slug: buildCitySlug(c.city!, stateCode),
-        }));
-}
-
-interface NationalBase {
-    value: number;
-    /** 'postings' = gated national median of NP-eligible rows; 'bls' = cited OEWS median. */
-    basis: 'postings' | 'bls';
-    jobCount?: number;
-}
-
-async function getNationalBase(): Promise<NationalBase> {
-    const rows = await prisma.job.findMany({
-        where: npSalaryAnalyticsWhere(),
-        select: NP_SALARY_ANALYTICS_SELECT,
-    });
-    const npRows = filterNpEligibleRows(rows);
-    const { national } = summarizeBenchmarks(
-        // Rows without a state still count toward the national pool.
-        npRows.map((r) => ({ ...r, state: r.state ?? 'Unknown' })),
-    );
-    if (national) {
-        return { value: national.median, basis: 'postings', jobCount: national.postings };
+/** Canonical active counts for the nearby states, keyed by full state name. */
+async function getNearbyJobCounts(stateNames: readonly string[]): Promise<Map<string, number>> {
+    if (stateNames.length === 0) return new Map();
+    try {
+        const rows = await prisma.job.groupBy({
+            by: ['state'],
+            where: { AND: [canonicalActiveJobWhere(), { state: { in: [...stateNames] } }] },
+            _count: { id: true },
+        });
+        return new Map(rows.flatMap((row) => (row.state ? [[row.state, row._count.id] as const] : [])));
+    } catch (error) {
+        console.error('[salary-guide] nearby state counts failed:', error);
+        return new Map();
     }
-    // Below the gate nationally (should not happen with a live corpus):
-    // fall back to the cited BLS OEWS median — never an ungated mean.
-    return { value: Number(STAT_SOURCES.averageSalary.value), basis: 'bls' };
 }
+
+/** Gated medians per state for the SAL-S5 median column; empty on failure. */
+const loadStateBenchmarks = cache(async (): Promise<Map<string, BenchmarkRow>> => {
+    try {
+        const rows = await getGatedStateBenchmarks();
+        return new Map(rows.map((row) => [row.scope, row]));
+    } catch (error) {
+        console.error('[salary-guide] state benchmarks failed:', error);
+        return new Map();
+    }
+});
 
 // ── Static Params ───────────────────────────────────────────────────────────
 
@@ -247,34 +328,48 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     if (!stateName) return { title: 'State Not Found' };
 
     const code = STATE_CODES[stateName];
+    const env = getPracticeEnvironment(stateName);
+    const [facts, salary] = await Promise.all([loadFacts(stateName, slug), loadSalary(stateName)]);
+    const benchmark = toBenchmarkRow(stateName, salary);
 
-    // Empty-state defense lives in the page handler (notFound() when the
-    // state has zero active jobs). We deliberately do NOT duplicate that
-    // gate here: generateMetadata + the page handler run in parallel, so
-    // adding a count() query here would double the per-request DB load
-    // for marginal benefit (the 404 itself is the strongest signal Google
-    // needs to drop the URL).
-    // Title trimmed to <60 chars (was 77-82 — reliably truncated mid-phrase).
-    // The "Average Pay, Jobs & Cost of Living" suffix moved into the description.
-    const title = `${brand.niche.short} Salary in ${stateName} (${code}) 2026: Pay & Jobs`;
-    const description = `${brand.niche.short} salary data for ${stateName}: median pay by practice setting, top employers, and open positions. Updated daily.`;
+    // SAL-meta: the title carries the median only when one is published,
+    // and the year derives from the snapshot date so it cannot go stale in
+    // January. No count in the title, because counts churn on the ISR cycle.
+    const title = buildSalaryStateTitle({
+        stateName,
+        stateCode: code,
+        benchmark,
+        year: facts.computedAt.getUTCFullYear(),
+    });
+    const description = env
+        ? buildSalaryStateDescription({ env, facts: { ...facts, benchmark } })
+        : truncateOnWord(buildSalaryStateSummary({ stateName, benchmark }), DESCRIPTION_MAX);
     const ogImage = salaryGuideOgImage(stateName, code);
+    const canonical = `${brand.baseUrl}/salary-guide/${slug}`;
+    // S-IDX: index only when the state publishes a median. A below-gate page
+    // still renders, keeps a self canonical and stays followable. The same
+    // predicate gates the URL in app/sitemap.ts, over the same pool.
+    const indexable = shouldIndexSalaryGuideState({
+        activeJobs: facts.total,
+        salaryGatePassed: salary.gatePassed,
+    });
 
     return {
         title,
         description,
-        alternates: { canonical: `${brand.baseUrl}/salary-guide/${slug}` },
+        robots: { index: indexable, follow: true },
+        alternates: { canonical },
         openGraph: {
-            title: `${brand.niche.short} Salary in ${stateName} (${code}): 2026 Data`,
-            description: `Median ${brand.niche.short} salary in ${stateName} by practice setting, top employers, and open positions.`,
+            title,
+            description,
             type: 'website',
-            url: `${brand.baseUrl}/salary-guide/${slug}`,
+            url: canonical,
             siteName: brand.name,
-            images: [{ url: ogImage, width: 1200, height: 630, alt: `${brand.niche.short} Salary in ${stateName} 2026` }],
+            images: [{ url: ogImage, width: 1200, height: 630, alt: `${brand.niche.short} salary data for ${stateName}` }],
         },
         twitter: {
             card: 'summary_large_image',
-            title: `${brand.niche.short} Salary in ${stateName} (${code}) 2026`,
+            title,
             description,
             images: [ogImage],
         },
@@ -283,14 +378,56 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatSalary(n: number) {
-    if (n >= 1000) return `$${Math.round(n / 1000)}K`;
-    return `$${n.toLocaleString()}`;
-}
-
 /** Escape angle brackets so JSON-LD can't break out of its <script> tag. */
 function sanitizeJson(obj: object): string {
     return JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+}
+
+interface StatTile {
+    key: string;
+    label: string;
+    value: string;
+    sub: string;
+}
+
+/** The headline figures as clay stat cards. A tile with no figure is omitted. */
+function StatTiles({ tiles }: { tiles: StatTile[] }) {
+    if (tiles.length === 0) return null;
+    return (
+        <div className="sg-stats">
+            {tiles.map((tile) => (
+                <div key={tile.key} style={{ ...clayStat, padding: '18px 16px', textAlign: 'left' }}>
+                    <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: CLAY_MUTED, margin: '0 0 6px' }}>
+                        {tile.label}
+                    </p>
+                    <p style={{ fontSize: '22px', fontWeight: 800, color: CLAY_INK, margin: '0 0 4px', lineHeight: 1.15 }}>
+                        {tile.value}
+                    </p>
+                    <p style={{ fontSize: '12px', color: CLAY_MUTED, margin: 0, lineHeight: 1.45 }}>{tile.sub}</p>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+/** One section band: eyebrow, Lora heading and the band's clay cards. */
+function Band({
+    eyebrow,
+    title,
+    lede,
+    children,
+}: {
+    eyebrow: string;
+    title: string;
+    lede?: string;
+    children: ReactNode;
+}) {
+    return (
+        <section className="sg-band">
+            <ClayHead eyebrow={eyebrow} title={title} lede={lede} />
+            {children}
+        </section>
+    );
 }
 
 // ── Page ────────────────────────────────────────────────────────────────────
@@ -302,108 +439,215 @@ export default async function StateSalaryPage({ params }: PageProps) {
 
     const stateCode = STATE_CODES[stateName];
     const stateSlug = slug;
+    const env = getPracticeEnvironment(stateName);
+    const nearbyEnvs = getNearbyStates(stateName);
 
-    const [salaryData, bySetting, topEmployers, topCities, nationalBase, activeJobs] = await Promise.all([
-        getStateSalaryData(stateName),
-        getStateSalaryBySetting(stateName),
-        getTopEmployers(stateName),
-        getTopCities(stateName),
-        getNationalBase(),
+    const [
+        facts,
+        salaryData,
+        boardMedian,
+        payRows,
+        citySalaries,
+        settingRows,
+        nearbyCounts,
+        stateBenchmarks,
+        licenseGuideLive,
+        nearbyGuidesLive,
+        activeJobs,
+    ] = await Promise.all([
+        loadFacts(stateName, stateSlug),
+        loadSalary(stateName),
+        loadBoardMedian(),
+        getPayRows(stateName),
+        getGatedCitySalaries(stateName),
+        getSettingStateRows(stateSlug),
+        getNearbyJobCounts(nearbyEnvs.map((neighbor) => neighbor.stateName)),
+        loadStateBenchmarks(),
+        isLicenseGuideLive(stateSlug),
+        Promise.all(nearbyEnvs.map((neighbor) => isLicenseGuideLive(neighbor.stateSlug))),
         getStateActiveJobCount(stateName),
     ]);
 
-    // GSC Fix: empty-state guard — a state with zero active jobs renders "0
-    // active jobs in WY" plus a CTA at /jobs/state/wy: a classic soft-404
-    // cluster, so it hard-404s instead. The gate is TOTAL ACTIVE JOBS, the
-    // exact predicate the sitemap uses to decide whether to advertise this
-    // URL — NOT the analytics pool. Gating on the analytics pool 404'd every
-    // state whose disclosed salaries were all hourly/estimated/non-NP (e.g.
-    // an all-locum state) while the sitemap kept advertising it — the
-    // indexed → 404 bounce the sitemap gate exists to prevent. Below-gate
-    // states keep rendering with the cited BLS figure per the interim
-    // policy; only truly job-less states 404.
+    // Empty-state guard: a state with zero active jobs would render "0 open
+    // roles" plus a CTA, a classic soft-404, so it hard-404s instead. The
+    // gate is TOTAL ACTIVE JOBS on the sitemap's own predicate, NOT the
+    // analytics pool: gating on the analytics pool 404'd every state whose
+    // disclosed salaries were all hourly, estimated or non-NP while the
+    // sitemap kept advertising it.
     if (activeJobs === 0) {
         notFound();
     }
 
-    // Comparison vs national — rendered only when this state passed the
-    // publishing gate (a below-gate state has no figure to compare).
-    const diff = salaryData.gatePassed ? salaryData.median! - nationalBase.value : 0;
-    const diffPct = nationalBase.value > 0 ? Math.round((diff / nationalBase.value) * 100) : 0;
-    const aboveBelow = diff >= 0 ? 'above' : 'below';
-    const nationalLabel = nationalBase.basis === 'postings'
-        ? `the national median across postings on this board`
-        : `the national median wage (${STAT_SOURCES.averageSalary.source})`;
+    const benchmark = toBenchmarkRow(stateName, salaryData);
+    const payFacts = {
+        benchmark,
+        salaryDisclosedCount: facts.salaryDisclosedCount,
+        total: facts.total,
+    };
 
-    // Find the licensure blog post slug (prefix lives in config/niche/content-map.ts)
-    const licenseSlug = licenseGuideSlug(slug);
+    // B8: the board-wide figure is "Median across all {brand} postings", and
+    // the comparison clause names that base. Below either gate there is no
+    // comparison to draw, so the clause is omitted rather than zero-filled.
+    const boardRow = toBenchmarkRow('board', boardMedian);
+    const comparison = benchmark && boardRow
+        ? `${Math.abs(Math.round(((benchmark.median - boardRow.median) / boardRow.median) * 100))}% ${benchmark.median >= boardRow.median ? 'above' : 'below'} the median across all ${brand.name} postings`
+        : null;
 
-    // ── AEO schemas (audit B48) ──────────────────────────────────────────
-    // FAQPage + Article + Speakable, mirroring the pSEO category-city
-    // template. ONE array feeds both the JSON-LD and the visible accordion
-    // below so schema and visible content cannot diverge (invisible FAQ
-    // structured data is spam per Google's policy). Every figure is live
-    // page data — no hardcoded salary claims (the cited national figures
-    // live in lib/stats-sources.ts and render on the salary-guide index).
     const pageUrl = `${brand.baseUrl}/salary-guide/${stateSlug}`;
-    const topSetting = [...bySetting].sort((a, b) => b.medianSalary - a.medianSalary)[0];
-    // Review P9 #2d: no FAQ answer (these feed FAQPage JSON-LD verbatim)
-    // may assert a board-derived state "average" below the publishing gate
-    // — a structured-data salary claim at n=1 was the worst version of
-    // this defect. Below the gate the answer states the sample honestly
-    // and cites the BLS national median instead.
-    const stateFaqs = [
-        salaryData.gatePassed
-            ? {
-                q: `What is the median ${brand.niche.short} salary in ${stateName}?`,
-                a: `The median ${brand.niche.short} salary in ${stateName} is ${formatSalary(salaryData.median!)} per year, the median of ${salaryData.jobCount} active ${brand.niche.short}-eligible ${salaryData.jobCount === 1 ? 'posting' : 'postings'} with disclosed, non-estimated salary from ${salaryData.employers} employers on ${brand.name}. The middle half of those postings pay ${formatSalary(salaryData.p25!)} to ${formatSalary(salaryData.p75!)}. That is ${Math.abs(diffPct)}% ${aboveBelow} ${nationalLabel}.`,
-            }
-            : {
-                q: `What is the median ${brand.niche.short} salary in ${stateName}?`,
-                a: `${stateName} currently has ${salaryData.jobCount} active ${brand.niche.short}-eligible ${salaryData.jobCount === 1 ? 'posting' : 'postings'} with disclosed salary on ${brand.name}, which is below the ${BENCHMARK_MIN_POSTINGS}-posting, ${BENCHMARK_MIN_EMPLOYERS}-employer minimum we require before publishing a state figure, so we do not report one. For reference, the national median ${brand.niche.short} wage is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`,
+
+    // ── SAL-S2 rows and their gated links ───────────────────────────────
+    const paySlugByLabel = new Map(payRowSpecs(stateName).map((spec) => [spec.label, spec.slug]));
+    const indexableSettings = new Set(
+        settingRows.filter((row) => row.indexable).map((row) => row.categorySlug),
+    );
+    const payScale = payRows.reduce((max, row) => Math.max(max, row.median), 0);
+
+    // ── SAL-S3 cities: linked only where the city page renders, median only
+    //    where that city's own sample clears the publishing gate ──────────
+    const cityRows = facts.cities.slice(0, 10).map((city) => {
+        const gated = citySalaries.get(city.name.trim());
+        const code = city.stateCode ?? stateCode;
+        const linkable = city.count >= MIN_CITY_JOBS_FOR_LINK && cityLinkResolves(city.name, code);
+        return {
+            name: city.name,
+            count: city.count,
+            href: linkable ? `/jobs/city/${buildCitySlug(city.name, code)}` : null,
+            medianK: gated?.medianK ?? null,
+        };
+    });
+
+    // ── SAL-S4 category rows, linked only where the target page indexes ──
+    const categoryRows = settingRows.slice(0, 8).map((row) => ({
+        slug: row.categorySlug,
+        label: categoryLabelOf(row.categorySlug),
+        count: row.totalJobs,
+        href: row.indexable && STATE_ELIGIBLE_CATEGORY_SLUGS.includes(row.categorySlug)
+            ? `/jobs/${row.categorySlug}/${stateSlug}`
+            : null,
+    }));
+    const hiringFor = buildHiringForSentence(facts);
+
+    // ── SAL-S5 nearby states ────────────────────────────────────────────
+    const nearbyRows: NearbyStateRow[] = nearbyEnvs.map((neighbor, i): NearbyStateRow => {
+        const neighborBenchmark = stateBenchmarks.get(neighbor.stateName) ?? null;
+        const jobs = nearbyCounts.get(neighbor.stateName) ?? 0;
+        return {
+            env: neighbor,
+            jobs,
+            medianK: neighborBenchmark ? Math.round(neighborBenchmark.median / 1000) : null,
+            link: {
+                href: `/salary-guide/${neighbor.stateSlug}`,
+                renders: shouldIndexSalaryGuideState({
+                    activeJobs: jobs,
+                    salaryGatePassed: neighborBenchmark !== null,
+                }),
             },
+            guide: {
+                href: `/blog/${neighbor.licenseGuideSlug}`,
+                renders: nearbyGuidesLive[i] === true,
+            },
+        };
+    });
+
+    // ── FAQ (SAL-S6) ────────────────────────────────────────────────────
+    // ONE array feeds the FAQPage JSON-LD and the visible accordion, so the
+    // schema and the visible content cannot diverge. No answer asserts a
+    // board-derived figure below the publishing gate: buildHubPayParagraph
+    // states the sample honestly and cites the BLS median instead.
+    const stateFaqs = [
         {
-            q: `How many ${brand.niche.short} jobs are open in ${stateName}?`,
-            // "Open jobs" means ALL active listings (activeJobs — the same
-            // count the browse CTA links to), not just the disclosed-salary
-            // analytics subset; conflating the two understated inventory.
-            a: `There ${activeJobs === 1 ? 'is' : 'are'} currently ${activeJobs} active ${brand.niche.short} ${activeJobs === 1 ? 'position' : 'positions'} in ${stateName} on ${brand.name}, ${salaryData.jobCount} of which ${salaryData.jobCount === 1 ? 'discloses' : 'disclose'} a non-estimated salary. Listings are ingested daily from employer applicant-tracking systems.`,
+            question: `What is the median ${brand.niche.short} salary in ${stateName}?`,
+            answer: buildHubPayParagraph({ scopeName: stateName, scopeNoun: 'state', facts: payFacts }),
         },
-        ...(topSetting
-            ? [{
-                q: `Which practice setting pays ${brand.niche.short}s the most in ${stateName}?`,
-                a: `Among current ${stateName} postings on ${brand.name}, ${topSetting.setting.toLowerCase()} roles report the highest median at ${formatSalary(topSetting.medianSalary)} per year (${topSetting.jobCount} ${topSetting.jobCount === 1 ? 'position' : 'positions'}). Actual pay varies with experience, employer type, and benefits.`,
-            }]
+        {
+            question: `How many ${brand.niche.short} jobs are open in ${stateName}?`,
+            answer: `${stateName} has ${formatCount(activeJobs, `open ${brand.niche.short} role`)} from ${formatCount(facts.distinctEmployers, 'employer')} on ${brand.name}, ${formatCount(facts.salaryDisclosedCount, 'posting')} of which ${facts.salaryDisclosedCount === 1 ? 'states' : 'state'} an annual salary.`,
+        },
+        ...(env
+            ? buildSalaryStateFaqAdditions({
+                env,
+                nlcVerifiedLabel: NLC_VERIFIED_LABEL,
+                topEmployers: facts.topEmployers.map((employer) => ({ name: employer.name, count: employer.count })),
+            })
             : []),
     ];
 
-    // Only 51 jurisdictions route here and all 51 ship a diorama, but keep
-    // the guard so a future slug without artwork degrades to the original
-    // centred text hero instead of an empty framed box.
     const showHeroDiorama = hasStateDiorama(stateSlug);
+    const heroSummary = buildSalaryStateSummary({ stateName, benchmark });
+
+    const statTiles: StatTile[] = [
+        benchmark
+            ? {
+                key: 'median',
+                label: 'Median posted pay',
+                value: formatDollars(benchmark.median),
+                sub: comparison
+                    ? `${formatCount(benchmark.postings, 'posting')}, ${comparison}`
+                    : `${formatCount(benchmark.postings, 'posting')} with disclosed pay`,
+            }
+            : {
+                key: 'median',
+                label: 'Median posted pay',
+                value: 'Sample too small',
+                sub: `Published at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers`,
+            },
+        ...(benchmark
+            ? [{
+                key: 'spread',
+                label: 'Middle half',
+                value: `${formatK(benchmark.p25)} to ${formatK(benchmark.p75)}`,
+                sub: '25th to 75th percentile of the same postings',
+            }]
+            : []),
+        {
+            key: 'roles',
+            label: `Open ${brand.niche.short} roles`,
+            value: activeJobs.toLocaleString('en-US'),
+            sub: `From ${formatCount(facts.distinctEmployers, 'employer')} in ${stateCode}`,
+        },
+        boardRow
+            ? {
+                key: 'board',
+                label: BOARD_MEDIAN_LABEL,
+                value: formatDollars(boardRow.median),
+                sub: `${formatCount(boardRow.postings, 'posting')} with disclosed pay, every state`,
+            }
+            : {
+                key: 'bls',
+                label: 'National median wage',
+                value: STAT_SOURCES.averageSalary.formatted,
+                sub: STAT_SOURCES.averageSalary.source,
+            },
+    ];
 
     return (
-        <div style={{ backgroundColor: 'var(--bg-primary)', minHeight: '100vh' }}>
-            {/* Hero layout. Deliberately a static block: a template
+        <div style={{ backgroundColor: CLAY_GROUND, minHeight: '100vh' }}>
+            {/* Hero and band layout. Deliberately a static block: a template
                 interpolation inside a style block deadlocks the route
                 compile under Turbopack, so every value here is literal. */}
             <style>{`
-                .sg-hero-inner { max-width: 800px; margin: 0 auto; text-align: center; }
+                .sg-hero-inner { max-width: 820px; margin: 0 auto; text-align: center; }
                 .sg-hero-inner p { margin-left: auto; margin-right: auto; }
-                .sg-hero-inner--art { max-width: 980px; }
+                .sg-hero-inner--art { max-width: 1000px; }
                 .sg-hero-art {
                     position: relative;
                     width: 200px;
                     aspect-ratio: 1 / 1;
-                    margin: 32px auto 0;
-                    border-radius: 28px;
                     overflow: hidden;
+                    margin: 32px auto 0;
                     flex: 0 0 auto;
-                    box-shadow: inset 4px 4px 10px rgba(255,255,255,0.3),
-                                inset -3px -3px 8px rgba(0,0,0,0.08),
-                                0 10px 30px rgba(0,0,0,0.12);
                 }
                 .sg-hero-art-img { object-fit: cover; }
+                .sg-band { max-width: 980px; margin: 0 auto; padding: 0 16px 56px; }
+                .sg-grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+                .sg-stats { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+                .sg-cta-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+                @media (min-width: 720px) {
+                    .sg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                }
+                @media (max-width: 860px) {
+                    .sg-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                }
                 @media (min-width: 860px) {
                     .sg-hero-inner--art {
                         display: flex;
@@ -413,9 +657,10 @@ export default async function StateSalaryPage({ params }: PageProps) {
                     }
                     .sg-hero-inner--art .sg-hero-copy { flex: 1 1 auto; min-width: 0; }
                     .sg-hero-inner--art p { margin-left: 0; margin-right: 0; }
-                    .sg-hero-inner--art .sg-hero-art { width: 260px; margin: 0; }
+                    .sg-hero-inner--art .sg-hero-art { width: 272px; margin: 0; }
                 }
             `}</style>
+            <ClayStyles />
             <BreadcrumbSchema
                 items={[
                     { name: 'Home', url: brand.baseUrl },
@@ -423,35 +668,34 @@ export default async function StateSalaryPage({ params }: PageProps) {
                     { name: stateName, url: `${brand.baseUrl}/salary-guide/${stateSlug}` },
                 ]}
             />
-            {/* FAQPage — same stateFaqs array renders the visible accordion below */}
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: sanitizeJson({
-                    '@context': 'https://schema.org',
-                    '@type': 'FAQPage',
-                    mainEntity: stateFaqs.map((faq) => ({
-                        '@type': 'Question',
-                        name: faq.q,
-                        acceptedAnswer: { '@type': 'Answer', text: faq.a },
-                    })),
-                }) }}
-            />
-            {/* Article — dates deliberately omitted: this page regenerates
+            {/* FAQPage, from the same stateFaqs array as the accordion below */}
+            {stateFaqs.length >= FAQ_SCHEMA_MIN_ENTRIES && (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: sanitizeJson({
+                        '@context': 'https://schema.org',
+                        '@type': 'FAQPage',
+                        mainEntity: stateFaqs.map((faq) => ({
+                            '@type': 'Question',
+                            name: faq.question,
+                            acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+                        })),
+                    }) }}
+                />
+            )}
+            {/* Article. Dates deliberately omitted: this page regenerates
                 daily from live posting data and has no editorial publish
-                date; emitting dateModified=now would fabricate freshness
-                (audit B54 principle). */}
+                date, so emitting dateModified of now would fabricate
+                freshness (audit B54 principle). Below the publishing gate
+                the description carries no figure, because a structured-data
+                salary claim over a tiny sample is fabricated data. */}
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: sanitizeJson({
                     '@context': 'https://schema.org',
                     '@type': 'Article',
-                    headline: `${brand.niche.short} Salary in ${stateName} (${stateCode}): Pay by Practice Setting`,
-                    // Review P9 #2d: below the publishing gate the schema
-                    // description carries NO figure — a structured-data
-                    // salary claim over a tiny sample is fabricated data.
-                    description: salaryData.gatePassed
-                        ? `Median ${brand.niche.short} salary in ${stateName}: ${formatSalary(salaryData.median!)} per year (middle half ${formatSalary(salaryData.p25!)} to ${formatSalary(salaryData.p75!)}), the median of ${salaryData.jobCount} active ${salaryData.jobCount === 1 ? 'posting' : 'postings'} with disclosed salary from ${salaryData.employers} employers.`
-                        : `${brand.niche.short} jobs in ${stateName}: ${salaryData.jobCount} active ${salaryData.jobCount === 1 ? 'posting' : 'postings'} with disclosed salary, a sample below the minimum we require to publish a state salary figure.`,
+                    headline: `${brand.niche.short} Salary in ${stateName} (${stateCode})`,
+                    description: heroSummary,
                     author: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
                     publisher: { '@type': 'Organization', name: brand.name, logo: { '@type': 'ImageObject', url: `${brand.baseUrl}/logo.png` } },
                     mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl },
@@ -459,7 +703,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                     url: pageUrl,
                 }) }}
             />
-            {/* Speakable — marks the salary summary + FAQ answers for voice/AI */}
+            {/* Speakable: the salary summary plus every FAQ answer */}
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: sanitizeJson({
@@ -474,40 +718,28 @@ export default async function StateSalaryPage({ params }: PageProps) {
                 }) }}
             />
 
-            {/* Hero — P2 #1: pairs the copy with this state's own diorama
+            {/* Hero. Pairs the copy with this state's own diorama
                 (public/images/states/<slug>.png). Every slug this route can
                 reach ships one; a jurisdiction without artwork falls back to
-                the original centred text-only hero rather than a placeholder
-                or a dead URL. The art sits in a fixed aspect-ratio box so its
-                space is reserved before it decodes — no layout shift. */}
-            <section style={{ padding: '72px 16px 48px' }}>
+                the text-only hero rather than a placeholder or a dead URL.
+                The art fills a fixed aspect-ratio box edge to edge, with no
+                frame, radius or inset shadow, so its space is reserved
+                before it decodes and there is no colour seam. */}
+            <section style={{ padding: '72px 16px 40px' }}>
                 <div className={showHeroDiorama ? 'sg-hero-inner sg-hero-inner--art' : 'sg-hero-inner'}>
                     <div className="sg-hero-copy">
-                        <div
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                backgroundColor: 'rgba(244,114,182,0.1)',
-                                border: '1px solid rgba(244,114,182,0.2)',
-                                borderRadius: '999px',
-                                padding: '6px 16px',
-                                marginBottom: '20px',
-                                fontSize: '13px',
-                                fontWeight: 600,
-                                color: '#F472B6',
-                            }}
-                        >
-                            <MapPin size={14} /> {stateCode} Salary Data · Updated Daily
-                        </div>
+                        <span style={{ ...clayChip, background: clayFill(0), gap: '6px' }}>
+                            <MapPin size={13} /> {stateCode} pay data
+                        </span>
 
                         <h1
+                            className="font-lora"
                             style={{
-                                fontSize: 'clamp(1.75rem, 4.5vw, 2.75rem)',
-                                fontWeight: 800,
-                                color: 'var(--text-primary)',
+                                fontSize: 'clamp(1.9rem, 4.5vw, 2.9rem)',
+                                fontWeight: 700,
+                                color: CLAY_INK,
                                 lineHeight: 1.15,
-                                marginBottom: '14px',
+                                margin: '16px 0 14px',
                             }}
                         >
                             {brand.niche.short} Salary in {stateName}
@@ -518,13 +750,13 @@ export default async function StateSalaryPage({ params }: PageProps) {
                             data-speakable="true"
                             style={{
                                 fontSize: '16px',
-                                color: 'var(--text-secondary)',
-                                maxWidth: '600px',
-                                lineHeight: 1.6,
+                                color: CLAY_BODY,
+                                maxWidth: '620px',
+                                lineHeight: 1.65,
+                                margin: 0,
                             }}
                         >
-                            Median {brand.niche.descriptor} compensation in {stateName}, broken down by
-                            practice setting, top employers, and cities.
+                            {heroSummary}
                         </p>
                     </div>
 
@@ -535,7 +767,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                                 alt={`Illustrated diorama representing ${stateName}`}
                                 fill
                                 className="sg-hero-art-img"
-                                sizes="(max-width: 859px) 200px, 260px"
+                                sizes="(max-width: 859px) 200px, 272px"
                                 priority
                             />
                         </div>
@@ -543,496 +775,204 @@ export default async function StateSalaryPage({ params }: PageProps) {
                 </div>
             </section>
 
-            {/* Salary Overview Cards */}
-            <section style={{ padding: '0 16px 64px', maxWidth: '900px', margin: '0 auto' }}>
-                <div
-                    style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                        gap: '16px',
-                        marginBottom: '32px',
-                    }}
-                >
-                    {/* Review P9 #2c/#2d: median + p25/p75 over the gated
-                        NP-eligible pool; below the gate the cards say
-                        "sample too small" instead of showing a figure. */}
-                    {[
-                        salaryData.gatePassed
-                            ? {
-                                icon: DollarSign,
-                                label: 'Median Salary',
-                                value: formatSalary(salaryData.median!),
-                                sub: `Median of ${salaryData.jobCount} postings · ${Math.abs(diffPct)}% ${aboveBelow} national`,
-                                color: '#F472B6',
-                            }
-                            : {
-                                icon: DollarSign,
-                                label: 'Median Salary',
-                                value: 'Sample too small',
-                                sub: `Needs ${BENCHMARK_MIN_POSTINGS}+ postings from ${BENCHMARK_MIN_EMPLOYERS}+ employers`,
-                                color: '#F472B6',
-                            },
-                        salaryData.gatePassed
-                            ? {
-                                icon: TrendingUp,
-                                label: 'Typical Range',
-                                value: `${formatSalary(salaryData.p25!)} to ${formatSalary(salaryData.p75!)}`,
-                                sub: '25th to 75th percentile',
-                                color: '#E86C2C',
-                            }
-                            : {
-                                icon: TrendingUp,
-                                label: 'Typical Range',
-                                value: 'Pending',
-                                sub: 'Published once the sample clears the gate',
-                                color: '#E86C2C',
-                            },
-                        {
-                            icon: Briefcase,
-                            // Label matches the number: this is the disclosed-
-                            // salary analytics sample, NOT total open jobs
-                            // (that count — activeJobs — feeds the FAQ and
-                            // the browse CTA below).
-                            label: 'Disclosed Salaries',
-                            value: salaryData.jobCount.toLocaleString(),
-                            sub: `Postings with disclosed salary in ${stateCode}`,
-                            color: '#A855F7',
-                        },
-                        {
-                            icon: BarChart3,
-                            label: nationalBase.basis === 'postings' ? 'National Median' : 'National Median (BLS)',
-                            value: formatSalary(nationalBase.value),
-                            sub: nationalBase.basis === 'postings'
-                                ? `Median of ${nationalBase.jobCount} postings on ${brand.name}`
-                                : STAT_SOURCES.averageSalary.source,
-                            color: '#3B82F6',
-                        },
-                    ].map(({ icon: Ic, label, value, sub, color }) => (
-                        <div
-                            key={label}
-                            style={{
-                                padding: '24px 20px',
-                                borderRadius: '16px',
-                                backgroundColor: 'var(--bg-secondary)',
-                                border: '1px solid var(--border-color)',
-                            }}
-                        >
-                            <Ic size={22} style={{ color, marginBottom: '10px' }} />
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                {label}
-                            </p>
-                            <p style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                                {value}
-                            </p>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{sub}</p>
-                        </div>
-                    ))}
-                </div>
-
-                {/* A4 (teardown parity): honest date-stamp equivalent. The
-                    figures above are a live snapshot, so the provenance line
-                    states the query's own basis (N postings with disclosed
-                    salary) instead of a fabricated "last updated today" —
-                    this page deliberately has no editorial review date
-                    (B54; its Article schema omits dates for the same
-                    reason). jobCount CAN be 0 here (the 404 gate counts all
-                    active jobs, not analytics rows) — SalaryProvenance
-                    omits the live sentence below its minimum, never
-                    fabricates one. */}
+            {/* Headline figures */}
+            <section className="sg-band">
+                <StatTiles tiles={statTiles} />
+                {/* B7: the provenance line states the query's own basis and
+                    renders ONLY when the gate that publishes the figure
+                    passed. Below it there is no figure to attribute, so the
+                    sentence is omitted rather than fabricated. This page has
+                    no editorial review date (B54; its Article schema omits
+                    dates for the same reason). */}
                 <SalaryProvenance
-                    live={{ count: salaryData.jobCount, minimum: 1 }}
-                    style={{ textAlign: 'center', margin: '-16px 0 32px' }}
+                    live={salaryData.gatePassed ? { count: salaryData.postings, minimum: BENCHMARK_MIN_POSTINGS } : undefined}
+                    style={{ margin: '16px 0 0' }}
                 />
+            </section>
 
-                {/* Salary by Setting */}
-                {bySetting.length > 0 && (
-                    <div
-                        style={{
-                            padding: '32px 28px',
-                            borderRadius: '18px',
-                            backgroundColor: 'var(--bg-secondary)',
-                            border: '1px solid var(--border-color)',
-                            marginBottom: '32px',
-                        }}
-                    >
-                        <h2
-                            style={{
-                                fontSize: '20px',
-                                fontWeight: 700,
-                                color: 'var(--text-primary)',
-                                marginBottom: '20px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                            }}
-                        >
-                            <Stethoscope size={20} style={{ color: '#F472B6' }} />
-                            Salary by Practice Setting
-                        </h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {/* Each row is a gated per-setting MEDIAN (same
-                                n≥5 / 3-employer policy); bars scale against
-                                the highest setting median on the page. */}
-                            {[...bySetting].sort((a, b) => b.medianSalary - a.medianSalary).map((s, _i, sorted) => {
-                                const maxMedian = sorted[0]?.medianSalary ?? 0;
-                                const pct = maxMedian > 0
-                                    ? Math.min(100, Math.round((s.medianSalary / maxMedian) * 100))
-                                    : 50;
-                                return (
-                                    <div key={s.setting}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                                                {s.setting}
-                                            </span>
-                                            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                                                {formatSalary(s.medianSalary)} <span style={{ fontWeight: 500, color: 'var(--text-muted)', fontSize: '12px' }}>median</span>
-                                            </span>
-                                        </div>
-                                        <div
-                                            style={{
-                                                height: '8px',
-                                                borderRadius: '4px',
-                                                backgroundColor: 'var(--bg-tertiary)',
-                                                overflow: 'hidden',
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    height: '100%',
-                                                    width: `${pct}%`,
-                                                    borderRadius: '4px',
-                                                    background: 'linear-gradient(90deg, #F472B6, #BE185D)',
-                                                    transition: 'width 0.5s',
-                                                }}
-                                            />
-                                        </div>
-                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                            {s.jobCount} {s.jobCount === 1 ? 'position' : 'positions'}
-                                        </p>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
+            {/* SAL-S1 practice environment */}
+            {env && (
+                <Band eyebrow="Licensure" title={`Practicing in ${stateName}`}>
+                    <PracticeCard
+                        env={env}
+                        variant={{ kind: 'salary' }}
+                        licenseGuideLive={licenseGuideLive}
+                        title={`${stateName} practice environment`}
+                        icon={ShieldCheck}
+                        headingLevel={3}
+                    />
+                </Band>
+            )}
 
-                {/* Two-column: Top Employers + Top Cities */}
-                <div
-                    style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                        gap: '24px',
-                        marginBottom: '32px',
-                    }}
+            {/* SAL-S2 pay by work arrangement and employment type. Two rows
+                is the floor: a single row is the state median again. */}
+            {payRows.length >= 2 && (
+                <Band
+                    eyebrow="Pay breakdown"
+                    title="Pay by work arrangement and employment type"
+                    lede={`Each row is a median over ${stateName} postings that disclose annual pay, published only at ${BENCHMARK_MIN_POSTINGS} or more postings from ${BENCHMARK_MIN_EMPLOYERS} or more employers. Rows overlap, because a posting can be both remote and full time.`}
                 >
-                    {/* Top Employers */}
-                    {topEmployers.length > 0 && (
-                        <div
-                            style={{
-                                padding: '28px 24px',
-                                borderRadius: '18px',
-                                backgroundColor: 'var(--bg-secondary)',
-                                border: '1px solid var(--border-color)',
-                            }}
-                        >
-                            <h2
-                                style={{
-                                    fontSize: '18px',
-                                    fontWeight: 700,
-                                    color: 'var(--text-primary)',
-                                    marginBottom: '16px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                }}
-                            >
-                                <Building2 size={18} style={{ color: '#E86C2C' }} />
-                                Top Employers in {stateCode}
-                            </h2>
-                            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                {topEmployers.map((emp, i) => (
-                                    <li
-                                        key={emp.name}
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            padding: '10px 14px',
-                                            borderRadius: '10px',
-                                            backgroundColor: i % 2 === 0 ? 'var(--bg-tertiary)' : 'transparent',
-                                        }}
-                                    >
-                                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                                            {emp.name}
+                    <ClayCard chip="Arrangement" index={1} icon={Banknote} title={`${stateName} posted medians`} headingLevel={3}>
+                        <ul className="pseo-clay-list" style={clayList}>
+                            {payRows.map((row, i) => {
+                                const rowSlug = paySlugByLabel.get(row.label) ?? null;
+                                const href = rowSlug && indexableSettings.has(rowSlug)
+                                    ? `/jobs/${rowSlug}/${stateSlug}`
+                                    : null;
+                                const width = payScale > 0 ? Math.round(Math.min(100, (row.median / payScale) * 100)) : 100;
+                                return (
+                                    <li key={row.label} style={{ ...clayRow(i === payRows.length - 1), fontSize: '13px' }}>
+                                        <span style={{ minWidth: '92px' }}>
+                                            {href ? <Link href={href} style={clayLink}>{row.label}</Link> : row.label}
                                         </span>
                                         <span
-                                            style={{
-                                                fontSize: '12px',
-                                                fontWeight: 600,
-                                                color: '#E86C2C',
-                                                backgroundColor: 'rgba(232,108,44,0.1)',
-                                                padding: '2px 10px',
-                                                borderRadius: '999px',
-                                            }}
+                                            aria-hidden="true"
+                                            style={{ flex: 1, height: '8px', borderRadius: '999px', background: CLAY_TRACK, overflow: 'hidden' }}
                                         >
-                                            {emp.jobCount} {emp.jobCount === 1 ? 'job' : 'jobs'}
-                                        </span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-
-                    {/* Top Cities */}
-                    {topCities.length > 0 && (
-                        <div
-                            style={{
-                                padding: '28px 24px',
-                                borderRadius: '18px',
-                                backgroundColor: 'var(--bg-secondary)',
-                                border: '1px solid var(--border-color)',
-                            }}
-                        >
-                            <h2
-                                style={{
-                                    fontSize: '18px',
-                                    fontWeight: 700,
-                                    color: 'var(--text-primary)',
-                                    marginBottom: '16px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                }}
-                            >
-                                <MapPin size={18} style={{ color: '#A855F7' }} />
-                                Top Cities in {stateCode}
-                            </h2>
-                            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                {topCities.map((city, i) => (
-                                    <li key={city.name}>
-                                        <Link
-                                            href={`/jobs/city/${city.slug}`}
-                                            style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                padding: '10px 14px',
-                                                borderRadius: '10px',
-                                                backgroundColor: i % 2 === 0 ? 'var(--bg-tertiary)' : 'transparent',
-                                                textDecoration: 'none',
-                                                transition: 'background 0.2s',
-                                            }}
-                                        >
-                                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                                                {city.name}
-                                            </span>
                                             <span
                                                 style={{
-                                                    fontSize: '12px',
-                                                    fontWeight: 600,
-                                                    color: '#A855F7',
-                                                    backgroundColor: 'rgba(168,85,247,0.1)',
-                                                    padding: '2px 10px',
+                                                    display: 'block',
+                                                    height: '100%',
                                                     borderRadius: '999px',
+                                                    background: CLAY_ACCENT,
+                                                    width: `${width}%`,
                                                 }}
-                                            >
-                                                {city.jobCount} {city.jobCount === 1 ? 'job' : 'jobs'}
-                                            </span>
-                                        </Link>
+                                            />
+                                        </span>
+                                        <span style={{ ...clayMeta, minWidth: '116px', textAlign: 'right' }}>
+                                            {formatK(row.median)}, {formatCount(row.postings, 'posting')}
+                                        </span>
                                     </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                </div>
+                                );
+                            })}
+                        </ul>
+                    </ClayCard>
+                </Band>
+            )}
 
-                {/* Cross-links (C17 + C18) */}
-                <div
-                    style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                        gap: '16px',
-                    }}
-                >
-                    {/* C17: Link to state jobs page */}
-                    <Link
-                        href={`/jobs/state/${stateSlug}`}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '20px 24px',
-                            borderRadius: '14px',
-                            backgroundColor: 'var(--bg-secondary)',
-                            border: '1px solid var(--border-color)',
-                            textDecoration: 'none',
-                            transition: 'border-color 0.3s',
-                        }}
-                    >
-                        <Briefcase size={22} style={{ color: '#F472B6', flexShrink: 0 }} />
-                        <div>
-                            <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>
-                                Browse All {stateCode} {brand.niche.short} Jobs →
-                            </p>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                {activeJobs} open positions in {stateName}
-                            </p>
-                        </div>
-                    </Link>
-
-                    {/* Link to licensure guide — rendered only once the
-                        license-guide blog series is published (see
-                        LICENSE_GUIDE_SERIES_PUBLISHED in
-                        config/niche/content-map.ts); otherwise this is a
-                        dead /blog link on every salary-guide state page. */}
-                    {LICENSE_GUIDE_SERIES_PUBLISHED && (
-                    <Link
-                        href={`/blog/${licenseSlug}`}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '20px 24px',
-                            borderRadius: '14px',
-                            backgroundColor: 'var(--bg-secondary)',
-                            border: '1px solid var(--border-color)',
-                            textDecoration: 'none',
-                            transition: 'border-color 0.3s',
-                        }}
-                    >
-                        <BookOpen size={22} style={{ color: '#E86C2C', flexShrink: 0 }} />
-                        <div>
-                            <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>
-                                {stateName} Licensure Guide →
-                            </p>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                Requirements, process & timeline
-                            </p>
-                        </div>
-                    </Link>
-                    )}
-
-                    {/* Link to national salary guide */}
-                    <Link
-                        href="/salary-guide"
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '20px 24px',
-                            borderRadius: '14px',
-                            backgroundColor: 'var(--bg-secondary)',
-                            border: '1px solid var(--border-color)',
-                            textDecoration: 'none',
-                            transition: 'border-color 0.3s',
-                        }}
-                    >
-                        <BarChart3 size={22} style={{ color: '#3B82F6', flexShrink: 0 }} />
-                        <div>
-                            <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>
-                                National Salary Guide →
-                            </p>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                Compare all 50 states
-                            </p>
-                        </div>
-                    </Link>
-                </div>
-
-                {/* FAQ — rendered from the SAME stateFaqs array as the FAQPage
-                    JSON-LD above (B48: schema must match visible content). */}
-                <div style={{ marginTop: '32px' }}>
-                    <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
-                        {brand.niche.short} Salary in {stateName}: FAQ
-                    </h2>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {stateFaqs.map((faq, i) => (
-                            <details
-                                key={faq.q}
-                                {...(i === 0 ? { open: true } : {})}
-                                style={{
-                                    borderRadius: '14px',
-                                    backgroundColor: 'var(--bg-secondary)',
-                                    border: '1px solid var(--border-color)',
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                <summary style={{ padding: '16px 20px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', listStyle: 'none' }}>
-                                    {faq.q}
-                                </summary>
-                                <p className="faq-answer" style={{ padding: '0 20px 16px', fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
-                                    {faq.a}
-                                </p>
-                            </details>
-                        ))}
+            {/* SAL-S3 employers and cities */}
+            {(facts.distinctEmployers >= 2 || cityRows.length > 0) && (
+                <Band eyebrow="Where the roles are" title={`Employers and cities hiring in ${stateName}`}>
+                    <div className="sg-grid">
+                        <EmployerRoster
+                            variant={{ kind: 'hub', stateName }}
+                            facts={facts}
+                            title={`Employers hiring in ${stateName}`}
+                            chip="Employers"
+                            icon={Building2}
+                            index={0}
+                            headingLevel={3}
+                        />
+                        {cityRows.length > 0 && (
+                            <ClayTable
+                                caption={`Cities by open ${brand.niche.short} roles on ${brand.name}. A city links its own page at ${MIN_CITY_JOBS_FOR_LINK} or more roles, and a median is published at ${BENCHMARK_MIN_POSTINGS} or more postings with disclosed pay from ${BENCHMARK_MIN_EMPLOYERS} or more employers.`}
+                                columns={['City', { label: 'Open roles', numeric: true }, { label: 'Posted median', numeric: true }]}
+                                rows={cityRows.map((city) => [
+                                    city.href ? <Link href={city.href} style={clayLink}>{city.name}</Link> : city.name,
+                                    city.count.toLocaleString('en-US'),
+                                    city.medianK === null ? 'Not published' : `$${city.medianK}K`,
+                                ])}
+                            />
+                        )}
                     </div>
+                </Band>
+            )}
+
+            {/* SAL-S4 what employers are hiring for */}
+            {hiringFor && (
+                <Band eyebrow="Open roles" title={`What employers are hiring for in ${stateName}`}>
+                    <ClayCard chip="Inventory" index={2} icon={Layers} title={`${stateName} listing mix`} desc={hiringFor} headingLevel={3}>
+                        {categoryRows.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '16px' }}>
+                                {categoryRows.map((row) => (
+                                    row.href ? (
+                                        <Link key={row.slug} href={row.href} className="pseo-clay-lift" style={clayTile}>
+                                            <span>{row.label}</span>
+                                            <span style={clayMeta}>{row.count.toLocaleString('en-US')}</span>
+                                        </Link>
+                                    ) : (
+                                        <span key={row.slug} style={clayTile}>
+                                            <span>{row.label}</span>
+                                            <span style={clayMeta}>{row.count.toLocaleString('en-US')}</span>
+                                        </span>
+                                    )
+                                ))}
+                            </div>
+                        )}
+                        {facts.newGradFriendly > 0 && (
+                            <p style={{ ...clayDesc, margin: '16px 0 0', fontSize: '13px' }}>
+                                <Link href="/jobs/new-grad" style={clayLink}>
+                                    Browse the roles marked open to new graduates
+                                </Link>
+                            </p>
+                        )}
+                    </ClayCard>
+                </Band>
+            )}
+
+            {/* SAL-S5 nearby states compared */}
+            {nearbyRows.length >= 2 && (
+                <Band eyebrow="Nearby" title={`States near ${stateName}`}>
+                    <NearbyStatesTable rows={nearbyRows} variant="salary" />
+                </Band>
+            )}
+
+            {/* SAL-S6 FAQ, rendered from the SAME stateFaqs array as the
+                FAQPage JSON-LD above, so every answer is in the server HTML
+                for the Speakable selector and for crawlers. */}
+            {stateFaqs.length > 0 && (
+                <Band eyebrow="Questions" title={`${brand.niche.short} salary in ${stateName}: FAQ`}>
+                    <CategoryFAQAccordion
+                        faqs={stateFaqs.map((faq) => ({ question: faq.question, answer: faq.answer }))}
+                    />
+                </Band>
+            )}
+
+            {/* Cross-links */}
+            <section className="sg-band">
+                <div className="sg-grid">
+                    <ClayCard
+                        href={`/jobs/state/${stateSlug}`}
+                        chip="Browse"
+                        index={1}
+                        icon={Briefcase}
+                        title={`Every ${brand.niche.short} job in ${stateName}`}
+                        desc={`${formatCount(activeJobs, 'open position')} across the state, with filters for setting, schedule and work arrangement.`}
+                        action="Open the state board"
+                        headingLevel={3}
+                    />
+                    <ClayCard
+                        href="/salary-guide"
+                        chip="Compare"
+                        index={2}
+                        icon={BarChart3}
+                        title="Pay across every state"
+                        desc={`The board-wide medians, the states that publish one, and how the ${BENCHMARK_MIN_POSTINGS} posting publishing gate works.`}
+                        action="Open the salary guide"
+                        headingLevel={3}
+                    />
                 </div>
             </section>
 
-            {/* CTA */}
-            <section
-                style={{
-                    padding: '64px 16px',
-                    textAlign: 'center',
-                    backgroundColor: 'var(--bg-secondary)',
-                }}
-            >
-                <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                    <h2
-                        style={{
-                            fontSize: '24px',
-                            fontWeight: 800,
-                            color: 'var(--text-primary)',
-                            marginBottom: '12px',
-                        }}
-                    >
-                        Find {brand.niche.short} Jobs in {stateName}
+            {/* One alert CTA per page */}
+            <section className="sg-band" style={{ paddingBottom: '72px' }}>
+                <div style={{ ...clayCta, textAlign: 'center', padding: '40px 24px' }}>
+                    <p style={{ ...clayEyebrow, marginBottom: '10px' }}>Job alerts</p>
+                    <h2 className="font-lora" style={{ fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 700, color: CLAY_INK, margin: '0 0 10px' }}>
+                        New {stateName} roles, by email
                     </h2>
-                    <p
-                        style={{
-                            fontSize: '15px',
-                            color: 'var(--text-secondary)',
-                            marginBottom: '24px',
-                        }}
-                    >
-                        Browse {activeJobs} active positions and get daily alerts for new openings.
+                    <p style={{ fontSize: '15px', color: CLAY_BODY, margin: '0 auto 24px', maxWidth: '520px', lineHeight: 1.6 }}>
+                        Browse the {formatCount(activeJobs, 'position')} open now, or have the next ones sent to you.
                     </p>
-                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <Link
-                            href={`/jobs/state/${stateSlug}`}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '14px 28px',
-                                borderRadius: '14px',
-                                fontWeight: 700,
-                                fontSize: '15px',
-                                color: '#fff',
-                                background: 'linear-gradient(135deg, #F472B6, #BE185D)',
-                                textDecoration: 'none',
-                                boxShadow: '0 4px 16px rgba(244,114,182,0.25)',
-                            }}
-                        >
-                            Browse {stateCode} Jobs <ArrowRight size={16} />
+                    <div className="sg-cta-actions">
+                        <Link href={`/jobs/state/${stateSlug}`} style={clayButton}>
+                            Browse {stateCode} jobs <ArrowRight size={16} />
                         </Link>
                         <Link
                             href="/job-alerts"
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '14px 28px',
-                                borderRadius: '14px',
-                                fontWeight: 600,
-                                fontSize: '15px',
-                                color: 'var(--text-primary)',
-                                backgroundColor: 'var(--bg-primary)',
-                                border: '1px solid var(--border-color)',
-                                textDecoration: 'none',
-                            }}
+                            style={{ ...clayCard, ...clayButton, background: '#FFFFFF', color: CLAY_INK }}
                         >
-                            Get Job Alerts
+                            Create a job alert
                         </Link>
                     </div>
                 </div>

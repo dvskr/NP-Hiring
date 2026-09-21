@@ -15,7 +15,7 @@ import {
     PSEO_STALENESS_HOURS,
 } from '@/lib/gsc-coverage';
 import { GSC_DIMENSION_ROW_LIMIT, GSC_MAX_ROW_LIMIT } from '@/lib/gsc-client';
-import { MIN_JOBS_FOR_CATEGORY_CITY } from '@/lib/pseo/render-gate';
+import { MIN_EMPLOYERS_FOR_INDEX, MIN_JOBS_FOR_CATEGORY_CITY, PSEO_STATS_MAX_AGE_HOURS } from '@/lib/pseo/render-gate';
 import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
 const NOW = new Date('2026-07-28T12:00:00Z');
@@ -29,6 +29,7 @@ interface RowOverrides {
     categorySlug?: string;
     locationSlug?: string;
     totalJobs?: number;
+    distinctEmployers?: number;
     updatedAt?: Date;
 }
 
@@ -37,6 +38,7 @@ function coverageRow(overrides: RowOverrides = {}) {
         categorySlug: ELIGIBLE,
         locationSlug: 'big-city',
         totalJobs: 10,
+        distinctEmployers: MIN_EMPLOYERS_FOR_INDEX,
         updatedAt: FRESH,
         ...overrides,
     };
@@ -153,13 +155,14 @@ describe('computeSettingStateCoverage', () => {
     test('renderable needs ≥1 job; indexable additionally needs freshness', () => {
         const result = computeSettingStateCoverage(
             [
-                { totalJobs: 0, updatedAt: FRESH }, // not renderable
-                { totalJobs: 1, updatedAt: FRESH }, // renderable + indexable
-                { totalJobs: 5, updatedAt: STALE }, // renderable only
+                { totalJobs: 0, indexable: false, updatedAt: FRESH }, // not renderable
+                { totalJobs: 1, indexable: true, updatedAt: FRESH }, // renderable + indexable
+                { totalJobs: 5, indexable: true, updatedAt: STALE }, // renderable only (stale)
+                { totalJobs: 5, indexable: false, updatedAt: FRESH }, // renderable only (verdict false)
             ],
             NOW,
         );
-        expect(result).toEqual({ total: 3, renderable: 2, indexable: 1 });
+        expect(result).toEqual({ total: 4, renderable: 3, indexable: 1 });
     });
 });
 
@@ -182,16 +185,21 @@ describe('drift guards — mirrored constants match the sitemap index route', ()
         return Number(match![1]);
     }
 
-    test('MIN_SITEMAP_JOBS mirrors the route', () => {
-        expect(MIN_SITEMAP_JOBS).toBe(routeConstant('MIN_SITEMAP_JOBS'));
+    test('MIN_SITEMAP_JOBS is the render-gate floor the route gates through', () => {
+        // The route no longer carries a job literal: it calls
+        // shouldIndexLocalListingPage, whose job floor is MIN_JOBS_FOR_CATEGORY_CITY.
+        expect(MIN_SITEMAP_JOBS).toBe(MIN_JOBS_FOR_CATEGORY_CITY);
+        expect(routeSource).toMatch(/import \{[^}]*shouldIndexLocalListingPage[^}]*\} from '@\/lib\/pseo\/render-gate'/);
+        expect(routeSource).toContain('shouldIndexLocalListingPage({ activeJobs: row.totalJobs, distinctEmployers: row.distinctEmployers })');
     });
 
     test('MIN_SITEMAP_POPULATION mirrors the route', () => {
         expect(MIN_SITEMAP_POPULATION).toBe(routeConstant('MIN_SITEMAP_POPULATION'));
     });
 
-    test('PSEO_STALENESS_HOURS mirrors the route', () => {
-        expect(PSEO_STALENESS_HOURS).toBe(routeConstant('PSEO_STALENESS_HOURS'));
+    test('PSEO_STALENESS_HOURS is the render-gate window the route reads', () => {
+        expect(PSEO_STALENESS_HOURS).toBe(PSEO_STATS_MAX_AGE_HOURS);
+        expect(routeSource).toContain('pseoStatsFreshnessThreshold()');
     });
 
     // The two constants are independently owned (render gate vs sitemap

@@ -1,10 +1,15 @@
 /**
  * Samples the ground color of every illustration that ImmersiveImage or
- * CategoryHero can letterbox, and writes lib/pseo/category-art-ground.ts.
+ * CategoryHero can letterbox, plus the clay icon and navigation tiles whose
+ * baked ground becomes the sticker tile face, and writes
+ * lib/pseo/category-art-ground.ts.
  *
  * The color is the mean of a 4px ring around the picture's edge, so it is
  * what sits next to the picture when it is letterboxed inside a wider cell.
  * A ring mean handles soft vignettes better than one corner pixel.
+ *
+ * The registry (lib/pseo/category-asset-registry.ts) reads every icon and
+ * nav Art.bg from the generated table, so re-run this after adding art.
  *
  * Usage: node scripts/sample-art-ground.mjs
  * Reads only public/images; touches no database.
@@ -15,7 +20,10 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DIRS = ['categories/heroes', 'categories/bento', 'job-seekers', 'employers', 'how-it-works', 'pages'];
+const DIRS = [
+  'categories/heroes', 'categories/bento', 'categories/icons', 'categories/nav',
+  'job-seekers', 'employers', 'how-it-works', 'pages',
+];
 const RING = 4;
 
 async function ringMean(file) {

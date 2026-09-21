@@ -30,14 +30,14 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { CITIES } from '@/lib/pseo/city-data/cities';
+import { CITIES, getCityByNameState, getCityBySlug } from '@/lib/pseo/city-data/cities';
 import { CITY_SLUGS, isKnownCitySlug } from '@/lib/pseo/city-data/city-slugs-edge';
 import {
   buildCityDatasetSlug,
   foldDiacritics,
   slugifyCityName,
 } from '@/lib/pseo/city-data/slugify';
-import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
+import { buildCitySlug, cityLinkResolves, parseCitySlugToName } from '@/app/jobs/locations/[state]/directory';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -313,5 +313,61 @@ describe('P3 #9: city links are gated on actually resolving', () => {
       expect(cityLinkResolves(name, stateCode), `${name} must not be route-linkable`).toBe(false);
     }
     expect(buildCitySlug('La Cañada Flintridge', 'CA')).not.toBe('la-canada-flintridge-ca');
+  });
+});
+
+// ─── 5. the city hub reads names and category links from the dataset ────────
+//
+// Thin plan P5 / T0-8 (pSEO thin-content program, W2-CITYHUB): the route slug
+// is title-cased ("mchenry-il" reads "Mchenry") and the dataset drops trailing
+// nouns ("Oklahoma City" is "oklahoma-ok"), so the hub resolves its dataset
+// record by (name, state) when the slug lookup misses, prints the dataset
+// spelling, and links category x city pages by the DATASET slug those routes
+// key on. Source pins read the comment-stripped page.
+
+describe('W2-CITYHUB: the city hub resolves its dataset record and links by dataset slug', () => {
+  const CITY_PAGE = 'app/jobs/city/[slug]/page.tsx';
+  const src = () => readCode(CITY_PAGE);
+
+  it('falls back from the route slug to the (name, state) lookup', () => {
+    expect(src()).toMatch(/getCityBySlug\(slug\)\s*\?\?\s*getCityByNameState\(/);
+    // The case the fallback exists for: the route slug keeps the trailing
+    // "City" the dataset slug dropped, so only the name lookup can find it.
+    expect(getCityBySlug('oklahoma-city-ok')).toBeUndefined();
+    expect(parseCitySlugToName('oklahoma-city-ok')).toBe('Oklahoma City');
+    expect(getCityByNameState('Oklahoma City', 'OK')?.slug).toBe('oklahoma-ok');
+  });
+
+  it('prints the dataset spelling ("McHenry"), not the title-cased slug ("Mchenry")', () => {
+    expect(parseCitySlugToName('mchenry-il')).toBe('Mchenry');
+    // The name lookup is case-insensitive, so the title-cased parse still
+    // lands on the record, and the page reads its `name` for display.
+    expect(getCityByNameState('Mchenry', 'IL')?.name).toBe('McHenry');
+    expect(src()).toMatch(/cityData\?\.name\s*\?\?/);
+  });
+
+  it('links category x city pages by the DATASET slug, never by the route slug', () => {
+    const code = src();
+    // The category x city route keys on getCityBySlug, so a route-slug link
+    // ("oklahoma-city-ok") would 410 at the middleware allowlist.
+    expect(code).toContain('/jobs/${row.categorySlug}/city/${cityData.slug}');
+    // The hub's own self canonical is /jobs/city/${slug} and stays; a
+    // category segment in front of /city/${slug} is the bug.
+    expect(code).not.toMatch(/\}\/city\/\$\{slug\}/);
+  });
+
+  it('gates every category x city link on the shared link-list floor', () => {
+    const code = src();
+    expect(code).toContain("from '@/lib/pseo/render-gate'");
+    expect(code).toMatch(/totalJobs >= MIN_JOBS_FOR_LINK_LIST_ROW/);
+    // Stale rows never feed the link list.
+    expect(code).toContain('updatedAt: { gte: pseoStatsFreshnessThreshold() }');
+  });
+
+  it('robots come from the shared local-listing gate and the canonical stays self', () => {
+    const code = src();
+    expect(code).toMatch(/shouldIndexLocalListingPage\(\{\s*activeJobs: facts\.total,\s*distinctEmployers: facts\.distinctEmployers,?\s*\}\)/);
+    expect(code).toContain('canonical: `${brand.baseUrl}/jobs/city/${slug}`');
+    expect(code).toMatch(/index: false,\s*follow: true/);
   });
 });

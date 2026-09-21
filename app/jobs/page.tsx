@@ -8,6 +8,7 @@ import { slugify } from '@/lib/utils';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import JobsPageClient from './JobsPageClient';
 import { Job } from '@/lib/types';
+import { JobsBoardListViewTracker } from '@/components/analytics/ViewTrackers';
 
 
 // Nav-only params do not constitute a user filter — paginated and sorted
@@ -224,6 +225,11 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
           location: true,
           city: true,
           state: true,
+          // Selected for the GA4 list impression below, not for the UI. The
+          // card renders `location`; item_category3 must carry the two-letter
+          // code, because that is what the detail page and the card click
+          // already send for the same job.
+          stateCode: true,
           jobType: true,
           isRemote: true,
           isHybrid: true,
@@ -304,6 +310,29 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
 
   return (
     <>
+      {/* view_item_list for the board's highest-traffic listing surface.
+          Mounted here rather than in JobsPageClient so it behaves exactly
+          like the category hubs: one impression per server render, which is
+          once per URL. Client-side filter changes inside JobsPageClient do
+          not re-render this server component, so they produce no second
+          impression, and a filter change that alters the URL does.
+
+          stateCode, never state. Job.state holds "California" and
+          Job.stateCode holds "CA" in separate columns, and item_category3 is
+          one item-scoped dimension: sending the long name from this surface
+          alone would split every Californian listing across two values that
+          no report reconciles. A row with no recorded code omits the
+          dimension here exactly as it does on the detail page. */}
+      <JobsBoardListViewTracker
+        jobs={jobs.map((j: Job) => ({
+          id: j.id,
+          title: j.title,
+          employer: j.employer,
+          jobType: j.jobType,
+          stateCode: j.stateCode,
+          normalizedMinSalary: j.normalizedMinSalary,
+        }))}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jobListSchema).replace(/</g, '\\u003c').replace(/>/g, '\\u003e') }}

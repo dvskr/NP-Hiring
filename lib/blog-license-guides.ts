@@ -17,8 +17,12 @@
  *     tests/regressions/p1-content-library-license-guides.test.ts),
  *     verified against the live NCSBN roster on NLC_ROSTER_VERIFIED_AT.
  *   - Salary / growth figures: lib/stats-sources.ts, cited inline. Live
- *     state-level numbers are LINKED (/salary-guide/<state>), never
- *     restated here.
+ *     state-level numbers render in the page's market snapshot
+ *     (components/blog/LicenseGuideMarketSnapshot.tsx, gated on the
+ *     target pages rendering), never in this static markdown, which is
+ *     also synced into the DB and cannot carry live conditions.
+ *   - State rule text: STATE_PRACTICE_AUTHORITY[state].details, quoted
+ *     verbatim (LIC-L1), so guides in the same authority tier differ.
  *   - Board contact: the NCSBN member-board directory. Fees, CE hours,
  *     renewal cycles, and processing times are NOT in repo data, so the
  *     guides deliberately never quote them — every such question is
@@ -41,6 +45,11 @@ import {
     type PracticeAuthority,
 } from './state-practice-authority';
 import { STAT_SOURCES, type StatSource } from './stats-sources';
+import { getNeighboringStates } from './pseo/neighboring-states';
+import {
+    BENCHMARK_MIN_EMPLOYERS,
+    BENCHMARK_MIN_POSTINGS,
+} from '../components/tools/benchmark-model';
 import type { BlogPost } from './blog';
 
 // ─── Editorial dates (real, fixed — never render-time; audit B54) ───────────
@@ -254,6 +263,28 @@ export const LICENSE_GUIDE_STATES: ReadonlyArray<LicenseGuideState> =
             boardUrl: ncsbnBoardUrl(name),
         }));
 
+const LICENSE_STATE_BY_NAME: ReadonlyMap<string, LicenseGuideState> = new Map(
+    LICENSE_GUIDE_STATES.map((s) => [s.name, s]),
+);
+
+/**
+ * LIC-L2: the nearby jurisdictions (lib/pseo/neighboring-states.ts, a
+ * proximity list, so copy says "nearby", never "bordering") as guide rows.
+ * Feeds the sibling-guide table on the post page and the variation test.
+ */
+export function getLicenseGuideNearbyStates(stateName: string): LicenseGuideState[] {
+    return getNeighboringStates(stateName)
+        .map((name) => LICENSE_STATE_BY_NAME.get(name))
+        .filter((s): s is LicenseGuideState => s !== undefined);
+}
+
+/** Table-cell label for a compact status (the nearby-states table). */
+export function nlcTableLabel(status: NlcStatus): string {
+    if (status === 'member') return 'Member';
+    if (status === 'pending') return 'Enacted, implementation pending';
+    return 'Not a member';
+}
+
 // ─── Prose builders ─────────────────────────────────────────────────────────
 
 /**
@@ -300,6 +331,18 @@ function authoritySection(s: LicenseGuideState): string {
                 `Restricted status affects more than autonomy: it shapes credentialing, prescriptive authority paperwork, and how quickly you can change practice settings, since supervision arrangements typically must be updated when you move. The [${s.boardName}](${s.boardUrl}) publishes the supervision and delegation requirements that apply; legislative changes in restricted states are frequent enough that the board page is the only current source worth trusting.`,
             ].join('\n\n');
     }
+}
+
+/**
+ * LIC-L1: the state's own rule text, quoted verbatim from the AANP-based
+ * dataset (lib/state-practice-authority.ts). Repo data, not live data, so
+ * it lives in the static markdown the sync script mirrors into the DB.
+ * Every entry differs, which is what breaks the near-duplicate groups
+ * among same-tier guides (spec4 3C).
+ */
+export function buildLicenseGuideRuleText(s: LicenseGuideState): string {
+    const details = STATE_PRACTICE_AUTHORITY[s.name].details;
+    return `The ${s.name} entry in the practice-authority dataset ${brand.name} publishes (AANP classification) reads: "${details}" The [${s.boardName}](${s.boardUrl}) holds the current rule text and the forms that go with it.`;
 }
 
 /**
@@ -419,9 +462,18 @@ export function buildLicenseGuideFaq(s: LicenseGuideState): LicenseGuideFaq[] {
         },
         {
             name: `How much do ${NP}s make in ${s.name}?`,
-            text: `The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}. State-level pay varies with cost of living and practice setting. The ${s.name} salary guide on ${brand.name} shows live averages and ranges computed from current ${s.code} postings.`,
+            text: payFaqAnswer(s),
         },
     ];
+}
+
+/**
+ * Data-free pay answer (spec4 B2): the cited BLS median plus the publishing
+ * gate. It never states a state figure, because the static markdown (and
+ * the faq_json synced from it) cannot know whether the gate is met.
+ */
+function payFaqAnswer(s: LicenseGuideState): string {
+    return `The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}. ${brand.name} publishes a ${s.name} median only when at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers support it. The ${s.name} job market snapshot on this page reports the current ${s.code} figure whenever that gate is met.`;
 }
 
 function buildMarkdown(s: LicenseGuideState): string {
@@ -447,6 +499,8 @@ function buildMarkdown(s: LicenseGuideState): string {
 
 ${authoritySection(s)}
 
+${buildLicenseGuideRuleText(s)}
+
 ## The Nurse Licensure Compact and your ${s.code} license
 
 ${nlcSection(s)}
@@ -463,7 +517,7 @@ Renewal cycles, continuing-education requirements, and fees are set by the ${s.b
 
 ## What ${NP}s earn in ${s.name}
 
-The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2034.formatted} (${STAT_SOURCES.blsGrowth2034.source}). For live ${s.name} numbers, including average pay, reported ranges, top employers, and pay by practice setting computed from current postings, see the [${s.name} salary guide](/salary-guide/${s.stateSlug}) and browse [open ${s.code} positions](/jobs/state/${s.stateSlug}).
+The national median for ${NP_PROSE}s is ${cite(STAT_SOURCES.averageSalary)}, and employment is projected to grow ${STAT_SOURCES.blsGrowth2034.formatted} (${STAT_SOURCES.blsGrowth2034.source}). ${brand.name} publishes a ${s.name} median only when at least ${BENCHMARK_MIN_POSTINGS} postings with disclosed pay from at least ${BENCHMARK_MIN_EMPLOYERS} employers support it. The ${s.name} job market snapshot further down this page reports what is currently posted for ${s.code}, and it links the live ${s.code} listings and the ${s.name} salary guide only when those pages have something to show.
 
 ## Frequently asked questions
 
@@ -524,15 +578,13 @@ export function getLicenseGuidePost(stateSlug: string): BlogPost | null {
 
 /**
  * HowTo JSON-LD for a license guide, derived from the SAME steps array
- * rendered in the visible "How to apply" section.
+ * rendered in the visible "How to apply" section (LIC-L4).
  *
- * NOT yet emitted: app/blog/[slug]/page.tsx (owned by the E-E-A-T
- * workstream) must add, inside its LICENSE_GUIDE_SLUG_REGEX branch:
- *   const howTo = buildLicenseGuideHowTo(stateSlugFromBlog);
- *   {howTo && <script type="application/ld+json" ... JSON.stringify(howTo)
- *     .replace(/</g, '\\u003c').replace(/>/g, '\\u003e') ... />}
- * (and tests/regressions/aeo-content-blog-freshness.test.ts B45 "no HowTo"
- * assertions must be updated to allow the license-branch HowTo).
+ * Emitted by app/blog/[slug]/page.tsx inside its LICENSE_GUIDE_SLUG_REGEX
+ * branch, escaped through the page's toJsonLd guard. Google no longer
+ * shows HowTo rich results, so this is structured context, not a traffic
+ * lever. tests/regressions/aeo-content-blog-freshness.test.ts pins that the
+ * page never builds a HowTo inline: this builder is the only source.
  */
 export function buildLicenseGuideHowTo(stateSlug: string): object | null {
     const s = getLicenseGuideState(stateSlug);

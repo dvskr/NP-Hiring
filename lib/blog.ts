@@ -73,7 +73,44 @@ const POSTS_PER_PAGE = 12;
 /** Upper bound on DB rows merged in memory with the license-guide series. */
 const MERGED_LISTING_MAX_ROWS = 1000;
 
+const LISTING_COLUMNS = 'id, title, slug, meta_description, category, publish_date, created_at, image_url, youtube_video_id';
+const RELATED_COLUMNS = 'id, title, slug, meta_description, category, publish_date, image_url';
+
 type SupabaseClient = ReturnType<typeof getSupabaseClient>;
+
+type SlugRow = { slug: string; updated_at: string };
+
+/** One blog_posts read; `error` is set on a PostgREST error or a thrown client. */
+interface BlogRead<T> {
+    data: T | null;
+    error: unknown;
+    count: number | null;
+}
+
+/**
+ * Run one blog_posts read and never throw. `T` names the row shape the
+ * caller's select produces (supabase-js types this untyped table as any).
+ *
+ * Production lesson (blog outage, September 2026): the anon role had no
+ * SELECT grant on blog_posts, so every read failed with Postgres 42501 and
+ * the loaders that returned early on error 404ed all 19 authored posts and
+ * dropped the 51 license guides from the sitemap. Every loader below treats
+ * a failed read as "zero DB rows" and still serves the code-generated posts;
+ * a thrown client error (missing env, network layer) takes the same path.
+ */
+async function readBlogPosts<T>(
+    label: string,
+    run: (supabase: SupabaseClient) => PromiseLike<{ data: unknown; error: unknown; count?: number | null }>,
+): Promise<BlogRead<T>> {
+    try {
+        const result = await run(getSupabaseClient());
+        if (result.error) console.error(`Error ${label}:`, result.error);
+        return { data: result.data as T | null, error: result.error, count: result.count ?? null };
+    } catch (error) {
+        console.error(`Error ${label}:`, error);
+        return { data: null, error, count: null };
+    }
+}
 
 /**
  * Code-generated license-guide slugs that are live WITHOUT a blog_posts row.
@@ -163,36 +200,30 @@ function mdxCandidateSlugs(category?: string): string[] {
 }
 
 /**
- * Slugs from `slugs` that have a blog_posts row of any status. On a query
- * error this fails OPEN (no rows), matching hasSuppressedRow: the fallback
+ * Slugs from `slugs` that have a blog_posts row of any status. On a failed
+ * read this fails OPEN (no rows), matching hasSuppressedRow: the fallback
  * posts still render, so they should still be listed.
  */
-async function fetchDbSlugsIn(supabase: SupabaseClient, slugs: readonly string[]): Promise<string[]> {
+async function fetchDbSlugsIn(slugs: readonly string[]): Promise<string[]> {
     if (slugs.length === 0) return [];
-    const { data, error } = await supabase.from('blog_posts').select('slug').in('slug', [...slugs]);
-    if (error) {
-        console.error('Error fetching blog rows for MDX guides:', error);
-        return [];
-    }
-    return (data ?? []).map((row: { slug: string }) => row.slug);
+    const read = await readBlogPosts<{ slug: string }[]>('fetching blog rows for code-served posts', (supabase) =>
+        supabase.from('blog_posts').select('slug').in('slug', [...slugs]),
+    );
+    return (read.data ?? []).map((row) => row.slug);
 }
 
 /**
- * Slugs of every blog_posts row (any status) in the license-guide series.
- * On a query error this fails OPEN (no rows), matching
- * hasSuppressedRow: the fallback guides still render, so they should
- * still be listed.
+ * Slugs of every blog_posts row in the license-guide series (any status,
+ * or only the unpublished ones). On a failed read this fails OPEN (no
+ * rows), matching hasSuppressedRow: the fallback guides still render, so
+ * they should still be listed.
  */
-async function fetchLicenseGuideDbSlugs(supabase: SupabaseClient): Promise<string[]> {
-    const { data, error } = await supabase
-        .from('blog_posts')
-        .select('slug')
-        .like('slug', `${LICENSE_GUIDE_SLUG_PREFIX}%`);
-    if (error) {
-        console.error('Error fetching license guide rows:', error);
-        return [];
-    }
-    return (data ?? []).map((row: { slug: string }) => row.slug);
+async function fetchLicenseGuideDbSlugs(onlyUnpublished = false): Promise<string[]> {
+    const read = await readBlogPosts<{ slug: string }[]>('fetching license guide rows', (supabase) => {
+        const query = supabase.from('blog_posts').select('slug').like('slug', `${LICENSE_GUIDE_SLUG_PREFIX}%`);
+        return onlyUnpublished ? query.neq('status', 'published') : query;
+    });
+    return (read.data ?? []).map((row) => row.slug);
 }
 
 export async function getPublishedPosts(
@@ -200,44 +231,33 @@ export async function getPublishedPosts(
     limit = POSTS_PER_PAGE,
     category?: string
 ) {
-    const supabase = getSupabaseClient();
     const offset = (page - 1) * limit;
     const includeGuides = categoryIncludesLicenseGuides(category) && LICENSE_GUIDE_SERIES_PUBLISHED;
     const mdxSlugs = mdxCandidateSlugs(category);
     const mergeFallbacks = includeGuides || mdxSlugs.length > 0;
 
-    let query = supabase
-        .from('blog_posts')
-        .select('id, title, slug, meta_description, category, publish_date, created_at, image_url, youtube_video_id')
-        .eq('status', 'published')
-        .order('publish_date', { ascending: false, nullsFirst: false });
-    // With code-served guides merged in, paging happens after the merge.
-    query = mergeFallbacks
-        ? query.limit(MERGED_LISTING_MAX_ROWS)
-        : query.range(offset, offset + limit - 1);
-
-    if (category && category !== 'all') {
-        query = query.eq('category', category);
-    }
-
-    const [{ data, error }, licenseDbSlugs, mdxDbSlugs] = await Promise.all([
-        query,
-        includeGuides ? fetchLicenseGuideDbSlugs(supabase) : Promise.resolve([]),
-        fetchDbSlugsIn(supabase, mdxSlugs),
+    const [listing, licenseDbSlugs, mdxDbSlugs] = await Promise.all([
+        readBlogPosts<BlogPost[]>('fetching blog posts', (supabase) => {
+            let query = supabase
+                .from('blog_posts')
+                .select(LISTING_COLUMNS)
+                .eq('status', 'published')
+                .order('publish_date', { ascending: false, nullsFirst: false });
+            // With code-served posts merged in, paging happens after the merge.
+            query = mergeFallbacks
+                ? query.limit(MERGED_LISTING_MAX_ROWS)
+                : query.range(offset, offset + limit - 1);
+            return category && category !== 'all' ? query.eq('category', category) : query;
+        }),
+        includeGuides ? fetchLicenseGuideDbSlugs() : Promise.resolve([]),
+        fetchDbSlugsIn(mdxSlugs),
     ]);
-    if (error) {
-        console.error('Error fetching blog posts:', error);
-        // Fail OPEN for the code-served guides: getPostBySlug still renders
-        // them when blog_posts is unreadable (it treats the error as a miss),
-        // so the index must still list them rather than claim "No posts found".
-        if (!mergeFallbacks) return [];
-    }
-    const rows = (error ? [] : (data ?? [])) as BlogPost[];
+    // A failed read contributes zero DB rows. The code-served posts still
+    // list (getPostBySlug renders them when blog_posts is unreadable), so
+    // /blog never claims "No posts found" during an outage.
+    const rows = listing.data ?? [];
     if (!mergeFallbacks) return rows;
 
-    // Live code-served guides belong in the index: without them /blog read
-    // "No posts found" while the license guides and the .mdx guides were
-    // live and in the sitemap.
     const licenseSlugs = includeGuides ? licenseGuideFallbackSlugs(licenseDbSlugs) : [];
     const withGuides = mergeListingWithLicenseGuides(rows, licenseSlugs);
     const merged = mergeListingWithFallbackPosts(withGuides, mdxFallbackPosts(mdxDbSlugs, category));
@@ -245,64 +265,54 @@ export async function getPublishedPosts(
 }
 
 export async function getPostCount(category?: string): Promise<number> {
-    const supabase = getSupabaseClient();
     const includeGuides = categoryIncludesLicenseGuides(category) && LICENSE_GUIDE_SERIES_PUBLISHED;
 
-    let query = supabase
-        .from('blog_posts')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'published');
-
-    if (category && category !== 'all') {
-        query = query.eq('category', category);
-    }
-
-    const [{ count, error }, licenseDbSlugs, mdxDbSlugs] = await Promise.all([
-        query,
-        includeGuides ? fetchLicenseGuideDbSlugs(supabase) : Promise.resolve([]),
-        fetchDbSlugsIn(supabase, mdxCandidateSlugs(category)),
+    const [counted, licenseDbSlugs, mdxDbSlugs] = await Promise.all([
+        readBlogPosts<unknown>('counting blog posts', (supabase) => {
+            const query = supabase
+                .from('blog_posts')
+                .select('id', { count: 'exact', head: true })
+                .eq('status', 'published');
+            return category && category !== 'all' ? query.eq('category', category) : query;
+        }),
+        includeGuides ? fetchLicenseGuideDbSlugs() : Promise.resolve([]),
+        fetchDbSlugsIn(mdxCandidateSlugs(category)),
     ]);
-    // On a count error, count zero DB rows but still count the live
-    // code-served guides, matching getPublishedPosts and getPostBySlug.
-    if (error) console.error('Error counting blog posts:', error);
-    const dbCount = error ? 0 : (count ?? 0);
+    // On a failed count the DB contributes zero, but the live code-served
+    // posts still count, matching getPublishedPosts and getPostBySlug.
+    const dbCount = counted.count ?? 0;
     const guideCount = includeGuides ? licenseGuideFallbackSlugs(licenseDbSlugs).length : 0;
     return dbCount + guideCount + mdxFallbackPosts(mdxDbSlugs, category).length;
 }
 
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
-    const supabase = getSupabaseClient();
+    const found = await readBlogPosts<BlogPost | null>('fetching blog post', (supabase) =>
+        supabase.from('blog_posts').select('*').eq('slug', slug).eq('status', 'published').maybeSingle(),
+    );
+    if (found.data) return found.data;
 
-    const { data, error } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .eq('slug', slug)
-        .eq('status', 'published')
-        .single();
-
-    if (error || !data) {
-        // License-guide series fallback: 'np-license-<state>' slugs resolve
-        // deterministically from lib/blog-license-guides.ts when no DB row
-        // exists, so the all-or-nothing gate (LICENSE_GUIDE_SERIES_PUBLISHED)
-        // can never 404 a subset of the 51 states — rendering does not
-        // depend on the sync script having run. A published DB row for the
-        // same slug (editorial override via admin) takes precedence above.
-        const licenseMatch = slug.match(LICENSE_GUIDE_SLUG_REGEX);
-        if (licenseMatch && LICENSE_GUIDE_SERIES_PUBLISHED) {
-            return (await hasSuppressedRow(slug))
-                ? null
-                : getLicenseGuidePost(licenseMatch[1]);
-        }
-        // Authored .mdx guide fallback (content/blog/): same contract as the
-        // license series, so a guide wired into the content map never 404s
-        // just because scripts/sync-blog-to-db.ts has not run.
-        const mdxPost = getMdxPost(slug);
-        if (mdxPost) {
-            return (await hasSuppressedRow(slug)) ? null : mdxPost;
-        }
-        return null;
+    // A miss (no published row, or blog_posts unreadable) falls through to
+    // the code-served posts, so rendering never depends on the sync script
+    // having run or on the DB grant being in place.
+    // License-guide series fallback: 'np-license-<state>' slugs resolve
+    // deterministically from lib/blog-license-guides.ts when no DB row
+    // exists, so the all-or-nothing gate (LICENSE_GUIDE_SERIES_PUBLISHED)
+    // can never 404 a subset of the 51 states. A published DB row for the
+    // same slug (editorial override via admin) takes precedence above.
+    const licenseMatch = slug.match(LICENSE_GUIDE_SLUG_REGEX);
+    if (licenseMatch && LICENSE_GUIDE_SERIES_PUBLISHED) {
+        return (await hasSuppressedRow(slug))
+            ? null
+            : getLicenseGuidePost(licenseMatch[1]);
     }
-    return data as BlogPost;
+    // Authored .mdx guide fallback (content/blog/): same contract as the
+    // license series, so a guide wired into the content map never 404s
+    // just because scripts/sync-blog-to-db.ts has not run.
+    const mdxPost = getMdxPost(slug);
+    if (mdxPost) {
+        return (await hasSuppressedRow(slug)) ? null : mdxPost;
+    }
+    return null;
 }
 
 /**
@@ -315,21 +325,17 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
  * status='published' filter and the code fallback serves the post anyway.
  * A YMYL correction that can't be taken down is worse than no CMS at all.
  *
- * Only runs on the miss path for license slugs, so the extra round-trip
- * never touches the normal published-post render.
+ * Only runs on the miss path for license and .mdx slugs, so the extra
+ * round-trip never touches the normal published-post render.
  */
 async function hasSuppressedRow(slug: string): Promise<boolean> {
-    const supabase = getSupabaseClient();
-    const { data, error } = await supabase
-        .from('blog_posts')
-        .select('id')
-        .eq('slug', slug)
-        .maybeSingle();
-
-    // On a query error, fail OPEN (serve the generated guide) — an outage in
+    const read = await readBlogPosts<{ id: string } | null>('checking for an unpublished blog row', (supabase) =>
+        supabase.from('blog_posts').select('id').eq('slug', slug).maybeSingle(),
+    );
+    // On a failed read, fail OPEN (serve the generated guide): an outage in
     // this secondary lookup should not 404 a page that would otherwise render.
-    if (error) return false;
-    return Boolean(data);
+    if (read.error) return false;
+    return Boolean(read.data);
 }
 
 export async function getRelatedPosts(
@@ -337,95 +343,118 @@ export async function getRelatedPosts(
     currentSlug: string,
     limit = 3
 ): Promise<BlogPost[]> {
-    const supabase = getSupabaseClient();
-
-    // Try same-category first — strongest topical relevance signal.
-    const { data, error } = await supabase
-        .from('blog_posts')
-        .select('id, title, slug, meta_description, category, publish_date, image_url')
-        .eq('status', 'published')
-        .eq('category', category)
-        .neq('slug', currentSlug)
-        .order('publish_date', { ascending: false, nullsFirst: false })
-        .limit(limit);
-
-    if (error) {
-        console.error('Error fetching related posts:', error);
-        return [];
-    }
-
-    const related = (data ?? []) as BlogPost[];
-
-    // Top up from any-category if the same-category query is short of `limit`.
-    // Thin categories (1-2 posts) would otherwise leave the "Read Next" block
-    // empty, costing every post page an internal-linking opportunity. The
-    // any-category fill ranks lower for topical match but still beats nothing.
-    if (related.length < limit) {
-        const have = new Set([currentSlug, ...related.map((p) => p.slug)]);
-        const { data: fillData, error: fillErr } = await supabase
+    // Same category first: the strongest topical relevance signal.
+    const same = await readBlogPosts<BlogPost[]>('fetching related posts', (supabase) =>
+        supabase
             .from('blog_posts')
-            .select('id, title, slug, meta_description, category, publish_date, image_url')
+            .select(RELATED_COLUMNS)
             .eq('status', 'published')
+            .eq('category', category)
             .neq('slug', currentSlug)
             .order('publish_date', { ascending: false, nullsFirst: false })
-            .limit(limit + related.length);
+            .limit(limit),
+    );
+    const related: BlogPost[] = [...(same.data ?? [])];
+    const have = new Set([currentSlug, ...related.map((p) => p.slug)]);
 
-        if (!fillErr && fillData) {
-            for (const post of fillData as BlogPost[]) {
-                if (related.length >= limit) break;
-                if (have.has(post.slug)) continue;
-                related.push(post);
-                have.add(post.slug);
-            }
-        }
+    // Top up from any category when the same-category query is short of
+    // `limit`: thin categories (1 to 2 posts) would otherwise leave "Read
+    // Next" empty. Skipped when the first read failed: the DB is unreadable
+    // and the code-served top-up below covers the block.
+    if (related.length < limit && !same.error) {
+        const fill = await readBlogPosts<BlogPost[]>('fetching related post fill', (supabase) =>
+            supabase
+                .from('blog_posts')
+                .select(RELATED_COLUMNS)
+                .eq('status', 'published')
+                .neq('slug', currentSlug)
+                .order('publish_date', { ascending: false, nullsFirst: false })
+                .limit(limit + related.length),
+        );
+        appendUpToLimit(related, have, fill.data ?? [], limit);
     }
 
+    // Code-served top-up: the license guides and .mdx posts that render
+    // without a DB row. Before this, "Read Next" was empty on every post
+    // while blog_posts was unreadable or unsynced.
+    if (related.length < limit) {
+        appendUpToLimit(related, have, await relatedFallbackPosts(category, currentSlug), limit);
+    }
     return related;
+}
+
+/** Append posts whose slug is not yet in `have` until `related` holds `limit`. */
+function appendUpToLimit(related: BlogPost[], have: Set<string>, posts: readonly BlogPost[], limit: number): void {
+    for (const post of posts) {
+        if (related.length >= limit) break;
+        if (have.has(post.slug)) continue;
+        related.push(post);
+        have.add(post.slug);
+    }
+}
+
+/**
+ * Code-served posts eligible for "Read Next": license guides and .mdx posts
+ * with no DB row of any status (a published row is already reachable from
+ * the DB reads above, an unpublished row is a takedown). Ranked same
+ * category first, then newest first; among equal dates the slugs after
+ * `currentSlug` lead, so the 51 guides, which share one publish date, do
+ * not all point at the same three states.
+ */
+async function relatedFallbackPosts(category: string, currentSlug: string): Promise<BlogPost[]> {
+    const guides = LICENSE_GUIDE_SERIES_PUBLISHED ? mergeListingWithLicenseGuides([], getAllLicenseGuideSlugs()) : [];
+    const candidates = mergeListingWithFallbackPosts([], [...guides, ...mdxFallbackPosts([])])
+        .filter((post) => post.slug !== currentSlug);
+    const inDb = new Set(await fetchDbSlugsIn(candidates.map((post) => post.slug)));
+    const time = (post: BlogPost) => (post.publish_date ? Date.parse(post.publish_date) : Number.NEGATIVE_INFINITY);
+    const rank = (post: BlogPost) => (post.category === category ? 0 : 1);
+    const follows = (post: BlogPost) => (post.slug > currentSlug ? 0 : 1);
+    return candidates
+        .filter((post) => !inDb.has(post.slug))
+        .sort((a, b) => rank(a) - rank(b) || time(b) - time(a) || follows(a) - follows(b) || a.slug.localeCompare(b.slug));
 }
 
 export async function getAllPublishedSlugs(): Promise<
     { slug: string; updated_at: string }[]
 > {
-    const supabase = getSupabaseClient();
-
-    const { data, error } = await supabase
-        .from('blog_posts')
-        .select('slug, updated_at')
-        .eq('status', 'published')
-        .order('publish_date', { ascending: false, nullsFirst: false });
-
-    // On a query error keep going with zero DB rows: the code-served guides
-    // below still render via getPostBySlug, so the sitemap still lists them.
-    if (error) console.error('Error fetching blog slugs:', error);
-    const rows: { slug: string; updated_at: string }[] = error ? [] : [...(data ?? [])];
+    // Never return early here (tests/regressions/blog-slugs-fallback.test.ts).
+    // On a failed read the DB contributes zero rows and the code-served posts
+    // below are still listed, matching what getPostBySlug renders. Returning
+    // [] on error is what emptied the sitemap of every blog URL while the
+    // anon role lacked SELECT on blog_posts.
+    const published = await readBlogPosts<SlugRow[]>('fetching blog slugs', (supabase) =>
+        supabase
+            .from('blog_posts')
+            .select('slug, updated_at')
+            .eq('status', 'published')
+            .order('publish_date', { ascending: false, nullsFirst: false }),
+    );
+    const rows: SlugRow[] = [...(published.data ?? [])];
+    const seen = new Set(rows.map((r) => r.slug));
 
     // Append the 51 code-generated license-guide slugs (sitemap + listing
     // coverage) once the series is published. Deduped against DB rows so
-    // states already synced into blog_posts aren't listed twice, and
-    // suppressed for slugs an editor unpublished — otherwise the sitemap
+    // states already synced into blog_posts are not listed twice, and
+    // suppressed for slugs an editor unpublished: otherwise the sitemap
     // would keep advertising a URL that getPostBySlug() now 404s.
     if (LICENSE_GUIDE_SERIES_PUBLISHED) {
-        const seen = new Set(rows.map((r) => r.slug));
-        const { data: suppressedRows } = await supabase
-            .from('blog_posts')
-            .select('slug')
-            .neq('status', 'published')
-            .like('slug', `${LICENSE_GUIDE_SLUG_PREFIX}%`);
-        const suppressed = new Set(
-            (suppressedRows ?? []).map((r: { slug: string }) => r.slug),
-        );
+        const suppressed = new Set(await fetchLicenseGuideDbSlugs(true));
         for (const slug of getAllLicenseGuideSlugs()) {
             if (!seen.has(slug) && !suppressed.has(slug)) {
                 rows.push({ slug, updated_at: LICENSE_GUIDE_REVIEWED_AT });
+                seen.add(slug);
             }
         }
     }
 
     // Authored .mdx guides served from code (getPostBySlug fallback): listed
     // exactly when no DB row of any status exists for the slug.
-    const mdxDbSlugs = await fetchDbSlugsIn(supabase, mdxCandidateSlugs());
+    const mdxDbSlugs = await fetchDbSlugsIn(mdxCandidateSlugs());
     for (const post of mdxFallbackPosts(mdxDbSlugs)) {
-        rows.push({ slug: post.slug, updated_at: post.updated_at });
+        if (!seen.has(post.slug)) {
+            rows.push({ slug: post.slug, updated_at: post.updated_at });
+            seen.add(post.slug);
+        }
     }
     return rows;
 }

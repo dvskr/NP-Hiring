@@ -169,13 +169,32 @@ describe('A4 — every salary surface renders the shared provenance line', () =>
     it('the state template ([state] → 51 pages) states its live basis, no fake date', () => {
         const src = read(STATE_PAGE);
         expect(src).toContain("import SalaryProvenance from '@/components/SalaryProvenance'");
-        expect(src).toContain('live={{ count: salaryData.jobCount, minimum: 1 }}');
+        // SAL-B7 (thin-spec-4): the line used to render at `minimum: 1`, so
+        // 31 of 43 pages printed "Based on 3 active postings with disclosed
+        // salary" while publishing no figure at all. It now renders ONLY
+        // when the benchmark gate passed, and quotes the same constant the
+        // figure is gated by, with the same n the median is computed from.
+        expect(src).toContain(
+            'live={salaryData.gatePassed ? { count: salaryData.postings, minimum: BENCHMARK_MIN_POSTINGS } : undefined}',
+        );
+        expect(src).not.toContain('minimum: 1 }');
         // B54: this page has no editorial review literal, so it must not
         // pass one — and must still omit Article dates entirely (comments
         // documenting that rule don't count as published code).
         const code = stripComments(src);
         expect(code).not.toContain('reviewedOn=');
         expect(code).not.toContain('dateModified');
+    });
+
+    it('the state template attributes the figure to the gated sample, not the raw pool', () => {
+        const code = stripComments(read(STATE_PAGE));
+        // The provenance count and the published median must come from the
+        // SAME GatedSalary, so the sentence can never claim a sample the
+        // figure was not computed from (the old jobCount was every
+        // NP-eligible analytics row, gated or not).
+        expect(code).not.toContain('salaryData.jobCount');
+        expect(code).toContain('salaryData.gatePassed');
+        expect(code).toContain('salaryData.postings');
     });
 
     it('the specialty detail template gates its live basis on the benchmark policy', () => {

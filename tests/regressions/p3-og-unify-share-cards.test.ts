@@ -180,6 +180,26 @@ describe('P3 #8 — the /api/og query-param contract survived the redesign', () 
         const dropped = emitted.filter((p) => !read_.has(p));
         expect(dropped, `/api/og/city ignores emitted params: ${dropped.join(', ')}`).toEqual([]);
     });
+
+    it('the metro card sends city/jobs/salary, and the salary tile stays gated', () => {
+        // PLAN C.1 T0-3: the metro page used to build ?salary from
+        // stats.avgSalary, an ungated board average printed as "$NNK". It now
+        // sends the published benchmark median through formatK, and only when
+        // the benchmark clears the gate, so the card drops the tile rather
+        // than showing a figure this board cannot source. The param NAMES are
+        // unchanged, which is why the caller-contract scan above still passes;
+        // this case pins the thing that did change.
+        const src = read('app/jobs/metro/[slug]/page.tsx');
+        expect(src).toContain('/api/og/city?${ogParams.toString()}');
+        expect(src).toContain('city: `${metro.city}, ${metro.stateCode}`');
+        expect(src).toContain('jobs: String(facts.total)');
+        expect(src).toContain("...(facts.benchmark !== null && { salary: formatK(facts.benchmark.median) })");
+        expect(src, 'the metro card is back on an ungated average').not.toContain('avgSalary');
+        const route = paramsReadBy(CITY_ROUTE);
+        for (const param of ['city', 'jobs', 'salary']) {
+            expect(route.has(param), `/api/og/city stopped reading ?${param}`).toBe(true);
+        }
+    });
 });
 
 // ─── one design system ────────────────────────────────────────────────────
@@ -300,12 +320,29 @@ describe('P2 #7 follow-up — the city card labels the shortage designation', ()
         expect(src).toContain('{shortage ? (');
     });
 
-    it('the caller gate that keeps the label on-topic is still the single predicate', () => {
-        // The route cannot know the discipline from the param, so the label is
-        // only true while the caller keeps gating on shortageIsOnTopic().
+    it('no caller can apply the label off-topic, because none sends ?shortage=true', () => {
+        // The route cannot know the discipline from the param, so this case
+        // used to pin the one caller gate that kept the label true: the
+        // category x city template's shortageIsOnTopic(city, config.slug)
+        // guard. PLAN C.1 T0-4 retires the donor behavioral-health HPSA
+        // column, so the gate was deleted along with the param it guarded.
+        // The property is now absolute rather than conditional, which is why
+        // this is a repin and not a weakening: nothing under app, lib or
+        // components hands the route a shortage param at all, so no page can
+        // put the badge on a city. The branch in the route is dormant, not
+        // dead, and the three cases above still pin its wording.
         const template = read('lib/pseo/category-city-template.tsx');
-        expect(template).toContain('shortageIsOnTopic(city, config.slug)');
-        expect(template).toContain("...(shortageMatchesCategory && { shortage: 'true' })");
+        // The predicate survives as a pure exported guard, and its own unit
+        // cases in p2-pseo-parity-donor-niche-gate still exercise it, but no
+        // render or metadata path calls it: the single occurrence left in the
+        // template is its declaration.
+        expect(template.match(/shortageIsOnTopic\(/g)).toHaveLength(1);
+        expect(template).toMatch(/export function shortageIsOnTopic\(/);
+        expect(template).not.toContain("shortage: 'true'");
+        const senders = callerFiles().filter((rel) =>
+            /['"]?shortage['"]?\s*:\s*['"]true['"]|[?&]shortage=true/.test(read(rel)),
+        );
+        expect(senders, `these files still send ?shortage=true: ${senders.join(', ')}`).toEqual([]);
     });
 });
 

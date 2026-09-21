@@ -47,7 +47,11 @@ import {
 } from '@/lib/pseo/city-narrative';
 import { buildSettingStateNarrative } from '@/lib/pseo/state-narrative';
 import { categoryOwnsShortageData, formatStatsBadge } from '@/lib/pseo/category-city-template';
+import { buildLiveRolesBadge } from '@/lib/pseo/listing-narrative';
 import { stripUnverifiableFreshness } from '@/components/CategoryHero';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import CategoryFAQAccordion from '@/components/CategoryFAQAccordion';
 import { getCityBySlug } from '@/lib/pseo/city-data/cities';
 import { ALL_CATEGORY_SLUGS, PSYCH_SPECIALTY_SLUG } from '@/lib/pseo/taxonomy-registry';
 import { scanNicheCopyDebt } from './brand-leak-scan';
@@ -238,11 +242,11 @@ describe('P3 #3 — city narrative makes no false designation claim in either po
         }
     });
 
-    it('on topic and flagged, the claim names its discipline and the site rule', () => {
+    it('on topic and flagged, no designation claim is published at all', () => {
+        // Thin plan T0-4 (2026-09): the shortage column has no citable source,
+        // so the narrative no longer names a designation in either polarity.
         const text = buildTaxonomyCityNarrative(flagged(), PSYCH_SPECIALTY_SLUG!, 12);
-        expect(text).toContain('behavioral-health Health Professional Shortage Area (HPSA)');
-        expect(text).toContain('NHSC-approved sites');
-        // The over-broad promise is gone.
+        expect(text).not.toMatch(/HPSA|Health Professional Shortage|NHSC|shortage area/i);
         expect(text).not.toMatch(/typically (eligible|qualify) for NHSC/i);
     });
 
@@ -272,10 +276,10 @@ describe('P3 #2 — state narrative makes no false designation claim in either p
         }
     });
 
-    it('on topic with a positive count, the claim names discipline and site rule', () => {
+    it('on topic with a positive count, no designation claim is published at all', () => {
+        // Thin plan T0-4 (2026-09): the count column has no citable source.
         const text = buildSettingStateNarrative(PSYCH_SPECIALTY_SLUG!, ...args(3));
-        expect(text).toContain('behavioral-health Health Professional Shortage Area (HPSA)');
-        expect(text).toContain('NHSC-approved sites');
+        expect(text).not.toMatch(/HPSA|Health Professional Shortage|NHSC|shortage area/i);
         expect(text).not.toMatch(/typically qualify for NHSC/i);
     });
 
@@ -299,16 +303,13 @@ describe('P3 #2/#3 — NHSC copy explains mechanics and quotes no award', () => 
                 .not.toMatch(/\$\s?\d[^.]{0,160}(NHSC|National Health Service Corps)/);
         });
 
-        it(`${rel} qualifies every shortage/HPSA claim with its discipline`, () => {
+        it(`${rel} makes no shortage/HPSA designation claim`, () => {
+            // Thin plan T0-4 (2026-09): the designation columns have no citable
+            // source, so the narratives stopped surfacing them altogether.
             const lines = readCode(rel)
                 .split('\n')
                 .filter((l) => /HPSA|Health Professional Shortage|shortage-area/i.test(l));
-            expect(lines.length, `${rel} should still surface the designation`)
-                .toBeGreaterThan(0);
-            for (const line of lines) {
-                expect(line, `${rel}: claim must name its discipline → ${line.trim()}`)
-                    .toMatch(/behavioral[- ]health/i);
-            }
+            expect(lines, `${rel} still surfaces a designation`).toEqual([]);
         });
 
         it(`${rel} never promises blanket NHSC eligibility`, () => {
@@ -319,11 +320,10 @@ describe('P3 #2/#3 — NHSC copy explains mechanics and quotes no award', () => 
         });
     }
 
-    it('the gate lives in one place and the state narrative imports it', () => {
+    it('the discipline gate has one definition and the state narrative does not copy it', () => {
         expect(readCode(CITY_NARRATIVE)).toContain('export function shortageColumnAppliesTo');
-        expect(readCode(STATE_NARRATIVE))
-            .toMatch(/import \{ shortageColumnAppliesTo \} from '\.\/city-narrative'/);
-        // No second copy of the predicate body.
+        // No second copy of the predicate body (the state narrative no longer
+        // needs it at all since the designation sentence was removed).
         expect(
             (readCode(STATE_NARRATIVE).match(/function shortageColumnAppliesTo/g) ?? []).length,
         ).toBe(0);
@@ -338,6 +338,26 @@ describe('P3 #4 — CategoryFAQAccordion answers carry the Speakable class', () 
         expect(src).toContain('className="faq-answer"');
         // On the answer <p>, not somewhere decorative.
         expect(src).toMatch(/<p className="faq-answer"[\s\S]{0,200}\{faq\.answer\}/);
+    });
+
+    // W1B-SHARED: the accordion is a server component over native <details>,
+    // so the class is pinned on the rendered HTML as well as the source:
+    // every answer is in the server output, no client JS, first item open.
+    it('renders native details with every answer under faq-answer in server HTML', () => {
+        const faqs = [
+            { question: 'First question?', answer: 'First answer in the HTML.' },
+            { question: 'Second question?', answer: 'Second answer, also in the HTML.' },
+        ];
+        const html = renderToStaticMarkup(React.createElement(CategoryFAQAccordion, { faqs }));
+        expect(html.match(/<details /g)).toHaveLength(2);
+        expect(html.match(/<summary /g)).toHaveLength(2);
+        // Only the first item starts open.
+        expect(html.match(/<details [^>]*\bopen\b[^>]*>/g)).toHaveLength(1);
+        expect(html).toContain('<p class="faq-answer">First answer in the HTML.</p>');
+        expect(html).toContain('<p class="faq-answer">Second answer, also in the HTML.</p>');
+        expect(html).not.toContain('<button');
+        expect(read(FAQ_ACCORDION)).not.toContain("'use client'");
+        expect(renderToStaticMarkup(React.createElement(CategoryFAQAccordion, { faqs: [] }))).toBe('');
     });
 
     it('the class matches the selector the other FAQ surfaces already declare', () => {
@@ -366,12 +386,23 @@ describe('P3 #5 — CategoryHero renders every prop it accepts', () => {
         expect(body()).toContain('cath5-badge');
     });
 
-    // Rendering badgeText made ~30 previously-dead strings visible. Only the
-    // two pSEO templates derive freshness through formatStatsBadge(); 26 app/
-    // routes hardcode "· updated today" and category-landing-template
-    // hardcodes "· updated daily", and every one of those routes is
-    // revalidate=3600 ISR with no generateStaticParams — so the served HTML
-    // can be days old while asserting it was updated today.
+    // Rendering badgeText made ~30 previously-dead strings visible, most of
+    // them hardcoding "· updated today" on a revalidate=3600 ISR route with
+    // no generateStaticParams, so the served HTML can be days old while
+    // asserting it was updated today.
+    //
+    // PLAN C.1 T0-4 has since retired that literal at the call sites the
+    // thin-content waves rewrote: the city hero reports the stats row's own
+    // date through formatStatsBadge(), and the metro hero and
+    // category-landing-template use buildLiveRolesBadge(), a bare count that
+    // makes no freshness claim at all.
+    //
+    // That is a dent, not a clearance. The waves rewrote only the call sites
+    // they owned; the majority of the app/jobs category hubs still hardcode
+    // "· updated today" and are out of this program's scope, so the component
+    // is still what has to defuse the claim. Both halves are pinned below: a
+    // sample of the call sites that still need defusing, and the removals, so
+    // a later edit cannot quietly put the claim back into a rewritten one.
     describe('the badge never publishes a freshness claim the HTML cannot support', () => {
         it('drops relative freshness and keeps the count', () => {
             expect(stripUnverifiableFreshness('412 live roles · updated today'))
@@ -406,25 +437,59 @@ describe('P3 #5 — CategoryHero renders every prop it accepts', () => {
         });
 
         it('the actual hardcoded call-site strings all lose the claim', () => {
+            // Still hardcoded upstream (foreign files); the component is what
+            // has to be safe. P10 pseo-jobs #4: the state hub pluralizes the
+            // noun ("1 live role"); the freshness suffix is unchanged.
             const callSites = [
-                'app/jobs/city/[slug]/page.tsx',
-                'app/jobs/metro/[slug]/page.tsx',
                 'app/jobs/state/[state]/page.tsx',
                 'app/jobs/remote/page.tsx',
                 'app/jobs/locum-tenens/page.tsx',
             ];
             for (const rel of callSites) {
-                // Still hardcoded upstream (foreign files); the component is
-                // what has to be safe.
-                // P10 pseo-jobs #4: the state and metro hubs pluralize the noun
-                // ("1 live role"); the freshness suffix is unchanged.
                 expect(read(rel), rel).toMatch(/live (?:roles|\$\{pluralize\([^)]*'role'\)\}) · updated today/);
             }
+            // A sample, not a census: many more app/jobs hubs still emit the
+            // same literal. The list must stay non-empty for as long as ANY
+            // caller hardcodes the claim, because the day it empties,
+            // stripUnverifiableFreshness has no remaining input and the
+            // defusing can be reconsidered. Until then the stripper is
+            // load-bearing on every hub that still ships the literal.
+            expect(callSites.length).toBeGreaterThan(0);
             expect(stripUnverifiableFreshness('1 live role · updated today')).toBe('1 live role');
-            expect(read('lib/pseo/category-landing-template.tsx'))
-                .toContain('live roles · updated daily');
             expect(stripUnverifiableFreshness('1247 live roles · updated today'))
                 .not.toMatch(/updated/i);
+        });
+
+        // PLAN C.1 T0-4 retires the hand-typed freshness literal wherever a
+        // thin-content wave rewrote the caller. These pin the REMOVAL itself,
+        // so the claim cannot come back through the same three files, and they
+        // check the replacement really is claim-free rather than a rename.
+        it('the rewritten call sites derive the badge instead of asserting it', () => {
+            expect(read('app/jobs/city/[slug]/page.tsx'))
+                .toContain('badgeText={formatStatsBadge(facts.total, facts.computedAt)}');
+            expect(read('app/jobs/metro/[slug]/page.tsx'))
+                .toContain('buildLiveRolesBadge(facts.total)');
+            expect(read('lib/pseo/category-landing-template.tsx'))
+                .toContain('buildLiveRolesBadge(facts.total)');
+            for (const rel of [
+                'app/jobs/city/[slug]/page.tsx',
+                'app/jobs/metro/[slug]/page.tsx',
+                'lib/pseo/category-landing-template.tsx',
+            ]) {
+                expect(read(rel), rel).not.toMatch(/updated (?:today|daily)/);
+            }
+            // buildLiveRolesBadge publishes a count and nothing else, so there
+            // is no freshness claim left for the hero to strip. Asserted on the
+            // builder, not on the literal, because a count-only badge is the
+            // property that makes the removal safe.
+            expect(buildLiveRolesBadge(412)).toBe('412 live roles');
+            expect(buildLiveRolesBadge(1)).toBe('1 live role');
+            expect(buildLiveRolesBadge(412)).not.toMatch(/updated/i);
+            expect(stripUnverifiableFreshness(buildLiveRolesBadge(412))).toBe('412 live roles');
+            // formatStatsBadge stays date-derived: it says "updated today" only
+            // for a row recomputed today and prints the real date otherwise.
+            expect(formatStatsBadge(412, new Date('2026-07-12T00:00:00Z')))
+                .toBe('412 live roles · updated Jul 12');
         });
     });
 

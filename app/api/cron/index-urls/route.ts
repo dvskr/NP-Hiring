@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
             console.log(`[CRON:index-urls] Submitting ${urls.length} URLs to search engines`);
 
             // Submit to all engines (Google, Bing, IndexNow)
-            const results = await pingAllSearchEnginesBatch(urls);
+            const results = await pingAllSearchEnginesBatch(urls, 'new-content');
 
             const googleSuccess = results.google.filter((r) => r.success).length;
             const googleFailed = results.google.filter((r) => !r.success).length;

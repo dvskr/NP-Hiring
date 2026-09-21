@@ -46,7 +46,8 @@ describe('B28 — active-job filter is computed per request, never at module sco
 describe('B27 — real lastmod values', () => {
   it('cities batch selects pseoStats.updatedAt and emits it per URL', () => {
     const src = read('app/api/sitemaps/cities/[batch]/route.ts');
-    expect(src).toMatch(/select: \{ categorySlug: true, locationSlug: true, updatedAt: true \}/);
+    // The rows come through one raw projection that carries updatedAt.
+    expect(src).toContain('SELECT "categorySlug", "locationSlug", "totalJobs", "distinctEmployers", "indexable", "updatedAt"');
     expect(src).toContain('toLastmod(row.updatedAt)');
     // The fabricated single "today" stamp must not come back.
     expect(src).not.toMatch(/const lastmod = new Date\(\)\.toISOString\(\)/);
@@ -75,20 +76,19 @@ describe('B33 — metro pages are inventory-gated in the sitemap', () => {
   const src = read('app/sitemap.ts');
 
   it('metro pages are no longer emitted unconditionally in staticPages', () => {
-    // Gating exists: a metroPages section driven by a job groupBy.
+    // Gating exists: a metroPages section driven by the canonical inventory
+    // inside the shared metro scope, through the same gate the page uses.
     expect(src).toContain('let metroPages');
-    expect(src).toContain('metroCityRows');
-    expect(src).toMatch(/by: \['city', 'stateCode'\]/);
+    expect(src).toContain('metroInventory(metro, now)');
+    expect(src).toContain('shouldIndexMetro({ activeJobs: inventory.activeJobs })');
   });
 
-  it('adjacency sets mirror the metro page inventory match', () => {
-    // Must stay in lockstep with getMetroStats in app/jobs/metro/[slug]/page.tsx.
-    expect(src).toContain('METRO_ADJACENT_CITIES');
-    const metroPage = read('app/jobs/metro/[slug]/page.tsx');
-    for (const adjacent of ['Brooklyn', 'St. Petersburg', 'Fort Worth']) {
-      expect(src).toContain(adjacent);
-      expect(metroPage).toContain(adjacent);
-    }
+  it('the metro scope has one definition shared with the page', () => {
+    // The in-sitemap adjacency copy (METRO_ADJACENT_CITIES) is gone; the
+    // scope predicate lives in lib/pseo/listing-facts.ts for both consumers.
+    expect(src).not.toContain('METRO_ADJACENT_CITIES');
+    expect(src).toContain('metroScopeWhere(metro)');
+    expect(src).toMatch(/import \{[^}]*metroScopeWhere[^}]*\} from '@\/lib\/pseo\/listing-facts'/);
   });
 
   it('metroPages are included in both the primary list and the degraded fallback', () => {

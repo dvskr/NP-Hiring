@@ -60,20 +60,41 @@ describe('P3 #12 — llms files carry no frozen inventory claim', () => {
 describe('P3 #12 — the llms editorial claim does not outrun /editorial-policy', () => {
     // llms-full.txt asserted "Statistics quoted on our pages carry a named
     // source and an as-of date; we omit a number rather than estimate one".
-    // That is false against live pages: every category x city page renders an
-    // unsourced salary band, and the template's own TODO calls those values
-    // estimates. /editorial-policy makes the narrower claim that is actually
-    // true — CITED statistics are sourced, and descriptive market context is
-    // labelled as the estimate it is. llms-full now matches that wording.
+    // That is false against live pages, which publish editorial ranges the
+    // board compiled from its own postings. /editorial-policy makes the
+    // narrower claim that is actually true: CITED statistics are sourced, and
+    // descriptive market context is labelled as the estimate it is. llms-full
+    // matches that wording, and the first case below keeps the two honest by
+    // pinning a live surface that still publishes a labelled estimate.
 
     it('the counter-evidence is still live, so the narrow claim remains the correct one', () => {
         // Self-updating: if the estimate bands are ever replaced with sourced
         // figures, this fails and the broader claim can be reconsidered on
-        // purpose rather than reintroduced by accident.
-        const tpl = read('lib/pseo/category-city-template.tsx');
-        expect(tpl, 'salaryRange values are no longer flagged as estimates — revisit the llms wording')
-            .toMatch(/TODO\(content\)[\s\S]{0,400}?estimates/);
-        expect(tpl, 'the unsourced band no longer renders in FAQ copy').toMatch(/typical range for/);
+        // purpose rather than reintroduced by accident. That trip-wire fired
+        // in the thin-content waves and the answer was NOT to widen the llms
+        // wording. PLAN C.1 T0-3 and T0-4 cleaned the category x city
+        // template (its salaryRange band and the TODO that called those
+        // values estimates are both gone) and stripped the metro page's
+        // cost-of-living figures, but the counter-evidence moved rather than
+        // disappeared: the salary guides still publish editorial ranges and
+        // label them as estimates, which is precisely the descriptive market
+        // context half of the /editorial-policy wording. So the narrow claim
+        // is still the true one and llms-full must keep it. The pins below
+        // now point at the surfaces that actually carry the evidence.
+        expect(
+            read('lib/pseo/category-city-template.tsx'),
+            'the city template is clean again: re-point this pin, do not widen the llms claim',
+        ).not.toMatch(/TODO\(content\)[\s\S]{0,400}?estimates/);
+
+        const guide = read('app/salary-guide/page.tsx');
+        expect(guide, 'salary-guide ranges are no longer flagged as estimates: revisit the llms wording')
+            .toMatch(/own editorial estimate, compiled from the roles posted here/);
+        expect(guide, 'the unsourced experience bands no longer render in FAQ copy')
+            .toMatch(/own editorial estimates from the roles posted here/);
+        expect(
+            read('app/salary-guide/specialty/specialty-content.ts'),
+            'the specialty premium band is no longer flagged as an estimate',
+        ).toMatch(/an estimated \$\{bandText/);
     });
 
     it.each(LLMS_FILES)('%s makes no blanket "we never estimate" claim', (rel) => {

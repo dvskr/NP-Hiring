@@ -1349,7 +1349,7 @@ export async function ingestJobs(
   if (allNewUrls.length > 0) {
     console.log(`\n[Indexing] Submitting ${allNewUrls.length} new job URLs to search engines...`);
     try {
-      const indexResults = await pingAllSearchEnginesBatch(allNewUrls);
+      const indexResults = await pingAllSearchEnginesBatch(allNewUrls, 'unreserved');
       const googleOk = indexResults.google.filter(r => r.success).length;
       const bingOk = indexResults.bing.filter(r => r.success).length;
       const indexNowOk = indexResults.indexNow.filter(r => r.success).length;
@@ -1451,7 +1451,7 @@ export async function cleanupExpiredJobs(): Promise<number> {
 
         console.log(`[Cleanup] De-indexing ${expiredUrls.length} expired jobs via dedicated deletion quota...`);
 
-        const results = await pingAllSearchEnginesBatchDeleted(expiredUrls);
+        const results = await pingAllSearchEnginesBatchDeleted(expiredUrls, 'unreserved');
         const googleOk = results.google.filter(r => r.success).length;
         const indexNowOk = results.indexNow.filter(r => r.success).length;
 

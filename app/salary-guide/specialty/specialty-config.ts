@@ -283,3 +283,52 @@ export const SALARY_SPECIALTY_SLUGS: readonly string[] = SALARY_SPECIALTY_PAGES.
 export function getSpecialtySalaryPage(slug: string): SpecialtySalaryPage | undefined {
     return SALARY_SPECIALTY_PAGES.find((p) => p.slug === slug);
 }
+
+// ─── SPEC-P5: editorial relation map ────────────────────────────────────────
+
+/**
+ * Which guides are related to which (thin-spec-4 3B P5). This is an
+ * EDITORIAL relation, not a factual claim: it records that two roles are
+ * adjacent enough for a reader comparing them, so it needs no citation and
+ * publishes no figure. The groupings are the spec's:
+ *
+ *   - acute care, hospitalist and emergency (inpatient and high acuity)
+ *   - family practice, adult-gerontology, pediatric and women's health
+ *     (primary care across the lifespan)
+ *   - the two non-niche APRN roles, which share a different licensure path
+ *   - dermatology and the psych specialty, both commonly entered from
+ *     family practice certification
+ *
+ * Each sibling blurb therefore appears on 2 to 4 of the 11 pages, below the
+ * boilerplate line a shared block would cross. The psych slug comes from
+ * the taxonomy registry so its terms never appear as literals here (same
+ * ratchet rule as buildPsychEntry above).
+ */
+const PSYCH_RELATED: readonly string[] = PSYCH_SPECIALTY_SLUG ? [PSYCH_SPECIALTY_SLUG] : [];
+
+export const RELATED_SPECIALTY_SLUGS: Readonly<Record<string, readonly string[]>> = {
+    'acute-care': ['hospitalist', 'emergency'],
+    'hospitalist': ['acute-care', 'emergency'],
+    'emergency': ['acute-care', 'hospitalist', 'family-practice'],
+    'family-practice': ['adult-gerontology', 'pediatric', 'women-health', ...PSYCH_RELATED],
+    'adult-gerontology': ['family-practice', 'acute-care', 'pediatric'],
+    'pediatric': ['family-practice', 'women-health', 'adult-gerontology'],
+    'women-health': ['family-practice', 'pediatric', 'midwifery'],
+    'anesthesia': ['midwifery', 'acute-care'],
+    'midwifery': ['anesthesia', 'women-health'],
+    'dermatology': ['family-practice', 'adult-gerontology'],
+    ...(PSYCH_SPECIALTY_SLUG
+        ? { [PSYCH_SPECIALTY_SLUG]: ['family-practice', 'adult-gerontology'] }
+        : {}),
+};
+
+/**
+ * The configured sibling guides for a slug, in map order. Slugs without a
+ * configured page are dropped, so the map can never link a route that does
+ * not exist.
+ */
+export function getRelatedSpecialtyPages(slug: string): SpecialtySalaryPage[] {
+    return (RELATED_SPECIALTY_SLUGS[slug] ?? [])
+        .map((related) => getSpecialtySalaryPage(related))
+        .filter((page): page is SpecialtySalaryPage => page !== undefined);
+}

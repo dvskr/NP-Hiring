@@ -299,11 +299,74 @@ describe('P9 #2d — publishing gate and median', () => {
     // Below-gate states are listed without a figure.
     expect(hub).toContain('too few postings');
 
+    // WHY THESE PINS CHANGED (PLAN C.1 truth fixes, T0-3): the state page ran
+    // this pipeline inline in getStateSalaryData, getStateSalaryBySetting and
+    // getNationalBase. All three were replaced by lib/salary-analytics.ts,
+    // which IS the same pipeline one level down, so the three names left the
+    // page and keeping them would be dead code and an unused-import error.
+    // One of the three old assertions, npSalaryAnalyticsWhere, would in fact
+    // still pass today, but only through the page's doc comment: no code on
+    // the page names it any more, which is exactly the kind of pin that has
+    // quietly stopped protecting anything. The intent is kept by following
+    // the pipeline into the shared module: the page is pinned onto the gated
+    // entry point, and the entry point is pinned onto each of the three
+    // stages, so a helper that quietly stopped gating still fails this test.
+    // The move is also a truth fix in its own right: the old inline query
+    // spread the pool into the where clause, which drops the pool's own
+    // AND/OR clauses; the shared fetcher ANDs them instead.
     const statePage = read('app/salary-guide/[state]/page.tsx');
-    expect(statePage).toContain('npSalaryAnalyticsWhere');
-    expect(statePage).toContain('filterNpEligibleRows');
-    expect(statePage).toContain('summarizeBenchmarks');
+    expect(statePage).toContain("from '@/lib/salary-analytics'");
+    expect(statePage).toContain('getGatedLocationSalary({ state: stateName })');
+    expect(statePage).toContain('getGatedCitySalaries(stateName)');
     expect(statePage).not.toContain('_avg');
+
+    // Pool, then NP eligibility, then the gated summary: the same three stages
+    // the hub and the specialty page still name on their own source.
+    //
+    // Every slice below is anchored to ONE exported function rather than to
+    // the module. fetchNpAnalyticsRows, npSalaryAnalyticsWhere,
+    // filterNpEligibleRows and summarizeBenchmarks are each named on three or
+    // four paths through this file (the per-category, per-state and per-city
+    // helpers all repeat them), so a file-wide toContain is satisfied by a
+    // path the state page never calls, and the location path could drop a
+    // stage while this test stayed green.
+    const analytics = read('lib/salary-analytics.ts');
+    const analyticsFn = (start: string, end: string) => {
+      const from = analytics.indexOf(start);
+      expect(from, start).toBeGreaterThan(-1);
+      const to = analytics.indexOf(end, from + start.length);
+      expect(to, end).toBeGreaterThan(from);
+      return analytics.slice(from, to);
+    };
+
+    // Stages 1 and 2, in the one fetcher the location helper calls.
+    const fetcher = analyticsFn(
+      'export async function fetchNpAnalyticsRows(',
+      'export async function getGatedBenchmark(',
+    );
+    expect(fetcher).toContain('where: { AND: [npSalaryAnalyticsWhere(), extra] }');
+    expect(fetcher).toContain('return filterNpEligibleRows(rows);');
+
+    // Stage 3, the publishing gate, in the summary that helper runs. The
+    // below-gate branch is pinned beside it: without that early return the
+    // helper publishes a figure for a sample it was supposed to withhold,
+    // which is the presentation this describe block exists to retire.
+    const gatedSummary = analyticsFn(
+      'export function summarizeGatedSalary(',
+      'export async function getGatedLocationSalary(',
+    );
+    expect(gatedSummary).toContain('summarizeBenchmarks(');
+    expect(gatedSummary).toContain('if (!national) return { postings, employers, ...BELOW_GATE };');
+
+    // ...and the entry point the state page imports is wired to both of them.
+    const locationHelper = analyticsFn(
+      'export async function getGatedLocationSalary(',
+      'const NP_CITY_SALARY_ANALYTICS_SELECT',
+    );
+    expect(locationHelper).toContain(
+      'return summarizeGatedSalary(await fetchNpAnalyticsRows(extra));',
+    );
+
     // Below the gate: "sample too small" + the cited BLS figure, never a posting mean.
     expect(statePage).toContain('Sample too small');
     expect(statePage).toContain('STAT_SOURCES.averageSalary');

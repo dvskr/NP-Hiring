@@ -6,7 +6,10 @@
  * which URLs are still live, then batch-submits valid URLs via IndexNow.
  * 
  * Usage:
- *   npx tsx scripts/gsc-resubmit.ts [--dry]
+ *   npx tsx scripts/gsc-resubmit.ts [--dry] [exportFolder ...]
+ *
+ * With no folder arguments it picks up every unzipped Coverage drilldown
+ * export sitting in the repo root.
  */
 
 import * as dotenv from 'dotenv';
@@ -28,11 +31,29 @@ if (!PROD_DB_URL) {
 const pool = new pg.Pool({ connectionString: PROD_DB_URL });
 const DRY_RUN = process.argv.includes('--dry');
 
-// GSC export folders
-const GSC_FOLDERS = [
-    path.join(process.cwd(), 'https___pmhnphiring.com_-Coverage-Drilldown-2026-03-10 (5)'), // Crawled — not indexed
-    path.join(process.cwd(), 'https___pmhnphiring.com_-Coverage-Drilldown-2026-03-10 (6)'), // Discovered — not indexed
-];
+/** Every Coverage drilldown export unzips to a folder with this in its name. */
+const GSC_EXPORT_FOLDER_MARKER = 'Coverage-Drilldown';
+
+/**
+ * Where the CSV exports live.
+ *
+ * This used to be two absolute folder names from the donor board's March 2026
+ * export. On any other board neither path exists, so the script printed two
+ * "Missing" lines, found zero URLs, and still reported success. Take the
+ * folders from the command line, or find whatever the owner unzipped into the
+ * repo root, which is what Search Console produces by default.
+ */
+function resolveExportFolders(): string[] {
+    const fromArgs = process.argv.slice(2).filter((arg) => !arg.startsWith('--'));
+    if (fromArgs.length > 0) {
+        return fromArgs.map((folder) => path.resolve(process.cwd(), folder));
+    }
+    return fs
+        .readdirSync(process.cwd(), { withFileTypes: true })
+        .filter((entry) => entry.isDirectory() && entry.name.includes(GSC_EXPORT_FOLDER_MARKER))
+        .map((entry) => path.join(process.cwd(), entry.name))
+        .sort();
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -56,35 +77,33 @@ function extractJobId(pathname: string): string | null {
 
 // ─── IndexNow submission ─────────────────────────────────────────────────────
 
-async function pingIndexNow(urls: string[]): Promise<{ success: boolean; submitted: number; error?: string }> {
-    const key = process.env.INDEXNOW_KEY;
-    if (!key) return { success: false, submitted: 0, error: 'INDEXNOW_KEY not set' };
+/** Engines cap a submission at 10,000 URLs, so chunk before handing over. */
+const INDEXNOW_CHUNK = 10000;
 
-    // IndexNow accepts up to 10,000 URLs per request
-    const batches: string[][] = [];
-    for (let i = 0; i < urls.length; i += 10000) {
-        batches.push(urls.slice(i, i + 10000));
-    }
+/**
+ * Submit through lib/indexnow.ts, the board's only IndexNow client.
+ *
+ * This script used to carry a private copy that read INDEXNOW_KEY alone, with
+ * no fallback to INDEXNOW_API_KEY, hardcoded the donor board's host, and
+ * skipped the same-host filter and the logging the shared client does. The one
+ * manual resubmit tool an owner reaches for after configuring credentials was
+ * therefore the one place most likely to silently submit nothing.
+ *
+ * The import is dynamic on purpose: lib/indexnow.ts captures its host from
+ * NEXT_PUBLIC_BASE_URL at module load, and a static import would be evaluated
+ * before the dotenv.config() calls at the top of this file have run.
+ */
+async function submitToIndexNow(
+    urls: string[],
+): Promise<{ success: boolean; submitted: number; error?: string }> {
+    const { pingIndexNow } = await import('../lib/indexnow');
 
     let totalSubmitted = 0;
-    for (const batch of batches) {
-        try {
-            const res = await fetch('https://api.indexnow.org/indexnow', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    host: 'pmhnphiring.com',
-                    key,
-                    urlList: batch,
-                }),
-            });
-            if (res.ok || res.status === 202) {
-                totalSubmitted += batch.length;
-            } else {
-                return { success: false, submitted: totalSubmitted, error: `HTTP ${res.status}: ${await res.text()}` };
-            }
-        } catch (err) {
-            return { success: false, submitted: totalSubmitted, error: String(err) };
+    for (let i = 0; i < urls.length; i += INDEXNOW_CHUNK) {
+        const result = await pingIndexNow(urls.slice(i, i + INDEXNOW_CHUNK));
+        totalSubmitted += result.submitted;
+        if (!result.ok) {
+            return { success: false, submitted: totalSubmitted, error: result.reason ?? 'rejected' };
         }
     }
 
@@ -99,8 +118,16 @@ async function main() {
     console.log('─'.repeat(60));
 
     // 1. Parse all CSV files
+    const folders = resolveExportFolders();
+    if (folders.length === 0) {
+        console.error(`❌ No Search Console export folders found. Unzip the Coverage drilldown exports into ${process.cwd()}, or pass their paths as arguments.`);
+        await pool.end();
+        process.exitCode = 1;
+        return;
+    }
+
     let allUrls: string[] = [];
-    for (const folder of GSC_FOLDERS) {
+    for (const folder of folders) {
         const csvPath = path.join(folder, 'Table.csv');
         if (!fs.existsSync(csvPath)) {
             console.log(`⚠️ Missing: ${csvPath}`);
@@ -184,7 +211,7 @@ async function main() {
 
     // 4. Submit via IndexNow (instantly reaches Bing, Yandex, Seznam, Naver)
     console.log('\n🚀 Submitting to IndexNow...');
-    const indexNowResult = await pingIndexNow(validUrls);
+    const indexNowResult = await submitToIndexNow(validUrls);
     console.log(`   ${indexNowResult.success ? '✅' : '❌'} IndexNow: ${indexNowResult.submitted} URLs submitted`);
     if (indexNowResult.error) console.log(`   Error: ${indexNowResult.error}`);
 

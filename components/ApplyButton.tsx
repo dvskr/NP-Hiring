@@ -7,7 +7,8 @@ import useAppliedJobs from '@/lib/hooks/useAppliedJobs';
 import { shouldLabelDirectApply } from '@/lib/direct-apply';
 
 import InPlatformApplyForm from '@/components/InPlatformApplyForm';
-import { trackJobApply, buildJobItem } from '@/lib/analytics';
+import { trackJobApply } from '@/lib/analytics';
+import { buildTrackedJobItem, type TrackedJob } from '@/components/analytics/ViewTrackers';
 import Link from 'next/link';
 import { brand } from '@/config/brand';
 
@@ -23,6 +24,24 @@ interface ApplyButtonProps {
    * applies as "Direct Apply" instead of generic "Apply Now".
    */
   sourceType?: string | null;
+  /**
+   * Analytics-only job dimensions, forwarded onto the GA4 item so the apply
+   * conversion carries the same employer, type, state and source the job
+   * detail page already sends on view_item. Optional because the detail page
+   * does not thread them through yet: absent, the item simply carries fewer
+   * dimensions, which GA4 reports as "(not set)" rather than a guess.
+   *
+   * Salary is deliberately not among them. trackJobApply sends the item's
+   * price as generate_lead's monetary `value`, so a $120,000 listing would
+   * book a $120,000 conversion for one apply click. That figure feeds Google
+   * Ads bidding and any ROAS report, so the apply event stays on the flat
+   * per-lead value it sends today and salary stays on the impression and
+   * detail-view items, where it is an item attribute rather than a value.
+   */
+  employer?: string | null;
+  jobType?: string | null;
+  stateCode?: string | null;
+  sourceProvider?: string | null;
 }
 
 function formatAppliedDate(date: Date): string {
@@ -32,9 +51,32 @@ function formatAppliedDate(date: Date): string {
   });
 }
 
-export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticated, applyOnPlatform = false, sourceType = null }: ApplyButtonProps) {
+export default function ApplyButton({
+  jobId,
+  applyLink,
+  jobTitle,
+  isAuthenticated,
+  applyOnPlatform = false,
+  sourceType = null,
+  employer = null,
+  jobType = null,
+  stateCode = null,
+  sourceProvider = null,
+}: ApplyButtonProps) {
   const { isApplied, markApplied, getAppliedDate } = useAppliedJobs();
   const searchParams = useSearchParams();
+
+  // GA4 item for this job. Rebuilt per render rather than memoized: it feeds
+  // click handlers only, never an effect dependency, so a stable identity
+  // would buy nothing.
+  const trackedJob: TrackedJob = {
+    id: jobId,
+    title: jobTitle,
+    employer,
+    jobType,
+    stateCode,
+    sourceProvider,
+  };
 
   // Auth is resolved CLIENT-SIDE so the parent job-detail page can stay
   // statically cached (ISR). The server no longer reads cookies to pass
@@ -180,7 +222,7 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
     // actual outcome once the user returns from the employer's site.
     if (applyLink) {
       fireApplyClick();
-      trackJobApply(buildJobItem({ id: jobId, title: jobTitle }), 'external');
+      trackJobApply(buildTrackedJobItem(trackedJob), 'external');
       window.open(applyLink, '_blank', 'noopener,noreferrer');
       if (!isApplied(jobId)) {
         setAwaitingApplyConfirm(true);
@@ -224,7 +266,27 @@ export default function ApplyButton({ jobId, applyLink, jobTitle, isAuthenticate
   // or Close (onClose). Closing here unmounted the confirmation the instant
   // it rendered, so candidates never saw that the submit went through.
   const handlePlatformApplySuccess = () => {
+    // Count the lead only when this submit created one. The apply route
+    // upserts on (userId, jobId) and answers 200 either way, and the button
+    // above offers "Apply Again" to someone who has already applied, so an
+    // ungated call would book a second generate_lead against one application
+    // row. Read this BEFORE markApplied, which flips isApplied().
+    //
+    // A null serverApplied means the check request has not settled yet, and
+    // that counts as not applied on purpose: a slow network must never cost
+    // us a real conversion. This fails open in the same direction as the
+    // job-alert surfaces.
+    const isFirstApplication = !serverApplied?.applied && !isApplied(jobId);
     markApplied(jobId);
+    // The Easy Apply conversion. Fired on the submitted application, not on
+    // the modal opening, because this branch is the one place on the board
+    // where an application is known to exist. The external branch has no such
+    // moment, so it still fires on the outbound click; apply_method
+    // ('platform' against 'external') keeps the two readable apart in
+    // reporting instead of averaging an intent signal with a completion one.
+    if (isFirstApplication) {
+      trackJobApply(buildTrackedJobItem(trackedJob), 'platform');
+    }
     // Show the "already applied" notice once the confirmation is dismissed,
     // then settle on the server's record (status, appliedAt).
     setServerApplied({ applied: true, appliedAt: new Date().toISOString() });

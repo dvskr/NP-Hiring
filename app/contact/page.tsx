@@ -7,21 +7,46 @@ import { brand } from '@/config/brand';
 import ContactForm from './ContactForm';
 import ContactFAQ from './ContactFAQ';
 
-const STORAGE_BASE = brand.assets.storageBase;
-
-// Single source of truth for FAQ content. Both the FAQPage JSON-LD (server-
-// rendered into <head>-adjacent script) and the visible accordion (client-
-// rendered for the toggle UX) consume this list — they cannot diverge.
+// Single source of truth for FAQ content. Both the FAQPage JSON-LD and the
+// visible accordion consume this list — they cannot diverge. Since B4 the
+// accordion is a SERVER component (app/contact/ContactFAQ.tsx), so every
+// answer below is in the served HTML that backs the schema; before that the
+// schema named questions whose answers only existed after a click.
+//
+// CLAIM RULES for anything added here. Each answer states only what the repo
+// can back, and names no cadence, price or turnaround that a config change
+// could silently falsify:
+//   - ingest cadence: config/cron-schedule.ts schedules ingestion waves every
+//     day, so the answer says "every day" and agrees with the "ingested daily"
+//     wording on the salary surfaces. The old answer said "twice daily", which
+//     reads as a contradiction of that wording and pins a wave count a cron
+//     edit can silently falsify. No source count either: the source list is a
+//     per-board decision in the same config.
+//   - employer posting: what a posting includes and costs lives on /pricing
+//     (lib/config.ts). The old answer sold "Featured listings ... for enhanced
+//     visibility" as an upsell; there is no separate featured product
+//     (config.isFeaturedTier is unconditional), so it linked to a thing that
+//     does not exist.
+//   - alerts: lib/job-alerts-service.ts sends a daily OR weekly digest and the
+//     form at /job-alerts offers both, so the answer cannot promise "daily".
+//   - deletion: app/api/auth/delete-account/route.ts closes the account on the
+//     spot and purges after PURGE_GRACE_DAYS. The answer says "a grace window"
+//     rather than the number, because that constant is private to the route
+//     and copy may not restate a figure it cannot import. The old "within 24
+//     hours" was a turnaround nothing in the repo enforces.
+//   - disappearing listings: expiry, the repeated-dead-link gate
+//     (lib/active-job-filter.ts) and the distinct-reporter auto-unpublish in
+//     app/api/jobs/report/route.ts are each real code paths.
 const FAQ_ITEMS = [
     { q: `Is ${brand.name} free for job seekers?`, a: 'Yes. Browsing jobs, setting up alerts, and applying are completely free. We never charge job seekers.' },
-    // P0 #5: cadence claim only — the previous answer carried a hardcoded
-    // company-count figure (config/niche/copy.ts RULE: evergreen claims
-    // only; live counters come from lib/site-stats.ts).
-    { q: 'How often are jobs updated?', a: 'Our pipeline runs twice daily, pulling new listings from major job boards and direct employer career pages.' },
-    { q: 'How do I post a job as an employer?', a: 'Create a free employer account and post your job listing. Featured listings are available for enhanced visibility.' },
-    { q: 'Can I get daily job alerts?', a: 'Yes. Sign up for free and set your preferences (location, job type, and salary range), and we will email you matching jobs daily.' },
-    { q: 'How do I delete my account?', a: `Go to Settings > Account and click "Delete Account", or email us at ${brand.email.support} and we will handle it within 24 hours.` },
-    { q: 'Why did a job listing disappear?', a: 'Jobs are automatically removed when they expire, are filled, or are reported by multiple users as invalid. Check the employer\'s site for the latest openings.' },
+    // P0 #5 still applies here: no hardcoded company or posting count
+    // (config/niche/copy.ts RULE: evergreen claims only; live counters come
+    // from lib/site-stats.ts).
+    { q: 'How often are jobs updated?', a: 'Our ingest runs on a schedule every day, pulling new listings from employer career pages and from the applicant tracking systems those employers publish through. Every listing carries the date it was posted, so you can see for yourself how fresh one is.' },
+    { q: 'How do I post a job as an employer?', a: 'Create an employer account, then post from the Post a Job page. Our pricing page lists what a posting costs and everything it includes, and you can renew or archive it later from the employer dashboard.' },
+    { q: 'Can I get job alerts by email?', a: 'Yes. Sign up for free, set your filters for location, job type and salary range, then choose a daily or a weekly digest. We email the matching jobs on whichever schedule you pick, and every message can unsubscribe you.' },
+    { q: 'How do I delete my account?', a: `Go to Settings, open Account and choose Delete Account. Your account closes immediately, and your records are erased after a grace window that exists so a deletion made by mistake can still be reversed. You can also email ${brand.email.support} and we will do it for you.` },
+    { q: 'Why did a job listing disappear?', a: 'A listing comes down when it expires, when the employer\'s own apply link has been dead on several consecutive checks, or when enough separate readers report it as invalid. Check the employer\'s site for its latest openings.' },
 ];
 
 export const metadata: Metadata = {
@@ -32,7 +57,9 @@ export const metadata: Metadata = {
     alternates: { canonical: `${brand.baseUrl}/contact` },
     openGraph: {
         title: `Contact ${brand.name}`,
-        description: `Get in touch with the team behind the #1 ${brand.niche.short} job board for support, employer, and partnership inquiries.`,
+        // C.5 claim sweep: the previous copy called this "the #1 NP job board",
+        // a ranking claim with no source behind it.
+        description: `Get in touch with the ${brand.name} team for support, employer, and partnership inquiries.`,
         type: 'website',
         url: `${brand.baseUrl}/contact`,
         siteName: brand.name,
@@ -177,6 +204,11 @@ export default function ContactPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 {[
                                     { label: 'FAQ', href: '/faq' },
+                                    // The two answers above name the posting flow and its
+                                    // price; an accordion answer is plain text, so the
+                                    // links a reader needs live here.
+                                    { label: 'Post a Job', href: '/post-job' },
+                                    { label: 'Pricing', href: '/pricing' },
                                     { label: `About ${brand.niche.short} Jobs`, href: '/about' },
                                     { label: 'Terms of Service', href: '/terms' },
                                     { label: 'Privacy Policy', href: '/privacy' },

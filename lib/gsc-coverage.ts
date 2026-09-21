@@ -15,19 +15,25 @@
  * floor, or a retired category slug), which is exactly the visibility
  * this dashboard panel exists to expose.
  *
- * Threshold mirrors: MIN_SITEMAP_JOBS / MIN_SITEMAP_POPULATION /
- * PSEO_STALENESS_HOURS mirror app/api/sitemaps/index/route.ts (which in
- * turn mirrors /api/sitemaps/cities/[batch]). Drift is guarded by
- * tests/regressions/p1-gsc-ops-coverage.test.ts — if you change the route
- * constants, change these and the test together.
+ * Gate parity: the job and employer floors and the freshness window come
+ * from lib/pseo/render-gate.ts, the same module app/api/sitemaps/index and
+ * cities/[batch] read (shouldIndexLocalListingPage, the stored setting-state
+ * indexable verdict, pseoStatsFreshnessThreshold). Only the population
+ * floor is still a sitemap-side literal, mirrored here and drift-guarded by
+ * tests/regressions/p1-gsc-ops-coverage.test.ts.
  */
-import { MIN_JOBS_FOR_CATEGORY_CITY } from '@/lib/pseo/render-gate';
+import {
+    MIN_JOBS_FOR_CATEGORY_CITY,
+    PSEO_STATS_MAX_AGE_HOURS,
+    shouldIndexLocalListingPage,
+} from '@/lib/pseo/render-gate';
 import { CITY_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
+/** Job floor of the sitemap gate (shouldIndexLocalListingPage), kept as a named export. */
+export const MIN_SITEMAP_JOBS = MIN_JOBS_FOR_CATEGORY_CITY;
 // Mirrors app/api/sitemaps/index/route.ts — see header comment.
-export const MIN_SITEMAP_JOBS = 3;
 export const MIN_SITEMAP_POPULATION = 10000;
-export const PSEO_STALENESS_HOURS = 36;
+export const PSEO_STALENESS_HOURS = PSEO_STATS_MAX_AGE_HOURS;
 
 // Same CITY_ELIGIBLE_CATEGORY_SLUGS allow-list the sitemap index and
 // cities/[batch] routes filter on (previously the stale 28-slug
@@ -44,6 +50,8 @@ export interface PseoCoverageRow {
     categorySlug: string;
     locationSlug: string;
     totalJobs: number;
+    /** Distinct employers behind totalJobs (PseoStats.distinctEmployers). */
+    distinctEmployers: number;
     updatedAt: Date;
 }
 
@@ -114,7 +122,7 @@ export function computeCategoryCityCoverage(input: CategoryCityCoverageInput): C
         const population = input.populationBySlug.get(row.locationSlug);
         const isIndexable =
             entry.sitemapEligible &&
-            row.totalJobs >= MIN_SITEMAP_JOBS &&
+            shouldIndexLocalListingPage({ activeJobs: row.totalJobs, distinctEmployers: row.distinctEmployers }) &&
             row.updatedAt >= freshCutoff &&
             population !== undefined &&
             population >= MIN_SITEMAP_POPULATION;
@@ -139,6 +147,8 @@ export function computeCategoryCityCoverage(input: CategoryCityCoverageInput): C
 
 export interface SettingStateCoverageRow {
     totalJobs: number;
+    /** The cron's stored shouldIndexSettingState verdict (PseoStats.indexable). */
+    indexable: boolean;
     updatedAt: Date;
 }
 
@@ -150,8 +160,8 @@ export interface SettingStateCoverage {
 
 /**
  * Setting×state axis: renders whenever a stats row exists with ≥1 job;
- * indexed when additionally fresh (mirrors the index route's setting-state
- * count: totalJobs ≥ 1 AND updatedAt within the staleness window).
+ * indexed when the stored indexable verdict is true AND the row is fresh
+ * (mirrors the sitemap routes' setting-state gate).
  */
 export function computeSettingStateCoverage(
     rows: readonly SettingStateCoverageRow[],
@@ -163,7 +173,7 @@ export function computeSettingStateCoverage(
     for (const row of rows) {
         if (row.totalJobs < 1) continue;
         renderable += 1;
-        if (row.updatedAt >= freshCutoff) indexable += 1;
+        if (row.indexable && row.updatedAt >= freshCutoff) indexable += 1;
     }
     return { total: rows.length, renderable, indexable };
 }

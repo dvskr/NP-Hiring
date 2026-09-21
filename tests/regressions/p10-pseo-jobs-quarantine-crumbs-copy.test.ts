@@ -17,6 +17,7 @@ import {
     publishedListingWhere,
     PUBLISHED_LISTING_WHERE,
 } from '@/lib/pseo/listing-where';
+import { canonicalActiveJobWhere, canonicalBucketWhere } from '@/lib/canonical-counts';
 import { crumbsFromSchema, normalizeCrumbs } from '@/components/CategoryHero';
 import { metadata as notFoundMetadata } from '@/app/not-found';
 
@@ -65,7 +66,6 @@ describe('1. profession quarantine on pSEO listing predicates', () => {
     });
 
     for (const rel of [
-        'app/jobs/state/[state]/page.tsx',
         'app/jobs/city/[slug]/page.tsx',
         'app/jobs/metro/[slug]/page.tsx',
         'app/jobs/locations/page.tsx',
@@ -77,6 +77,51 @@ describe('1. profession quarantine on pSEO listing predicates', () => {
             expect(src).toMatch(/\.\.\.PUBLISHED_LISTING_WHERE/);
         });
     }
+
+    /*
+     * WHY THIS PIN CHANGED (PLAN T0-1, thin-content state hub rewrite):
+     * app/jobs/state/[state]/page.tsx no longer hand-builds a listing
+     * predicate at all, so it cannot spread PUBLISHED_LISTING_WHERE. Every
+     * Job query it makes now composes canonicalBucketWhere(), which is
+     * activeIndexableJobWhere() AND GLOBAL_EXCLUSIONS. That is a strict
+     * superset of PUBLISHED_LISTING_WHERE: the same quarantine vetoes plus
+     * the expiry and repeated-dead-link gates. The property this case exists
+     * for therefore still holds, by a different mechanism, so the pin follows
+     * the property rather than the literal. The removal of the old shape is
+     * pinned too, so a half-migrated file fails loudly instead of quietly
+     * carrying two predicates.
+     */
+    it('app/jobs/state/[state]/page.tsx routes every Job query through canonicalBucketWhere', () => {
+        const rel = 'app/jobs/state/[state]/page.tsx';
+        const src = read(rel);
+        expect(src).not.toMatch(/isPublished: true/);
+        expect(src).not.toMatch(/PUBLISHED_LISTING_WHERE/);
+        expect(src).toContain("import { canonicalBucketWhere } from '@/lib/canonical-counts';");
+        // EVERY call site, not just the first: a second query added later with
+        // a bare where clause is exactly how a quarantined Podiatrist row
+        // reached /jobs/state/texas the first time.
+        const queries = src.match(/prisma\.job\.\w+\(\{[\s\S]{0,240}?where: [^\n]*/g) ?? [];
+        expect(queries.length, `${rel} makes no prisma.job query, so the loader moved`).toBeGreaterThan(0);
+        for (const query of queries) expect(query, query).toContain('canonicalBucketWhere(');
+        // The hub's aggregates come from the shared facts loader, which
+        // composes the same predicate, so they carry the quarantine as well.
+        expect(src).toContain("import { getListingFacts");
+        expect(read('lib/pseo/listing-facts.ts')).toContain("import { canonicalBucketWhere");
+    });
+
+    it('canonicalBucketWhere carries the same profession vetoes as PUBLISHED_LISTING_WHERE', () => {
+        // The mechanism behind the pin above: swapping the builder must never
+        // be a way to drop the quarantine. Every veto the spreadable base
+        // appends has to survive in the canonical predicate and in a bucketed
+        // composition of it, which is the shape the hub actually queries with.
+        const canonical = JSON.stringify(canonicalActiveJobWhere());
+        for (const clause of NOT_CLAUSES) expect(canonical).toContain(JSON.stringify(clause));
+        const bucketed = JSON.stringify(canonicalBucketWhere({ state: 'Texas' }));
+        for (const clause of NOT_CLAUSES) expect(bucketed).toContain(JSON.stringify(clause));
+        expect(bucketed).toContain('professionClass');
+        expect(bucketed).toContain('other_clinical');
+        expect(bucketed).toContain('Podiatrist');
+    });
 
     it('the job detail route gates its live render on the quarantine and 404s a rejected row', () => {
         const src = read('app/jobs/[slug]/page.tsx');
@@ -158,14 +203,25 @@ describe('3. state hub count copy agrees in number', () => {
     const src = read('app/jobs/state/[state]/page.tsx');
 
     it('FAQ city counts, hero badge and stats are pluralized', () => {
-        expect(src).toContain("`${c.name} (${c.count} ${pluralize(c.count, 'job')})`");
+        // WHY THIS PIN CHANGED (PLAN C.4, HUB-S10): the page-local FAQ array
+        // and the page-local "There is/are currently" sentence were replaced
+        // by buildHubFaqs and buildPlainStateNarrative. Both builders do their
+        // own count-noun agreement through isAre / formatCount and are pinned
+        // entry by entry in tests/unit/listing-narrative.test.ts, so the
+        // plural guarantee survived the move and only its address changed.
+        // Pin the call sites, and keep every in-page pin that still applies.
+        expect(src).toContain('...buildHubFaqs({');
+        expect(src).toContain('buildPlainStateNarrative({');
         expect(src).not.toContain('(${c.count} jobs)');
         expect(src).toContain("badgeText={`${stats.totalJobs} live ${pluralize(stats.totalJobs, 'role')} · updated today`}");
         expect(src).toContain("label: pluralize(stats.totalJobs, 'position')");
         expect(src).toContain("label: pluralize(stats.uniqueEmployerCount, 'employer')");
-        expect(src).toContain("There ${isAre(stats.totalJobs)} currently");
         expect(src).not.toMatch(/label: '(positions|employers)'/);
         expect(src).not.toMatch(/\{stats\.totalJobs\} active positions/);
+        // The defect itself, pinned independently of where the copy now lives:
+        // a live count interpolated straight in front of a hard-coded plural
+        // noun is what "1 jobs" was, and the hub must never print one again.
+        expect(src).not.toMatch(/\$\{[\w.()]*(?:count|Count|total|Total)[\w.()]*\}\s+(?:jobs|roles|positions|employers|cities)\b/);
     });
 
     it('metro and city hubs no longer hard-code plural nouns after a live count', () => {

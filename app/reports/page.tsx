@@ -6,9 +6,14 @@
  * advertise a report that has no config, and the schema can never claim a
  * report the visible page does not show.
  *
- * TRUTH RULES: no figures are quoted here at all. Numbers live on the
- * report pages, where they render from live queries with sample gates;
- * a hub that retypes "N postings" goes stale the hour after it deploys.
+ * TRUTH RULES: the hub types no figure of its own. The publishing floors
+ * in the methods block are interpolated from the constants the queries
+ * gate on (lib/reports/report-model.ts, components/tools/benchmark-model.ts),
+ * so the prose cannot describe a floor the code stopped using; and the one
+ * live line comes from the same cache()d `loadHiringReportSnapshot` the
+ * annual report renders from, so the hub and the report can never print
+ * different totals. A hub that RETYPED "N postings" would go stale the hour
+ * after it deployed, which is why nothing here is a literal.
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -16,6 +21,22 @@ import { BarChart3, FileText, ArrowRight, Scale } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { brand } from '@/config/brand';
 import { ALL_REPORTS, REPORTS_HUB_PATH } from '@/lib/reports/editions';
+import {
+    REPORT_MIN_GROUP_COUNT,
+    REPORT_MIN_SHARE_SAMPLE,
+    TREND_MIN_MONTHS,
+    TREND_MIN_MONTH_SAMPLE,
+} from '@/lib/reports/report-model';
+import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
+import { loadHiringReportSnapshot } from '@/lib/reports/queries';
+import { formatCount } from '@/lib/display-text';
+
+/**
+ * Live aggregates refresh hourly, the same cadence as /press and both
+ * report pages. Without this the hub would be fully static and its one
+ * live line would freeze at build time.
+ */
+export const revalidate = 3600;
 
 const PAGE_URL = `${brand.baseUrl}${REPORTS_HUB_PATH}`;
 const PAGE_TITLE = `${brand.niche.short} Hiring Data Reports`;
@@ -59,7 +80,14 @@ const MUTED_TEXT = '#5A6E7A';
 
 const REPORT_ICONS = [BarChart3, Scale, FileText] as const;
 
-export default function ReportsHubPage() {
+export default async function ReportsHubPage() {
+    // The one live line on the hub. `loadHiringReportSnapshot` is the same
+    // cache()d loader the annual report uses, so the hub cannot print a
+    // different total from the report it links to; it resolves to null
+    // during `next build` and on a repeated query failure, in which case
+    // the sentence is simply absent (the /press pattern: omit, never pad).
+    const snapshot = await loadHiringReportSnapshot();
+
     // CollectionPage schema derives from the SAME array the cards render
     // from, escaped with the repo's < pattern.
     const collectionSchema = {
@@ -194,18 +222,58 @@ export default function ReportsHubPage() {
                     })}
                 </div>
 
-                <p style={{ fontSize: '13px', color: MUTED_TEXT, lineHeight: 1.7, marginTop: '24px' }}>
-                    Methodology lives on each report and on the{' '}
-                    <Link href="/press" style={{ color: '#BE185D', textDecoration: 'underline' }}>
-                        press &amp; data room
-                    </Link>
-                    . Where a sample is too small to support a figure, the report says so instead of
-                    printing one. Custom cuts:{' '}
-                    <a href={`mailto:${brand.email.press}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>
-                        {brand.email.press}
-                    </a>
-                    .
-                </p>
+                {/* Methods. Every threshold below is interpolated from the
+                    constant the queries actually gate on, so the paragraph
+                    cannot describe a floor the code stopped using. */}
+                <section
+                    aria-labelledby="reports-methods-heading"
+                    style={{ ...clayCard, padding: '24px 28px', marginTop: '24px' }}
+                >
+                    <h2
+                        id="reports-methods-heading"
+                        style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px 0' }}
+                    >
+                        How these reports handle small samples
+                    </h2>
+                    <p style={{ fontSize: '13.5px', color: MUTED_TEXT, lineHeight: 1.75, margin: '0 0 10px 0' }}>
+                        Every figure is computed from {brand.name}&apos;s own active postings, and each kind
+                        of figure has a publishing floor written into the query rather than into the prose.
+                        A rate is published as a percentage only when its denominator reaches{' '}
+                        {REPORT_MIN_SHARE_SAMPLE} postings; below that the report shows the counts
+                        themselves. A row in a breakdown is named only at {REPORT_MIN_GROUP_COUNT} or more
+                        postings, and the smaller rows fold into a single remainder line. A month joins the
+                        pay disclosure trend only at {TREND_MIN_MONTH_SAMPLE} or more postings added that
+                        month, and a trend is drawn only once{' '}
+                        {formatCount(TREND_MIN_MONTHS, 'such month')} exist. A pay figure is published only
+                        from {BENCHMARK_MIN_POSTINGS} or more postings with employer stated pay across{' '}
+                        {BENCHMARK_MIN_EMPLOYERS} or more employers, and pay that our own enrichment
+                        pipeline inferred is excluded from that sample entirely.
+                    </p>
+                    <p style={{ fontSize: '13.5px', color: MUTED_TEXT, lineHeight: 1.75, margin: '0 0 10px 0' }}>
+                        Where a sample is below its floor, the report says so in place of the number. The
+                        current partial month is excluded from every trend, because a half month of
+                        postings reads as a decline that has not happened. These are counts of what
+                        employers posted here, not a census of the profession.
+                    </p>
+                    {snapshot && (
+                        <p style={{ fontSize: '13.5px', color: MUTED_TEXT, lineHeight: 1.75, margin: '0 0 10px 0' }}>
+                            Current snapshot: {formatCount(snapshot.inventory.totalActive, 'active posting')}{' '}
+                            from {formatCount(snapshot.inventory.totalEmployers, 'employer')} across{' '}
+                            {formatCount(snapshot.inventory.totalStates, 'state')}.
+                        </p>
+                    )}
+                    <p style={{ fontSize: '13px', color: MUTED_TEXT, lineHeight: 1.7, margin: 0 }}>
+                        Full methodology lives on each report and on the{' '}
+                        <Link href="/press" style={{ color: '#BE185D', textDecoration: 'underline' }}>
+                            press &amp; data room
+                        </Link>
+                        . Custom cuts:{' '}
+                        <a href={`mailto:${brand.email.press}`} style={{ color: '#BE185D', textDecoration: 'underline' }}>
+                            {brand.email.press}
+                        </a>
+                        .
+                    </p>
+                </section>
             </div>
         </div>
     );

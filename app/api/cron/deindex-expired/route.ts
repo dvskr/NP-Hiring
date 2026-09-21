@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
         console.log(`[CRON:deindex-expired] De-indexing ${expiredUrls.length} expired URLs...`);
 
         // Send URL_DELETED to Google + IndexNow batch
-        const results = await pingAllSearchEnginesBatchDeleted(expiredUrls);
+        const results = await pingAllSearchEnginesBatchDeleted(expiredUrls, 'expired-job-removal');
 
         const googleOk = results.google.filter(r => r.success).length;
         const googleFailed = results.google.filter(r => !r.success).length;

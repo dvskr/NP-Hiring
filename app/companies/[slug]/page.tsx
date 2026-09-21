@@ -1,22 +1,46 @@
 import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import Link from 'next/link';
 import { formatDate } from '@/lib/utils';
 import type { Metadata } from 'next';
 import type { Prisma } from '@prisma/client';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
+import CategoryFAQAccordion from '@/components/CategoryFAQAccordion';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { categorySlugLabel } from '@/lib/pseo/category-landing-template';
-import { STATE_CODES, CODE_TO_STATE, stateToSlug } from '@/lib/pseo/setting-state-config';
+import { STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
 import { activeIndexableJobWhere } from '@/lib/active-job-filter';
 import { RECRUITMENT_TYPE_LABELS } from '@/lib/filters';
+import { BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
+import { shouldIndexCompanyProfile } from '@/lib/pseo/render-gate';
+import { getPracticeEnvironment } from '@/lib/pseo/practice-environment';
+import { DESCRIPTION_MAX } from '@/lib/pseo/category-metadata';
+import {
+    buildCompanyProfileFacts,
+    resolveRowStateName,
+    type CompanyProfileFacts,
+} from '@/lib/company-profile-facts';
+import {
+    COMPANY_CLAIM_CTA,
+    buildCompanyDescription,
+    buildCompanyFaqs,
+    buildCompanyFootprintSentence,
+    buildCompanyPaySentence,
+    buildCompanyStatePracticeLine,
+    buildCompanyTitle,
+    buildListingJobTypesSentence,
+    buildListingWorkModeSentence,
+    buildNewGradSentence,
+    type FaqEntry,
+} from '@/lib/pseo/listing-narrative';
 import ClaimProfileCta from './ClaimProfileCta';
 import { normalizeDisplaySalary } from '@/lib/salary-display';
 // Company names, job titles and locations are employer-authored and often
 // carry dashes as separators. They stay raw in the DB lookups and in both
 // JSON-LD blocks; visible render points go through lib/display-text.ts.
-import { displayText, normalizeDisplayText } from '@/lib/display-text';
+import { displayText, normalizeDisplayText, truncateOnWord } from '@/lib/display-text';
 
 // GSC Fix: ISR caching prevents DB pool exhaustion when Googlebot crawls company pages.
 // Previously defaulted to dynamic (no cache) → every crawl hit the DB.
@@ -66,13 +90,32 @@ async function resolveCompanyNormalizedName(slug: string): Promise<string | null
 
 const VALID_CATEGORY_SLUGS = new Set(ALL_CATEGORY_SLUGS);
 
-/** Minimum active postings with a disclosed pay range before the salary
- *  snapshot renders — a single row has no spread worth aggregating. */
-const SALARY_SNAPSHOT_MIN_SAMPLE = 2;
+/**
+ * Minimum active postings with a disclosed pay range before the salary
+ * snapshot publishes figures.
+ *
+ * CO-B6 (thin plan, spec 4 defect B6): this was 2, which published a
+ * "median" from a two-row sample on a named real employer while every
+ * other salary surface on the site waits for `BENCHMARK_MIN_POSTINGS`.
+ * One floor, one rule. The distinct-employer half of the benchmark gate
+ * deliberately does NOT apply here: a company profile has exactly one
+ * employer by construction, and the copy already says the figures are
+ * employer posted rather than a market median.
+ *
+ * Below the floor the block still renders, as the count sentence from
+ * `buildCompanyPaySentence` (CO-C2) — never a figure.
+ */
+const SALARY_SNAPSHOT_MIN_SAMPLE = BENCHMARK_MIN_POSTINGS;
 
 /** Max chips per breakdown row and max similar-employer cards. */
 const MAX_BREAKDOWN_CHIPS = 8;
 const MAX_SIMILAR_EMPLOYERS = 6;
+
+/** Work arrangement (CO-C4) renders from this many active postings up. */
+const MIN_JOBS_FOR_WORK_ARRANGEMENT = 2;
+
+/** FAQPage rich results need more than one question (components/CategoryFAQ.tsx). */
+const MIN_FAQ_ENTRIES_FOR_SCHEMA = 2;
 
 /**
  * Over-fetch factor for the similar-employer query. Prisma cannot order by a
@@ -121,7 +164,7 @@ interface SalaryRow {
  * Aggregate the company's active postings that disclose an annualized pay
  * range (normalizedMin/MaxSalary are annual USD — lib/salary-normalizer.ts).
  * min = lowest posted minimum, max = highest posted maximum, median = the
- * median of each posting's range midpoint. Returns null (module hidden)
+ * median of each posting's range midpoint. Returns null (figures hidden)
  * below the sample threshold.
  *
  * TRUTH RULE — salaryIsEstimated rows are EXCLUDED. normalizedMin/MaxSalary
@@ -194,58 +237,132 @@ function tallyTop(values: readonly string[], limit: number): TallyEntry[] {
         .slice(0, limit);
 }
 
-/** Resolve a job row's state to a full state name ("Texas"), accepting
- *  either the full-name `state` column or the 2-letter `stateCode`. */
-function resolveJobStateName(job: { state: string | null; stateCode: string | null }): string | null {
-    if (job.state && STATE_CODES[job.state]) return job.state;
-    const code = (job.stateCode ?? job.state ?? '').toUpperCase();
-    return CODE_TO_STATE[code] ?? null;
-}
+/**
+ * The profile's own rows, loaded once per request.
+ *
+ * generateMetadata and the page body both need the full row set now that
+ * the title, the description and the robots verdict all derive from it
+ * (CO-meta, thin-spec-4 section 5.5). React cache() dedupes on the slug, so
+ * the two callers share ONE company query instead of the previous
+ * resolve + count in metadata plus resolve + include in the body. Sharing
+ * the array is also what makes the robots verdict and the 404 gate
+ * structurally incapable of disagreeing: there is one count, not two.
+ *
+ * A QUERY FAILURE PROPAGATES (PLAN C.3). "Not found" is `null`; a database
+ * error throws, so Next answers 5xx. The previous `catch { notFound() }`
+ * turned a transient pool exhaustion into a 404 that this route then CACHED
+ * for an hour on a company whose profile was perfectly alive, which is the
+ * same "Submitted URL returns 404" class the middleware gate above exists
+ * to remove. Crawlers retry a 5xx and de-index on a 404.
+ */
+const loadCompanyProfile = cache(async (slug: string) => {
+    const now = new Date();
+    const resolvedName = await resolveCompanyNormalizedName(slug);
+    if (!resolvedName) return null;
+    return prisma.company.findUnique({
+        where: { normalizedName: resolvedName },
+        include: {
+            jobs: {
+                // Shared single source of truth (lib/active-job-filter.ts).
+                // The hand-rolled `expiresAt: { gt: now }` this replaces
+                // treated expiresAt=NULL as EXPIRED, while BOTH upstream
+                // gates treat NULL as ACTIVE:
+                //   app/sitemap.ts:342-358 selects company URLs with this
+                //     same helper, so those pages ARE submitted; and
+                //   middleware.ts passes them with the same predicate.
+                // A company whose active jobs all had null expiry was
+                // therefore emitted in sitemap.xml, served 200 by
+                // middleware, and then 404'd right here — the exact
+                // "Submitted URL returns 404/410" class that
+                // tests/regressions/shell-company-410-null-expiry.test.ts
+                // was written to stop. Reusing the helper also drops
+                // known-dead apply links (healthConsecutiveMissing) so the
+                // page and the sitemap now agree row-for-row.
+                where: activeIndexableJobWhere(now),
+                orderBy: [
+                    { isFeatured: 'desc' },
+                    { createdAt: 'desc' },
+                ],
+                select: {
+                    id: true,
+                    title: true,
+                    slug: true,
+                    location: true,
+                    jobType: true,
+                    mode: true,
+                    displaySalary: true,
+                    isFeatured: true,
+                    isRemote: true,
+                    // CO-C4 needs the third work-mode branch, CO-C1 the
+                    // employer-stated first-posted date, and the CO-C6
+                    // new-graduate question its own column.
+                    isHybrid: true,
+                    originalPostedAt: true,
+                    newGradFriendly: true,
+                    createdAt: true,
+                    city: true,
+                    state: true,
+                    stateCode: true,
+                    normalizedMinSalary: true,
+                    normalizedMaxSalary: true,
+                    // Required by computeSalarySnapshot to exclude
+                    // LLM-inferred / clamped pay from a module whose copy
+                    // asserts the figures are employer-posted.
+                    salaryIsEstimated: true,
+                    categoryTags: true,
+                },
+            },
+        },
+    });
+});
 
 // Generate dynamic metadata
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
 
     try {
-        const resolvedName = await resolveCompanyNormalizedName(slug);
-        if (!resolvedName) return { title: 'Company Not Found' };
-
-        const company = await prisma.company.findUnique({
-            where: { normalizedName: resolvedName },
-            select: { name: true, description: true },
-        });
-
+        const company = await loadCompanyProfile(slug);
         if (!company) return { title: 'Company Not Found' };
         const companyName = displayText(company.name);
 
-        // GSC Fix: Check if company has any active jobs.
-        // Companies with 0 active jobs get noindexed to prevent soft 404 flags.
-        // Must use the SAME predicate as the render path's 404 gate, or a
-        // company can be noindexed while its page renders (and vice versa).
-        const activeJobCount = await prisma.job.count({
-            where: {
-                company: { normalizedName: resolvedName },
-                ...activeIndexableJobWhere(),
-            },
-        });
+        // The robots decision reads the SAME rows as the render path's 404
+        // gate, so a company can never be noindexed while its page renders
+        // (and vice versa).
+        const activeJobCount = company.jobs.length;
+        const facts = buildCompanyProfileFacts(company.jobs);
 
         // P1 #12: edge-generated OG card via /api/og (pattern:
         // app/companies/page.tsx COMPANIES_OG_IMAGE) — company pages
         // previously shipped no social image at all.
+        const title = buildCompanyTitle({
+            company: companyName,
+            states: facts.states,
+            allRemote: facts.allRemote,
+        });
         const ogImage = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${companyName} ${brand.niche.short} Jobs`)}&type=page&subtitle=${encodeURIComponent(`${activeJobCount} open ${brand.niche.descriptor} position${activeJobCount === 1 ? '' : 's'}: salary data, locations, direct apply`)}`;
 
+        // CO-meta: the blurb still leads when the employer wrote one, but the
+        // cut lands on a word boundary and the whole string stays inside the
+        // SERP budget instead of running past it with an ellipsis.
+        const blurb = normalizeDisplayText(company.description);
+        const description = blurb
+            ? truncateOnWord(`${blurb} View open ${brand.niche.short} roles at ${companyName}.`, DESCRIPTION_MAX)
+            : buildCompanyDescription({
+                company: companyName,
+                total: activeJobCount,
+                states: facts.states,
+                topSpecialty: facts.topSpecialties[0] ?? null,
+                disclosed: facts.disclosedPay,
+            });
+
         return {
-            title: `${companyName} ${brand.niche.short} Jobs`,
-            description: company.description
-                ? `${company.description.substring(0, 150)}... View open ${brand.niche.short} positions at ${companyName}.`
-                : `Browse open ${brand.niche.long} (${brand.niche.short}) positions at ${companyName}. Find salary info, locations, and apply today.`,
+            title,
+            description,
             openGraph: {
-                title: `${companyName} ${brand.niche.short} Jobs`,
+                title,
                 // Expanded from a 30-char default so social cards (LinkedIn,
                 // Facebook) have enough copy to render a usable preview.
-                description: company.description
-                    ? `${company.description.substring(0, 140)}... View ${activeJobCount} open ${brand.niche.short} role${activeJobCount === 1 ? '' : 's'} at ${companyName}.`
-                    : `Browse ${activeJobCount} open ${brand.niche.short} position${activeJobCount === 1 ? '' : 's'} at ${companyName}. Salary info, locations, and direct apply.`,
+                description,
                 url: `${brand.baseUrl}/companies/${slug}`,
                 type: 'website',
                 siteName: brand.name,
@@ -258,17 +375,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             },
             twitter: {
                 card: 'summary_large_image',
-                title: `${companyName} ${brand.niche.short} Jobs`,
+                title,
                 description: `Browse ${activeJobCount} open ${brand.niche.descriptor} position${activeJobCount === 1 ? '' : 's'} at ${companyName}.`,
                 images: [ogImage],
             },
             alternates: {
                 canonical: `${brand.baseUrl}/companies/${slug}`,
             },
-            // GSC Fix: noindex companies with 0 active jobs (prevents soft 404)
-            ...(activeJobCount === 0 && {
-                robots: { index: false, follow: true },
-            }),
+            // Index gate C-IDX (PLAN C.2): 5 or more active jobs. Below it the
+            // page still renders and stays linked, it just does not compete in
+            // search with the job detail pages it mostly repeats. 0 active
+            // jobs never reaches here (410 in middleware, 404 below).
+            robots: {
+                index: shouldIndexCompanyProfile(activeJobCount),
+                follow: true,
+            },
         };
     } catch (error) {
         console.error(`[companies] Failed to generate metadata for ${slug}:`, error);
@@ -283,70 +404,23 @@ interface SimilarEmployer {
     _count: { jobs: number };
 }
 
+/** Shared section chrome: the profile's own white card on the page ground. */
+const sectionCard: React.CSSProperties = {
+    backgroundColor: 'var(--bg-secondary)',
+    border: '1px solid var(--border-color)',
+};
+
+/** Recessed row used by the practice-rules and cities lists. */
+const innerTile: React.CSSProperties = {
+    backgroundColor: 'var(--bg-primary)',
+    border: '1px solid var(--border-color)',
+};
+
 export default async function CompanyPage({ params }: Props) {
     const { slug } = await params;
     const now = new Date();
 
-    let company;
-    try {
-        const resolvedName = await resolveCompanyNormalizedName(slug);
-        if (!resolvedName) {
-            notFound();
-        }
-        company = await prisma.company.findUnique({
-            where: { normalizedName: resolvedName },
-            include: {
-                jobs: {
-                    // Shared single source of truth (lib/active-job-filter.ts).
-                    // The hand-rolled `expiresAt: { gt: now }` this replaces
-                    // treated expiresAt=NULL as EXPIRED, while BOTH upstream
-                    // gates treat NULL as ACTIVE:
-                    //   app/sitemap.ts:342-358 selects company URLs with this
-                    //     same helper, so those pages ARE submitted; and
-                    //   middleware.ts:647-649 passes them with
-                    //     `or=(expires_at.is.null,expires_at.gt.{now})`.
-                    // A company whose active jobs all had null expiry was
-                    // therefore emitted in sitemap.xml, served 200 by
-                    // middleware, and then 404'd right here — the exact
-                    // "Submitted URL returns 404/410" class that
-                    // tests/regressions/shell-company-410-null-expiry.test.ts
-                    // was written to stop. Reusing the helper also drops
-                    // known-dead apply links (healthConsecutiveMissing) so the
-                    // page and the sitemap now agree row-for-row.
-                    where: activeIndexableJobWhere(now),
-                    orderBy: [
-                        { isFeatured: 'desc' },
-                        { createdAt: 'desc' },
-                    ],
-                    select: {
-                        id: true,
-                        title: true,
-                        slug: true,
-                        location: true,
-                        jobType: true,
-                        mode: true,
-                        displaySalary: true,
-                        isFeatured: true,
-                        isRemote: true,
-                        createdAt: true,
-                        city: true,
-                        state: true,
-                        stateCode: true,
-                        normalizedMinSalary: true,
-                        normalizedMaxSalary: true,
-                        // Required by computeSalarySnapshot to exclude
-                        // LLM-inferred / clamped pay from a module whose copy
-                        // asserts the figures are employer-posted.
-                        salaryIsEstimated: true,
-                        categoryTags: true,
-                    },
-                },
-            },
-        });
-    } catch (error) {
-        console.error(`[companies] Failed to fetch company ${slug}:`, error);
-        notFound();
-    }
+    const company = await loadCompanyProfile(slug);
 
     if (!company) {
         notFound();
@@ -366,6 +440,9 @@ export default async function CompanyPage({ params }: Props) {
 
     // ─── P1 #12: aggregates from the company's own active rows ─────────
     const salarySnapshot = computeSalarySnapshot(company.jobs);
+    // CO-C1 to CO-C6 read one pure tally over the same rows the list below
+    // renders, so no sentence can disagree with the listings under it.
+    const facts: CompanyProfileFacts = buildCompanyProfileFacts(company.jobs, now);
     // Dedupe per job so each chip's badge counts POSTINGS, not tag entries —
     // the visible copy says "active postings in each area", and categoryTags
     // is a stored array column (a repeated tag on one row would otherwise
@@ -378,17 +455,76 @@ export default async function CompanyPage({ params }: Props) {
         ]),
         MAX_BREAKDOWN_CHIPS,
     );
+    // Same resolver the facts tally uses, so the chips and the footprint
+    // sentence can never disagree about which states this employer hires in.
     const stateTally = tallyTop(
         company.jobs
-            .map(resolveJobStateName)
+            .map(resolveRowStateName)
             .filter((stateName): stateName is string => stateName !== null),
         MAX_BREAKDOWN_CHIPS,
     );
 
+    // CO-C1 hiring footprint.
+    const footprint = buildCompanyFootprintSentence({
+        company: companyName,
+        total: activeJobCount,
+        states: facts.states,
+        topSpecialties: facts.topSpecialties,
+        newestPostedAt: facts.recency?.newestPostedAt ?? null,
+    });
+
+    // CO-C2 below the figure floor: the count sentence, never a number the
+    // sample cannot carry.
+    const payCountSentence = buildCompanyPaySentence({
+        company: companyName,
+        total: activeJobCount,
+        disclosed: facts.disclosedPay,
+    });
+
+    // CO-C3 practice rules in the states this employer actually hires in.
+    // A state with no dataset row drops out rather than printing a blank.
+    const practiceStates = facts.topStates.flatMap((state) => {
+        const env = getPracticeEnvironment(state.name);
+        return env ? [{ state, env }] : [];
+    });
+
+    // CO-C4 work arrangement and experience.
+    const workModeSentence = activeJobCount >= MIN_JOBS_FOR_WORK_ARRANGEMENT
+        ? buildListingWorkModeSentence({
+            mix: facts.workMode,
+            subject: `open ${brand.niche.short} roles at ${companyName}`,
+            min: MIN_JOBS_FOR_WORK_ARRANGEMENT,
+        })
+        : null;
+    const jobTypeSentence = activeJobCount >= MIN_JOBS_FOR_WORK_ARRANGEMENT && facts.jobTypes
+        ? buildListingJobTypesSentence(facts.jobTypes, MIN_JOBS_FOR_WORK_ARRANGEMENT)
+        : null;
+    const newGradSentence = activeJobCount >= MIN_JOBS_FOR_WORK_ARRANGEMENT
+        ? buildNewGradSentence(facts.newGradFriendly)
+        : null;
+    const arrangementLines = [workModeSentence, jobTypeSentence, newGradSentence]
+        .filter((line): line is string => line !== null);
+
+    // CO-C6: one array feeds the visible accordion and the FAQPage schema, so
+    // a question that fails its render condition leaves both together.
+    const faqs: FaqEntry[] = buildCompanyFaqs({
+        company: companyName,
+        total: activeJobCount,
+        states: facts.states,
+        disclosed: facts.disclosedPay,
+        workMode: facts.workMode,
+        newGradFriendly: facts.newGradFriendly,
+    });
+
     // Similar employers: other companies with an active job matching this
     // company's dominant category and/or dominant state. Skipped entirely
     // (module hidden) when neither dominant signal exists.
-    const dominantCategory = categoryTally[0]?.value ?? null;
+    //
+    // CO-B9: the dominant category comes from the specialty and APRN axes
+    // first (lib/company-profile-facts.ts), never from the employment-type
+    // tags where "Full Time" used to win on nearly every profile and made
+    // the same three large employers "similar" to everyone.
+    const dominantCategory = facts.dominantCategory;
     const dominantState = stateTally[0]?.value ?? null;
     const similarityOr: Prisma.JobWhereInput[] = [
         ...(dominantCategory ? [{ categoryTags: { has: dominantCategory } }] : []),
@@ -450,6 +586,20 @@ export default async function CompanyPage({ params }: Props) {
         ...(dominantState ? [dominantState] : []),
     ];
 
+    // FAQPage rich results need more than one question; a single question is
+    // a paragraph with a heading, not a FAQ page.
+    const faqSchema = faqs.length >= MIN_FAQ_ENTRIES_FOR_SCHEMA
+        ? JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: faqs.map((entry) => ({
+                '@type': 'Question',
+                name: entry.question,
+                acceptedAnswer: { '@type': 'Answer', text: entry.answer },
+            })),
+        }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')
+        : null;
+
     return (
         <>
             <BreadcrumbSchema items={[
@@ -465,8 +615,7 @@ export default async function CompanyPage({ params }: Props) {
                     <div
                         className="rounded-2xl p-8 mb-8"
                         style={{
-                            backgroundColor: 'var(--bg-secondary)',
-                            border: '1px solid var(--border-color)',
+                            ...sectionCard,
                             boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                         }}
                     >
@@ -601,46 +750,103 @@ export default async function CompanyPage({ params }: Props) {
                         </div>
                     </div>
 
-                    {/* P1 #12 — Salary snapshot. Aggregated live from this
-                        company's active postings that disclose an annualized
-                        pay range; hidden below the sample threshold. */}
-                    {salarySnapshot && (
+                    {/* CO-C1 — hiring footprint, built from this company's own
+                        active rows. Absolute UTC date: the page is ISR-cached,
+                        so a relative label would bake in and drift. */}
+                    {footprint && (
                         <section
-                            aria-labelledby="salary-snapshot-heading"
+                            aria-labelledby="hiring-footprint-heading"
                             className="rounded-2xl p-6 mb-8"
-                            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}
+                            style={sectionCard}
                         >
-                            <h2 id="salary-snapshot-heading" className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-                                Posted Pay at {companyName}
+                            <h2 id="hiring-footprint-heading" className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
+                                Hiring Footprint
                             </h2>
-                            <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
-                                Annualized from the {salarySnapshot.sampleSize === activeJobCount
-                                    ? `${activeJobCount} active postings`
-                                    : `${salarySnapshot.sampleSize} of ${activeJobCount} active postings`} that
-                                disclose a pay range. Figures are employer-posted, not {brand.name} estimates.
+                            <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                                {footprint}
                             </p>
-                            {/* 3-up collapses to a single column under 640px —
-                                three "$132k" tiles + their labels wrap to 3-4
-                                lines each inside a ~100px column on a 360px
-                                phone. */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                {[
-                                    { label: 'Lowest posted minimum', value: salarySnapshot.min },
-                                    { label: 'Median (range midpoint)', value: salarySnapshot.median },
-                                    { label: 'Highest posted maximum', value: salarySnapshot.max },
-                                ].map((stat) => (
-                                    <div
-                                        key={stat.label}
-                                        className="rounded-xl p-4 text-center"
-                                        style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}
-                                    >
-                                        <div className="text-2xl font-bold" style={{ color: '#BE185D' }}>
-                                            {formatAnnualUsd(stat.value)}
+                        </section>
+                    )}
+
+                    {/* P1 #12 — Posted pay. Aggregated live from this company's
+                        active postings that disclose an annualized pay range.
+                        CO-C2: below the sample floor the block keeps the count
+                        sentence and drops every figure. */}
+                    <section
+                        aria-labelledby="salary-snapshot-heading"
+                        className="rounded-2xl p-6 mb-8"
+                        style={sectionCard}
+                    >
+                        <h2 id="salary-snapshot-heading" className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
+                            Posted Pay at {companyName}
+                        </h2>
+                        {salarySnapshot && (
+                            <>
+                                <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
+                                    Annualized from the {salarySnapshot.sampleSize === activeJobCount
+                                        ? `${activeJobCount} active postings`
+                                        : `${salarySnapshot.sampleSize} of ${activeJobCount} active postings`} that
+                                    disclose a pay range. Figures are employer-posted, not {brand.name} estimates.
+                                </p>
+                                {/* 3-up collapses to a single column under 640px —
+                                    three "$132k" tiles + their labels wrap to 3-4
+                                    lines each inside a ~100px column on a 360px
+                                    phone. */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    {[
+                                        { label: 'Lowest posted minimum', value: salarySnapshot.min },
+                                        { label: 'Median (range midpoint)', value: salarySnapshot.median },
+                                        { label: 'Highest posted maximum', value: salarySnapshot.max },
+                                    ].map((stat) => (
+                                        <div
+                                            key={stat.label}
+                                            className="rounded-xl p-4 text-center"
+                                            style={innerTile}
+                                        >
+                                            <div className="text-2xl font-bold" style={{ color: '#BE185D' }}>
+                                                {formatAnnualUsd(stat.value)}
+                                            </div>
+                                            <div className="text-xs mt-1 font-medium" style={{ color: 'var(--text-tertiary)' }}>
+                                                {stat.label}
+                                            </div>
                                         </div>
-                                        <div className="text-xs mt-1 font-medium" style={{ color: 'var(--text-tertiary)' }}>
-                                            {stat.label}
-                                        </div>
-                                    </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                        {!salarySnapshot && (
+                            <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                                {payCountSentence}{' '}
+                                {facts.disclosedPay >= 1
+                                    ? `Each posted range is on its own listing below. ${brand.name} publishes a median for one employer only at ${SALARY_SNAPSHOT_MIN_SAMPLE} or more postings with disclosed pay.`
+                                    : (
+                                        <>
+                                            How often employers state pay is tracked in our{' '}
+                                            <Link href="/reports/pay-transparency" style={{ color: '#BE185D' }}>
+                                                pay transparency report
+                                            </Link>
+                                            .
+                                        </>
+                                    )}
+                            </p>
+                        )}
+                    </section>
+
+                    {/* CO-C4 — how the roles are set up. Renders from two active
+                        postings up; each clause omits itself when its count is
+                        zero rather than printing "0 hybrid". */}
+                    {arrangementLines.length > 0 && (
+                        <section
+                            aria-labelledby="work-arrangement-heading"
+                            className="rounded-2xl p-6 mb-8"
+                            style={sectionCard}
+                        >
+                            <h2 id="work-arrangement-heading" className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
+                                Work Arrangement and Experience
+                            </h2>
+                            <div className="text-sm leading-relaxed space-y-1.5" style={{ color: 'var(--text-secondary)' }}>
+                                {arrangementLines.map((line) => (
+                                    <p key={line}>{line}</p>
                                 ))}
                             </div>
                         </section>
@@ -648,12 +854,13 @@ export default async function CompanyPage({ params }: Props) {
 
                     {/* P1 #12 — Category / state breakdown chips, linking into
                         the matching taxonomy and state hub pages. Hidden when
-                        no active job carries a registry tag / resolvable state. */}
+                        no active job carries a registry tag / resolvable state.
+                        */}
                     {(categoryTally.length > 0 || stateTally.length > 0) && (
                         <section
                             aria-labelledby="hiring-focus-heading"
                             className="rounded-2xl p-6 mb-8"
-                            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}
+                            style={sectionCard}
                         >
                             <h2 id="hiring-focus-heading" className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
                                 Where {companyName} Is Hiring
@@ -673,7 +880,7 @@ export default async function CompanyPage({ params }: Props) {
                                 to browse every employer hiring for it.
                             </p>
                             {categoryTally.length > 0 && (
-                                <div className={stateTally.length > 0 ? 'mb-4' : ''}>
+                                <div className="mb-4">
                                     <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-tertiary)' }}>
                                         Specialties &amp; settings
                                     </h3>
@@ -723,6 +930,103 @@ export default async function CompanyPage({ params }: Props) {
                         </section>
                     )}
 
+                    {/* CO-C5 — the cities this employer posts in. A city is a
+                        link only when the lossy slug round-trips back to the
+                        same name AND this company alone already has enough
+                        roles there to clear the city page's own render floor,
+                        which is a lower bound on that page's total. Smaller
+                        markets are named, never linked. */}
+                    {facts.cities.length > 0 && (
+                        <section
+                            aria-labelledby="hiring-cities-heading"
+                            className="rounded-2xl p-6 mb-8"
+                            style={sectionCard}
+                        >
+                            <h2 id="hiring-cities-heading" className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
+                                Cities With Open Roles
+                            </h2>
+                            <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
+                                A city links to its own job page once that page carries enough roles to
+                                render. Smaller markets are named here and their roles are in the list below.
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                {facts.cities.map((city) => {
+                                    const label = city.stateCode ? `${city.name}, ${city.stateCode}` : city.name;
+                                    const badge = (
+                                        <span className="text-xs font-semibold" style={{ color: '#BE185D' }}>{city.count}</span>
+                                    );
+                                    const key = `${city.name}|${city.stateCode ?? ''}`;
+                                    return city.slug ? (
+                                        <Link
+                                            key={key}
+                                            href={`/jobs/city/${city.slug}`}
+                                            className="ce-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                                            style={{
+                                                backgroundColor: 'var(--bg-primary)',
+                                                border: '1px solid var(--border-color)',
+                                                textDecoration: 'none',
+                                            }}
+                                        >
+                                            {label}
+                                            {badge}
+                                        </Link>
+                                    ) : (
+                                        <span
+                                            key={key}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium"
+                                            style={{
+                                                backgroundColor: 'var(--bg-primary)',
+                                                border: '1px solid var(--border-color)',
+                                                color: 'var(--text-secondary)',
+                                            }}
+                                        >
+                                            {label}
+                                            {badge}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* CO-C3 — the regulatory picture a candidate needs before
+                        applying out of state. Every line is the AANP authority
+                        row plus the NCSBN compact status for that state
+                        (lib/state-practice-authority.ts, lib/blog-license-guides.ts
+                        through lib/pseo/practice-environment.ts). */}
+                    {practiceStates.length > 0 && (
+                        <section
+                            aria-labelledby="practice-rules-heading"
+                            className="rounded-2xl p-6 mb-8"
+                            style={sectionCard}
+                        >
+                            <h2 id="practice-rules-heading" className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
+                                Practice Rules Where {companyName} Hires
+                            </h2>
+                            <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
+                                Practice authority is the AANP classification for each state; compact status is
+                                verified against the NCSBN roster.
+                            </p>
+                            <div className="space-y-3">
+                                {practiceStates.map(({ state, env }) => (
+                                    <div key={env.stateName} className="rounded-xl p-4" style={innerTile}>
+                                        <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                                            {buildCompanyStatePracticeLine(env)}
+                                        </p>
+                                        <div className="flex flex-wrap items-center gap-3 mt-2 text-xs font-medium">
+                                            <Link href={`/blog/${env.licenseGuideSlug}`} style={{ color: '#BE185D' }}>
+                                                {env.stateName} license guide
+                                            </Link>
+                                            <Link href={`/jobs/state/${stateToSlug(env.stateName)}`} style={{ color: '#BE185D' }}>
+                                                All {env.stateName} roles ({state.count} here)
+                                            </Link>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
                     {/* Active Positions */}
                     <div className="mb-4">
                         <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
@@ -730,64 +1034,44 @@ export default async function CompanyPage({ params }: Props) {
                         </h2>
                     </div>
 
-                    {activeJobCount === 0 ? (
-                        <div
-                            className="rounded-lg p-12 text-center"
-                            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}
-                        >
-                            <p className="text-lg mb-2" style={{ color: 'var(--text-secondary)' }}>
-                                No open positions at {companyName} right now.
-                            </p>
-                            <p className="text-sm mb-6" style={{ color: 'var(--text-tertiary)' }}>
-                                Check back later or browse other {brand.niche.short} jobs.
-                            </p>
+                    <div className="space-y-3">
+                        {company.jobs.map((job) => (
                             <Link
-                                href="/jobs"
-                                className="inline-block bg-pink-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-pink-800 transition-colors"
+                                key={job.id}
+                                href={job.slug ? `/jobs/${job.slug}` : `/jobs/${job.id}`}
+                                className="block rounded-lg p-5 transition-all hover:shadow-md group"
+                                style={{
+                                    backgroundColor: 'var(--bg-secondary)',
+                                    border: job.isFeatured ? '1.5px solid rgba(244,114,182,0.4)' : '1px solid var(--border-color)',
+                                    textDecoration: 'none',
+                                }}
                             >
-                                Browse All Jobs
-                            </Link>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {company.jobs.map((job) => (
-                                <Link
-                                    key={job.id}
-                                    href={job.slug ? `/jobs/${job.slug}` : `/jobs/${job.id}`}
-                                    className="block rounded-lg p-5 transition-all hover:shadow-md group"
-                                    style={{
-                                        backgroundColor: 'var(--bg-secondary)',
-                                        border: job.isFeatured ? '1.5px solid rgba(244,114,182,0.4)' : '1px solid var(--border-color)',
-                                        textDecoration: 'none',
-                                    }}
-                                >
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1.5">
-                                                <h3 className="ce-hover-title font-semibold text-base transition-colors">
-                                                    {normalizeDisplayText(job.title)}
-                                                </h3>
-                                                {job.isFeatured && (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-900">
-                                                        Featured
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="flex flex-wrap items-center gap-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                                                <span>{normalizeDisplayText(job.location)}</span>
-                                                {job.jobType && <span>· {job.jobType}</span>}
-                                                {job.isRemote && <span className="text-pink-700 font-medium">Remote</span>}
-                                                {job.displaySalary && <span>· {normalizeDisplaySalary(job.displaySalary)}</span>}
-                                            </div>
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            <h3 className="ce-hover-title font-semibold text-base transition-colors">
+                                                {normalizeDisplayText(job.title)}
+                                            </h3>
+                                            {job.isFeatured && (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-900">
+                                                    Featured
+                                                </span>
+                                            )}
                                         </div>
-                                        <div className="text-xs flex-shrink-0" style={{ color: 'var(--text-tertiary)' }}>
-                                            Posted {formatDate(job.createdAt.toISOString())}
+                                        <div className="flex flex-wrap items-center gap-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                                            <span>{normalizeDisplayText(job.location)}</span>
+                                            {job.jobType && <span>· {job.jobType}</span>}
+                                            {job.isRemote && <span className="text-pink-700 font-medium">Remote</span>}
+                                            {job.displaySalary && <span>· {normalizeDisplaySalary(job.displaySalary)}</span>}
                                         </div>
                                     </div>
-                                </Link>
-                            ))}
-                        </div>
-                    )}
+                                    <div className="text-xs flex-shrink-0" style={{ color: 'var(--text-tertiary)' }}>
+                                        Posted {formatDate(job.createdAt.toISOString())}
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
 
                     {/* P1 #12 — Similar employers, matched on this company's
                         dominant category/state. Hidden when no match exists. */}
@@ -840,6 +1124,19 @@ export default async function CompanyPage({ params }: Props) {
                         </section>
                     )}
 
+                    {/* CO-C6 — the visible FAQ. Server-rendered <details>, so
+                        every answer is in the HTML that backs the FAQPage
+                        schema below; an entry that fails its render condition
+                        leaves the accordion and the schema together. */}
+                    {faqs.length > 0 && (
+                        <section aria-labelledby="company-faq-heading" className="mt-10">
+                            <h2 id="company-faq-heading" className="text-xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
+                                {companyName} Hiring Questions
+                            </h2>
+                            <CategoryFAQAccordion faqs={faqs} />
+                        </section>
+                    )}
+
                     {/* Claim step (brief #7). Rendered only while the profile is
                         unclaimed — once claimVerifiedAt is set the header badge
                         above is the surface, and re-offering "claim this" under
@@ -858,6 +1155,7 @@ export default async function CompanyPage({ params }: Props) {
                             <ClaimProfileCta
                                 companyId={company.id}
                                 companyName={companyName}
+                                intro={COMPANY_CLAIM_CTA}
                                 profilePath={`/companies/${slug}`}
                             />
                         </div>
@@ -869,7 +1167,7 @@ export default async function CompanyPage({ params }: Props) {
                             href="/jobs"
                             className="text-pink-700 hover:text-pink-900 font-medium text-sm hover:underline"
                         >
-                            ← Browse All {brand.niche.short} Jobs
+                            Browse all {brand.niche.short} jobs
                         </Link>
                     </div>
                 </div>
@@ -931,6 +1229,16 @@ export default async function CompanyPage({ params }: Props) {
                     }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e'),
                 }}
             />
+
+            {/* CO-C6 — FAQPage from the SAME array the accordion renders, so
+                the schema can never carry a question whose answer is absent
+                from the server HTML. */}
+            {faqSchema && (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: faqSchema }}
+                />
+            )}
         </>
     );
 }

@@ -1,5 +1,5 @@
 /**
- * Regression guards — P1 #5 (FAQ coverage), #6 template half (CategoryHero
+ * Regression guards: P1 #5 (FAQ coverage), #6 template half (CategoryHero
  * via the asset-registry contract), #16 hub side (DB-gated state mesh), and
  * #17 (/jobs hub editorial + citable FAQ). Category-editorial package,
  * 2026-07-29.
@@ -37,7 +37,7 @@ function joinedAnswers(category: CategorySlug): string {
         .join('\n');
 }
 
-describe('P1 #5 — FAQ builders for the landing slugs', () => {
+describe('P1 #5: FAQ builders for the landing slugs', () => {
     it.each(NEW_LANDING_FAQ_KEYS)('%s returns 4-6 populated Q&As', (key) => {
         const faqs = getCategoryFaqs({ category: key, totalJobs: SENTINEL_TOTAL });
         expect(faqs.length).toBeGreaterThanOrEqual(4);
@@ -114,7 +114,7 @@ describe('P1 #5 — FAQ builders for the landing slugs', () => {
         it('the P1 #15 verticals cite the right bodies and defer licensure specifics', () => {
             expect(joinedAnswers('aesthetics')).toContain('Plastic Surgical Nursing Certification Board');
             expect(joinedAnswers('palliative-hospice')).toContain('Hospice and Palliative Credentialing Center');
-            // Prescribing limits and PDMP rules are not repo data — the copy
+            // Prescribing limits and PDMP rules are not repo data, so the copy
             // must send readers to the state board, never assert specifics.
             const pain = joinedAnswers('pain-management');
             expect(pain).toContain('state board');
@@ -124,7 +124,7 @@ describe('P1 #5 — FAQ builders for the landing slugs', () => {
         });
     });
 
-    describe('truth rule — figures derive from stats-sources', () => {
+    describe('truth rule: figures derive from stats-sources', () => {
         it('the only dollar figure in the new builders (no live avg) is the cited BLS median', () => {
             for (const key of NEW_LANDING_FAQ_KEYS) {
                 const dollars = joinedAnswers(key).match(/\$[\d,]+/g) ?? [];
@@ -162,7 +162,7 @@ describe('P1 #5 — FAQ builders for the landing slugs', () => {
     });
 });
 
-describe('P1 #6 (template half) — CategoryHero adopts the asset-registry contract', () => {
+describe('P1 #6 (template half): CategoryHero adopts the asset-registry contract', () => {
     const src = read('lib/pseo/category-landing-template.tsx');
 
     it('hero art comes from CATEGORY_ASSET_REGISTRY, with a clean no-image fallback', () => {
@@ -195,7 +195,7 @@ describe('P1 #6 (template half) — CategoryHero adopts the asset-registry contr
     });
 });
 
-describe('P1 #16 (hub side) — DB-gated browse-by-state mesh on category landings', () => {
+describe('P1 #16 (hub side): DB-gated browse-by-state mesh on category landings', () => {
     const src = read('lib/pseo/category-landing-template.tsx');
 
     it('state links are gated on state eligibility + live inventory', () => {
@@ -211,7 +211,65 @@ describe('P1 #16 (hub side) — DB-gated browse-by-state mesh on category landin
     });
 });
 
-describe('P1 #17 — /jobs hub editorial + citable FAQ', () => {
+describe('W2-LANDING (thin-spec-1 section 5, PLAN C.4 item 8): the landing template repair', () => {
+    const src = read('lib/pseo/category-landing-template.tsx');
+
+    it('every count comes from getListingFacts over the canonical predicate (LAND-T3)', () => {
+        expect(src).toContain("import { getListingFacts, type ListingFacts, type StateCount } from '@/lib/pseo/listing-facts'");
+        expect(src).toContain('getListingFacts(`category-landing:${slug}`, categoryWhere(slug))');
+        expect(src).toContain('where: canonicalBucketWhere(categoryWhere(slug))');
+        expect(src).toContain('numberOfItems: facts.total');
+        // The posting mean and its consumers are gone (T0-3, T14).
+        expect(src).not.toContain('avgSalary:');
+        expect(src).not.toContain('_avg');
+        expect(src).not.toContain('Average salary');
+        expect(src).not.toMatch(/label: 'avg salary'/);
+    });
+
+    it('titles, descriptions and robots go through the shared helpers', () => {
+        expect(src).toContain('buildCategoryLandingTitle({ role, totalJobs })');
+        expect(src).toContain('buildCategoryLandingDescription({');
+        expect(src).toContain("import { MIN_JOBS_FOR_INDEX, shouldIndexListingPage } from '@/lib/pseo/render-gate'");
+        expect(src).toContain('...(!shouldIndexListingPage(totalJobs, page) && { robots: { index: false, follow: true } })');
+        expect(src).not.toContain('keywords:');
+    });
+
+    it('renders LAND-L1 to L7 through the clay section kit, each behind its builder', () => {
+        expect(src).toContain("from '@/components/seo/pseo'");
+        expect(src).toContain('<MarketSnapshot slug={slug} label={midSentenceLabel} scope="nationwide" facts={facts} />');
+        expect(src).toContain("<LocationSpread variant={{ kind: 'landing' }} places={places}");
+        expect(src).toContain('buildListingsAuthoritySentence({ slug, states, total: facts.total })');
+        expect(src).toContain("<PostedPay variant={{ kind: 'category', slug }} facts={facts}");
+        expect(src).toContain('getLandingAxisGuide(slug)');
+        expect(src).toContain('buildRelatedCategorySub(sibling.count ?? 0)');
+        expect(src).toContain('buildLowInventoryIntro({ label, total })');
+        expect(src).toContain('facts.total < MIN_JOBS_FOR_INDEX');
+        // Non-state-eligible categories link each state to its hub; the
+        // state-eligible mesh keeps the /jobs/<category>/<state> spokes.
+        expect(src).toContain('href: `/jobs/state/${stateToSlug(state.name)}`');
+        // The FAQ pay answer receives the gated median only.
+        expect(src).toContain('avgSalary={facts.benchmark ? facts.benchmark.median : undefined}');
+    });
+
+    it('the sidebar keeps exactly one alert card and no Top Employers list', () => {
+        expect(src.match(/Create Alert/g)?.length).toBe(1);
+        expect(src).not.toContain('Top Employers');
+        expect(src).not.toContain('TOP_EMPLOYERS_TAKE');
+    });
+
+    it('carries no freshness claim, trend word, dash or sticker import (C.5, house rules)', () => {
+        expect(src).not.toMatch(/updated daily|added daily|updated today/);
+        // U+2013 and U+2014 spelled by code point so this file carries neither.
+        expect(src).not.toMatch(new RegExp(`${String.fromCharCode(0x2013)}|${String.fromCharCode(0x2014)}`));
+        expect(src).not.toMatch(/'[^'\n]* - [^'\n]*'/);
+        expect(src).not.toContain('<style jsx');
+        expect(src).not.toContain('@/components/sticker');
+        expect(src).not.toContain('stk-');
+        expect(src).not.toContain('console.log');
+    });
+});
+
+describe('P1 #17: /jobs hub editorial + citable FAQ', () => {
     const src = read('app/jobs/page.tsx');
 
     it('renders a FAQPage schema derived from the same array as the visible FAQ', () => {

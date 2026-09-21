@@ -71,11 +71,15 @@ describe('pSEO internal links only target pages that clear the render gate', () 
 describe('index-pseo cron submits only pages its own render gate serves', () => {
   const src = () => read('app/api/cron/index-pseo/route.ts');
   it('sources candidates from category-city pseoStats, not city-wide groupBy', () => {
-    expect(src()).toMatch(/type: 'category-city'/);
+    expect(src()).toMatch(/"type" = 'category-city'/);
     expect(src()).not.toMatch(/prisma\.job\.groupBy/);
   });
-  it('applies the job-count and freshness gates', () => {
-    expect(src()).toMatch(/totalJobs: \{ gte: MIN_JOBS \}/);
-    expect(src()).toMatch(/updatedAt: \{ gte: freshnessThreshold \}/);
+  it('applies the sitemap index gate and the shared freshness window', () => {
+    // Same gate as app/api/sitemaps/index and cities/[batch]: job and
+    // employer floors through shouldIndexLocalListingPage, cutoff through
+    // pseoStatsFreshnessThreshold, both from lib/pseo/render-gate.
+    expect(src()).toContain('shouldIndexLocalListingPage({ activeJobs: row.totalJobs, distinctEmployers: row.distinctEmployers })');
+    expect(src()).toMatch(/"updatedAt" >= \$\{pseoStatsFreshnessThreshold\(\)\}/);
+    expect(src()).not.toMatch(/const MIN_JOBS = /);
   });
 });

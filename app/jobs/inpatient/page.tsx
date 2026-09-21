@@ -2,13 +2,15 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import MedianFigure from '@/components/MedianFigure';
 import ImmersiveImage from '@/components/ImmersiveImage';
-import { Building, Briefcase, DollarSign, Shield, TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
+import { ArrowRight, Bell, BookOpen, ShieldCheck } from 'lucide-react';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
-import { buildCategoryWhereClause } from '@/lib/filters';
+import { buildCategoryWhereClause, CATEGORY_EXTRA_OR, CATEGORY_FILTERS } from '@/lib/filters';
+import { canonicalBucketWhere, COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
+import { formatCount, pluralize } from '@/lib/display-text';
+import { STAT_SOURCES } from '@/lib/stats-sources';
 import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
@@ -16,65 +18,219 @@ import CategoryFAQ from '@/components/CategoryFAQ';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
+import {
+  ClayCard,
+  ClayHead,
+  ClayStyles,
+  IconWell,
+  LocationSpread,
+  MarketSnapshot,
+  PostedPay,
+  clayDesc,
+  clayLink,
+  clayList,
+  clayMeta,
+  clayRow,
+  employerSentence,
+  postedPaySentence,
+  type LocationSpreadPlace,
+} from '@/components/seo/pseo';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
+import { getListingFacts, type StateCount } from '@/lib/pseo/listing-facts';
+import {
+  buildListingsAuthoritySentence,
+  buildLowInventoryIntro,
+  buildRecencySentence,
+  buildRelatedCategorySub,
+  buildRoleSetup,
+  formatK,
+} from '@/lib/pseo/listing-narrative';
+import {
+  buildCategoryLandingDescription,
+  buildCategoryLandingTitle,
+  categoryLandingRobots,
+  labelNoun,
+  labelSentence,
+} from '@/lib/pseo/category-metadata';
+import { getLandingAxisGuide } from '@/lib/pseo/category-axis-guide';
+import { MIN_JOBS_FOR_INDEX } from '@/lib/pseo/render-gate';
+import { CODE_TO_STATE, STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
 
 
-/* ═══ Design Tokens — clay card style ═══ */
+/* ═══ Design Tokens: clay card style ═══ */
 const clayCard: React.CSSProperties = {
   background: '#FFFFFF', borderRadius: '20px',
   border: '1px solid rgba(255,255,255,0.5)',
   boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
 };
 
+/** Band grounds for the data bands; adjacent bands never share one. */
+const MINT_STAGE = 'linear-gradient(180deg, #FDFBF7 0%, #E6FFFA 50%, #FDFBF7 100%)';
+const PEACH_STAGE = 'linear-gradient(180deg, #FDFBF7 0%, #FFF3E8 50%, #FDFBF7 100%)';
+
 export const revalidate = 3600;
 
-interface EmployerGroupResult {
-  employer: string;
-  _count: { employer: number };
+const SLUG = 'inpatient';
+const LABEL = 'Inpatient';
+/** Role noun for titles and headings, e.g. "Inpatient NP". */
+const NOUN = labelNoun(SLUG, LABEL);
+/** Mid-sentence form of the label. */
+const MID = labelSentence(LABEL);
+
+/**
+ * Buckets the bespoke landings count with, so a sibling card here prints the
+ * same number that page prints. The inpatient clause is the one the /jobs
+ * filter uses, which tests/regressions/p9-counts-unification-canonical pins.
+ */
+const BESPOKE_BUCKETS: Record<string, Prisma.JobWhereInput> = {
+  remote: { isRemote: true },
+  inpatient: buildCategoryWhereClause('inpatient', { isRemote: { not: true } }),
+};
+
+/**
+ * The category bucket for a slug. Slugs without a legacy keyword entry gate
+ * on the precomputed categoryTags column, so a count can never degrade to
+ * "all published jobs" (the shared template applies the same rule).
+ */
+function categoryWhere(slug: string): Prisma.JobWhereInput {
+  const bespoke = BESPOKE_BUCKETS[slug];
+  if (bespoke) return bespoke;
+  const hasLegacyKeywordFilter =
+    (CATEGORY_FILTERS[slug]?.length ?? 0) > 0 || (CATEGORY_EXTRA_OR[slug]?.length ?? 0) > 0;
+  return hasLegacyKeywordFilter
+    ? buildCategoryWhereClause(slug)
+    : buildCategoryWhereClause(slug, { categoryTags: { has: slug } });
 }
 
-interface ProcessedEmployer {
-  name: string;
-  count: number;
+/** This page's bucket, composed onto the canonical predicate by every reader. */
+const BUCKET = categoryWhere(SLUG);
+
+/**
+ * LAND-T3: the one facts load for this page. getListingFacts composes the
+ * canonical predicate and is React cache()d on the scope key, so
+ * generateMetadata and the page body share a single set of queries.
+ */
+function getFacts() {
+  return getListingFacts(`category-landing:${SLUG}`, BUCKET);
 }
 
-const WHERE_CLAUSE = buildCategoryWhereClause('inpatient', { isRemote: { not: true } });
-
-async function getJobs(skip: number = 0, take: number = 20) {
+async function getJobs(skip: number = 0, take: number = 10) {
   return prisma.job.findMany({
-    where: WHERE_CLAUSE,
+    where: canonicalBucketWhere(BUCKET),
     orderBy: BEST_SORT_ORDER_BY,
     skip, take,
   });
 }
 
-async function getStats() {
-  const totalJobs = await prisma.job.count({ where: WHERE_CLAUSE });
-  // P9 #2c/#2d: gated MEDIAN over the NP-eligible analytics pool
-  // (lib/salary-analytics) — 0 below the n ≥ 5 / 3-employer publishing
-  // gate, which keeps this page's existing fallback copy in charge.
-  const medianSalaryK = await getGatedMedianKForWhere({ ...WHERE_CLAUSE, normalizedMinSalary: { not: null }, normalizedMaxSalary: { not: null } });
-  const topEmployers = await prisma.job.groupBy({
-    by: ['employer'], where: WHERE_CLAUSE,
-    _count: { employer: true }, orderBy: { _count: { employer: 'desc' } }, take: 8,
-  });
-  return { totalJobs, medianSalaryK, topEmployers: topEmployers.map((e: EmployerGroupResult) => ({ name: e.employer, count: e._count.employer })) };
+/** LAND-L6 related destinations; slugged cards carry a live canonical count. */
+const EXPLORE_CARDS: ReadonlyArray<{ href: string; label: string; sub: string; icon: string }> = [
+  { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based care', icon: '/images/categories/nav/outpatient.webp' },
+  { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: '/images/categories/nav/remote.webp' },
+  { href: '/jobs/emergency', label: 'Emergency', sub: 'ED and urgent care', icon: '/images/categories/nav/urgent-call.webp' },
+  { href: '/jobs/correctional', label: 'Correctional', sub: 'Corrections settings', icon: '/images/categories/nav/correctional.webp' },
+  { href: '/salary-guide', label: 'Salary Guide', sub: 'Posted pay by state', icon: '/images/categories/nav/salary.webp' },
+  { href: '/jobs/locations', label: 'By Location', sub: 'Browse every state', icon: '/images/categories/nav/location.webp' },
+];
+
+/** Taxonomy slug a card points at, or null for a non-category destination. */
+function cardSlug(href: string): string | null {
+  const slug = href.startsWith('/jobs/') ? href.slice(6) : '';
+  return ALL_CATEGORY_SLUGS.includes(slug) ? slug : null;
+}
+/** Live canonical counts for the explore cards that point at a landing. */
+async function getRelatedCounts(): Promise<Map<string, number>> {
+  const slugs = EXPLORE_CARDS.flatMap((card) => { const slug = cardSlug(card.href); return slug ? [slug] : []; });
+  const rows = await Promise.all(slugs.map(async (slug) => {
+    try {
+      return [slug, await prisma.job.count({ where: canonicalBucketWhere(categoryWhere(slug)) })] as const;
+    } catch (error) {
+      console.error(`[jobs/${SLUG}] sibling count failed for "${slug}":`, error);
+      return [slug, null] as const;
+    }
+  }));
+  return new Map(rows.flatMap(([slug, count]) => (count === null ? [] : [[slug, count] as [string, number]])));
 }
 
+/** Canonical full state name for a raw Job.state value, or null for a non-state. */
+function canonicalStateName(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return null;
+  if (STATE_CODES[value]) return value;
+  return CODE_TO_STATE[value.toUpperCase()]
+    ?? Object.keys(STATE_CODES).find((name) => name.toLowerCase() === value.toLowerCase())
+    ?? null;
+}
+
+/** LAND-L2 places: the facts' states folded onto canonical names, each linked to its hub. */
+function landingPlaces(states: readonly StateCount[]): LocationSpreadPlace[] {
+  const counts = new Map<string, number>();
+  for (const state of states) {
+    const canonical = canonicalStateName(state.name);
+    if (canonical) counts.set(canonical, (counts.get(canonical) ?? 0) + state.count);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([name, count]) => ({
+      name,
+      count,
+      link: { href: `/jobs/state/${stateToSlug(name)}`, renders: count >= 1 },
+    }));
+}
+
+/** A data band in this page's own chrome: stage ground, eyebrow, Lora H2, clay cards. */
+function Band({ id, eyebrow, title, background, children }: {
+  id: string; eyebrow: string; title: string; background: string; children: React.ReactNode;
+}) {
+  return (
+    <div style={{ background }}>
+      <section aria-labelledby={id} style={{ maxWidth: '1140px', margin: '0 auto', padding: '48px 24px 32px' }}>
+        <ClayHead eyebrow={eyebrow} title={title} id={id} />
+        {children}
+      </section>
+    </div>
+  );
+}
+
+/**
+ * Generate metadata for SEO. Title, description and robots come from
+ * lib/pseo/category-metadata.ts, the same builders the shared landing
+ * template uses, so counts appear only at the display floor and the index
+ * gate here is the one the sitemap reads.
+ */
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
-  const [stats, params] = await Promise.all([getStats(), searchParams]);
-  const page = parseInt(params.page || '1');
+  const [facts, params] = await Promise.all([getFacts(), searchParams]);
+  const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
+  const totalJobs = facts.total;
+  const title = buildCategoryLandingTitle({ role: NOUN, totalJobs });
+  const description = buildCategoryLandingDescription({
+    role: NOUN,
+    totalJobs,
+    employerCount: facts.distinctEmployers,
+    stateCount: landingPlaces(facts.states).length,
+    medianK: facts.benchmark ? Math.round(facts.benchmark.median / 1000) : null,
+  });
+  const ogSubtitle = totalJobs >= COUNT_DISPLAY_FLOOR
+    ? formatCount(totalJobs, 'open position')
+    : 'Role overview, certification requirements and state links';
+
   return {
-    title: `${stats.totalJobs} Inpatient ${brand.niche.short} Jobs: Hospital & Acute Care`,
-    description: `Find ${stats.totalJobs} inpatient ${brand.niche.short} jobs. Hospital-based ${brand.niche.descriptor} positions in acute care, step-down, and specialty inpatient units.`,
+    title,
+    description,
     openGraph: {
-      title: `${stats.totalJobs} Inpatient ${brand.niche.short} Jobs: Hospital-Based Roles`,
-      description: `Browse inpatient ${brand.niche.descriptor} positions.`,
+      title,
+      description,
       type: 'website',
-      images: [{ url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} Inpatient ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Hospital & acute care ${brand.niche.short} positions`)}`, width: 1200, height: 630, alt: `Inpatient ${brand.niche.short} Jobs` }],
+      images: [{
+        url: `/api/og?type=page&title=${encodeURIComponent(`${NOUN} Jobs`)}&subtitle=${encodeURIComponent(ogSubtitle)}`,
+        width: 1200,
+        height: 630,
+        alt: `${NOUN} Jobs`,
+      }],
     },
     alternates: { canonical: `${brand.baseUrl}/jobs/inpatient` },
-    ...(page > 1 && { robots: { index: false, follow: true } }),
+    // thin-spec-1 8.3 / PLAN C.2: index page 1 only, at MIN_JOBS_FOR_INDEX
+    // or more canonical jobs. Every other view stays follow.
+    robots: categoryLandingRobots(totalJobs, page),
   };
 }
 
@@ -82,43 +238,74 @@ interface PageProps { searchParams: Promise<{ page?: string }>; }
 
 export default async function InpatientJobsPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const page = Math.max(1, parseInt(params.page || '1'));
+  const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
   const limit = 10;
   const skip = (page - 1) * limit;
-  const [jobs, stats] = await Promise.all([getJobs(skip, limit), getStats()]);
+
+  const [facts, relatedCounts] = await Promise.all([getFacts(), getRelatedCounts()]);
+  const jobs = facts.total > 0 ? await getJobs(skip, limit) : [];
+
+  // Data bands, each rendered only when its own builder returns something.
+  const places = landingPlaces(facts.states);
+  const states: StateCount[] = places.map(({ name, count }) => ({ name, count }));
+  const snapshotRenders =
+    employerSentence({ kind: 'scoped', label: MID, scope: 'nationwide' }, facts) !== null
+    || buildRoleSetup({ slug: SLUG, facts }).rendered
+    || buildRecencySentence(facts.recency) !== null;
+  const practiceSentence = buildListingsAuthoritySentence({ slug: SLUG, states, total: facts.total });
+  const locationCards = [places.length > 0, practiceSentence !== null].filter(Boolean).length;
+  const payRenders = postedPaySentence({ kind: 'category', slug: SLUG }, facts) !== null;
+  const axisGuide = getLandingAxisGuide(SLUG);
+  const isLowInventory = facts.total < MIN_JOBS_FOR_INDEX;
+  const lowInventoryLinks = EXPLORE_CARDS.flatMap((card) => {
+    const slug = cardSlug(card.href);
+    const count = slug ? relatedCounts.get(slug) : undefined;
+    return count !== undefined && count >= MIN_JOBS_FOR_INDEX ? [{ ...card, count }] : [];
+  });
+  const lowInventoryIntro = buildLowInventoryIntro({ label: MID, total: facts.total });
+  const aanp = STAT_SOURCES.fullPracticeStates;
+
+  // One array drives the BreadcrumbList JSON-LD and the hero's linked trail.
+  const breadcrumbTrail = [
+    { name: "Home", url: brand.baseUrl },
+    { name: "Jobs", url: `${brand.baseUrl}/jobs` },
+    { name: "Inpatient", url: `${brand.baseUrl}/jobs/inpatient` },
+  ];
 
   return (
     <div style={{ backgroundColor: '#FDFBF7' }}>
-      <BreadcrumbSchema items={[
-        { name: "Home", url: brand.baseUrl },
-        { name: "Jobs", url: `${brand.baseUrl}/jobs` },
-        { name: "Inpatient", url: `${brand.baseUrl}/jobs/inpatient` }
-      ]} />
+      <ClayStyles />
+      <BreadcrumbSchema items={breadcrumbTrail} />
       {jobs.length > 0 && (
+        // Employer-supplied titles go through the repo's \u003c escape chain
+        // so an unescaped </script> in a title cannot break out of the block.
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-          '@context': 'https://schema.org', '@type': 'ItemList', name: `Inpatient ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs,
+          '@context': 'https://schema.org', '@type': 'ItemList', name: `${NOUN} Jobs`, numberOfItems: facts.total,
           itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })),
-        }) }} />
+        }).replace(/</g, '\\u003c').replace(/>/g, '\\u003e') }} />
       )}
-      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName={`Inpatient ${brand.niche.short} Jobs`} />
+      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName={`${NOUN} Jobs`} />
 
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#a0b7c4"
         heroImage="/images/categories/heroes/inpatient.webp"
         heroAlt={`${brand.niche.short} working in inpatient hospital setting`}
-        badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Inpatient", url: `${brand.baseUrl}/jobs/inpatient` }])}
+        badgeText={`${facts.total} live ${pluralize(facts.total, 'role')} · updated today`}
+        breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('inpatient') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Inpatient"
         headlineLine2={brand.niche.short}
         headlineSub="jobs, hospital & acute care."
         stats={[
-          { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$140K+', label: 'median salary' },
-          { value: `${stats.topEmployers.length}+`, label: 'hospitals' },
+          { value: `${facts.total}`, label: pluralize(facts.total, 'position') },
+          ...(facts.distinctEmployers > 0
+            ? [{ value: `${facts.distinctEmployers}`, label: pluralize(facts.distinctEmployers, 'employer') }]
+            : []),
+          // The gated median only (T0-3): below the publishing gate the stat is omitted.
+          ...(facts.benchmark ? [{ value: formatK(facts.benchmark.median), label: 'median posted pay' }] : []),
         ]}
-        description="Hospital-based and acute care positions with structured schedules, competitive pay, and multidisciplinary team support."
+        description="Hospital-based and acute care positions with set shift blocks and a multidisciplinary team around each admission."
         ctaLabel="Browse Inpatient Jobs"
         ctaHref="/jobs?category=inpatient"
         secondaryCtaLabel="Set Alert"
@@ -130,95 +317,121 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
         <div className="grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>Inpatient Positions ({stats.totalJobs})</h2>
+              <h2 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>Inpatient Positions ({facts.total})</h2>
               <Link href="/jobs" className="text-sm font-medium hover:opacity-80 transition-opacity" style={{ color: 'var(--color-primary)' }}>View All Jobs →</Link>
             </div>
-            {jobs.length === 0 ? (
-              <div className="text-center py-12 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                <Building className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-tertiary)' }} />
-                <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No inpatient positions at this time</h3>
-                <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>New inpatient {brand.niche.short} openings are added daily.</p>
-                <Link href="/jobs" className="inline-block px-6 py-3 text-white rounded-lg font-medium" style={{ backgroundColor: 'var(--color-primary)' }}>Browse All Jobs</Link>
+            {jobs.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                {jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}
               </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                  {jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}
-                </div>
-              </>
             )}
-            <div style={{ textAlign: 'center', marginTop: '32px' }}>
-              <Link href="/jobs?category=inpatient" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>
-                Browse All Inpatient Jobs <ArrowRight size={16} />
-              </Link>
-            </div>
+
+            {/* LAND-L7 low inventory: the counted intro, then the related
+                categories that clear the index floor with their live counts. */}
+            {isLowInventory && (
+              <div style={{ ...clayCard, padding: '32px 28px', marginTop: facts.total > 0 ? '24px' : 0 }}>
+                <p style={{ ...clayDesc, fontSize: '15px', margin: 0 }}>
+                  {lowInventoryLinks.length > 0
+                    ? lowInventoryIntro
+                    : lowInventoryIntro.split(' These related categories')[0]}
+                </p>
+                {lowInventoryLinks.length > 0 ? (
+                  <ul className="pseo-clay-list" style={clayList}>
+                    {lowInventoryLinks.map((card, i) => (
+                      <li key={card.href} style={clayRow(i === lowInventoryLinks.length - 1)}>
+                        <Link href={card.href} style={clayLink}>{card.label}</Link>
+                        <span style={clayMeta}>{buildRelatedCategorySub(card.count)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p style={{ margin: '16px 0 0', fontSize: '14px' }}>
+                    <Link href="/jobs" style={clayLink}>Browse all {brand.niche.short} jobs</Link>
+                  </p>
+                )}
+              </div>
+            )}
+
+            {jobs.length > 0 && (
+              <div style={{ textAlign: 'center', marginTop: '32px' }}>
+                <Link href="/jobs?category=inpatient" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>
+                  Browse All Inpatient Jobs <ArrowRight size={16} />
+                </Link>
+              </div>
+            )}
           </div>
-          {/* Sidebar */}
+          {/* Sidebar: the page's ONE alert CTA (T0-5). Alert cadence:
+              /api/cron/send-alerts runs in the daily group
+              (config/cron-schedule.ts), so "daily" is true here. */}
           <div className="lg:col-span-1">
-            <div className="cat-bento-card" style={{ ...clayCard, padding: '0', overflow: 'hidden', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
+            <div className="cat-bento-card" style={{ ...clayCard, padding: '0', overflow: 'hidden', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
               <div style={{ padding: '24px' }}>
                 <Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} />
                 <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 8px' }}>Inpatient Alerts</h3>
-                <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>New inpatient listings delivered to your inbox daily.</p>
+                <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>New {MID} roles delivered to your inbox daily.</p>
                 <Link href="/job-alerts" className="cat-cta-primary" style={{ display: 'block', width: '100%', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none', boxShadow: '3px 3px 8px rgba(190,24,93,0.15)' }}>Create Alert</Link>
               </div>
             </div>
-            {stats.topEmployers.length > 0 && (
-              <div className="cat-bento-card" style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <Building2 size={20} style={{ color: '#BE185D' }} />
-                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Hiring Hospitals</h3>
-                </div>
-                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                  {stats.topEmployers.map((employer: ProcessedEmployer, index: number) => (
-                    <li key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: index < stats.topEmployers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
-                      <span style={{ fontSize: '13px', color: '#5A4A42', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{employer.name}</span>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', marginLeft: '8px', whiteSpace: 'nowrap' }}>{employer.count} {employer.count === 1 ? 'job' : 'jobs'}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {stats.medianSalaryK > 0 && (
-              <div className="cat-bento-card" style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <TrendingUp size={20} style={{ color: '#34D399' }} />
-                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Salary Insights</h3>
-                </div>
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}><MedianFigure k={stats.medianSalaryK} /></div>
-                <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Median annual salary</div>
-                <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Includes shift differentials and sign-on bonuses.</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* ═══ BENTO GRID — Why Choose Inpatient ═══ */}
+      {/* LAND-L1 MARKET SNAPSHOT: who is hiring (the former sidebar employer
+          list, now with the sentence and company links), how the roles are
+          set up, and how current the listings are. */}
+      {snapshotRenders && (
+        <Band id={`snapshot-${SLUG}`} eyebrow="Market Snapshot" title={`What current ${NOUN} listings show`} background="#FDFBF7">
+          <MarketSnapshot slug={SLUG} label={MID} scope="nationwide" facts={facts} />
+        </Band>
+      )}
+
+      {/* LAND-L2 WHERE THE LISTINGS ARE + LAND-L3 PRACTICE ENVIRONMENT. */}
+      {locationCards > 0 && (
+        <Band id={`locations-${SLUG}`} eyebrow="Locations" title={`Where ${NOUN} listings are`} background={PEACH_STAGE}>
+          <div className={locationCards > 1 ? 'pseo-clay-grid pseo-clay-cols-2' : 'pseo-clay-grid'}>
+            <LocationSpread variant={{ kind: 'landing' }} places={places} title="States with current listings" index={1} />
+            {practiceSentence && (
+              <ClayCard chip="Practice authority" index={2} icon={ShieldCheck} title="Practice environment of current listings" desc={practiceSentence}>
+                <ul className="pseo-clay-list" style={clayList}>
+                  <li style={clayRow(false)}>
+                    <span>Classification</span>
+                    <a href={aanp.sourceUrl} target="_blank" rel="noopener noreferrer" style={clayLink}>{aanp.source}</a>
+                  </li>
+                  <li style={clayRow(true)}>
+                    <Link href="/resources/fpa-guide" style={clayLink}>Full practice authority guide</Link>
+                  </li>
+                </ul>
+              </ClayCard>
+            )}
+          </div>
+        </Band>
+      )}
+
+      {/* ═══ BENTO GRID: Why Choose Inpatient ═══ */}
       <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #FDF2F8 50%, #FDF2F8 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose Inpatient</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Built for Clinical Impact</h2>
-          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Inpatient roles provide structured environments, team-based care, and some of the highest-acuity clinical experience in {brand.niche.short} practice.</p>
+          <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>Inpatient roles sit inside hospitals and acute care units, with set shift blocks and a multidisciplinary team at the bedside.</p>
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
-            {/* ROW 1: Hospital Settings (8) + Higher Base Pay (4) */}
+            {/* ROW 1: Hospital Settings (8) + Reading the offer (4) */}
             <div className="cat-bento-hero-1 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
               <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Hospital Settings</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Work in major medical centers with full support teams, established protocols, and multidisciplinary collaboration.
+                  Work in medical centers with full support teams, established protocols, and multidisciplinary collaboration.
                 </p>
               </div>
               <ImmersiveImage src="/images/categories/bento/inpatient-ward.webp" alt="Hospital inpatient ward" minHeight={240} />
             </div>
 
             <div className="cat-bento-hero-2 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <ImmersiveImage src="/images/categories/bento/inpatient-pay.webp" alt="Inpatient salary and benefits" minHeight={200} />
+              <ImmersiveImage src="/images/categories/bento/inpatient-pay.webp" alt="Inpatient offer terms" minHeight={200} />
               <div style={{ padding: '24px 22px', flex: 1 }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Higher Base Pay</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Read the Whole Offer</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  Pay often sits at the top of the {brand.niche.short} range, with shift differentials, night and weekend premiums, and sign-on bonuses.
+                  Hospital listings state benefits, malpractice coverage and any shift differentials separately from base pay.
                 </p>
               </div>
             </div>
@@ -226,13 +439,13 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
             {/* ROW 2: 4 compact cards (3 cols each) */}
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src="/images/categories/icons/inpatient-bed.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
-              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Structured Shifts</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Predictable 7-on/7-off or 3×12 schedules with no after-hours calls.</p>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Defined Shifts</h3>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Listings name the shift block and whether the role carries nights, weekends or call.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src="/images/categories/icons/inpatient-alarm.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Acute Care Skills</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Gain critical skills in rapid assessment, acute management, and complex case coordination.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Rapid assessment, acute management, and complex case coordination day to day.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src="/images/categories/icons/inpatient-team.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -242,42 +455,38 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <Image src="/images/categories/icons/inpatient-mentor.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>New Grad Friendly</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Many hospitals offer structured onboarding, supervision, and mentorship programs.</p>
-            </div>
-
-            {/* ROW 3: Salary (8) + Alert CTA (4) */}
-            <div className="cat-bento-hero-3 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
-                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary + Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Inpatient {brand.niche.short}s earn {stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k annually` : 'competitive salaries'} with full benefits, malpractice coverage, and retirement plans.
-                </p>
-              </div>
-              <ImmersiveImage src="/images/categories/bento/inpatient-pay.webp" alt={`Inpatient ${brand.niche.short} compensation breakdown`} minHeight={240} />
-            </div>
-
-            <div className="cat-bento-cta cat-bento-card" style={{
-              ...clayCard, gridColumn: 'span 4', padding: '28px 22px',
-              display: 'flex', flexDirection: 'column', justifyContent: 'center',
-              background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)',
-            }}>
-              <Image src="/images/categories/icons/alert-bell.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '14px' }} />
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Job Alerts</h3>
-              <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                New inpatient listings delivered to your inbox so you can be first to apply.
-              </p>
-              <Link href="/job-alerts" className="cat-cta-primary" style={{
-                padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                background: '#BE185D', color: '#fff', textDecoration: 'none',
-                display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content',
-                boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
-              }}>
-                Create Alert <ArrowRight size={14} />
-              </Link>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Some hospital listings describe structured onboarding, supervision and fellowship programs.</p>
             </div>
           </div>
         </section>
       </div>
+
+      {/* LAND-L4 POSTED PAY: the gated median, which replaced the page's
+          salary card and its hand-typed band. Nothing prints below the gate
+          except the counted sentence with the cited national median. */}
+      {payRenders && (
+        <Band id={`pay-${SLUG}`} eyebrow="Compensation" title={`What ${NOUN} listings post`} background="#FDFBF7">
+          <div className="pseo-clay-split" style={{ gap: '14px', alignItems: 'stretch' }}>
+            <PostedPay variant={{ kind: 'category', slug: SLUG }} facts={facts} />
+            <div className="pseo-clay-card" style={{ ...clayCard, padding: 0, overflow: 'hidden', display: 'grid' }}>
+              <ImmersiveImage src="/images/categories/bento/inpatient-pay.webp" alt={`Inpatient ${brand.niche.short} pay illustration`} minHeight={240} />
+            </div>
+          </div>
+        </Band>
+      )}
+
+      {/* LAND-L5 HOW TO USE THIS PAGE: the paragraph for this taxonomy axis. */}
+      {axisGuide && (
+        <Band id={`guide-${SLUG}`} eyebrow="Using This Page" title="How to use this page" background={MINT_STAGE}>
+          <div
+            className="pseo-clay-card"
+            style={{ ...clayCard, padding: '28px', display: 'flex', gap: '20px', alignItems: 'flex-start', maxWidth: '860px', margin: '0 auto' }}
+          >
+            <IconWell icon={BookOpen} />
+            <p style={{ ...clayDesc, fontSize: '15px', lineHeight: 1.75 }}>{axisGuide}</p>
+          </div>
+        </Band>
+      )}
 
       {/* ═══ BEFORE YOU APPLY ═══ */}
       <div style={{ background: 'linear-gradient(180deg, #FDFBF7 0%, #FFF8F0 50%, #FDFBF7 100%)' }}>
@@ -289,7 +498,7 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
               { step: '01', title: 'Acute Care Readiness', text: 'Become comfortable with rapid assessment, deteriorating patients, and the management of inpatient emergencies.' },
               { step: '02', title: 'Team Dynamics', text: 'Learn to collaborate with physicians, pharmacists, nurses, and case managers in multidisciplinary rounds.' },
               { step: '03', title: 'Pharmacology', text: 'Stay current on inpatient pharmacology. Acute settings require rapid titration, IV therapies, and careful medication reconciliation.' },
-              { step: '04', title: 'Shift Negotiation', text: 'Negotiate shift differentials for nights, weekends, and holidays, as they can add meaningfully to your base pay.' },
+              { step: '04', title: 'Shift Terms', text: 'Ask how nights, weekends and holidays are paid, and get any differential written into the offer.' },
             ].map(r => (
               <div key={r.step} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>{r.step}</span>
@@ -301,37 +510,44 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
         </section>
       </div>
 
-      {/* ═══ EXPLORE MORE ═══ */}
+      {/* ═══ EXPLORE MORE (LAND-L6): the same cards, now with live counts ═══ */}
       <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #FDF2F8 50%, #FDF2F8 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '56px 20px' }}>
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Keep Exploring</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More Ways to Find Your Next Role</h2>
           <div className="cat-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-            {[
-              { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based care', icon: '/images/categories/nav/outpatient.webp' },
-              { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: '/images/categories/nav/remote.webp' },
-              { href: '/jobs/emergency', label: 'Emergency', sub: 'ED & urgent care', icon: '/images/categories/nav/urgent-call.webp' },
-              { href: '/jobs/correctional', label: 'Correctional', sub: 'Corrections settings', icon: '/images/categories/nav/correctional.webp' },
-              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: '/images/categories/nav/salary.webp' },
-              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: '/images/categories/nav/location.webp' },
-            ].map(c => (
-              <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
-                <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />
-                <span style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', display: 'block', marginBottom: '4px' }}>{c.label}</span>
-                <span style={{ fontSize: '12px', color: '#7A6A62', display: 'block' }}>{c.sub}</span>
-              </Link>
-            ))}
+            {EXPLORE_CARDS.map(c => {
+              const slug = cardSlug(c.href);
+              const count = slug ? relatedCounts.get(slug) : undefined;
+              return (
+                <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
+                  <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', display: 'block', marginBottom: '4px' }}>{c.label}</span>
+                  <span style={{ fontSize: '12px', color: '#7A6A62', display: 'block' }}>{c.sub}</span>
+                  {count !== undefined && count >= 1 && (
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', display: 'block', marginTop: '6px' }}>
+                      {buildRelatedCategorySub(count)}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
           </div>
         </section>
       </div>
 
-      {/* By Location — pseoStats-gated internal links */}
+      {/* By Location: pseoStats-gated internal links */}
 
       <CategoryLocationsExplore categorySlug="inpatient" categoryLabel="Inpatient" />
 
 
-      {/* FAQ */}
-      <CategoryFAQ category="inpatient" totalJobs={stats.totalJobs} />
+      {/* FAQ + FAQPage schema from the identical array; the pay answer
+          receives the gated median only (T14). */}
+      <CategoryFAQ
+        category="inpatient"
+        totalJobs={facts.total}
+        avgSalary={facts.benchmark ? facts.benchmark.median : undefined}
+      />
 
       {/* ═══ Responsive + Hover CSS ═══ */}
       <style>{`
@@ -355,6 +571,10 @@ export default async function InpatientJobsPage({ searchParams }: PageProps) {
           .cat-bento-hero-1, .cat-bento-hero-3 { grid-column: span 6 !important; }
           .cat-bento-hero-2, .cat-bento-cta { grid-column: span 6 !important; }
           .cat-bento-grid > div:not(.cat-bento-hero-1):not(.cat-bento-hero-2):not(.cat-bento-hero-3):not(.cat-bento-cta) { grid-column: span 3 !important; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .cat-cta-primary, .cat-bento-card, .cat-stat-pill { transition: none; }
+          .cat-cta-primary:hover, .cat-bento-card:hover, .cat-stat-pill:hover { transform: none; }
         }
       `}</style>
     </div>

@@ -141,7 +141,7 @@ describe('P1 #10 — rendered prompts carry zero reference-niche terms', () => {
     it('base city prompt is clean and uses the niche-neutral shortage phrasing', () => {
         const prompt = buildCityPrompt(factBlock, TOTAL_JOBS);
         expect(countNicheTerms(prompt)).toBe(0);
-        expect(prompt).toContain('Health Professional Shortage Area');
+        expect(prompt).not.toMatch(/HPSA|Health Professional Shortage/i);
         expect(prompt).toContain(`${brand.niche.short} Jobs in Springfield, IL`);
         expect(prompt).not.toContain('undefined');
     });

@@ -26,6 +26,7 @@ import {
     pingBingBatch,
     pingIndexNow,
     pingAllSearchEnginesBatch,
+    GOOGLE_INDEXING_LANES,
 } from '../lib/search-indexing';
 
 dotenv.config({ path: '.env.local' });
@@ -124,14 +125,19 @@ async function main() {
     }
 
     if (engine === 'all') {
-        if (urls.length > 200) {
-            console.warn(`⚠️  Google capped at 200/day. Submitting 200 of ${urls.length} to Google.`);
+        // This run spends the new-content lane, so the cap is that lane's
+        // per-run allowance rather than the project's whole daily quota. The
+        // scheduled crons hold their own reservations, so a large manual run
+        // no longer starves them.
+        const googleCap = GOOGLE_INDEXING_LANES['new-content'].perInvocation;
+        if (urls.length > googleCap) {
+            console.warn(`⚠️  Google capped at ${googleCap} per run on the new-content budget. Submitting ${googleCap} of ${urls.length} to Google.`);
             console.warn(`   Bing and IndexNow will get all ${urls.length} URLs.\n`);
         }
 
         console.log('🚀 Submitting to all engines...\n');
 
-        const results = await pingAllSearchEnginesBatch(urls);
+        const results = await pingAllSearchEnginesBatch(urls, 'new-content');
 
         // Summary
         const gSuccess = results.google.filter(r => r.success).length;

@@ -11,6 +11,10 @@ import { isKnownCitySlug } from '@/lib/pseo/city-data/city-slugs-edge';
 import { resolveStateSlug } from '@/lib/pseo/setting-state-config';
 import { getAllMetroSlugs } from '@/lib/metro-data';
 import { JOBS_TOP_SEGMENTS, isUnknownJobsTaxonomy } from '@/lib/pseo/jobs-segments-edge';
+// The dead-link half of canonicalActiveJobWhere, for the company-profile 410
+// gate below. Plain integer constant; lib/active-job-filter.ts reaches
+// @prisma/client through type-only imports, which the compiler erases.
+import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';
 import {
     LISTING_GATE_SELECT,
     NOT_FOUND_REWRITE_PATH,
@@ -773,32 +777,68 @@ export async function middleware(request: NextRequest) {
                             const companyId = rows[0].id;
                             // Count active published jobs for this company.
                             //
-                            // V1 fix: "active" must match the sitemap's predicate
-                            // (lib/active-job-filter.ts activeIndexableJobWhere),
-                            // which treats `expiresAt IS NULL` as active. The old
-                            // filter (`expires_at=gt.now`) EXCLUDED null-expiry
-                            // rows, so a company whose active jobs all had null
-                            // expiry was sitemap-listed yet 410'd here. Null
-                            // expiry currently only enters via the admin job
-                            // create/edit path, but the two predicates must not
-                            // diverge.
+                            // The predicate must be `canonicalActiveJobWhere`
+                            // (lib/canonical-counts.ts) — the one the sitemap's
+                            // company block and the profile page's own 404 gate
+                            // both read — or this gate rules on a different
+                            // inventory than the page it is protecting. Three
+                            // clauses make that up, and this edge context gets
+                            // each of them a different way:
+                            //
+                            //   1. is_published                → a REST filter.
+                            //   2. unexpired, where NULL means ACTIVE          → a
+                            //      REST `or=`. The pre-V1 filter (`expires_at=
+                            //      gt.now`) EXCLUDED null-expiry rows, so a company
+                            //      whose active jobs all had null expiry was
+                            //      sitemap-listed yet 410'd here.
+                            //   3. not a repeated dead link, and not vetoed by
+                            //      GLOBAL_EXCLUSIONS                → the dead-link
+                            //      counter is one more REST filter, but the
+                            //      quarantine is a set of case-insensitive title
+                            //      patterns with rescue signals that PostgREST
+                            //      cannot express without re-implementing (and
+                            //      therefore eventually mis-copying) lib/filters.ts.
+                            //
+                            // So clause 3's quarantine half is evaluated the way
+                            // the job and city gates above already evaluate it:
+                            // fetch the rows with LISTING_GATE_SELECT and run the
+                            // real GLOBAL_EXCLUSIONS over them in memory. Without
+                            // clauses 3 a company whose only remaining "active"
+                            // rows were dead links or quarantined non-NP titles
+                            // passed this gate and then 404'd on the page — the
+                            // "Submitted URL returns 404" class this block exists
+                            // to remove.
+                            //
+                            // The fetch is bounded, and a full page of rows is not
+                            // proof of absence, so a 410 is ruled only when the
+                            // result is short of the cap (every matching row was
+                            // seen) and none of those rows passes the quarantine.
+                            const ACTIVE_JOB_FETCH_LIMIT = 100;
                             const nowIso = new Date().toISOString();
                             const activeExpiry = `or=(expires_at.is.null,expires_at.gt.${encodeURIComponent(nowIso)})`;
+                            const deadLinkGate = `health_consecutive_missing=lt.${DEAD_LINK_MISS_THRESHOLD}`;
                             const countRes = await fetch(
-                                `${supabaseUrl}/rest/v1/jobs?company_id=eq.${companyId}&is_published=eq.true&${activeExpiry}&select=id&limit=1`,
+                                `${supabaseUrl}/rest/v1/jobs?company_id=eq.${companyId}&is_published=eq.true&${activeExpiry}&${deadLinkGate}&select=${LISTING_GATE_SELECT}&limit=${ACTIVE_JOB_FETCH_LIMIT}`,
                                 {
                                     headers: {
                                         'apikey': supabaseKey,
                                         'Authorization': `Bearer ${supabaseKey}`,
-                                        'Prefer': 'count=exact',
                                     },
                                 }
                             );
                             if (countRes.ok) {
-                                const contentRange = countRes.headers.get('content-range') || '';
-                                const totalMatch = contentRange.match(/\/(\d+)$/);
-                                const total = totalMatch ? parseInt(totalMatch[1], 10) : NaN;
-                                if (!Number.isNaN(total) && total === 0) {
+                                const jobRows: ListingGateRow[] = await countRes.json();
+                                // `!== false`, not `=== true`: passesListingQuarantine
+                                // returns null when a future exclusion reads a column
+                                // this select does not carry, and an unevaluable
+                                // quarantine must never turn into a 410 on a company
+                                // whose page renders. Standing down costs a soft 404
+                                // at worst; guessing costs a live employer its URL.
+                                const servable = jobRows.filter(
+                                    (jobRow) => passesListingQuarantine(jobRow) !== false,
+                                ).length;
+                                const sawEveryRow = jobRows.length < ACTIVE_JOB_FETCH_LIMIT;
+                                if (servable === 0 && sawEveryRow) {
                                     cacheLookupSet(cacheKey, true);
                                     return styled410({
                                         badge: 'No Open Positions',
