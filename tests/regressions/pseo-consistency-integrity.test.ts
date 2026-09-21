@@ -23,7 +23,12 @@ import {
 } from '@/lib/pseo/render-gate';
 
 const ROOT = process.cwd();
-const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+// Normalized to LF because several assertions below pin MULTI-LINE literals
+// (an import tail, a guard body). A Windows checkout stores these sources with
+// CRLF, so without this the result depended on the reader's git autocrlf
+// setting rather than on the code: green in one worktree and red in a fresh
+// clone of the same commit.
+const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\n/g, '\n');
 
 describe('B39: narrative uniqueness covers the full taxonomy surface', () => {
   it('every city-eligible category slug has a taxonomy-specific lead', () => {
