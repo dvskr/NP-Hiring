@@ -9,6 +9,10 @@
  * render as free, and a made-up benchmark on a page that concludes our product
  * is cheaper would be indefensible.
  *
+ * Our side has three ways to buy (launch promo → free; per-post ladder; the
+ * Employer plan) and the widget prices whichever one the reader picks, so a
+ * $0 promo result is always labelled as a dated window rather than a rate.
+ *
  * ACCESSIBILITY / STABILITY
  *  - Labelled native inputs with ids, keyboard operable, hints wired through
  *    aria-describedby.
@@ -26,22 +30,28 @@ import {
     DEFAULT_INPUTS,
     FIRST_YEAR_BASE_SOURCE,
     FLAT_FEE_COST_PER_DAY,
+    FLAT_FEE_MODE_LABELS,
     FLAT_FEE_PRICING,
     FREE_POST_SCOPE_NOTE,
+    INTRO_PRICE_SCOPE_NOTE,
     compareChannels,
     flatFeeCostPerHire,
     flatFeeSpend,
     rankByCostPerHire,
     type CostPerHireInputs,
+    type FlatFeeMode,
 } from './cost-per-hire-model';
 
-type NumericKey = Exclude<keyof CostPerHireInputs, 'useFreeFirstPost'>;
+type NumericKey = Exclude<keyof CostPerHireInputs, 'useIntroPrice' | 'flatFeeMode'>;
 type Draft = Record<NumericKey, string>;
+
+const FLAT_FEE_MODES: readonly FlatFeeMode[] = ['promo', 'per-post', 'plan'];
 
 function toDraft(inputs: CostPerHireInputs): Draft {
     return {
         roles: String(inputs.roles),
         renewalsPerRole: String(inputs.renewalsPerRole),
+        planMonths: String(inputs.planMonths),
         hiresPerRole: String(inputs.hiresPerRole),
         flatFeeApplicantsPerRole: String(inputs.flatFeeApplicantsPerRole),
         flatFeeTimeToFillDays: String(inputs.flatFeeTimeToFillDays),
@@ -129,13 +139,16 @@ const twoCol = {
 
 export default function EmployerCostPerHireCalculator() {
     const [draft, setDraft] = useState<Draft>(() => toDraft(DEFAULT_INPUTS));
-    const [useFreeFirstPost, setUseFreeFirstPost] = useState(DEFAULT_INPUTS.useFreeFirstPost);
+    const [flatFeeMode, setFlatFeeMode] = useState<FlatFeeMode>(DEFAULT_INPUTS.flatFeeMode);
+    const [useIntroPrice, setUseIntroPrice] = useState(DEFAULT_INPUTS.useIntroPrice);
 
     const inputs = useMemo<CostPerHireInputs>(
         () => ({
             roles: num(draft.roles),
             renewalsPerRole: num(draft.renewalsPerRole),
-            useFreeFirstPost,
+            flatFeeMode,
+            useIntroPrice,
+            planMonths: num(draft.planMonths),
             hiresPerRole: num(draft.hiresPerRole),
             flatFeeApplicantsPerRole: num(draft.flatFeeApplicantsPerRole),
             flatFeeTimeToFillDays: num(draft.flatFeeTimeToFillDays),
@@ -147,7 +160,7 @@ export default function EmployerCostPerHireCalculator() {
             agencyTimeToFillDays: num(draft.agencyTimeToFillDays),
             dailyVacancyCost: num(draft.dailyVacancyCost),
         }),
-        [draft, useFreeFirstPost],
+        [draft, flatFeeMode, useIntroPrice],
     );
 
     const results = useMemo(() => compareChannels(inputs), [inputs]);
@@ -169,7 +182,7 @@ export default function EmployerCostPerHireCalculator() {
                 <p style={{ fontSize: '12.5px', color: '#312E81', margin: 0, lineHeight: 1.6 }}>
                     <strong>We sell job postings, so here is how this stays honest.</strong> The only prices filled in
                     for you are ours, and they are the prices our checkout actually charges. We publish no benchmark
-                    for what a sponsored click, an agency fee, or a time-to-fill &ldquo;usually&rdquo; costs — every
+                    for what a sponsored click, an agency fee, or a time-to-fill &ldquo;usually&rdquo; costs. Every
                     figure in the other two columns is one you enter from your own invoices, and a column with nothing
                     entered says so instead of showing a zero.
                 </p>
@@ -177,7 +190,7 @@ export default function EmployerCostPerHireCalculator() {
 
             {/* Hiring plan */}
             <h3 style={groupHeading}>Your hiring plan</h3>
-            <p style={groupNote}>Applies to every channel — the same roles filled three different ways.</p>
+            <p style={groupNote}>Applies to every channel: the same roles filled three different ways.</p>
             <div className="tool-two-col" style={{ ...twoCol, marginBottom: '10px' }}>
                 <NumberField
                     id="cph-roles"
@@ -198,46 +211,80 @@ export default function EmployerCostPerHireCalculator() {
             {/* Flat fee */}
             <h3 style={{ ...groupHeading, marginTop: '20px' }}>Flat-fee posting on {brand.name}</h3>
             <p style={groupNote}>
-                {formatUsd(FLAT_FEE_PRICING.postingPrice)} per post for {FLAT_FEE_PRICING.paidDurationDays} days
-                ({formatUsd(FLAT_FEE_COST_PER_DAY)} a day), {formatUsd(FLAT_FEE_PRICING.renewalPrice)} to renew,
-                and {FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate unlocks plus{' '}
-                {FLAT_FEE_PRICING.inmailsPerPosting} direct messages included. Your organization&rsquo;s first post is
-                free for {FLAT_FEE_PRICING.freeDurationDays} days: {FREE_POST_SCOPE_NOTE}.
+                During our launch promo {FREE_POST_SCOPE_NOTE}. From {FLAT_FEE_PRICING.ladderStartsLabel}: your
+                first post is {formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is{' '}
+                {formatUsd(FLAT_FEE_PRICING.postingPrice)} for {FLAT_FEE_PRICING.durationDays} days
+                ({formatUsd(FLAT_FEE_COST_PER_DAY)} a day), or {formatUsd(FLAT_FEE_PRICING.planPrice)}/month for{' '}
+                {FLAT_FEE_PRICING.planSlots} active jobs. Renew any post for {formatUsd(FLAT_FEE_PRICING.renewalPrice)}{' '}
+                (+{FLAT_FEE_PRICING.durationDays} days). Every post includes {FLAT_FEE_PRICING.candidateUnlocksPerPosting}{' '}
+                candidate unlocks and {FLAT_FEE_PRICING.inmailsPerPosting} direct messages.
             </p>
+            <div style={{ marginBottom: '10px' }}>
+                <label htmlFor="cph-flat-mode" style={labelStyle}>How you would buy from us</label>
+                <select
+                    id="cph-flat-mode"
+                    className="tool-control"
+                    value={flatFeeMode}
+                    aria-describedby="cph-flat-mode-hint"
+                    onChange={(event) => setFlatFeeMode(event.target.value as FlatFeeMode)}
+                    style={controlStyle}
+                >
+                    {FLAT_FEE_MODES.map((mode) => (
+                        <option key={mode} value={mode}>{FLAT_FEE_MODE_LABELS[mode]}</option>
+                    ))}
+                </select>
+                <p id="cph-flat-mode-hint" style={{ fontSize: '11.5px', color: '#94A3B8', margin: '5px 0 0', lineHeight: 1.45 }}>
+                    The promo prices every post at zero until it ends; the two {FLAT_FEE_PRICING.ladderStartsLabel} options
+                    price the same roles on the per-post ladder or on the Employer plan.
+                </p>
+            </div>
             <div className="tool-two-col" style={{ ...twoCol, marginBottom: '10px' }}>
                 <NumberField
                     id="cph-flat-applicants"
                     label="Applicants per role you expect"
-                    hint={`Starts at ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} because that is how many candidate unlocks a posting includes — a plan feature, not a benchmark. Replace it with what your postings actually draw.`}
+                    hint={`Starts at ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} because that is how many candidate unlocks a posting includes. It is a plan feature, not a benchmark. Replace it with what your postings actually draw.`}
                     value={draft.flatFeeApplicantsPerRole}
                     onChange={set('flatFeeApplicantsPerRole')}
                 />
-                <NumberField
-                    id="cph-renewals"
-                    label="Renewals per role"
-                    hint={`Each renewal adds ${formatUsd(FLAT_FEE_PRICING.renewalPrice)} and another ${FLAT_FEE_PRICING.paidDurationDays} days.`}
-                    value={draft.renewalsPerRole}
-                    onChange={set('renewalsPerRole')}
-                />
+                {flatFeeMode === 'plan' ? (
+                    <NumberField
+                        id="cph-plan-months"
+                        label="Months on the Employer plan"
+                        hint={`Starts at ${DEFAULT_INPUTS.planMonths} because that is our ${FLAT_FEE_PRICING.durationDays}-day posting window in whole billing months. That is a product fact, not how long anyone subscribes. Plan posts stay live while you are subscribed, so there are no renewals to price.`}
+                        value={draft.planMonths}
+                        suffix="months"
+                        onChange={set('planMonths')}
+                    />
+                ) : (
+                    <NumberField
+                        id="cph-renewals"
+                        label="Renewals per role"
+                        hint={`Each renewal adds ${formatUsd(FLAT_FEE_PRICING.renewalPrice)} and another ${FLAT_FEE_PRICING.durationDays} days.`}
+                        value={draft.renewalsPerRole}
+                        onChange={set('renewalsPerRole')}
+                    />
+                )}
             </div>
-            <label
-                htmlFor="cph-free-post"
-                style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', padding: '12px 14px', borderRadius: '12px', background: '#F8FAFC', border: '1px solid rgba(0,0,0,0.06)', marginBottom: '10px' }}
-            >
-                <input
-                    id="cph-free-post"
-                    className="tool-control"
-                    type="checkbox"
-                    checked={useFreeFirstPost}
-                    onChange={(event) => setUseFreeFirstPost(event.target.checked)}
-                    style={{ width: '17px', height: '17px', flexShrink: 0, marginTop: '1px', accentColor: TOOL_ACCENT, padding: 0 }}
-                />
-                <span style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5 }}>
-                    Apply the free first post — {FREE_POST_SCOPE_NOTE}. Uncheck it if a colleague at your domain has
-                    already used it, because the quota does not reset for each new recruiter who signs up. With it
-                    applied, a single-role plan costs nothing on our side, which is a real price and not a comparison.
-                </span>
-            </label>
+            {flatFeeMode === 'per-post' && (
+                <label
+                    htmlFor="cph-intro-price"
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', padding: '12px 14px', borderRadius: '12px', background: '#F8FAFC', border: '1px solid rgba(0,0,0,0.06)', marginBottom: '10px' }}
+                >
+                    <input
+                        id="cph-intro-price"
+                        className="tool-control"
+                        type="checkbox"
+                        checked={useIntroPrice}
+                        onChange={(event) => setUseIntroPrice(event.target.checked)}
+                        style={{ width: '17px', height: '17px', flexShrink: 0, marginTop: '1px', accentColor: TOOL_ACCENT, padding: 0 }}
+                    />
+                    <span style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5 }}>
+                        Apply the intro price: {INTRO_PRICE_SCOPE_NOTE}. Uncheck it if a colleague at your domain has
+                        already bought a post, because the intro price does not reset for each new recruiter who signs
+                        up. Posts made free during the launch promo do not use it up.
+                    </span>
+                </label>
+            )}
 
             {/* CPC */}
             <h3 style={{ ...groupHeading, marginTop: '20px' }}>Sponsored / cost-per-click, from your invoice</h3>
@@ -255,7 +302,7 @@ export default function EmployerCostPerHireCalculator() {
                 <NumberField
                     id="cph-cpc-applicants"
                     label="Applicants that spend produced"
-                    hint="Completed applications, not clicks or impressions — your ATS knows this number."
+                    hint="Completed applications, not clicks or impressions. Your ATS knows this number."
                     value={draft.cpcApplicantsPerRole}
                     onChange={set('cpcApplicantsPerRole')}
                 />
@@ -268,7 +315,7 @@ export default function EmployerCostPerHireCalculator() {
                 <NumberField
                     id="cph-agency-pct"
                     label="Contingency rate"
-                    hint="The percentage of first-year base in your signed agreement. We publish no typical rate — this has to come from your paperwork."
+                    hint="The percentage of first-year base in your signed agreement. We publish no typical rate; this has to come from your paperwork."
                     value={draft.agencyFeePct}
                     suffix="%"
                     onChange={set('agencyFeePct')}
@@ -288,8 +335,8 @@ export default function EmployerCostPerHireCalculator() {
             <h3 style={{ ...groupHeading, marginTop: '20px' }}>Optional: what the vacancy itself costs</h3>
             <p style={groupNote}>
                 Zero by default, which switches the overlay off entirely. Only you know what an unfilled seat costs
-                per day — coverage, lost visit revenue, overtime — and we will not guess it for you. The three
-                time-to-fill fields start at our {FLAT_FEE_PRICING.paidDurationDays}-day posting window, which is a
+                per day (coverage, lost visit revenue, overtime), and we will not guess it for you. The three
+                time-to-fill fields start at our {FLAT_FEE_PRICING.durationDays}-day posting window, which is a
                 product fact rather than a market average, and the same number for all three channels so the default
                 cannot favour one.
             </p>
@@ -305,7 +352,7 @@ export default function EmployerCostPerHireCalculator() {
                 />
                 <NumberField
                     id="cph-flat-ttf"
-                    label="Time-to-fill — flat-fee posting"
+                    label="Time-to-fill: flat-fee posting"
                     hint="Days from posting to accepted offer, on your own history."
                     value={draft.flatFeeTimeToFillDays}
                     suffix="days"
@@ -313,7 +360,7 @@ export default function EmployerCostPerHireCalculator() {
                 />
                 <NumberField
                     id="cph-cpc-ttf"
-                    label="Time-to-fill — sponsored"
+                    label="Time-to-fill: sponsored"
                     hint="Days from launching the campaign to accepted offer."
                     value={draft.cpcTimeToFillDays}
                     suffix="days"
@@ -321,7 +368,7 @@ export default function EmployerCostPerHireCalculator() {
                 />
                 <NumberField
                     id="cph-agency-ttf"
-                    label="Time-to-fill — agency"
+                    label="Time-to-fill: agency"
                     hint="Days from engaging the agency to accepted offer."
                     value={draft.agencyTimeToFillDays}
                     suffix="days"
@@ -338,11 +385,29 @@ export default function EmployerCostPerHireCalculator() {
                     {ourCostPerHire === null ? '—' : formatUsd(ourCostPerHire)}
                 </div>
                 <p style={{ fontSize: '13px', color: '#5A4A42', margin: '8px 0 0', lineHeight: 1.6 }}>
-                    {flat.freePostings > 0 && `${flat.freePostings} free post, `}
-                    {flat.paidPostings} paid {flat.paidPostings === 1 ? 'post' : 'posts'} at{' '}
-                    {formatUsd(FLAT_FEE_PRICING.postingPrice)} and {flat.renewals}{' '}
-                    {flat.renewals === 1 ? 'renewal' : 'renewals'} at {formatUsd(FLAT_FEE_PRICING.renewalPrice)} —{' '}
-                    <strong>{formatUsd(flat.total)}</strong> total.
+                    {flat.mode === 'promo' && (
+                        <>
+                            {flat.promoPostings} free {flat.promoPostings === 1 ? 'post' : 'posts'} during the launch
+                            promo and {flat.renewals} {flat.renewals === 1 ? 'renewal' : 'renewals'} at{' '}
+                            {formatUsd(FLAT_FEE_PRICING.renewalPrice)}
+                        </>
+                    )}
+                    {flat.mode === 'per-post' && (
+                        <>
+                            {flat.introPostings > 0 && `${flat.introPostings} intro post at ${formatUsd(FLAT_FEE_PRICING.introPrice)}, `}
+                            {flat.proPostings} {flat.proPostings === 1 ? 'post' : 'posts'} at{' '}
+                            {formatUsd(FLAT_FEE_PRICING.postingPrice)} and {flat.renewals}{' '}
+                            {flat.renewals === 1 ? 'renewal' : 'renewals'} at {formatUsd(FLAT_FEE_PRICING.renewalPrice)}
+                        </>
+                    )}
+                    {flat.mode === 'plan' && (
+                        <>
+                            {flat.planCount} Employer {flat.planCount === 1 ? 'plan' : 'plans'} ({FLAT_FEE_PRICING.planSlots}{' '}
+                            active job slots each) for {flat.planMonths} {flat.planMonths === 1 ? 'month' : 'months'} at{' '}
+                            {formatUsd(FLAT_FEE_PRICING.planPrice)}/month, no renewals to price
+                        </>
+                    )}
+                    , for a total of <strong>{formatUsd(flat.total)}</strong>.
                     {ourCostPerHire !== null && ourCostPerHire > 0 && (
                         <>
                             {' '}On your numbers, any channel costing more than{' '}
@@ -351,8 +416,15 @@ export default function EmployerCostPerHireCalculator() {
                     )}
                     {ourCostPerHire === 0 && (
                         <>
-                            {' '}That is the free first post doing the work — it is a real price, but it is a one-off
-                            for your whole organization rather than a rate, so model your second role too.
+                            {' '}That is the launch promo doing the work: {FREE_POST_SCOPE_NOTE}. It is a real price for
+                            a dated window rather than a rate, so switch to a {FLAT_FEE_PRICING.ladderStartsLabel} option
+                            above to see what the same roles cost once it ends.
+                        </>
+                    )}
+                    {flat.mode === 'plan' && flat.planCount > 1 && (
+                        <>
+                            {' '}Modelled as enough plans to hold every role at once; swapping roles through fewer slots
+                            costs less.
                         </>
                     )}
                 </p>
@@ -405,7 +477,7 @@ export default function EmployerCostPerHireCalculator() {
                                     </>
                                 ) : (
                                     <td colSpan={5} style={{ textAlign: 'left', padding: '11px 10px', color: '#94A3B8' }}>
-                                        Not comparable — {result.missingInput}
+                                        Not comparable. {result.missingInput}
                                     </td>
                                 )}
                             </tr>
@@ -428,7 +500,7 @@ export default function EmployerCostPerHireCalculator() {
                 <Info size={15} color="#64748B" aria-hidden="true" style={{ flexShrink: 0, marginTop: '1px' }} />
                 <p style={{ fontSize: '12.5px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                     Cost per hire is spend divided by hires, and nothing else. It says nothing about candidate quality,
-                    retention, or the recruiter time each channel consumes — an agency fee buys screening work that a
+                    retention, or the recruiter time each channel consumes. An agency fee buys screening work that a
                     posting does not, and this comparison cannot price that. Weigh it alongside the number, not
                     against it.
                 </p>

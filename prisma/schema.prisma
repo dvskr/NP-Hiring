@@ -331,6 +331,10 @@ model EmployerJob {
   notifyOnApplication Boolean          @default(true) @map("notify_on_application")
   notifyDigest        String           @default("instant") @map("notify_digest") // instant, daily, off
   userId              String?          @map("user_id")
+  // Latest Stripe Checkout Session minted for this posting (new-post and
+  // resume paths). The resume path expires the previous session before
+  // minting a new one so two payable sessions never exist for one posting.
+  stripeCheckoutSessionId String?      @map("stripe_checkout_session_id")
   job                 Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
   user                UserProfile?     @relation(fields: [userId], references: [supabaseId])
   profileViews        ProfileView[]
@@ -354,6 +358,11 @@ model ProcessedStripeEvent {
   eventId     String   @unique @map("event_id")
   eventType   String   @map("event_type")
   processedAt DateTime @default(now()) @map("processed_at")
+  // Two-phase claim: 'processing' while a delivery is being handled, 'done'
+  // once it succeeded. A 'processing' row older than the reclaim window is a
+  // crashed/timed-out delivery and a Stripe retry may take it over.
+  status      String   @default("done")
+  claimedAt   DateTime @default(now()) @map("claimed_at")
 
   @@index([eventType])
   @@map("processed_stripe_events")
@@ -397,6 +406,38 @@ model JobCharge {
   @@index([refundedAt])
   @@index([stripeInvoiceId])
   @@map("job_charges")
+}
+
+/// Employer plan ($399/month — config.planPrice): `slots` concurrent job
+/// postings, live while subscribed. Posts created under it are EmployerJob
+/// rows with paymentStatus 'plan' / pricingTier 'plan'.
+///
+/// Written ONLY by lib/employer-plan.ts#upsertPlan, called from the Stripe
+/// subscription webhook (Payment Link in subscription mode) and the admin
+/// grant API. `userId` is the Supabase auth id held loosely (no FK), the
+/// company_claims.claimant_user_id precedent: account deletion must not
+/// cascade away the billing trail. It is NULL when a Stripe checkout email
+/// matched no employer account; `email` lets an admin attach it later.
+model EmployerPlan {
+  id                   String   @id @default(uuid())
+  userId               String?  @unique @map("user_id")
+  email                String
+  status               String   @default("active") // 'active' | 'past_due' | 'cancelled' | 'pending'
+  slots                Int      @default(5)
+  priceCents           Int      @default(39900) @map("price_cents")
+  currentPeriodEnd     DateTime @map("current_period_end")
+  stripeCustomerId     String?  @map("stripe_customer_id")
+  stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
+  source               String   @default("stripe") // 'stripe' | 'admin'
+  // `created` timestamp of the newest subscription event applied to this row;
+  // older (out-of-order) events are ignored.
+  lastStripeEventAt    DateTime? @map("last_stripe_event_at")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@index([status, currentPeriodEnd])
+  @@map("employer_plans")
 }
 
 model SiteStat {

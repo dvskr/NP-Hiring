@@ -51,6 +51,12 @@ const envSchema = z.object({
     // return 503 { code: 'PAID_POSTING_DISABLED' } and lets /post-job show a
     // "paid posting coming soon" state before the form.
     ENABLE_PAID_POSTING: z.string().optional(),
+    // Employer plan Stripe Payment Link (subscription mode). Format is
+    // enforced where it is used (lib/employer-plan-link.ts fails CLOSED on
+    // anything but https://buy.stripe.com/…) and reported at startup below —
+    // deliberately NOT a hard schema rule, so a bad link disables the plan
+    // CTA instead of making getEnv() throw for every route in production.
+    STRIPE_PLAN_PAYMENT_LINK: z.string().optional(),
 
     // Cron security (required — protects all cron endpoints)
     CRON_SECRET: z.string().min(16, 'CRON_SECRET must be at least 16 characters'),
@@ -236,6 +242,11 @@ export function validateEnvironmentAtStartup(): EnvStartupReport {
             }
             if (!process.env.STRIPE_WEBHOOK_SECRET) {
                 warnings.push('ENABLE_PAID_POSTING=true but STRIPE_WEBHOOK_SECRET is unset — payment webhooks are rejected; paid jobs will never activate');
+            }
+            if (!process.env.STRIPE_PLAN_PAYMENT_LINK) {
+                warnings.push('ENABLE_PAID_POSTING=true but STRIPE_PLAN_PAYMENT_LINK is unset — the Employer plan falls back to a contact mailto');
+            } else if (!process.env.STRIPE_PLAN_PAYMENT_LINK.startsWith('https://buy.stripe.com/')) {
+                warnings.push('STRIPE_PLAN_PAYMENT_LINK is not a https://buy.stripe.com/ Payment Link — plan checkout is disabled until it is fixed');
             }
         }
     }

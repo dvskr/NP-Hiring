@@ -8,6 +8,7 @@ import {
     FileText, Mail, ExternalLink, Loader2, Shield, Clock, Linkedin, Lock, Plus,
 } from 'lucide-react';
 import ComposeMessageModal from './ComposeMessageModal';
+import { config } from '@/lib/config';
 
 interface CandidateProfile {
     id: string;
@@ -520,7 +521,9 @@ export default function CandidateProfileClient({ candidateId }: { candidateId: s
                             Contact info, resume, and LinkedIn access requires an active job posting with remaining unlocks.
                         </p>
                         <p style={{ fontSize: '12px', color: '#B0C4BC', marginBottom: '18px' }}>
-                            Post a job to unlock candidate profiles (your first post is free).
+                            {config.isPromoActive()
+                                ? `Post a job to unlock candidate profiles, free through ${config.promoEndsLabel}.`
+                                : 'Post a job to unlock candidate profiles.'}
                         </p>
                         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '18px' }}>
                             {[

@@ -7,24 +7,29 @@
  * the job never publishes — and nothing ever noticed. This daily sweep:
  *
  *   1. Finds EmployerJob rows stuck 'pending' for >2h.
- *   2. Looks up their Stripe Checkout Session. The session id was never
- *      persisted pre-payment (JobCharge rows are only written by the
- *      webhook, and EmployerJob has no session column — schema is
- *      intentionally untouched), and Checkout Sessions are not covered by
- *      Stripe's Search API, so we list recent sessions and match on
- *      `metadata.jobId` (set by /api/create-checkout).
+ *   2. Lists recent Stripe Checkout Sessions (Checkout Sessions are not
+ *      covered by Stripe's Search API) and matches them on `metadata.jobId`
+ *      (set by /api/create-checkout).
  *   3. Session paid → runs the same shared activation the webhook runs
  *      (atomic pending→paid claim inside prevents double-apply) and alerts
  *      Discord: a paid-but-pending row means webhook delivery is broken.
  *   4. Session unpaid/expired/missing and the row is >24h old (Stripe
  *      checkout sessions hard-expire after 24h) → marks the row 'expired'
  *      so abandoned checkouts stop accumulating as 'pending'.
+ *   5. RENEWALS: a renewal is bought against an already-live row, so it is
+ *      invisible to steps 1–4. Every paid `metadata.type === 'renewal'`
+ *      session older than 2h with no JobCharge for its session id is
+ *      fulfilled through the webhook's shared applyRenewalCheckout (its
+ *      JobCharge-first transaction prevents a double extension) and reported
+ *      in the same alert as "renewal recovered".
+ *
+ * ('upgrade' sessions are skipped: nothing in the app creates them any more.)
  *
  * Runs on Inngest (NOT vercel.json cron — per audit constraints) and is
  * registered in app/api/inngest/route.ts.
  */
 
-import Stripe from 'stripe';
+import { getStripe } from '@/lib/stripe';
 import { inngest } from '@/lib/inngest/client';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
@@ -32,18 +37,15 @@ import { captureException } from '@/lib/sentry';
 import { sendDiscordMessage } from '@/lib/discord-notifier';
 import { sanitizeForDiscord } from '@/lib/sanitize-for-discord';
 import { activatePaidJobCheckout } from '@/app/api/webhooks/stripe/activate-paid-job';
+import { applyRenewalCheckout } from '@/app/api/webhooks/stripe/apply-renewal';
 
 const PENDING_MIN_AGE_MS = 2 * 60 * 60 * 1000;   // ignore rows younger than 2h — webhook may still be in flight
 const ABANDON_AFTER_MS = 24 * 60 * 60 * 1000;    // Stripe checkout sessions hard-expire 24h after creation
+const RENEWAL_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000; // past Stripe's ~3-day webhook retry window, with margin
 const MAX_ROWS_PER_SWEEP = 100;
+const MAX_RENEWALS_PER_SWEEP = 100;
 const MAX_SESSIONS_SCANNED = 2000;
 const SESSION_LIST_MARGIN_SECONDS = 3600;        // list from 1h before the oldest pending row
-
-function getStripe(): Stripe | null {
-    const key = process.env.STRIPE_SECRET_KEY;
-    if (!key) return null;
-    return new Stripe(key);
-}
 
 interface SessionMatch {
     sessionId: string;
@@ -52,9 +54,26 @@ interface SessionMatch {
     createdMs: number;
 }
 
+interface SessionScan {
+    byJobId: Record<string, SessionMatch>;
+    /** Paid renewal sessions old enough that the webhook should have landed. */
+    paidRenewals: Array<{ sessionId: string; jobId: string }>;
+}
+
 interface ActivationStepResult {
-    outcome: 'activated' | 'already_active' | 'employer_job_missing' | 'skipped-unpaid' | 'error';
+    outcome: 'activated' | 'already_active' | 'employer_job_missing' | 'duplicate_payment' | 'skipped-unpaid' | 'error';
     error?: string;
+}
+
+interface RenewalStepResult {
+    outcome: 'applied' | 'already_applied' | 'revoked_posting' | 'employer_job_missing' | 'has-charge' | 'skipped-unpaid' | 'error';
+    error?: string;
+}
+
+function requireStripe() {
+    const stripe = getStripe();
+    if (!stripe) throw new Error('STRIPE_SECRET_KEY not configured — cannot reconcile checkouts');
+    return stripe;
 }
 
 export const paymentReconciliationSweep = inngest.createFunction(
@@ -78,18 +97,15 @@ export const paymentReconciliationSweep = inngest.createFunction(
             return rows.map((r) => ({ id: r.id, jobId: r.jobId, createdAtMs: r.createdAt.getTime() }));
         });
 
-        if (stalePending.length === 0) {
-            return { checked: 0, activated: 0, expired: 0, failures: 0 };
-        }
+        const scan = await step.run('map-stripe-sessions', async (): Promise<SessionScan> => {
+            const stripe = requireStripe();
 
-        const sessionsByJobId = await step.run('map-stripe-sessions', async () => {
-            const stripe = getStripe();
-            if (!stripe) {
-                throw new Error('STRIPE_SECRET_KEY not configured — cannot reconcile pending checkouts');
-            }
-
-            const oldestMs = stalePending[0].createdAtMs;
-            const map: Record<string, SessionMatch> = {};
+            // Cover the oldest pending row AND the renewal lookback window.
+            const renewalFromMs = Date.now() - RENEWAL_LOOKBACK_MS;
+            const oldestMs = stalePending.length > 0 ? Math.min(stalePending[0].createdAtMs, renewalFromMs) : renewalFromMs;
+            const byJobId: Record<string, SessionMatch> = {};
+            const paidRenewals: SessionScan['paidRenewals'] = [];
+            const renewalCutoffMs = Date.now() - PENDING_MIN_AGE_MS;
             let scanned = 0;
 
             for await (const s of stripe.checkout.sessions.list({
@@ -99,23 +115,27 @@ export const paymentReconciliationSweep = inngest.createFunction(
                 scanned += 1;
                 const matchedJobId = s.metadata?.jobId;
                 const sessionType = s.metadata?.type;
-                // Renewal/upgrade sessions carry jobId too but must never feed
-                // the NEW-post activation path.
-                if (matchedJobId && sessionType !== 'renewal' && sessionType !== 'upgrade') {
+                if (matchedJobId && sessionType === 'renewal') {
+                    if (s.payment_status === 'paid' && s.created * 1000 < renewalCutoffMs) {
+                        paidRenewals.push({ sessionId: s.id, jobId: matchedJobId });
+                    }
+                } else if (matchedJobId && sessionType !== 'upgrade') {
+                    // Renewal/upgrade sessions carry jobId too but must never
+                    // feed the NEW-post activation path.
                     const candidate: SessionMatch = {
                         sessionId: s.id,
                         paymentStatus: s.payment_status,
                         status: s.status ?? null,
                         createdMs: s.created * 1000,
                     };
-                    const existing = map[matchedJobId];
+                    const existing = byJobId[matchedJobId];
                     // Prefer a paid session; otherwise keep the newest.
                     if (
                         !existing ||
                         (existing.paymentStatus !== 'paid' &&
                             (candidate.paymentStatus === 'paid' || candidate.createdMs > existing.createdMs))
                     ) {
-                        map[matchedJobId] = candidate;
+                        byJobId[matchedJobId] = candidate;
                     }
                 }
                 if (scanned >= MAX_SESSIONS_SCANNED) break;
@@ -123,12 +143,14 @@ export const paymentReconciliationSweep = inngest.createFunction(
 
             logger.info('[PaymentReconciliation] Stripe session scan complete', {
                 scanned,
-                matched: Object.keys(map).length,
+                matched: Object.keys(byJobId).length,
                 pendingRows: stalePending.length,
+                paidRenewals: paidRenewals.length,
             });
-            return map;
+            return { byJobId, paidRenewals: paidRenewals.slice(0, MAX_RENEWALS_PER_SWEEP) };
         });
 
+        const sessionsByJobId = scan.byJobId;
         const recovered: Array<{ jobId: string; sessionId: string; activation: string }> = [];
         const failures: Array<{ jobId: string; sessionId?: string; error: string }> = [];
         let expired = 0;
@@ -139,8 +161,7 @@ export const paymentReconciliationSweep = inngest.createFunction(
             if (match && match.paymentStatus === 'paid') {
                 // PAID BUT PENDING — the webhook was missed. Activate now.
                 const result = await step.run(`activate-${row.id}`, async (): Promise<ActivationStepResult> => {
-                    const stripe = getStripe();
-                    if (!stripe) throw new Error('STRIPE_SECRET_KEY not configured');
+                    const stripe = requireStripe();
                     try {
                         // Re-retrieve so activation sees the full, fresh session
                         // (amount, invoice, metadata) rather than the slim map entry.
@@ -190,6 +211,35 @@ export const paymentReconciliationSweep = inngest.createFunction(
                     });
                     if (didExpire) expired += 1;
                 }
+            }
+        }
+
+        // Renewal arm: paid renewal sessions with no ledger row.
+        for (const renewal of scan.paidRenewals) {
+            const result = await step.run(`renewal-${renewal.sessionId}`, async (): Promise<RenewalStepResult> => {
+                try {
+                    const charge = await prisma.jobCharge.findUnique({
+                        where: { stripeSessionId: renewal.sessionId },
+                        select: { id: true },
+                    });
+                    if (charge) return { outcome: 'has-charge' };
+                    const stripe = requireStripe();
+                    const session = await stripe.checkout.sessions.retrieve(renewal.sessionId);
+                    if (session.payment_status !== 'paid') return { outcome: 'skipped-unpaid' };
+                    const applied = await applyRenewalCheckout(stripe, session);
+                    return { outcome: applied.outcome };
+                } catch (err) {
+                    logger.error('[PaymentReconciliation] Renewal recovery failed', err, renewal);
+                    captureException(err, { tags: { area: 'payment-reconciliation' }, extra: { ...renewal, kind: 'renewal' } });
+                    return { outcome: 'error', error: err instanceof Error ? err.message : String(err) };
+                }
+            });
+
+            if (result.outcome === 'error') {
+                failures.push({ jobId: renewal.jobId, sessionId: renewal.sessionId, error: `RENEWAL ${result.error ?? 'unknown'}` });
+            } else if (result.outcome !== 'has-charge' && result.outcome !== 'skipped-unpaid') {
+                const label = result.outcome === 'applied' ? 'renewal recovered' : `renewal ${result.outcome}`;
+                recovered.push({ jobId: renewal.jobId, sessionId: renewal.sessionId, activation: label });
             }
         }
 

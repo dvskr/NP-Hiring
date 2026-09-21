@@ -16,13 +16,16 @@ import EmployerBenchmarkWidget from '@/components/tools/EmployerBenchmarkWidget'
 import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS } from '@/components/tools/benchmark-model';
 import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard } from '@/components/tools/tool-theme';
 import { STAT_SOURCES } from '@/lib/stats-sources';
+// Launch-promo end date for the post-a-role cross-link — read from config so
+// this page can never advertise a free window the product has stopped running.
+import { config } from '@/lib/config';
 
 export const revalidate = 86400;
 
 const PAGE_PATH = '/tools/salary-benchmark';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
 const PAGE_TITLE = `What Should I Pay a ${brand.niche.long}? Salary Benchmark by State`;
-const PAGE_DESCRIPTION = `Free salary benchmark for employers hiring ${brand.niche.descriptor}s: median and 25th–75th percentile posted pay by state, from live listings. Check a planned offer against the market before you post.`;
+const PAGE_DESCRIPTION = `Free salary benchmark for employers hiring ${brand.niche.descriptor}s: median and 25th to 75th percentile posted pay by state, from live listings. Check a planned offer against the market before you post.`;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`What should I pay a ${brand.niche.long}?`)}&type=page`;
 
 export const metadata: Metadata = {
@@ -50,7 +53,7 @@ export const metadata: Metadata = {
 const FAQS = [
   {
     q: `What should I pay a ${brand.niche.descriptor}?`,
-    a: `Start from the median posted salary for your state in the tool above, then adjust for the things a median cannot see: setting, specialty, shift pattern, call burden, experience floor, and how quickly you need the seat filled. The 25th-to-75th percentile band is the practical decision range — below the 25th you are competing on something other than pay, and above the 75th you are buying speed. For national context, the BLS median annual wage for ${brand.niche.descriptor}s is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`,
+    a: `Start from the median posted salary for your state in the tool above, then adjust for the things a median cannot see: setting, specialty, shift pattern, call burden, experience floor, and how quickly you need the seat filled. The 25th-to-75th percentile band is the practical decision range: below the 25th you are competing on something other than pay, and above the 75th you are buying speed. For national context, the BLS median annual wage for ${brand.niche.descriptor}s is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`,
   },
   {
     q: 'Where does this benchmark data come from?',
@@ -58,7 +61,7 @@ const FAQS = [
   },
   {
     q: 'Why is my state missing from the dropdown?',
-    a: `Because it has not cleared the disclosure threshold yet. A state is published only when it has at least ${BENCHMARK_MIN_POSTINGS} salaried postings from at least ${BENCHMARK_MIN_EMPLOYERS} distinct employers — otherwise the "benchmark" would just be one organisation's pay scale made public. Use the national figure in the meantime.`,
+    a: `Because it has not cleared the disclosure threshold yet. A state is published only when it has at least ${BENCHMARK_MIN_POSTINGS} salaried postings from at least ${BENCHMARK_MIN_EMPLOYERS} distinct employers; otherwise the "benchmark" would simply be one organization's pay scale made public. Use the national figure in the meantime.`,
   },
   {
     q: 'Is this posted pay or accepted pay?',
@@ -66,7 +69,7 @@ const FAQS = [
   },
   {
     q: 'Should I put the range in the job posting?',
-    a: `Yes, and in many states you are legally required to. Beyond compliance, a visible range filters out mismatched expectations before the first screen and is one of the few posting changes that reliably improves applicant volume. If your range sits below the market band here, publishing it alongside what you do offer — schedule, autonomy, support ratio — beats hiding it.`,
+    a: `Yes, and in many states you are legally required to. Beyond compliance, a visible range filters out mismatched expectations before the first screen and is one of the few posting changes that reliably improves applicant volume. If your range sits below the market band here, publishing it alongside what you do offer (schedule, autonomy, support ratio) beats hiding it.`,
   },
 ] as const;
 
@@ -124,7 +127,7 @@ export default function SalaryBenchmarkPage() {
               What should I pay a {brand.niche.long}?
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
-              Median and 25th–75th percentile posted pay by state, straight from live listings. Pick a state,
+              Median and 25th to 75th percentile posted pay by state, straight from live listings. Pick a state,
               drop in the number you had in mind, and see where it lands before candidates do.
             </p>
           </div>
@@ -157,7 +160,7 @@ export default function SalaryBenchmarkPage() {
             ]}
             sources={[
               { label: STAT_SOURCES.averageSalary.source, url: STAT_SOURCES.averageSalary.sourceUrl },
-              { label: `${brand.name} salary guide — state pay from live postings`, url: '/salary-guide' },
+              { label: `${brand.name} salary guide: state pay from live postings`, url: '/salary-guide' },
               { label: `How to hire a ${brand.niche.long}`, url: '/for-employers/resources/how-to-hire' },
             ]}
           />
@@ -202,7 +205,7 @@ export default function SalaryBenchmarkPage() {
             {[
               { href: '/for-employers/resources/how-to-hire', title: `How to hire a ${brand.niche.long}`, blurb: 'Process, credential checks, and a realistic timeline.' },
               { href: '/for-employers/resources/job-description-templates', title: 'Job description templates', blurb: 'Setting-specific skeletons you can post today.' },
-              { href: '/post-job', title: 'Post a role', blurb: 'First post free, all features included.' },
+              { href: '/post-job', title: 'Post a role', blurb: `Free through ${config.promoEndsLabel}, all features included.` },
               { href: '/for-employers', title: 'For employers', blurb: 'Pricing, reach, and what a post includes.' },
               { href: '/salary-guide', title: `${brand.niche.short} salary guide`, blurb: 'The candidate-facing view of the same market data.' },
               { href: '/tools/cost-of-living-comparison', title: 'Cost-of-living comparator', blurb: 'Why the same salary lands differently in two markets.' },

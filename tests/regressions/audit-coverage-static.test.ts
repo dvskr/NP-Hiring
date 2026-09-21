@@ -17,8 +17,15 @@ describe('payments wiring', () => {
     expect(src).toMatch(/paymentStatus === 'refunded'/);
   });
   it('stripe webhook resets expiryWarningSentAt on renewal', () => {
-    const src = read('app/api/webhooks/stripe/route.ts');
+    // Renewal fulfilment moved to the shared module the webhook, the
+    // verify-renewal self-heal and the reconciliation sweep all call.
+    const src = read('app/api/webhooks/stripe/apply-renewal.ts');
     expect(src).toMatch(/expiryWarningSentAt:\s*null/);
+    expect(read('app/api/webhooks/stripe/route.ts')).toMatch(/applyRenewalCheckout\(stripe, session\)/);
+  });
+  it('create-renewal-checkout blocks disputed postings', () => {
+    const src = read('app/api/create-renewal-checkout/route.ts');
+    expect(src).toMatch(/paymentStatus === 'disputed'/);
   });
   it('stripe webhook only unpublishes on a full refund', () => {
     const src = read('app/api/webhooks/stripe/route.ts');

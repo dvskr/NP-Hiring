@@ -1,9 +1,28 @@
-import Stripe from 'stripe';
+/**
+ * POST /api/create-checkout — Stripe Checkout for a PAID job post.
+ *
+ * Pricing (from January 1, 2027 — config.ladderStartsLabel):
+ *   intro — config.introPrice, the FIRST paid post per company domain
+ *   pro   — config.postingPrice, every later post
+ * The rung is resolved server-side by lib/pricing.ts#getNextPaidTier from
+ * the SIGNUP email domain (EmployerJob.quotaDomain), never from the request
+ * body, and is written to EmployerJob.pricingTier + Stripe metadata.pricing
+ * so the webhook / verify / sweep activation and the ledger agree on what
+ * was sold. The resume path re-prices from the persisted pricingTier.
+ *
+ * During the launch promo (config.isPromoActive) the wizard never routes
+ * here — /api/jobs/post-free publishes for free — but this route stays
+ * callable so the paid funnel can be exercised end to end.
+ */
+import type Stripe from 'stripe';
+import { getStripe } from '@/lib/stripe';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 import { createId } from '@paralleldrive/cuid2';
 import { config, PricingTier } from '@/lib/config';
+import { expiresFromNow } from '@/lib/expires-at';
+import { domainOf, getNextPaidTier, asPaidTier, type PaidTier } from '@/lib/pricing';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import {
@@ -14,21 +33,13 @@ import {
   normalizeContentWhitespace,
 } from '@/lib/sanitize';
 import { createClient } from '@/lib/supabase/server';
-import { isFeatureEnabled } from '@/lib/env';
+import { getBaseUrl, isFeatureEnabled } from '@/lib/env';
 import { normalizeSalary } from '@/lib/salary-normalizer';
 import { formatDisplaySalary } from '@/lib/salary-display';
 import { computeQualityScore } from '@/lib/utils/quality-score';
 import { parseLocation } from '@/lib/location-parser';
 import { summarizeForMeta } from '@/lib/description-cleaner';
 import { normalizeExperienceFromInput } from '@/lib/experience-label';
-
-// Lazy Stripe client — instantiated per-request so a missing STRIPE_SECRET_KEY
-// surfaces as a clean 503 instead of crashing on module import.
-function getStripe(): Stripe | null {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) return null;
-  return new Stripe(key);
-}
 
 interface CheckoutRequestBody {
   /**
@@ -101,8 +112,11 @@ export async function POST(request: NextRequest) {
     const rawBody: CheckoutRequestBody = await request.json();
 
     // Auth — paid posts still must be tied to an authenticated employer.
+    // The SIGNUP email domain (not the form's contactEmail) anchors the
+    // per-domain intro price, mirroring /api/jobs/post-free (audit #26).
     let userId: string | null = null;
     let profileEmail: string | null = null;
+    let signupDomain: string | null = null;
     try {
       const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -123,6 +137,7 @@ export async function POST(request: NextRequest) {
       }
       userId = user.id;
       profileEmail = profile.email ?? user.email ?? null;
+      signupDomain = domainOf(user.email) ?? domainOf(profile.email);
     } catch (authErr) {
       logger.warn('Failed to fetch user session in create-checkout', { error: authErr });
       return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
@@ -171,9 +186,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Single-tier: all paid posts are 'pro' internally, $199
-    const pricing: PricingTier = 'pro';
-    const price = config.stripePriceInCents;
+    // Ladder rung: 'intro' until this company domain has one paid post,
+    // 'pro' afterwards. Anchored on the signup domain; the contactEmail
+    // domain is only a fallback for a session with no email at all.
+    const quotaDomain = signupDomain ?? domainOf(sanitized.contactEmail);
+    if (!quotaDomain) {
+      return NextResponse.json({ error: 'Invalid contact email' }, { status: 400 });
+    }
+    const pricing: PaidTier = await getNextPaidTier(quotaDomain);
+    const price = config.priceCentsForTier(pricing);
+    const tierLabel = config.getTierLabel(pricing);
 
     // Salary parsing + normalization
     const parsedMinSalary = (() => {
@@ -213,9 +235,9 @@ export async function POST(request: NextRequest) {
 
     const parsedLoc = parseLocation(sanitized.location);
 
-    // Calculate expiry — paid duration (60 days)
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + config.durationDays);
+    // Calculate expiry — every post runs config.durationDays. UTC math via
+    // expiresFromNow; setDate() drifted across DST boundaries.
+    const expiresAt = expiresFromNow(config.durationDays);
 
     // Generate unique tokens
     const editToken = crypto.randomBytes(32).toString('hex');
@@ -248,8 +270,8 @@ export async function POST(request: NextRequest) {
           stateCode: parsedLoc.stateCode,
           isRemote: parsedLoc.isRemote,
           isHybrid: parsedLoc.isHybrid,
-          // isFeatured reserved for a future premium tier. Standard $199
-          // posts get top placement via the EmployerJob relation now —
+          // isFeatured stays false on every employer post. Top placement
+          // and the Featured badge come from the EmployerJob relation —
           // see lib/utils/job-sort.ts.
           isFeatured: false,
           isPublished: false, // Will be flipped by webhook on successful payment
@@ -297,10 +319,10 @@ export async function POST(request: NextRequest) {
           paymentStatus: 'pending',
           pricingTier: pricing,
           userId,
-          // Anchor — paid posts don't consume free quota (the count query
-          // filters paymentStatus='free'), but we still record the domain so
-          // ownership reporting stays consistent.
-          quotaDomain: sanitized.contactEmail.split('@')[1] || null,
+          // Immutable per-domain anchor. Once the webhook flips this row to
+          // 'paid', lib/pricing.ts#getNextPaidTier sees a paid post at this
+          // domain and every later post prices at 'pro'.
+          quotaDomain,
         },
       });
 
@@ -336,16 +358,19 @@ export async function POST(request: NextRequest) {
 
     logger.info('Job created for paid checkout', { jobId: job.id, userId });
 
-    // Create Stripe Checkout session with job ID and dashboard token in metadata
+    // Payment methods are NOT pinned here: the account's Dashboard payment
+    // method settings apply (Link, wallets, bank debit…). Delayed methods are
+    // safe because every fulfilment path gates on payment_status === 'paid'
+    // and the webhook handles checkout.session.async_payment_succeeded/failed.
+    const baseUrl = getBaseUrl();
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: `Job Post: ${sanitized.title}`,
-              description: `${sanitized.employer} - ${sanitized.location}`,
+              name: `${tierLabel} job post — ${sanitized.title}`,
+              description: `${sanitized.employer} - ${sanitized.location} · ${config.durationDays}-day Featured listing`,
             },
             unit_amount: price,
           },
@@ -369,22 +394,30 @@ export async function POST(request: NextRequest) {
       invoice_creation: {
         enabled: true,
         invoice_data: {
-          description: `Job Post: ${sanitized.title} — ${sanitized.employer} (${sanitized.location})`,
+          description: `${tierLabel} job post: ${sanitized.title} — ${sanitized.employer} (${sanitized.location})`,
           metadata: {
             jobId: job.id,
             employerJobId: employerJob.id,
+            pricing,
           },
           rendering_options: { amount_tax_display: 'exclude_tax' },
         },
       },
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/post-job`,
+      success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/post-job`,
+      // No bearer credentials in Stripe metadata — every reader loads the
+      // dashboardToken from EmployerJob by jobId.
       metadata: {
         jobId: job.id,
         pricing,
-        dashboardToken: employerJob.dashboardToken,
       },
+    }, {
+      // The EmployerJob row is new per request, so this only collapses a
+      // retried create for THIS row into one session.
+      idempotencyKey: `new-post-${employerJob.id}`,
     });
+
+    await recordCheckoutSession(employerJob.id, session.id);
 
     if (!session.url) {
       logger.error('Stripe returned a checkout session without a URL', null, { sessionId: session.id });
@@ -403,6 +436,8 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       sessionId: session.id,
       url: session.url,
+      tier: pricing,
+      price: config.priceDollarsForTier(pricing),
     });
     response.cookies.set('checkout_session_bind', session.id, {
       httpOnly: true,
@@ -426,6 +461,40 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/** Remember the latest session for a posting (resume expires it). Best-effort. */
+async function recordCheckoutSession(employerJobId: string, sessionId: string): Promise<void> {
+  try {
+    await prisma.employerJob.update({ where: { id: employerJobId }, data: { stripeCheckoutSessionId: sessionId } });
+  } catch (err) {
+    logger.error('Failed to record Stripe checkout session on EmployerJob', err, { employerJobId, sessionId });
+  }
+}
+
+/**
+ * Before minting a replacement session, make sure the previous one can no
+ * longer be paid: a posting must never have two payable sessions.
+ *   - previous session already complete → the employer has paid and the
+ *     activation is in flight; refuse instead of selling the post twice;
+ *   - previous session open → expire it (errors such as "already expired"
+ *     are ignored — the goal state is "not payable").
+ */
+async function retirePreviousSession(stripe: Stripe, previousSessionId: string | null): Promise<'paid' | 'retired'> {
+  if (!previousSessionId) return 'retired';
+  try {
+    const previous = await stripe.checkout.sessions.retrieve(previousSessionId);
+    if (previous.status === 'complete') return 'paid';
+    if (previous.status === 'open') {
+      await stripe.checkout.sessions.expire(previousSessionId);
+    }
+  } catch (err) {
+    logger.info('Previous checkout session could not be retrieved/expired — continuing', {
+      previousSessionId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+  return 'retired';
+}
+
 /**
  * B78 — mint a fresh Stripe Checkout session for an existing unpaid job.
  *
@@ -433,7 +502,7 @@ export async function POST(request: NextRequest) {
  * paymentStatus='pending' (or 'expired' after the reconciliation sweep).
  * Stripe sessions hard-expire after 24h, so the original session URL is
  * useless — this creates a new session carrying the SAME metadata shape as
- * the original (jobId / pricing / dashboardToken), so the existing webhook,
+ * the original (jobId / pricing), so the existing webhook,
  * verify-checkout-session, and reconciliation activation paths all work
  * unchanged.
  */
@@ -478,6 +547,14 @@ async function resumeAbandonedCheckout(
     );
   }
 
+  // One payable session per posting: retire the previous one first.
+  if ((await retirePreviousSession(stripe, employerJob.stripeCheckoutSessionId)) === 'paid') {
+    return NextResponse.json(
+      { error: 'Payment for this job was already received and is being processed. Refresh your dashboard in a minute.', code: 'PAYMENT_PROCESSING' },
+      { status: 409 }
+    );
+  }
+
   // Revive rows the reconciliation sweep marked 'expired' — the shared
   // activation path only claims pending→paid, so the row must be 'pending'
   // again before the new session can complete. Guarded update so a
@@ -492,22 +569,26 @@ async function resumeAbandonedCheckout(
   // Restart the listing window — the paid duration should run from the
   // payment the employer is about to make, not from the abandoned attempt
   // days earlier.
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + config.durationDays);
+  const expiresAt = expiresFromNow(config.durationDays);
   await prisma.job.update({ where: { id: jobId }, data: { expiresAt } });
 
-  const pricing = (employerJob.pricingTier as PricingTier) || 'pro';
+  // Re-price from the rung persisted at creation: the row was quoted
+  // 'intro' or 'pro' then and the employer is completing THAT checkout.
+  // 'plan' can never be pending (plan posts publish without Checkout), so
+  // asPaidTier's 'pro' fallback only ever catches legacy/unknown values.
+  const pricing: PaidTier = asPaidTier(employerJob.pricingTier as PricingTier);
+  const tierLabel = config.getTierLabel(pricing);
+  const baseUrl = getBaseUrl();
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
     line_items: [
       {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: `Job Post: ${employerJob.job.title}`,
-            description: `${employerJob.job.employer} - ${employerJob.job.location}`,
+            name: `${tierLabel} job post — ${employerJob.job.title}`,
+            description: `${employerJob.job.employer} - ${employerJob.job.location} · ${config.durationDays}-day Featured listing`,
           },
-          unit_amount: config.stripePriceInCents,
+          unit_amount: config.priceCentsForTier(pricing),
         },
         quantity: 1,
       },
@@ -522,22 +603,29 @@ async function resumeAbandonedCheckout(
     invoice_creation: {
       enabled: true,
       invoice_data: {
-        description: `Job Post: ${employerJob.job.title} — ${employerJob.job.employer} (${employerJob.job.location})`,
+        description: `${tierLabel} job post: ${employerJob.job.title} — ${employerJob.job.employer} (${employerJob.job.location})`,
         metadata: {
           jobId: employerJob.job.id,
           employerJobId: employerJob.id,
+          pricing,
         },
         rendering_options: { amount_tax_display: 'exclude_tax' },
       },
     },
-    success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/employer/dashboard`,
+    success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/employer/dashboard`,
     metadata: {
       jobId: employerJob.job.id,
       pricing,
-      dashboardToken: employerJob.dashboardToken,
     },
+  }, {
+    // Keyed on the session being replaced: a double-click that read the same
+    // previous session gets the same new session back, while a later resume
+    // (whose previous session is this one) mints a fresh one.
+    idempotencyKey: `resume-${employerJob.id}-${pricing}-${employerJob.stripeCheckoutSessionId ?? 'none'}`,
   });
+
+  await recordCheckoutSession(employerJob.id, session.id);
 
   if (!session.url) {
     logger.error('Stripe returned a resume-checkout session without a URL', null, { sessionId: session.id });
@@ -556,7 +644,12 @@ async function resumeAbandonedCheckout(
   // Same browser-binding cookie as the fresh-post path —
   // /api/verify-checkout-session only releases the dashboardToken when the
   // cookie matches the session_id.
-  const response = NextResponse.json({ sessionId: session.id, url: session.url });
+  const response = NextResponse.json({
+    sessionId: session.id,
+    url: session.url,
+    tier: pricing,
+    price: config.priceDollarsForTier(pricing),
+  });
   response.cookies.set('checkout_session_bind', session.id, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

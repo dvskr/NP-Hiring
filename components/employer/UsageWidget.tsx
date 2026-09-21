@@ -3,6 +3,25 @@
 import { useState, useEffect } from 'react';
 import { Users, Mail, TrendingUp, Loader2, Zap } from 'lucide-react';
 import Link from 'next/link';
+import { config } from '@/lib/config';
+import { brand } from '@/config/brand';
+
+/**
+ * Dashboard usage strip: Plan card + unlock / InMail meters + "Post Another".
+ *
+ * The Plan card is the dashboard's compact Employer-plan widget. It reads
+ * two endpoints and picks ONE label so the employer is never told two
+ * things at once:
+ *   1. GET /api/employer/plan — an active plan wins: "Employer plan · N of
+ *      M slots used".
+ *   2. GET /api/employer/free-quota-status — otherwise the next-post quote:
+ *      launch promo ("Free through <date>") or the paid rung.
+ * Without an active plan the card carries the Subscribe link (Stripe
+ * Payment Link from the plan endpoint) or, when no link is configured, a
+ * mailto to support — the same fallback /pricing uses. A Stripe-billed plan
+ * (including one that is past due) instead carries "Manage billing", which
+ * opens the Stripe Customer Portal via POST /api/employer/billing-portal.
+ */
 
 interface UsageData {
     tier: string;
@@ -13,11 +32,25 @@ interface UsageData {
     };
 }
 
+/** GET /api/employer/free-quota-status — see lib/pricing.ts#PricingQuote. */
 interface QuotaStatus {
     eligible: boolean;
+    mode?: 'promo' | 'plan' | 'intro' | 'paid';
+    tier?: 'intro' | 'pro' | 'plan';
     willBeFree?: boolean;
-    remaining?: number;
-    limit?: number;
+    price?: number;
+    promoEndsLabel?: string;
+}
+
+/** GET /api/employer/plan — see lib/employer-plan.ts#getPlanSlotStatus. */
+interface PlanStatus {
+    plan: { status: string; slots: number; currentPeriodEnd: string; source: string; canManageBilling?: boolean } | null;
+    entitled: boolean;
+    slots: number;
+    used: number;
+    remaining: number;
+    price: number;
+    paymentLinkUrl: string | null;
 }
 
 /* ═══ Clay Design Tokens ═══ */
@@ -37,17 +70,38 @@ const clayIconWrap: React.CSSProperties = {
 export default function UsageWidget() {
     const [data, setData] = useState<UsageData | null>(null);
     const [quota, setQuota] = useState<QuotaStatus | null>(null);
+    const [planStatus, setPlanStatus] = useState<PlanStatus | null>(null);
     const [loading, setLoading] = useState(true);
+    const [billingError, setBillingError] = useState<string | null>(null);
+
+    const openBillingPortal = async () => {
+        setBillingError(null);
+        try {
+            const res = await fetch('/api/employer/billing-portal', { method: 'POST' });
+            const body = await res.json().catch(() => null);
+            if (res.ok && body?.url) {
+                window.location.href = body.url;
+                return;
+            }
+            setBillingError(body?.error ?? 'Could not open billing. Please contact support.');
+        } catch {
+            setBillingError('Could not open billing. Please contact support.');
+        }
+    };
 
     useEffect(() => {
-        // Fetch in parallel — usage drives the meters, quota drives the
-        // Free-vs-Pro plan label and the "X free posts left" line.
+        // Fetch in parallel — usage drives the meters; plan + quota drive the
+        // Plan card (see the header comment for precedence). Each request
+        // degrades independently: a missing plan endpoint just means "no
+        // active plan", never a broken strip.
         Promise.allSettled([
             fetch('/api/employer/usage').then(r => r.ok ? r.json() : null),
             fetch('/api/employer/free-quota-status').then(r => r.ok ? r.json() : null),
-        ]).then(([usageResult, quotaResult]) => {
+            fetch('/api/employer/plan').then(r => r.ok ? r.json() : null),
+        ]).then(([usageResult, quotaResult, planResult]) => {
             if (usageResult.status === 'fulfilled') setData(usageResult.value);
             if (quotaResult.status === 'fulfilled') setQuota(quotaResult.value);
+            if (planResult.status === 'fulfilled') setPlanStatus(planResult.value);
         }).finally(() => setLoading(false));
     }, []);
 
@@ -79,14 +133,38 @@ export default function UsageWidget() {
 
     const t = tierGradients[tier] || tierGradients.pro;
 
-    // Show "Free trial" as the plan label when the employer still has free
-    // posts available (and is otherwise eligible). Once they pay or burn
-    // their free quota, it flips to the proper tier label ("Pro").
-    const onFreeTrial = quota?.eligible === true && (quota.remaining ?? 0) > 0;
-    const planLabel = onFreeTrial ? 'Free trial' : tierLabel;
-    const planSublabel = onFreeTrial && typeof quota?.remaining === 'number' && typeof quota?.limit === 'number'
-        ? `${quota.remaining} of ${quota.limit} free posts left`
-        : null;
+    // ─── Plan card label (one message, precedence documented up top) ───
+    const hasActivePlan = planStatus?.entitled === true;
+    const quoteMode = quota?.eligible === true ? quota.mode : undefined;
+    const promoEndsLabel = quota?.promoEndsLabel ?? config.promoEndsLabel;
+    const planPrice = planStatus?.price ?? config.planPrice;
+    const planSlots = planStatus?.slots && planStatus.slots > 0 ? planStatus.slots : config.planSlots;
+
+    const planLabel = hasActivePlan
+        ? 'Employer plan'
+        : quoteMode === 'promo'
+            ? 'Launch promo'
+            : tierLabel;
+    const planSublabel = hasActivePlan && planStatus
+        ? `${planStatus.used} of ${planStatus.slots} slots used`
+        : quoteMode === 'promo'
+            ? `Free through ${promoEndsLabel}`
+            : quoteMode === 'intro' || quoteMode === 'paid'
+                ? `Next post $${quota?.price ?? config.priceDollarsForTier(quota?.tier)}`
+                : null;
+
+    // Subscribe (Stripe Payment Link) or Contact us (mailto) — only when the
+    // employer is NOT already on a plan. Hidden during the launch promo:
+    // every post is free then, so a subscription pitch would only confuse.
+    const canManageBilling = planStatus?.plan?.canManageBilling === true
+        && (hasActivePlan || planStatus.plan.status === 'past_due');
+    const planAction: CardAction | null = canManageBilling
+        ? { label: billingError ?? 'Manage billing', onClick: openBillingPortal }
+        : !hasActivePlan && quoteMode !== 'promo'
+            ? planStatus?.paymentLinkUrl
+                ? { href: planStatus.paymentLinkUrl, label: `Subscribe · $${planPrice}/mo for ${planSlots} jobs`, external: true }
+                : { href: `mailto:${brand.email.support}`, label: `Contact us · $${planPrice}/mo for ${planSlots} jobs`, external: false }
+            : null;
 
     return (
         <div style={{
@@ -95,7 +173,7 @@ export default function UsageWidget() {
             gap: '10px',
             marginBottom: '24px',
         }}>
-            {/* ─── Tier Badge — single-line label, tier + optional free counter ─── */}
+            {/* ─── Plan card — active plan / launch promo / next-post rung, plus Subscribe or Contact ─── */}
             <CompactCard
                 icon={<Zap size={14} color="#fff" />}
                 iconBg={t.gradient}
@@ -104,6 +182,7 @@ export default function UsageWidget() {
                 value={planLabel}
                 valueColor={t.accent}
                 sub={planSublabel}
+                action={planAction}
             />
 
             {/* ─── Candidate Unlocks ─── */}
@@ -160,7 +239,7 @@ export default function UsageWidget() {
                         fontSize: '10px', color: '#8A9BA6', margin: '1px 0 0',
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     }}>
-                        +25 unlocks · +25 InMails
+                        +{config.limits.candidateUnlocksPerPosting} unlocks · +{config.limits.inmailsPerPosting} InMails
                     </p>
                 </div>
             </Link>
@@ -176,9 +255,14 @@ export default function UsageWidget() {
     );
 }
 
+/** Plan card footer: a link (Subscribe / Contact) or a button (Manage billing). */
+type CardAction =
+    | { href: string; label: string; external: boolean }
+    | { label: string; onClick: () => void };
+
 /* ═══ Compact Card — used for the Plan badge ═══ */
 function CompactCard({
-    icon, iconBg, iconGlow, label, value, valueColor, sub,
+    icon, iconBg, iconGlow, label, value, valueColor, sub, action,
 }: {
     icon: React.ReactNode;
     iconBg: string;
@@ -187,11 +271,20 @@ function CompactCard({
     value: string;
     valueColor: string;
     sub: string | null;
+    /** Optional footer action — Subscribe (Payment Link), Contact (mailto) or Manage billing (portal). */
+    action?: CardAction | null;
 }) {
+    const actionStyle: React.CSSProperties = {
+        flexBasis: '100%',
+        fontSize: '10px', fontWeight: 700, color: '#1D4ED8',
+        textDecoration: 'underline', textUnderlineOffset: '2px',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+    };
     return (
         <div style={{
             ...clayCard, padding: '12px 14px',
             display: 'flex', alignItems: 'center', gap: '10px',
+            flexWrap: 'wrap',
         }}>
             <div style={{
                 width: '32px', height: '32px', borderRadius: '10px',
@@ -221,6 +314,24 @@ function CompactCard({
                     </p>
                 )}
             </div>
+            {action && 'onClick' in action && (
+                <button
+                    type="button"
+                    onClick={action.onClick}
+                    style={{ ...actionStyle, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+                >
+                    {action.label}
+                </button>
+            )}
+            {action && 'href' in action && (
+                <a
+                    href={action.href}
+                    {...(action.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                    style={actionStyle}
+                >
+                    {action.label}
+                </a>
+            )}
         </div>
     );
 }

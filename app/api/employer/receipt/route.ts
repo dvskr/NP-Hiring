@@ -1,8 +1,9 @@
-import Stripe from 'stripe';
+import { getStripe } from '@/lib/stripe';
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 /**
  * GET /api/employer/receipt?jobId=...&[chargeId=...]&[token=...]
@@ -19,13 +20,14 @@ import { createClient } from '@/lib/supabase/server';
  * Auth mirrors the invoice route: token (email link) OR logged-in
  * session ownership check.
  */
-function getStripe(): Stripe | null {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) return null;
-  return new Stripe(key);
-}
-
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  // Token-authenticated (no session required) and proxies the Stripe API on
+  // every hit — rate-limit so it cannot burn the Stripe quota shared with
+  // checkout and the webhook, or be used to guess dashboard tokens in bulk
+  // (same rationale as verify-checkout-session, B114).
+  const rateLimitResult = await rateLimit(request, 'employer-receipt', RATE_LIMITS.employer);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const jobId = searchParams.get('jobId');
@@ -57,6 +59,26 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (!employerJob) {
       return NextResponse.json({ error: 'Receipt not found or access denied' }, { status: 404 });
+    }
+    // No charge → no receipt. Mirrors the invoice route: launch-promo
+    // posts, Employer-plan posts (billed per period by Stripe Billing) and
+    // the legacy free-quota statuses never produced a per-post payment.
+    if (employerJob.paymentStatus === 'plan') {
+      return NextResponse.json(
+        { error: 'Receipts are not available for Employer plan postings — your plan receipts are sent by Stripe each billing period.' },
+        { status: 400 },
+      );
+    }
+    if (
+      employerJob.paymentStatus === 'promo' ||
+      employerJob.paymentStatus === 'free' ||
+      employerJob.paymentStatus === 'free_renewed' ||
+      employerJob.paymentStatus === 'free_upgraded'
+    ) {
+      return NextResponse.json(
+        { error: 'Receipts are not available for free job postings — no payment was made.' },
+        { status: 400 },
+      );
     }
     if (employerJob.paymentStatus !== 'paid') {
       return NextResponse.json({ error: 'Receipt not available — payment not completed' }, { status: 400 });

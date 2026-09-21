@@ -7,7 +7,7 @@ import { Metadata } from 'next';
  * shape as app/unsubscribe/layout.tsx.
  *
  * noindex, no canonical: checkout-funnel confirmation reached with a
- * ?session_id= token (or ?free=true) — already in middleware's
+ * ?session_id= token (or ?mode=promo|plan / legacy ?free=true) — already in middleware's
  * X-Robots-Tag list; the per-page robots below is the belt-and-suspenders
  * guard the sibling auth surfaces use.
  */

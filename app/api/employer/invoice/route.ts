@@ -1,16 +1,11 @@
-import Stripe from 'stripe';
+import { getStripe } from '@/lib/stripe';
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { generateInvoice } from '@/lib/invoice-generator';
 import { config, PricingTier } from '@/lib/config';
-
-function getStripe(): Stripe | null {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) return null;
-  return new Stripe(key);
-}
 
 /**
  * GET /api/employer/invoice?jobId=...&[chargeId=...]&[token=...]
@@ -23,6 +18,13 @@ function getStripe(): Stripe | null {
  * renewed multiple times.
  */
 export async function GET(request: NextRequest) {
+  // Token-authenticated (no session required) and proxies the Stripe API on
+  // every hit — rate-limit so it cannot burn the Stripe quota shared with
+  // checkout and the webhook, or be used to guess dashboard tokens in bulk
+  // (same rationale as verify-checkout-session, B114).
+  const rateLimitResult = await rateLimit(request, 'employer-invoice', RATE_LIMITS.employer);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const jobId = searchParams.get('jobId');
@@ -90,14 +92,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Block invoice generation for free posts
-    if (employerJob.paymentStatus === 'free' ||
+    // Block invoice generation for rows that never produced a charge:
+    // launch-promo posts, Employer-plan posts (the plan itself is invoiced by
+    // Stripe Billing, not per post) and the legacy free-quota statuses.
+    if (employerJob.paymentStatus === 'plan') {
+      return NextResponse.json(
+        {
+          error: 'Invoices are not available for Employer plan postings.',
+          message: 'This job was posted under your Employer plan. No per-post payment was made; your plan invoices are sent by Stripe each billing period.'
+        },
+        { status: 400 }
+      );
+    }
+    if (employerJob.paymentStatus === 'promo' ||
+      employerJob.paymentStatus === 'free' ||
       employerJob.paymentStatus === 'free_renewed' ||
       employerJob.paymentStatus === 'free_upgraded') {
       return NextResponse.json(
         {
           error: 'Invoices are not available for free job postings.',
-          message: 'Your job was posted during our free launch period. No payment was made, so no invoice is available.'
+          message: `Your job was posted free during our launch period (through ${config.promoEndsLabel}). No payment was made, so no invoice is available.`
         },
         { status: 400 }
       );

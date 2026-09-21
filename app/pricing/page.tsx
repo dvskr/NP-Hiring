@@ -10,20 +10,50 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 // the ONE audited module, so the audit cannot be forked away again.
 import { EMPLOYER_COMPARISON_ROWS } from '@/lib/employer-comparison';
 import { config } from '@/lib/config';
-import { Check, ArrowRight, X, HelpCircle, RefreshCw, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign } from 'lucide-react';
+import { isPlanSaleOpen } from '@/lib/employer-plan-link';
+import { Check, ArrowRight, X, HelpCircle, RefreshCw, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign, Layers } from 'lucide-react';
+
+/**
+ * Pricing page — launch promo + 2027 ladder (2026-09-12).
+ *
+ * Every number and date on this page is a lib/config token, and the
+ * sentences below are the CANONICAL copy strings the other employer
+ * surfaces (/for-employers, /faq, /terms, the post-job wizard, emails)
+ * repeat verbatim, so a price change in config can never strand a stale
+ * figure here and the regression suite can pin the exact wording.
+ *
+ *   PROMO_HEADLINE / PROMO_SUB — the hero: every post free through
+ *                                config.promoEndsLabel.
+ *   LADDER_LINE                — what happens from config.ladderStartsLabel:
+ *                                intro → featured → Employer plan.
+ *   PLAN_TERMS                 — the plan's billing shape.
+ *   FEATURES_LINE              — what EVERY post gets (no stripped tier).
+ *   RENEWAL_LINE               — +60 days on any promo/intro/featured post.
+ */
+const PROMO_HEADLINE = `Free through ${config.promoEndsLabel}`;
+const PROMO_SUB = `Every job post is free during our launch period: ${config.durationDays}-day listing, Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails. No credit card required.`;
+const LADDER_LINE = `From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs.`;
+const PLAN_TERMS = `${config.planSlots} active job slots, live while you're subscribed. Swap jobs any time. Cancel any time.`;
+const FEATURES_LINE = `Featured badge · Top placement · ${config.limits.candidateUnlocksPerPosting} candidate unlocks · ${config.limits.inmailsPerPosting} InMails · Applicant analytics`;
+const RENEWAL_LINE = `Renew any post for $${config.renewalPrice} (+${config.durationDays} days).`;
 
 // Edge-generated OG card — no dependency on storage assets that don't
 // exist on this board (the old pmhnp-*.webp URL 400s). Same pattern as
 // app/for-employers/page.tsx.
-const PRICING_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Pricing — first post free, then $${config.postingPrice}`)}&type=page`;
+const PRICING_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Pricing: free through ${config.promoEndsLabel}`)}&type=page`;
+
+// The plan CTA depends on the launch-promo clock (lib/employer-plan-link.ts
+// isPlanSaleOpen); re-render hourly so it opens without a redeploy when the
+// promo ends — same cadence as /for-employers.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
-    title: `Pricing — ${brand.niche.short} Job Board | First Post Free, Then $${config.postingPrice}`,
+    title: `Pricing | ${brand.niche.short} Job Board | Free Through ${config.promoEndsLabel}`,
     description:
-        `Simple, transparent pricing for ${brand.niche.short} job postings. Your first post is free with all features. After that, $${config.postingPrice} per post. No subscriptions, no contracts.`,
+        `Every ${brand.niche.short} job post is free through ${config.promoEndsLabel}, all features included. ${LADDER_LINE} No bidding, no contracts.`,
     openGraph: {
-        title: `Pricing — ${brand.niche.short} Job Board`,
-        description: `Post ${brand.niche.short} jobs — first one free, then $${config.postingPrice}/post. Every post gets the full package.`,
+        title: `Pricing | ${brand.niche.short} Job Board`,
+        description: `Post ${brand.niche.short} jobs free through ${config.promoEndsLabel}. ${LADDER_LINE} Every post gets the full package.`,
         images: [{ url: PRICING_OG_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} job board pricing` }],
     },
     twitter: { card: 'summary_large_image', images: [PRICING_OG_IMAGE] },
@@ -62,23 +92,86 @@ const clayIconWrap = (gradient: string): React.CSSProperties => ({
     flexShrink: 0,
 });
 
+const ctaPrimary: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+    padding: '13px 24px', borderRadius: '14px', fontWeight: 700, fontSize: '14px',
+    background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
+    textDecoration: 'none',
+    boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
+};
+
+const ctaSecondary: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+    padding: '13px 24px', borderRadius: '14px', fontWeight: 600, fontSize: '14px',
+    background: '#fff', color: '#1A2E35', textDecoration: 'none',
+    border: '1px solid rgba(0,0,0,0.08)',
+    boxShadow: '2px 2px 6px rgba(0,0,0,0.04)',
+};
+
 /* ═══ Comparison Data — the shared audited module (lib/employer-comparison.ts),
    genuinely the same rows as the employer page ═══ */
 const comparisonRows = EMPLOYER_COMPARISON_ROWS;
 
 const faqs = [
-    { q: 'How many free posts do I get?', a: `Your first job post is completely free — no credit card required, and every feature is included.` },
-    { q: 'What happens after my free post?', a: `Every post after your first is a flat $${config.postingPrice}. Same features, same visibility. Just add payment at checkout.` },
-    { q: 'How long do job postings stay active?', a: `Paid postings (and renewals) run for ${config.durationDays} days. Free postings run for ${config.freeDurationDays} days — a shorter trial window. You can renew paid postings at any time from your employer dashboard.` },
-    { q: 'What does renewal cost?', a: `Renewals are $${config.renewalPrice} (10% off the regular price) and apply to paid postings only. Your listing gets another ${config.durationDays} days and is boosted back to the top of search results.` },
-    { q: 'If I renew before my posting expires, do I lose the remaining days?', a: `No. Renewing early adds ${config.durationDays} days to your current expiration date — you don't lose any time you've already paid for. Renew whenever it's convenient.` },
-    { q: 'Are free posts different from paid posts?', a: `Same features — Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks, ${config.limits.inmailsPerPosting} InMails, and full analytics. The only difference is duration: free posts run ${config.freeDurationDays} days, paid posts run ${config.durationDays} days.` },
-    { q: 'Do I lose access to candidates I\'ve unlocked when my posting expires?', a: 'No. Once you\'ve unlocked a candidate (viewed their full profile), their contact info, resume, and details remain in your dashboard forever — even after the posting expires. To unlock new candidates or send new InMails, you\'ll need an active posting.' },
-    { q: 'Can I edit my job posting after publishing?', a: 'Yes! You can edit your posting anytime from your dashboard — update salary, requirements, or any details. Changes go live immediately.' },
-    { q: 'Do you offer bulk discounts?', a: `Yes! Contact us at ${brand.email.support} for custom pricing if you need to post 5+ positions. We offer volume discounts for larger organizations.` },
+    { q: 'How long is posting free?', a: `${PROMO_HEADLINE}. ${PROMO_SUB} Promo posts run the full ${config.durationDays} days even if that runs past the promo, and they can be renewed like any other post.` },
+    { q: `What happens on ${config.ladderStartsLabel}?`, a: `${LADDER_LINE} ${RENEWAL_LINE} Every post, whether promo, intro, featured, or plan, gets exactly the same features. There is no stripped-down tier.` },
+    { q: 'What is the intro price, and who gets it?', a: `The intro price ($${config.introPrice}) applies to the first paid post per company email domain. It is scoped to your organization, not to a login. Posts made free during the launch promo don't use it up, so every employer gets one intro-priced post once paid posting starts.` },
+    { q: 'How does the Employer plan work?', a: `$${config.planPrice}/month. ${PLAN_TERMS} Every slot is a full Featured post with the same ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails. The plan is billed month to month; if you cancel, your posts stay live through the end of the paid period.` },
+    { q: 'What does renewal cost?', a: `${RENEWAL_LINE} Renewing boosts the listing back to the top of search results and refreshes its ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails. Plan posts stay live while your plan is active, so they don't need renewing.` },
+    { q: 'If I renew before my posting expires, do I lose the remaining days?', a: `No. Renewing early adds ${config.durationDays} days to your current expiration date, so you don't lose any time you already have. Renew whenever it's convenient.` },
+    { q: 'Do I lose access to candidates I\'ve unlocked when my posting expires?', a: 'No. Once you\'ve unlocked a candidate (viewed their full profile), their contact info, resume, and details remain in your dashboard forever, even after the posting expires. To unlock new candidates or send new InMails, you\'ll need an active posting.' },
+    { q: 'Can I edit my job posting after publishing?', a: 'Yes! You can edit your posting at any time from your dashboard to update the salary, requirements, or any other details. Changes go live immediately.' },
+    { q: `Need more than ${config.planSlots} active jobs at once?`, a: `Contact us at ${brand.email.support} and tell us how many roles you're hiring for. We'll work out the right arrangement for larger organizations.` },
 ];
 
 export default function PricingPage() {
+    // The plan is sold through a Stripe Payment Link (subscription). The CTA
+    // never hands out the raw link: /api/employer/plan/subscribe signs the
+    // buyer in, sends an employer who already has a plan to the dashboard,
+    // and adds their account id to the link (the only key the webhook
+    // attaches a plan by). While plan sales are closed — link unset or not a
+    // Stripe link, ENABLE_PAID_POSTING off, or the free launch promo running
+    // — the card routes to support instead (lib/employer-plan-link.ts).
+    const planSaleOpen = isPlanSaleOpen();
+    const planHref = planSaleOpen ? '/api/employer/plan/subscribe' : `mailto:${brand.email.support}`;
+    const planCtaLabel = planSaleOpen ? 'Subscribe to the plan' : 'Ask about the plan';
+
+    const ladder = [
+        {
+            key: 'intro',
+            icon: <Star size={22} />,
+            name: `${config.getTierLabel('intro')} post`,
+            price: `$${config.introPrice}`,
+            unit: '/post',
+            blurb: 'Your first paid post',
+            note: `First paid post per company email domain. ${config.durationDays} days. Promo posts don't use it up.`,
+            cta: <Link href="/post-job" className="emp-cta-secondary" style={ctaSecondary}>Post a Job <ArrowRight size={15} /></Link>,
+            featured: false,
+        },
+        {
+            key: 'pro',
+            icon: <DollarSign size={22} />,
+            name: 'Featured post',
+            price: `$${config.postingPrice}`,
+            unit: '/post',
+            blurb: 'Every post after that',
+            note: `${config.durationDays} days, exactly the same features. ${RENEWAL_LINE}`,
+            cta: <Link href="/post-job" className="emp-cta-secondary" style={ctaSecondary}>Post a Job <ArrowRight size={15} /></Link>,
+            featured: false,
+        },
+        {
+            key: 'plan',
+            icon: <Layers size={22} />,
+            name: 'Employer plan',
+            price: `$${config.planPrice}`,
+            unit: '/month',
+            blurb: PLAN_TERMS,
+            note: `Every slot is a Featured post with the same ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails. Posts stay live through the end of the paid period if you cancel.`,
+            cta: <a href={planHref} className="emp-cta-primary" style={ctaPrimary}>{planCtaLabel} <ArrowRight size={15} /></a>,
+            featured: true,
+        },
+    ];
+
     return (
         <>
             <BreadcrumbSchema items={[
@@ -105,7 +198,7 @@ export default function PricingPage() {
             />
 
             {/* ═══════════════════════════════════════════════════════════════
-                SECTION 1: HERO + BENTO GRID (pricing card is the first bento card)
+                SECTION 1: PROMO HERO + BENTO GRID (promo card is the first bento card)
                 ═══════════════════════════════════════════════════════════════ */}
             <div style={{
                 background: 'linear-gradient(180deg, #FFF5EE 0%, #FDE8D8 40%, #FFF5EE 100%)',
@@ -114,21 +207,21 @@ export default function PricingPage() {
                 <section style={{ padding: '80px 16px 48px', textAlign: 'center' }}>
                     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
                         <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
-                            Simple Pricing
+                            Launch Pricing
                         </p>
                         <h1 className="font-lora" style={{
                             fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, lineHeight: 1.15,
                             color: '#1A2E35', marginBottom: '16px',
                         }}>
-                            First Post Free, Then ${config.postingPrice}
+                            {PROMO_HEADLINE}
                         </h1>
-                        <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
-                            Every post gets the full package — no downgrades, no hidden fees. Start hiring in under 5 minutes.
+                        <p style={{ fontSize: '17px', color: '#5A4A42', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
+                            {PROMO_SUB}
                         </p>
                     </div>
                 </section>
 
-                {/* ─── Bento Grid with Pricing as Hero Card ─── */}
+                {/* ─── Bento Grid with the promo card as the hero ─── */}
                 <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 20px' }}>
                     <div className="bento-grid" style={{
                         display: 'grid',
@@ -137,20 +230,19 @@ export default function PricingPage() {
                         gap: '14px',
                     }}>
 
-                        {/* ═══ ROW 0: PRICING HERO (full-width 12 cols) ═══ */}
+                        {/* ═══ ROW 0: PROMO HERO (full-width 12 cols) ═══ */}
                         <div className="bento-pricing-hero emp-bento-card" style={{
                             ...clayCard, gridColumn: 'span 12', padding: '0', overflow: 'hidden',
                             border: '2px solid rgba(190,24,93,0.15)',
                             position: 'relative',
                         }}>
-                            {/* "One Simple Plan" badge */}
                             <div style={{
                                 position: 'absolute', top: '-1px', left: '50%', transform: 'translateX(-50%)',
                                 background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                                 fontSize: '11px', fontWeight: 700, padding: '6px 24px', borderRadius: '0 0 12px 12px',
                                 textTransform: 'uppercase', letterSpacing: '0.06em',
                                 boxShadow: '0 4px 12px rgba(190,24,93,0.2)',
-                            }}>One Simple Plan</div>
+                            }}>Launch Promo</div>
 
                             <div className="pricing-hero-inner" style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '0' }}>
                                 {/* Left — Price block */}
@@ -161,37 +253,31 @@ export default function PricingPage() {
                                 }}>
                                     <div style={{ marginBottom: '16px' }}>
                                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                                            <span style={{ fontSize: '56px', fontWeight: 800, color: '#831843', lineHeight: 1 }}>${config.postingPrice}</span>
+                                            <span style={{ fontSize: '56px', fontWeight: 800, color: '#831843', lineHeight: 1 }}>$0</span>
                                             <span style={{ fontSize: '16px', color: '#BE185D', fontWeight: 500 }}>/post</span>
                                         </div>
-                                        <p style={{ fontSize: '14px', color: '#BE185D', fontWeight: 700, marginTop: '6px' }}>First post FREE — no card required</p>
+                                        <p style={{ fontSize: '14px', color: '#BE185D', fontWeight: 700, marginTop: '6px' }}>Every post, through {config.promoEndsLabel}. No card required.</p>
                                     </div>
 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: 'rgba(255,255,255,0.7)', borderRadius: '10px', border: '1px solid rgba(190,24,93,0.1)', marginBottom: '20px' }}>
                                         <RefreshCw size={14} style={{ color: '#BE185D', flexShrink: 0 }} />
                                         <p style={{ fontSize: '12px', color: '#831843', margin: 0, lineHeight: 1.4 }}>
-                                            <strong>Renewals: ${config.renewalPrice}</strong> (10% off) — another {config.durationDays} days
+                                            <strong>{RENEWAL_LINE}</strong>
                                         </p>
                                     </div>
 
-                                    <Link href="/post-job" className="emp-cta-primary" style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                                        padding: '14px 28px', borderRadius: '14px', fontWeight: 700, fontSize: '15px',
-                                        background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
-                                        textDecoration: 'none',
-                                        boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 1px 1px 2px rgba(255,255,255,0.15)',
-                                    }}>
-                                        Start Posting — First Post Free <ArrowRight size={16} />
+                                    <Link href="/post-job" className="emp-cta-primary" style={{ ...ctaPrimary, padding: '14px 28px', fontSize: '15px' }}>
+                                        Post a Job: Free <ArrowRight size={16} />
                                     </Link>
                                 </div>
 
                                 {/* Right — Feature checklist */}
                                 <div style={{ padding: '44px 36px 36px' }}>
-                                    <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Full Package — Every Post</h2>
-                                    <p style={{ fontSize: '13px', color: '#5A4A42', margin: '0 0 20px', lineHeight: 1.5 }}>No tiers. No downgrades. Free or paid, you get everything.</p>
+                                    <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Full Package on Every Post</h2>
+                                    <p style={{ fontSize: '13px', color: '#5A4A42', margin: '0 0 20px', lineHeight: 1.5 }}>No tiers. No downgrades. Whether promo, intro, featured, or plan, you get everything.</p>
                                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px' }}>
                                         {[
-                                            `${config.durationDays}-day listing (${config.freeDurationDays} days free)`,
+                                            `${config.durationDays}-day listing`,
                                             '★ Featured badge',
                                             'Top search placement',
                                             'Highlighted in job alerts',
@@ -218,9 +304,9 @@ export default function PricingPage() {
                                 <div style={iconBg}>
                                     <Calendar size={24} />
                                 </div>
-                                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>60-Day Listing</h3>
+                                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>{config.durationDays}-Day Listing</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                                    Double the industry standard. Your job stays visible for 2 full months — no daily budget, no bidding.
+                                    Every post stays visible for two full months with no daily budget and no bidding. Promo posts included.
                                 </p>
                             </div>
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
@@ -252,7 +338,7 @@ export default function PricingPage() {
                                 <TrendingUp size={22} />
                             </div>
                             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Top Search Placement</h3>
-                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Featured listings rank higher — more visibility, more clicks.</p>
+                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Featured listings rank higher, which means more visibility and more clicks.</p>
                         </div>
 
                         <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -268,7 +354,7 @@ export default function PricingPage() {
                                 <Users size={22} />
                             </div>
                             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{config.limits.candidateUnlocksPerPosting} Candidate Unlocks</h3>
-                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>View full profiles — contact info, resume, LinkedIn.</p>
+                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>View full profiles: contact info, resume, and LinkedIn.</p>
                         </div>
 
                         <div className="emp-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
@@ -276,7 +362,7 @@ export default function PricingPage() {
                                 <Briefcase size={22} />
                             </div>
                             <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{config.limits.inmailsPerPosting} InMails</h3>
-                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Message candidates directly — no guessing emails.</p>
+                            <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Message candidates directly, with no guessing at email addresses.</p>
                         </div>
 
                         {/* ═══ ROW 3: Analytics (12 cols full-width) ═══ */}
@@ -303,6 +389,55 @@ export default function PricingPage() {
             </div>
 
             {/* ═══════════════════════════════════════════════════════════════
+                SECTION 2: THE 2027 LADDER — three cards, same features on every rung
+                ═══════════════════════════════════════════════════════════════ */}
+            <section style={{ background: '#FFF', padding: '80px 20px' }}>
+                <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+                        After the launch period
+                    </p>
+                    <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
+                        Starting {config.ladderStartsLabel}
+                    </h2>
+                    <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '640px', margin: '0 auto 12px', lineHeight: 1.6 }}>
+                        {LADDER_LINE}
+                    </p>
+                    <p style={{ fontSize: '13px', color: '#7A6A62', textAlign: 'center', maxWidth: '640px', margin: '0 auto 40px', lineHeight: 1.6 }}>
+                        Until then, every post is free, and every rung gets the same package: {FEATURES_LINE}.
+                    </p>
+
+                    <div className="pricing-ladder-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px', alignItems: 'stretch' }}>
+                        {ladder.map((rung) => (
+                            <div
+                                key={rung.key}
+                                className="emp-bento-card"
+                                style={{
+                                    ...clayCard,
+                                    padding: '30px 26px 26px',
+                                    display: 'flex', flexDirection: 'column',
+                                    ...(rung.featured
+                                        ? { background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.2)' }
+                                        : {}),
+                                }}
+                            >
+                                <div style={{ ...iconBg, ...(rung.featured ? { background: 'rgba(190,24,93,0.1)', color: '#BE185D' } : {}) }}>
+                                    {rung.icon}
+                                </div>
+                                <h3 style={{ fontSize: '16px', fontWeight: 800, color: rung.featured ? '#831843' : '#1A2E35', margin: '0 0 8px' }}>{rung.name}</h3>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '40px', fontWeight: 800, color: '#831843', lineHeight: 1 }}>{rung.price}</span>
+                                    <span style={{ fontSize: '14px', color: '#BE185D', fontWeight: 500 }}>{rung.unit}</span>
+                                </div>
+                                <p style={{ fontSize: '13.5px', color: '#1A2E35', fontWeight: 600, margin: '0 0 8px', lineHeight: 1.5 }}>{rung.blurb}</p>
+                                <p style={{ fontSize: '12.5px', color: '#5A4A42', margin: '0 0 20px', lineHeight: 1.55, flex: 1 }}>{rung.note}</p>
+                                {rung.cta}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* ═══════════════════════════════════════════════════════════════
                 SECTION 3: COMPARISON + CTA (split screen, same as employer)
                 ═══════════════════════════════════════════════════════════════ */}
             <section style={{ background: 'linear-gradient(180deg, #F1F5F9 0%, #E8EDF2 50%, #F1F5F9 100%)', padding: '80px 20px' }}>
@@ -314,7 +449,7 @@ export default function PricingPage() {
                         How We Compare
                     </h2>
                     <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '440px', margin: '0 auto 44px', lineHeight: 1.6 }}>
-                        An honest look at what you get — no cherry-picking.
+                        An honest look at what you get, with no cherry-picking.
                     </p>
 
                     {/* Split: Table (left) + CTA Card (right) */}
@@ -396,24 +531,14 @@ export default function PricingPage() {
                                     <span style={{ color: '#BE185D' }}>Next {brand.niche.short}</span>?
                                 </h3>
                                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px' }}>
-                                    First post free — all features included. Then just ${config.postingPrice}/post.
+                                    Every post is free through {config.promoEndsLabel}, with all features included. From{' '}
+                                    {config.ladderStartsLabel}, from ${config.introPrice}.
                                 </p>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    <Link href="/post-job" className="emp-cta-primary" style={{
-                                        padding: '12px 24px', borderRadius: '12px', fontWeight: 700, fontSize: '14px',
-                                        background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
-                                        textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                                        boxShadow: '4px 4px 12px rgba(190,24,93,0.2), inset 1px 1px 2px rgba(255,255,255,0.15)',
-                                    }}>
-                                        Post a Job — First Post Free <ArrowRight size={15} />
+                                    <Link href="/post-job" className="emp-cta-primary" style={{ ...ctaPrimary, borderRadius: '12px', padding: '12px 24px' }}>
+                                        Post a Job: Free <ArrowRight size={15} />
                                     </Link>
-                                    <Link href="/contact" className="emp-cta-secondary" style={{
-                                        padding: '12px 24px', borderRadius: '12px', fontWeight: 600, fontSize: '14px',
-                                        background: '#fff', color: '#1A2E35', textDecoration: 'none',
-                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                                        border: '1px solid rgba(0,0,0,0.08)',
-                                        boxShadow: '2px 2px 6px rgba(0,0,0,0.04)',
-                                    }}>
+                                    <Link href="/contact" className="emp-cta-secondary" style={{ ...ctaSecondary, borderRadius: '12px', padding: '12px 24px' }}>
                                         Contact Sales
                                     </Link>
                                 </div>
@@ -487,6 +612,7 @@ export default function PricingPage() {
 
                 @media (max-width: 768px) {
                     .emp-compare-grid { grid-template-columns: 1fr !important; }
+                    .pricing-ladder-grid { grid-template-columns: 1fr !important; }
                     .bento-grid { grid-template-columns: 1fr !important; }
                     .bento-hero-1, .bento-hero-2, .bento-hero-3, .bento-pricing-hero {
                         grid-column: span 1 !important;

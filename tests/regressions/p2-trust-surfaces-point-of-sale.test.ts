@@ -17,7 +17,8 @@
  *      is never upgraded to a money-back guarantee;
  *   3. checkout carries the policy plus consent-gated social proof that
  *      renders nothing when nothing is approved;
- *   4. the free post's shorter duration is disclosed on /for-employers;
+ *   4. /for-employers discloses the pricing terms (launch-promo end date and
+ *      the 2027 ladder) from config tokens, never typed-in numbers;
  *   5. the comparison table keeps its honesty guarantees.
  */
 import { describe, it, expect } from 'vitest';
@@ -74,10 +75,16 @@ describe('P2 #16 — the price is visible before checkout', () => {
         expect(preview).toContain('const willBePaid = quotaKnown && quotaStatus?.willBeFree === false');
     });
 
-    it('renders the price from lib/config, never a hardcoded literal', () => {
-        expect(preview).toContain('`$${config.postingPrice}`');
+    it('renders the price from the quote, falling back to lib/config, never a hardcoded literal', () => {
+        // 2026-09-12 ladder: the amount is the quote's rung (intro vs pro);
+        // config.postingPrice is only the fallback for a pre-ladder payload.
+        expect(preview).toContain('`$${paidPrice}`');
+        expect(preview).toContain(': config.postingPrice;');
+        expect(preview).toContain('`$${config.introPrice} today, the intro price for your first post`');
         // No typed-in dollar amount in the preview page's actual markup.
         expect(previewCode).not.toMatch(/\$199\b/);
+        expect(previewCode).not.toMatch(/\$299\b/);
+        expect(previewCode).not.toMatch(/\$399\b/);
     });
 
     it('shows nothing rather than a wrong price while quota status is unknown', () => {
@@ -88,8 +95,8 @@ describe('P2 #16 — the price is visible before checkout', () => {
 
     it('labels the primary button with the action it actually performs', () => {
         expect(preview).toContain('const primaryCtaLabel = willBePaid');
-        expect(preview).toContain('`Continue to Payment — $${config.postingPrice}`');
-        expect(preview).toContain("'Looks Good — Post Job'");
+        expect(preview).toContain('`Continue to Payment: $${paidPrice}`');
+        expect(preview).toContain("'Looks Good, Post Job'");
         expect(preview).toContain('{primaryCtaLabel}');
     });
 
@@ -210,11 +217,19 @@ describe('P2 #16 — the point-of-sale trust copy clears AA on the surface it la
     });
 });
 
-describe('P2 #16 — /for-employers discloses the free-post terms', () => {
-    it('states the free post duration wherever the paid duration is sold', () => {
-        expect(employers).toContain('config.freeDurationDays');
-        expect(employers).toMatch(/Free post runs \{config\.freeDurationDays\} days/);
-        expect(employers).toContain('One free post per organization');
+describe('P2 #16 — /for-employers discloses the pricing terms', () => {
+    it('states the launch-promo end date and the 2027 ladder from config wherever a price is sold', () => {
+        // 2026-09-12 pricing change: every post is free through
+        // config.promoEndsLabel, then the intro / featured / plan ladder. The
+        // old "one free post, shorter duration" disclosure is gone because
+        // the concept is — every post now runs config.durationDays.
+        expect(employers).toContain('Free through {config.promoEndsLabel}');
+        expect(employers).toMatch(/From \{config\.ladderStartsLabel\}: your first post is \$\{config\.introPrice\}/);
+        expect(employers).toContain('${config.planPrice}/month for {config.planSlots} active jobs');
+        expect(employers).toMatch(/Every post runs\{' '\}\s*\{config\.durationDays\} days/);
+        expect(employersCode).not.toContain('One free post per organization');
+        expect(employersCode).not.toMatch(/first post (is )?free/i);
+        expect(employersCode).not.toMatch(/\$(199|299|399)\b/);
     });
 
     it('no longer hardcodes the listing duration in the bento headline', () => {
@@ -258,10 +273,25 @@ describe('P2 #16 — the comparison table is honest', () => {
 
     it('stops asserting that competitors have no free posting option', () => {
         const rows = comparison.slice(comparison.indexOf('const EMPLOYER_COMPARISON_ROWS'));
-        const freeRow = rows.split('\n').find((l) => l.includes('First Post Free'));
+        // 2026-09-12: the row is the dated launch promo ("Free Posting Through
+        // <config.promoEndsLabel>"), not "First Post Free" — and the competitor
+        // cells stay 'partial' because both offer limited free listings.
+        const freeRow = rows.split('\n').find((l) => l.includes('Free Posting Through ${config.promoEndsLabel}'));
         expect(freeRow).toBeDefined();
         expect(freeRow).toContain("indeed: 'partial'");
         expect(freeRow).toContain("linkedin: 'partial'");
+        expect(freeRow).toContain('Every post is free during our launch period; others offer limited free listings');
+        expect(comparisonCode).not.toContain('First Post Free');
+    });
+
+    it('states the 2027 ladder from config tokens in the flat-pricing row', () => {
+        const rows = comparison.slice(comparison.indexOf('const EMPLOYER_COMPARISON_ROWS'));
+        const flatRow = rows.split('\n').find((l) => l.includes('Flat Per-Post Pricing, No Bidding'));
+        expect(flatRow).toBeDefined();
+        expect(flatRow).toContain('From ${config.ladderStartsLabel}: $${config.introPrice} first post, $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs');
+        const durationRow = rows.split('\n').find((l) => l.includes('-Day Listing Duration'));
+        expect(durationRow).toContain('Every post runs ${config.durationDays} days. Competitor durations vary by plan');
+        expect(comparisonCode).not.toMatch(/\$(199|299|399)\b/);
     });
 
     it('marks competitor paid add-ons as limited rather than absent', () => {

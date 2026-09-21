@@ -40,15 +40,35 @@ interface JobFormData {
   screeningQuestions?: { text: string; type: string; options?: string[]; required?: boolean; knockout?: boolean; knockoutAnswer?: string }[];
 }
 
+/**
+ * Shape of GET /api/employer/free-quota-status (the path predates the ladder;
+ * the payload is now a PricingQuote — see lib/pricing.ts). `mode` says WHY
+ * the next post is free or paid and drives every label on this page:
+ *   promo → free through config.promoEndsLabel
+ *   plan  → a slot on the employer's Employer plan
+ *   intro → config.introPrice, the company's first paid post
+ *   paid  → config.postingPrice
+ * Every field except `eligible` is optional so an older cached payload (or a
+ * transient failure) degrades to neutral copy instead of crashing.
+ */
 interface QuotaStatus {
   eligible: boolean;
+  reason?: string;
+  mode?: 'promo' | 'plan' | 'intro' | 'paid';
+  tier?: 'intro' | 'pro' | 'plan';
   willBeFree?: boolean;
-  remaining?: number;
-  limit?: number;
+  /** Dollars due now; 0 for promo / plan. */
+  price?: number;
+  priceCents?: number;
   durationDays?: number;
   paidDurationDays?: number;
-  freeDurationDays?: number;
-  reason?: string;
+  promoActive?: boolean;
+  promoEndsLabel?: string;
+  ladderStartsLabel?: string;
+  plan?: { slots: number; used: number; remaining: number };
+  // Legacy fields — still emitted by the API, no longer rendered here.
+  remaining?: number;
+  limit?: number;
 }
 
 /* ═══ Clay Tokens ═══ */
@@ -141,7 +161,9 @@ export default function PreviewPage() {
     setIsLoading(true);
     setError(null);
     try {
-      // Always try free posting first — API checks if employer has free posts remaining
+      // Always try the no-charge path first — post-free resolves the mode
+      // server-side (promo → plan → intro/paid) and answers requiresPayment
+      // when a Stripe checkout is actually needed.
       if (!formData) return;
       const response = await fetch('/api/jobs/post-free', {
         method: 'POST',
@@ -185,22 +207,28 @@ export default function PreviewPage() {
           // Non-fatal — the dashboard list is a UX nicety, not data
           // integrity; a stale draft can be cleared from the dashboard.
         }
-        router.push('/success?free=true');
+        // post-free reports which no-charge path it took so /success can say
+        // "free during our launch period" vs "posted under your Employer
+        // plan". `?free=true` remains the fallback the success page still
+        // honours for older callers.
+        const postedMode = result.mode === 'plan' || result.mode === 'promo' ? result.mode : null;
+        router.push(postedMode ? `/success?mode=${postedMode}` : '/success?free=true');
       } else if (result.requiresPayment) {
-        // Free posts exhausted — fire P7 limit-hit event then redirect to checkout
+        // Next post is a paid rung — fire the P7 funnel event with the quote
+        // post-free returned, then redirect to checkout
         const domain = (formData.contactEmail || '').split('@')[1] || 'unknown';
-        trackFreePostLimitHit(
-          domain,
-          result.freePostsUsed ?? config.freePostsPerEmail,
-          result.freePostsLimit ?? config.freePostsPerEmail
-        );
+        trackFreePostLimitHit(domain, {
+          mode: result.mode ?? quotaStatus?.mode,
+          tier: result.tier ?? quotaStatus?.tier,
+          price: result.price ?? quotaStatus?.price,
+        });
         // F3: don't route into a checkout that cannot complete. When paid
         // posting is off (flag or Stripe unconfigured) the checkout page's
         // Pay button would only ever 503 — surface the state here instead.
         if (paidPostingAvailable === false) {
           setError(
-            "Your organization has used its free post, and paid posting isn't open yet. " +
-            'Your job details are saved — contact support and we\'ll notify you when checkout is available.'
+            "Your next post requires payment, and paid posting isn't open yet. " +
+            'Your job details are saved. Contact support and we will notify you when checkout is available.'
           );
         } else {
           router.push('/post-job/checkout');
@@ -300,33 +328,52 @@ export default function PreviewPage() {
   };
 
   const willBeFree = quotaStatus?.eligible === true && quotaStatus.willBeFree === true;
-  const packageHeadline = willBeFree
-    ? `Free trial post — live for ${quotaStatus?.freeDurationDays ?? config.freeDurationDays} days`
-    : quotaStatus?.eligible === true
-      ? `Live for ${quotaStatus?.paidDurationDays ?? config.durationDays} days`
-      : `Live for ${config.durationDays} days`;
+  // Mode is only trusted from an eligible answer; anything else renders the
+  // neutral "Live for N days" headline (no price guessed, no promo claimed).
+  const postingMode = quotaStatus?.eligible === true ? quotaStatus.mode : undefined;
+  const listingDays = quotaStatus?.durationDays ?? config.durationDays;
+  const planSlots = quotaStatus?.plan?.slots ?? config.planSlots;
+  const planSlotNumber = (quotaStatus?.plan?.used ?? 0) + 1;
+  const packageHeadline = postingMode === 'promo'
+    ? `Free through ${config.promoEndsLabel}, live for ${listingDays} days`
+    : postingMode === 'plan'
+      ? `Using plan slot ${planSlotNumber} of ${planSlots}`
+      : postingMode === 'intro'
+        ? `$${config.introPrice} today, the intro price for your first post`
+        : postingMode === 'paid'
+          ? `$${config.postingPrice}, live for ${listingDays} days`
+          : `Live for ${listingDays} days`;
   const packageDetails = `Featured badge · Top placement · ${config.limits.candidateUnlocksPerPosting} candidate unlocks · ${config.limits.inmailsPerPosting} InMails · Applicant analytics`;
 
   // ─── Price disclosure (content audit P2 #16) ────────────────────────────
   // The quota API is the authority on whether THIS post is free; until it
   // answers, `willBePaid` stays false and the neutral copy below shows no
-  // price rather than guessing one. Nobody should discover the $199 for the
-  // first time on the Stripe page — the primary button label carries it.
+  // price rather than guessing one. Nobody should discover the charge for
+  // the first time on the Stripe page — the primary button label carries it.
+  // The amount comes from the quote (intro vs pro rung); config.postingPrice
+  // is only the fallback for a payload that predates the ladder.
   const quotaKnown = quotaStatus?.eligible === true;
   const willBePaid = quotaKnown && quotaStatus?.willBeFree === false;
+  const paidPrice = willBePaid && typeof quotaStatus?.price === 'number' && quotaStatus.price > 0
+    ? quotaStatus.price
+    : config.postingPrice;
   const priceLabel = willBeFree
     ? 'Free'
     : willBePaid
-      ? `$${config.postingPrice}`
+      ? `$${paidPrice}`
       : null;
-  const priceCaption = willBeFree
-    ? `$0 today — your organization's free post`
-    : willBePaid
-      ? 'One-time charge · secure Stripe checkout'
-      : null;
+  const priceCaption = postingMode === 'promo'
+    ? `$0 today. Every post is free during our launch period through ${config.promoEndsLabel}. No credit card required.`
+    : postingMode === 'plan'
+      ? '$0 today, included in your Employer plan'
+      : willBePaid
+        ? postingMode === 'intro'
+          ? `One-time charge · secure Stripe checkout · every post after this one is $${config.postingPrice}`
+          : 'One-time charge · secure Stripe checkout'
+        : null;
   const primaryCtaLabel = willBePaid
-    ? `Continue to Payment — $${config.postingPrice}`
-    : 'Looks Good — Post Job';
+    ? `Continue to Payment: $${paidPrice}`
+    : 'Looks Good, Post Job';
 
   return (
     <div style={{ background: '#F5F0EB', minHeight: '100vh', padding: '0 16px 80px' }}>
@@ -550,7 +597,7 @@ export default function PreviewPage() {
                   }}>
                     Apply Now <ExternalLink size={16} />
                   </a>
-                  <p style={{ marginTop: '8px', fontSize: '11px', color: '#B0BEC5', textAlign: 'center' }}>Opens in a new tab — verify your link works.</p>
+                  <p style={{ marginTop: '8px', fontSize: '11px', color: '#B0BEC5', textAlign: 'center' }}>Opens in a new tab. Verify that your link works.</p>
                 </>
               )}
             </div>
@@ -574,9 +621,9 @@ export default function PreviewPage() {
             <div style={{ minWidth: 0, flex: 1 }}>
               <p style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>{packageHeadline}</p>
               <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '2px 0 0' }}>{packageDetails}</p>
-              {willBeFree && typeof quotaStatus?.remaining === 'number' && (
+              {postingMode === 'plan' && typeof quotaStatus?.plan?.remaining === 'number' && (
                 <p style={{ fontSize: '11px', color: '#BE185D', margin: '4px 0 0', fontWeight: 600 }}>
-                  {quotaStatus.remaining} of {quotaStatus.limit} free posts remaining for your domain
+                  {Math.max(0, quotaStatus.plan.remaining - 1)} of {planSlots} plan slots left after this post
                 </p>
               )}
             </div>
@@ -610,8 +657,8 @@ export default function PreviewPage() {
         {paidPostingAvailable === false && quotaStatus?.eligible === true && quotaStatus.willBeFree === false && (
           <div style={{ ...cardBase, padding: '14px 18px', marginBottom: '16px', background: '#FFFBEB', border: '1px solid #FDE68A' }}>
             <p style={{ fontSize: '13px', fontWeight: 600, color: '#92400E', margin: 0 }}>
-              Your organization has used its free post — paid posting is coming soon
-              and isn&apos;t open yet, so this job can&apos;t be published today. Your
+              Your next post requires payment. Paid posting is coming soon
+              but is not open yet, so this job cannot be published today. Your
               draft stays saved.
             </p>
           </div>

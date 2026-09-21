@@ -35,6 +35,9 @@ vi.mock('@/lib/rate-limit', () => ({
   RATE_LIMITS: { employer: { limit: 30, windowSeconds: 60 } },
 }));
 
+// The renewal self-heal has its own suite (verify-renewal-session-self-heal.test.ts).
+vi.mock('@/app/api/webhooks/stripe/apply-renewal', () => ({ applyRenewalCheckout: vi.fn() }));
+
 function makeReq(sessionId: string, cookie?: string): NextRequest {
   const headers: Record<string, string> = {};
   if (cookie) headers['cookie'] = cookie;
@@ -49,6 +52,8 @@ beforeEach(() => {
   process.env.STRIPE_SECRET_KEY = 'sk_test_x';
   // Default: anonymous caller. Individual tests override with a signed-in user.
   getUserMock.mockResolvedValue({ data: { user: null }, error: null });
+  // Ledger row present — the webhook already applied this renewal.
+  vi.mocked(prisma.jobCharge.findUnique).mockResolvedValue({ id: 'jc-1' } as never);
   retrieveMock.mockResolvedValue({
     payment_status: 'paid',
     metadata: { jobId: 'job-1', type: 'renewal', tier: 'pro' },

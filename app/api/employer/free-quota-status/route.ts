@@ -1,28 +1,38 @@
+/**
+ * GET /api/employer/free-quota-status — read-only quote for the NEXT post.
+ *
+ * The path name is historical (the wizard, the preview and UsageWidget
+ * already call it); it now answers "what will this employer's next post
+ * cost, and why" without consuming anything. Mirrors the gate order in
+ * /api/jobs/post-free via lib/pricing.ts#resolvePostingMode:
+ *
+ *   promo → free through config.promoEndsLabel   ('promo' rows)
+ *   plan  → free, uses an Employer plan slot      ('plan' rows)
+ *   intro → config.introPrice, first PAID post for this company domain
+ *   paid  → config.postingPrice
+ *
+ * Response shape (the wizard reads `eligible` + `willBeFree`, the preview
+ * banner reads `mode` / `price` / `tier`, UsageWidget reads `plan`):
+ *   { eligible, reason?, mode, tier, willBeFree, price, priceCents,
+ *     durationDays, paidDurationDays, promoActive, promoEndsAt,
+ *     promoEndsLabel, ladderStartsLabel, plan?: { slots, used, remaining },
+ *     remaining, limit }
+ * `remaining` / `limit` are legacy fields kept so old callers keep
+ * compiling: promo → promo cap headroom / cap; plan → slots remaining /
+ * slots; paid modes → 0 / 0.
+ */
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { config } from '@/lib/config';
+import {
+  isFreeEmailDomain,
+  domainOf,
+  countActivePromoPostsForDomain,
+  resolvePostingMode,
+} from '@/lib/pricing';
+import { getPlanSlotStatus } from '@/lib/employer-plan';
 
-const FREE_EMAIL_DOMAINS = [
-  'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
-  'aol.com', 'icloud.com', 'mail.com', 'protonmail.com',
-  'ymail.com', 'live.com', 'msn.com', 'googlemail.com',
-];
-
-/**
- * GET /api/employer/free-quota-status
- *
- * Read-only quota check used by the post-job preview UI to render the right
- * duration ("30-day free trial" vs "60-day paid listing") before the user
- * clicks submit. Mirrors the gate logic in /api/jobs/post-free without
- * actually consuming a freebie.
- *
- * Returns:
- *   - eligible: whether the user can post AT ALL (auth + role + non-free-email-domain)
- *   - willBeFree: true if their next post will fall under the free quota
- *   - remaining: how many free posts the domain has left
- *   - durationDays: 30 if next post is free, 60 if paid
- */
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -41,25 +51,46 @@ export async function GET() {
       return NextResponse.json({ eligible: false, reason: 'not-employer' });
     }
 
-    const signupDomain = user.email.toLowerCase().split('@')[1];
-    if (!signupDomain || FREE_EMAIL_DOMAINS.includes(signupDomain)) {
+    // Same signup-domain anchor as the posting gate (audit #26).
+    const signupDomain = domainOf(user.email);
+    if (!signupDomain || isFreeEmailDomain(signupDomain)) {
       return NextResponse.json({ eligible: false, reason: 'free-email-provider' });
     }
 
-    const used = await prisma.employerJob.count({
-      where: { quotaDomain: signupDomain, paymentStatus: 'free' },
-    });
-    const remaining = Math.max(0, config.freePostsPerEmail - used);
-    const willBeFree = remaining > 0;
+    const now = new Date();
+    const planSlot = await getPlanSlotStatus(user.id, now);
+    const quote = await resolvePostingMode({ quotaDomain: signupDomain, hasPlanSlot: planSlot.canPost, now });
+
+    // Legacy remaining/limit semantics — see file header.
+    let remaining = 0;
+    let limit = 0;
+    if (quote.mode === 'promo') {
+      const activePromo = await countActivePromoPostsForDomain(signupDomain, prisma, now);
+      limit = config.promoMaxActivePostsPerDomain;
+      remaining = Math.max(0, limit - activePromo);
+    } else if (quote.mode === 'plan') {
+      limit = planSlot.slots;
+      remaining = planSlot.remaining;
+    }
 
     return NextResponse.json({
       eligible: true,
-      willBeFree,
-      remaining,
-      limit: config.freePostsPerEmail,
-      durationDays: willBeFree ? config.freeDurationDays : config.durationDays,
+      mode: quote.mode,
+      tier: quote.tier,
+      willBeFree: quote.willBeFree,
+      price: quote.price,
+      priceCents: quote.priceCents,
+      durationDays: quote.durationDays,
       paidDurationDays: config.durationDays,
-      freeDurationDays: config.freeDurationDays,
+      promoActive: config.isPromoActive(now),
+      promoEndsAt: config.promoEndsAt,
+      promoEndsLabel: config.promoEndsLabel,
+      ladderStartsLabel: config.ladderStartsLabel,
+      ...(planSlot.entitled && {
+        plan: { slots: planSlot.slots, used: planSlot.used, remaining: planSlot.remaining },
+      }),
+      remaining,
+      limit,
     });
   } catch (err) {
     return NextResponse.json(

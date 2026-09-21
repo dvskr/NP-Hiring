@@ -18,6 +18,8 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+// Launch-promo end date for the CTA (config token, never typed).
+import { config } from '@/lib/config';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import {
   JD_TEMPLATES,
@@ -46,11 +48,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const template = findTemplate(id);
   if (!template) return {};
 
-  const title = `${template.label} — ${brand.niche.short} Job Description Template`;
+  const title = `${template.label} | ${brand.niche.short} Job Description Template`;
   const ogImage = `${brand.baseUrl}/api/og?title=${encodeURIComponent(title)}&type=page`;
   return {
     title: `${title} | ${brand.name}`,
-    description: `${template.summary} A free ${brand.niche.descriptor} job description skeleton for this setting — customize the bracketed prompts and post in minutes.`,
+    description: `${template.summary} A free ${brand.niche.descriptor} job description skeleton for this setting. Customize the bracketed prompts and post in minutes.`,
     openGraph: {
       title,
       description: template.summary,
@@ -72,7 +74,7 @@ export default async function JdTemplateDetailPage({ params }: Props) {
   if (!template) notFound();
 
   const pageUrl = `${brand.baseUrl}${LIBRARY_PATH}/${template.id}`;
-  const pageTitle = `${template.label} — ${brand.niche.short} Job Description Template`;
+  const pageTitle = `${template.label} | ${brand.niche.short} Job Description Template`;
   // Registry-authored HTML with the neutral token fallbacks applied.
   const bodyHtml = renderTemplate(template, {});
   const related = JD_TEMPLATES.filter(
@@ -127,7 +129,7 @@ export default async function JdTemplateDetailPage({ params }: Props) {
           <div className="mb-8 rounded-xl p-5 flex gap-3" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
             <Info className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-primary)' }} aria-hidden="true" />
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-              This is a skeleton, not a finished posting: everything in [square brackets] is a prompt to replace with your actual specifics — visit lengths, EHR, schedule, salary range. Inside the{' '}
+              This is a skeleton, not a finished posting: everything in [square brackets] is a prompt to replace with your actual specifics, such as visit lengths, EHR, schedule, and salary range. Inside the{' '}
               <Link href="/post-job" className="underline font-medium" style={{ color: 'var(--color-primary)' }}>post-job form</Link>, picking this template also fills in your practice name and location from the fields you have already entered.
             </p>
           </div>
@@ -148,14 +150,14 @@ export default async function JdTemplateDetailPage({ params }: Props) {
               Use this template in your posting
             </h2>
             <p className="text-sm mb-5 max-w-lg mx-auto" style={{ color: '#9D174D' }}>
-              Open the post-job form and pick &ldquo;{template.label}&rdquo; from the description editor&apos;s template starters. Your first post is free with every feature included.
+              Open the post-job form and pick &ldquo;{template.label}&rdquo; from the description editor&apos;s template starters. Every post is free through {config.promoEndsLabel}, with every feature included.
             </p>
             <Link
               href="/post-job"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm text-white"
               style={{ background: 'linear-gradient(145deg, #BE185D, #9D174D)' }}
             >
-              Post a Job — First Post Free <ArrowRight size={16} aria-hidden="true" />
+              Post a Job: Free <ArrowRight size={16} aria-hidden="true" />
             </Link>
           </div>
 

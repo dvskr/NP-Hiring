@@ -27,7 +27,10 @@ import { ShieldCheck, Clock, LifeBuoy } from 'lucide-react';
  *     consented, admin-approved rows and renders NOTHING when none exist.
  *     There is no fallback copy, no logo wall, and no invented quote.
  *   - Every number renders from lib/config.ts, the same source the price
- *     and the Stripe line item use.
+ *     and the Stripe line item use. This layout is a server component and
+ *     cannot know which ladder rung (intro vs pro) the client page was
+ *     quoted, so it states the ladder and defers the exact amount to the
+ *     order summary above it.
  */
 
 /**
@@ -56,10 +59,16 @@ const assurances: { icon: React.ReactNode; title: string; body: React.ReactNode 
         title: 'What you are buying',
         body: (
             <>
-                One {brand.niche.short} job posting, live for {config.durationDays} days, with the full feature set —
+                One {brand.niche.short} job posting, live for {config.durationDays} days, with the full feature set:
                 Featured badge, top placement, {config.limits.candidateUnlocksPerPosting} candidate unlocks,{' '}
-                {config.limits.inmailsPerPosting} InMails, and applicant analytics. A one-time charge of $
-                {config.postingPrice}. No subscription is created and no card is stored by us.
+                {config.limits.inmailsPerPosting} InMails, and applicant analytics. A one-time charge: $
+                {config.introPrice} for your company&apos;s first paid post, ${config.postingPrice} for every post
+                after that. The exact amount is in the order summary above. Hiring for several roles? The
+                Employer plan is ${config.planPrice}/month for {config.planSlots} active jobs (see{' '}
+                <Link href="/pricing" style={{ color: '#BE185D', textDecoration: 'underline' }}>
+                    pricing
+                </Link>
+                ). No subscription is created by this checkout and no card is stored by us.
             </>
         ),
     },
@@ -87,7 +96,7 @@ const assurances: { icon: React.ReactNode; title: string; body: React.ReactNode 
         body: (
             <>
                 Salary, requirements, and description stay editable from your employer dashboard after the post goes
-                live — changes publish immediately, and you do not pay again to edit.
+                live. Changes publish immediately, and you do not pay again to edit.
             </>
         ),
     },

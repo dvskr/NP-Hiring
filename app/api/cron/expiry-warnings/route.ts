@@ -21,6 +21,18 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl
 // email timely; the EmailSend dedup below makes re-scans idempotent.
 const POST_EXPIRY_LOOKBACK_DAYS = 3
 
+// Rows that can buy the per-post renewal (config.renewalPrice). 'plan' rows
+// are deliberately excluded: plan posts stay live while the plan is active
+// and the employer re-posts from a slot, so their emails get a dashboard
+// CTA instead of a renewal CTA. Legacy free-quota rows re-enter via the
+// dashboard's own upgrade path (unchanged).
+const RENEWABLE_STATUSES = new Set(['promo', 'paid'])
+
+// Statuses whose expiry is worth an email at all — everything that was
+// actually published. Never-published checkouts ('pending'/'expired') have
+// nothing to mourn; refunded rows were pulled deliberately.
+const NOTIFIABLE_STATUSES = ['free', 'free_renewed', 'free_upgraded', 'promo', 'plan', 'paid']
+
 /**
  * B87 — "your listing has expired" notification. The funnel previously went
  * silent at expiry: a pre-expiry warning, then nothing — employers whose
@@ -35,10 +47,14 @@ async function sendPostExpiryEmail(
   try {
     const dashboardUrl = `${BASE_URL}/employer/dashboard/${employerJob.dashboardToken || employerJob.editToken}`
     const unsubToken = await getOrCreateUnsubToken(employerJob.contactEmail)
-    // Only fully-paid rows can use the discounted renewal flow — free-quota
-    // posts re-enter via the dashboard's own upgrade path.
-    const canRenew = employerJob.paymentStatus === 'paid'
+    const canRenew = RENEWABLE_STATUSES.has(employerJob.paymentStatus)
+    const isPlanPost = employerJob.paymentStatus === 'plan'
     const discountPct = Math.round((1 - config.renewalPrice / config.postingPrice) * 100)
+    const relistLine = canRenew
+      ? `Renew for $${config.renewalPrice} (save ${discountPct}%) to relist it for another ${config.durationDays} days — your stats, applicants, and unlocked candidates carry over.`
+      : isPlanPost
+        ? `Post it again from one of your Employer plan slots — your stats and applicants stay attached to the posting.`
+        : `You can relist this role from your dashboard — your stats and applicants stay attached to the posting.`
 
     const html = emailShellV2(`
       ${headerBlockV2('Your Listing Has Expired', '')}
@@ -47,11 +63,7 @@ async function sendPostExpiryEmail(
       ${spacerV2(20)}
       <tr><td class="content-pad" style="padding:0 40px;">
         <div style="background:#FDF2F8;border:1px solid rgba(190,24,93,0.15);border-radius:12px;padding:16px 20px;">
-          <p style="margin:0;font-family:${SANS};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${
-            canRenew
-              ? `Renew for $${config.renewalPrice} (save ${discountPct}%) to relist it for another ${config.durationDays} days — your stats, applicants, and unlocked candidates carry over.`
-              : `You can relist this role from your dashboard — your stats and applicants stay attached to the posting.`
-          }</p>
+          <p style="margin:0;font-family:${SANS};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${relistLine}</p>
         </div>
       </td></tr>
       ${spacerV2(24)}
@@ -137,7 +149,10 @@ export async function GET(request: NextRequest) {
               job.viewCount || 0,
               job.applyClickCount || 0,
               employerJob.dashboardToken || employerJob.editToken,
-              null // unsubscribeToken — sendExpiryWarningEmail will mint one if null
+              null, // unsubscribeToken — sendExpiryWarningEmail will mint one if null
+              // paymentStatus lets the template hide the renewal CTA for
+              // 'plan' rows (they re-post from a slot instead of renewing).
+              { paymentStatus: employerJob.paymentStatus },
             )
 
             // sendExpiryWarningEmail swallows send failures and returns
@@ -179,9 +194,8 @@ export async function GET(request: NextRequest) {
             lt: now,
           },
           employerJobs: {
-            // Never-published checkouts ('pending'/'expired') have nothing
-            // to mourn; refunded rows were pulled deliberately.
-            paymentStatus: { in: ['free', 'free_renewed', 'free_upgraded', 'paid'] },
+            // See NOTIFIABLE_STATUSES — published rows only.
+            paymentStatus: { in: NOTIFIABLE_STATUSES },
           },
         },
         include: {

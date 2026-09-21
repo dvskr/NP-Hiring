@@ -28,7 +28,7 @@ describe('shared activation module (single source of truth)', () => {
 
   it('treats a lost claim (P2025) as already_active instead of re-applying side effects', () => {
     expect(src).toContain("'P2025'");
-    expect(src).toContain("outcome: 'already_active'");
+    expect(src).toContain("return 'already_active'");
   });
 
   it('surfaces a missing EmployerJob row instead of skipping silently (C3)', () => {
@@ -39,7 +39,7 @@ describe('shared activation module (single source of truth)', () => {
 describe('webhook and verify-checkout-session share the activation path', () => {
   it('the webhook new-post branch calls activatePaidJobCheckout', () => {
     const src = read('app/api/webhooks/stripe/route.ts');
-    expect(src).toMatch(/import \{ activatePaidJobCheckout, fetchInvoiceData \} from '\.\/activate-paid-job'/);
+    expect(src).toMatch(/import \{ activatePaidJobCheckout \} from '\.\/activate-paid-job'/);
     expect(src).toMatch(/await activatePaidJobCheckout\(stripe, session\)/);
   });
 

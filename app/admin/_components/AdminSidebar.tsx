@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Target, Users, Menu, X, Home, BarChart3, FileText, Settings, Mail, Activity, HeartPulse, Search, GitBranch, GraduationCap, ShieldCheck, Quote, BadgeCheck, Building2 } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Target, Users, Menu, X, Home, BarChart3, FileText, Settings, Mail, Activity, HeartPulse, Search, GitBranch, GraduationCap, ShieldCheck, Quote, BadgeCheck, Building2, CreditCard } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -28,6 +28,11 @@ const navItems = [
   // Without an entry here the human-classification loop never starts and the
   // candidate-side employer-type filter stays permanently empty.
   { name: 'Companies', href: '/admin/companies', icon: Building2 },
+  // The Employer plan back office. The Stripe Payment Link identifies a
+  // subscriber by checkout email only; rows the webhook cannot match land
+  // unattached (paid, cannot post) and ONLY this page attaches them. It is
+  // also the only way to grant a plan without Stripe.
+  { name: 'Employer Plans', href: '/admin/employer-plans', icon: CreditCard },
   { name: 'Job Health', href: '/admin/health', icon: HeartPulse },
   { name: 'Cron & Triggers', href: '/admin/cron', icon: Activity },
   { name: 'Settings', href: '/admin/settings', icon: Settings },

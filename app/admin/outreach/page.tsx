@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { brand } from '@/config/brand';
+// Launch-promo end date for the template blurb — the offer is only true
+// through config.promoEndsLabel, so the label carries the date.
+import { config } from '@/lib/config';
 import { Plus, Mail, Copy, Check } from 'lucide-react';
 import { formatCT } from '@/lib/format-ct';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -322,7 +325,7 @@ export default function OutreachPage() {
                 <p style={sub}>
                   {template === 'initial' && 'First outreach to potential employers'}
                   {template === 'followUp' && 'Follow-up for non-responders'}
-                  {template === 'freeOffer' && 'Special free posting offer'}
+                  {template === 'freeOffer' && `Launch promo: free featured posts through ${config.promoEndsLabel}`}
                 </p>
               </div>
             ))}

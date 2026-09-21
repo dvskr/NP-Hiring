@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 import { LazyMotion, domAnimation, m, useReducedMotion } from 'framer-motion';
 import { brand } from '@/config/brand';
+import { config } from '@/lib/config';
 
 const fadeUp = {
     hidden: { opacity: 0, y: 24 },
@@ -24,10 +25,10 @@ const stepSrcSet = (base: string) =>
     STEP_SIZES.map((s) => `/images/how-it-works/${base}-${s}.webp ${s}w`).join(', ');
 
 const STEPS = [
-    { base: 'step-employer-post', title: 'Post Your Listing', desc: `Start from an ${brand.niche.short} template or generate the full description with AI. Set required experience and your post is live in 5 minutes — first one free.` },
-    { base: 'step-employer-reach', title: `Reach Every ${brand.niche.short}`, desc: 'Your listing surfaces in semantic search, the weekly digest, and new-grad-friendly filters — plus its own indexed SEO page on Google.' },
+    { base: 'step-employer-post', title: 'Post Your Listing', desc: `Start from an ${brand.niche.short} template or generate the full description with AI. Set required experience, and your post is live in 5 minutes.` },
+    { base: 'step-employer-reach', title: `Reach Every ${brand.niche.short}`, desc: 'Your listing surfaces in semantic search, the weekly digest, and new-grad-friendly filters, plus its own indexed SEO page on Google.' },
     { base: 'step-employer-browse', title: 'Browse & Unlock in Bulk', desc: 'Search the talent pool with experience filters, then unlock multiple profiles in one click using your remaining credits.' },
-    { base: 'step-employer-track', title: 'Track & Hire', desc: 'Per-job views, apply clicks, and CTR in the analytics dashboard. Export CSV to your ATS or hiring spreadsheet anytime.' },
+    { base: 'step-employer-track', title: 'Track & Hire', desc: 'See per-job views, apply clicks, and CTR in the analytics dashboard. Export CSV to your ATS or hiring spreadsheet anytime.' },
 ];
 
 const css = `
@@ -141,6 +142,10 @@ export default function EmployerHowItWorks() {
     // animations. `initial={false}` renders elements in their visible
     // resting state so whileInView never moves them.
     const reduceMotion = useReducedMotion();
+    // The CTA carries the pricing hook: "free through <date>" while the
+    // launch promo runs, a plain "Post a Job" once the ladder is live. The
+    // date comes from lib/config so this cannot outlive the promo by mistake.
+    const promoActive = config.isPromoActive();
 
     return (
         <LazyMotion features={domAnimation}>
@@ -258,7 +263,7 @@ export default function EmployerHowItWorks() {
                             e.currentTarget.style.boxShadow = '0 4px 20px rgba(200,90,120,0.3)';
                         }}
                     >
-                        Post a Job — First Post Free <ArrowUpRight size={15} />
+                        {promoActive ? `Post a Job (Free Through ${config.promoEndsLabel})` : 'Post a Job'} <ArrowUpRight size={15} />
                     </Link>
                 </m.div>
             </m.div>

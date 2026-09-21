@@ -626,18 +626,33 @@ export default function EmployerSettingsClient() {
                                 </thead>
                                 <tbody>
                                     {payments.map(p => {
-                                        // Free posts have no charge → no invoice link.
-                                        // Paid posts get a "Download" button that hits our PDF generator.
+                                        // No-charge rows have no invoice link: legacy free-trial
+                                        // posts ('free*'), launch-promo posts ('promo') and
+                                        // Employer-plan slots ('plan' — billed by the subscription,
+                                        // not per post). Paid posts get a "Download" button that
+                                        // hits our PDF generator. `isFree` is the billing API's own
+                                        // flag; the status check is belt-and-suspenders for a
+                                        // payload that predates the promo/plan statuses.
                                         // Defensive reads — historical payment rows occasionally have
                                         // null `tier` or missing `charges`, and a render-time crash on
                                         // those (`p.tier.includes` etc.) was producing the System
                                         // Malfunction error in production.
                                         const latestCharge = p.charges?.[0];
                                         const tier = p.tier ?? '';
+                                        const status = p.status ?? '';
+                                        const isPromoPost = status === 'promo';
+                                        const isPlanPost = status === 'plan';
+                                        const isNoCharge = p.isFree || isPromoPost || isPlanPost;
                                         const isFeatured = tier.includes('Featured');
-                                        const planLabel = p.isFree ? 'Free trial' : (tier || 'Standard');
-                                        const planBg = p.isFree ? '#FDF2F8' : (isFeatured ? '#FFF8E1' : '#FDF2F8');
-                                        const planColor = p.isFree ? '#BE185D' : (isFeatured ? '#F59E0B' : '#BE185D');
+                                        const planLabel = isPlanPost
+                                            ? 'Employer plan'
+                                            : isPromoPost
+                                                ? 'Launch promo'
+                                                : p.isFree
+                                                    ? 'Free trial'
+                                                    : (tier || 'Standard');
+                                        const planBg = isPlanPost ? '#EFF6FF' : isNoCharge ? '#FDF2F8' : (isFeatured ? '#FFF8E1' : '#FDF2F8');
+                                        const planColor = isPlanPost ? '#1D4ED8' : isNoCharge ? '#BE185D' : (isFeatured ? '#F59E0B' : '#BE185D');
                                         const statusLabel = p.isActive ? 'Active' : 'Expired';
                                         const downloadUrl = `/api/employer/invoice?jobId=${p.jobId}${latestCharge?.id ? `&chargeId=${latestCharge.id}` : ''}`;
                                         const receiptUrl = `/api/employer/receipt?jobId=${p.jobId}${latestCharge?.id ? `&chargeId=${latestCharge.id}` : ''}`;
@@ -667,7 +682,9 @@ export default function EmployerSettingsClient() {
                                                     {new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                                 </td>
                                                 <td style={{ padding: '14px 8px', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                                                    {p.isFree ? (
+                                                    {/* A renewed promo post has a real JobCharge even though the
+                                                        row itself was free — a charge always wins over the status. */}
+                                                    {isNoCharge && !latestCharge ? (
                                                         <span style={{ color: '#B0BEC5', fontSize: '12px' }}>—</span>
                                                     ) : latestCharge ? (
                                                         // Two buttons side-by-side: the Stripe "Invoice" PDF

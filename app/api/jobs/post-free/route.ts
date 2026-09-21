@@ -1,8 +1,36 @@
+/**
+ * POST /api/jobs/post-free — post a job WITHOUT a charge.
+ *
+ * The path name is historical (the wizard already calls it); the semantics
+ * are "create the listing now if the employer's next post costs nothing".
+ * Two modes qualify, resolved in this order (lib/pricing.ts):
+ *
+ *   promo — config.isPromoActive(): every post is free through
+ *           config.promoEndsLabel. Row: paymentStatus 'promo', pricingTier
+ *           'pro'. Guarded by config.promoMaxActivePostsPerDomain (an abuse
+ *           cap on concurrently-live promo posts per signup domain — never
+ *           marketed) → 403 { promoCapReached: true }.
+ *   plan  — the employer holds an entitled Employer plan with a free slot
+ *           (lib/employer-plan.ts#getPlanSlotStatus). Row: paymentStatus
+ *           'plan', pricingTier 'plan'. Slot re-checked inside the
+ *           transaction → 403 { planSlotsFull: true } when a parallel
+ *           submit took the last one.
+ *
+ * Anything else is a paid post → 403 { requiresPayment: true, mode, tier,
+ * price, priceCents } and the wizard redirects to /api/create-checkout,
+ * which prices the intro/pro rung itself.
+ *
+ * Both gate checks + all writes run in ONE Serializable transaction (audit
+ * #6 + #7) so two parallel submitters can't both slip past the cap / slot,
+ * and a failed slug update or EmployerJob insert can't orphan a Job row.
+ * Every row snapshots the SIGNUP email domain into EmployerJob.quotaDomain
+ * — the immutable anchor for the promo cap and the per-domain intro price.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
-import { config, PricingTier } from '@/lib/config';
+import { config, type PostingMode, type PricingTier } from '@/lib/config';
 import { expiresFromNow } from '@/lib/expires-at';
 import { sendConfirmationEmail } from '@/lib/email-service';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
@@ -18,11 +46,29 @@ import { parseLocation } from '@/lib/location-parser';
 import { summarizeForMeta } from '@/lib/description-cleaner';
 import { normalizeExperienceFromInput } from '@/lib/experience-label';
 import { brand } from '@/config/brand';
+import {
+  isFreeEmailDomain,
+  domainOf,
+  countActivePromoPostsForDomain,
+  countActivePlanPostsForUser,
+  resolvePostingMode,
+} from '@/lib/pricing';
+import { getPlanSlotStatus } from '@/lib/employer-plan';
 
-class FreeQuotaExceededError extends Error {
-  constructor(public readonly usedCount: number) {
-    super('Free post quota exceeded');
-    this.name = 'FreeQuotaExceededError';
+/** Modes this route can fulfil without a charge. Paid modes 403 to checkout. */
+type NoChargeMode = Extract<PostingMode, 'promo' | 'plan'>;
+
+class PromoCapReachedError extends Error {
+  constructor(public readonly activeCount: number) {
+    super('Promo post cap reached for domain');
+    this.name = 'PromoCapReachedError';
+  }
+}
+
+class PlanSlotsFullError extends Error {
+  constructor(public readonly used: number, public readonly slots: number) {
+    super('Employer plan slots full');
+    this.name = 'PlanSlotsFullError';
   }
 }
 
@@ -32,8 +78,6 @@ export async function POST(request: NextRequest) {
   if (rateLimitResult) return rateLimitResult;
 
   try {
-    // Free posting gate: check if this employer still has free posts remaining
-
     // Parse and sanitize request body
     const body = await request.json();
 
@@ -100,7 +144,8 @@ export async function POST(request: NextRequest) {
       salaryPeriod,
     });
 
-    // ── Auth FIRST — the signup email is the canonical identity for the freebie quota.
+    // ── Auth FIRST — the signup email is the canonical identity for every
+    // per-domain rule (promo cap, intro price, plan slots).
     // Audit #26: previously the FREE_EMAIL_DOMAINS check + quota count both keyed off
     // the form-submitted contactEmail, which let an attacker submit each free post with
     // a different `bob@example<N>.com` and bypass the per-domain cap. Now we anchor
@@ -139,36 +184,61 @@ export async function POST(request: NextRequest) {
     }
 
     // Block free email providers — keyed off SIGNUP email, not form input.
-    const FREE_EMAIL_DOMAINS = [
-      'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
-      'aol.com', 'icloud.com', 'mail.com', 'protonmail.com',
-      'ymail.com', 'live.com', 'msn.com', 'googlemail.com'
-    ];
-
-    const signupDomain = signupEmail.toLowerCase().split('@')[1];
-    if (!signupDomain || FREE_EMAIL_DOMAINS.includes(signupDomain)) {
+    // Shared list lives in lib/pricing.ts so this gate and the read-only
+    // quote endpoint can never drift.
+    const signupDomain = domainOf(signupEmail);
+    if (!signupDomain || isFreeEmailDomain(signupDomain)) {
       return NextResponse.json(
         {
           error: 'Company email required',
-          message: 'Free job posts require a company email account (not Gmail, Yahoo, etc.). Please sign up with your company email.'
+          message: 'Job posts require a company email account (not Gmail, Yahoo, etc.). Please sign up with your company email.'
         },
         { status: 400 }
       );
     }
 
-    // Per-domain freebie quota anchored to an IMMUTABLE per-row snapshot
+    // Per-domain rules are anchored to an IMMUTABLE per-row snapshot
     // (EmployerJob.quotaDomain), not to mutable contactEmail or nullable userId.
-    // Rule: 1 free post per email domain, lifetime, shared across
-    // every employee at that domain (config.freePostsPerEmail).
     //
     // Why the immutable snapshot:
     //   - Editing contactEmail later cannot shift the count (audit #23)
     //   - Account deletion / userId being nulled cannot drop the count
     //   - Form contactEmail can be anything (recruiter posting on behalf of a
-    //     client, multi-brand orgs); the quota is keyed off who signed up
+    //     client, multi-brand orgs); the rules are keyed off who signed up
     //   - Hard-deleting the row is the only way to drop the count, and that's
     //     admin-only (audit #25 — separate concern)
     const quotaDomain = signupDomain;
+
+    // ── Which rung does this post land on? ──────────────────────────────
+    // Plan entitlement is read once here (time-based, cheap); the slot
+    // COUNT is re-read inside the transaction below.
+    const now = new Date();
+    const planSlot = await getPlanSlotStatus(userId, now);
+    const quote = await resolvePostingMode({ quotaDomain, hasPlanSlot: planSlot.canPost, now });
+
+    if (!quote.willBeFree) {
+      logger.info('Post requires payment — redirecting to checkout', {
+        domain: quotaDomain,
+        userId,
+        mode: quote.mode,
+        tier: quote.tier,
+      });
+      return NextResponse.json(
+        {
+          error: `This post is $${quote.price} (${config.getTierLabel(quote.tier)} post, ${config.durationDays} days). Continue to payment to publish it.`,
+          requiresPayment: true,
+          mode: quote.mode,
+          tier: quote.tier,
+          price: quote.price,
+          priceCents: quote.priceCents,
+        },
+        { status: 403 }
+      );
+    }
+
+    const postingMode: NoChargeMode = quote.mode === 'plan' ? 'plan' : 'promo';
+    const paymentStatus = postingMode;
+    const pricingTier: PricingTier = quote.tier;
 
     // Validate sanitized URL (only for external apply)
     if (!applyOnPlatform && !sanitized.applyLink) {
@@ -182,11 +252,9 @@ export async function POST(request: NextRequest) {
     const editToken = crypto.randomBytes(32).toString('hex');
     const dashboardToken = crypto.randomBytes(32).toString('hex');
 
-    // Free posts get the shorter trial duration (audit #30); paid posts use the
-    // full duration via /api/create-checkout. Features are otherwise identical.
+    // Every post — promo, plan, intro, pro — runs config.durationDays.
     // UTC math via expiresFromNow — setDate() drifted across DST boundaries.
-    const tierForDuration: PricingTier = 'pro';
-    const expiresAt = expiresFromNow(config.freeDurationDays);
+    const expiresAt = expiresFromNow(config.durationDays, now);
 
     // Parse salary values
     let parsedMinSalary = (() => {
@@ -257,19 +325,22 @@ export async function POST(request: NextRequest) {
     let job;
     try {
       job = await prisma.$transaction(async (tx) => {
-        // Per-domain freebie quota — see comment block above. Counted from the
-        // immutable EmployerJob.quotaDomain snapshot. Re-checked inside the
-        // Serializable transaction so two parallel submitters at the same
-        // domain can't both slip past.
-        const existingPostCount = await tx.employerJob.count({
-          where: {
-            quotaDomain: quotaDomain,
-            paymentStatus: 'free',
-          },
-        });
-
-        if (existingPostCount >= config.freePostsPerEmail) {
-          throw new FreeQuotaExceededError(existingPostCount);
+        if (postingMode === 'promo') {
+          // Promo abuse cap — live promo posts per signup domain, counted
+          // from the immutable quotaDomain snapshot. Re-checked inside the
+          // Serializable transaction so two parallel submitters at the same
+          // domain can't both slip past.
+          const activePromo = await countActivePromoPostsForDomain(quotaDomain, tx, now);
+          if (activePromo >= config.promoMaxActivePostsPerDomain) {
+            throw new PromoCapReachedError(activePromo);
+          }
+        } else {
+          // Plan slot — re-counted through the transaction client so a
+          // parallel submit from the same employer can't over-fill the plan.
+          const used = await countActivePlanPostsForUser(userId, tx, now);
+          if (used >= planSlot.slots) {
+            throw new PlanSlotsFullError(used, planSlot.slots);
+          }
         }
 
         const created = await tx.job.create({
@@ -296,9 +367,9 @@ export async function POST(request: NextRequest) {
             stateCode: parsedLoc.stateCode,
             isRemote: parsedLoc.isRemote,
             isHybrid: parsedLoc.isHybrid,
-            // isFeatured reserved for a future premium tier ($299+). Regular
-            // employer posts (free + paid $199) get top placement via the
-            // EmployerJob relation now, not via this flag (see job-sort.ts).
+            // isFeatured stays false on every employer post. Top placement
+            // and the Featured badge come from the EmployerJob relation
+            // (see lib/utils/job-sort.ts and JobCard), not from this flag.
             isFeatured: false,
             isPublished: true,
             isVerifiedEmployer: true,
@@ -336,8 +407,8 @@ export async function POST(request: NextRequest) {
             jobId: created.id,
             editToken,
             dashboardToken,
-            paymentStatus: 'free',
-            pricingTier: 'pro',
+            paymentStatus,
+            pricingTier,
             userId: userId,
             // Immutable quota anchor — never written by any update path
             quotaDomain: quotaDomain,
@@ -347,19 +418,32 @@ export async function POST(request: NextRequest) {
         return updated;
       }, { isolationLevel: 'Serializable' });
     } catch (txErr) {
-      if (txErr instanceof FreeQuotaExceededError) {
-        logger.info('Free post limit reached for domain', {
+      if (txErr instanceof PromoCapReachedError) {
+        logger.warn('Promo post cap reached for domain', {
           domain: quotaDomain,
           userId,
-          existingCount: txErr.usedCount,
-          limit: config.freePostsPerEmail,
+          activeCount: txErr.activeCount,
+          cap: config.promoMaxActivePostsPerDomain,
         });
         return NextResponse.json(
           {
-            error: `Your organization (${quotaDomain}) has already used its free post. Additional posts cost $${config.postingPrice}.`,
-            requiresPayment: true,
-            freePostsUsed: txErr.usedCount,
-            freePostsLimit: config.freePostsPerEmail,
+            error: `Your organization (${quotaDomain}) already has the maximum number of live posts for our launch period. Close or archive an existing post to publish a new one, or contact ${brand.email.support}.`,
+            promoCapReached: true,
+          },
+          { status: 403 }
+        );
+      }
+      if (txErr instanceof PlanSlotsFullError) {
+        logger.info('Employer plan slots full', {
+          domain: quotaDomain,
+          userId,
+          used: txErr.used,
+          slots: txErr.slots,
+        });
+        return NextResponse.json(
+          {
+            error: `All ${txErr.slots} of your Employer plan slots are in use. Close or archive an active post to free a slot.`,
+            planSlotsFull: true,
           },
           { status: 403 }
         );
@@ -395,17 +479,20 @@ export async function POST(request: NextRequest) {
       logger.info('Screening questions created', { jobId: job.id, count: questions.length });
     }
 
-    // Send confirmation email with dashboard token + free-post duration so
-    // the email's "30-day listing" line matches the actual expiresAt written
-    // to the DB (audit #30).
+    // Send confirmation email with dashboard token + the listing duration so
+    // the email's "N-day listing" line matches the actual expiresAt written
+    // to the DB (audit #30), plus the mode so the template can say "free
+    // during our launch promo" / "posted under your Employer plan".
     try {
       await sendConfirmationEmail(
         sanitized.contactEmail,
         sanitized.title,
         job.id,
         dashboardToken,
-        undefined,
-        config.freeDurationDays,
+        undefined, // unsubscribeToken — looked up by email
+        config.durationDays,
+        undefined, // invoice — no charge on promo / plan posts
+        postingMode,
       );
     } catch (emailError) {
       logger.error('Failed to send confirmation email', emailError);
@@ -422,9 +509,10 @@ export async function POST(request: NextRequest) {
       logger.debug('No draft to clean up');
     }
 
-    logger.info('Free job posted successfully', {
+    logger.info('Job posted without charge', {
       jobId: job.id,
-      employer: sanitized.employer
+      employer: sanitized.employer,
+      mode: postingMode,
     });
 
     // C1 fix (2026-06-01): emit embedding refresh so this new posting
@@ -449,16 +537,17 @@ export async function POST(request: NextRequest) {
       logger.info('[Post-Free] Skipping indexing ping (non-production environment)');
     }
 
-    // Return success response
+    // Return success response. `mode` lets the preview redirect to
+    // /success?mode=promo | ?mode=plan (the legacy ?free=true still works).
     return NextResponse.json({
       success: true,
       jobId: job.id,
       editToken,
       dashboardToken,
+      mode: postingMode,
     });
   } catch (error) {
-    logger.error('Free posting error', error);
+    logger.error('Posting error (no-charge path)', error);
     return NextResponse.json({ error: 'Failed to create job' }, { status: 500 });
   }
 }
-

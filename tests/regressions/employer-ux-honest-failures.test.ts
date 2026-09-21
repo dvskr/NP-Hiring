@@ -92,8 +92,8 @@ describe('V2: EmployerDashboardClient Pause/Republish and Archive/Restore fail l
 
     it('toggle-publish surfaces failures and prefers the server message', () => {
         expect(dashboard).toMatch(/result\.message \|\| result\.error \|\| `Request failed \(\$\{res\.status\}\)`/);
-        expect(dashboard).toContain('Couldn’t pause this job — please try again.');
-        expect(dashboard).toContain('Couldn’t republish this job — please try again.');
+        expect(dashboard).toContain('Couldn’t pause this job. Please try again.');
+        expect(dashboard).toContain('Couldn’t republish this job. Please try again.');
     });
 
     it('pause-reason modal only closes on success', () => {
@@ -116,8 +116,8 @@ describe('V2: EmployerDashboardClient Pause/Republish and Archive/Restore fail l
     });
 
     it('archive/restore surfaces failures', () => {
-        expect(dashboard).toContain('Couldn’t archive this job — please try again.');
-        expect(dashboard).toContain('Couldn’t restore this job — please try again.');
+        expect(dashboard).toContain('Couldn’t archive this job. Please try again.');
+        expect(dashboard).toContain('Couldn’t restore this job. Please try again.');
         const archive = dashboard.slice(
             dashboard.indexOf('const performArchiveToggle'),
             dashboard.indexOf('const handleRenewCheckout'),

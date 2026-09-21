@@ -185,15 +185,29 @@ export async function PATCH(
 }
 
 /**
+ * paymentStatus values whose EmployerJob row anchors a per-domain
+ * entitlement and therefore must survive a hard delete:
+ *   'free' — legacy free-quota rows (audit #25)
+ *   'paid' — the intro-price allowance: lib/pricing.ts#getNextPaidTier
+ *            quotes 'intro' whenever a domain has ZERO 'paid' rows, so
+ *            cascading one away would re-open config.introPrice for the
+ *            whole company domain.
+ * 'promo' and 'plan' rows are not anchors (the promo cap and plan slots
+ * count LIVE posts only, and soft-delete already unpublishes), so admins
+ * can still hard-delete those.
+ */
+const HARD_DELETE_PROTECTED_STATUSES = new Set(['free', 'paid']);
+
+/**
  * DELETE /api/admin/jobs/:id
  * Soft-delete by default (sets isPublished=false).
  * Use ?hard=true for permanent deletion.
  *
- * Audit #25: hard-delete is BLOCKED on free posts. Cascade-deleting an
- * EmployerJob row that recorded a freebie use would drop the domain's
- * freebie count, letting the (probably-just-spammy) employer post 2 fresh
- * free jobs from a clean slate. Admin can still soft-delete free posts,
- * which removes them from search without nuking the quota signal.
+ * Audit #25: hard-delete is BLOCKED on rows in HARD_DELETE_PROTECTED_STATUSES.
+ * Cascade-deleting an EmployerJob row that anchors a per-domain entitlement
+ * would reset it, letting the (probably-just-spammy) employer start again
+ * from a clean slate. Admin can still soft-delete such posts, which removes
+ * them from search without nuking the pricing signal.
  */
 export async function DELETE(
     request: NextRequest,
@@ -207,18 +221,20 @@ export async function DELETE(
 
     try {
         if (hard) {
-            // Audit #25: refuse hard-delete if the job is a free posting.
-            // Cascade through EmployerJob would drop the quotaDomain row that
-            // anchors the freebie quota count.
+            // Audit #25: refuse hard-delete if the EmployerJob row anchors a
+            // per-domain entitlement (legacy free quota, intro-price
+            // allowance). Cascade through EmployerJob would drop the
+            // quotaDomain row the pricing rules count against.
             const employerJob = await prisma.employerJob.findUnique({
                 where: { jobId: id },
                 select: { paymentStatus: true },
             });
-            if (employerJob && employerJob.paymentStatus === 'free') {
+            if (employerJob && HARD_DELETE_PROTECTED_STATUSES.has(employerJob.paymentStatus)) {
+                const label = employerJob.paymentStatus === 'free' ? 'free' : 'paid';
                 return NextResponse.json(
                     {
                         success: false,
-                        error: 'Cannot hard-delete a free posting — cascade would erase the freebie-quota record. Soft-delete (default, no ?hard flag) instead, or contact engineering for a quota-preserving removal.',
+                        error: `Cannot hard-delete a ${label} posting — cascade would erase the per-domain pricing record (${label === 'free' ? 'freebie quota' : 'intro-price allowance'}). Soft-delete (default, no ?hard flag) instead, or contact engineering for a record-preserving removal.`,
                     },
                     { status: 409 },
                 );

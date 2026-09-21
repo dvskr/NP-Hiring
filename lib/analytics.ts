@@ -403,17 +403,31 @@ export function trackBeginCheckout(amountCents: number, type: 'new' | 'renewal')
   });
 }
 
-/** Free post submitted successfully (no Stripe involved) */
-export function trackSubmitFreePost(jobId: string) {
-  gtag('event', 'submit_free_post', { job_id: jobId });
+/**
+ * No-charge post submitted successfully (no Stripe involved). `mode` records
+ * WHY it was free — 'promo' (launch period) or 'plan' (Employer plan slot) —
+ * so the two funnels stay separable in GA4 after the promo ends. The event
+ * name is unchanged to keep historical reports continuous.
+ */
+export function trackSubmitFreePost(jobId: string, mode?: 'promo' | 'plan') {
+  gtag('event', 'submit_free_post', { job_id: jobId, ...(mode ? { posting_mode: mode } : {}) });
 }
 
-/** Employer hit the free-post lifetime limit on this domain */
-export function trackFreePostLimitHit(domain: string, used: number, limit: number) {
+/**
+ * Employer's next post requires payment (post-free answered requiresPayment).
+ * Pre-ladder this meant "free lifetime quota exhausted"; the event name is
+ * kept for report continuity, but the payload now carries the ladder rung
+ * the employer was quoted so intro-vs-pro drop-off is measurable.
+ */
+export function trackFreePostLimitHit(
+  domain: string,
+  quote?: { mode?: string; tier?: string; price?: number },
+) {
   gtag('event', 'free_post_limit_hit', {
     email_domain: domain,
-    used,
-    limit,
+    posting_mode: quote?.mode ?? 'paid',
+    pricing_tier: quote?.tier ?? 'pro',
+    ...(typeof quote?.price === 'number' ? { value: quote.price, currency: 'USD' } : {}),
   });
 }
 

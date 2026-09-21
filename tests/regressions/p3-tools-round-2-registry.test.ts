@@ -55,11 +55,14 @@ import {
 import {
   DEFAULT_APPLICANTS_PER_ROLE,
   DEFAULT_FIRST_YEAR_BASE,
+  DEFAULT_FLAT_FEE_MODE,
   DEFAULT_INPUTS,
+  DEFAULT_PLAN_MONTHS,
   DEFAULT_TIME_TO_FILL_DAYS,
   FLAT_FEE_COST_PER_DAY,
   FLAT_FEE_PRICING,
   FREE_POST_SCOPE_NOTE,
+  INTRO_PRICE_SCOPE_NOTE,
   compareChannels,
   flatFeeSpend,
   rankByCostPerHire,
@@ -634,11 +637,16 @@ describe('revenue projector — no unsourced timeline on a new surface', () => {
 
 describe('cost per hire — prices come from the pricing config', () => {
   it('quotes nothing the checkout would not charge', () => {
+    // 2026-09-12 launch promo + 2027 ladder: every rung and date the widget
+    // can print is the config token the checkout / webhook charge against.
+    expect(FLAT_FEE_PRICING.introPrice).toBe(config.introPrice);
     expect(FLAT_FEE_PRICING.postingPrice).toBe(config.postingPrice);
     expect(FLAT_FEE_PRICING.renewalPrice).toBe(config.renewalPrice);
-    expect(FLAT_FEE_PRICING.freePostsPerDomain).toBe(config.freePostsPerEmail);
-    expect(FLAT_FEE_PRICING.paidDurationDays).toBe(config.durationDays);
-    expect(FLAT_FEE_PRICING.freeDurationDays).toBe(config.freeDurationDays);
+    expect(FLAT_FEE_PRICING.planPrice).toBe(config.planPrice);
+    expect(FLAT_FEE_PRICING.planSlots).toBe(config.planSlots);
+    expect(FLAT_FEE_PRICING.durationDays).toBe(config.durationDays);
+    expect(FLAT_FEE_PRICING.promoEndsLabel).toBe(config.promoEndsLabel);
+    expect(FLAT_FEE_PRICING.ladderStartsLabel).toBe(config.ladderStartsLabel);
     expect(FLAT_FEE_PRICING.candidateUnlocksPerPosting).toBe(config.limits.candidateUnlocksPerPosting);
     expect(FLAT_FEE_PRICING.inmailsPerPosting).toBe(config.limits.inmailsPerPosting);
     expect(FLAT_FEE_COST_PER_DAY).toBeCloseTo(config.postingPrice / config.durationDays, 8);
@@ -647,8 +655,10 @@ describe('cost per hire — prices come from the pricing config', () => {
   it('hardcodes no price in the model or the widget', () => {
     for (const file of ['components/tools/cost-per-hire-model.ts', NEW_COMPONENTS[2]]) {
       const code = readCode(file);
+      expect(code).not.toContain(String(config.introPrice));
       expect(code).not.toContain(String(config.postingPrice));
       expect(code).not.toContain(String(config.renewalPrice));
+      expect(code).not.toContain(String(config.planPrice));
     }
   });
 
@@ -663,6 +673,15 @@ describe('cost per hire — prices come from the pricing config', () => {
     // First-year base: the cited median, the only salary figure this board asserts.
     expect(DEFAULT_FIRST_YEAR_BASE).toBe(Number(STAT_SOURCES.averageSalary.value));
     expect(DEFAULT_INPUTS.firstYearBase).toBe(DEFAULT_FIRST_YEAR_BASE);
+    // Plan length: the posting window in whole billing months — a product
+    // fact, not an estimate of how long anyone subscribes.
+    expect(DEFAULT_PLAN_MONTHS).toBe(Math.ceil(config.durationDays / 30));
+    expect(DEFAULT_INPUTS.planMonths).toBe(DEFAULT_PLAN_MONTHS);
+    // Opening mode follows the promo clock, so the widget never opens on a
+    // $0 price once the launch window has closed.
+    expect(DEFAULT_FLAT_FEE_MODE).toBe(config.isPromoActive() ? 'promo' : 'per-post');
+    expect(DEFAULT_INPUTS.flatFeeMode).toBe(DEFAULT_FLAT_FEE_MODE);
+    expect(DEFAULT_INPUTS.useIntroPrice).toBe(true);
   });
 
   it('starts every unsourceable input at zero', () => {
@@ -674,74 +693,95 @@ describe('cost per hire — prices come from the pricing config', () => {
 });
 
 /**
- * The free-post quota is the one place this tool states a RULE about our own
- * pricing rather than a price, and it is the first employer-facing surface to
- * state its scope at all (/pricing does not). The enforced rule is 1 free post
- * per employer EMAIL DOMAIN, lifetime, shared across every employee at that
- * domain — counted in app/api/jobs/post-free/route.ts against the immutable
- * EmployerJob.quotaDomain snapshot taken from the signup email.
+ * The launch promo and the intro price are the two places this tool states a
+ * RULE about our own pricing rather than a price. Each rule is asserted from
+ * ONE exported string, and every surface is checked to render that string
+ * rather than its own paraphrase:
  *
- * "Per account" is the failure this block exists to catch: a health system with
- * five recruiter accounts on one domain would tick the free-post box, read the
- * quota as one each, and model five free posts instead of one — understating its
- * flat-fee spend by 4 × the posting price. The scope is therefore asserted from
- * ONE exported string, and every surface is checked to render that string rather
- * than its own paraphrase.
+ *   - FREE_POST_SCOPE_NOTE: every post is free through config.promoEndsLabel
+ *     for config.durationDays — a dated window, never "one free post" and
+ *     never per account.
+ *   - INTRO_PRICE_SCOPE_NOTE: from config.ladderStartsLabel the FIRST PAID
+ *     post per employer EMAIL DOMAIN is config.introPrice, lifetime, shared
+ *     across every employee at that domain — lib/pricing.ts#getNextPaidTier
+ *     counts 'paid' rows against the immutable EmployerJob.quotaDomain
+ *     snapshot taken from the signup email.
+ *
+ * "Per account" is the failure this block exists to catch: a health system
+ * with five recruiter accounts on one domain would read the intro price as
+ * one each and model five intro posts instead of one — understating its
+ * per-post spend by 4 × (postingPrice − introPrice).
  */
-describe('cost per hire — the free-post quota is scoped to the domain', () => {
+describe('cost per hire — the promo and the intro price are stated from one string each', () => {
   const CPH_SURFACES = [
     'components/tools/cost-per-hire-model.ts',
     NEW_COMPONENTS[2],
     routeFile('/tools/cost-per-hire-calculator'),
   ] as const;
 
-  it('states the quota against the email domain, with the config count', () => {
-    expect(FREE_POST_SCOPE_NOTE).toContain(String(config.freePostsPerEmail));
-    expect(FREE_POST_SCOPE_NOTE).toMatch(/per employer email domain/i);
-    expect(FREE_POST_SCOPE_NOTE).toMatch(/lifetime/i);
-    expect(FREE_POST_SCOPE_NOTE).toMatch(/shared/i);
-    // The unit is never a login. This is the whole point of the constant.
+  it('states the promo as a dated window with the config duration, never per account', () => {
+    expect(FREE_POST_SCOPE_NOTE).toBe(
+      `every post is free through ${config.promoEndsLabel} (${config.durationDays} days, every feature, no card required)`,
+    );
     expect(FREE_POST_SCOPE_NOTE).not.toMatch(/account/i);
     expect(FREE_POST_SCOPE_NOTE).not.toMatch(/\buser\b/i);
   });
 
-  it('has every surface render the shared note instead of paraphrasing it', () => {
+  it('states the intro price against the email domain, with the config prices', () => {
+    expect(INTRO_PRICE_SCOPE_NOTE).toContain(`$${config.introPrice}`);
+    expect(INTRO_PRICE_SCOPE_NOTE).toContain(`$${config.postingPrice}`);
+    expect(INTRO_PRICE_SCOPE_NOTE).toMatch(/per employer email domain/i);
+    expect(INTRO_PRICE_SCOPE_NOTE).toMatch(/lifetime/i);
+    expect(INTRO_PRICE_SCOPE_NOTE).toMatch(/shared/i);
+    // The unit is never a login. This is the whole point of the constant.
+    expect(INTRO_PRICE_SCOPE_NOTE).not.toMatch(/account/i);
+    expect(INTRO_PRICE_SCOPE_NOTE).not.toMatch(/\buser\b/i);
+  });
+
+  it('has every surface render both shared notes instead of paraphrasing them', () => {
     for (const file of [NEW_COMPONENTS[2], routeFile('/tools/cost-per-hire-calculator')]) {
-      // More than once: the import plus at least one interpolation. A surface
-      // that imports the note and then writes its own wording would pass a
-      // bare `toContain`.
-      const uses = readCode(file).match(/FREE_POST_SCOPE_NOTE/g) ?? [];
-      expect(uses.length).toBeGreaterThan(1);
+      for (const note of ['FREE_POST_SCOPE_NOTE', 'INTRO_PRICE_SCOPE_NOTE']) {
+        // More than once: the import plus at least one interpolation. A surface
+        // that imports the note and then writes its own wording would pass a
+        // bare `toContain`.
+        const uses = readCode(file).match(new RegExp(note, 'g')) ?? [];
+        expect(uses.length, `${file} interpolates ${note}`).toBeGreaterThan(1);
+      }
     }
   });
 
-  it('never restates the quota as account-scoped', () => {
+  it('never restates the intro price as account-scoped', () => {
     for (const file of CPH_SURFACES) {
       // Comments stripped: this is about the copy a reader is shown.
       const code = readCode(file);
       expect(code).not.toMatch(/per account/i);
       expect(code).not.toMatch(/post(ing)?s? on an account/i);
       expect(code).not.toMatch(/this account has already/i);
-      expect(code).not.toMatch(/freePostsPerAccount/);
+      expect(code).not.toMatch(/introPricePerAccount|freePostsPerAccount/);
     }
   });
 
-  it('caps free postings at the domain quota however many roles are modelled', () => {
-    const many = flatFeeSpend({ ...DEFAULT_INPUTS, roles: 5, useFreeFirstPost: true });
-    expect(many.freePostings).toBe(config.freePostsPerEmail);
-    expect(many.paidPostings).toBe(5 - config.freePostsPerEmail);
+  it('applies the intro price once per domain however many roles are modelled', () => {
+    const many = flatFeeSpend({ ...DEFAULT_INPUTS, roles: 5, flatFeeMode: 'per-post', useIntroPrice: true });
+    expect(many.introPostings).toBe(1);
+    expect(many.proPostings).toBe(4);
     // The five-recruiter case from the FAQ, priced.
-    expect(many.total).toBe((5 - config.freePostsPerEmail) * config.postingPrice);
+    expect(many.total).toBe(config.introPrice + 4 * config.postingPrice);
   });
 
-  it('is the same constant the gate enforces against', () => {
-    const gate = read('app/api/jobs/post-free/route.ts');
-    expect(gate).toContain('config.freePostsPerEmail');
-    // Counted per domain off the immutable snapshot, not per user or per email.
-    expect(gate).toMatch(/quotaDomain:\s*quotaDomain/);
+  it('is the same rule the checkout prices against', () => {
+    // lib/pricing.ts counts ONLY paid POSTS per quotaDomain (status 'paid'
+    // bought through Checkout — a renewed promo post is 'paid' too but carries
+    // only a 'renewal' charge, and a renewal is not a post); create-checkout
+    // asks it for the rung; post-free snapshots the immutable domain anchor.
+    const pricing = read('lib/pricing.ts');
+    expect(pricing).toMatch(/quotaDomain,\s*paymentStatus:\s*'paid',\s*OR:\s*\[\s*\{\s*jobCharges:\s*\{\s*some:\s*\{\s*type:\s*'new'\s*\}\s*\}\s*\},\s*\{\s*jobCharges:\s*\{\s*none:\s*\{\}\s*\}\s*\},?\s*\]/);
+    expect(pricing).toMatch(/where:\s*paidPostWhere\(quotaDomain\)/);
+    expect(pricing).toMatch(/paid === 0 \? 'intro' : 'pro'/);
+    expect(read('app/api/create-checkout/route.ts')).toContain('getNextPaidTier(quotaDomain)');
+    expect(read('app/api/jobs/post-free/route.ts')).toMatch(/quotaDomain:\s*quotaDomain/);
   });
 });
-
 /**
  * The cost-per-hire surfaces sell one of the three channels they compare, and
  * their stated premise is that the only figures asserted are ours and checkable.
@@ -782,28 +822,51 @@ describe('cost per hire — comparison', () => {
   const withNumbers: CostPerHireInputs = {
     ...DEFAULT_INPUTS,
     roles: 4,
-    useFreeFirstPost: false,
+    flatFeeMode: 'per-post',
+    useIntroPrice: false,
     cpcSpendPerRole: 600,
     cpcApplicantsPerRole: 30,
     agencyFeePct: 18,
     firstYearBase: 130_000,
   };
 
-  it('prices the flat-fee plan from posts and renewals', () => {
+  it('prices the per-post ladder from posts and renewals', () => {
     const spend = flatFeeSpend({ ...withNumbers, renewalsPerRole: 1 });
-    expect(spend.freePostings).toBe(0);
-    expect(spend.paidPostings).toBe(4);
+    expect(spend.mode).toBe('per-post');
+    expect(spend.introPostings).toBe(0);
+    expect(spend.proPostings).toBe(4);
     expect(spend.renewals).toBe(4);
     expect(spend.total).toBe(4 * config.postingPrice + 4 * config.renewalPrice);
   });
 
-  it('applies the free first post once, not per role', () => {
-    const spend = flatFeeSpend({ ...withNumbers, useFreeFirstPost: true });
-    expect(spend.freePostings).toBe(config.freePostsPerEmail);
-    expect(spend.paidPostings).toBe(4 - config.freePostsPerEmail);
-    expect(spend.total).toBe((4 - config.freePostsPerEmail) * config.postingPrice);
+  it('applies the intro price once, not per role', () => {
+    const spend = flatFeeSpend({ ...withNumbers, useIntroPrice: true });
+    expect(spend.introPostings).toBe(1);
+    expect(spend.proPostings).toBe(3);
+    expect(spend.total).toBe(config.introPrice + 3 * config.postingPrice);
   });
 
+  it('prices every post at zero during the launch promo, but still prices renewals', () => {
+    const spend = flatFeeSpend({ ...withNumbers, flatFeeMode: 'promo', renewalsPerRole: 1 });
+    expect(spend.promoPostings).toBe(4);
+    expect(spend.introPostings + spend.proPostings + spend.planPostings).toBe(0);
+    expect(spend.postingSpend).toBe(0);
+    expect(spend.renewals).toBe(4);
+    expect(spend.total).toBe(4 * config.renewalPrice);
+  });
+
+  it('prices the Employer plan as enough concurrent plans × months, with nothing to renew', () => {
+    const roles = config.planSlots + 1;
+    const spend = flatFeeSpend({ ...withNumbers, roles, flatFeeMode: 'plan', planMonths: 2, renewalsPerRole: 3 });
+    expect(spend.planPostings).toBe(roles);
+    expect(spend.planCount).toBe(Math.ceil(roles / config.planSlots));
+    expect(spend.planMonths).toBe(2);
+    expect(spend.planSpend).toBe(spend.planCount * 2 * config.planPrice);
+    // Plan posts stay live while the plan is active — renewalsPerRole is ignored.
+    expect(spend.renewals).toBe(0);
+    expect(spend.renewalSpend).toBe(0);
+    expect(spend.total).toBe(spend.planSpend);
+  });
   it('reports an unfilled channel as not comparable rather than as zero', () => {
     const results = compareChannels({ ...DEFAULT_INPUTS, roles: 2 });
     const cpc = results.find((result) => result.key === 'cpc');

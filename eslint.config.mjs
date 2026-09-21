@@ -22,6 +22,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Git worktrees checked out under the repo (e.g. .worktrees/preview for a
+    // parallel preview build) carry their own .next/ output. They are excluded
+    // from git via .git/info/exclude, so nothing in them is repo source; without
+    // this entry `eslint .` lints thousands of generated chunk files.
+    ".worktrees/**",
   ]),
 ]);
 

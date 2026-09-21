@@ -19,10 +19,11 @@
  * re-published by a late verify-page hit or a sweep run.
  */
 
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
+import { asPaidTier, paidPostWhere, type PaidTier } from '@/lib/pricing';
 import { logger } from '@/lib/logger';
 import { sendConfirmationEmail } from '@/lib/email-service';
 import { pingAllSearchEngines } from '@/lib/search-indexing';
@@ -64,7 +65,7 @@ export async function fetchInvoiceData(
   }
 }
 
-export type PaidJobActivationOutcome = 'activated' | 'already_active' | 'employer_job_missing';
+export type PaidJobActivationOutcome = 'activated' | 'already_active' | 'employer_job_missing' | 'duplicate_payment';
 
 export interface PaidJobActivationResult {
   outcome: PaidJobActivationOutcome;
@@ -76,8 +77,10 @@ function prismaErrorCode(err: unknown): string | undefined {
 }
 
 /**
- * Record the JobCharge for a paid session if the winner of the activation
- * claim crashed before writing it. Best-effort — never throws.
+ * Record the JobCharge for a paid session that did not win the activation
+ * claim: the winner crashed before its ledger write, or this is a second
+ * payment for the same posting. Money Stripe took must always be on the
+ * ledger (the refund/dispute webhooks match on it). Best-effort — never throws.
  */
 async function ensureJobChargeRecorded(
   stripe: Stripe,
@@ -97,13 +100,13 @@ async function ensureJobChargeRecorded(
         employerJobId,
         stripeSessionId: session.id,
         stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
-        amountCents: session.amount_total ?? config.stripePriceInCents,
+        amountCents: session.amount_total ?? config.priceCentsForTier(asPaidTier(session.metadata?.pricing)),
         currency: session.currency ?? 'usd',
         type: 'new',
         ...invoiceData,
       },
     });
-    logger.info('Backfilled missing JobCharge for already-active paid session', {
+    logger.info('Backfilled missing JobCharge for a paid session that lost the activation claim', {
       sessionId: session.id,
       employerJobId,
     });
@@ -124,6 +127,92 @@ async function ensureJobChargeRecorded(
  * dedupe rollback) so Stripe retries; the self-heal and sweep callers catch,
  * log, and alert.
  */
+/**
+ * Log (never throw) when an 'intro'-priced activation finds another paid
+ * post already ledgered at the same domain — the only way that happens is
+ * the concurrent-checkout race described at the call site. Exported for
+ * the unit test; the count uses the SAME predicate the intro decision uses
+ * (lib/pricing.ts#paidPostWhere) minus this row.
+ */
+export async function detectIntroDoubleCharge(
+  employerJobId: string,
+  quotaDomain: string | null,
+  paidTier: PaidTier,
+  jobId: string,
+  session: Pick<Stripe.Checkout.Session, 'id' | 'amount_total'>,
+): Promise<boolean> {
+  if (paidTier !== 'intro' || !quotaDomain) return false;
+  try {
+    const others = await prisma.employerJob.count({
+      where: { ...paidPostWhere(quotaDomain), id: { not: employerJobId } },
+    });
+    if (others === 0) return false;
+    logger.error('Intro price charged twice for one domain (concurrent first checkouts) — refund the difference', undefined, {
+      jobId,
+      employerJobId,
+      quotaDomain,
+      sessionId: session.id,
+      amountCents: session.amount_total ?? undefined,
+      otherPaidPosts: others,
+    });
+    return true;
+  } catch (err) {
+    logger.warn('Intro double-charge check failed', { jobId, err });
+    return false;
+  }
+}
+
+/**
+ * The claim was lost (P2025). Decide between a harmless replay and a SECOND
+ * payment for one posting:
+ *   - this session is already on the ledger → replay (webhook retry, verify
+ *     page, sweep) — nothing to do;
+ *   - the row is 'paid' and no OTHER new-post charge exists → the winner is
+ *     mid-flight or crashed before its ledger write — backfill the charge;
+ *   - anything else (another new-post session already charged, or the row
+ *     is refunded/disputed/expired) → the employer paid twice. Record the
+ *     charge and report 'duplicate_payment' so a human refunds it.
+ */
+async function resolveLostClaim(
+  stripe: Stripe,
+  session: Stripe.Checkout.Session,
+  employerJobId: string,
+  jobId: string,
+): Promise<PaidJobActivationOutcome> {
+  const [current, charges] = await Promise.all([
+    prisma.employerJob.findUnique({ where: { id: employerJobId }, select: { paymentStatus: true } }),
+    prisma.jobCharge.findMany({ where: { employerJobId }, select: { stripeSessionId: true, type: true } }),
+  ]);
+  const chargeRows = Array.isArray(charges) ? charges : [];
+
+  if (chargeRows.some((c) => c.stripeSessionId === session.id)) {
+    logger.info('Paid checkout already activated by another path — skipping side effects', {
+      jobId, sessionId: session.id, paymentStatus: current?.paymentStatus,
+    });
+    return 'already_active';
+  }
+
+  const otherNewCharge = chargeRows.some((c) => c.type === 'new' && c.stripeSessionId !== session.id);
+  await ensureJobChargeRecorded(stripe, session, employerJobId);
+
+  if (current?.paymentStatus === 'paid' && !otherNewCharge) {
+    logger.info('Paid checkout already activated by another path — ledger backfilled', {
+      jobId, sessionId: session.id,
+    });
+    return 'already_active';
+  }
+
+  logger.error('Second payment for one posting — refund required', undefined, {
+    jobId,
+    employerJobId,
+    sessionId: session.id,
+    paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : undefined,
+    amountCents: session.amount_total ?? undefined,
+    paymentStatus: current?.paymentStatus,
+  });
+  return 'duplicate_payment';
+}
+
 export async function activatePaidJobCheckout(
   stripe: Stripe,
   session: Stripe.Checkout.Session,
@@ -131,6 +220,11 @@ export async function activatePaidJobCheckout(
   const jobId = session.metadata?.jobId;
   if (!jobId) {
     throw new Error(`Checkout session ${session.id} has no jobId metadata`);
+  }
+  // Runtime guard for the caller contract: publishing a posting (and
+  // ledgering a charge) for money that has not settled is never correct.
+  if (session.payment_status !== 'paid') {
+    throw new Error(`activatePaidJobCheckout called for session ${session.id} with payment_status=${session.payment_status}`);
   }
 
   const employerJob = await prisma.employerJob.findFirst({
@@ -144,7 +238,12 @@ export async function activatePaidJobCheckout(
     return { outcome: 'employer_job_missing', jobId };
   }
 
-  const paidTier = session.metadata?.pricing || 'pro';
+  // Ladder rung the session was sold at — written by /api/create-checkout
+  // as metadata.pricing ('intro' | 'pro'). Narrowed so a legacy or tampered
+  // value can only ever fall back to 'pro', never to a cheaper rung. The
+  // fallback amount below is only used when Stripe omits amount_total.
+  const paidTier = asPaidTier(session.metadata?.pricing);
+  const fallbackAmountCents = config.priceCentsForTier(paidTier);
 
   // Atomic claim: exactly one of {webhook, verify self-heal, sweep} flips
   // pending → paid. Prisma ≥5 allows non-unique filters in `update` where;
@@ -157,21 +256,8 @@ export async function activatePaidJobCheckout(
     });
   } catch (claimErr) {
     if (prismaErrorCode(claimErr) === 'P2025') {
-      const current = await prisma.employerJob.findUnique({
-        where: { id: employerJob.id },
-        select: { paymentStatus: true },
-      });
-      if (current?.paymentStatus === 'paid') {
-        // The winner may have crashed between the claim and the ledger
-        // write — make sure the charge is recorded either way.
-        await ensureJobChargeRecorded(stripe, session, employerJob.id);
-      }
-      logger.info('Paid checkout already activated by another path — skipping side effects', {
-        jobId,
-        sessionId: session.id,
-        paymentStatus: current?.paymentStatus,
-      });
-      return { outcome: 'already_active', jobId };
+      const outcome = await resolveLostClaim(stripe, session, employerJob.id, jobId);
+      return { outcome, jobId };
     }
     throw claimErr;
   }
@@ -193,7 +279,7 @@ export async function activatePaidJobCheckout(
         employerJobId: employerJob.id,
         stripeSessionId: session.id,
         stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
-        amountCents: session.amount_total ?? config.stripePriceInCents,
+        amountCents: session.amount_total ?? fallbackAmountCents,
         currency: session.currency ?? 'usd',
         type: 'new',
         ...newPostInvoiceData,
@@ -205,6 +291,16 @@ export async function activatePaidJobCheckout(
       logger.error('Failed to record JobCharge for new post', chargeErr, { jobId });
     }
   }
+
+  // Intro-rung race detector. The intro price is decided at Checkout
+  // creation from the domain's paid-post count; two checkouts opened at the
+  // same time for one domain can both be sold at 'intro' before either is
+  // paid. Blocking that at creation would make an honest employer who
+  // abandons a $199 checkout see $299 on retry, so the race is accepted and
+  // surfaced here instead: once THIS charge is in the ledger, any OTHER paid
+  // post at the domain means the intro price was charged twice. Logged as an
+  // error (forwarded to Sentry) so the owner can refund the difference.
+  await detectIntroDoubleCharge(employerJob.id, employerJob.quotaDomain, paidTier, jobId, session);
 
   // Send confirmation email.
   //
@@ -225,12 +321,13 @@ export async function activatePaidJobCheckout(
       job.id,
       employerJob.dashboardToken,
       undefined, // unsubscribeToken — sendConfirmationEmail looks it up by email
-      undefined, // durationDays — paid posts use config.durationDays default
+      config.durationDays,
       {
         invoicePdfUrl: stableInvoiceUrl,
         hostedInvoiceUrl: newPostInvoiceData.hostedInvoiceUrl,
         invoiceNumber: newPostInvoiceData.invoiceNumber,
-      }
+      },
+      'paid', // mode — lets the template drop the promo / plan wording
     );
   } catch (emailError) {
     logger.error('Failed to send confirmation email', emailError, { jobId });
@@ -257,10 +354,10 @@ export async function activatePaidJobCheckout(
   trackServerPurchase({
     clientId: jobId,
     sessionId: session.id,
-    amountCents: session.amount_total ?? config.stripePriceInCents,
+    amountCents: session.amount_total ?? fallbackAmountCents,
     currency: session.currency ?? 'usd',
     type: 'new',
-    tier: session.metadata?.pricing,
+    tier: paidTier,
     jobId,
   }).catch(() => { /* logged inside */ });
 

@@ -241,7 +241,7 @@ function SavedIndicator({
 
   const label = (() => {
     if (status === 'saving') return 'Saving…';
-    if (status === 'error') return "Couldn't save — will retry";
+    if (status === 'error') return 'Could not save. Will retry.';
     if (status === 'saved' && lastSavedAt) {
       // Until the deferred seed resolves (or when a fresh save makes the
       // stored clock older than lastSavedAt), elapsed clamps into the
@@ -508,9 +508,10 @@ function PostJobContent() {
         const quota = await quotaRes.json();
         if (cancelled) return;
         // Only employers who would be routed to PAID checkout are gated:
-        // eligible with no free post remaining. Free-post-eligible employers
-        // (and edge cases the quota API rejects for other reasons) proceed —
-        // their path never reaches Stripe.
+        // eligible and quoted a paid rung (intro / pro). Employers whose next
+        // post is free — launch promo or an Employer-plan slot — proceed, as
+        // do edge cases the quota API rejects for other reasons; their path
+        // never reaches Stripe.
         const nextPostRequiresPayment = quota?.eligible === true && quota?.willBeFree === false;
         if (availability?.available === false && nextPostRequiresPayment) {
           setShowPaidComingSoon(true);
@@ -963,7 +964,7 @@ function PostJobContent() {
             Paid posting is coming soon
           </h2>
           <p style={{ fontSize: '14px', color: '#6B7F8A', margin: '0 0 28px', lineHeight: 1.5 }}>
-            Your organization has used its free job post, and paid posting isn&apos;t
+            Your next post requires payment, and paid posting isn&apos;t
             open on {brand.name} yet. Email us and we&apos;ll notify you the moment
             checkout is ready.
           </p>
@@ -1025,8 +1026,14 @@ function PostJobContent() {
         <h1 style={{ fontSize: '26px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '8px 0 4px' }}>
           Post a {brand.niche.long} Job
         </h1>
+        {/* Pricing subtitle is time-aware: the launch promo (every post free)
+            runs through config.promoEndsLabel, after which the per-post ladder
+            applies. Both strings are built from lib/config tokens so this
+            cannot drift from what the preview / checkout actually charge. */}
         <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 20px' }}>
-          Your first post is free with every feature included.
+          {config.isPromoActive()
+            ? `Free through ${config.promoEndsLabel}. Every feature included, no credit card required.`
+            : `Every feature included. Your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs.`}
         </p>
 
         {/* Resume banner — shown ONLY on initial hydration of an
@@ -1040,7 +1047,7 @@ function PostJobContent() {
             background: '#FDF2F8', border: '1px solid #FBCFE8',
           }}>
             <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', margin: 0 }}>
-              ✓ Resumed your unfinished post — all fields restored. Auto-saving as you go.
+              ✓ Resumed your unfinished post with all fields restored. Auto-saving as you go.
             </p>
           </div>
         )}
@@ -1073,7 +1080,7 @@ function PostJobContent() {
                 {/* Job Title */}
                 <div>
                   <Label required htmlFor="title">Job Title</Label>
-                  <input type="text" id="title" placeholder={`e.g. Remote ${brand.niche.short} - Telehealth`}
+                  <input type="text" id="title" placeholder={`e.g. Remote ${brand.niche.short} (Telehealth)`}
                     {...register('title')}
                     style={errors.title ? clayInputError : clayInput}
                   />
@@ -1497,7 +1504,7 @@ function PostJobContent() {
                         />
                         <div>
                           <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on {brand.name}</span>
-                          <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly — no website needed</p>
+                          <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly. No website needed.</p>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
                             {['Resume', 'Cover letter', 'Email alerts'].map(f => (
                               <span key={f} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '8px', background: '#FCE7F3', color: '#BE185D', fontWeight: 500 }}>✓ {f}</span>
@@ -1518,7 +1525,7 @@ function PostJobContent() {
                       />
                       <ErrorMsg message={errors.applyUrl?.message} />
                       <InfoBox emoji="💡" color="amber">
-                        This should be a direct link to your application page — <strong>not your company homepage</strong>.
+                        This should be a direct link to your application page, <strong>not your company homepage</strong>.
                       </InfoBox>
                     </div>
                   )}
@@ -1545,7 +1552,7 @@ function PostJobContent() {
               <h2 style={{ fontSize: '20px', fontWeight: 700, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
                 Your Posting Includes
               </h2>
-              <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 24px' }}>Every job post gets the full package — free or paid</p>
+              <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 24px' }}>Every job post gets the full package, free or paid</p>
 
               <div style={{
                 ...cardBase, padding: '20px',
@@ -1561,12 +1568,16 @@ function PostJobContent() {
                     <Check size={18} color="#fff" />
                   </div>
                   <div>
-                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>Full Package — Every Post</h3>
-                    <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '2px 0 0' }}>First post free, then ${config.postingPrice}/post</p>
+                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>Full Package for Every Post</h3>
+                    <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '2px 0 0' }}>
+                      {config.isPromoActive()
+                        ? `Free through ${config.promoEndsLabel}`
+                        : `From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs.`}
+                    </p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {[`${config.durationDays}-day paid · ${config.freeDurationDays}-day free`, 'Featured badge', 'Top placement', 'Email alerts', `${config.limits.candidateUnlocksPerPosting} candidate unlocks`, `${config.limits.inmailsPerPosting} InMails`, 'Analytics'].map(f => (
+                  {[`${config.durationDays}-day listing`, 'Featured badge', 'Top placement', 'Email alerts', `${config.limits.candidateUnlocksPerPosting} candidate unlocks`, `${config.limits.inmailsPerPosting} InMails`, 'Analytics'].map(f => (
                     <span key={f} style={{
                       fontSize: '11px', fontWeight: 500, padding: '4px 10px',
                       borderRadius: '10px', background: '#FCE7F3', color: '#BE185D',

@@ -39,6 +39,11 @@ function makePost(url: string): NextRequest {
 
 const savedStripeKey = process.env.STRIPE_SECRET_KEY;
 
+// The checkout routes' cold import (Stripe SDK + lib/pricing + lib/expires-at
+// since the 2026-09-12 ladder change) can exceed vitest's 5s default under a
+// full parallel run; the first test in each describe pays for it.
+const COLD_IMPORT_TIMEOUT_MS = 20_000;
+
 beforeEach(() => {
     envMock.paidPostingEnabled = false;
     delete process.env.STRIPE_SECRET_KEY;
@@ -61,7 +66,7 @@ describe('F3 — POST /api/create-checkout flag gate', () => {
         const body = await res.json();
         expect(body.code).toBe('PAID_POSTING_DISABLED');
         expect(body.error).toBeTruthy();
-    });
+    }, COLD_IMPORT_TIMEOUT_MS);
 
     it('503 STRIPE_NOT_CONFIGURED when the flag is on but the key is missing', async () => {
         envMock.paidPostingEnabled = true;
@@ -70,7 +75,7 @@ describe('F3 — POST /api/create-checkout flag gate', () => {
         expect(res.status).toBe(503);
         const body = await res.json();
         expect(body.code).toBe('STRIPE_NOT_CONFIGURED');
-    });
+    }, COLD_IMPORT_TIMEOUT_MS);
 
     it('passes the gate (proceeds to auth, not 503) when flag + key are both set', async () => {
         envMock.paidPostingEnabled = true;
@@ -80,7 +85,7 @@ describe('F3 — POST /api/create-checkout flag gate', () => {
         // Outside a request scope Supabase auth fails → 401. The point is:
         // NOT a 503 — the availability gate itself let the request through.
         expect(res.status).not.toBe(503);
-    });
+    }, COLD_IMPORT_TIMEOUT_MS);
 });
 
 describe('F3 — POST /api/create-renewal-checkout flag gate', () => {
@@ -91,7 +96,7 @@ describe('F3 — POST /api/create-renewal-checkout flag gate', () => {
         expect(res.status).toBe(503);
         const body = await res.json();
         expect(body.code).toBe('PAID_POSTING_DISABLED');
-    });
+    }, COLD_IMPORT_TIMEOUT_MS);
 
     it('503 STRIPE_NOT_CONFIGURED when the flag is on but the key is missing', async () => {
         envMock.paidPostingEnabled = true;
@@ -100,7 +105,7 @@ describe('F3 — POST /api/create-renewal-checkout flag gate', () => {
         expect(res.status).toBe(503);
         const body = await res.json();
         expect(body.code).toBe('STRIPE_NOT_CONFIGURED');
-    });
+    }, COLD_IMPORT_TIMEOUT_MS);
 
     it('passes the gate (400 missing fields, not 503) when flag + key are both set', async () => {
         envMock.paidPostingEnabled = true;
@@ -110,7 +115,7 @@ describe('F3 — POST /api/create-renewal-checkout flag gate', () => {
         expect(res.status).toBe(400);
         const body = await res.json();
         expect(body.error).toContain('Missing required fields');
-    });
+    }, COLD_IMPORT_TIMEOUT_MS);
 });
 
 describe('F3 — GET /api/create-checkout/availability', () => {

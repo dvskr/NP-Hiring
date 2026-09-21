@@ -29,6 +29,10 @@
  */
 
 import { brand } from '@/config/brand';
+// The employer OG card names the launch-promo end date; it reads the same
+// config token as /for-employers so the sitemap image can never advertise a
+// promo the product has stopped running.
+import { config } from '@/lib/config';
 // The diorama helpers come from the component the two state surfaces actually
 // render (app/jobs/state/[state], app/salary-guide/[state]). That module owns
 // the slug→artwork contract and is pinned against the real directory listing
@@ -78,8 +82,8 @@ export const PAGE_IMAGE_SEO: Record<string, PageImageSEO> = {
         title: 'About NP Hiring',
     },
     '/for-employers': {
-        image: ogCard('Hire NPs — first post free'),
-        alt: 'NP employer hiring solutions page showing job posting options, pricing tiers, and targeted recruitment for nurse practitioners',
+        image: ogCard(`Hire NPs — free through ${config.promoEndsLabel}`),
+        alt: 'NP employer hiring solutions page showing job posting options, launch-promo and 2027 pricing, and targeted recruitment for nurse practitioners',
         caption: 'Employer solutions for hiring NPs',
         title: 'NP Employer Hiring Solutions',
     },

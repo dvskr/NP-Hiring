@@ -43,6 +43,23 @@ interface JobFormData {
   screeningQuestions?: ScreeningQuestion[];
 }
 
+/**
+ * The employer's quoted rung for their NEXT post, from
+ * GET /api/employer/free-quota-status (see lib/pricing.ts#PricingQuote).
+ * The order summary reads the amount from here — intro vs pro — so the
+ * number the employer sees matches the Stripe line item create-checkout
+ * builds from the same quote. Every field is optional: until it loads (or
+ * if it fails) the summary falls back to config.postingPrice.
+ */
+interface PricingQuote {
+  eligible: boolean;
+  mode?: 'promo' | 'plan' | 'intro' | 'paid';
+  tier?: 'intro' | 'pro' | 'plan';
+  willBeFree?: boolean;
+  price?: number;
+  priceCents?: number;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const [jobData, setJobData] = useState<JobFormData | null>(null);
@@ -52,6 +69,7 @@ export default function CheckoutPage() {
   // stripeConfigured). null = unknown → fail open; the create-checkout API
   // still returns a stable 503 code if payment is attempted anyway.
   const [paidPostingAvailable, setPaidPostingAvailable] = useState<boolean | null>(null);
+  const [quote, setQuote] = useState<PricingQuote | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,8 +87,23 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
-    // Checkout always requires paid form data
-    // (this page is only reached when free posts are exhausted)
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/employer/free-quota-status');
+        if (!res.ok) return;
+        const data = (await res.json()) as PricingQuote;
+        if (!cancelled) setQuote(data);
+      } catch {
+        /* leave null — the summary falls back to the list price */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    // Checkout always requires paid form data (this page is only reached
+    // when post-free answered requiresPayment — an intro or pro rung)
 
     // Read jobFormData from localStorage
     const storedData = localStorage.getItem('jobFormData');
@@ -94,14 +127,29 @@ export default function CheckoutPage() {
     }
   }, [router]);
 
+  // ─── Quoted amount ────────────────────────────────────────────────────
+  // Trust the quote only when it says a charge is due; an eligible+free
+  // answer (promo / plan) means this page was reached with a stale draft
+  // and is handled by the banner below, never by silently charging.
+  const quoteIsPaid = quote?.eligible === true && quote.willBeFree === false;
+  const quotedPrice = quoteIsPaid && typeof quote?.price === 'number' && quote.price > 0
+    ? quote.price
+    : config.postingPrice;
+  const quotedPriceCents = quoteIsPaid && typeof quote?.priceCents === 'number' && quote.priceCents > 0
+    ? quote.priceCents
+    : config.stripePriceInCents;
+  const isIntroRung = quoteIsPaid && quote?.mode === 'intro';
+  const nextPostIsFree = quote?.eligible === true && quote.willBeFree === true;
+
   const handlePayment = async () => {
     if (!jobData) return;
 
     setLoading(true);
     setError(null);
 
-    // P7: fire begin_checkout before redirect to Stripe
-    trackBeginCheckout(config.stripePriceInCents, 'new');
+    // P7: fire begin_checkout before redirect to Stripe — with the quoted
+    // rung's amount so intro and pro checkouts report their real value
+    trackBeginCheckout(quotedPriceCents, 'new');
 
     try {
       const response = await fetch('/api/create-checkout', {
@@ -140,7 +188,7 @@ export default function CheckoutPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({} as { error?: string; cause?: string }));
         const baseMsg = errorData.error || 'Failed to create checkout session';
-        const fullMsg = errorData.cause ? `${baseMsg} — ${errorData.cause}` : baseMsg;
+        const fullMsg = errorData.cause ? `${baseMsg}: ${errorData.cause}` : baseMsg;
         throw new Error(fullMsg);
       }
 
@@ -158,9 +206,12 @@ export default function CheckoutPage() {
     }
   };
 
-  const getPrice = () => `$${config.postingPrice}`;
+  const getPrice = () => `$${quotedPrice}`;
 
-  const getPlanName = () => 'Job Post';
+  // Customer-facing rung names. "Intro" is the company's first paid post;
+  // every later post is a Featured post (config.postingPrice). Both carry
+  // the identical feature set — the label only explains the amount.
+  const getPlanName = () => (isIntroRung ? 'Intro Job Post' : 'Featured Job Post');
 
   const getDescriptionExcerpt = (html: string, max = 220): string => {
     if (!html) return '';
@@ -186,7 +237,7 @@ export default function CheckoutPage() {
       return 'Competitive';
     }
     if (jobData?.salaryMin && jobData?.salaryMax) {
-      return `$${jobData.salaryMin.toLocaleString()} - $${jobData.salaryMax.toLocaleString()}`;
+      return `$${jobData.salaryMin.toLocaleString()} to $${jobData.salaryMax.toLocaleString()}`;
     }
     if (jobData?.salaryMin) {
       return `$${jobData.salaryMin.toLocaleString()}+`;
@@ -206,7 +257,7 @@ export default function CheckoutPage() {
           <h1 className="text-2xl font-bold mb-2">Paid posting is coming soon</h1>
           <p className="text-gray-600 mb-6">
             Checkout isn&apos;t open yet, so paid job posts can&apos;t be purchased
-            right now. Your job details are saved — we&apos;ll have this ready shortly.
+            right now. Your job details are saved, and we will have this ready shortly.
           </p>
           <div className="flex flex-col gap-3">
             <Link
@@ -303,12 +354,37 @@ export default function CheckoutPage() {
         </div>
       </div>
 
+      {/* Stale-draft guard: the quote says this employer's next post needs no
+          payment (launch promo or an Employer-plan slot). Charging them
+          anyway would be the worst outcome on this page, so point them back
+          to the preview, whose primary button posts without Stripe. */}
+      {nextPostIsFree && (
+        <div className="bg-pink-50 border border-pink-200 rounded-lg p-4 mb-6">
+          <p className="text-pink-800 text-sm">
+            Good news: your next post doesn&apos;t need a payment
+            {quote?.mode === 'plan'
+              ? ' (it uses a slot on your Employer plan)'
+              : ` (every post is free through ${config.promoEndsLabel})`}
+            .{' '}
+            <Link href="/post-job/preview" className="font-semibold underline">
+              Go back to the preview and post it
+            </Link>
+            .
+          </p>
+        </div>
+      )}
+
       {/* Pricing Card */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="flex items-start justify-between gap-6 mb-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">{getPlanName()}</h3>
             <p className="text-sm text-gray-500 mt-0.5">{config.durationDays}-day listing</p>
+            {isIntroRung && (
+              <p className="text-xs text-gray-500 mt-1">
+                Intro price for your company&apos;s first paid post. Every post after this one is ${config.postingPrice}.
+              </p>
+            )}
           </div>
           <div className="text-right shrink-0">
             <span className="text-3xl font-bold text-gray-900">{getPrice()}</span>
@@ -332,6 +408,10 @@ export default function CheckoutPage() {
             <span className="text-pink-600">✓</span> Email candidate alerts
           </li>
         </ul>
+        <p className="text-xs text-gray-500 mt-4">
+          Hiring for several roles? The Employer plan is ${config.planPrice}/month for {config.planSlots} active jobs.{' '}
+          <Link href="/pricing" className="text-pink-700 hover:text-pink-800 underline">See pricing</Link>.
+        </p>
       </div>
 
       {/* Error Message */}
@@ -353,7 +433,7 @@ export default function CheckoutPage() {
             Creating checkout session...
           </>
         ) : (
-          `Proceed to Payment - ${getPrice()}`
+          `Proceed to Payment: ${getPrice()}`
         )}
       </button>
 

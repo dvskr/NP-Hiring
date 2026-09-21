@@ -1,6 +1,24 @@
+/**
+ * lib/outreach-service.ts — cold-outreach templates + EmployerLead helpers
+ * for the admin outreach page (app/admin/outreach) and POST /api/outreach.
+ *
+ * Copy rules (2026-09-12 pricing change):
+ *   - NEVER state audience numbers (subscribers, visitors, applicants). The
+ *     old "over 1,000 NPs subscribed" line was unverifiable and is gone.
+ *   - The launch offer IS true now — every post is free through
+ *     config.promoEndsLabel — so it is stated with the same tokens the
+ *     pricing page uses (duration, Featured, unlocks/InMails), never with
+ *     literal numbers or dates.
+ *   - The three template keys and renderTemplate's signature are pinned by
+ *     the admin page and the API route; do not rename them.
+ */
 import { prisma } from '@/lib/prisma';
 import { EmployerLead } from '@/lib/types';
 import { brand } from '@/config/brand';
+import { config } from '@/lib/config';
+
+/** One-line statement of the launch offer, shared by all three templates. */
+const LAUNCH_OFFER_LINE = `Right now every job post on ${brand.name} is free during our launch period through ${config.promoEndsLabel}: a ${config.durationDays}-day Featured listing with top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails. No credit card required.`;
 
 const TEMPLATES = {
   initial: {
@@ -9,9 +27,7 @@ const TEMPLATES = {
 
 I noticed {{companyName}} is hiring ${brand.niche.descriptor}s. I'm reaching out because we run ${brand.name}, the specialized job board for ${brand.niche.descriptor}s.
 
-We have over 1,000 ${brand.niche.short}s subscribed to job alerts, and our site gets targeted traffic from practitioners actively looking for new opportunities.
-
-Right now, we're offering free featured job posts during our launch period.
+${LAUNCH_OFFER_LINE}
 
 Would you be interested in posting your open positions? I'm happy to set up your first listing.
 
@@ -28,7 +44,7 @@ P.S. You can check out our site at ${brand.domain}`
 
 Just following up on my previous email about posting your ${brand.niche.short} positions on our job board.
 
-We've had great results helping telehealth groups and health systems reach qualified candidates.
+${LAUNCH_OFFER_LINE}
 
 Happy to answer any questions or set up a quick call.
 
@@ -40,9 +56,9 @@ Best,
     subject: `Free ${brand.niche.short} job posting for {{companyName}}`,
     body: `Hi {{contactName}},
 
-I'd like to offer {{companyName}} a free featured job posting on ${brand.name}.
+I'd like to invite {{companyName}} to post on ${brand.name}, the specialized job board for ${brand.niche.descriptor}s.
 
-No strings attached - I want to help you reach our audience of ${brand.niche.descriptor}s.
+${LAUNCH_OFFER_LINE}
 
 Just reply to this email with your job details, or post directly at ${brand.domain}/post-job
 

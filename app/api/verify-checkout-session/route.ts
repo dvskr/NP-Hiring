@@ -1,4 +1,4 @@
-import Stripe from 'stripe';
+import { getStripe } from '@/lib/stripe';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
@@ -6,12 +6,6 @@ import { captureException } from '@/lib/sentry';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { createClient } from '@/lib/supabase/server';
 import { activatePaidJobCheckout } from '@/app/api/webhooks/stripe/activate-paid-job';
-
-function getStripe(): Stripe | null {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) return null;
-  return new Stripe(key);
-}
 
 // Shared select for the success-page payload — used for the initial read and
 // the re-read after a self-heal activation. userId/contactEmail feed the
@@ -180,6 +174,12 @@ export async function GET(request: NextRequest) {
           sessionId,
           outcome: activation.outcome,
         });
+        if (activation.outcome === 'duplicate_payment') {
+          captureException(new Error('Second payment for one posting — refund required'), {
+            tags: { area: 'verify-checkout-session' },
+            extra: { jobId, sessionId },
+          });
+        }
         const refreshed = await prisma.employerJob.findFirst({
           where: { jobId },
           select: EMPLOYER_JOB_SELECT,

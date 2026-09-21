@@ -14,11 +14,16 @@ const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 describe('Stripe webhook failure alerting', () => {
-  const src = read('app/api/webhooks/stripe/route.ts');
+  // The helper lives in webhook-support.ts (shared with the plan / renewal
+  // modules the webhook delegates to); call sites span the webhook directory.
+  const src = read('app/api/webhooks/stripe/webhook-support.ts');
+  const WEBHOOK_MODULES = ['route.ts', 'plan-checkout.ts', 'plan-subscription.ts'];
+  const allSrc = WEBHOOK_MODULES.map((f) => read(`app/api/webhooks/stripe/${f}`)).join('\n');
 
   it('imports both alert channels', () => {
     expect(src).toMatch(/import \{ captureException \} from '@\/lib\/sentry'/);
     expect(src).toMatch(/import \{ sendDiscordMessage \} from '@\/lib\/discord-notifier'/);
+    expect(read('app/api/webhooks/stripe/route.ts')).toMatch(/alertWebhookFailure,[\s\S]*from '\.\/webhook-support'/);
   });
 
   it('the alert helper reports to Sentry AND Discord with sanitized content', () => {
@@ -31,12 +36,12 @@ describe('Stripe webhook failure alerting', () => {
   });
 
   it('every failure/rollback path alerts (≥10 call sites)', () => {
-    const calls = src.match(/await alertWebhookFailure\(/g) ?? [];
+    const calls = allSrc.match(/await alertWebhookFailure\(/g) ?? [];
     expect(calls.length).toBeGreaterThanOrEqual(10);
   });
 
   it('the dedupe-rollback failure (silently-dropped-retry case) alerts', () => {
-    const idx = src.indexOf('Dedupe rollback failed');
+    const idx = read('app/api/webhooks/stripe/route.ts').indexOf('Dedupe rollback failed');
     expect(idx).toBeGreaterThan(-1);
   });
 

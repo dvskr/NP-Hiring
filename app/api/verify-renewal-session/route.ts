@@ -1,16 +1,12 @@
-import Stripe from 'stripe';
+import { getStripe } from '@/lib/stripe';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { slugify } from '@/lib/utils';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { createClient } from '@/lib/supabase/server';
-
-function getStripe(): Stripe | null {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) return null;
-  return new Stripe(key);
-}
+import { captureException } from '@/lib/sentry';
+import { applyRenewalCheckout } from '@/app/api/webhooks/stripe/apply-renewal';
 
 /**
  * B114: resolve the authenticated Supabase user, if any. Null on any
@@ -129,6 +125,37 @@ export async function GET(request: NextRequest) {
           { status: 403 }
         );
       }
+    }
+
+    // Self-heal (missed-webhook recovery for renewals): Stripe says this
+    // renewal is PAID (checked above) and the caller owns it, but no ledger
+    // row exists for the session — the webhook was lost or has not landed.
+    // Run the same fulfilment the webhook runs; its JobCharge-first
+    // transaction guarantees a concurrently arriving webhook can never
+    // extend the expiry twice. Never breaks the response.
+    try {
+      const charge = await prisma.jobCharge.findUnique({
+        where: { stripeSessionId: session.id },
+        select: { id: true },
+      });
+      if (!charge) {
+        const result = await applyRenewalCheckout(stripe, session);
+        logger.info('[VerifyRenewal] Self-heal ran for paid renewal with no ledger row', {
+          jobId, sessionId, outcome: result.outcome,
+        });
+        if (result.outcome === 'revoked_posting' || result.outcome === 'employer_job_missing') {
+          captureException(new Error(`Renewal self-heal: ${result.outcome}`), {
+            tags: { area: 'verify-renewal-session' },
+            extra: { jobId, sessionId, status: result.revokedStatus },
+          });
+        }
+      }
+    } catch (healError) {
+      logger.error('[VerifyRenewal] Self-heal failed', healError, { jobId, sessionId });
+      captureException(healError, {
+        tags: { area: 'verify-renewal-session' },
+        extra: { jobId, sessionId, reason: 'renewal self-heal failed' },
+      });
     }
 
     // Sec3 fix (2026-06-01): cookie-bind the dashboardToken. The new-post

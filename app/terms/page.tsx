@@ -4,6 +4,9 @@ import Link from 'next/link';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import Image from 'next/image';
 import { FileText } from 'lucide-react';
+// Every price, date, slot count and duration in §6–§8 is a config token: the
+// Terms incorporate /pricing by reference, so the two can never disagree.
+import { config } from '@/lib/config';
 
 // P0 OG sweep: edge-generated card via /api/og — the previous Supabase
 // page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
@@ -52,7 +55,7 @@ const TERMS_SECTIONS: ReadonlyArray<{ id: string; title: string }> = [
   { id: 'eligibility-and-accounts', title: '4. Eligibility & Accounts' },
   { id: 'user-responsibilities', title: '5. User Responsibilities' },
   { id: 'job-postings', title: '6. Job Postings' },
-  { id: 'pricing-and-payments', title: '7. Pricing, Free Postings & Payments' },
+  { id: 'pricing-and-payments', title: '7. Pricing, Launch Promotion, Employer Plan & Payments' },
   { id: 'refund-policy', title: '8. Refund Policy' },
   { id: 'candidate-data', title: '9. Candidate Data, Unlocks & Privacy' },
   { id: 'intellectual-property', title: '10. Intellectual Property' },
@@ -90,7 +93,7 @@ export default function TermsPage() {
               <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.75rem)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 12px 0', lineHeight: 1.15 }}>
                 Terms of <span style={{ color: '#0284C7' }}>Service</span>
               </h1>
-              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: May 1, 2026</p>
+              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: September 12, 2026</p>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <Image src="/images/terms/hero.webp" alt="Terms of Service" width={140} height={140} style={{ objectFit: 'contain', filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.12))' }} priority />
@@ -174,26 +177,39 @@ export default function TermsPage() {
             <li style={liStyle}>We may suspend or terminate employer accounts that repeatedly violate these Terms</li>
           </ul>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Listing duration & renewals:</p>
-          <p style={pStyle}>All job postings — free or paid — are active for 60 days from the date of publication. After 60 days, postings expire automatically. Employers may renew paid postings through the employer dashboard. Renewals add 60 days to the current expiration date; renewing early does not forfeit any remaining time on the existing posting.</p>
+          <p style={pStyle}>All job postings, whether promotional, paid, or posted from an Employer plan slot, are active for {config.durationDays} days from the date of publication. After {config.durationDays} days, postings expire automatically. Employers may renew promotional and paid postings through the employer dashboard. Renewals add {config.durationDays} days to the current expiration date; renewing early does not forfeit any remaining time on the existing posting. Postings made from an Employer plan slot remain live while the plan is active and are not renewed individually.</p>
 
-          <h2 id="pricing-and-payments" style={h2Style}>7. Pricing, Free Postings & Payments</h2>
-          <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Pricing schedule (current as of the &quot;Last updated&quot; date above):</p>
+          <h2 id="pricing-and-payments" style={h2Style}>7. Pricing, Launch Promotion, Employer Plan & Payments</h2>
+          <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Launch promotion (through {config.promoEndsLabel}):</p>
           <ul style={ulStyle}>
-            <li style={liStyle}>Each verified employer email domain is allowed one free job posting (the first), lifetime, with no credit card required</li>
-            <li style={liStyle}>Additional postings (after the free quota is exhausted) are $199 USD each, one-time</li>
-            <li style={liStyle}>Renewals of paid postings are $179 USD, one-time, and add 60 days to the existing expiration</li>
-            <li style={liStyle}>All postings — free, paid, or renewed — receive the same features: 60-day duration, Featured badge, top placement in search results, 25 candidate profile unlocks, 25 InMails, and full analytics</li>
-            <li style={liStyle}>Free postings cannot be renewed at the discounted rate. Once a free posting expires, the employer may post a new listing at the standard $199 rate</li>
+            <li style={liStyle}>Through {config.promoEndsLabel}, every job posting created by a verified employer is free, with no credit card required, and receives every feature listed below</li>
+            <li style={liStyle}>Promotional postings run for their full {config.durationDays}-day term even if that term ends after {config.promoEndsLabel}, and may be renewed at the standard renewal price</li>
+            <li style={liStyle}>We may limit the number of concurrently live promotional postings per employer domain to prevent abuse</li>
           </ul>
-          <p style={pStyle}>Current pricing is also published at <Link href="/pricing" style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.domain}/pricing</Link> and is incorporated into this Agreement by reference. We may change pricing at any time, and changes will be effective for postings created after the change date. Postings already paid for under prior pricing are not affected.</p>
+          <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Pricing schedule from {config.ladderStartsLabel} (current as of the &quot;Last updated&quot; date above):</p>
+          <ul style={ulStyle}>
+            <li style={liStyle}>The first paid posting per verified employer email domain is ${config.introPrice} USD, one-time (the &quot;intro&quot; price). Promotional postings do not consume the intro price</li>
+            <li style={liStyle}>Each additional paid posting is ${config.postingPrice} USD, one-time</li>
+            <li style={liStyle}>Renewals of promotional and paid postings are ${config.renewalPrice} USD, one-time, and add {config.durationDays} days to the existing expiration</li>
+            <li style={liStyle}>All postings, whether promotional, paid, renewed, or posted from a plan slot, receive the same features: {config.durationDays}-day duration, Featured badge, top placement in search results, {config.limits.candidateUnlocksPerPosting} candidate profile unlocks, {config.limits.inmailsPerPosting} InMails, and full analytics</li>
+          </ul>
+          <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Employer plan (from {config.ladderStartsLabel}):</p>
+          <ul style={ulStyle}>
+            <li style={liStyle}>The Employer plan is ${config.planPrice} USD per month and includes {config.planSlots} concurrently active job slots. Every slot is a full Featured posting with the same features and limits as a paid posting</li>
+            <li style={liStyle}>The plan is billed month-to-month through Stripe and renews automatically until cancelled. You may cancel at any time; cancellation stops future charges</li>
+            <li style={liStyle}>If you cancel, postings made from plan slots stay live through the end of the paid period, after which they are unpublished. You may swap the jobs in your slots at any time while the plan is active</li>
+            <li style={liStyle}>If a plan payment fails, we may pause your plan postings after a short grace period until the balance is settled</li>
+            <li style={liStyle}>Plan months are not refunded once billed (see §8)</li>
+          </ul>
+          <p style={pStyle}>Current pricing is also published at <Link href="/pricing" style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.domain}/pricing</Link> and is incorporated into this Agreement by reference. We may change pricing at any time, and changes will be effective for postings created and plan periods beginning after the change date. Postings already paid for under prior pricing are not affected.</p>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Payment terms:</p>
           <ul style={ulStyle}>
-            <li style={liStyle}>Job posting and renewal fees are due at the time of purchase</li>
+            <li style={liStyle}>Job posting and renewal fees are due at the time of purchase; Employer plan fees are due at the start of each monthly billing period</li>
             <li style={liStyle}>All payments are processed by Stripe, our third-party payment processor. Your card statement will show &quot;{brand.legal.stripeDescriptor}&quot; as the merchant</li>
             <li style={liStyle}>All amounts are stated in US Dollars (USD) and are exclusive of any taxes that may apply in your jurisdiction</li>
             <li style={liStyle}>Payment must be completed before a paid posting goes live</li>
-            <li style={liStyle}>You authorize us, through Stripe, to charge the payment method you provide</li>
-            <li style={liStyle}>Invoices for paid postings and renewals are available from your employer dashboard</li>
+            <li style={liStyle}>You authorize us, through Stripe, to charge the payment method you provide, including recurring monthly charges for an Employer plan until you cancel</li>
+            <li style={liStyle}>Invoices for paid postings and renewals are available from your employer dashboard; Employer plan receipts are issued by Stripe</li>
           </ul>
 
           <h2 id="refund-policy" style={h2Style}>8. Refund Policy</h2>
@@ -203,12 +219,13 @@ export default function TermsPage() {
             <li style={liStyle}>To request a refund, email <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a> with your order details and the reason for the request</li>
             <li style={liStyle}>We reserve the right to grant or deny refund requests at our sole discretion</li>
             <li style={liStyle}>If we remove a posting for violation of these Terms, no refund will be issued</li>
-            <li style={liStyle}>Free postings have no associated payment and are therefore not refundable</li>
-            <li style={liStyle}>Refunds, if granted, will be issued to the original payment method through Stripe and may take 5-10 business days to appear on your statement</li>
+            <li style={liStyle}>Promotional postings and postings made from plan slots have no associated per-posting payment and are therefore not refundable</li>
+            <li style={liStyle}>Employer plan fees are not refunded for a billing month that has already been charged. Cancelling stops future charges, and your plan postings stay live through the end of the paid period</li>
+            <li style={liStyle}>Refunds, if granted, will be issued to the original payment method through Stripe and may take 5 to 10 business days to appear on your statement</li>
           </ul>
 
           <h2 id="candidate-data" style={h2Style}>9. Candidate Data, Unlocks & Privacy</h2>
-          <p style={pStyle}>When an employer with an active paid or free posting uses an unlock to view a candidate&apos;s full profile, that candidate&apos;s information (including name, email, resume, and other contact details) becomes accessible to the employer&apos;s account. This access is retained indefinitely, even after the underlying posting expires.</p>
+          <p style={pStyle}>When an employer with an active posting uses an unlock to view a candidate&apos;s full profile, that candidate&apos;s information (including name, email, resume, and other contact details) becomes accessible to the employer&apos;s account. This access is retained indefinitely, even after the underlying posting expires.</p>
           <p style={pStyle}>Employers receiving candidate data agree to:</p>
           <ul style={ulStyle}>
             <li style={liStyle}>Use candidate information only to evaluate the candidate for the role they applied to or are being recruited for</li>
@@ -220,7 +237,7 @@ export default function TermsPage() {
           <p style={pStyle}>Candidates agree that, when they make their profile visible and indicate openness to opportunities, their profile may be discoverable by employers using the Service. Candidates may at any time make their profile non-visible or close their account. See our <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'none' }}>Privacy Policy</Link> for full details on how candidate data is collected, used, shared, and protected.</p>
 
           <h2 id="intellectual-property" style={h2Style}>10. Intellectual Property</h2>
-          <p style={pStyle}>All content provided by {ENTITY} on {brand.name} — including text, graphics, logos, icons, images, audio clips, data compilations, software, design, and the &quot;{brand.name}&quot; brand — is the property of {ENTITY} or its licensors and is protected by United States and international copyright, trademark, and other intellectual property laws.</p>
+          <p style={pStyle}>All content provided by {ENTITY} on {brand.name}, including text, graphics, logos, icons, images, audio clips, data compilations, software, design, and the &quot;{brand.name}&quot; brand, is the property of {ENTITY} or its licensors and is protected by United States and international copyright, trademark, and other intellectual property laws.</p>
           <p style={pStyle}>You may not reproduce, distribute, modify, create derivative works of, publicly display, or otherwise exploit any content from the Service without our prior written permission, except for your personal, non-commercial use within the Service.</p>
           <p style={pStyle}>By submitting content to the Service (including job postings, candidate profiles, resumes, and messages), you grant {ENTITY} a worldwide, non-exclusive, royalty-free license to host, store, display, transmit, and use that content as necessary to operate, improve, and promote the Service. This license terminates when you delete the content, except where reasonably required for our backups, audit logs, or legal compliance.</p>
 
@@ -234,10 +251,10 @@ export default function TermsPage() {
             <li style={liStyle}>We are not an employment agency, recruiter, or staffing firm</li>
             <li style={liStyle}>We do not warrant that the Service will be uninterrupted, error-free, or free of harmful components</li>
           </ul>
-          <p style={pStyle}>Job seekers and employers use the Service at their own risk. We strongly encourage all users to conduct their own due diligence — including license verification, reference checks, and background checks where appropriate — before extending or accepting any offer.</p>
+          <p style={pStyle}>Job seekers and employers use the Service at their own risk. We strongly encourage all users to conduct their own due diligence, including license verification, reference checks, and background checks where appropriate, before extending or accepting any offer.</p>
 
           <h2 id="limitation-of-liability" style={h2Style}>12. Limitation of Liability</h2>
-          <p style={pStyle}>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, {ENTITY.toUpperCase()}, ITS OFFICERS, DIRECTORS, EMPLOYEES, CONTRACTORS, AGENTS, LICENSORS, AND SUPPLIERS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, REVENUE, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, ARISING OUT OF OR RELATING TO YOUR USE OF — OR INABILITY TO USE — THE SERVICE.</p>
+          <p style={pStyle}>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, {ENTITY.toUpperCase()}, ITS OFFICERS, DIRECTORS, EMPLOYEES, CONTRACTORS, AGENTS, LICENSORS, AND SUPPLIERS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, REVENUE, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, ARISING OUT OF OR RELATING TO YOUR USE OF, OR INABILITY TO USE, THE SERVICE.</p>
           <p style={pStyle}>OUR TOTAL CUMULATIVE LIABILITY TO YOU FOR ALL CLAIMS ARISING FROM OR RELATED TO THE SERVICE SHALL NOT EXCEED THE GREATER OF: (A) THE TOTAL AMOUNT YOU PAID TO US IN THE TWELVE (12) MONTHS PRECEDING THE EVENT GIVING RISE TO THE CLAIM, OR (B) ONE HUNDRED US DOLLARS ($100).</p>
           <p style={pStyle}>SOME JURISDICTIONS DO NOT ALLOW THE EXCLUSION OF CERTAIN WARRANTIES OR THE LIMITATION OR EXCLUSION OF LIABILITY FOR INCIDENTAL OR CONSEQUENTIAL DAMAGES. ACCORDINGLY, SOME OF THE ABOVE LIMITATIONS MAY NOT APPLY TO YOU.</p>
 
@@ -253,8 +270,8 @@ export default function TermsPage() {
 
           <h2 id="termination" style={h2Style}>14. Termination</h2>
           <p style={pStyle}>You may terminate your account at any time by following the account-deletion flow in your dashboard or by emailing <a href={`mailto:${brand.email.support}`} style={{ color: '#BE185D', textDecoration: 'none' }}>{brand.email.support}</a>. Account deletion is subject to a 30-day grace period during which the account may be restored, after which it is permanently purged.</p>
-          <p style={pStyle}>We may suspend or terminate your access to the Service, or any portion of it, at any time, with or without notice, for any reason — including violation of these Terms, suspected fraud, or any other conduct we determine is harmful to the Service or other users.</p>
-          <p style={pStyle}>Upon termination, your right to use the Service immediately ceases. Provisions that by their nature should survive termination — including intellectual property, disclaimers, limitation of liability, indemnification, and dispute resolution — shall survive.</p>
+          <p style={pStyle}>We may suspend or terminate your access to the Service, or any portion of it, at any time, with or without notice, for any reason, including violation of these Terms, suspected fraud, or any other conduct we determine is harmful to the Service or other users.</p>
+          <p style={pStyle}>Upon termination, your right to use the Service immediately ceases. Provisions that by their nature should survive termination, including intellectual property, disclaimers, limitation of liability, indemnification, and dispute resolution, shall survive.</p>
 
           <h2 id="governing-law" style={h2Style}>15. Governing Law, Venue & Dispute Resolution</h2>
           <p style={pStyle}>These Terms and any dispute arising out of or related to them or the Service are governed by the laws of the State of {brand.legal.governingState}, United States, without regard to its conflict-of-laws principles. The United Nations Convention on Contracts for the International Sale of Goods does not apply.</p>

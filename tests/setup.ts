@@ -21,6 +21,7 @@ vi.mock('@/lib/prisma', () => {
                 groupBy: vi.fn(),
                 aggregate: vi.fn(),
                 upsert: vi.fn(),
+                updateMany: vi.fn(),
                 deleteMany: vi.fn(),
             },
             emailLead: {
@@ -44,6 +45,8 @@ vi.mock('@/lib/prisma', () => {
                 count: vi.fn(),
                 create: vi.fn(),
                 update: vi.fn(),
+                updateMany: vi.fn(),
+                groupBy: vi.fn(),
             },
             profileView: {
                 count: vi.fn(),
@@ -67,6 +70,8 @@ vi.mock('@/lib/prisma', () => {
                 create: vi.fn(),
                 findUnique: vi.fn(),
                 delete: vi.fn(),
+                // Two-phase dedupe: reclaim a stale 'processing' claim / mark 'done'.
+                updateMany: vi.fn().mockResolvedValue({ count: 0 }),
             },
             jobCharge: {
                 create: vi.fn(),
@@ -80,6 +85,7 @@ vi.mock('@/lib/prisma', () => {
             },
             userProfile: {
                 findUnique: vi.fn(),
+                findFirst: vi.fn(),
                 findMany: vi.fn(),
                 create: vi.fn(),
                 update: vi.fn(),
@@ -142,6 +148,8 @@ vi.mock('@/lib/prisma', () => {
             emailSend: {
                 create: vi.fn(),
                 createMany: vi.fn(),
+                findFirst: vi.fn(),
+                delete: vi.fn(),
                 findMany: vi.fn(),
                 update: vi.fn(),
                 updateMany: vi.fn(),
@@ -178,6 +186,15 @@ vi.mock('@/lib/prisma', () => {
                 create: vi.fn(),
                 count: vi.fn(),
                 deleteMany: vi.fn(),
+            },
+            // Employer plan rows (2026-09-12 launch promo + ladder) — lib/employer-plan.ts
+            employerPlan: {
+                findUnique: vi.fn(),
+                findFirst: vi.fn(),
+                findMany: vi.fn(),
+                create: vi.fn(),
+                update: vi.fn(),
+                count: vi.fn(),
             },
             $queryRaw: vi.fn(),
             // Batch form only (array of PrismaPromises). Test files that need
@@ -216,6 +233,12 @@ vi.mock('@/lib/email-service', () => {
         sendRenewalConfirmationEmail: vi.fn().mockResolvedValue({ success: true }),
         sendExpiryWarningEmail: vi.fn().mockResolvedValue({ success: true }),
         sendDraftSavedEmail: vi.fn().mockResolvedValue({ success: true }),
+        // Employer plan lifecycle emails (2026-09-12) — imported by the Stripe
+        // webhook, the plan-lapse Inngest job and the admin plan routes.
+        sendPlanActivatedEmail: vi.fn().mockResolvedValue({ success: true }),
+        sendPlanPausedEmail: vi.fn().mockResolvedValue({ success: true }),
+        sendPlanPaymentFailedEmail: vi.fn().mockResolvedValue({ success: true }),
+        sendPlanLinkPendingEmail: vi.fn().mockResolvedValue({ success: true }),
     };
 });
 

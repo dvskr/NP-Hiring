@@ -251,6 +251,14 @@ function checkStripeEnv(): void {
     requireEnv('STRIPE_SECRET_KEY', 'required because ENABLE_PAID_POSTING=true');
     requireEnv('STRIPE_WEBHOOK_SECRET', 'required because ENABLE_PAID_POSTING=true (checkout webhooks fail without it)');
     requireEnv('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY', 'required because ENABLE_PAID_POSTING=true');
+    const planLink = envValue('STRIPE_PLAN_PAYMENT_LINK');
+    if (!planLink) {
+        warn('STRIPE_PLAN_PAYMENT_LINK not set — the Employer plan CTA falls back to a contact mailto');
+    } else if (!planLink.startsWith('https://buy.stripe.com/')) {
+        fail('STRIPE_PLAN_PAYMENT_LINK must be a https://buy.stripe.com/ Payment Link — the plan CTA is disabled until it is');
+    } else {
+        pass('STRIPE_PLAN_PAYMENT_LINK is a Stripe Payment Link');
+    }
 }
 
 // ─── 2. BRAND / CONFIG COHERENCE ────────────────────────────────────────────

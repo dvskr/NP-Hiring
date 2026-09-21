@@ -1,19 +1,28 @@
 /**
  * Email-change policy.
  *
- * The free-post quota is per-domain (audit #26 final): each company domain
- * gets its first post free, lifetime, shared across all employees. The quota
- * anchor is `EmployerJob.quotaDomain` — an immutable snapshot of the signup
- * email's domain, set at posting time.
+ * Every per-domain pricing rule is anchored on `EmployerJob.quotaDomain` —
+ * an immutable snapshot of the SIGNUP email's domain, written at posting
+ * time on every path (promo, plan, checkout):
+ *
+ *   - the launch-promo cap (config.promoMaxActivePostsPerDomain) counts
+ *     live 'promo' rows per domain;
+ *   - the intro price (config.introPrice) is for the first PAID post per
+ *     company domain — the allowance is "zero 'paid' rows at this domain".
  *
  * If we let a user freely change their account email's *domain*, they can
- * use the freebie on @acme.com, change their account to @example.com, and
- * claim another free post under the new domain. To prevent that, this helper
- * enforces:
+ * post from @acme.com, change their account to @example.com, and start over
+ * at the new domain: a fresh promo cap and a fresh intro price. To prevent
+ * that, this helper enforces:
  *
  *   - Local-part changes (bob@acme.com → bob.smith@acme.com) → allowed
- *   - Domain changes when NO freebies have been used → allowed
- *   - Domain changes when ANY freebies exist for the user → BLOCKED
+ *   - Domain changes when NO posts exist at the old domain (and none owned
+ *     by this user) → allowed
+ *   - Domain changes when ANY EmployerJob row exists at the old domain (or
+ *     is owned by this user) with a paymentStatus that carries an
+ *     entitlement — legacy 'free', 'promo', 'paid', 'plan' → BLOCKED.
+ *     Abandoned 'pending' / 'expired' checkouts and 'refunded' rows never
+ *     lock a domain.
  *
  * **Where to call this:**
  * Anywhere we accept an email-change request — `/api/auth/change-email`,
@@ -34,6 +43,13 @@ interface EmailChangeDecision {
     lockedDomain?: string;
 }
 
+/**
+ * paymentStatus values that tie a domain to a pricing entitlement. Legacy
+ * 'free' rows are included because they still exist in the table; they are
+ * never written again.
+ */
+export const DOMAIN_LOCKING_STATUSES: readonly string[] = ['free', 'promo', 'paid', 'plan'];
+
 function emailDomain(email: string): string | null {
     const parts = email.toLowerCase().trim().split('@');
     if (parts.length !== 2 || !parts[1]) return null;
@@ -42,7 +58,7 @@ function emailDomain(email: string): string | null {
 
 /**
  * Given a user's supabaseId, current email, and proposed new email, decide
- * whether the change can proceed under the per-domain freebie quota policy.
+ * whether the change can proceed under the per-domain pricing policy.
  *
  * @param userId   Supabase auth user id (matches UserProfile.supabaseId and EmployerJob.userId)
  * @param oldEmail Current email on the auth user
@@ -65,46 +81,30 @@ export async function evaluateEmailChange(
         return { allowed: true };
     }
 
-    // Domain change → only allowed if this user has zero rows that would let
-    // them carry freebies across to a new domain. We check both:
-    //   1. Free posts they personally posted (userId match), and
-    //   2. Free posts at the old domain (in case userId got nulled by a
-    //      prior account deletion + re-creation flow)
-    // If either set is non-empty, domain change is blocked.
-
-    const userOwnedFreePosts = await prisma.employerJob.count({
+    // Domain change → only allowed if nothing would let the employer carry
+    // an entitlement across to a new domain. One count covers both:
+    //   1. Rows snapshotted at the old domain (quotaDomain match) — the
+    //      per-domain anchor itself, regardless of who posted them; and
+    //   2. Rows this user personally posted (userId match), in case
+    //      quotaDomain is null on a legacy row or userId got nulled by a
+    //      prior account deletion + re-creation flow.
+    const lockingRows = await prisma.employerJob.count({
         where: {
-            userId,
-            paymentStatus: 'free',
+            paymentStatus: { in: [...DOMAIN_LOCKING_STATUSES] },
+            OR: [
+                { userId },
+                ...(oldDomain ? [{ quotaDomain: oldDomain }] : []),
+            ],
         },
     });
 
-    if (userOwnedFreePosts > 0) {
+    if (lockingRows > 0) {
+        const domainLabel = oldDomain ?? 'your current domain';
         return {
             allowed: false,
-            reason: `Email domain changes aren't allowed once free posts have been used at ${oldDomain ?? 'your current domain'}. Contact ${brand.email.support} if your company domain has actually changed.`,
+            reason: `Email domain changes aren't allowed once jobs have been posted from ${domainLabel} — posting terms are per company domain. Contact ${brand.email.support} if your company domain has actually changed.`,
             lockedDomain: oldDomain ?? undefined,
         };
-    }
-
-    if (oldDomain) {
-        const oldDomainFreePosts = await prisma.employerJob.count({
-            where: {
-                quotaDomain: oldDomain,
-                paymentStatus: 'free',
-            },
-        });
-        // We only block if THIS user is the one who'd benefit. Other employers
-        // at the same domain having used freebies isn't this user's concern.
-        // Net: this branch is mostly a safety net; the userId check above is
-        // the primary gate.
-        if (oldDomainFreePosts > 0 && userOwnedFreePosts > 0) {
-            return {
-                allowed: false,
-                reason: `Email domain changes aren't allowed once free posts have been used at ${oldDomain}. Contact support if your company domain has actually changed.`,
-                lockedDomain: oldDomain,
-            };
-        }
     }
 
     return { allowed: true };

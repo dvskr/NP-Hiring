@@ -52,7 +52,9 @@ describe('B78 — create-checkout resume mode', () => {
   it('reuses the original metadata contract and browser-binding cookie', () => {
     // Metadata must match what the webhook / verify / sweep activation reads.
     const resumeSection = src.slice(src.indexOf('async function resumeAbandonedCheckout'));
-    expect(resumeSection).toMatch(/metadata:\s*\{\s*jobId:\s*employerJob\.job\.id,\s*pricing,\s*dashboardToken:\s*employerJob\.dashboardToken,?\s*\}/);
+    expect(resumeSection).toMatch(/metadata:\s*\{\s*jobId:\s*employerJob\.job\.id,\s*pricing,?\s*\}/);
+    // The bearer dashboardToken is never copied into Stripe metadata.
+    expect(src).not.toMatch(/dashboardToken:\s*employerJob\.dashboardToken/);
     expect(resumeSection).toContain("response.cookies.set('checkout_session_bind', session.id");
   });
 });

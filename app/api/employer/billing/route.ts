@@ -85,7 +85,11 @@ export async function GET(req: NextRequest) {
         chargesByJob.set(c.employerJobId, arr);
     }
 
-    const isFreeStatus = (status: string) => status === 'free' || status === 'free_renewed' || status === 'free_upgraded';
+    // Rows that never produced a charge: launch-promo posts, Employer-plan
+    // posts (billed by Stripe Billing, not per post) and the legacy
+    // free-quota statuses. The dashboard hides invoice links for these.
+    const NO_CHARGE_STATUSES = new Set(['promo', 'plan', 'free', 'free_renewed', 'free_upgraded']);
+    const isFreeStatus = (status: string) => NO_CHARGE_STATUSES.has(status);
 
     const payments = employerJobs.map((ej) => {
         const isActive = ej.job.isPublished && (!ej.job.expiresAt || new Date(ej.job.expiresAt) > new Date());

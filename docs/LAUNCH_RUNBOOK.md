@@ -45,9 +45,11 @@ Rotate BEFORE going live; update `.env` locally and Vercel after §2:
    - `CRON_SECRET` (rotated) · `RESEND_API_KEY` + `RESEND_WEBHOOK_SECRET` (rotated)
    - `EMAIL_FROM` / `EMAIL_FROM_MARKETING` / `EMAIL_REPLY_TO` (@nphiring.com forms)
    - `OPENAI_API_KEY` (enables enrichment/semantic search; set spend cap first)
-   - `ENABLE_PAID_POSTING=false` — enforced in code: checkout APIs return 503
-     (`code: PAID_POSTING_DISABLED`) and /post-job shows a "paid posting coming
-     soon" state to employers whose free post is used, until you flip it (§8)
+   - `ENABLE_PAID_POSTING=false` — fine for launch: every employer post is free
+     through December 31, 2026 (`config.promoEndsLabel`, no flag, no Stripe
+     needed). Enforced in code: checkout APIs return 503
+     (`code: PAID_POSTING_DISABLED`) until you flip it — which MUST happen
+     before January 1, 2027 (§8)
 2. [ ] **DNS** (registrar): `A @ → 76.76.21.21` · `CNAME www → cname.vercel-dns.com`
 3. [ ] **Resend**: add domain nphiring.com → publish SPF/DKIM/DMARC records → verified ✅
    (all transactional mail silently fails until this is green)
@@ -138,12 +140,31 @@ VAPID keypair for web push (`npx web-push generate-vapid-keys`).
 
 ## 8. Deferred by design (not launch blockers)
 
-Stripe paid posting — set `ENABLE_PAID_POSTING=true` **and** the three Stripe keys
-(+ descriptor NPHIRING) when ready; the flag is real (`isFeatureEnabled('paidPosting')`):
-until both are set, checkout 503s (`PAID_POSTING_DISABLED` / `STRIPE_NOT_CONFIGURED`)
-and the /post-job funnel shows "paid posting coming soon" instead of the form ·
-browser autofill extension (per-board build + Chrome listing) · np-license blog series ·
-AI eval fixtures re-curation before enabling AI features broadly · scripts/ deep-clean.
+**Stripe paid posting — deadline January 1, 2027, not launch.** The launch promo
+(every post free through December 31, 2026, `config.isPromoActive()`) needs
+NOTHING from Stripe and has no flag to flip. The 2027 ladder (intro $199 →
+featured $299 → Employer plan $399/month; see [pricing-system.md](pricing-system.md))
+starts automatically on `config.promoEndsAt`, so everything below must be live
+in production BEFORE that date or employers hit a 503 on their first paid post:
+
+- [ ] `ENABLE_PAID_POSTING=true` (the flag is real: `isFeatureEnabled('paidPosting')`;
+      until it is set, checkout 503s `PAID_POSTING_DISABLED` / `STRIPE_NOT_CONFIGURED`)
+- [ ] `STRIPE_SECRET_KEY` · `STRIPE_PUBLISHABLE_KEY` · `STRIPE_WEBHOOK_SECRET`
+      (+ statement descriptor NPHIRING)
+- [ ] `STRIPE_PLAN_PAYMENT_LINK` — a Stripe Payment Link for the Employer plan
+      (recurring $399/month, collects the customer email). Until it is set, the
+      /pricing plan card and the dashboard plan widget fall back to a support mailto.
+      /pricing is statically rendered, so **redeploy after setting it** for the card
+      to pick the link up
+- [ ] Webhook endpoint `https://nphiring.com/api/webhooks/stripe` subscribed to
+      `checkout.session.completed` **and** `customer.subscription.created`,
+      `customer.subscription.updated`, `customer.subscription.deleted`
+      (the plan's activate / pause / resume lifecycle rides on these)
+- [ ] Inngest synced (§6 step 4) so the daily `plan-lapse` job runs
+
+Also deferred: browser autofill extension (per-board build + Chrome listing) ·
+np-license blog series · AI eval fixtures re-curation before enabling AI features
+broadly · scripts/ deep-clean.
 
 ---
 

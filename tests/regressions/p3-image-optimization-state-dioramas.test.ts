@@ -232,7 +232,8 @@ describe('P3 #10: public/images/how-it-works carries no unreachable file', () =>
 
   /** Text files that could name an asset — public/ and build output excluded. */
   function sourceCorpus(): string[] {
-    const skip = new Set(['node_modules', '.next', '.git', 'public', '.vercel', 'dist', 'coverage', '.turbo']);
+    // '.worktrees' — git worktrees checked out under the repo carry their own copy of this suite's files.
+    const skip = new Set(['node_modules', '.next', '.git', 'public', '.vercel', 'dist', 'coverage', '.turbo', '.worktrees']);
     const out: string[] = [];
     const walk = (dir: string) => {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -355,7 +356,8 @@ describe('P3 #10: the deferred `.webp` rename handoff stays accurate', () => {
   });
 
   it('lists every file that pins a diorama path', () => {
-    const skip = new Set(['node_modules', '.next', '.git', 'public', '.vercel', 'dist', 'coverage', '.turbo']);
+    // '.worktrees' — git worktrees checked out under the repo carry their own copy of this suite's files.
+    const skip = new Set(['node_modules', '.next', '.git', 'public', '.vercel', 'dist', 'coverage', '.turbo', '.worktrees']);
     const names = new RegExp(`images/states[^\\r\\n]*${EXT.replace('.', '\\.')}`);
     const found: string[] = [];
     const walk = (dir: string) => {

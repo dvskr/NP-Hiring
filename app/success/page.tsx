@@ -6,6 +6,7 @@ import { CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { trackSubmitFreePost } from '@/lib/analytics';
 import { brand } from '@/config/brand';
+import { config } from '@/lib/config';
 
 interface VerifiedSession {
   paid: boolean;
@@ -20,10 +21,16 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const freeParam = searchParams.get('free');
+  const modeParam = searchParams.get('mode');
 
-  // Free-mode posts don't go through Stripe — they post directly via /api/jobs/post-free
-  // and redirect here with ?free=true. Nothing to verify in that case.
-  const isFreeMode = freeParam === 'true';
+  // No-charge posts don't go through Stripe — they post directly via
+  // /api/jobs/post-free and redirect here with `?mode=promo` (launch period)
+  // or `?mode=plan` (Employer-plan slot). `?free=true` is the pre-ladder
+  // spelling and still means "posted free during the promo". Nothing to
+  // verify in any of these cases.
+  const isPlanMode = modeParam === 'plan';
+  const isPromoMode = modeParam === 'promo' || freeParam === 'true';
+  const isFreeMode = isPlanMode || isPromoMode;
 
   const [state, setState] = useState<{
     loading: boolean;
@@ -52,9 +59,10 @@ function SuccessContent() {
 
     if (isFreeMode) {
       clearJobDraft();
-      // P7: free post conversion event (no Stripe purchase event for free posts)
+      // P7: no-charge post conversion event (no Stripe purchase event fires
+      // for promo / plan posts)
       const jobId = searchParams.get('jobId') ?? 'unknown';
-      trackSubmitFreePost(jobId);
+      trackSubmitFreePost(jobId, isPlanMode ? 'plan' : 'promo');
       return;
     }
 
@@ -117,7 +125,7 @@ function SuccessContent() {
 
     tick();
     return () => { cancelled = true; };
-  }, [sessionId, isFreeMode]);
+  }, [sessionId, isFreeMode, isPlanMode]);
 
   // ─── Clay design tokens (match post-job/preview/dashboard pages) ───
   const pageWrap: React.CSSProperties = {
@@ -241,9 +249,11 @@ function SuccessContent() {
           <p style={{ fontSize: '16px', color: '#5A6B73', margin: '0 0 6px', lineHeight: 1.6 }}>
             {state.session?.jobTitle
               ? <>Your job <strong style={{ color: '#1A2E35' }}>{state.session.jobTitle}</strong> is now live on {brand.name}.</>
-              : isFreeMode
-                ? `Your job listing is now live on ${brand.name}.`
-                : 'Your job post is now live.'}
+              : isPlanMode
+                ? 'Your job is live. Posted under your Employer plan.'
+                : isPromoMode
+                  ? `Your job is live. Free during our launch period through ${config.promoEndsLabel}.`
+                  : 'Your job post is now live.'}
           </p>
           <p style={{ fontSize: '14px', color: '#8A9BA6', margin: '0 0 28px', lineHeight: 1.6 }}>
             {isFreeMode

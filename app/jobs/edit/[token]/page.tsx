@@ -497,6 +497,16 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
     return isExpired() || isExpiringSoon();
   };
 
+  // Which rows can buy a $renewalPrice extension (mirrors the dashboard and
+  // /api/create-renewal-checkout): 'plan' posts run their term under the
+  // subscription and are re-posted from a slot instead; 'pending' (unpaid)
+  // and 'refunded' rows are never renewable. Legacy 'free' rows still open
+  // the "can't be renewed" modal below, so they stay "renewable" here.
+  const isPlanPost = employerJob?.paymentStatus === 'plan';
+  const canRenew = !isPlanPost
+    && employerJob?.paymentStatus !== 'pending'
+    && employerJob?.paymentStatus !== 'refunded';
+
   const handleRenewCheckout = async (tier: 'pro') => {
     if (!job) return;
 
@@ -626,24 +636,39 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                   {expired ? 'This job has expired' : 'This job expires soon'}
                 </h3>
                 <p style={{ fontSize: '13px', color: accentColor, margin: '0 0 14px', lineHeight: 1.5, opacity: 0.85 }}>
-                  {expired
-                    ? `Expired on ${expiryDate} — no longer visible to candidates. Renew to relist.`
-                    : `Expires on ${expiryDate}. Renew now to keep it visible.`}
+                  {isPlanPost
+                    ? (expired
+                      ? `Expired on ${expiryDate}. It is no longer visible to candidates. Plan posts run ${config.durationDays} days and aren't renewed per post: post the role again from a plan slot.`
+                      : `Expires on ${expiryDate}. Plan posts run ${config.durationDays} days and aren't renewed per post. When it ends, post the role again from a plan slot.`)
+                    : expired
+                      ? `Expired on ${expiryDate}. It is no longer visible to candidates. Renew to relist it.`
+                      : `Expires on ${expiryDate}. Renew now to keep it visible.`}
                 </p>
-                <button
-                  onClick={() => setShowRenewModal(true)}
-                  disabled={renewingTier !== null}
-                  style={{
+                {canRenew ? (
+                  <button
+                    onClick={() => setShowRenewModal(true)}
+                    disabled={renewingTier !== null}
+                    style={{
+                      ...clayBtn,
+                      background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
+                      border: 'none',
+                      boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
+                      opacity: renewingTier ? 0.6 : 1,
+                    }}
+                  >
+                    <RefreshCw size={16} className={renewingTier ? 'animate-spin' : ''} />
+                    {renewingTier ? 'Processing...' : 'Renew This Job'}
+                  </button>
+                ) : isPlanPost ? (
+                  <Link href="/post-job" style={{
                     ...clayBtn,
                     background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
-                    border: 'none',
+                    border: 'none', textDecoration: 'none',
                     boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
-                    opacity: renewingTier ? 0.6 : 1,
-                  }}
-                >
-                  <RefreshCw size={16} className={renewingTier ? 'animate-spin' : ''} />
-                  {renewingTier ? 'Processing...' : 'Renew This Job'}
-                </button>
+                  }}>
+                    Post from a plan slot
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>
@@ -938,7 +963,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                       />
                       <div>
                         <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>Receive on {brand.name}</span>
-                        <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly — applications arrive in your dashboard</p>
+                        <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates apply directly, and applications arrive in your dashboard.</p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
                           {['Resume', 'Cover letter', 'Email alerts'].map(f => (
                             <span key={f} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '8px', background: '#FCE7F3', color: '#BE185D', fontWeight: 500 }}>✓ {f}</span>
@@ -1025,7 +1050,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 fontSize: '11px', color: '#6B7F8A', lineHeight: 1.5,
               }}>
                 <strong style={{ color: '#1A2E35' }}>Not editable here:</strong> company name &amp; logo (Settings → Company Profile),
-                pricing tier, expiry date, paused/featured/archived state — those have their own dedicated controls.
+                pricing tier, expiry date, paused/featured/archived state. Those have their own dedicated controls.
               </div>
             </div>
           </div>
@@ -1153,7 +1178,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
         </div>
       )}
 
-      {/* Renewal Modal — free posts can't be renewed at the discounted rate */}
+      {/* Renewal Modal — legacy free-trial posts can't be renewed */}
       {showRenewModal && job && employerJob?.paymentStatus === 'free' && (
         <div style={{
           position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1171,10 +1196,12 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
             <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 16px' }}>{job.title}</p>
 
             <p style={{ fontSize: '14px', color: '#1A2E35', lineHeight: 1.6, margin: '0 0 8px' }}>
-              Renewals at the discounted ${config.renewalPrice} rate are available for paid postings only.
+              Renewals at ${config.renewalPrice} (+{config.durationDays} days) are available for posts made under our current pricing. This legacy free-trial post isn&apos;t one of them.
             </p>
             <p style={{ fontSize: '13px', color: '#6B7F8A', lineHeight: 1.6, margin: '0 0 20px' }}>
-              You can post this role again as a fresh listing for ${config.postingPrice} — same {config.durationDays}-day duration and a new bucket of {config.limits.candidateUnlocksPerPosting} unlocks &amp; {config.limits.inmailsPerPosting} InMails.
+              {config.isPromoActive()
+                ? `You can post this role again as a fresh listing, free through ${config.promoEndsLabel}. It keeps the same ${config.durationDays}-day duration and gets a new bucket of ${config.limits.candidateUnlocksPerPosting} unlocks & ${config.limits.inmailsPerPosting} InMails.`
+                : `You can post this role again as a fresh listing: $${config.introPrice} for your company's first paid post, $${config.postingPrice} after that. It keeps the same ${config.durationDays}-day duration and gets a new bucket of ${config.limits.candidateUnlocksPerPosting} unlocks & ${config.limits.inmailsPerPosting} InMails.`}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1184,7 +1211,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 border: 'none', padding: '12px 16px', fontWeight: 700,
                 boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
               }}>
-                Post a New Job — ${config.postingPrice}
+                {config.isPromoActive() ? 'Post a New Job for Free' : 'Post a New Job'}
               </Link>
               <button
                 onClick={() => setShowRenewModal(false)}
@@ -1200,8 +1227,8 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
         </div>
       )}
 
-      {/* Renewal Modal — paid posts get the discounted renewal */}
-      {showRenewModal && job && employerJob?.paymentStatus !== 'free' && (
+      {/* Renewal Modal — promo / paid (and legacy renewed) posts get the $renewalPrice extension */}
+      {showRenewModal && job && employerJob?.paymentStatus !== 'free' && canRenew && (
         <div style={{
           position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '16px', zIndex: 50, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',

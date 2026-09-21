@@ -25,11 +25,18 @@
  *     inventory-invariant test is green over the live inventory.
  *   - "No Unqualified Applicants" — DELETED (P2 #16). Anyone can click
  *     Apply here too; it was an unenforceable guarantee.
- *   - "First Post Free" — competitor cells are 'partial', not false:
- *     both Indeed and LinkedIn offer free listings.
+ *   - "Free Posting Through <promoEndsLabel>" (2026-09-12, was "First
+ *     Post Free") — competitor cells stay 'partial', not false: both
+ *     Indeed and LinkedIn offer limited free listings. Our cell is true
+ *     only while config.isPromoActive(); the row copy names the end
+ *     date so it cannot silently outlive the promo.
+ *   - "Flat Per-Post Pricing — No Bidding" — the note states the 2027
+ *     ladder (intro → featured → plan) from config tokens; no price is
+ *     typed by hand.
  *   - Listing duration — competitor cells never assert "Others: 30
- *     days" (unverifiable, plan-dependent); the note discloses that the
- *     FREE first post runs config.freeDurationDays.
+ *     days" (unverifiable, plan-dependent); every post here runs
+ *     config.durationDays, so there is no shorter free window to
+ *     disclose any more.
  *
  * Rule for future edits: the {brand.name} column must describe
  * behaviour that ships (with its limits in the note); competitor
@@ -57,10 +64,10 @@ export interface ComparisonRow {
 }
 
 export const EMPLOYER_COMPARISON_ROWS: ComparisonRow[] = [
-    { feature: `${brand.niche.medium}-Focused Job Inventory`, us: true, indeed: false, linkedin: false, note: `Built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles — listings are screened at ingest and removed when flagged out of scope` },
-    { feature: `First Post Free (No Card)`, us: true, indeed: 'partial', linkedin: 'partial', note: 'Others offer limited free listings; ours includes every paid feature' },
-    { feature: `Flat $${config.postingPrice}/Post — No Bidding`, us: true, indeed: false, linkedin: false, note: 'Others bill per click or per day' },
-    { feature: `${config.durationDays}-Day Listing Duration`, us: true, indeed: 'partial', linkedin: 'partial', note: `Paid posts run ${config.durationDays} days; the free first post runs ${config.freeDurationDays} days. Competitor durations vary by plan` },
+    { feature: `${brand.niche.medium}-Focused Job Inventory`, us: true, indeed: false, linkedin: false, note: `Built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles. Listings are screened at ingest and removed when flagged out of scope` },
+    { feature: `Free Posting Through ${config.promoEndsLabel}`, us: true, indeed: 'partial', linkedin: 'partial', note: `Every post is free during our launch period; others offer limited free listings` },
+    { feature: `Flat Per-Post Pricing, No Bidding`, us: true, indeed: false, linkedin: false, note: `From ${config.ladderStartsLabel}: $${config.introPrice} first post, $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs. Others bill per click or per day` },
+    { feature: `${config.durationDays}-Day Listing Duration`, us: true, indeed: 'partial', linkedin: 'partial', note: `Every post runs ${config.durationDays} days. Competitor durations vary by plan` },
     { feature: 'Direct Candidate Messaging', us: true, indeed: 'partial', linkedin: 'partial', note: `${config.limits.inmailsPerPosting} InMails included per posting; a paid add-on elsewhere` },
     { feature: 'Candidate Profile Unlocks', us: true, indeed: 'partial', linkedin: 'partial', note: `${config.limits.candidateUnlocksPerPosting} included per posting; a paid add-on elsewhere` },
     { feature: 'Built-In Screening Questions', us: true, indeed: true, linkedin: true, note: 'Up to 5 questions, with knockout answers' },

@@ -25,6 +25,12 @@ import { prisma } from '@/lib/prisma';
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
+// The #24 tests cold-import the real TopStatesSection (prisma client +
+// TopStatesList + its state data). The first import in this file can exceed
+// vitest's 5s default under a full parallel run — same remedy as
+// tests/regressions/paid-posting-checkout-gate.test.ts.
+const COLD_IMPORT_TIMEOUT_MS = 20_000;
+
 // Surfaces the audit flagged for fabricated inventory numbers.
 const SWEPT_SURFACES = [
     'app/feed.xml/route.ts',
@@ -110,7 +116,7 @@ describe('P0 #24 — TopStatesSection omits instead of fabricating', () => {
         } finally {
             consoleSpy.mockRestore();
         }
-    });
+    }, COLD_IMPORT_TIMEOUT_MS);
 
     it('renders only the real states when live data is thin — never padded with inventions', async () => {
         vi.mocked(prisma.job.groupBy).mockResolvedValue([
@@ -123,7 +129,7 @@ describe('P0 #24 — TopStatesSection omits instead of fabricating', () => {
             { name: 'Texas', count: 7, slug: 'texas' },
             { name: 'Ohio', count: 3, slug: 'ohio' },
         ]);
-    });
+    }, COLD_IMPORT_TIMEOUT_MS);
 });
 
 beforeEach(() => vi.clearAllMocks());

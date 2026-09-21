@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   // `absolute` opts out of the layout title template so we don't end up
   // with "FAQ | PMHNP Jobs | PMHNP Hiring" (the brand-confusing form
   // audit 09 M-18 flagged — "PMHNP Jobs" is not the brand name).
-  title: { absolute: `${brand.name} FAQ — Job Search, Posting & Alerts` },
+  title: { absolute: `${brand.name} FAQ | Job Search, Posting & Alerts` },
   description: `Frequently asked questions about ${brand.name}. Learn how to search jobs, post positions, set up alerts, and make the most of the #1 ${brand.niche.short} job board.`,
   openGraph: {
     title: `${brand.name} FAQ`,
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: `${brand.baseUrl}/faq`,
     siteName: brand.name,
-    images: [{ url: FAQ_OG_IMAGE, width: 1200, height: 630, alt: `${brand.name} FAQ — job posting, salary transparency, job alerts, employer features` }],
+    images: [{ url: FAQ_OG_IMAGE, width: 1200, height: 630, alt: `${brand.name} FAQ: job posting, salary transparency, job alerts, and employer features` }],
   },
   twitter: { card: 'summary_large_image', title: `${brand.name} FAQ`, images: [FAQ_OG_IMAGE] },
   alternates: {
@@ -63,30 +63,42 @@ export default function FAQPage() {
     },
   ];
 
+  // Pricing answers are written around the launch promo + 2027 ladder in
+  // lib/config — every number and date is a config token, and the sentences
+  // match the canonical copy on /pricing so the FAQPage JSON-LD below never
+  // tells Google a different price than the pricing page does.
   const employerFaqs = [
     {
       question: "How much does it cost to post a job?",
-      answer: `Your first job post is completely FREE with all features included — no credit card required. After that, each additional post costs $${config.postingPrice} flat. Renewals are discounted at $${config.renewalPrice} (${Math.round((1 - config.renewalPrice / config.postingPrice) * 100)}% off).`
+      answer: `Free through ${config.promoEndsLabel}. Every job post is free during our launch period: ${config.durationDays}-day listing, Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails. No credit card required. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs.`
     },
     {
       question: "What features are included?",
-      answer: `Every job post — free or paid — gets the same features: Featured badge, top placement in search results, company logo, full analytics with salary benchmarks, ${config.limits.candidateUnlocksPerPosting} candidate profile views, ${config.limits.inmailsPerPosting} InMails, up to 5 screening questions, and apply-on-platform. The only difference is listing duration: free posts run ${config.freeDurationDays} days, paid posts run ${config.durationDays} days.`
+      answer: `Every job post, whether free during the promo, intro, featured, or posted from an Employer plan slot, gets the same features: a ${config.durationDays}-day listing, Featured badge, top placement in search results, company logo, full analytics with salary benchmarks, ${config.limits.candidateUnlocksPerPosting} candidate profile views, ${config.limits.inmailsPerPosting} InMails, up to 5 screening questions, and apply-on-platform. There is no stripped-down tier.`
     },
     {
-      question: "How long do job postings last?",
-      answer: `Paid postings are active for ${config.durationDays} days; free postings run for ${config.freeDurationDays} days. Paid postings can be renewed any time from the employer dashboard for $${config.renewalPrice} (${Math.round((1 - config.renewalPrice / config.postingPrice) * 100)}% off the regular price). Free postings cannot be renewed at the discounted rate — post a fresh listing at $${config.postingPrice} instead.`
+      question: `What is the intro price, and who gets it?`,
+      answer: `From ${config.ladderStartsLabel}, the first paid post per company email domain is $${config.introPrice} instead of $${config.postingPrice}. It is scoped to your organization's domain, not to a login, and posts made free during the launch promo do not use it up.`
+    },
+    {
+      question: "How does the Employer plan work?",
+      answer: `$${config.planPrice}/month. ${config.planSlots} active job slots, live while you're subscribed. Swap jobs any time. Cancel any time. The plan is billed month to month from ${config.ladderStartsLabel}; if you cancel, your posts stay live through the end of the paid period. Every slot is a full Featured post with the same ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails.`
+    },
+    {
+      question: "How long do job postings last, and what does renewal cost?",
+      answer: `Every posting is active for ${config.durationDays} days. Renew any post for $${config.renewalPrice} (+${config.durationDays} days) from the employer dashboard, promo posts included. Plan posts stay live while your plan is active, so they don't need renewing.`
     },
     {
       question: "If I renew before my post expires, do I lose the remaining days?",
-      answer: `No. Renewing early adds ${config.durationDays} days to your current expiration date — you keep every day you've already paid for. Renew on your schedule.`
+      answer: `No. Renewing early adds ${config.durationDays} days to your current expiration date, so you keep every day you already have. Renew on your schedule.`
     },
     {
       question: "What happens to candidates I've unlocked when my posting expires?",
-      answer: "You keep them. Once you've unlocked a candidate (paid 1 of your 25 unlocks to view their full profile), their contact info, resume, and details remain accessible in your dashboard forever — even after the posting expires. To unlock new candidates or send new InMails, you'll need an active posting."
+      answer: "You keep them. Once you've unlocked a candidate (paid 1 of your 25 unlocks to view their full profile), their contact info, resume, and details remain accessible in your dashboard forever, even after the posting expires. To unlock new candidates or send new InMails, you'll need an active posting."
     },
     {
       question: "Can I edit my job posting?",
-      answer: "Yes! Open your employer dashboard (link is in your confirmation email) and click Edit on any posting. You can update salary, requirements, description, or any other details — changes go live immediately."
+      answer: "Yes! Open your employer dashboard (link is in your confirmation email) and click Edit on any posting. You can update the salary, requirements, description, or any other details, and changes go live immediately."
     },
     {
       question: "How do I access my employer dashboard?",
@@ -94,7 +106,7 @@ export default function FAQPage() {
     },
     {
       question: "Do you offer refunds?",
-      answer: `Contact us at ${brand.email.support} within 7 days of posting if you're unsatisfied and we'll work with you. We want you to have a great experience and will do our best to resolve any issues.`
+      answer: `Posting fees are generally non-refundable, but if you're unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we'll review the request case by case. Promo posts involve no payment to refund, and Employer plan months already billed are not refunded. Cancelling stops future renewals, and your posts stay live through the end of the paid period.`
     },
   ];
 
@@ -120,7 +132,7 @@ export default function FAQPage() {
   const careerFaqs = [
     {
       question: `How long does it take to become a ${brand.niche.descriptor}?`,
-      answer: `Becoming an ${brand.niche.short} typically takes 6-8 years: 4 years for a BSN, 1-2 years of RN experience, and 2-3 years for an MSN or DNP with ${brand.niche.short} specialization. Accelerated BSN-to-DNP programs can shorten this timeline.`
+      answer: `Becoming an ${brand.niche.short} typically takes 6 to 8 years: 4 years for a BSN, 1 to 2 years of RN experience, and 2 to 3 years for an MSN or DNP with ${brand.niche.short} specialization. Accelerated BSN-to-DNP programs can shorten this timeline.`
     },
     {
       question: `What educational background is required for an ${brand.niche.short} role?`,
@@ -128,7 +140,7 @@ export default function FAQPage() {
     },
     {
       question: `What is the difference between an ${brand.niche.short} and a physician?`,
-      answer: `${brand.niche.short}s hold a Master's or Doctoral degree in nursing (2-4 years of graduate school), while physicians complete medical school plus a 3-7 year residency. Both can diagnose, treat, and prescribe. In full practice authority states, ${brand.niche.short}s practice independently. ${brand.niche.short}s reach full practice faster and with far less educational debt, while physicians train for a broader, more specialized scope.`
+      answer: `${brand.niche.short}s hold a Master's or Doctoral degree in nursing (2 to 4 years of graduate school), while physicians complete medical school plus a residency of 3 to 7 years. Both can diagnose, treat, and prescribe. In full practice authority states, ${brand.niche.short}s practice independently. ${brand.niche.short}s reach full practice faster and with far less educational debt, while physicians train for a broader, more specialized scope.`
     },
     {
       question: `What are the main ${brand.niche.short} specialties?`,
@@ -140,11 +152,11 @@ export default function FAQPage() {
     },
     {
       question: `What is the ROI of an ${brand.niche.short} degree?`,
-      answer: `The ROI is excellent. Graduate school costs vary by program, and ${brand.niche.short}s earn a median of ${STAT_SOURCES.averageSalary.formatted} per year (${STAT_SOURCES.averageSalary.source}, ${STAT_SOURCES.averageSalary.asOf}) — well above the median RN salary — so most ${brand.niche.short}s recoup their graduate-degree investment within a few years of full-time practice.`
+      answer: `The ROI is excellent. Graduate school costs vary by program, and ${brand.niche.short}s earn a median of ${STAT_SOURCES.averageSalary.formatted} per year (${STAT_SOURCES.averageSalary.source}, ${STAT_SOURCES.averageSalary.asOf}), which is well above the median RN salary, so most ${brand.niche.short}s recoup their graduate-degree investment within a few years of full-time practice.`
     },
     {
       question: `What are the top 3 ${brand.niche.short} jobs for new grads?`,
-      answer: `1) Federally Qualified Health Centers (FQHCs) — structured settings with mentorship, often qualifying for HRSA loan repayment. 2) Outpatient group practices — collaborative environments with gradual caseload ramp-up. 3) VA ${brand.niche.short} positions — federal benefits, pension, and residency programs for new graduates.`
+      answer: `1) Federally Qualified Health Centers (FQHCs): structured settings with mentorship that often qualify for HRSA loan repayment. 2) Outpatient group practices: collaborative environments with a gradual caseload ramp-up. 3) VA ${brand.niche.short} positions: federal benefits, a pension, and residency programs for new graduates.`
     },
   ];
 
@@ -155,7 +167,7 @@ export default function FAQPage() {
     },
     {
       question: `Which states pay the highest salaries for ${brand.niche.short}s?`,
-      answer: `${brand.niche.short} pay is consistently highest in West Coast and Northeast markets — California, Washington, Oregon, Nevada, and New Jersey rank near the top in federal wage data. When adjusted for cost of living, several Midwest and Southern states offer stronger real purchasing power. See our salary guide for state-by-state figures.`
+      answer: `${brand.niche.short} pay is consistently highest in West Coast and Northeast markets: California, Washington, Oregon, Nevada, and New Jersey rank near the top in federal wage data. When adjusted for cost of living, several Midwest and Southern states offer stronger real purchasing power. See our salary guide for state-by-state figures.`
     },
     {
       question: `How do ${brand.niche.descriptor} salaries vary by specialty?`,
@@ -163,7 +175,7 @@ export default function FAQPage() {
     },
     {
       question: `Does having a DNP vs MSN affect an ${brand.niche.short}'s salary?`,
-      answer: `In clinical roles, DNP and MSN ${brand.niche.short}s typically earn similar salaries — the degree itself rarely commands a higher clinical wage. However, DNP holders have advantages in academic positions, executive leadership roles, and may qualify for higher-tier positions in hospital systems.`
+      answer: `In clinical roles, DNP and MSN ${brand.niche.short}s typically earn similar salaries; the degree itself rarely commands a higher clinical wage. However, DNP holders have advantages in academic positions and executive leadership roles, and they may qualify for higher-tier positions in hospital systems.`
     },
     {
       question: `How can you make the most money as an ${brand.niche.short}?`,
@@ -171,7 +183,7 @@ export default function FAQPage() {
     },
     {
       question: `What is the salary range for locum tenens ${brand.niche.short} jobs?`,
-      answer: `Locum tenens ${brand.niche.short}s are typically paid hourly, commonly in the $60-$150+ per hour range depending on specialty and setting, with CRNA locum rates at the top of the market. Packages usually include housing stipends, travel allowances, and malpractice coverage, and locum rates typically run higher than comparable permanent positions — making it one of the higher-earning ${brand.niche.short} career paths.`
+      answer: `Locum tenens ${brand.niche.short}s are typically paid hourly, commonly in the $60 to $150+ per hour range depending on specialty and setting, with CRNA locum rates at the top of the market. Packages usually include housing stipends, travel allowances, and malpractice coverage, and locum rates typically run higher than comparable permanent positions, which makes it one of the higher-earning ${brand.niche.short} career paths.`
     },
   ];
 
