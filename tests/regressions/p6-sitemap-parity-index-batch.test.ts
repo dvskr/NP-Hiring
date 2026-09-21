@@ -63,12 +63,18 @@ describe('hole #1 — index and batch route derive from the SAME registry import
     expect(indexSrc).not.toContain('STATE_ELIGIBLE_CATEGORY_SLUGS');
   });
 
-  it('the index DB filter and its fallback estimate both use the shared set', () => {
+  it('the index DB filter uses the shared set, and there is no estimate to keep in step', () => {
     // DB path: the allow-list the pseoStats rows are checked against.
     expect(indexSrc).toContain('new Set(CITY_ELIGIBLE_CATEGORY_SLUGS)');
-    // Catch path: the conservative estimate must size against the same set,
-    // or a DB outage recreates the undercount.
-    expect(indexSrc).toContain('CITY_ELIGIBLE_CATEGORY_SLUGS.length');
+    // Catch path: this used to require the failure estimate to be sized from
+    // the same set, so that a database outage could not recreate the
+    // undercount this suite exists to prevent. There is no estimate any more.
+    // Guessing a URL total made the outage WORSE than an undercount, because
+    // the batch route answers the same failure with 404s, so the index
+    // advertised sitemaps that could not be read. The successor rule is in
+    // 'a failed count never advertises a batch the batch route cannot serve'
+    // below, which pins that the failure path counts zero.
+    expect(indexSrc).not.toContain('CITY_ELIGIBLE_CATEGORY_SLUGS.length *');
   });
 });
 
@@ -110,5 +116,31 @@ describe('hole #12 — batch route header comment tracks the live registry count
     expect(batchSrc).not.toContain('42 slugs');
     expect(batchSrc).not.toContain('21 state-eligible');
     expect(batchSrc).not.toContain('21-slug');
+  });
+});
+
+describe('a failed count never advertises a batch the batch route cannot serve', () => {
+  const indexSrc = read(INDEX_ROUTE);
+
+  /*
+   * Found on a local production build whose database lacked the gate columns.
+   * The index caught the failing query, estimated the URL total as every
+   * eligible category multiplied by every city, and advertised three city
+   * batches. The batch route caught the SAME failure, returned an empty URL
+   * list, and answered 404 for every batch above zero. Two of the three
+   * sitemaps were unreadable, from one failing query, and the response was
+   * cacheable, so a transient fault would have been served for the whole
+   * cache window. The catch block's own comment claimed it under-listed.
+   */
+  it('estimates nothing on failure, so the floor leaves one servable batch', () => {
+    expect(indexSrc).not.toMatch(/CITY_ELIGIBLE_CATEGORY_SLUGS\.length \* Math\.min\(CITIES\.length/);
+    expect(indexSrc).toContain('degraded = true');
+    expect(indexSrc).toMatch(/degraded = true;\s*\n\s*totalUrls = 0;/);
+  });
+
+  it('a degraded render is never cached', () => {
+    // Both count failures set the flag, and the response reads it.
+    expect(indexSrc.match(/degraded = true/g) ?? []).toHaveLength(2);
+    expect(indexSrc).toMatch(/'Cache-Control': degraded\s*\n?\s*\?\s*'no-store'/);
   });
 });

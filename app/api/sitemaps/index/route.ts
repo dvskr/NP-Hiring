@@ -91,6 +91,10 @@ export async function GET() {
   // (shouldIndexLocalListingPage for category x city, the stored indexable
   // verdict for setting x state), so the index never over- or under-reports
   // the batch count.
+  // Set when any count query fails. A degraded render must not be cached,
+  // because the CDN would otherwise serve a wrong sitemap index for the whole
+  // max-age window from a single transient failure.
+  let degraded = false;
   let totalUrls = 0;
   try {
     const categoryCityRows = await readFreshStatsRows('category-city');
@@ -112,9 +116,14 @@ export async function GET() {
       totalUrls++;
     }
   } catch {
-    // Fallback: conservative estimate. Better to under-list batches than
-    // to advertise empty ones.
-    totalUrls = CITY_ELIGIBLE_CATEGORY_SLUGS.length * Math.min(CITIES.length, 500);
+    // Advertise nothing we cannot serve. The batch route answers the SAME
+    // failure by returning an empty URL list and 404ing every batch above 0,
+    // so an estimate here (it used to guess categories multiplied by cities)
+    // advertises batches that 404, which Search Console reports as "sitemap
+    // could not be read". Zero leaves exactly the one batch the floor below
+    // keeps, and that batch serves an empty urlset rather than a 404.
+    degraded = true;
+    totalUrls = 0;
   }
 
   const totalBatches = Math.max(1, Math.ceil(totalUrls / BATCH_SIZE));
@@ -129,7 +138,9 @@ export async function GET() {
     // more job batches than /api/sitemaps/jobs/[batch] actually serves.
     activeJobCount = await prisma.job.count({ where: activeIndexableJobWhere() });
   } catch {
-    // Fall back to a single batch — better to under-list than to hide jobs entirely.
+    // Zero job batches hides every job URL from discovery, so this render is
+    // degraded too and must not be frozen in the CDN for the cache window.
+    degraded = true;
     activeJobCount = 0;
   }
   const totalJobBatches = activeJobCount > 0
@@ -166,7 +177,9 @@ ${sitemaps.join('\n')}
   return new NextResponse(xml, {
     headers: {
       'Content-Type': 'application/xml',
-      'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+      'Cache-Control': degraded
+        ? 'no-store'
+        : 'public, max-age=3600, s-maxage=3600',
     },
   });
 }
