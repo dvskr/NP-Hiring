@@ -1,34 +1,39 @@
 /**
- * P2 #13 — metro editorial depth.
+ * P2 #13: metro editorial depth.
  *
  * The metro landing pages are the board's anti-thin-content surface: ten
  * hand-written metros became twenty, and each one has to carry genuinely
  * local, verifiable-or-evergreen substance rather than a find-and-replace of
  * the last one. These tests pin the invariants that make that true:
  *
- *   1. COVERAGE — the twenty target metros exist and are internally consistent
+ *   1. COVERAGE: the twenty target metros exist and are internally consistent
  *      (slugs, state codes, state slugs).
- *   2. TRUTH LINKAGE — practice authority agrees with the board's regulatory
+ *   2. TRUTH LINKAGE: practice authority agrees with the board's regulatory
  *      source of truth (lib/state-practice-authority.ts), statute citations
  *      match the session law they name, and NO metro asserts per-state Nurse
  *      Licensure Compact membership at all. These are the places where a
  *      plausible-sounding sentence can quietly become a false YMYL claim.
- *   3. DEPTH + VARIETY — minimum substance per section, and no two metros
+ *   3. DEPTH + VARIETY: minimum substance per section, and no two metros
  *      sharing byte-identical editorial. A template that repeats is the exact
  *      failure mode this work exists to fix.
- *   4. PAGE WIRING — the template derives adjacency from data, emits exactly
- *      one FAQPage node, serves only local artwork, and does not overstate its
- *      own job counts.
+ *   4. PAGE WIRING: the template reads its inventory through the shared metro
+ *      scope, gates robots on the same function the sitemap uses, publishes
+ *      pay only through the gated median, emits exactly one FAQPage node from
+ *      one array, serves only local artwork, and publishes none of the
+ *      unsourced index readings or ranking claims the data file still carries.
+ *      The last one is asserted against the DATA, by running the page's own
+ *      publish filter over all twenty records (thin plan METRO-M1 to M6; M7 is
+ *      the owner's review of lib/metro-data.ts).
  *
- * ── WHY THE NLC TEST INVERTED ─────────────────────────────────────────────
+ * WHY THE NLC TEST INVERTED
  * This file used to assert that every "X is not a Nurse Licensure Compact
  * state" sentence AGREED WITH LICENSE_GUIDE_NLC_NON_MEMBERS. That made the
  * test an accomplice rather than a guard: the board's own code documents that
  * set as wrong in both directions and forbids deriving per-state membership
  * claims from it (components/tools/MultiStatePlanner.tsx,
  * app/tools/licensure-checker/page.tsx). Agreement with it is not evidence of
- * anything, and it is what let Massachusetts — a party state since
- * 2024-11-20, pending implementation — ship as "not a Nurse Licensure Compact
+ * anything, and it is what let Massachusetts (a party state since
+ * 2024-11-20, pending implementation) ship as "not a Nurse Licensure Compact
  * state" on twenty indexed pages. The assertion is now the prohibition the
  * rest of the repo already carries.
  */
@@ -43,8 +48,6 @@ import {
     getNearbyQueryCities,
     getNearbyDisplayCities,
     firstSentence,
-    spliceSentence,
-    costOfLivingSplice,
 } from '@/lib/metro-data';
 import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
 import { STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
@@ -54,9 +57,10 @@ const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 const METRO_DATA_SRC = read('lib/metro-data.ts');
 const METRO_PAGE_SRC = read('app/jobs/metro/[slug]/page.tsx');
+const SITEMAP_SRC = read('app/sitemap.ts');
 
 /**
- * Source with block and line comments removed — mirrors the helper in
+ * Source with block and line comments removed; mirrors the helper in
  * tests/regressions/p2-tools-calculators-routes.test.ts.
  *
  * The dead-asset and banned-dataset scans below need this: the fix for both
@@ -69,8 +73,9 @@ const stripComments = (src: string) =>
 
 const METRO_DATA_CODE = stripComments(METRO_DATA_SRC);
 const METRO_PAGE_CODE = stripComments(METRO_PAGE_SRC);
+const SITEMAP_CODE = stripComments(SITEMAP_SRC);
 
-/** Every editorial string on a metro, concatenated — for text-level assertions. */
+/** Every editorial string on a metro, concatenated, for text-level assertions. */
 function allProse(metro: (typeof METRO_CITIES)[number]): string {
     return [
         metro.heroDescription,
@@ -83,7 +88,7 @@ function allProse(metro: (typeof METRO_CITIES)[number]): string {
     ].join(' \n ');
 }
 
-describe('P2 #13 — metro coverage', () => {
+describe('P2 #13: metro coverage', () => {
     const EXPECTED_SLUGS = [
         // Original ten.
         'new-york-ny', 'los-angeles-ca', 'jacksonville-fl', 'columbus-oh', 'tampa-fl',
@@ -128,7 +133,7 @@ describe('P2 #13 — metro coverage', () => {
     });
 });
 
-describe('P2 #13 — regulatory truth linkage', () => {
+describe('P2 #13: regulatory truth linkage', () => {
     it('practice authority matches lib/state-practice-authority.ts for every metro', () => {
         for (const metro of METRO_CITIES) {
             const authority = STATE_PRACTICE_AUTHORITY[metro.state];
@@ -148,7 +153,7 @@ describe('P2 #13 — regulatory truth linkage', () => {
     });
 
     it('asserts no per-state Nurse Licensure Compact membership anywhere', () => {
-        // Membership is not a single bit — a jurisdiction can have enacted the
+        // Membership is not a single bit: a jurisdiction can have enacted the
         // compact and still issue no multistate licenses (Massachusetts:
         // signed 2024-11-20, still implementing). Metro copy therefore states
         // the observable EFFECT, never the membership status. See policy note
@@ -164,7 +169,7 @@ describe('P2 #13 — regulatory truth linkage', () => {
             for (const pattern of BANNED) {
                 expect(
                     pattern.test(prose),
-                    `${metro.slug} asserts NLC membership status (${pattern}) — state the effect instead`,
+                    `${metro.slug} asserts NLC membership status (${pattern}); state the effect instead`,
                 ).toBe(false);
             }
         }
@@ -172,7 +177,7 @@ describe('P2 #13 — regulatory truth linkage', () => {
 
     it('does not derive any claim from LICENSE_GUIDE_NLC_NON_MEMBERS', () => {
         // The dataset the rest of the repo pins shut. Neither the data file,
-        // the template, nor this test may read it — an assertion against it
+        // the template, nor this test may read it: an assertion against it
         // only proves the copy and the bad dataset agree with each other.
         const BANNED_SYMBOL = ['LICENSE_GUIDE', 'NLC', 'NON_MEMBERS'].join('_');
         for (const [label, src] of [
@@ -181,7 +186,7 @@ describe('P2 #13 — regulatory truth linkage', () => {
         ] as const) {
             expect(src.includes(BANNED_SYMBOL), label).toBe(false);
         }
-        // This test may not read it either — asserting that metro copy agrees
+        // This test may not read it either: asserting that metro copy agrees
         // with that set is what let the wrong Massachusetts claim through, so
         // the guard is the missing import, not a substring of its own source.
         const SELF = stripComments(read('tests/regressions/p2-metro-editorial-depth.test.ts'));
@@ -218,9 +223,9 @@ describe('P2 #13 — regulatory truth linkage', () => {
         expect(METRO_DATA_SRC).not.toMatch(/Chapter (?!260\b)\d+ of the Acts of 2020/);
     });
 
-    it('never invents a dollar figure — salary numbers come from live aggregation', () => {
+    it('never invents a dollar figure: salary numbers come from live aggregation', () => {
         // TRUTH RULE: the only cited salary figures live in lib/stats-sources.ts;
-        // everything a reader sees on a metro page is DB-aggregated.
+        // everything a reader sees on a metro page is the gated median.
         expect(METRO_DATA_SRC).not.toMatch(/\$\s?\d/);
     });
 
@@ -237,15 +242,15 @@ describe('P2 #13 — regulatory truth linkage', () => {
     });
 });
 
-describe('P2 #13 — editorial depth', () => {
+describe('P2 #13: editorial depth', () => {
     it.each(METRO_CITIES.map((m) => [m.slug, m] as const))('%s carries enough substance', (_slug, metro) => {
         expect(metro.heroDescription.length).toBeGreaterThan(180);
-        expect(metro.costOfLivingNote.length).toBeGreaterThan(180);
         expect(metro.licensureNote.length).toBeGreaterThan(150);
         expect(metro.careDemandContext.length).toBeGreaterThan(200);
-        // The bento grid renders whyThisMetro[0..3] unconditionally.
+        // The bento grid renders up to four bullets, and only the ones that
+        // clear the page's publish filter, so a record needs at least four to
+        // give the filter something to work with.
         expect(metro.whyThisMetro.length).toBeGreaterThanOrEqual(4);
-        expect(metro.topSettings.length).toBeGreaterThanOrEqual(4);
     });
 
     it.each(METRO_CITIES.map((m) => [m.slug, m] as const))('%s documents its sub-market structure', (_slug, metro) => {
@@ -266,19 +271,18 @@ describe('P2 #13 — editorial depth', () => {
         }
     });
 
-    it('renders cost of living cleanly in both splice positions', () => {
-        // The template reuses the first sentence standalone AND mid-sentence,
-        // splitting on the first period — an abbreviation would truncate it.
+    it('opens every licensure note on a sentence the Licensure step can reuse', () => {
+        // The "Getting Started" band prints firstSentence(licensureNote) as a
+        // standalone sentence; an abbreviation ("St.", "U.S.") would cut it
+        // to a fragment. Nashville's opener is 40 characters, the shortest.
         for (const metro of METRO_CITIES) {
-            const first = firstSentence(metro.costOfLivingNote);
-            expect(first.length, `${metro.slug} first sentence too short to splice`).toBeGreaterThan(40);
-            expect(metro.avgCostOfLiving, metro.slug).toBe(metro.avgCostOfLiving.trim());
-            expect(metro.avgCostOfLiving.endsWith('.'), metro.slug).toBe(false);
+            const first = firstSentence(metro.licensureNote);
+            expect(first.length, `${metro.slug} first sentence too short to reuse`).toBeGreaterThanOrEqual(30);
         }
     });
 
     it('only folds SAME-STATE cities into a metro job query', () => {
-        // getMetroStats ANDs on stateCode; a cross-state suburb can never
+        // metroScopeWhere ANDs on stateCode; a cross-state suburb can never
         // match, so listing one would be silently dead config.
         const CROSS_STATE = ['Arlington, VA', 'Camden', 'Hoboken', 'Bethesda', 'Rock Hill', 'Hudson'];
         for (const metro of METRO_CITIES) {
@@ -289,77 +293,7 @@ describe('P2 #13 — editorial depth', () => {
     });
 });
 
-describe('P2 #13 — cost-of-living splice', () => {
-    // The opener is spliced after an em dash in the Cost of Living bento card
-    // and again in the Salary Outlook card. It may be lowercased so it reads
-    // as one clause — but ONLY when lowercasing is correct English.
-
-    /** Metros whose note opens on a place name. Lowercasing these misspells a city. */
-    const PROPER_NOUN_OPENERS: Record<string, string> = {
-        'houston-tx': 'Houston is',
-        'philadelphia-pa': 'Philadelphia costs',
-        'boston-ma': 'Boston is',
-        'denver-co': 'Denver costs',
-        'miami-fl': 'Miami is',
-        'nashville-tn': 'Nashville sits',
-        'charlotte-nc': 'Charlotte sits',
-        'san-antonio-tx': 'San Antonio is',
-    };
-
-    it.each(Object.entries(PROPER_NOUN_OPENERS))(
-        '%s keeps its leading proper noun capitalised',
-        (slug, opener) => {
-            // REGRESSION GUARD. These rendered as "houston is one of the
-            // cheapest…" and "san Antonio is the most affordable…" in two
-            // visible places each.
-            const metro = getMetroCity(slug)!;
-            expect(costOfLivingSplice(metro).startsWith(opener), costOfLivingSplice(metro)).toBe(true);
-        },
-    );
-
-    it('still lowercases a common-noun opener so the clause reads continuously', () => {
-        expect(costOfLivingSplice(getMetroCity('chicago-il')!)).toMatch(/^cost of living in Chicago /);
-        expect(costOfLivingSplice(getMetroCity('new-york-ny')!)).toMatch(/^living costs in the NYC metro /);
-        expect(costOfLivingSplice(getMetroCity('minneapolis-mn')!)).toMatch(/^the Twin Cities /);
-        expect(costOfLivingSplice(getMetroCity('washington-dc')!)).toMatch(/^the DMV is /);
-    });
-
-    it('never lowercases an unvetted opening word', () => {
-        // Independent of the helper's own proper-noun rule: a lowercased
-        // opener must be one of a short list of common nouns a human signed
-        // off on. A new metro opening "Williamson County sits…" fails here.
-        const COMMON_OPENERS = ['cost', 'living', 'the', 'housing'];
-        for (const metro of METRO_CITIES) {
-            const splice = costOfLivingSplice(metro);
-            const source = firstSentence(metro.costOfLivingNote);
-            if (splice === source) continue;
-            expect(COMMON_OPENERS, `${metro.slug} lowercased "${splice.split(' ')[0]}"`).toContain(
-                splice.split(' ')[0],
-            );
-        }
-    });
-
-    it('changes at most the first character, so interior acronyms survive', () => {
-        // "Living costs in the NYC metro…" must not become "…nYC…", and the
-        // splice must never rewrite the note beyond that one character.
-        for (const metro of METRO_CITIES) {
-            const splice = costOfLivingSplice(metro);
-            const source = firstSentence(metro.costOfLivingNote);
-            expect(splice.slice(1), metro.slug).toBe(source.slice(1));
-            expect(splice.toLowerCase(), metro.slug).toBe(source.toLowerCase());
-        }
-    });
-
-    it('leaves an all-caps opening token alone', () => {
-        // Guards the branch no metro currently exercises: a note opening on an
-        // acronym would otherwise render "dMV housing…".
-        expect(spliceSentence('DMV housing costs are the reason', [])).toBe('DMV housing costs are the reason');
-        expect(spliceSentence('Cost of living is low', [])).toBe('cost of living is low');
-        expect(spliceSentence('Houston is cheap', ['Houston'])).toBe('Houston is cheap');
-    });
-});
-
-describe('P2 #13 — adjacent-city lists', () => {
+describe('P2 #13: adjacent-city lists', () => {
     it('names each adjacent city once, under one spelling, in visible copy', () => {
         // REGRESSION GUARD. Minneapolis carried 'Saint Paul' AND 'St. Paul' in
         // the same array, so the job-count caption printed the same city twice
@@ -376,7 +310,7 @@ describe('P2 #13 — adjacent-city lists', () => {
         expect(getNearbyDisplayCities(minneapolis)).toEqual([
             'Saint Paul', 'Bloomington', 'Edina', 'Minnetonka', 'Maple Grove',
         ]);
-        // The DB match still needs both spellings — employers use both.
+        // The DB match still needs both spellings; employers use both.
         expect(getNearbyQueryCities(minneapolis)).toContain('St. Paul');
         expect(getNearbyQueryCities(minneapolis)).toContain('Saint Paul');
     });
@@ -400,7 +334,7 @@ describe('P2 #13 — adjacent-city lists', () => {
     });
 });
 
-describe('P2 #13 — anti-thin-content: no metro is a copy of another', () => {
+describe('P2 #13: anti-thin-content, no metro is a copy of another', () => {
     const uniqueAcrossMetros = (label: string, pick: (m: (typeof METRO_CITIES)[number]) => string[]) => {
         const seen = new Map<string, string>();
         for (const metro of METRO_CITIES) {
@@ -421,12 +355,11 @@ describe('P2 #13 — anti-thin-content: no metro is a copy of another', () => {
         uniqueAcrossMetros('careDemandContext', (m) => [m.careDemandContext]);
     });
 
-    it('cost-of-living and licensure notes are unique', () => {
-        uniqueAcrossMetros('costOfLivingNote', (m) => [m.costOfLivingNote]);
+    it('licensure notes are unique', () => {
         uniqueAcrossMetros('licensureNote', (m) => [m.licensureNote]);
     });
 
-    it('FAQ answers are unique — same-state metros must not share boilerplate', () => {
+    it('FAQ answers are unique: same-state metros must not share boilerplate', () => {
         // Three Texas metros and three Florida metros share a regulatory
         // regime; that is exactly where copy-paste is tempting.
         uniqueAcrossMetros('faq answer', (m) => m.faqs.map((f) => f.answer));
@@ -437,7 +370,7 @@ describe('P2 #13 — anti-thin-content: no metro is a copy of another', () => {
     });
 });
 
-describe('P2 #13 — metro page wiring', () => {
+describe('P2 #13: metro page wiring', () => {
     it('derives metro adjacency from data, not hardcoded city branches', () => {
         expect(METRO_PAGE_SRC).toContain('nearbyCities');
         expect(METRO_PAGE_SRC).not.toContain("city === 'New York'");
@@ -446,11 +379,15 @@ describe('P2 #13 — metro page wiring', () => {
         expect(METRO_PAGE_SRC).not.toContain("contains: 'Fort Worth'");
     });
 
-    it('emits exactly one FAQPage node (CategoryFAQ owns it)', () => {
+    it('emits exactly one FAQPage node (CategoryFAQ owns it) from one array', () => {
         // The page used to render its own FAQPage from metro.faqs AND pass the
         // same array to CategoryFAQ, which renders a second identical node.
+        // METRO-M6 appends the employers question to that one array before it
+        // reaches CategoryFAQ, so the accordion and the schema cannot drift.
         expect(METRO_PAGE_SRC).not.toContain("'FAQPage'");
-        expect(METRO_PAGE_SRC).toContain('customFaqs={metro.faqs}');
+        expect(METRO_PAGE_CODE).toContain('customFaqs={faqs}');
+        expect(METRO_PAGE_CODE).toMatch(/const faqs = employersFaq \? \[\.\.\.reviewedFaqs, employersFaq\] : reviewedFaqs;/);
+        expect(METRO_PAGE_CODE).toContain('buildMetroEmployersFaq({ city: metro.city, employers: facts.topEmployers })');
     });
 
     it('renders the sub-market rail and the care-demand prose', () => {
@@ -466,26 +403,15 @@ describe('P2 #13 — metro page wiring', () => {
     });
 
     it('never prints a hardcoded fallback salary range', () => {
-        // Salary copy must degrade to "not enough data" rather than to an
-        // invented $130K-$200K band.
+        // Salary copy must degrade to the counted below-gate sentence rather
+        // than to an invented $130K-$200K band.
         expect(METRO_PAGE_SRC).not.toMatch(/\$130K/);
     });
 
-    it('splices sentences through the tested data-layer helper', () => {
-        // The splice rule lives in lib/metro-data.ts so it can be asserted
-        // against all 20 records (see "cost-of-living splice" above) rather
-        // than as an un-exercised private function in a server component.
-        expect(METRO_PAGE_SRC).toContain('costOfLivingSplice(metro)');
-        expect(METRO_PAGE_SRC).not.toContain('function decapitalize');
-        expect(METRO_PAGE_SRC).not.toContain(".split('.')[0].toLowerCase()");
-        expect(METRO_DATA_SRC).toContain('export function spliceSentence');
-    });
-
-    it('reads the query list and the display list from separate accessors', () => {
-        expect(METRO_PAGE_SRC).toContain('getNearbyQueryCities(metro)');
+    it('reads the display list from its accessor and never builds copy from the query list', () => {
         expect(METRO_PAGE_SRC).toContain('getNearbyDisplayCities(metro)');
-        // The visible caption must never be built from the query list.
-        expect(METRO_PAGE_SRC).not.toContain('getNearbyQueryCities(metro).slice');
+        // The query list now lives inside metroScopeWhere (lib/pseo/listing-facts).
+        expect(METRO_PAGE_CODE).not.toContain('getNearbyQueryCities');
     });
 
     it('keeps niche identity on brand tokens', () => {
@@ -496,7 +422,7 @@ describe('P2 #13 — metro page wiring', () => {
     it('serves no image from the retired remote asset bucket', () => {
         // Ten distinct remote URLs (hero_wc_states, three bento illustrations,
         // six clay icons) were live on this template and every one returned
-        // HTTP 400 — roughly thirteen broken <Image> elements per page across
+        // HTTP 400: roughly thirteen broken <Image> elements per page across
         // all 20 metros, the LCP hero included. Same purge the sibling
         // surfaces already took; this template was missed.
         for (const marker of ['storage/v1/object/public', 'supabase.co', 'clay_icon_', 'hero_wc_states', 'bento_state_', 'storageBase']) {
@@ -514,7 +440,7 @@ describe('P2 #13 — metro page wiring', () => {
         for (const src of srcs) {
             expect(
                 /^(ART_PRACTICE|ART_SALARY|ART_GROWTH)$/.test(src),
-                `metro template renders <Image src={${src}}> — not a local asset constant`,
+                `metro template renders <Image src={${src}}>, not a local asset constant`,
             ).toBe(true);
         }
         // Hero goes through the shared diorama helpers, so a state without
@@ -542,19 +468,6 @@ describe('P2 #13 — metro page wiring', () => {
         }
     });
 
-    it('matches adjacent cities exactly so the job count cannot be inflated', () => {
-        // `contains` on a short nearby-city token swept in unrelated
-        // municipalities — Houston's "Spring" matched Big Spring / Springtown
-        // / Spring Branch TX, Philadelphia's "Chester" matched Rochester and
-        // Manchester PA — and that count feeds the H1, the <title> and the
-        // ItemList numberOfItems.
-        expect(METRO_PAGE_CODE).toContain('city: { equals: nearby');
-        expect(METRO_PAGE_CODE).not.toContain('city: { contains: nearby');
-        // The metro's own name deliberately keeps `contains` (it is what folds
-        // Miami Beach into Miami); that is the only permitted substring match.
-        expect([...METRO_PAGE_CODE.matchAll(/city:\s*\{\s*contains:\s*(\w+)/g)].map((m) => m[1])).toEqual(['city']);
-    });
-
     it('names any city whose jobs it counts', () => {
         // Under exact matching a nearby entry can only match its own name, so
         // the caption and the count can no longer diverge. Guard the invariant
@@ -569,5 +482,232 @@ describe('P2 #13 — metro page wiring', () => {
                 ).not.toBe(metro.city);
             }
         }
+    });
+});
+
+describe('P2 #13: thin plan METRO-M1 to M6 (one predicate, gated pay, live facts)', () => {
+    it('M3: every metro count reads the shared scope through getListingFacts', () => {
+        // The page spells no city predicate of its own; the own-name `contains`
+        // and the exact nearby matches live in metroScopeWhere, pinned by
+        // tests/unit/listing-facts.test.ts, and app/sitemap.ts reads the same
+        // function so page and sitemap can never disagree on inventory.
+        expect(METRO_PAGE_SRC).toMatch(/import \{[^}]*\bmetroScopeWhere\b[^}]*\} from '@\/lib\/pseo\/listing-facts'/);
+        expect(METRO_PAGE_CODE).toContain("getListingFacts(`metro:${metro.slug}`, metroScopeWhere(metro))");
+        expect(METRO_PAGE_CODE).not.toMatch(/city:\s*\{/);
+        expect(METRO_PAGE_CODE).not.toContain('groupBy');
+        expect(METRO_PAGE_CODE).not.toContain('prisma.job.aggregate');
+        expect(SITEMAP_SRC).toMatch(/import \{[^}]*\bmetroScopeWhere\b[^}]*\} from '@\/lib\/pseo\/listing-facts'/);
+        expect(SITEMAP_CODE).toContain('metroScopeWhere(metro)');
+        expect(SITEMAP_CODE).not.toContain('METRO_ADJACENT_CITIES');
+    });
+
+    it('M3: the listing rows use the canonical bucket with the quarantine visible', () => {
+        expect(METRO_PAGE_SRC).toContain("import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';");
+        expect(METRO_PAGE_CODE).toContain('canonicalBucketWhere({ ...PUBLISHED_LISTING_WHERE, ...metroScopeWhere(metro) }, now)');
+        expect(METRO_PAGE_CODE).not.toMatch(/isPublished: true/);
+        // Statewide figures use the bucket the state hub and salary guide use.
+        expect(METRO_PAGE_CODE).toContain('canonicalBucketWhere({ state: metro.state }, now)');
+        expect(METRO_PAGE_CODE).toContain('getGatedLocationSalary({ state: metro.state })');
+    });
+
+    it('M1: robots follow shouldIndexMetro over the canonical count, with a self canonical', () => {
+        expect(METRO_PAGE_SRC).toMatch(/import \{[^}]*\bshouldIndexMetro\b[^}]*\} from '@\/lib\/pseo\/render-gate'/);
+        expect(METRO_PAGE_CODE).toContain('shouldIndexMetro({ activeJobs: facts.total })');
+        expect(METRO_PAGE_CODE).toContain('{ index: false, follow: true }');
+        expect(METRO_PAGE_CODE).toContain('canonical: `${brand.baseUrl}/jobs/metro/${slug}`');
+        expect(SITEMAP_CODE).toContain('shouldIndexMetro({ activeJobs: inventory.activeJobs })');
+    });
+
+    it('M1: the zero-job state makes no freshness claim and links the state surfaces', () => {
+        expect(METRO_PAGE_CODE).toContain('buildMetroZeroJobsSentence(metro.city)');
+        expect(METRO_PAGE_CODE).not.toMatch(/added daily|updated daily|updated today/);
+        // The listings caption explains an inventory ("refreshed hourly", or
+        // which nearby cities the count folds in), so it renders only when
+        // there is one. It used to sit above the empty-state branch and print
+        // a freshness claim directly above "No positions at this time".
+        expect(METRO_PAGE_CODE).toMatch(/facts\.total >= 1 && \([\s\S]{0,400}refreshed hourly/);
+        // The heading omits the count rather than printing "(0)".
+        expect(METRO_PAGE_CODE).toMatch(/facts\.total >= 1 \? ` \(\$\{facts\.total\}\)` : ''/);
+        // The state hub and salary guide 404 below one canonical job, so
+        // every link to them carries the statewide gate.
+        expect(METRO_PAGE_CODE).toContain('const stateLinksRender = state.total >= 1;');
+        expect(METRO_PAGE_CODE).toMatch(/\/jobs\/state\/\$\{metro\.stateSlug\}[\s\S]{0,120}renders: stateLinksRender/);
+        expect(METRO_PAGE_CODE).toMatch(/\/salary-guide\/\$\{metro\.stateSlug\}[\s\S]{0,120}renders: stateLinksRender/);
+    });
+
+    it('M2: pay is the gated median through PostedPay, never a posting mean', () => {
+        expect(METRO_PAGE_SRC).toMatch(/import \{[\s\S]*?\bPostedPay\b[\s\S]*?\} from '@\/components\/seo\/pseo'/);
+        expect(METRO_PAGE_CODE).toMatch(/const payVariant: PostedPayVariant = \{ kind: 'location', scopeName, scopeNoun: 'metro' \};/);
+        expect(METRO_PAGE_CODE).toContain('<PostedPay');
+        for (const banned of ['_avg', 'avgSalary', 'rawAvgSalary', 'salaryRange', 'MedianFigure', 'salaryGap', 'Average annual salary']) {
+            expect(METRO_PAGE_CODE.includes(banned), `page still carries "${banned}"`).toBe(false);
+        }
+        expect(METRO_PAGE_CODE).not.toMatch(/\baverage\b/i);
+        // The hero and the OG card show a figure only when the metro gate passes.
+        expect(METRO_PAGE_CODE).toContain("stats.push({ value: formatK(facts.benchmark.median), label: 'median posted pay' });");
+        expect(METRO_PAGE_CODE).toMatch(/\.\.\.\(facts\.benchmark !== null && \{ salary: formatK\(facts\.benchmark\.median\) \}\)/);
+        // The statewide comparison needs both gates.
+        expect(METRO_PAGE_CODE).toContain('if (!metroRow || !state.gatePassed || state.medianK === null) return null;');
+    });
+
+    it('M4: the employer card is EmployerRoster at the 2-employer floor', () => {
+        expect(METRO_PAGE_SRC).toMatch(/import \{[\s\S]*?\bEmployerRoster\b[\s\S]*?\} from '@\/components\/seo\/pseo'/);
+        expect(METRO_PAGE_CODE).toMatch(/const rosterVariant: EmployerRosterVariant = \{ kind: 'city', city: scopeName \};/);
+        expect(METRO_PAGE_CODE).toContain('const rosterRenders = employerSentence(rosterVariant, facts) !== null;');
+        expect(METRO_PAGE_CODE).toContain('<EmployerRoster variant={rosterVariant} facts={facts}');
+        expect(METRO_PAGE_CODE).not.toContain('Top Employers');
+    });
+
+    it('M5: the live snapshot is a clay card of floored counts from listing-facts', () => {
+        // The dark card became a clayCard (owner decision 2026-09-20); the
+        // rows keep their dl and every one comes from a shared builder.
+        expect(METRO_PAGE_CODE).not.toContain("background: '#1A2E35'");
+        expect(METRO_PAGE_CODE).toContain('Live market snapshot');
+        expect(METRO_PAGE_CODE).toContain('buildTerseWorkModeLine(facts.workMode, MIX_MIN_POSTINGS_HUB)');
+        expect(METRO_PAGE_CODE).toContain('buildMetroCategoriesSentence(facts.categoryTop)');
+        expect(METRO_PAGE_CODE).toContain('buildHubSettingsSentence(facts.settings)');
+        expect(METRO_PAGE_CODE).toContain('buildHubRecencySentence(facts.recency)');
+        // No share-of-state percentage: every metro sits below the share sample floor.
+        expect(METRO_PAGE_CODE).not.toContain('shareOfState');
+        expect(METRO_PAGE_CODE).not.toMatch(/\* 100\)/);
+    });
+
+    it('reads none of the unsourced record fields or setting lists (T0-4)', () => {
+        // lib/metro-data.ts still carries avgCostOfLiving and costOfLivingNote
+        // for the owner's M7 review; the page reads neither, nor the
+        // hand-typed topSettings list.
+        for (const banned of ['avgCostOfLiving', 'costOfLivingNote', 'costOfLivingSplice', 'topSettings', 'HPSA']) {
+            expect(METRO_PAGE_CODE.includes(banned), `page still renders "${banned}"`).toBe(false);
+        }
+        expect(METRO_PAGE_SRC).not.toMatch(/cost of living/i);
+        expect(METRO_PAGE_CODE).not.toContain('Salary Outlook');
+        expect(METRO_PAGE_CODE).not.toContain('TrendingUp');
+    });
+
+    it('metadata: title and description come from the shared builders, no keywords, no hero fragment', () => {
+        expect(METRO_PAGE_CODE).toContain('buildMetroTitle({');
+        expect(METRO_PAGE_CODE).toContain('year: new Date().getUTCFullYear()');
+        expect(METRO_PAGE_CODE).toMatch(/truncateOnWord\(buildMetroDescription\(\{[\s\S]*?\}\), DESCRIPTION_MAX\)/);
+        expect(METRO_PAGE_SRC).toMatch(/import \{[^}]*\btruncateOnWord\b[^}]*\} from '@\/lib\/display-text'/);
+        expect(METRO_PAGE_CODE).not.toContain('function truncateOnWord');
+        expect(METRO_PAGE_CODE).not.toContain('heroDescription.slice');
+        expect(METRO_PAGE_CODE).not.toContain('keywords:');
+        expect(METRO_PAGE_CODE).not.toContain('.slice(0, 158)');
+    });
+
+    it('hero: the badge and H1 sub-line come from the shared builders, one alert card per page', () => {
+        expect(METRO_PAGE_CODE).toContain('buildLiveRolesBadge(facts.total)');
+        expect(METRO_PAGE_CODE).toContain('headlineSub={buildMetroHeadlineSub(metro.stateCode)}');
+        expect(METRO_PAGE_CODE).not.toContain('Find your fit');
+        expect(METRO_PAGE_CODE).not.toMatch(/label: 'positions'/);
+        // Exactly one alert card: the sidebar CTA. The bento alert cell is gone.
+        expect(METRO_PAGE_CODE.match(/Create Alert/g)?.length).toBe(1);
+        expect(METRO_PAGE_CODE).not.toContain('metro-bento-cta');
+    });
+
+    it('copy lint: no en or em dash, no spaced hyphen, no console.log, no style jsx, no sticker kit', () => {
+        // U+2013 and U+2014, built from char codes so this file carries neither.
+        const dashes = new RegExp(`[${String.fromCharCode(0x2013)}${String.fromCharCode(0x2014)}]`);
+        expect(METRO_PAGE_SRC).not.toMatch(dashes);
+        // A spaced hyphen in a string literal or in JSX text (arithmetic is fine).
+        expect(METRO_PAGE_CODE).not.toMatch(/['"`][^'"`\n]* - [^'"`\n]*['"`]/);
+        expect(METRO_PAGE_CODE).not.toMatch(/>[^<{\n]* - [^<{\n]*</);
+        expect(METRO_PAGE_CODE).not.toContain('console.log');
+        expect(METRO_PAGE_SRC).not.toContain('<style jsx');
+        expect(METRO_PAGE_SRC).not.toContain('@/components/sticker');
+        expect(METRO_PAGE_SRC).not.toContain('stk-');
+        // Styles are inline objects plus one static string.
+        const styleBlock = METRO_PAGE_SRC.slice(METRO_PAGE_SRC.indexOf('<style>{`'));
+        expect(styleBlock).not.toContain('${');
+    });
+});
+
+/*
+ * T0-4 / METRO-M7, pinned against the DATA rather than the page source.
+ *
+ * The earlier version of this scan asserted only that the page file contained
+ * no unsourced phrase, which proved nothing: the page did not spell the claim,
+ * it rendered a record field that did. Three channels published the index
+ * readings and the ranking claims lib/metro-data.ts admits it cannot source,
+ * a hero deck, four bento bullets and twenty FAQ entries.
+ *
+ * So the filter is read out of the page and run over every record, and the
+ * assertion is on what survives. Weaken a pattern in the page and a surviving
+ * string carries the claim again, which fails here.
+ */
+describe('P2 #13: the page publishes no unsourced claim from lib/metro-data.ts', () => {
+    /** One claim pattern, read from its declaration in the page. */
+    const claimPattern = (name: string): RegExp => {
+        const declared = new RegExp(`const ${name} = /(.+)/([a-z]*);`).exec(METRO_PAGE_SRC);
+        expect(declared, `${name} is not declared in the metro page`).not.toBeNull();
+        return new RegExp(declared![1], declared![2]);
+    };
+
+    const CLAIM_PATTERNS = ['CLAIM_QUANTITY', 'CLAIM_EXPENSE', 'CLAIM_PAY', 'CLAIM_RANK'].map(claimPattern);
+
+    const isPublishable = (text: string): boolean => CLAIM_PATTERNS.every((pattern) => !pattern.test(text));
+    const publishableProse = (note: string): string =>
+        note.split(/(?<=\.)\s+/).filter(isPublishable).join(' ');
+
+    /** Every record string the page renders, after the page's own filter. */
+    const publishedProse = (metro: (typeof METRO_CITIES)[number]): string[] => [
+        ...metro.whyThisMetro.filter(isPublishable).slice(0, 4),
+        publishableProse(metro.careDemandContext),
+        publishableProse(metro.licensureNote),
+        ...metro.subMarkets.map((sub) => publishableProse(sub.note)).filter((note) => note !== ''),
+        ...metro.subMarkets.map((sub) => sub.name),
+        ...metro.faqs
+            .filter((entry) => isPublishable(entry.question) && isPublishable(entry.answer))
+            .flatMap((entry) => [entry.question, entry.answer]),
+    ];
+
+    /**
+     * What may never reach a reader: an index reading or any percentage, a
+     * comparison against a benchmark this board does not publish, a ranking or
+     * growth-rate claim, a population magnitude lib/metro-data.ts calls an
+     * orientation figure, and pay stated as a mean rather than the gated median.
+     */
+    const UNSOURCED = /cost of living|living costs|housing costs|national average|fastest[- ]growing|most affordable|\baverage\b|\d\s*%|\b\d[\d.,]*[\s-]*(?:million|billion)\b/i;
+
+    it.each(METRO_CITIES.map((m) => [m.slug, m] as const))('%s publishes no unsourced claim', (slug, metro) => {
+        for (const text of publishedProse(metro)) {
+            expect(text, `${slug} publishes: ${text}`).not.toMatch(UNSOURCED);
+        }
+    });
+
+    it('leaves every metro something to publish', () => {
+        // The filter may not empty a page: if a record ever loses all of its
+        // bullets or all of its care-demand prose, that record needs editing
+        // (METRO-M7), not a looser filter.
+        for (const metro of METRO_CITIES) {
+            expect(metro.whyThisMetro.filter(isPublishable).length, `${metro.slug} bullets`).toBeGreaterThanOrEqual(1);
+            expect(publishableProse(metro.careDemandContext), `${metro.slug} care demand`).not.toBe('');
+            expect(publishableProse(metro.licensureNote), `${metro.slug} licensure note`).not.toBe('');
+            expect(metro.subMarkets.filter((sub) => publishableProse(sub.note) !== '').length, `${metro.slug} sub-markets`).toBeGreaterThanOrEqual(2);
+            // At zero reviewed questions CategoryFAQ falls through to the
+            // built-in set for the slug, and 'metro' has none, so the band
+            // would disappear without anything saying why.
+            expect(
+                metro.faqs.filter((entry) => isPublishable(entry.question) && isPublishable(entry.answer)).length,
+                `${metro.slug} FAQ entries`,
+            ).toBeGreaterThanOrEqual(1);
+        }
+    });
+
+    it('the page renders the filtered copy, never the raw record field', () => {
+        // The hero deck is the shared builder over sourced inputs; the bullets,
+        // the sub-market notes, the care-demand prose and the FAQ array are all
+        // filtered before they reach the markup.
+        expect(METRO_PAGE_CODE).toContain('description={heroDeck}');
+        expect(METRO_PAGE_CODE).not.toContain('metro.heroDescription');
+        expect(METRO_PAGE_CODE).toContain('const metroBullets = metro.whyThisMetro.filter(isPublishable)');
+        expect(METRO_PAGE_CODE).toContain('const careDemand = publishableProse(metro.careDemandContext);');
+        expect(METRO_PAGE_CODE).toContain('const licensureNote = publishableProse(metro.licensureNote);');
+        expect(METRO_PAGE_CODE).toMatch(/const reviewed = metro\.subMarkets\.map\(\(sub\) => \(\{ name: sub\.name, note: publishableProse\(sub\.note\) \}\)\);/);
+        expect(METRO_PAGE_CODE).toMatch(/const reviewedFaqs = metro\.faqs\.filter\(\(entry\) => isPublishable\(entry\.question\) && isPublishable\(entry\.answer\)\);/);
+        // The bullet tiles and the rail read the filtered lists, not the record.
+        expect(METRO_PAGE_CODE).toContain('{metroBullets.map(');
+        expect(METRO_PAGE_CODE).toContain('{subMarkets.map(');
+        expect(METRO_PAGE_CODE).toContain('{careDemand}');
     });
 });

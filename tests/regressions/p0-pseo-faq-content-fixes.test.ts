@@ -201,11 +201,15 @@ describe('P0 #16 — category-landing metadata emits OG cards via /api/og', () =
 });
 
 describe('P0 #19 — metro pages are linked and de-donored', () => {
-    it('metro metadata keywords derive from brand tokens, not donor terms', () => {
+    it('metro metadata carries no keywords array and no donor terms', () => {
         const src = read('app/jobs/metro/[slug]/page.tsx');
         expect(src).not.toMatch(/pmhnp|psychiatric|mental health/i);
-        expect(src).toContain('brand.niche.short.toLowerCase()');
-        expect(src).toContain('brand.niche.descriptor');
+        // PLAN C.2 and thin-spec section 6 delete the keywords metadata
+        // outright. The two brand tokens this case used to pin only ever
+        // appeared inside that array, so pinning its ABSENCE is what keeps the
+        // de-donoring ratchet biting: a reinstated keywords block would have
+        // to be written, and reviewed, from scratch rather than inherited.
+        expect(src).not.toMatch(/\bkeywords:\s*\[/);
     });
 
     it('/jobs/locations links the metro guides', () => {

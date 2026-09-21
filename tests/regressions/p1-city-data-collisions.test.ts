@@ -20,6 +20,11 @@ import {
   getCityBySlug,
   getCityByNameState,
 } from '@/lib/pseo/city-data/cities';
+import {
+  MIN_EMPLOYERS_FOR_INDEX,
+  MIN_JOBS_FOR_INDEX,
+  shouldIndexLocalListingPage,
+} from '@/lib/pseo/render-gate';
 
 const ROOT = process.cwd();
 
@@ -276,17 +281,31 @@ describe('#9: cities resolve by (name, state), never by name alone', () => {
 });
 
 describe('#9: deleting a copied bundle never de-indexes the page', () => {
-  it('the indexing threshold is already met by job count alone', () => {
-    // getPageQualityScore() gives metroArea 10 points and healthcareSystems 15,
-    // so emptying them costs 25 — exactly the index threshold. That is only
-    // survivable because the job-count tier already clears it on its own: a
-    // page with fewer than MIN_JOBS_FOR_INDEX jobs is noindex regardless, and
-    // one at or above it scores at least 30 before any city signal is added.
+  it('the index gate reads live job facts, so a city bundle is not an input', () => {
+    // WHY THIS PIN CHANGED (PLAN C.2): the old assertion measured a points
+    // race inside getPageQualityScore, which awarded metroArea 10 and
+    // healthcareSystems 15 and so made a deletion cost 25 of the 25 needed.
+    // That function is gone. Robots on the category x city template now read
+    // shouldIndexLocalListingPage over the page's OWN job count and distinct
+    // employer count, and the city dataset is not an input to it at all, so
+    // emptying a copied bundle cannot cost a single point. That is a stronger
+    // statement of the same #9 invariant, so the removal is pinned alongside
+    // the replacement: a reintroduced score would fail here.
     const src = fs.readFileSync(path.join(ROOT, 'lib/pseo/category-city-template.tsx'), 'utf8');
-    const threshold = Number(src.match(/const qualityScore = getPageQualityScore[\s\S]{0,200}?>= (\d+)/)?.[1]);
-    const floor = Number(src.match(/else score \+= (\d+);\s*\/\/ Meets minimum/)?.[1]);
-    expect(threshold).toBe(25);
-    expect(floor).toBeGreaterThanOrEqual(threshold);
+    expect(src).not.toMatch(/getPageQualityScore/);
+    expect(src).not.toMatch(/Meets minimum/);
+    expect(src).toContain('shouldIndexLocalListingPage({ activeJobs: stats.totalJobs, distinctEmployers, page })');
+    expect(src).toContain('robots: { index: shouldIndex, follow: true }');
+    // The gate is pure and takes no city-dataset field, so a record with every
+    // copied value deleted indexes exactly as one that kept them.
+    const repaired = getCityBySlug('portland-me')!;
+    expect(repaired.metroArea).toBeNull();
+    expect(repaired.healthcareSystems).toEqual([]);
+    const atFloor = { activeJobs: MIN_JOBS_FOR_INDEX, distinctEmployers: MIN_EMPLOYERS_FOR_INDEX };
+    expect(shouldIndexLocalListingPage(atFloor)).toBe(true);
+    // Only live inventory can move the verdict, in either direction.
+    expect(shouldIndexLocalListingPage({ ...atFloor, activeJobs: MIN_JOBS_FOR_INDEX - 1 })).toBe(false);
+    expect(shouldIndexLocalListingPage({ ...atFloor, distinctEmployers: MIN_EMPLOYERS_FOR_INDEX - 1 })).toBe(false);
   });
 });
 

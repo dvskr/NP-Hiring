@@ -16,6 +16,12 @@
  *   4. Keyword differentiation from /jobs/veterans holds: no niche-copy
  *      debt terms in the FAQ block (the ratchet baseline for this file
  *      predates the FAQ and must not grow).
+ *
+ * W3-D (thin-content program, PLAN C.4 item 8 / thin-spec-1 section 5)
+ * extends the file with the LAND-T15 claim sweep for the five bespoke
+ * landings this package owns, plus the LAND-L* section wiring. The FAQ
+ * array and the "VA {brand.niche.short} Questions" heading above are
+ * unchanged by that work and stay pinned exactly as they were.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
@@ -26,6 +32,15 @@ const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 const PAGE = 'app/jobs/va/page.tsx';
 const src = read(PAGE);
+
+/** The five bespoke landings W3-D owns. */
+const W3D_PAGES = [
+    'app/jobs/va/page.tsx',
+    'app/jobs/correctional/page.tsx',
+    'app/jobs/geriatric/page.tsx',
+    'app/jobs/veterans/page.tsx',
+    'app/jobs/lgbtq/page.tsx',
+] as const;
 
 /** Comments must not satisfy (or fail) assertions about published copy. */
 const stripComments = (s: string) =>
@@ -106,5 +121,82 @@ describe('P6 #7 — VA FAQ answers stay truth-rule clean', () => {
         const code = stripComments(faqArraySource);
         expect(code).not.toContain('Vet Center');
         expect(code).not.toContain('Community Care Network');
+    });
+});
+
+describe('W3-D — LAND-T15 claim sweep on the five bespoke landings', () => {
+    it.each(W3D_PAGES)('%s prints no hand-typed annual salary band', (rel) => {
+        const code = stripComments(read(rel));
+        // "$95K to $160K" / "$95K-$160K" / "$120,000 to $200,000", both
+        // bounds salary shaped so a bonus or a limit never matches.
+        expect(code).not.toMatch(/\$\d{2,3}K?\s*(?:-|–|—|\s+to\s+)\s*\$?\d{2,3}K/);
+        expect(code).not.toMatch(/\$\d{2,3},000\s*(?:-|–|—|\s+to\s+)\s*\$?\d{2,3},000/);
+    });
+
+    it.each(W3D_PAGES)('%s prints no ungated fallback figure and no $0k', (rel) => {
+        const code = stripComments(read(rel));
+        expect(code).not.toContain('MedianFigure');
+        expect(code).not.toContain('getGatedMedianKForWhere');
+        expect(code).not.toMatch(/\$\{?\w*[Ss]alaryK\}?k/);
+        expect(code).not.toContain("'$120K+'");
+    });
+
+    it.each(W3D_PAGES)('%s makes no unverifiable freshness or trend claim', (rel) => {
+        const code = stripComments(read(rel));
+        for (const phrase of ['added daily', 'posted daily', 'updated daily', 'continues to grow', 'turn 65']) {
+            expect(code.toLowerCase()).not.toContain(phrase);
+        }
+    });
+
+    it.each(W3D_PAGES)('%s carries exactly one alert CTA (T0-5)', (rel) => {
+        const hits = read(rel).match(/>Create Alert</g) ?? [];
+        expect(hits).toHaveLength(1);
+    });
+
+    it.each(W3D_PAGES)('%s keeps the crumbsFromSchema hero trail', (rel) => {
+        const page = read(rel);
+        expect(page).toContain("import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';");
+        expect(page).toMatch(/breadcrumbs=\{crumbsFromSchema\(/);
+    });
+});
+
+describe('W3-D — the LAND-L sections and the shared metadata gate are wired', () => {
+    it.each(W3D_PAGES)('%s builds title, description and robots from category-metadata', (rel) => {
+        const page = read(rel);
+        expect(page).toContain("from '@/lib/pseo/category-metadata'");
+        expect(page).toContain('buildCategoryLandingTitle(');
+        expect(page).toContain('buildCategoryLandingDescription(');
+        expect(page).toContain('categoryLandingRobots(');
+        // Keywords carry no ranking value and repeated the label (6.2).
+        expect(page).not.toMatch(/^\s*keywords:/m);
+    });
+
+    it.each(W3D_PAGES)('%s reads one facts scope and renders the LAND-L bands from it', (rel) => {
+        const page = read(rel);
+        expect(page).toContain("getListingFacts(`category-landing:${SLUG}`");
+        expect(page).toContain('<MarketSnapshot');       // LAND-L1
+        expect(page).toContain('<LocationSpread');       // LAND-L2
+        expect(page).toContain('buildListingsAuthoritySentence('); // LAND-L3
+        expect(page).toContain('<PostedPay');            // LAND-L4
+        expect(page).toContain('getLandingAxisGuide(');  // LAND-L5
+        expect(page).toContain('buildRelatedCategorySub('); // LAND-L6 and L7
+        expect(page).toContain('buildLowInventoryIntro('); // LAND-L7
+    });
+
+    it.each(W3D_PAGES)('%s stays clay: no sticker kit, no styled-jsx interpolation', (rel) => {
+        const page = read(rel);
+        expect(page).not.toContain('@/components/sticker');
+        expect(page).not.toContain('StickerStyles');
+        expect(page).not.toContain('<style jsx');
+        expect(page).not.toContain('stk-');
+        expect(page).toContain('clayCard');
+    });
+
+    it.each(W3D_PAGES)('%s carries no en dash, em dash or spaced hyphen in a string literal', (rel) => {
+        const page = read(rel);
+        for (const [i, line] of stripComments(page).split('\n').entries()) {
+            expect(line, `${rel}:${i + 1}`).not.toContain('–');
+            expect(line, `${rel}:${i + 1}`).not.toContain('—');
+        }
     });
 });

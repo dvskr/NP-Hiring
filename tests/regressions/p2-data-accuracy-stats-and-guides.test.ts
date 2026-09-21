@@ -110,33 +110,27 @@ describe('P2 #10 — SALARY_BANDS is the single source for published pay ranges'
  * Creating a constant is not a migration. These are the surfaces that still
  * print hand-typed annual bands. The list may only SHRINK: migrate a
  * surface onto SALARY_BANDS, then delete its entry here.
+ *
+ * 2026-09, thin-content waves 2 and 3 (PLAN B.6 reserves this ratchet for the
+ * integration pass): 17 of the original 24 surfaces stopped printing a
+ * hand-typed band and were deleted from the list in one edit. Every pay figure
+ * on them now comes from the gated benchmark helpers and carries its cite, so
+ * the scanner no longer flags them. The seven below are the real remaining
+ * debt. Nothing was ADDED: the scan was reproduced against the worktree and
+ * its output is a strict subset of the previous list.
  * ────────────────────────────────────────────────────────────────────────*/
 const UNMIGRATED_SALARY_BAND_SURFACES: readonly string[] = [
     'app/api/og/city/route.tsx',
-    'app/jobs/city/[slug]/page.tsx',
-    'app/jobs/community-health/page.tsx',
-    'app/jobs/correctional/page.tsx',
-    'app/jobs/entry-level/page.tsx',
-    'app/jobs/full-time/page.tsx',
-    'app/jobs/geriatric/page.tsx',
-    'app/jobs/hospital/page.tsx',
-    'app/jobs/mid-career/page.tsx',
-    'app/jobs/new-grad/page.tsx',
-    'app/jobs/outpatient/page.tsx',
-    'app/jobs/part-time/page.tsx',
-    'app/jobs/private-practice/page.tsx',
-    'app/jobs/remote/page.tsx',
-    'app/jobs/senior/page.tsx',
-    'app/jobs/telehealth/page.tsx',
     'app/salary-guide/page.tsx',
     'app/salary-guide/specialty/specialty-content.ts',
     'components/HomepageFAQ.tsx',
     'lib/blog-formatter.ts',
-    'lib/pseo/category-city-template.tsx',
     'lib/pseo/category-landing-content.ts',
-    'lib/pseo/setting-state-template.tsx',
     'scripts/generate-salary-pdf.ts',
 ];
+
+/** The length after waves 2 and 3. The ratchet may only shrink from here. */
+const SALARY_BAND_DEBT_CEILING = 7;
 
 /**
  * Files the scan flags but which publish nothing: lib/stats-sources.ts
@@ -208,8 +202,18 @@ describe('P2 #10 — the band migration is pinned as debt, not claimed as done',
         expect(filesPrintingHandTypedBands()).toEqual([...UNMIGRATED_SALARY_BAND_SURFACES].sort());
     });
 
-    it('the debt is real and large, so nothing reads this as a finished migration', () => {
-        expect(UNMIGRATED_SALARY_BAND_SURFACES.length).toBeGreaterThan(20);
+    it('the debt is still open and the ratchet only ever shrinks', () => {
+        // The old floor was "> 20", a stand-in for "nothing may read this as a
+        // finished migration" while 24 surfaces were dirty. Waves 2 and 3
+        // cleared 17 of them, so the floor now pins a number that is simply
+        // untrue, and raising the list back to 21 entries to satisfy it would
+        // mean re-publishing hand-typed bands. The two properties worth having
+        // survive: the migration is NOT finished (so the status claim pinned
+        // above stays false), and the list is monotone. The ceiling is the
+        // ratchet the header comment always described; the equality case above
+        // is what catches a newly dirty surface.
+        expect(UNMIGRATED_SALARY_BAND_SURFACES.length).toBeGreaterThan(0);
+        expect(UNMIGRATED_SALARY_BAND_SURFACES.length).toBeLessThanOrEqual(SALARY_BAND_DEBT_CEILING);
     });
 
     it('the one migrated surface stays migrated', () => {

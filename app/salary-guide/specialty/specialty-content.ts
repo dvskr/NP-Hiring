@@ -24,7 +24,9 @@
  */
 import { brand } from '@/config/brand';
 import { STAT_SOURCES } from '@/lib/stats-sources';
-import type { SpecialtyPremium, SpecialtySalaryPage } from './specialty-config';
+import type { WorkModeMix } from '@/lib/pseo/listing-facts';
+import { buildSpecialtyFaqAdditions } from '@/lib/pseo/listing-narrative';
+import type { SpecialtySalaryPage, SpecialtyPremium } from './specialty-config';
 
 // ─── Live-data shapes (filled by the page's DB queries) ─────────────────────
 
@@ -202,10 +204,24 @@ function settingsList(settings: readonly string[]): string {
     return settings.slice(0, 3).map(settingProse).join(', ');
 }
 
+/**
+ * Facts the live SPEC-P1 and SPEC-P4 sections rendered, so the FAQ can
+ * repeat them only when they are on the page (thin-spec-4 3B, "Specialty
+ * schema"). Every field may be null, in which case its question and its
+ * FAQPage entry disappear together.
+ */
+export interface SpecialtyLiveSections {
+    /** The SPEC-P1 sentence, or null when that section did not render. */
+    statesSentence: string | null;
+    /** The SPEC-P4 work-mode mix, or null when it did not clear its floor. */
+    workMode: WorkModeMix | null;
+}
+
 export function buildSpecialtyFaqs(
     page: SpecialtySalaryPage,
     live: SpecialtyLiveStats | null,
     topStates: readonly SpecialtyStateRow[],
+    sections: SpecialtyLiveSections = { statesSentence: null, workMode: null },
 ): SpecialtyFaq[] {
     const fpa = STAT_SOURCES.fullPracticeStates;
     const noun = page.credential ? `${page.credential}` : specialtyNoun(page);
@@ -260,7 +276,10 @@ export function buildSpecialtyFaqs(
             .join(', ');
         faqs.push({
             q: `Which states pay ${specialtyNounPlural(page)} the most?`,
-            a: `Among current postings with disclosed salary on ${brand.name}, the top-paying states for ${page.label.toLowerCase()} roles are ${top3}. Rankings shift as new jobs are ingested daily.`,
+            // No trend claim: the ranking is a snapshot of the postings
+            // behind the medians, and this page holds no time series that
+            // would support "shifts as new jobs arrive".
+            a: `Among current postings with disclosed salary on ${brand.name}, the top-paying states for ${page.label.toLowerCase()} roles are ${top3}.`,
         });
     }
 
@@ -275,6 +294,17 @@ export function buildSpecialtyFaqs(
         q: `How can I increase my ${noun} salary?`,
         a: `Compare offers across practice settings (${settingsList(page.settings)}), consider states that grant full practice authority (${fpa.formatted} per ${fpa.source}), and negotiate total compensation (base pay, bonuses, CME allowance, and loan-repayment support) rather than base salary alone.`,
     });
+
+    // 6. Live sections (SPEC-P1 and SPEC-P4). Each entry is built only from
+    //    a sentence that already rendered above the fold, so no FAQPage
+    //    answer can state something a reader cannot see on the page.
+    for (const entry of buildSpecialtyFaqAdditions({
+        credential: noun,
+        statesSentence: sections.statesSentence,
+        workMode: sections.workMode,
+    })) {
+        faqs.push({ q: entry.question, a: entry.answer });
+    }
 
     return faqs;
 }

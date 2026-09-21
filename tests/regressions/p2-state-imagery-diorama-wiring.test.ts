@@ -3,24 +3,26 @@
  *
  * 52 state dioramas shipped in public/images/states/ but the two pages most
  * about a state never rendered them: /jobs/state/<state> led with one generic
- * map illustration shared by all 51 hubs — pulled from the retired remote
+ * map illustration shared by all 51 hubs, pulled from the retired remote
  * asset bucket, so it returned HTTP 400 along with the page's other seven
- * remote images — and /salary-guide/<state> had no artwork at all.
+ * remote images, and /salary-guide/<state> had no artwork at all.
  *
  * Pins:
- *  1. components/StateImage.tsx's slug→backdrop map matches the directory
+ *  1. components/StateImage.tsx's slug to backdrop map matches the directory
  *     listing exactly, and each colour still matches the artwork it claims to
  *     sample (an artwork swap that shifts the backdrop must fail here, not
  *     ship as coloured bars behind the contain-fitted hero).
  *  2. Every jurisdiction either page can route to has a diorama, so the
  *     no-artwork fallback is unreachable on a live URL.
- *  3. StateImage stays importable from server components — the helpers the
+ *  3. StateImage stays importable from server components: the helpers the
  *     two pages call are resolved on the server, which a `'use client'`
  *     directive would turn into opaque client references.
  *  4. Neither page reintroduces a remote-bucket image URL, and every local
  *     image path they reference exists on disk.
  *  5. Both heroes stay wired: correct intrinsic size, reserved space (no
  *     layout shift), explicit sizes, priority on the above-fold art.
+ *  6. The state hub's bento pictures render through ImmersiveImage and its
+ *     HUB-S4 work-mode row keeps the decorative icon well shape.
  */
 import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
@@ -51,16 +53,16 @@ const onDiskSlugs = (): string[] =>
     .sort();
 
 /**
- * Mean of the four 48px corner patches — the artwork's baked backdrop.
+ * Mean of the four 48px corner patches, the artwork's baked backdrop.
  *
  * The extract MUST be materialised with `.toBuffer()` before `.stats()`.
  * `sharp(file).extract(...).stats()` silently ignores the queued extract and
  * reports the WHOLE image's mean: sharp's stats() re-reads the input rather
  * than running the pipeline, so all four "corners" come back identical and
  * equal to `sharp(file).stats()`. That bug generated the first version of
- * STATE_DIORAMA_BG (every value ~29 RGB units too dark, worst 60) and this
- * assertion could never catch it, because it re-derived the map with the same
- * broken call and compared each value against itself.
+ * STATE_DIORAMA_BG (every value about 29 RGB units too dark, worst 60) and
+ * this assertion could never catch it, because it re-derived the map with
+ * the same broken call and compared each value against itself.
  */
 async function sampleBackdrop(slug: string): Promise<[number, number, number]> {
   const file = path.join(DIORAMA_DIR, `${slug}.png`);
@@ -116,8 +118,8 @@ describe('P2 #1: the diorama set and its colour map stay in lockstep', () => {
     // Without this, the drift check is a tautology: the map was generated with
     // `sharp(file).extract(...).stats()`, whose stats() ignores the queued
     // extract and returns the whole-image mean, and the check re-derived the
-    // value the same broken way — comparing each colour against itself. It
-    // passed on all 52 while the real deltas ran 7.9-60.1.
+    // value the same broken way, comparing each colour against itself. It
+    // passed on all 52 while the real deltas ran 7.9 to 60.1.
     const file = path.join(DIORAMA_DIR, 'hawaii.png');
     const patch = 48;
     const corner = async (left: number, top: number) => {
@@ -127,7 +129,7 @@ describe('P2 #1: the diorama set and its colour map stay in lockstep', () => {
     };
     const topLeft = await corner(0, 0);
     const bottomRight = await corner(1024 - patch, 1024 - patch);
-    // Distinct corners must read differently — identical values are the
+    // Distinct corners must read differently: identical values are the
     // signature of stats() having ignored the extract.
     expect(Math.max(...topLeft.map((v, i) => Math.abs(v - bottomRight[i])))).toBeGreaterThan(1);
 
@@ -177,7 +179,7 @@ describe('P2 #1: StateImage stays server-importable', () => {
     expect(STATE_IMAGE_SRC).not.toMatch(/^\s*['"]use client['"]/m);
     expect(STATE_IMAGE_SRC).not.toContain('useState');
     // The missing-asset fallback is resolved at render time, not via a failed
-    // request — no broken-image flash and nothing to hydrate.
+    // request: no broken-image flash and nothing to hydrate.
     expect(STATE_IMAGE_SRC).not.toMatch(/onError\s*=/);
     expect(typeof StateImage).toBe('function');
   });
@@ -193,7 +195,7 @@ describe('P2 #1: neither state page serves a dead remote image', () => {
         if (re.test(src)) offenders.push(`${name} matches ${re}`);
       }
     }
-    expect(offenders, 'remote image URLs are dead (HTTP 400) — use public/images/** or lucide').toEqual([]);
+    expect(offenders, 'remote image URLs are dead (HTTP 400); use public/images/** or lucide').toEqual([]);
   });
 
   it('references only local image files that exist', () => {
@@ -228,12 +230,34 @@ describe('P2 #1: /jobs/state/<state> hero renders the state diorama', () => {
     expect(STATE_PAGE).toContain('Illustrated diorama representing ${stateName}');
   });
 
-  it('replaced the four dead icon tiles with lucide glyphs', () => {
-    for (const icon of ['Video', 'Stethoscope', 'Hospital', 'Briefcase']) {
-      expect(STATE_PAGE, `${icon} tile missing`).toContain(`{ Icon: ${icon},`);
+  it('renders the HUB-S4 work-mode icon well row where the four generic setting tiles were', () => {
+    // One lucide glyph per work mode; a zero bucket renders no well at all.
+    for (const [key, icon] of [['remote', 'Laptop'], ['hybrid', 'Shuffle'], ['onsite', 'Hospital']] as const) {
+      expect(STATE_PAGE, `${key} well missing`).toContain(`{ key: '${key}', Icon: ${icon}, `);
     }
-    // Decorative — the tile heading carries the meaning.
+    expect(STATE_PAGE).toContain('.filter((tile) => tile.count > 0)');
+    // Decorative: the heading and the sentences carry the meaning.
     expect(STATE_PAGE).toMatch(/<span aria-hidden="true"[^>]*>\s*<Icon/);
+    // The four hand-typed tiles (and their generic claims) are gone.
+    for (const title of ['Telehealth', 'Outpatient', 'Inpatient', 'Private Practice']) {
+      expect(STATE_PAGE, `${title} tile still present`).not.toContain(`title: '${title}'`);
+    }
+    expect(STATE_PAGE).not.toContain('Clinic-based roles with standard weekday hours');
+  });
+
+  it('bento pictures render through ImmersiveImage inside padding-0 clay frames, never padded or rounded', () => {
+    expect(STATE_PAGE).toContain("import ImmersiveImage from '@/components/ImmersiveImage'");
+    const pictures = STATE_PAGE.match(/<ImmersiveImage src=\{ART_[A-Z]+\} alt="" minHeight=\{\d+\} \/>/g) ?? [];
+    expect(pictures.length).toBe(3);
+    expect(STATE_PAGE).not.toMatch(/<img\b/);
+    expect(STATE_PAGE).not.toMatch(/<Image\b/);
+  });
+
+  it('uses a static style block (interpolation deadlocks the route compile)', () => {
+    const block = STATE_PAGE.slice(STATE_PAGE.indexOf('<style>{`'), STATE_PAGE.indexOf('`}</style>'));
+    expect(block).toBeTruthy();
+    expect(block).not.toContain('${');
+    expect(STATE_PAGE).not.toContain('<style jsx');
   });
 });
 
@@ -245,7 +269,7 @@ describe('P2 #1: /salary-guide/<state> hero renders the state diorama', () => {
     expect(hero).toContain('slug={stateSlug}');
     expect(hero).toContain('fill');
     expect(hero).toMatch(/sizes="[^"]+"/);
-    // Above-fold hero art — preloaded, never lazy.
+    // Above-fold hero art: preloaded, never lazy.
     expect(hero).toContain('priority');
     expect(hero).not.toContain("loading='lazy'");
   });

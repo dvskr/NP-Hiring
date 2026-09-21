@@ -22,6 +22,10 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+    MIN_ACTIVE_JOBS_FOR_COMPANY_INDEX,
+    shouldIndexCompanyProfile,
+} from '@/lib/pseo/render-gate';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -344,9 +348,67 @@ describe('P1 #12 — company surfaces share ONE active-job predicate', () => {
 
     it('generateMetadata noindex gate matches the render 404 gate', () => {
         // Divergence here noindexes a page that renders, or indexes one that 404s.
-        const idx = src.indexOf('const activeJobCount = await prisma.job.count');
-        expect(idx).toBeGreaterThan(-1);
-        expect(src.slice(idx, idx + 260)).toContain('...activeIndexableJobWhere()');
+        //
+        // WHY THIS PIN CHANGED (PLAN C.2 index gates, thin-spec-4 section 5.5):
+        // generateMetadata used to run its own `await prisma.job.count` beside
+        // the body's own query, and this test pinned that literal because two
+        // counts can drift. The robots verdict now needs the whole row set
+        // (title, description AND index), so one React cache()d loader feeds
+        // both callers and there is exactly ONE count, not two. The property is
+        // unchanged and structurally stronger, so the pin moves to the new
+        // shape instead of being deleted: one loader, both callers on it, both
+        // verdicts computed from the same `company.jobs.length`.
+        expect(src).toContain('const loadCompanyProfile = cache(');
+
+        const loaderStart = srcCode.indexOf('const loadCompanyProfile = cache(');
+        const metaStart = srcCode.indexOf('export async function generateMetadata(');
+        const metaEnd = srcCode.indexOf('export default async function CompanyPage(');
+        expect(loaderStart).toBeGreaterThan(-1);
+        expect(metaStart).toBeGreaterThan(loaderStart);
+        expect(metaEnd).toBeGreaterThan(metaStart);
+
+        // The predicate is anchored to the loader, NOT to the file. The
+        // similar-employer card at the bottom of the page carries the identical
+        // `where: activeIndexableJobWhere(now)` string and is pinned on its own
+        // above, so a file-wide toContain here is satisfied by that call site
+        // alone: the ONE query both callers read could swap back to a
+        // hand-rolled predicate and every pin in this file would stay green.
+        // That hand-rolled predicate is exactly the sitemap-says-200 /
+        // page-404s defect this describe block is named for.
+        const loaderFn = srcCode.slice(loaderStart, metaStart);
+        expect(loaderFn).toContain('where: activeIndexableJobWhere(now)');
+        expect(loaderFn).not.toMatch(/where:\s*\{\s*isPublished:\s*true\s*\}/);
+        // Both callers await the SAME loader, and nothing else counts jobs.
+        // A second count query is the divergence surface this test forbids.
+        expect(srcCode.split('await loadCompanyProfile(slug)').length - 1).toBe(2);
+        expect(srcCode).not.toContain('prisma.job.count');
+
+        // Metadata side: robots.index derives from the loaded array's length.
+        //
+        // Anchored to generateMetadata's own body on purpose (PLAN C.2): the
+        // render path carries the identical `const activeJobCount =
+        // company.jobs.length` line, so a file-wide toContain is satisfied by
+        // the render side alone and metadata could derive its count from a
+        // SUBSET of the same loaded array (say a featured-only filter) without
+        // failing this test. One loader removes the two-QUERY divergence; it
+        // does not remove the in-memory derivation divergence, and that is the
+        // half the retired `prisma.job.count` literal used to cover.
+        const metadataFn = srcCode.slice(metaStart, metaEnd);
+        expect(metadataFn).toContain('const activeJobCount = company.jobs.length');
+        expect(metadataFn).toContain('index: shouldIndexCompanyProfile(activeJobCount)');
+        // Render side: the same derivation, and 0 is the hard 404. Anchored to
+        // the render body for the mirror-image reason, so neither caller can
+        // quietly start counting a different subset of the shared row set.
+        const renderFn = srcCode.slice(metaEnd);
+        expect(renderFn).toContain('const activeJobCount = company.jobs.length');
+        expect(renderFn).toMatch(/if \(activeJobCount === 0\) \{\s*notFound\(\);/);
+
+        // The semantic half, not just the shape. The render 404s at zero active
+        // jobs, so the index gate has to be false there or generateMetadata
+        // would advertise a missing page as indexable. Pinning the gate itself
+        // keeps that true even if the page source is rewritten again.
+        expect(shouldIndexCompanyProfile(0)).toBe(false);
+        expect(MIN_ACTIVE_JOBS_FOR_COMPANY_INDEX).toBeGreaterThan(0);
     });
 });
 
@@ -387,9 +449,40 @@ describe('P1 #12 — interaction + responsive states are real, not dead classes'
         expect(offenders).toEqual([]);
     });
 
-    it('the four enrichment surfaces use the stylesheet classes instead', () => {
-        expect(src).toContain('className="ce-chip inline-flex');
-        expect(src.split('className="ce-chip inline-flex').length - 1).toBe(2);
+    it('every interactive enrichment surface uses the stylesheet classes instead', () => {
+        // WHY THIS PIN CHANGED (PLAN C.4 sections by page type, CO-C5): the
+        // count was fixed at 2 for the category and state chip rows. CO-C5 adds
+        // a third correct chip row (cities), so the old literal failed a page
+        // that got MORE right, and the only ways to satisfy it were to drop the
+        // row or to give it a duplicate hover rule. The bare count is replaced
+        // by the invariant it stood in for: an interactive chip is one that
+        // animates its color, and every one of those must carry `ce-chip` so
+        // the stylesheet rule is what paints its hover and focus states.
+        const CHIP =
+            'className="ce-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"';
+        const chipUses = src.split(CHIP).length - 1;
+        expect(chipUses).toBeGreaterThanOrEqual(3);
+
+        // Every className that carries `ce-chip` is the identical canonical
+        // string, so a new chip row cannot ship a near-miss class list that
+        // misses the stylesheet hook. Rules in the <style> block are free to
+        // grow; only the JSX attributes are pinned.
+        const chipClassAttrs = src.match(/className="[^"]*\bce-chip\b[^"]*"/g) ?? [];
+        expect(chipClassAttrs).toHaveLength(chipUses);
+        expect(new Set(chipClassAttrs).size).toBe(1);
+
+        // Within the chip vocabulary, animating the color and taking the
+        // stylesheet class go together in both directions. A chip that
+        // promises a transition without `ce-chip` has no rule that can paint
+        // it, and the unlinked city chip (a plain span, not interactive) must
+        // not take a hover rule that promises an affordance it does not have.
+        const chipShaped =
+            src.match(/className="[^"]*px-3 py-1\.5 rounded-full text-sm font-medium[^"]*"/g) ?? [];
+        expect(chipShaped.length).toBeGreaterThan(chipUses);
+        for (const attr of chipShaped) {
+            expect(attr.includes('ce-chip'), attr).toBe(attr.includes('transition-colors'));
+        }
+
         expect(src).toContain('className="ce-hover-title font-semibold text-base');
         expect(src).toContain('className="ce-hover-title font-semibold text-sm truncate');
     });

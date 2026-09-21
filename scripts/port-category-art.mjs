@@ -155,7 +155,6 @@ export const MANIFEST = [
   bento('bento_senior_strategy', 'senior-strategy'),
   bento('bento_senior_compensation', 'senior-compensation'),
   bento('bento_state_practice', 'state-practice'),
-  bento('bento_state_growth', 'state-growth'),
   bento('bento_state_salary', 'state-salary'),
   bento('bento_th_videocall', 'telehealth-videocall'),
   bento('bento_th_multistate', 'telehealth-multistate'),

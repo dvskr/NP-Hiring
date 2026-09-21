@@ -252,15 +252,23 @@ Style rules:
 
 Output: just the paragraph. No preamble, no quotation marks, no explanation.`;
 
+/**
+ * The prompt's fact block is deliberately NARROWER than CityData. The shortage
+ * designation, the cost of living index and the median income are retired
+ * (thin plan T0-4): the donor generator and source dataset for those columns
+ * are lost, so the figures cannot be re-verified and must not be published.
+ *
+ * They are excluded HERE, not only in the renderers, because an approved
+ * snippet is rendered in preference to the deterministic narrative. A fact in
+ * this block can therefore reach published HTML without passing any renderer
+ * assertion, which is exactly how the claim survived its own removal once.
+ */
 export interface CityFactBlock {
     cityName: string;
     stateName: string;
     stateCode: string;
     population: number;
-    costOfLivingIndex: number;
-    medianIncome: number;
     metroArea: string | null;
-    shortageArea: boolean;
     healthcareSystems: string[];
     /**
      * Authority LEVEL only. The free-text `details` prose in
@@ -278,10 +286,7 @@ export function toCityFactBlock(facts: CityNarrativeFacts): CityFactBlock {
         stateName: facts.city.state,
         stateCode: facts.city.stateCode,
         population: facts.city.population,
-        costOfLivingIndex: facts.city.costOfLivingIndex,
-        medianIncome: facts.city.medianIncome,
         metroArea: facts.city.metroArea,
-        shortageArea: facts.shortage,
         healthcareSystems: facts.topEmployers,
         practiceAuthority: facts.practiceAuthority,
     };
@@ -295,14 +300,10 @@ export function buildCityPrompt(facts: CityFactBlock, totalJobs: number): string
         `- City: ${facts.cityName}, ${facts.stateCode} (${facts.stateName})`,
         `- Population: ${facts.population.toLocaleString('en-US')}`,
         facts.metroArea ? `- Metro area: ${facts.metroArea}` : null,
-        `- Cost of living index: ${facts.costOfLivingIndex} (US average = 100)`,
-        facts.medianIncome > 0 ? `- Median household income: $${facts.medianIncome.toLocaleString('en-US')}` : null,
-        `- HRSA-designated Health Professional Shortage Area: ${facts.shortageArea ? 'Yes — federally designated' : 'No'}`,
         facts.practiceAuthority ? `- ${facts.stateName} ${brand.niche.short} practice authority: ${facts.practiceAuthority}` : null,
         facts.healthcareSystems.length > 0 ? `- Major healthcare employers: ${facts.healthcareSystems.slice(0, 4).join(', ')}` : null,
         `- Active ${brand.niche.short} listings on this page: ${totalJobs}`,
         ``,
-        `Mention shortage status if Yes (it implies NHSC loan repayment eligibility).`,
         `Mention practice authority because it directly shapes ${brand.niche.short} scope and earning potential.`,
     ].filter(Boolean).join('\n');
 }
@@ -326,8 +327,6 @@ export function buildTaxonomyPrompt(
         `Facts:`,
         `- City: ${facts.cityName}, ${facts.stateCode}`,
         `- Population: ${facts.population.toLocaleString('en-US')}`,
-        `- Cost of living index: ${facts.costOfLivingIndex} (US average = 100)`,
-        `- HRSA-designated Health Professional Shortage Area: ${facts.shortageArea ? 'Yes' : 'No'}`,
         // The board niche's practice-authority ladder does not govern the APRN
         // cohort roles (CRNA / CNM / CNS licensure is regulated separately) —
         // omit the fact on those pages rather than misapply it.

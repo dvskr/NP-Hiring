@@ -24,11 +24,41 @@
  * Labelling makes the sentence TRUE; gating is what keeps the donor niche off
  * the all-NP URLs the niche-copy ratchets exist to protect. Both are needed.
  *
- * The metadata assertions here are BEHAVIOURAL — they drive the real exported
- * builder and read the string Google would index. The two JSX surfaces cannot
- * be rendered without a live DB, so those are proven structurally: the gate
- * predicate is exported and unit-tested, and each render surface is asserted
- * to sit inside it.
+ * Thin-content program (PLAN.md T0-4, packages W2-STATE and W2-CITYTPL): all
+ * three surfaces are now gone, not merely gated. T0-4 retires the donor
+ * columns that carry no citable source, and the shortage flag is one of them:
+ * lib/pseo/city-data/types.ts records that the column's generator and source
+ * dataset are lost, so neither the designation type nor its vintage can be
+ * re-verified from this repo. The category x state template stopped reading
+ * the flag first; the category x city template followed, dropping the meta
+ * sentence, the OG shortage param, the Community Profile tile, the careers
+ * FAQ answer and the HRSA line in its sources note.
+ *
+ * WHAT THIS FILE PINS NOW. The rule it was written for did not change: the
+ * donor board's behavioral-health column may never be published as an all-NP
+ * shortage figure. Withholding it everywhere satisfies that rule strictly
+ * more than gating it did, so every case below pins the REMOVAL, on the same
+ * surfaces and by the same means as before. A claim that merely moved would
+ * fail these: the behavioural cases drive the real metadata builder and read
+ * the string Google would index (description AND OG params, for the flagged
+ * and unflagged city on the owning and an unrelated category), and the
+ * structural cases assert that the template's one surviving HRSA mention is
+ * the bare lookup-tool pointer, which asserts nothing about any city.
+ *
+ * The two gate predicates are deliberately NOT deleted. They stay exported,
+ * pure and unit-tested here so that a future surface backed by a citable
+ * HRSA dataset has one gate to reuse instead of re-deriving the slug
+ * comparison inline, which is how the three leaks happened the first time.
+ * The cases below therefore also pin that nothing calls them today.
+ *
+ * ONE CASE IS RED ON PURPOSE. The renderers are clean; the PRODUCER is not.
+ * scripts/generate-city-snippets.ts still writes the designation and the NHSC
+ * eligibility inference into the LLM prompt whose approved output both city
+ * surfaces render in preference to the deterministic narrative. That is a
+ * source fix this file's owner may not make, so the last case in "the rendered
+ * surfaces are gone, not relabelled" fails until the script is corrected. Do
+ * not weaken it to go green: it is the only assertion in the repo standing
+ * between the retired column and the published page.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'node:fs';
@@ -75,7 +105,6 @@ const readCode = (rel: string): string =>
         .replace(/^\s*\/\/.*$/gm, '');
 
 const CITY_TEMPLATE = 'lib/pseo/category-city-template.tsx';
-const STATE_TEMPLATE = 'lib/pseo/setting-state-template.tsx';
 
 /** A city that carries the donor flag, and one that does not. */
 const SHORTAGE_CITY = 'houston-tx';
@@ -85,6 +114,9 @@ const CLEAR_CITY = 'new-york-ny';
 const OFF_TOPIC_CATEGORY = 'dermatology';
 
 const HPSA_SENTENCE = 'Federally designated behavioral-health HPSA.';
+
+/** Split source on either line ending: the worktree checks out CRLF. */
+const LINE_BREAK = /\r?\n/;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = prisma as any;
@@ -165,28 +197,37 @@ describe('the two gate predicates', () => {
 
 // ─── surface 1: the SERP snippet (behavioural) ──────────────────────────────
 
-describe('meta description — the donor claim never ships on an off-topic category', () => {
+describe('meta description: the donor claim ships on no category at all', () => {
     it('omits the HPSA sentence on a flagged city under an unrelated specialty', async () => {
         const meta = await buildCategoryCityMetadata(OFF_TOPIC_CATEGORY, SHORTAGE_CITY, 1);
 
         expect(meta.description).toBeDefined();
         expect(meta.description).not.toContain(HPSA_SENTENCE);
         expect(meta.description).not.toMatch(/HPSA|shortage/i);
-        // Still a real description — the gate withholds the claim, it does
-        // not blank the snippet.
+        // Still a real description: withholding the claim does not blank the
+        // snippet, it just leaves the live inventory facts.
         expect(meta.description).toContain('Houston, TX');
-        expect(meta.description).toContain('COL index');
+        expect(meta.description).toMatch(/^\d+ active .+ listings? in Houston, TX/);
+        // T0-4 retires cost of living with the shortage column: the donor's
+        // costOfLivingIndex has no source file either, so the snippet that
+        // used to end "COL index: 96." now ends with facts the page can cite.
+        expect(meta.description).not.toMatch(/COL index|cost of living/i);
     });
 
-    it('keeps the HPSA sentence on the behavioral-health category', async () => {
-        const meta = await buildCategoryCityMetadata(PSYCH_SPECIALTY_SLUG!, SHORTAGE_CITY, 1);
-        expect(meta.description).toContain(HPSA_SENTENCE);
-    });
-
-    it('omits it for an unflagged city even on the behavioral-health category', async () => {
-        const meta = await buildCategoryCityMetadata(PSYCH_SPECIALTY_SLUG!, CLEAR_CITY, 1);
-        expect(meta.description).not.toContain(HPSA_SENTENCE);
-        expect(meta.description).not.toMatch(/HPSA/i);
+    it('withholds it on the behavioral-health category too, flagged or not', async () => {
+        // This case used to assert the OPPOSITE: the designation was allowed
+        // on the one category whose discipline it describes. T0-4 pulled the
+        // column outright because its provenance cannot be re-established, so
+        // the on-topic surface is the one that changed and it is pinned here.
+        for (const citySlug of [SHORTAGE_CITY, CLEAR_CITY]) {
+            const meta = await buildCategoryCityMetadata(PSYCH_SPECIALTY_SLUG!, citySlug, 1);
+            expect(meta.description, citySlug).toBeDefined();
+            expect(meta.description, citySlug).not.toContain(HPSA_SENTENCE);
+            expect(meta.description, citySlug).not.toMatch(/HPSA|shortage/i);
+            // And the snippet is still built, so this is a withheld claim and
+            // not a builder that failed and returned nothing.
+            expect(meta.description!.length, citySlug).toBeGreaterThan(40);
+        }
     });
 
     it('leaves no dangling separator when the claim is withheld', async () => {
@@ -195,83 +236,161 @@ describe('meta description — the donor claim never ships on an off-topic categ
         expect(meta.description).not.toMatch(/\s{2,}/);
     });
 
-    it('the OG shortage param stays gated in lockstep with the description', async () => {
-        const off = await buildCategoryCityMetadata(OFF_TOPIC_CATEGORY, SHORTAGE_CITY, 1);
-        const on = await buildCategoryCityMetadata(PSYCH_SPECIALTY_SLUG!, SHORTAGE_CITY, 1);
-
-        const ogUrl = (m: typeof off) =>
-            String((m.openGraph?.images as { url: string }[] | undefined)?.[0]?.url ?? '');
-
-        expect(ogUrl(off)).not.toContain('shortage=true');
-        expect(ogUrl(on)).toContain('shortage=true');
+    it('no category sets the OG shortage param any more', async () => {
+        // The param was the second half of the same gate: /api/og/city renders
+        // a "Behavioral-Health HPSA" badge for shortage=true, and a share card
+        // is as public a claim as the SERP snippet. With the description gone,
+        // a caller still passing the param would republish the claim as an
+        // image, which no text assertion would catch.
+        for (const categoryKey of [OFF_TOPIC_CATEGORY, PSYCH_SPECIALTY_SLUG!]) {
+            for (const citySlug of [SHORTAGE_CITY, CLEAR_CITY]) {
+                const meta = await buildCategoryCityMetadata(categoryKey, citySlug, 1);
+                const ogUrl = String(
+                    (meta.openGraph?.images as { url: string }[] | undefined)?.[0]?.url ?? '',
+                );
+                const label = `${categoryKey}/${citySlug}`;
+                // The card is still generated, so this is a dropped param and
+                // not a dropped image.
+                expect(ogUrl, label).toContain('/api/og/city?');
+                expect(ogUrl, label).not.toMatch(/shortage/i);
+            }
+        }
     });
 });
 
 // ─── surfaces 2 and 3: the rendered tiles (structural) ──────────────────────
 
-describe('rendered stat tiles sit inside the same gate', () => {
-    it('the city Community Profile tile renders only on the owning category', () => {
+describe('the rendered surfaces are gone, not relabelled', () => {
+    it('the Community Profile tile no longer states the designation', () => {
         const code = readCode(CITY_TEMPLATE);
-        expect(code).toMatch(
-            /categoryOwnsShortage && \([\s\S]{0,500}Behavioral-Health HPSA/,
-        );
+        // Was: `categoryOwnsShortage && ( … Behavioral-Health HPSA … )`, a tile
+        // printing "Designated" / "Not designated" under a discipline label.
+        expect(code).not.toMatch(/Behavioral-Health HPSA/);
+        expect(code).not.toMatch(/categoryOwnsShortage\b/);
+        expect(code).not.toMatch(/'Designated' : 'Not designated'/);
     });
 
-    it('the state Insights stat card renders only on the owning category', () => {
-        const code = readCode(STATE_TEMPLATE);
-        expect(code).toMatch(
-            /shortageMatchesCategory && topCities\.length > 0 && \([\s\S]{0,500}Behavioral-Health HPSA/,
-        );
-    });
-
-    it('the careers FAQ answer branches on the gate, not on the raw flag', () => {
+    it('the careers FAQ answer no longer states the designation', () => {
         const code = readCode(CITY_TEMPLATE);
-        // The former leak read `city!.mentalHealthShortage && … === PSYCH_…`
-        // inline; the answer also feeds the FAQPage schema, so one drifting
-        // copy would desync the visible text from the structured data.
-        expect(code).toMatch(
-            /shortageMatchesCategory\s*\n?\s*\?\s*'carries a federal HRSA behavioral-health/,
-        );
+        // The FAQ answer also fed the FAQPage schema, so this one string was
+        // published twice per URL. Both copies go with the branch.
+        expect(code).not.toContain('carries a federal HRSA behavioral-health');
+        expect(code).not.toMatch(/shortageMatchesCategory/);
     });
 
-    it('the meta description branches on the gate, not on the raw flag', () => {
-        const descLine = readCode(CITY_TEMPLATE)
-            .split('\n')
-            .find((l) => l.includes('description: `Find'));
-
-        expect(descLine).toBeDefined();
-        expect(descLine!).not.toContain('mentalHealthShortage');
-        expect(descLine!).toContain('shortageMatchesCategory');
-    });
-
-    it('the raw flag is read only by the predicates and by publish-nothing scorers', () => {
-        // The two scoring functions consume the flag as an internal demand
-        // input and publish nothing, so they legitimately read it directly.
-        // The tile reads it for its VALUE, but only inside the category gate
-        // asserted above. Everything else must go through a predicate.
+    it('the sources note no longer credits HRSA for data the page stopped printing', () => {
         const code = readCode(CITY_TEMPLATE);
-        const rawReads = code.split('\n').filter((l) => l.includes('.mentalHealthShortage'));
-        expect(rawReads.length).toBeGreaterThan(0);
-        for (const line of rawReads) {
-            expect(
-                /score \+=|return city\.mentalHealthShortage|'Designated' : 'Not designated'/.test(line),
-                `unexpected raw shortage read → ${line.trim()}`,
-            ).toBe(true);
-        }
+        expect(code).not.toMatch(/HRSA behavioral-health HPSA designations/);
     });
 
-    it('both templates route their gate through the shared predicates', () => {
-        expect(readCode(CITY_TEMPLATE)).toMatch(/shortageIsOnTopic\(city/);
-        // The state template has no per-city claim to make — its card is a
-        // COUNT over top cities — so it imports the category predicate rather
-        // than re-deriving the slug comparison locally.
-        const state = readCode(STATE_TEMPLATE);
-        expect(state).toMatch(
-            /import \{[^}]*categoryOwnsShortageData[^}]*\} from '\.\/category-city-template'/,
-        );
-        expect(state).toContain('categoryOwnsShortageData(config.slug)');
-        // And it must not hand-roll a second copy of the comparison.
-        expect(state).not.toMatch(/config\.slug === PSYCH_SPECIALTY_SLUG/);
+    it('the one surviving HRSA mention is a bare pointer to the lookup tool', () => {
+        // Not a blanket ban: a link to HRSA's own site-eligibility lookup
+        // asserts nothing about this city, which is exactly the distinction
+        // this file exists to hold. Pinned as a whole line so a claim cannot
+        // be smuggled in alongside the URL that would otherwise excuse it.
+        const hpsaLines = readCode(CITY_TEMPLATE)
+            .split(LINE_BREAK)
+            .map((l) => l.trim())
+            .filter((l) => /HPSA|Health Professional Shortage/i.test(l));
+        expect(hpsaLines).toEqual([
+            "'Check NHSC loan repayment eligibility for your site (hpsa.hrsa.gov)',",
+        ]);
+    });
+
+    it('the meta description is built by the shared, claim-free narrative helper', () => {
+        // The inline `description: \`Find … COL index: …\`` template literal that
+        // carried the gated sentence is gone; the snippet now comes from
+        // lib/pseo/listing-narrative.ts, which composes live inventory facts
+        // only. Pinning the delegation stops the literal growing back here.
+        const code = readCode(CITY_TEMPLATE);
+        expect(code).not.toMatch(/description: `Find/);
+        expect(code).toContain('buildCategoryCityDescription({');
+        expect(readCode('lib/pseo/listing-narrative.ts')).not.toMatch(/HPSA|shortage/i);
+    });
+
+    it('the raw flag is read only by the predicate that owns it', () => {
+        // Every other reader is gone: the two demand scorers that consumed it
+        // as an internal input, and the tile that read it for its value. One
+        // read is left, and it is the predicate's own return.
+        const code = readCode(CITY_TEMPLATE);
+        const rawReads = code
+            .split(LINE_BREAK)
+            .map((l) => l.trim())
+            .filter((l) => l.includes('.mentalHealthShortage'));
+        expect(rawReads).toEqual([
+            'return city.mentalHealthShortage && categoryOwnsShortageData(categorySlug);',
+        ]);
+    });
+
+    it('the predicates survive with no caller, which is what keeps them honest', () => {
+        // They are kept on purpose (see this file's header): a later surface
+        // built on a citable HRSA dataset reuses the gate instead of inlining
+        // the slug comparison. Until then every occurrence in the template is
+        // a declaration, so a new caller is a deliberate, visible change here.
+        const code = readCode(CITY_TEMPLATE);
+        expect(code.match(/shortageIsOnTopic\(/g) ?? []).toHaveLength(1);
+        expect(code).toMatch(/export function shortageIsOnTopic\(city: CityData/);
+        // categoryOwnsShortageData: its declaration plus the one call inside
+        // shortageIsOnTopic, and nothing else.
+        expect(code.match(/categoryOwnsShortageData\(/g) ?? []).toHaveLength(2);
+        expect(code).toMatch(/export function categoryOwnsShortageData\(categorySlug: string/);
+    });
+
+    // RED ON PURPOSE. Every case above reads a RENDERER, and the renderers are
+    // clean. They are not the only way the claim reaches a page. Both city
+    // surfaces prefer an APPROVED DB snippet over the deterministic narrative
+    // (getCityNarrative in app/jobs/city/[slug]/page.tsx, and the
+    // dbCatCityOverride branch in this template), and those rows are written by
+    // scripts/generate-city-snippets.ts, which no package in this pass touched:
+    // "git diff --stat be5a2f2 -- scripts/generate-city-snippets.ts" is empty.
+    // Its prompt still states the donor designation as fact, in buildCityPrompt
+    // and again in buildTaxonomyPrompt (which runs for EVERY taxonomy slug, not
+    // only the one category the discipline describes), and still instructs the
+    // model to draw the NHSC eligibility inference that P3 #2 and #3 removed
+    // from the narratives. So the retired claim can still reach the HTML
+    // through a surface none of the assertions above look at.
+    //
+    // PLAN C.1 T0-4 retires the column itself, not merely its renderers, so the
+    // removal has to reach the producer or it is only skin deep. Fixing the
+    // script is a source edit this group is forbidden to make, so this case
+    // stays red and the finding goes to the orchestrator.
+    //
+    // WHOEVER APPLIES THAT FIX MUST APPLY IT AS ONE CHANGE. An older ratchet,
+    // tests/regressions/p1-snippet-generator-prompt-niche.test.ts, asserts the
+    // OPPOSITE of this case: its 'base city prompt is clean and uses the
+    // niche-neutral shortage phrasing' expects buildCityPrompt to CONTAIN
+    // 'Health Professional Shortage Area', because when it was written the
+    // only defect in view was the donor niche leaking into the wording, not
+    // the designation itself. T0-4 supersedes that: the designation is now
+    // retired outright, so the same case has to become a not.toMatch on the
+    // same string, keeping its countNicheTerms, title and no-'undefined' pins
+    // so the P1 #10 niche-neutrality intent survives. Deleting the prompt
+    // lines without that rewrite trades this red for that one and reads like
+    // a mistake, which is how a removal gets reverted.
+    it('the snippet generator no longer feeds the donor claim into the prompt', () => {
+        const generator = readCode('scripts/generate-city-snippets.ts')
+            .split(LINE_BREAK)
+            .map((l) => l.trim());
+        // Every family T0-4 retires, in ONE assertion, so a single run hands
+        // the orchestrator the complete edit list instead of one family per
+        // re-run. Line level, so the message names the surviving producer
+        // rather than printing the whole script.
+        //
+        //  - the designation sentence itself, in buildCityPrompt and again in
+        //    buildTaxonomyPrompt;
+        //  - the CityFactBlock field and the mapping that carries
+        //    CityData.mentalHealthShortage into it, so the value cannot
+        //    survive under a new label once the sentences go;
+        //  - the instruction telling the model to draw the NHSC eligibility
+        //    inference that P3 #2 and #3 removed from the deterministic
+        //    narratives, which would otherwise still invite the claim with
+        //    the fact lines already deleted;
+        //  - costOfLivingIndex and medianIncome, retired by the same T0-4
+        //    item for the same reason (no source file survives for either)
+        //    and already pinned absent from the SERP snippet above.
+        const RETIRED_IN_PROMPTS =
+            /HPSA|Health Professional Shortage|shortageArea|shortage status|NHSC|Cost of living index|Median household income/i;
+        expect(generator.filter((line) => RETIRED_IN_PROMPTS.test(line))).toEqual([]);
     });
 });
 

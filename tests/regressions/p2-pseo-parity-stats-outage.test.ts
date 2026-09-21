@@ -21,6 +21,24 @@
  * Correct behaviour: rethrow. A 5xx is retried by crawlers and never removes a
  * URL. Absence of data is not evidence of an empty page.
  *
+ * WAVE 2 (PLAN C.3, thin-content program): the setting×state template stopped
+ * reading PseoStats.totalJobs altogether. Its counts now come from
+ * getListingFacts() over the canonical predicate, where the total count is
+ * the ONE query allowed to throw (lib/pseo/listing-facts.ts: a failed
+ * section query logs and comes back empty, a failed TOTAL count rethrows).
+ * The rule above is therefore now applied uniformly instead of only to the
+ * first query: every count failure rejects, including the one a stale
+ * cached row used to paper over. That is deliberate on both counts. A stale
+ * row is a figure the page can no longer trace to live listings, which the
+ * copy rules (PLAN C.5) retire, and the alternative under the new data
+ * layer is not "render the cached number" but "render 0 jobs", which is
+ * exactly the cacheable false-404 this file was written to prevent. The
+ * cases below pin the rethrow AND pin the removal of the rescue. PseoStats
+ * is still read for setting×state, but only for the stored robots verdict,
+ * and that read fails soft (p10-platform-routing-db-fixes.test.ts #5).
+ *
+ * The category×city half keeps its cached-count rescue and is unchanged.
+ *
  * These are behavioural tests: they drive the real exported metadata builders
  * with a rejecting prisma and assert the ORIGINAL error escapes, rather than
  * asserting on source text.
@@ -41,6 +59,11 @@ vi.mock('@/lib/prisma', () => ({
             groupBy: vi.fn(),
             findMany: vi.fn(),
         },
+        // getListingFacts (PLAN C.3) resolves employer company links and
+        // the template reads its stored robots verdict through raw SQL;
+        // both must exist on the stub or the real path is never exercised.
+        company: { findMany: vi.fn() },
+        $queryRaw: vi.fn(),
     },
 }));
 
@@ -108,30 +131,41 @@ describe('a pseoStats read failure surfaces as 5xx, not as a cacheable 404/308',
             buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 1),
         ).rejects.toThrow(OUTAGE);
     });
+
+    /*
+     * The case that used to sit under "a stale-but-positive cached row still
+     * rescues a failed live recount". PLAN C.3 retired that rescue for this
+     * template, so the removal itself is what is worth pinning: a positive
+     * but stale row, present and readable, must NOT turn a failed count into
+     * a rendered page. If a cached-count fallback is ever reinstated here the
+     * page would print a figure it cannot trace, and this case goes red.
+     */
+    it('setting×state: a stale positive cached row does not rescue a failed recount', async () => {
+        const stale = { totalJobs: 42, indexable: true, updatedAt: hoursAgo(72) };
+        db.pseoStats.findUnique.mockResolvedValue(stale);
+        // Offered through the raw projection too, so the pin holds whichever
+        // read a future fallback would come back through.
+        db.$queryRaw.mockResolvedValue([stale]);
+        db.job.count.mockRejectedValue(outage());
+        db.job.groupBy.mockResolvedValue([]);
+        db.job.findMany.mockResolvedValue([]);
+
+        await expect(
+            buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 1),
+        ).rejects.toThrow(OUTAGE);
+    });
 });
 
 // ─── the fallback the try/catch was actually added for ──────────────────────
 
-describe('a stale-but-positive cached row still rescues a failed live recount', () => {
-    it('setting×state: renders the cached count when only the recount fails', async () => {
-        // Positive but STALE (older than the 36h window), so the code path
-        // goes on to the live recount — which then fails.
-        db.pseoStats.findUnique.mockResolvedValue({
-            totalJobs: 42,
-            rawAvgSalary: 131,
-            updatedAt: hoursAgo(72),
-        });
-        db.job.count.mockRejectedValue(outage());
-        db.job.groupBy.mockResolvedValue([]);
-
-        const meta = await buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 1);
-
-        expect(meta.title).toContain('42');
-        // 42 ≥ 3, so the thin-page noindex gate must NOT have fired.
-        expect(meta.robots).toBeUndefined();
-    });
-
-    it('category×city: renders the cached count when only the recount fails', async () => {
+/*
+ * Still true for category×city: lib/pseo/category-city-template.tsx keeps
+ * getCityStats and its cachedRow fallback. Only the setting×state half moved
+ * to getListingFacts in wave 2, so the two templates now answer a partial
+ * outage differently. That asymmetry is recorded, not asserted away.
+ */
+describe('category×city: a stale-but-positive cached row still rescues a recount', () => {
+    it('renders the cached count when only the recount fails', async () => {
         db.pseoStats.findUnique.mockResolvedValue({
             totalJobs: 37,
             rawAvgSalary: 128,
@@ -150,13 +184,32 @@ describe('a stale-but-positive cached row still rescues a failed live recount', 
 // ─── a genuinely empty combo is still an empty combo ────────────────────────
 
 describe('a successful read of zero jobs is unaffected', () => {
-    it('setting×state: no row + a live count of 0 resolves to a 0-job (noindex) metadata', async () => {
+    /*
+     * The counterweight to the rethrow: a successful read that genuinely
+     * finds nothing must still resolve, not throw, or the gate would be
+     * unreachable. Two things changed with PLAN C.3 and C.2, neither of
+     * which is this case relaxing:
+     *   - the title no longer prints the count below COUNT_DISPLAY_FLOOR,
+     *     so "0" is not fabricated into the tab (the old pin looked for it);
+     *   - robots are always emitted now, index true or false, through
+     *     resolveSettingStateIndexable, so the noindex verdict is explicit
+     *     rather than inferred from an absent robots key.
+     */
+    it('setting×state: no row + a live count of 0 resolves to a noindex page, not a throw', async () => {
         db.pseoStats.findUnique.mockResolvedValue(null);
+        // No cron row at all, so robots come from the live facts.
+        db.$queryRaw.mockResolvedValue([]);
         db.job.count.mockResolvedValue(0);
+        // getListingFacts iterates the row sample; an unmocked findMany
+        // returns undefined and fails inside the tally, which would mask
+        // the very distinction this case exists to draw.
+        db.job.findMany.mockResolvedValue([]);
 
         const meta = await buildSettingStateMetadata(SETTING_KEY, STATE_SLUG, 1);
 
-        expect(meta.title).toContain('0');
+        expect(meta.title).toBe('Inpatient NP Jobs in Texas');
+        // No count is invented anywhere in the title at zero inventory.
+        expect(String(meta.title)).not.toMatch(/[0-9]/);
         expect(meta.robots).toEqual({ index: false, follow: true });
     });
 });

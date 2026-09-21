@@ -84,7 +84,6 @@ export const ART_GROUND: Record<string, string> = {
   "/images/categories/bento/senior-compensation.webp": "#e4cfb5",
   "/images/categories/bento/senior-leadership.webp": "#e3ceaf",
   "/images/categories/bento/senior-strategy.webp": "#c2a58a",
-  "/images/categories/bento/state-growth.webp": "#f5f4f0",
   "/images/categories/bento/state-practice.webp": "#eae7e3",
   "/images/categories/bento/state-salary.webp": "#e8e7e2",
   "/images/categories/bento/telehealth-multistate.webp": "#f0dba9",

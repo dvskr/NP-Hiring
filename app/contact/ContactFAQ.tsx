@@ -1,42 +1,34 @@
-'use client';
-
-import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+/**
+ * ContactFAQ: the /contact quick-answers list.
+ *
+ * SERVER COMPONENT (thin plan defect B4). This used to be a client island
+ * whose answer only entered the DOM after a click, while the page shipped a
+ * FAQPage block naming every question. Crawlers therefore saw structured
+ * data whose answers were nowhere in the served HTML, which is invisible
+ * FAQ markup, and a reader with no JavaScript saw six questions and no
+ * answers at all. The native <details>/<summary> accordion renders every
+ * answer into the server HTML and still opens on tap with no script.
+ *
+ * The rendering is delegated to CategoryFAQAccordion, the one accordion the
+ * rest of the site already uses, so /contact cannot drift into a second
+ * clay FAQ look and its answers carry the same `faq-answer` class every
+ * other FAQ surface exposes.
+ *
+ * The prop shape ({ q, a }) is unchanged: app/contact/page.tsx owns the
+ * single FAQ_ITEMS array that feeds both this list and the FAQPage JSON-LD,
+ * and that array is what makes the two halves impossible to desynchronize.
+ */
+import CategoryFAQAccordion from '@/components/CategoryFAQAccordion';
 
 interface FAQItem {
     q: string;
     a: string;
 }
 
-const clayCard: React.CSSProperties = {
-    background: '#FFFFFF', borderRadius: '20px',
-    border: '1px solid rgba(0,0,0,0.06)',
-    boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
-};
-
 export default function ContactFAQ({ items }: { items: FAQItem[] }) {
-    const [openFaq, setOpenFaq] = useState<number | null>(null);
-
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {items.map((item, i) => (
-                <div key={i} style={{ ...clayCard, overflow: 'hidden', padding: 0 }}>
-                    <button
-                        onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                        style={{
-                            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            padding: '16px 20px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer',
-                        }}
-                        aria-expanded={openFaq === i}
-                    >
-                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35', paddingRight: '16px' }}>{item.q}</span>
-                        <ChevronDown size={16} style={{ color: '#B0BEC5', flexShrink: 0, transform: openFaq === i ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
-                    </button>
-                    {openFaq === i && (
-                        <div style={{ padding: '0 20px 16px', fontSize: '13px', color: '#6B7F8A', lineHeight: 1.6 }}>{item.a}</div>
-                    )}
-                </div>
-            ))}
-        </div>
+        <CategoryFAQAccordion
+            faqs={items.map((item) => ({ question: item.q, answer: item.a }))}
+        />
     );
 }

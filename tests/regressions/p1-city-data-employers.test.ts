@@ -1,57 +1,53 @@
 /**
- * P1 #13 — "Top employers hiring now" on city pages.
+ * P1 #13: "Top employers hiring now" on city and category x city pages.
  *
- * 87.6% of records in lib/pseo/city-data/cities.ts carry an empty
+ * Most records in lib/pseo/city-data/cities.ts carry an empty
  * `healthcareSystems` list (and the #9 repair emptied more of them, because
  * they held another state's hospitals), so the city page's Healthcare block was
  * a bare negative on most pages. lib/pseo/city-employers.ts answers it from the
  * job table instead.
  *
- * What these tests defend:
- *   • The list only ever contains employers that appear on live postings.
- *   • Below two distinct employers the module returns nothing so the surface
- *     omits the block — it is never padded up to look fuller.
- *   • "Hiring now" counts ACTIVE postings only (published, unexpired, apply
+ * Thin-content program (package W2-CITYTPL): the standalone groupBy loader
+ * `getTopCityEmployers` is retired. Its one consumer, the category x city
+ * template, now reads employers from lib/pseo/listing-facts.ts, which wraps
+ * the SAME pure selector through `selectEmployers` and reads the canonical
+ * predicate, so the page, the city hub and the aggregate-pseo cron count one
+ * way. What this file defends is unchanged:
+ *   - The list only ever contains employers that appear on live postings.
+ *   - Below two distinct employers the selector returns nothing so the
+ *     surface omits the block; it is never padded up to look fuller.
+ *   - "Hiring now" counts ACTIVE postings only (published, unexpired, apply
  *     link not repeatedly dead), so the claim on the page is true.
- *   • A database failure degrades to an omitted block, never a broken page.
+ *   - The template renders the block only from what the data returned.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
   CITY_EMPLOYER_LIMIT,
   MIN_CITY_EMPLOYERS,
-  getTopCityEmployers,
   selectCityEmployers,
   type EmployerGroupRow,
 } from '@/lib/pseo/city-employers';
 import { DEAD_LINK_MISS_THRESHOLD } from '@/lib/active-job-filter';
-import { prisma } from '@/lib/prisma';
+import { canonicalActiveJobWhere } from '@/lib/canonical-counts';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const stripComments = (src: string): string =>
+  src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
 const row = (employer: string | null, employerCount: number): EmployerGroupRow => ({
   employer,
   _count: { employer: employerCount },
 });
 
-const groupBy = () => vi.mocked(prisma.job.groupBy);
-
-/** First call's argument object, narrowed to the fields under test. */
-const firstGroupByArgs = () =>
-  groupBy().mock.calls[0][0] as unknown as {
-    by: string[];
-    take: number;
-    where: Record<string, unknown>;
-  };
-
 describe('#13: selectCityEmployers omits rather than pads', () => {
   it('returns nothing when no employer is hiring', () => {
     expect(selectCityEmployers([])).toEqual([]);
   });
 
-  it('returns nothing for a single employer — one name is a directory entry, not a market', () => {
+  it('returns nothing for a single employer: one name is a directory entry, not a market', () => {
     expect(selectCityEmployers([row('Talkiatry', 9)])).toEqual([]);
     expect(MIN_CITY_EMPLOYERS).toBe(2);
   });
@@ -64,15 +60,23 @@ describe('#13: selectCityEmployers omits rather than pads', () => {
     ]);
   });
 
-  it('never invents a count — every entry traces to a groupBy row', () => {
+  it('never invents a count: every entry traces to a groupBy row', () => {
     const employers = selectCityEmployers([row('Alpha Clinic', 3), row('Beta Health System', 1)]);
     expect(employers.map((e) => e.openRoles)).toEqual([3, 1]);
+  });
+
+  it('honours an explicit floor of 0 so the facts loader can rank a single employer', () => {
+    // lib/pseo/listing-facts.ts calls the selector with min 0 and leaves the
+    // "is one employer worth a sentence" decision to the narrative builders.
+    expect(selectCityEmployers([row('Only Clinic', 12)], CITY_EMPLOYER_LIMIT, 0)).toEqual([
+      { name: 'Only Clinic', openRoles: 12 },
+    ]);
   });
 });
 
 describe('#13: selectCityEmployers reports real, de-duplicated employers', () => {
   it('merges alias spellings of one employer and sums their postings', () => {
-    // "LifeStance" / "LifeStance Health" / "Life Stance" are one company —
+    // "LifeStance" / "LifeStance Health" / "Life Stance" are one company;
     // listing them separately would triple-count a single employer.
     const employers = selectCityEmployers([
       row('LifeStance', 3),
@@ -88,9 +92,9 @@ describe('#13: selectCityEmployers reports real, de-duplicated employers', () =>
   it('merges alias spellings that normalize DIFFERENTLY but are one known company', () => {
     // The LifeStance case above passes even under a normalize-only merge key,
     // because both spellings happen to normalize to "life-stance". These do
-    // not — and KNOWN_COMPANIES lists them as aliases of one company anyway:
-    //   "Talkspace"            → "talkspace"
-    //   "Talkspace Psychiatry" → "talkspace-psychiatry"
+    // not, and KNOWN_COMPANIES lists them as aliases of one company anyway:
+    //   "Talkspace"            to "talkspace"
+    //   "Talkspace Psychiatry" to "talkspace-psychiatry"
     // Keyed on the normalized form, they render as two rows both labelled
     // "Talkspace", each with a slice of the postings and the same React key.
     expect(selectCityEmployers([row('Talkspace', 3), row('Talkspace Psychiatry', 2), row('Headway', 1)])).toEqual([
@@ -98,26 +102,26 @@ describe('#13: selectCityEmployers reports real, de-duplicated employers', () =>
       { name: 'Headway', openRoles: 1 },
     ]);
 
-    //   "VA Health" / "VA Medical" → "va"        "VA Hospital" → "va-hospital"
+    //   "VA Health" / "VA Medical" to "va"        "VA Hospital" to "va-hospital"
     expect(selectCityEmployers([row('VA Health', 4), row('VA Hospital', 3), row('Cerebral', 2)])).toEqual([
       { name: 'Department of Veterans Affairs', openRoles: 7 },
       { name: 'Cerebral', openRoles: 2 },
     ]);
 
-    //   "BlueSky Telepsych" → "blue-sky-telepsych"   "blueskytelepsych" → itself
+    //   "BlueSky Telepsych" to "blue-sky-telepsych"   "blueskytelepsych" to itself
     expect(selectCityEmployers([row('BlueSky Telepsych', 2), row('blueskytelepsych', 5), row('Cerebral', 1)])).toEqual([
       { name: 'BlueSky Telepsych', openRoles: 7 },
       { name: 'Cerebral', openRoles: 1 },
     ]);
 
-    //   "Lyra Health" / "Lyra" → "lyra"          "lyrahealth" → itself
+    //   "Lyra Health" / "Lyra" to "lyra"          "lyrahealth" to itself
     expect(selectCityEmployers([row('Lyra Health', 3), row('lyrahealth', 1), row('Lyra', 2), row('Cerebral', 1)])).toEqual([
       { name: 'Lyra Health', openRoles: 6 },
       { name: 'Cerebral', openRoles: 1 },
     ]);
   });
 
-  it('never returns the same display name twice — the template keys its <li> on it', () => {
+  it('never returns the same display name twice: the template keys its <li> on it', () => {
     const employers = selectCityEmployers([
       row('Talkspace', 3),
       row('Talkspace Psychiatry', 2),
@@ -158,73 +162,69 @@ describe('#13: selectCityEmployers reports real, de-duplicated employers', () =>
   });
 });
 
-describe('#13: getTopCityEmployers only counts jobs a candidate can still apply to', () => {
-  beforeEach(() => {
-    groupBy().mockReset();
+describe('#13: the employer query only counts jobs a candidate can still apply to', () => {
+  it('the module ships the selector alone: no second groupBy loader to drift', () => {
+    // Comments stripped: the doc block still describes the groupBy row SHAPE
+    // the selector consumes, which is not a second query path.
+    const src = stripComments(read('lib/pseo/city-employers.ts'));
+    // The standalone loader is retired; one query path, in listing-facts.ts.
+    expect(src).not.toContain('getTopCityEmployers');
+    expect(src).not.toContain('prisma.job');
+    expect(src).not.toContain("from '@/lib/prisma'");
+    expect(src).toContain('export function selectCityEmployers');
   });
 
-  it('scopes the groupBy to the city, the state, and active postings', async () => {
-    groupBy().mockResolvedValue([row('Alpha Clinic', 3), row('Beta Clinic', 2)] as never);
-    await getTopCityEmployers('Bangor', 'Maine');
+  it('lib/pseo/listing-facts.ts fetches its rows through the canonical predicate', () => {
+    const src = read('lib/pseo/listing-facts.ts');
+    expect(src).toContain('selectCityEmployers');
+    expect(src).toContain('canonicalBucketWhere(bucket, now)');
+    // The rows the employer tally is built from are the rows the count counts.
+    expect(src).toMatch(/fetchRows\(scopeKey, where\)/);
+  });
 
-    expect(groupBy()).toHaveBeenCalledTimes(1);
-    const args = firstGroupByArgs();
-    expect(args.by).toEqual(['employer']);
-    expect(args.where.city).toEqual({ equals: 'Bangor', mode: 'insensitive' });
-    expect(args.where.state).toEqual({ equals: 'Maine', mode: 'insensitive' });
-    // "Hiring now" must not be counting unpublished, expired, or dead-link rows.
-    expect(args.where.isPublished).toBe(true);
-    expect(args.where.healthConsecutiveMissing).toEqual({ lt: DEAD_LINK_MISS_THRESHOLD });
-    expect(args.where.OR).toEqual([
+  it('the canonical predicate excludes unpublished, expired and dead-link rows', () => {
+    // "Hiring now" must not be counting postings nobody can apply to. This is
+    // the behaviour the retired loader's own where-clause test defended.
+    const where = canonicalActiveJobWhere(new Date('2026-09-21T00:00:00Z')) as {
+      isPublished?: boolean;
+      healthConsecutiveMissing?: unknown;
+      AND?: Array<{ OR?: unknown }>;
+    };
+    expect(where.isPublished).toBe(true);
+    expect(where.healthConsecutiveMissing).toEqual({ lt: DEAD_LINK_MISS_THRESHOLD });
+    expect(where.AND?.[0]?.OR).toEqual([
       { expiresAt: null },
-      { expiresAt: { gt: expect.any(Date) } },
+      { expiresAt: { gt: new Date('2026-09-21T00:00:00Z') } },
     ]);
-  });
-
-  it('over-fetches so alias merging cannot silently shorten the list', async () => {
-    groupBy().mockResolvedValue([] as never);
-    await getTopCityEmployers('Brunswick', 'Maine');
-    expect(firstGroupByArgs().take).toBeGreaterThan(CITY_EMPLOYER_LIMIT);
-  });
-
-  it('omits the block when the city has a single employer hiring', async () => {
-    groupBy().mockResolvedValue([row('Only Clinic', 12)] as never);
-    await expect(getTopCityEmployers('Solo City', 'Iowa')).resolves.toEqual([]);
-  });
-
-  it('degrades to an omitted block when the query fails', async () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    groupBy().mockRejectedValue(new Error('connection reset'));
-    await expect(getTopCityEmployers('Broken City', 'Ohio')).resolves.toEqual([]);
-    spy.mockRestore();
-  });
-
-  it('never queries on an empty city or state', async () => {
-    groupBy().mockResolvedValue([] as never);
-    await expect(getTopCityEmployers('', 'Ohio')).resolves.toEqual([]);
-    await expect(getTopCityEmployers('Columbus', '  ')).resolves.toEqual([]);
-    expect(groupBy()).not.toHaveBeenCalled();
   });
 });
 
 describe('#13: the city template renders the module honestly', () => {
   const src = () => read('lib/pseo/category-city-template.tsx');
 
-  it('fetches live employers for the city', () => {
+  it('takes its employer limit from the module and its employers from the live facts', () => {
     expect(src()).toContain("from './city-employers'");
-    expect(src()).toContain('await getTopCityEmployers(city!.name, city!.state)');
+    // No second query: the fallback roster is a slice of the city pool facts.
+    expect(src()).toContain('cityFacts.topEmployers.slice(0, CITY_EMPLOYER_LIMIT)');
+    expect(src()).not.toContain('getTopCityEmployers');
   });
 
-  it('renders the employer list only when the module returned entries', () => {
+  it('renders the employer list only when the data returned entries', () => {
     expect(src()).toContain('Top Employers Hiring Now');
     expect(src()).toMatch(/topEmployers\.length > 0 \? \(/);
   });
 
-  it('omits the whole card when there is neither a live employer nor a stored system', () => {
-    expect(src()).toContain('{(topEmployers.length > 0 || city!.healthcareSystems.length > 0) && (');
-    // The old bare negative is gone — an empty block is better than a
-    // sentence telling the reader the page has nothing.
+  it('omits the whole card when no pool has two employers hiring', () => {
+    // The category roster first, the all-specialty city pool as the fallback,
+    // then nothing. No stored healthcare-system chips stand in for live data
+    // any more, and the old bare negative is gone: an empty block is better
+    // than a sentence telling the reader the page has nothing.
+    expect(src()).toMatch(/topEmployers\.length > 0 \? \([\s\S]{0,2400}?\) : null/);
+    expect(src()).not.toContain('city!.healthcareSystems');
     expect(src()).not.toContain('No major healthcare systems listed for this area.');
+    // The whole Local Insights band goes with it when nothing inside renders.
+    expect(src()).toContain('const showInsights = categoryEmployersRender || topEmployers.length > 0 || acrossStateRenders;');
+    expect(src()).toContain('{showInsights && (');
   });
 
   it('labels the counts with the brand niche token rather than a hardcoded role name', () => {

@@ -118,8 +118,28 @@ describe('D4 salary guide Top Cities gate', () => {
   it('filters sidebar cities on MIN_CITY_JOBS_FOR_LINK as well as the slug round trip', () => {
     const src = read('app/salary-guide/[state]/page.tsx');
     expect(MIN_CITY_JOBS_FOR_LINK).toBe(3);
-    expect(src).toContain('c._count.id >= MIN_CITY_JOBS_FOR_LINK');
-    expect(src).toContain('cityLinkResolves(c.city!, stateCode)');
+    // WHY THESE PINS CHANGED (PLAN C.1 truth fixes, thin-spec-4 B3): the old
+    // getTopCities groupBy filtered on isPublished alone, so expired and
+    // dead-link rows inflated the very counts this gate reads. Cities now come
+    // from getListingFacts over the canonical pool as facts.cities, which
+    // renamed the variables. Both gates survive verbatim, now ANDed into one
+    // `linkable` decision, so a city failing either one is named and not
+    // linked. Restoring the old literals would mean restoring the inflated
+    // count they were reading.
+    expect(src).toContain('const cityRows = facts.cities.slice(');
+    expect(src).toContain(
+      'const linkable = city.count >= MIN_CITY_JOBS_FOR_LINK && cityLinkResolves(city.name, code);',
+    );
+    // The gate has to reach the href or it gates nothing: a linked city that
+    // does not clear the floor is a link to a noindex page.
+    expect(src).toContain('href: linkable ? `/jobs/city/${buildCitySlug(city.name, code)}` : null,');
+    // ...and the render has to HONOUR the null, or the gate computes a value
+    // nothing reads. The gated city is still NAMED, so failing the floor
+    // removes the link, not the row.
+    expect(src).toContain('city.href ? <Link href={city.href}');
+    expect(src).toContain('</Link> : city.name,');
+    // And the de-inflated pool is the other half of the fix.
+    expect(src).not.toContain('c._count.id >= MIN_CITY_JOBS_FOR_LINK');
   });
 });
 

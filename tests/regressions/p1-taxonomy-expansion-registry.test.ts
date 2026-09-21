@@ -30,7 +30,9 @@ import { buildCityFacts, getTaxonomyLead } from '@/lib/pseo/city-narrative';
 import { CITIES } from '@/lib/pseo/city-data/cities';
 import {
   shouldRenderCategoryCity,
+  shouldIndexListingPage,
   MIN_JOBS_FOR_CATEGORY_CITY,
+  MIN_JOBS_FOR_INDEX,
 } from '@/lib/pseo/render-gate';
 
 const ROOT = path.resolve(__dirname, '../..');
@@ -91,16 +93,31 @@ describe('P1 #15 — new vertical slugs are first-class registry citizens', () =
     expect(new Set(leads).size).toBe(NEW_VERTICALS.length);
   });
 
-  it('landing metadata noindexes zero-inventory categories (thin-shell gate, static check)', () => {
-    // The shared landing template gates empty categories with
-    // robots.index=false — new slugs ride the same template, so a
-    // zero-inventory vertical never ships as an indexable thin shell.
+  it('landing metadata noindexes thin categories (shared gate, wiring check)', () => {
+    /*
+     * thin-spec-1 8.3 / PLAN C.2: the landing robots moved from a local
+     * zero-inventory check to shouldIndexListingPage, the same function
+     * app/sitemap.ts calls for the category-landing PseoStats row. The new
+     * gate is STRICTER (noindex below MIN_JOBS_FOR_INDEX, not only at 0),
+     * so the original intent survives intact: a zero-inventory vertical
+     * still never ships as an indexable thin shell, and a 1-job or 2-job
+     * one no longer does either. Pinned on the gate plus the wiring rather
+     * than on the retired literal, so the pin also fails if the floor moves.
+     */
+    expect(shouldIndexListingPage(0, 1)).toBe(false);
+    expect(shouldIndexListingPage(MIN_JOBS_FOR_INDEX - 1, 1)).toBe(false);
+    expect(shouldIndexListingPage(MIN_JOBS_FOR_INDEX, 1)).toBe(true);
+    // Paginated views stay noindex, follow, exactly as before.
+    expect(shouldIndexListingPage(MIN_JOBS_FOR_INDEX, 2)).toBe(false);
+
     const src = fs.readFileSync(
       path.join(ROOT, 'lib', 'pseo', 'category-landing-template.tsx'),
       'utf-8',
     );
-    expect(src).toContain('page > 1 || totalJobs === 0');
-    expect(src).toContain('robots: { index: false, follow: true }');
+    expect(src).toContain("from '@/lib/pseo/render-gate'");
+    expect(src).toContain('!shouldIndexListingPage(totalJobs, page) && { robots: { index: false, follow: true } }');
+    // The retired local zero check must not come back beside the shared gate.
+    expect(src).not.toContain('totalJobs === 0');
   });
 
   it('the category×city surface hard-404s below the thin-content floor', () => {

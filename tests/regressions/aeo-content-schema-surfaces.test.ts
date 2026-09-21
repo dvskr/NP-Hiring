@@ -96,7 +96,18 @@ describe('B48 — state salary-guide pages carry answer-engine schema', () => {
 
     it('speakable selectors exist in the rendered markup', () => {
         expect(src).toContain('id="state-salary-summary"');
-        expect(src).toContain('className="faq-answer"');
+        // PLAN C.4 SAL-S6: the FAQ band renders through the shared server
+        // component instead of hand-rolled markup, so the page no longer
+        // writes className="faq-answer" itself. The property this case exists
+        // for is unchanged and is checked one level down: the page declares
+        // '.faq-answer' as a speakable selector, it renders
+        // CategoryFAQAccordion, and that component is what emits the class.
+        // (p3-donor-followups-narrative-truth.test.ts renders the accordion
+        // and asserts <p class="faq-answer"> in the server HTML.)
+        expect(src).toContain("'.faq-answer'");
+        expect(src).toContain("import CategoryFAQAccordion from '@/components/CategoryFAQAccordion'");
+        expect(src).toMatch(/<CategoryFAQAccordion\b/);
+        expect(read('components/CategoryFAQAccordion.tsx')).toContain('className="faq-answer"');
     });
 });
 
@@ -104,7 +115,13 @@ describe('B52 — category-city FAQ has a single source array', () => {
     const src = read('lib/pseo/category-city-template.tsx');
 
     it('exactly one categoryCityFaqs definition feeds schema and accordion', () => {
-        expect(src.match(/const categoryCityFaqs = \[/g)).toHaveLength(1);
+        // PLAN C.4 CC-K8 moves the entries to the shared builder
+        // buildCategoryCityFaqs, so the binding is no longer an array literal.
+        // B52 itself is untouched and still the point of this case: exactly
+        // ONE definition feeds both the JSON-LD and the visible accordion, so
+        // the two copies that had drifted apart cannot come back.
+        expect(src.match(/const categoryCityFaqs = /g)).toHaveLength(1);
+        expect(src).toMatch(/const categoryCityFaqs = buildCategoryCityFaqs\(/);
         expect(src).toMatch(/mainEntity: categoryCityFaqs\.map/);
         expect(src).toMatch(/\{categoryCityFaqs\.map\(\(faq/);
     });

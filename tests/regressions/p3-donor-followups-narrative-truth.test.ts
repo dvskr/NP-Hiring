@@ -47,6 +47,7 @@ import {
 } from '@/lib/pseo/city-narrative';
 import { buildSettingStateNarrative } from '@/lib/pseo/state-narrative';
 import { categoryOwnsShortageData, formatStatsBadge } from '@/lib/pseo/category-city-template';
+import { buildLiveRolesBadge } from '@/lib/pseo/listing-narrative';
 import { stripUnverifiableFreshness } from '@/components/CategoryHero';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -385,12 +386,23 @@ describe('P3 #5 — CategoryHero renders every prop it accepts', () => {
         expect(body()).toContain('cath5-badge');
     });
 
-    // Rendering badgeText made ~30 previously-dead strings visible. Only the
-    // two pSEO templates derive freshness through formatStatsBadge(); 26 app/
-    // routes hardcode "· updated today" and category-landing-template
-    // hardcodes "· updated daily", and every one of those routes is
-    // revalidate=3600 ISR with no generateStaticParams — so the served HTML
-    // can be days old while asserting it was updated today.
+    // Rendering badgeText made ~30 previously-dead strings visible, most of
+    // them hardcoding "· updated today" on a revalidate=3600 ISR route with
+    // no generateStaticParams, so the served HTML can be days old while
+    // asserting it was updated today.
+    //
+    // PLAN C.1 T0-4 has since retired that literal at the call sites the
+    // thin-content waves rewrote: the city hero reports the stats row's own
+    // date through formatStatsBadge(), and the metro hero and
+    // category-landing-template use buildLiveRolesBadge(), a bare count that
+    // makes no freshness claim at all.
+    //
+    // That is a dent, not a clearance. The waves rewrote only the call sites
+    // they owned; the majority of the app/jobs category hubs still hardcode
+    // "· updated today" and are out of this program's scope, so the component
+    // is still what has to defuse the claim. Both halves are pinned below: a
+    // sample of the call sites that still need defusing, and the removals, so
+    // a later edit cannot quietly put the claim back into a rewritten one.
     describe('the badge never publishes a freshness claim the HTML cannot support', () => {
         it('drops relative freshness and keeps the count', () => {
             expect(stripUnverifiableFreshness('412 live roles · updated today'))
@@ -425,25 +437,59 @@ describe('P3 #5 — CategoryHero renders every prop it accepts', () => {
         });
 
         it('the actual hardcoded call-site strings all lose the claim', () => {
+            // Still hardcoded upstream (foreign files); the component is what
+            // has to be safe. P10 pseo-jobs #4: the state hub pluralizes the
+            // noun ("1 live role"); the freshness suffix is unchanged.
             const callSites = [
-                'app/jobs/city/[slug]/page.tsx',
-                'app/jobs/metro/[slug]/page.tsx',
                 'app/jobs/state/[state]/page.tsx',
                 'app/jobs/remote/page.tsx',
                 'app/jobs/locum-tenens/page.tsx',
             ];
             for (const rel of callSites) {
-                // Still hardcoded upstream (foreign files); the component is
-                // what has to be safe.
-                // P10 pseo-jobs #4: the state and metro hubs pluralize the noun
-                // ("1 live role"); the freshness suffix is unchanged.
                 expect(read(rel), rel).toMatch(/live (?:roles|\$\{pluralize\([^)]*'role'\)\}) · updated today/);
             }
+            // A sample, not a census: many more app/jobs hubs still emit the
+            // same literal. The list must stay non-empty for as long as ANY
+            // caller hardcodes the claim, because the day it empties,
+            // stripUnverifiableFreshness has no remaining input and the
+            // defusing can be reconsidered. Until then the stripper is
+            // load-bearing on every hub that still ships the literal.
+            expect(callSites.length).toBeGreaterThan(0);
             expect(stripUnverifiableFreshness('1 live role · updated today')).toBe('1 live role');
-            expect(read('lib/pseo/category-landing-template.tsx'))
-                .toContain('live roles · updated daily');
             expect(stripUnverifiableFreshness('1247 live roles · updated today'))
                 .not.toMatch(/updated/i);
+        });
+
+        // PLAN C.1 T0-4 retires the hand-typed freshness literal wherever a
+        // thin-content wave rewrote the caller. These pin the REMOVAL itself,
+        // so the claim cannot come back through the same three files, and they
+        // check the replacement really is claim-free rather than a rename.
+        it('the rewritten call sites derive the badge instead of asserting it', () => {
+            expect(read('app/jobs/city/[slug]/page.tsx'))
+                .toContain('badgeText={formatStatsBadge(facts.total, facts.computedAt)}');
+            expect(read('app/jobs/metro/[slug]/page.tsx'))
+                .toContain('buildLiveRolesBadge(facts.total)');
+            expect(read('lib/pseo/category-landing-template.tsx'))
+                .toContain('buildLiveRolesBadge(facts.total)');
+            for (const rel of [
+                'app/jobs/city/[slug]/page.tsx',
+                'app/jobs/metro/[slug]/page.tsx',
+                'lib/pseo/category-landing-template.tsx',
+            ]) {
+                expect(read(rel), rel).not.toMatch(/updated (?:today|daily)/);
+            }
+            // buildLiveRolesBadge publishes a count and nothing else, so there
+            // is no freshness claim left for the hero to strip. Asserted on the
+            // builder, not on the literal, because a count-only badge is the
+            // property that makes the removal safe.
+            expect(buildLiveRolesBadge(412)).toBe('412 live roles');
+            expect(buildLiveRolesBadge(1)).toBe('1 live role');
+            expect(buildLiveRolesBadge(412)).not.toMatch(/updated/i);
+            expect(stripUnverifiableFreshness(buildLiveRolesBadge(412))).toBe('412 live roles');
+            // formatStatsBadge stays date-derived: it says "updated today" only
+            // for a row recomputed today and prints the real date otherwise.
+            expect(formatStatsBadge(412, new Date('2026-07-12T00:00:00Z')))
+                .toBe('412 live roles · updated Jul 12');
         });
     });
 

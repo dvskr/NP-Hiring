@@ -1,62 +1,114 @@
 /**
- * Category × City pSEO Template Factory
- * 
- * THE 50K MULTIPLIER: A single shared component that renders pages for
- * any category (setting or specialty) × any city combination.
- * 
- * Each page includes genuine, unique content:
- * - Local market demand score
- * - Cost-of-living adjusted salary
- * - Healthcare landscape for the area
- * - Provider shortage indicators
- * - Community profile
- * - Nearby city cross-links
- * - State licensure quick reference
+ * Category x City pSEO template factory
+ *
+ * One shared server component renders /jobs/{category}/city/{slug} for every
+ * category (setting, job type, specialty, APRN role, experience level,
+ * employer type, population) in every dataset city.
+ *
+ * Thin-content program (PLAN C.4 item 6, thin-spec 2 section 4): every
+ * data-backed section reads lib/pseo/listing-facts.ts through the shared
+ * clay sections in components/seo/pseo/* and the sentence builders in
+ * lib/pseo/listing-narrative.ts, and renders only when its facts pass the
+ * builder's own floor:
+ *   CC-K1 employers for this category (EmployerRoster), the all-specialty
+ *         city pool as the fallback with its disclaimer, else nothing;
+ *   CC-K2 listing snapshot (RoleSetup skips the page's own axis; the
+ *         freshness sentence leads the bento);
+ *   CC-K3 posted pay through PostedPay only (gated median or the cited BLS
+ *         sentence; never a mean, never a hand-typed band);
+ *   CC-K4 roles across the state from fresh PseoStats rows at 3 or more;
+ *   CC-K5 other categories in this city as a live list with counts;
+ *   CC-K6 practicing as a {role} in {State} (PracticeCard) with the
+ *         certification clause;
+ *   CC-K7 per-axis editorial (lib/pseo/category-axis-guide.ts);
+ *   CC-K8 one FAQ array feeds the accordion and the FAQPage JSON-LD;
+ *   CC-K9 labelNoun and labelSentence titles, H1 and hero stats.
+ * Robots read shouldIndexLocalListingPage over the page count and the
+ * cron's stored distinctEmployers (a facts fallback when no fresh row
+ * exists), the same predicate the sitemaps use.
  */
 import Link from 'next/link';
 import Image from 'next/image';
+import type { CSSProperties } from 'react';
 import ImmersiveImage from '@/components/ImmersiveImage';
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
+import type { Prisma } from '@prisma/client';
 import {
-  TrendingUp, Building2, Bell, MapPin, Lightbulb,
-  DollarSign, Users, AlertTriangle, Activity, Heart, Shield, ArrowRight,
+  ArrowLeft, ArrowRight, Bell, Building2, DollarSign, Info, Lightbulb, MapPin,
 } from 'lucide-react';
 import { cache } from 'react';
 import { withTagFallback, type CategoryTag } from './category-tagger';
-import { shouldRenderCategoryCity, MIN_JOBS_FOR_CATEGORY_CITY } from './render-gate';
+import {
+  shouldRenderCategoryCity,
+  shouldIndexLocalListingPage,
+  isPseoStatsFresh,
+  pseoStatsFreshnessThreshold,
+  PSEO_STATS_MAX_AGE_HOURS,
+  MIN_JOBS_FOR_CATEGORY_CITY } from './render-gate';
 import { JOB_LISTING_OMIT } from './job-listing-omit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { brand } from '@/config/brand';
-import { licenseGuideSlug, LICENSE_GUIDE_SERIES_PUBLISHED } from '@/config/niche/content-map';
+import { LICENSE_GUIDE_SERIES_PUBLISHED } from '@/config/niche/content-map';
 import { STAT_SOURCES } from '@/lib/stats-sources';
+import { NLC_SOURCE_LINE, SOP_SOURCE_LINE } from '@/components/ScopeOfPracticeData';
 import { prisma } from '@/lib/prisma';
+import { canonicalBucketWhere } from '@/lib/canonical-counts';
 import JobCard from '@/components/JobCard';
-// P2 #19: Breadcrumbs renders the VISIBLE trail *and* the BreadcrumbList
+// P2 #19: Breadcrumbs renders the VISIBLE trail and the BreadcrumbList
 // JSON-LD from one items array, so schema can never drift from what users
-// see. It replaces the schema-only BreadcrumbSchema that used to sit here —
+// see. It replaces the schema-only BreadcrumbSchema that used to sit here:
 // do not add both, or the page emits two BreadcrumbList graphs.
 import Breadcrumbs from '@/components/Breadcrumbs';
-import { pluralize } from '@/lib/pseo/plural';
+import { formatCount, pluralize } from '@/lib/display-text';
 import { withListingQuarantine } from '@/lib/pseo/listing-where';
 import CategoryHero from '@/components/CategoryHero';
+import {
+  ClayCard,
+  EmployerRoster,
+  employerSentence,
+  IconWell,
+  LocationSpread,
+  locationSentences,
+  PostedPay,
+  PracticeCard,
+  RoleSetup,
+  FAQ_SCHEMA_MIN_ENTRIES,
+  resolveSectionIcon,
+  clayLink,
+  clayList,
+  clayMeta,
+  clayMuted,
+  clayRow,
+  clayTile,
+  type LocationSpreadPlace,
+  type SectionGlyph,
+} from '@/components/seo/pseo';
 import { Job } from '@/lib/types';
 import { CityData } from './city-data/types';
 import { getCityBySlug } from './city-data/cities';
 import { SETTING_CONFIGS, SettingConfig, stateToSlug } from './setting-state-config';
-import { CATEGORY_ASSET_REGISTRY, DEFAULT_HERO_IMAGE } from './category-asset-registry';
+import { categoryNavArt, getCategoryAssets, NAV_ICONS } from './category-asset-registry';
+import { emptyListingFacts, getListingFacts, type ListingFacts } from './listing-facts';
 import {
-  getStatePracticeAuthority,
-  getAuthorityLabel,
-  StatePracticeInfo,
-} from '@/lib/state-practice-authority';
-// P3 #9: the /jobs/city/[slug] route does NOT read the city dataset — it rebuilds
+  buildCategoryCityDescription,
+  buildCategoryCityFaqs,
+  buildCategoryCityTitle,
+  buildFreshnessSentence,
+  buildRoleSetup,
+  formatK,
+  receivesNpMedian,
+} from './listing-narrative';
+import { labelNoun, labelSentence } from './category-metadata';
+import { buildCategoryCityAxisGuide } from './category-axis-guide';
+import { getPracticeEnvironment, isLicenseGuideLive } from './practice-environment';
+// P3 #9: the /jobs/city/[slug] route does NOT read the city dataset: it rebuilds
 // a city NAME out of the slug and matches that against the DB `city` column. These
 // two are P2's builder/guard pair for that round-trip, and importing them here is
 // the same cross-import components/tools/city-picker-data.ts already makes.
 import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
 import { PseoPageViewTracker } from '@/components/analytics/ViewTrackers';
 import { buildCityFacts, buildTaxonomyCityNarrative } from './city-narrative';
-import { getTopCityEmployers } from './city-employers';
+import { CITY_EMPLOYER_LIMIT } from './city-employers';
 import { STATE_ELIGIBLE_CATEGORY_SLUGS } from './taxonomy-registry';
 // Kept as its own statement: tests/regressions/pseo-consistency-integrity.test.ts
 // (B36) pins the exact single-specifier import line above.
@@ -68,6 +120,7 @@ import { PSYCH_SPECIALTY_SLUG } from './taxonomy-registry';
 // hub for them instead of emitting a guaranteed-410 URL.
 const STATE_ELIGIBLE_SET = new Set<string>(STATE_ELIGIBLE_CATEGORY_SLUGS);
 
+const NP = brand.niche.short;
 
 // ─── Category Configuration (extends SettingConfig for specialties) ────────────
 
@@ -76,8 +129,6 @@ export interface CategoryConfig {
   label: string;
   fullLabel: string;
   heroSubtitle: string;
-  /** @deprecated hand-typed band; removed by the template rewrite (thin plan T0-3). */
-  salaryRange?: string;
   keywords: string[];
   faqCategory: string;
   buildWhere: (stateName: string, cityName?: string) => Record<string, unknown>;
@@ -89,18 +140,18 @@ export interface CategoryConfig {
   tips: string[];
 }
 
+// Copy rule for every benefit and tip below (thin-spec 2 P4, PLAN C.5): no
+// figure, no pay band, no trend word. Each entry says what the category means
+// on this board and what to confirm in a listing. Pay renders only through the
+// gated helpers (CC-K3).
+
 // Specialty configs (supplement the setting configs from setting-state-config.ts)
-// NP taxonomy migration (2026-07): the five donor-niche-only specialty configs
-// were removed — their slugs are no longer in taxonomy-registry.ts.
-// Narrative fields in the kept configs below were rewritten for the all-NP
-// board (2026-07); salary bands align to the config/niche/salary.ts anchors.
 export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   'new-grad': {
     slug: 'new-grad',
     label: 'New Grad',
     fullLabel: `New Graduate ${brand.niche.short}`,
     heroSubtitle: 'Entry-level & new graduate positions',
-    salaryRange: '$95K-140K',
     keywords: ['new grad np', 'entry level np', 'new graduate np', 'np fellowship'],
     faqCategory: 'new-grad',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -111,15 +162,15 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Mentorship', description: `Many new grad positions include structured mentorship and supervision from experienced physicians and senior ${brand.niche.short}s.`, iconName: 'Users' },
-      { title: 'High Demand', description: `The ${brand.niche.short} shortage means even new graduates are highly sought after and receive strong starting salaries.`, iconName: 'TrendingUp' },
+      { title: 'Onboarding Terms', description: 'The better listings spell out onboarding, preceptorship and supervision, so read those sections before comparing offers.', iconName: 'TrendingUp' },
       { title: 'Career Foundation', description: 'Build clinical confidence and skills that set you up for advanced roles or private practice later.', iconName: 'Shield' },
     ],
     tips: [
       'Prioritize positions with structured supervision',
-      'Start with manageable caseloads (8-12 patients/day)',
+      'Ask how the caseload ramps in the first months',
       'Seek collaborative practice opportunities',
       `Join AANP and your state ${brand.niche.short} association for networking and CE`,
-      'Negotiate sign-on bonuses and student loan assistance',
+      'Ask whether sign-on bonuses or student loan assistance are offered',
     ],
   },
   'per-diem': {
@@ -127,7 +178,6 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Per Diem',
     fullLabel: `Per Diem ${brand.niche.short}`,
     heroSubtitle: 'PRN & flexible schedule positions',
-    salaryRange: '$60-110/hr',
     keywords: ['per diem np', 'PRN np', 'part time np', 'flexible np'],
     faqCategory: 'per-diem',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -138,29 +188,26 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Maximum Flexibility', description: 'Set your own schedule and work as many or as few shifts as you want, when you want.', iconName: 'Activity' },
-      { title: 'Higher Hourly Rate', description: 'Per diem roles pay $60-$110+/hr, a premium over the hourly equivalent of salaried full-time work.', iconName: 'DollarSign' },
-      { title: 'Income Supplement', description: 'Per diem work is ideal for supplementing a full-time position or private practice while maintaining clinical variety.', iconName: 'TrendingUp' },
+      { title: 'Hourly Pay', description: 'Per diem roles are paid by the shift or hour; compare the rate against the hourly value of a salaried offer with benefits.', iconName: 'DollarSign' },
+      { title: 'Income Supplement', description: 'Per diem work can supplement a full-time position or private practice while maintaining clinical variety.', iconName: 'TrendingUp' },
     ],
     tips: [
       'Maintain your own malpractice insurance',
       'Track hours carefully for tax purposes',
       'Build relationships at multiple facilities',
-      'Negotiate competitive hourly rates',
+      'Negotiate the hourly rate before the first shift',
       'Consider 1099 versus W-2 per diem arrangements',
     ],
   },
 };
 
 // Job Type configs
-// Narrative copy below was rewritten for the all-NP board (2026-07); salary
-// bands align to the config/niche/salary.ts anchors.
 export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   'full-time': {
     slug: 'full-time',
     label: 'Full-Time',
     fullLabel: `Full-Time ${brand.niche.short}`,
     heroSubtitle: `Permanent full-time ${brand.niche.short} positions with benefits`,
-    salaryRange: '$110K-170K',
     keywords: ['full time np', 'permanent np', 'salaried np'],
     faqCategory: 'remote', // Use remote FAQ as closest match
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -170,13 +217,13 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('full-time'),
     }),
     benefits: [
-      { title: 'Comprehensive Benefits', description: 'Full health insurance, dental, vision, retirement plans, and PTO, typically 20-30 days off.', iconName: 'Heart' },
+      { title: 'Comprehensive Benefits', description: 'Health, dental and vision coverage, retirement plans and paid time off are usually part of the offer; confirm each in the listing.', iconName: 'Heart' },
       { title: 'Job Security', description: 'Stable employment with consistent income, malpractice coverage, and professional development support.', iconName: 'Shield' },
-      { title: 'Career Growth', description: 'Access to leadership tracks, CME funding ($2,000-$5,000/year), and promotion opportunities.', iconName: 'TrendingUp' },
+      { title: 'Career Growth', description: 'Access to leadership tracks, CME funding and promotion paths; ask how each is structured.', iconName: 'TrendingUp' },
     ],
     tips: [
-      'Negotiate sign-on bonuses (often $10K-$25K)',
-      'Ask about panel size and aim for 14-18 patients/day',
+      'Ask whether a sign-on bonus is offered and how it vests',
+      'Ask about panel size and daily visit expectations',
       'Clarify on-call requirements before accepting',
       'Review non-compete clauses carefully',
       'Confirm CME budget and time-off allowance',
@@ -187,7 +234,6 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Part-Time',
     fullLabel: `Part-Time ${brand.niche.short}`,
     heroSubtitle: `Flexible part-time ${brand.niche.short} positions`,
-    salaryRange: '$60-100/hr',
     keywords: ['part time np', 'half time np', 'flexible np'],
     faqCategory: 'per-diem',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -197,9 +243,9 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('part-time'),
     }),
     benefits: [
-      { title: 'Work-Life Balance', description: 'Set your own schedule and work 2-3 days per week while maintaining clinical skills and income.', iconName: 'Activity' },
-      { title: 'Multiple Income Streams', description: 'Combine part-time with private practice, telehealth, or consulting for maximum earning.', iconName: 'DollarSign' },
-      { title: 'Reduced Burnout', description: `Lower caseloads and schedule flexibility help prevent the burnout epidemic in ${brand.niche.category}.`, iconName: 'Heart' },
+      { title: 'Work-Life Balance', description: 'Set a reduced weekly schedule while maintaining clinical skills and income.', iconName: 'Activity' },
+      { title: 'Multiple Income Streams', description: 'Combine part-time with private practice, telehealth, or consulting.', iconName: 'DollarSign' },
+      { title: 'Sustainable Pace', description: 'Lower caseloads and schedule flexibility can make the work more sustainable.', iconName: 'Heart' },
     ],
     tips: [
       'Clarify whether benefits (health, dental) are included',
@@ -214,7 +260,6 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Contract',
     fullLabel: `Contract ${brand.niche.short}`,
     heroSubtitle: `Contract & locum tenens ${brand.niche.short} assignments`,
-    salaryRange: '$70-150/hr',
     keywords: ['contract np', 'locum tenens np', '1099 np', 'temp np'],
     faqCategory: 'travel',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -224,30 +269,27 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('contract'),
     }),
     benefits: [
-      { title: 'Premium Pay', description: 'Contract rates are typically 20-50% higher than permanent positions, at $70-$150+/hour.', iconName: 'DollarSign' },
-      { title: 'Tax Advantages', description: '1099 contractors can deduct travel, housing, CME, malpractice insurance, and home office expenses.', iconName: 'TrendingUp' },
+      { title: 'Rate-Based Pay', description: 'Contract rates are quoted per hour or per shift without the benefits of a permanent role, so compare the whole package.', iconName: 'DollarSign' },
+      { title: 'Tax Considerations', description: '1099 contractors can deduct travel, housing, CME, malpractice insurance, and home office expenses where the rules allow.', iconName: 'TrendingUp' },
       { title: 'Geographic Freedom', description: 'Try different cities, practice settings, and patient populations before committing long-term.', iconName: 'MapPin' },
     ],
     tips: [
-      'Work with reputable staffing agencies (AMN, CompHealth)',
+      'Work with established staffing agencies',
       'Negotiate housing/travel stipends in your contract',
       'Get your own occurrence-based malpractice policy',
-      'Set aside 25-30% for self-employment taxes',
+      'Set aside a share of each payment for self-employment taxes',
       'Ensure contract specifies patient volume expectations',
     ],
   },
 };
 
 // Experience Level configs
-// Narrative copy below was rewritten for the all-NP board (2026-07); salary
-// bands align to the config/niche/salary.ts anchors.
 export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
   'entry-level': {
     slug: 'entry-level',
     label: 'Entry-Level',
     fullLabel: `Entry-Level ${brand.niche.short}`,
     heroSubtitle: `New graduate & early-career ${brand.niche.short} positions with mentorship`,
-    salaryRange: '$95K-140K',
     keywords: ['entry level np', 'new grad np', 'junior np', '0-2 years np'],
     faqCategory: 'new-grad',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -257,14 +299,14 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('entry-level'),
     }),
     benefits: [
-      { title: 'Structured Mentorship', description: `Most entry-level positions include 6-12 months of supervised practice with experienced physicians or senior ${brand.niche.short}s.`, iconName: 'Users' },
-      { title: 'Competitive Starting Pay', description: `The ${brand.niche.short} shortage means entry-level pay starts at $95K-$140K, which is strong compensation right out of school.`, iconName: 'DollarSign' },
-      { title: 'Career Launchpad', description: 'Build your clinical foundation with manageable caseloads (8-12 patients/day) before scaling up.', iconName: 'TrendingUp' },
+      { title: 'Structured Mentorship', description: `Many entry-level positions include a period of supervised practice with experienced physicians or senior ${brand.niche.short}s.`, iconName: 'Users' },
+      { title: 'Room to Grow', description: 'Entry-level roles establish the clinical base that later specialty and leadership roles build on.', iconName: 'DollarSign' },
+      { title: 'Career Launchpad', description: 'Build your clinical foundation with a manageable caseload before scaling up.', iconName: 'TrendingUp' },
     ],
     tips: [
       'Prioritize positions offering structured supervision',
       'Start with collaborative practice models when possible',
-      'Negotiate sign-on bonuses ($5K-$15K common for new grads)',
+      'Ask whether sign-on bonuses are offered to new graduates',
       'Ask about the ramp-up period and initial caseload expectations',
       `Join AANP or your state ${brand.niche.short} association for networking and CE opportunities`,
     ],
@@ -273,8 +315,7 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
     slug: 'mid-career',
     label: 'Mid-Career',
     fullLabel: `Mid-Career ${brand.niche.short}`,
-    heroSubtitle: `Experienced ${brand.niche.short} positions for 3-7 years of practice`,
-    salaryRange: '$120K-160K',
+    heroSubtitle: `Experienced ${brand.niche.short} positions for clinicians with several years of practice`,
     keywords: ['experienced np', 'mid career np', '3-5 years np', 'senior np positions'],
     faqCategory: 'remote',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -284,12 +325,12 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('mid-career'),
     }),
     benefits: [
-      { title: 'Higher Compensation', description: `Mid-career ${brand.niche.short}s earn $120K-$160K with premium benefits, CME budgets, and leadership bonuses.`, iconName: 'DollarSign' },
+      { title: 'Compensation Leverage', description: 'Proven experience supports negotiation on base pay, CME budgets and leadership bonuses.', iconName: 'DollarSign' },
       { title: 'Autonomy & Flexibility', description: 'With proven experience, choose between independent practice, hybrid schedules, or specialized roles.', iconName: 'Activity' },
       { title: 'Specialization Options', description: 'Pivot into urgent care, dermatology, cardiology, palliative care, or private practice consulting.', iconName: 'Shield' },
     ],
     tips: [
-      'Leverage your experience for a higher base salary (benchmark $140K+)',
+      'Use your experience to negotiate base pay and productivity terms',
       'Negotiate productivity bonuses or profit-sharing',
       'Consider adding niche certifications (ENP, GS-C, wound care)',
       'Explore leadership tracks (clinical director, program manager)',
@@ -300,8 +341,7 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
     slug: 'senior',
     label: 'Senior',
     fullLabel: `Senior ${brand.niche.short}`,
-    heroSubtitle: 'Leadership & advanced practice positions for 7+ years of experience',
-    salaryRange: '$150K-200K+',
+    heroSubtitle: 'Leadership & advanced practice positions for experienced clinicians',
     keywords: ['senior np', 'lead np', 'director np', 'advanced practice nurse practitioner'],
     faqCategory: 'remote',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -311,12 +351,12 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('senior'),
     }),
     benefits: [
-      { title: 'Top-Tier Compensation', description: `Senior ${brand.niche.short}s earn $150K-$200K+ with equity, executive benefits, and performance bonuses.`, iconName: 'DollarSign' },
+      { title: 'Senior Compensation', description: 'Senior roles often pair base pay with performance bonuses, and some add equity or partnership terms.', iconName: 'DollarSign' },
       { title: 'Leadership Impact', description: `Shape clinical programs, mentor junior providers, and influence organizational clinical strategy.`, iconName: 'Users' },
       { title: 'Private Practice Ready', description: 'Your reputation and network support a thriving independent or group practice transition.', iconName: 'TrendingUp' },
     ],
     tips: [
-      'Target clinical director or VP-level roles ($170K-$200K+)',
+      'Target clinical director or VP-level roles',
       'Negotiate equity or partnership opportunities',
       'Consider building your own private practice or telehealth group',
       'Pursue board certification in subspecialties for premium positioning',
@@ -326,15 +366,12 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
 };
 
 // Employer Type configs
-// Narrative copy below was rewritten for the all-NP board (2026-07); salary
-// bands align to the config/niche/salary.ts anchors.
 export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
   hospital: {
     slug: 'hospital',
     label: 'Hospital',
     fullLabel: `Hospital ${brand.niche.short}`,
     heroSubtitle: `Hospital-based ${brand.niche.short} positions with full benefits`,
-    salaryRange: '$115K-180K',
     keywords: ['hospital np', 'inpatient hospital np', 'academic medical center np'],
     faqCategory: 'inpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -349,10 +386,10 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       { title: 'Career Advancement', description: `Clear promotion tracks from staff ${brand.niche.short} to clinical lead, program director, or department head.`, iconName: 'TrendingUp' },
     ],
     tips: [
-      'Large systems (HCA, Kaiser, Ascension) offer the best benefits',
+      'Large health systems often carry the broadest benefits; compare the details',
       'Academic medical centers often include teaching opportunities',
       'Ask about call schedules, since hospital roles may require weekend coverage',
-      'Negotiate CME days (5-10 per year is standard for hospital systems)',
+      'Negotiate CME days and funding',
       'Union hospitals may offer higher base pay and better protections',
     ],
   },
@@ -361,7 +398,6 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Private Practice',
     fullLabel: `Private Practice ${brand.niche.short}`,
     heroSubtitle: `Independent & group practice ${brand.niche.short} opportunities`,
-    salaryRange: '$130K-200K+',
     keywords: ['private practice np', 'independent np', 'group practice np', 'own practice np'],
     faqCategory: 'outpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -371,7 +407,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('private-practice'),
     }),
     benefits: [
-      { title: 'Highest Earning Potential', description: `Practice owners and partners can earn $180K+ with autonomy over fee schedules, payer mix, and patient volume.`, iconName: 'DollarSign' },
+      { title: 'Earning Upside', description: 'Practice owners and partners set fee schedules, payer mix and patient volume, which shapes what the role can earn.', iconName: 'DollarSign' },
       { title: 'Schedule Control', description: 'Set your own hours, choose your patient mix, and build a practice that fits your lifestyle.', iconName: 'Activity' },
       { title: 'Clinical Autonomy', description: 'Full control over treatment plans, visit cadence, and care model without corporate protocols.', iconName: 'Shield' },
     ],
@@ -388,7 +424,6 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Community Health',
     fullLabel: `Community Health ${brand.niche.short}`,
     heroSubtitle: `FQHC, community health & public health positions`,
-    salaryRange: '$110K-160K',
     keywords: ['community health np', 'FQHC np', 'community health center np', 'public health np'],
     faqCategory: 'outpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -398,14 +433,14 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('community-health'),
     }),
     benefits: [
-      { title: 'Loan Repayment', description: 'NHSC loan repayment up to $50K for 2 years of service at qualifying FQHCs and underserved sites.', iconName: 'DollarSign' },
+      { title: 'Loan Repayment', description: "NHSC loan repayment may be available at approved sites; eligibility depends on the site's current NHSC status and your discipline.", iconName: 'DollarSign' },
       { title: 'Mission-Driven Work', description: `Serve underserved populations and make a direct impact on community health outcomes.`, iconName: 'Heart' },
       { title: 'Diverse Experience', description: 'Treat a wide range of conditions across all ages, building broad clinical expertise quickly.', iconName: 'Activity' },
     ],
     tips: [
       'Check NHSC loan repayment eligibility for your site (hpsa.hrsa.gov)',
       'FQHCs provide malpractice coverage under the FTCA, a major benefit',
-      'Expect higher patient volumes (16-22 per day) but a broader scope',
+      'Ask about daily visit volumes and support staffing',
       'Bilingual skills are highly valued and may qualify for pay differentials',
       'Community health experience is excellent for future leadership roles',
     ],
@@ -415,7 +450,6 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     label: 'VA',
     fullLabel: `VA ${brand.niche.short}`,
     heroSubtitle: `Veterans Affairs ${brand.niche.short} positions with federal benefits`,
-    salaryRange: '$120K-170K',
     keywords: ['VA np', 'veterans affairs np', 'military np', 'federal np'],
     faqCategory: 'inpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -425,30 +459,27 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('va'),
     }),
     benefits: [
-      { title: 'Federal Benefits', description: 'Federal pension (FERS), TSP retirement matching, FEHB health insurance, and 26 days of PTO to start.', iconName: 'Shield' },
-      { title: 'Full Practice Authority', description: `The VA grants ${brand.niche.short}s full practice authority nationwide, regardless of state laws, so you can prescribe independently.`, iconName: 'Heart' },
-      { title: 'Student Loan Repayment', description: 'EDRP offers up to $200K in student loan repayment for qualifying VA positions.', iconName: 'DollarSign' },
+      { title: 'Federal Benefits', description: 'Federal pension (FERS), TSP retirement matching and FEHB health insurance, with leave set by federal rules.', iconName: 'Shield' },
+      { title: 'Defined Scope', description: "The VA sets its own practice standards for its clinicians; ask how the role's scope is defined.", iconName: 'Heart' },
+      { title: 'Student Loan Repayment', description: "The VA's Education Debt Reduction Program may apply to qualifying positions; confirm eligibility with the hiring facility.", iconName: 'DollarSign' },
     ],
     tips: [
       'VA applications go through USAJobs.gov, so create your profile early',
       'Apply under Direct Hire Authority for faster processing',
-      'PTSD and TBI experience is highly valued at VA facilities',
+      'PTSD and TBI experience is valued at VA facilities',
       'Federal pay is based on GS/GP scales; negotiate within the grade',
-      'The VA offers some of the best work-life balance in healthcare',
+      'Ask how the schedule and leave structure compare with private employers',
     ],
   },
 };
 
 // Population Specialty configs
-// Narrative copy below was rewritten for the all-NP board (2026-07); salary
-// bands align to the config/niche/salary.ts anchors.
 export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
   geriatric: {
     slug: 'geriatric',
     label: 'Geriatric',
     fullLabel: `Geriatric ${brand.niche.short}`,
     heroSubtitle: `Older adult & geriatric ${brand.niche.short} positions`,
-    salaryRange: '$110K-160K',
     keywords: ['geriatric np', 'gerontology np', 'elderly care NP', 'older adult health'],
     faqCategory: 'inpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -458,7 +489,7 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('geriatric'),
     }),
     benefits: [
-      { title: 'Growing Demand', description: `10,000 baby boomers turn 65 daily, and geriatric care is one of the fastest-growing ${brand.niche.short} niches.`, iconName: 'TrendingUp' },
+      { title: 'Older Adult Care', description: 'Geriatric roles center on medication management, chronic conditions and care coordination for older adults.', iconName: 'TrendingUp' },
       { title: 'Meaningful Care', description: `Help older adults maintain independence and quality of life through expert medication management.`, iconName: 'Heart' },
       { title: 'Diverse Settings', description: 'Work in SNFs, memory care units, home health, outpatient clinics, or palliative care programs.', iconName: 'Building2' },
     ],
@@ -467,7 +498,7 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       'Understand polypharmacy risks and Beers Criteria medications',
       'Learn dementia assessment tools (MoCA, MMSE, GDS)',
       'Build relationships with geriatricians for collaborative care',
-      'SNF and consulting roles often command premium hourly rates',
+      'Ask how SNF and consulting roles structure pay',
     ],
   },
   veterans: {
@@ -475,7 +506,6 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Veterans',
     fullLabel: `Veterans ${brand.niche.short}`,
     heroSubtitle: `Military & veteran-focused ${brand.niche.short} positions`,
-    salaryRange: '$110K-170K',
     keywords: ['veterans np', 'military health np', 'VA community care np', 'veteran care NP'],
     faqCategory: 'inpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -487,10 +517,10 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
     benefits: [
       { title: 'Critical Mission', description: `Veterans carry distinct health burdens, including polytrauma, TBI, toxic exposures, and chronic pain, and veteran-focused ${brand.niche.short}s close real care gaps.`, iconName: 'Heart' },
       { title: 'Specialized Training', description: 'VA-funded continuing education and fellowship pathways span primary care, rehabilitation, and specialty medicine.', iconName: 'Shield' },
-      { title: 'Federal Benefits', description: 'VA positions include federal pension, TSP matching, 26+ days PTO, and up to $200K loan repayment.', iconName: 'DollarSign' },
+      { title: 'Federal Benefits', description: 'VA positions include the federal pension, TSP matching and federal leave; loan repayment programs depend on the position.', iconName: 'DollarSign' },
     ],
     tips: [
-      'TBI, polytrauma, and toxic-exposure (PACT Act) expertise is in high demand',
+      'TBI, polytrauma, and toxic-exposure (PACT Act) expertise is valued',
       'Learn VA disability and service-connected documentation requirements',
       'Military-connected clinicians are especially valued',
       `Community-based veteran organizations also hire ${brand.niche.short}s`,
@@ -502,7 +532,6 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'LGBTQ+',
     fullLabel: `LGBTQ+ Affirming ${brand.niche.short}`,
     heroSubtitle: `LGBTQ+ affirming ${brand.niche.short} positions`,
-    salaryRange: '$110K-170K',
     keywords: ['lgbtq np', 'gender affirming np', 'transgender health', 'lgbtq affirming NP'],
     faqCategory: 'outpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -512,9 +541,9 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('lgbtq'),
     }),
     benefits: [
-      { title: 'Underserved Niche', description: `LGBTQ+ individuals face well-documented health disparities, and affirming, trained providers are critically needed.`, iconName: 'Heart' },
-      { title: 'Growing Demand', description: 'Gender-affirming care is expanding rapidly with new clinics and telehealth platforms specifically serving the community.', iconName: 'TrendingUp' },
-      { title: 'Meaningful Impact', description: `Help reduce health disparities by providing culturally competent care to marginalized populations.`, iconName: 'Users' },
+      { title: 'Affirming Care', description: `LGBTQ+ patients benefit from affirming, trained providers who understand their care needs.`, iconName: 'Heart' },
+      { title: 'Affirming Practice', description: 'Gender-affirming and preventive care are delivered in clinics and on telehealth platforms that serve the community.', iconName: 'TrendingUp' },
+      { title: 'Meaningful Impact', description: `Provide culturally competent care to patients who are often underserved.`, iconName: 'Users' },
     ],
     tips: [
       'Complete WPATH SOC training for gender-affirming care fundamentals',
@@ -524,8 +553,6 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       'Telehealth expands reach to LGBTQ+ patients in underserved areas',
     ],
   },
-  // NP taxonomy migration (2026-07): 'crisis' config removed — slug no
-  // longer in taxonomy-registry.ts.
 };
 
 // Merge setting configs with city-aware buildWhere
@@ -544,39 +571,32 @@ function settingToCategory(config: SettingConfig): CategoryConfig {
 
 // ─── NP taxonomy category configs (2026-07 migration) ─────────────────────────
 //
-// Minimal, honest configs for the 19 NP slugs added by the taxonomy
-// migration (lib/pseo/taxonomy-registry.ts) so every CITY-eligible category
-// has a working /jobs/<slug>/city/[slug] route. Mirrors the
-// buildNpSpecialtyConfig pattern in setting-state-config.ts.
+// Minimal configs for the NP slugs added by the taxonomy migration
+// (lib/pseo/taxonomy-registry.ts) so every CITY-eligible category has a
+// working /jobs/<slug>/city/[slug] route. Mirrors the buildNpSpecialtyConfig
+// pattern in setting-state-config.ts.
 //
-// TODO(content): per-board editorial copy + researched salary bands — see
-// docs/pilot-fork-runbook.md §3. salaryRange values are broad national
-// estimates consistent with config/niche/salary.ts (staff NP ~$95-140K
-// bands; CRNA drives the $180K-250K high end).
+// QUERY NOTE: the ingest classifier (lib/pseo/category-tagger.ts) emits the
+// NP taxonomy, so these buildWhere clauses go through the normal
+// withTagFallback() path like the legacy configs: precomputed `categoryTags`
+// containment first, legacy keyword fallback only for rows whose tags have
+// not been backfilled yet.
 //
-// QUERY NOTE: the ingest classifier (lib/pseo/category-tagger.ts) now emits
-// the 42-slug NP taxonomy (2026-07 classifier migration), so these buildWhere
-// clauses go through the normal withTagFallback() path like the legacy
-// configs: precomputed `categoryTags` containment first, legacy keyword
-// fallback only for rows whose tags haven't been backfilled yet.
-//
-// faqCategory is the slug itself: getCategoryFaqs() returns [] for unmapped
-// keys and CategoryFAQ renders nothing (no empty/mismatched FAQPage schema);
-// the city template builds its FAQ block inline from label/salaryRange.
+// faqCategory is the slug itself; the city template builds its FAQ block
+// from lib/pseo/listing-narrative.ts (CC-K8), never from CategoryFAQ.
 
 interface NpCategoryConfigInput {
   slug: CategoryTag;
   label: string;
   fullLabel: string;
   heroSubtitle: string;
-  salaryRange: string;
   keywords: string[];
 }
 
 function buildNpCategoryConfig(input: NpCategoryConfigInput): CategoryConfig {
   return {
     ...input,
-    faqCategory: input.slug, // CategoryFAQ renders nothing for unmapped keys
+    faqCategory: input.slug,
     buildWhere: (stateName: string, cityName?: string) => ({
       isPublished: true,
       state: { equals: stateName, mode: 'insensitive' },
@@ -584,7 +604,7 @@ function buildNpCategoryConfig(input: NpCategoryConfigInput): CategoryConfig {
       ...withTagFallback(input.slug),
     }),
     benefits: [
-      { title: 'Growing Demand', description: `${input.fullLabel} roles are among the fastest-growing advanced practice positions nationwide.`, iconName: 'TrendingUp' },
+      { title: 'Role Focus', description: `${input.fullLabel} roles center on a defined patient population or setting; each listing states the certification it expects.`, iconName: 'TrendingUp' },
       { title: 'Practice Variety', description: 'Openings span health systems, private groups, and community settings.', iconName: 'Building2' },
       { title: 'Career Mobility', description: 'State licensure plus national certification keeps your options open across employers and settings.', iconName: 'Users' },
     ],
@@ -598,14 +618,12 @@ function buildNpCategoryConfig(input: NpCategoryConfigInput): CategoryConfig {
   };
 }
 
-// TODO(content): all salaryRange values below are estimates — see block comment above.
 export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   'urgent-care': buildNpCategoryConfig({
     slug: 'urgent-care',
     label: 'Urgent Care',
     fullLabel: 'Urgent Care NP',
     heroSubtitle: 'Walk-in clinic & urgent care nurse practitioner positions',
-    salaryRange: '$105K-140K',
     keywords: ['urgent care nurse practitioner', 'urgent care NP jobs', 'walk-in clinic NP'],
   }),
   'home-health': buildNpCategoryConfig({
@@ -613,7 +631,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Home Health',
     fullLabel: 'Home Health NP',
     heroSubtitle: 'In-home visit & house-call nurse practitioner positions',
-    salaryRange: '$100K-135K',
     keywords: ['home health nurse practitioner', 'home health NP jobs', 'house call NP'],
   }),
   'family-practice': buildNpCategoryConfig({
@@ -621,7 +638,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Family Practice',
     fullLabel: 'Family Practice NP (FNP)',
     heroSubtitle: 'Family practice nurse practitioner positions',
-    salaryRange: '$110K-150K',
     keywords: ['family practice nurse practitioner', 'FNP jobs', 'family nurse practitioner'],
   }),
   'adult-gerontology': buildNpCategoryConfig({
@@ -629,7 +645,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Adult-Gerontology',
     fullLabel: 'Adult-Gerontology NP (AGNP)',
     heroSubtitle: 'Adult-gerontology nurse practitioner positions',
-    salaryRange: '$110K-150K',
     keywords: ['adult gerontology nurse practitioner', 'AGNP jobs', 'AGACNP', 'AGPCNP'],
   }),
   pediatric: buildNpCategoryConfig({
@@ -637,7 +652,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Pediatric',
     fullLabel: 'Pediatric NP (PNP)',
     heroSubtitle: 'Pediatric nurse practitioner positions',
-    salaryRange: '$105K-145K',
     keywords: ['pediatric nurse practitioner', 'PNP jobs', 'peds NP'],
   }),
   neonatal: buildNpCategoryConfig({
@@ -645,7 +659,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Neonatal',
     fullLabel: 'Neonatal NP (NNP)',
     heroSubtitle: 'NICU & newborn care nurse practitioner positions',
-    salaryRange: '$115K-155K',
     keywords: ['neonatal nurse practitioner', 'NNP jobs', 'NICU nurse practitioner'],
   }),
   'women-health': buildNpCategoryConfig({
@@ -653,7 +666,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: "Women's Health",
     fullLabel: "Women's Health NP (WHNP)",
     heroSubtitle: "Women's health nurse practitioner positions",
-    salaryRange: '$105K-145K',
     keywords: ["women's health nurse practitioner", 'WHNP jobs', 'OB/GYN nurse practitioner'],
   }),
   'acute-care': buildNpCategoryConfig({
@@ -661,7 +673,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Acute Care',
     fullLabel: 'Acute Care NP (ACNP)',
     heroSubtitle: 'Acute care nurse practitioner positions',
-    salaryRange: '$115K-160K',
     keywords: ['acute care nurse practitioner', 'ACNP jobs', 'ICU nurse practitioner'],
   }),
   emergency: buildNpCategoryConfig({
@@ -669,7 +680,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Emergency',
     fullLabel: 'Emergency NP (ENP)',
     heroSubtitle: 'Emergency nurse practitioner positions',
-    salaryRange: '$115K-160K',
     keywords: ['emergency nurse practitioner', 'ENP jobs', 'ER nurse practitioner'],
   }),
   'psychiatric-mental-health': buildNpCategoryConfig({
@@ -677,7 +687,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Psychiatric Mental Health',
     fullLabel: 'Psychiatric Mental Health NP (PMHNP)',
     heroSubtitle: 'Psychiatric mental health nurse practitioner positions',
-    salaryRange: '$120K-170K',
     keywords: ['psychiatric nurse practitioner', 'PMHNP jobs', 'psych NP'],
   }),
   oncology: buildNpCategoryConfig({
@@ -685,7 +694,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Oncology',
     fullLabel: 'Oncology NP',
     heroSubtitle: 'Oncology nurse practitioner positions',
-    salaryRange: '$110K-150K',
     keywords: ['oncology nurse practitioner', 'oncology NP jobs', 'hematology oncology NP'],
   }),
   cardiology: buildNpCategoryConfig({
@@ -693,7 +701,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Cardiology',
     fullLabel: 'Cardiology NP',
     heroSubtitle: 'Cardiology nurse practitioner positions',
-    salaryRange: '$110K-150K',
     keywords: ['cardiology nurse practitioner', 'cardiology NP jobs', 'cardiovascular NP'],
   }),
   'primary-care': buildNpCategoryConfig({
@@ -701,7 +708,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Primary Care',
     fullLabel: 'Primary Care NP',
     heroSubtitle: 'Primary care nurse practitioner positions',
-    salaryRange: '$100K-140K',
     keywords: ['primary care nurse practitioner', 'primary care NP jobs', 'internal medicine NP'],
   }),
   hospitalist: buildNpCategoryConfig({
@@ -709,7 +715,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Hospitalist',
     fullLabel: 'Hospitalist NP',
     heroSubtitle: 'Inpatient medicine nurse practitioner positions',
-    salaryRange: '$110K-150K',
     keywords: ['hospitalist nurse practitioner', 'hospitalist NP jobs', 'inpatient medicine NP'],
   }),
   dermatology: buildNpCategoryConfig({
@@ -717,7 +722,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Dermatology',
     fullLabel: 'Dermatology NP',
     heroSubtitle: 'Dermatology nurse practitioner positions',
-    salaryRange: '$110K-155K',
     keywords: ['dermatology nurse practitioner', 'dermatology NP jobs', 'derm NP'],
   }),
   orthopedic: buildNpCategoryConfig({
@@ -725,7 +729,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Orthopedic',
     fullLabel: 'Orthopedic NP',
     heroSubtitle: 'Orthopedic nurse practitioner positions',
-    salaryRange: '$105K-145K',
     keywords: ['orthopedic nurse practitioner', 'orthopedic NP jobs', 'ortho NP'],
   }),
   anesthesia: buildNpCategoryConfig({
@@ -733,7 +736,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Nurse Anesthetist',
     fullLabel: 'Nurse Anesthetist (CRNA)',
     heroSubtitle: 'Certified registered nurse anesthetist positions',
-    salaryRange: '$180K-250K',
     keywords: ['CRNA jobs', 'nurse anesthetist', 'certified registered nurse anesthetist'],
   }),
   midwifery: buildNpCategoryConfig({
@@ -741,7 +743,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Nurse Midwife',
     fullLabel: 'Nurse Midwife (CNM)',
     heroSubtitle: 'Certified nurse midwife positions',
-    salaryRange: '$105K-140K',
     keywords: ['CNM jobs', 'certified nurse midwife', 'nurse midwifery'],
   }),
   'clinical-nurse-specialist': buildNpCategoryConfig({
@@ -749,18 +750,13 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Clinical Nurse Specialist',
     fullLabel: 'Clinical Nurse Specialist (CNS)',
     heroSubtitle: 'Clinical nurse specialist positions',
-    salaryRange: '$95K-130K',
     keywords: ['clinical nurse specialist', 'CNS jobs', 'CNS nurse jobs'],
   }),
-  // ── 2026-07 P1 #15 verticals. salaryRange uses the board-wide typical
-  // NP comparison band (config/niche/salary.ts normalizer.typical) until
-  // per-specialty market data lands — never an invented per-slug figure.
   aesthetics: buildNpCategoryConfig({
     slug: 'aesthetics',
     label: 'Aesthetics',
     fullLabel: 'Aesthetic NP',
     heroSubtitle: 'Med spa & aesthetic medicine nurse practitioner positions',
-    salaryRange: '$110K-170K',
     keywords: ['aesthetic nurse practitioner', 'aesthetics NP jobs', 'med spa NP', 'nurse injector'],
   }),
   'pain-management': buildNpCategoryConfig({
@@ -768,7 +764,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Pain Management',
     fullLabel: 'Pain Management NP',
     heroSubtitle: 'Interventional pain & pain medicine nurse practitioner positions',
-    salaryRange: '$110K-170K',
     keywords: ['pain management nurse practitioner', 'pain management NP jobs', 'interventional pain NP'],
   }),
   'palliative-hospice': buildNpCategoryConfig({
@@ -776,7 +771,6 @@ export const NP_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Palliative & Hospice',
     fullLabel: 'Palliative Care & Hospice NP',
     heroSubtitle: 'Palliative care & hospice nurse practitioner positions',
-    salaryRange: '$110K-170K',
     keywords: ['palliative care nurse practitioner', 'hospice nurse practitioner', 'palliative NP jobs'],
   }),
 };
@@ -798,7 +792,7 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
   ...EMPLOYER_TYPE_CONFIGS,
   // Population Specialties (3: geriatric, veterans, lgbtq)
   ...POPULATION_SPECIALTY_CONFIGS,
-  // NP taxonomy categories (19 — 2026-07 migration)
+  // NP taxonomy categories (2026-07 migration)
   ...NP_CATEGORY_CONFIGS,
   // ─── Additional Categories (3) ─────────────────────────────────────────────
   '1099': {
@@ -806,7 +800,6 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: '1099',
     fullLabel: `1099 / Independent Contractor ${brand.niche.short}`,
     heroSubtitle: `Independent contractor & 1099 ${brand.niche.short} positions`,
-    salaryRange: '$75-150/hr',
     keywords: ['1099 np', 'independent contractor np', '1099 nurse practitioner', 'contract NP'],
     faqCategory: 'outpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -816,26 +809,23 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('1099'),
     }),
     benefits: [
-      { title: 'Higher Gross Pay', description: `1099 ${brand.niche.short}s earn $75-$150+/hr, which is 20-40% higher than W-2 rates, with significant tax deduction opportunities.`, iconName: 'DollarSign' },
+      { title: 'Gross Rate', description: '1099 rates are quoted before self-employment tax, malpractice and the benefits you fund yourself, so model the after-tax figure.', iconName: 'DollarSign' },
       { title: 'Schedule Control', description: 'Set your own hours, work with multiple clients, and control your patient volume and caseload.', iconName: 'Clock' },
-      { title: 'Tax Advantages', description: 'Deduct business expenses, contribute $66K/year to SEP-IRA, and write off home office and mileage.', iconName: 'DollarSign' },
+      { title: 'Tax Considerations', description: 'Deduct business expenses, contribute to a SEP-IRA or Solo 401(k), and write off home office and mileage where the rules allow.', iconName: 'DollarSign' },
     ],
     tips: [
       'Form an LLC or PLLC before signing your first contract',
-      'Get individual malpractice insurance ($1.5-3K/year)',
+      'Get individual malpractice insurance',
       'Set up quarterly estimated tax payments with the IRS',
       'Open a SEP-IRA or Solo 401k for retirement savings',
       'Keep detailed records of all business expenses for deductions',
     ],
   },
-  // NP taxonomy migration (2026-07): 'behavioral-health' config removed —
-  // slug no longer in taxonomy-registry.ts.
   correctional: {
     slug: 'correctional',
     label: 'Correctional',
     fullLabel: `Correctional ${brand.niche.short}`,
     heroSubtitle: `Prison, jail & correctional facility ${brand.niche.short} positions`,
-    salaryRange: '$130K-190K',
     keywords: ['correctional np', 'prison np', 'correctional health NP', 'jail nurse practitioner'],
     faqCategory: 'inpatient',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -845,8 +835,8 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('correctional'),
     }),
     benefits: [
-      { title: 'Premium Pay', description: `Correctional ${brand.niche.short}s earn $130K-$190K+ due to the challenging environment and high demand for correctional healthcare providers.`, iconName: 'DollarSign' },
-      { title: 'Loan Repayment', description: 'Many correctional facilities qualify for NHSC and state loan repayment programs, with up to $50K for 2 years of service.', iconName: 'DollarSign' },
+      { title: 'Public-Sector Terms', description: 'Many correctional roles come from state, county or contracted health services and describe public-employee benefits.', iconName: 'DollarSign' },
+      { title: 'Loan Repayment', description: "Correctional facilities are among HRSA's eligible NHSC site types; repayment depends on the specific facility holding an active NHSC approval.", iconName: 'DollarSign' },
       { title: 'Unique Clinical Skills', description: 'Develop expertise in correctional medicine, emergency response, and managing complex comorbidities in underserved populations.', iconName: 'Shield' },
     ],
     tips: [
@@ -862,7 +852,6 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     label: 'Locum Tenens',
     fullLabel: `Locum Tenens ${brand.niche.short}`,
     heroSubtitle: `Temporary assignment & locum tenens ${brand.niche.short} positions`,
-    salaryRange: '$80-160/hr',
     keywords: ['locum tenens np', 'locum NP', 'temporary assignment np', 'locum nurse practitioner'],
     faqCategory: 'travel',
     buildWhere: (stateName: string, cityName?: string) => ({
@@ -872,13 +861,13 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('locum-tenens'),
     }),
     benefits: [
-      { title: 'Highest Hourly Rates', description: `Locum tenens ${brand.niche.short}s earn $80-$160/hr, the highest hourly rates in ${brand.niche.adjective} nursing, with full travel expenses covered.`, iconName: 'DollarSign' },
-      { title: 'No Long-Term Commitment', description: 'Assignments from 2 weeks to 6+ months. Take breaks between assignments and maintain complete career flexibility.', iconName: 'Calendar' },
+      { title: 'Agency-Handled Logistics', description: 'Assignments are usually arranged through an agency that covers malpractice and handles credentialing paperwork.', iconName: 'DollarSign' },
+      { title: 'Defined Assignments', description: 'Assignments run for a stated period; take breaks between them and keep your options open.', iconName: 'Calendar' },
       { title: 'Nationwide Opportunities', description: 'Work across multiple states, experience different healthcare systems, and build a diverse clinical portfolio.', iconName: 'MapPin' },
     ],
     tips: [
       'Maintain active licenses in multiple states via compact agreements',
-      'Work with 2-3 locum agencies for the best selection of assignments',
+      'Work with more than one locum agency for the best selection of assignments',
       'Negotiate per diem rates, housing, and travel expenses separately',
       'Keep credentialing documents updated and organized digitally',
       'Build relationships for repeat assignments at preferred facilities',
@@ -893,10 +882,17 @@ export function getAllCategorySlugs(): string[] {
 
 // ─── Data Fetching ─────────────────────────────────────────────────────────────
 
+/** The category x city bucket clause (published rows of this category in this city). */
+function categoryCityBucket(config: CategoryConfig, city: CityData): Prisma.JobWhereInput {
+  return config.buildWhere(city.state, city.name) as Prisma.JobWhereInput;
+}
+
 async function getCityJobs(config: CategoryConfig, city: CityData, skip = 0, take = 10) {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where = withListingQuarantine(config.buildWhere(city.state, city.name) as any);
+    // T0-1: the canonical predicate (published, unexpired, dead-link and
+    // profession gates) composed through AND; the quarantine wrapper keeps
+    // the listing query on the same veto every /jobs browse query applies.
+    const where = withListingQuarantine(canonicalBucketWhere(config.buildWhere(city.state, city.name) as Prisma.JobWhereInput));
     return await prisma.job.findMany({
       where,
       omit: JOB_LISTING_OMIT, // Perf1: don't pull the multi-KB description for cards
@@ -912,31 +908,28 @@ async function getCityJobs(config: CategoryConfig, city: CityData, skip = 0, tak
 
 interface CityStats {
   totalJobs: number;
-  rawAvgSalary: number;
-  colAdjustedSalary: number;
   /**
-   * When the counts were actually computed: pseoStats.updatedAt for fresh
+   * When the count was actually computed: pseoStats.updatedAt for fresh
    * cached rows, "now" for live-count fallbacks, null when no data exists
    * (the page redirects/404s before rendering in that case).
    */
   statsAsOf: Date | null;
 }
 
-const EMPTY_STATS: CityStats = { totalJobs: 0, rawAvgSalary: 0, colAdjustedSalary: 0, statsAsOf: null };
+const EMPTY_STATS: CityStats = { totalJobs: 0, statsAsOf: null };
 
-// Staleness window for cached pseoStats rows. Matches PSEO_STALENESS_HOURS in
-// app/api/sitemaps/cities/[batch]/route.ts and the aggregate-pseo staleness
-// probe (app/api/cron/aggregate-pseo/staleness.ts) — 3x the 6h cron cadence.
-// Rows older than this are treated as unreliable: a stale positive count would
-// otherwise render frozen job counts (soft-404 pattern on never-refreshed
-// cities), so we recount live instead.
-const STATS_STALENESS_HOURS = 36;
+// Staleness window for cached pseoStats rows: the one value in
+// lib/pseo/render-gate.ts (PSEO_STATS_MAX_AGE_HOURS) that the sitemaps and the
+// aggregate-pseo staleness probe also read. Rows older than this are treated
+// as unreliable: a stale positive count would otherwise render frozen job
+// counts (soft-404 pattern on never-refreshed cities), so we recount live.
+const STATS_STALENESS_HOURS = PSEO_STATS_MAX_AGE_HOURS;
 const STATS_STALENESS_MS = STATS_STALENESS_HOURS * 60 * 60 * 1000;
 
 // Perf2: cache() dedupes the duplicate call within a render (metadata + page
 // component both call getCityStats with the same module-level config/city refs).
 const getCityStats = cache(async function getCityStats(config: CategoryConfig, city: CityData): Promise<CityStats> {
-  let cachedRow: { totalJobs: number; rawAvgSalary: number; colAdjustedSalary: number; updatedAt: Date } | null = null;
+  let cachedRow: { totalJobs: number; updatedAt: Date } | null = null;
   try {
     const stats = await prisma.pseoStats.findUnique({
       where: {
@@ -952,56 +945,117 @@ const getCityStats = cache(async function getCityStats(config: CategoryConfig, c
       cachedRow = stats;
       const isFresh = Date.now() - stats.updatedAt.getTime() <= STATS_STALENESS_MS;
       if (isFresh) {
-        return {
-          totalJobs: stats.totalJobs,
-          rawAvgSalary: stats.rawAvgSalary,
-          colAdjustedSalary: stats.colAdjustedSalary,
-          statsAsOf: stats.updatedAt,
-        };
+        return { totalJobs: stats.totalJobs, statsAsOf: stats.updatedAt };
       }
     }
 
     // Fallback: live count when the pseoStats cache is empty, zero, or stale.
-    // A stale positive row is NOT trusted — if the live count is 0 the page
-    // correctly redirects instead of rendering frozen counts.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where = withListingQuarantine(config.buildWhere(city.state, city.name) as any);
+    // A stale positive row is NOT trusted: if the live count is 0 the page
+    // correctly redirects instead of rendering frozen counts. The count reads
+    // the canonical predicate (T0-1), the same one the cron wrote the row with.
+    const where = withListingQuarantine(canonicalBucketWhere(config.buildWhere(city.state, city.name) as Prisma.JobWhereInput));
     const liveCount = await prisma.job.count({ where });
     if (liveCount > 0) {
-      // Compute rough avg salary from live data
-      const salaryAgg = await prisma.job.aggregate({
-        where,
-        _avg: { normalizedMaxSalary: true, normalizedMinSalary: true },
-      });
-      const rawAvg = Math.round(((salaryAgg._avg.normalizedMinSalary ?? 0) + (salaryAgg._avg.normalizedMaxSalary ?? 0)) / 2 / 1000);
-      const colAdj = Math.round(rawAvg * (100 / (city.costOfLivingIndex || 100)));
-      return { totalJobs: liveCount, rawAvgSalary: rawAvg, colAdjustedSalary: colAdj, statsAsOf: new Date() };
+      return { totalJobs: liveCount, statsAsOf: new Date() };
     }
 
     return EMPTY_STATS;
   } catch (error) {
     console.error(`[category-city] Failed to fetch stats for ${config.slug}/${city.slug}:`, error);
     // If the live recount failed but we hold a (possibly stale) positive row,
-    // prefer it — with its REAL date — over redirecting a page that likely
+    // prefer it, with its REAL date, over redirecting a page that likely
     // still has jobs. Transient DB errors must not 308 live pages away.
     if (cachedRow) {
-      return {
-        totalJobs: cachedRow.totalJobs,
-        rawAvgSalary: cachedRow.rawAvgSalary,
-        colAdjustedSalary: cachedRow.colAdjustedSalary,
-        statsAsOf: cachedRow.updatedAt,
-      };
+      return { totalJobs: cachedRow.totalJobs, statsAsOf: cachedRow.updatedAt };
     }
     // No trusted row to fall back on. `cachedRow` is only ever assigned INSIDE
     // the try after a successful findUnique returning a positive row, so
     // reaching here means the FIRST query failed and we hold zero evidence
     // that this combo is empty. Returning EMPTY_STATS would make the caller
-    // permanentRedirect() (line ~1319) — a 308 is a PERMANENT signal, cached
-    // by the route's `revalidate = 3600` and consolidated by Google — so a DB
-    // blip would fold the whole category×city surface into its parents.
-    // Rethrow: a 5xx is retried and never moves a URL. Absence of data is not
-    // evidence of an empty page.
+    // permanentRedirect(): a 308 is a PERMANENT signal, cached by the route's
+    // `revalidate = 3600` and consolidated by Google, so a DB blip would fold
+    // the whole category x city surface into its parents. Rethrow: a 5xx is
+    // retried and never moves a URL. Absence of data is not evidence of an
+    // empty page.
     throw error;
+  }
+});
+
+/**
+ * The facts reads are DECORATIVE, and the count is not.
+ *
+ * getCityStats owns the only fatal read on this route: it rescues the count
+ * from a stale-but-positive PseoStats row when the live recount fails, and
+ * rethrows when it holds no row at all, so a DB outage surfaces as a 5xx
+ * that crawlers retry instead of a cacheable 308 to the parent category.
+ *
+ * computeListingFacts deliberately lets its own count throw
+ * (lib/pseo/listing-facts.ts: "The count is the only query allowed to
+ * throw"). During the very outage getCityStats just rescued, that second
+ * count fails too, so an uncaught facts read would reject the metadata
+ * builder and the page component and turn the rescue back into a 5xx,
+ * leaving the rescue machinery and its comments as dead code. Swallowing
+ * the failure keeps the rescued count on the page. The cost is bounded and
+ * far softer than a moved URL: with no fresh stored row distinctEmployers
+ * falls back to 0, so the page noindexes (index false, follow true) for one
+ * revalidate window and every optional section omits itself.
+ */
+function factsOrEmpty(scope: string, load: () => Promise<ListingFacts>): Promise<ListingFacts> {
+  return load().catch((error) => {
+    console.error(`[category-city] facts read failed for ${scope}; rendering without the optional sections:`, error);
+    return emptyListingFacts(new Date());
+  });
+}
+
+/** Facts for the category pool in this city (one cache()d loader per scope key). */
+function getCategoryCityFacts(config: CategoryConfig, city: CityData): Promise<ListingFacts> {
+  return factsOrEmpty(`${config.slug}/${city.slug}`, () =>
+    getListingFacts(`category-city:${config.slug}:${city.slug}`, categoryCityBucket(config, city)));
+}
+
+/** Facts for every listing in the city, the fallback pool for CC-K1 and CC-K3. */
+function getCityPoolFacts(city: CityData): Promise<ListingFacts> {
+  return factsOrEmpty(`pool/${city.slug}`, () =>
+    getListingFacts(`category-city:pool:${city.slug}`, {
+      state: { equals: city.state, mode: 'insensitive' },
+      city: { equals: city.name, mode: 'insensitive' },
+    }));
+}
+
+/** The PseoStats gate columns, typed locally (see readStoredCategoryCityRow). */
+interface StoredCategoryCityRow {
+  totalJobs: number;
+  distinctEmployers: number;
+  updatedAt: Date;
+}
+
+/**
+ * The cron's fresh row for this combo, or null.
+ *
+ * WHY RAW: the generated Prisma client predates the `distinctEmployers` and
+ * `indexable` columns (prisma/migrations/20260916120000_pseo_stats_index_gate)
+ * and must not be regenerated on this branch, so the employer count the
+ * sitemap gates on is only reachable through a $queryRaw tagged template
+ * (parameterized; the column names are literals). A failed or non-array
+ * result reads as "no row", and the caller falls back to the live facts.
+ */
+const readStoredCategoryCityRow = cache(async function readStoredCategoryCityRow(
+  categorySlug: string,
+  locationSlug: string,
+): Promise<StoredCategoryCityRow | null> {
+  try {
+    const rows = await prisma.$queryRaw<StoredCategoryCityRow[]>`
+      SELECT "totalJobs", "distinctEmployers", "updatedAt"
+      FROM "PseoStats"
+      WHERE "type" = 'category-city'
+        AND "categorySlug" = ${categorySlug}
+        AND "locationSlug" = ${locationSlug}
+        AND "updatedAt" >= ${pseoStatsFreshnessThreshold()}
+      LIMIT 1`;
+    return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  } catch (error) {
+    console.error(`[category-city] PseoStats gate read failed for ${categorySlug}/${locationSlug}:`, error);
+    return null;
   }
 });
 
@@ -1012,8 +1066,8 @@ const getCityStats = cache(async function getCityStats(config: CategoryConfig, c
  * date so stale-positive rows can't render a false freshness claim.
  *
  * Exported (P2 #15) so lib/pseo/setting-state-template.tsx renders the same
- * freshness contract on the ~663 state pages instead of hardcoding "updated
- * today". ONE implementation — a copy is how the two surfaces drift.
+ * freshness contract on the state pages instead of hardcoding "updated
+ * today". ONE implementation: a copy is how the two surfaces drift.
  */
 export function formatStatsBadge(totalJobs: number, statsAsOf: Date | null): string {
   const asOf = statsAsOf ?? new Date();
@@ -1032,11 +1086,11 @@ export function formatStatsBadge(totalJobs: number, statsAsOf: Date | null): str
  * JSON-LD (B52 rule), so a wrong body here is wrong in both places.
  *
  * WHY THIS EXISTS: the template asserted "National board certification (ANCC
- * or AANP)" for EVERY one of the 42 categories. That is factually wrong for
- * the APRN cohort this board carries — CRNAs certify through the NBCRNA and
- * CNMs through the AMCB, neither of which administers an AANP/ANCC exam —
- * and wrong for the population-specific NP tracks (PNCB for pediatrics, NCC
- * for neonatal and women's health, ANCC/AACN for acute care and CNS).
+ * or AANP)" for EVERY category. That is factually wrong for the APRN cohort
+ * this board carries (CRNAs certify through the NBCRNA and CNMs through the
+ * AMCB, neither of which administers an AANP/ANCC exam) and wrong for the
+ * population-specific NP tracks (PNCB for pediatrics, NCC for neonatal and
+ * women's health, ANCC/AACN for acute care and CNS).
  *
  * TRUTH RULE: every entry below must agree with the per-specialty
  * certification answers in lib/pseo/category-faq-data.ts. Change both or
@@ -1136,112 +1190,28 @@ export function getCategoryCredentials(categorySlug: string): CategoryCredential
  * Does the donor shortage column describe THIS category's specialty at all?
  *
  * `CityData.mentalHealthShortage` is the donor board's BEHAVIORAL-HEALTH
- * -discipline HRSA HPSA column (see ./city-data/types.ts). Naming the
- * discipline in the copy is necessary but NOT sufficient: a behavioral-health
- * designation is still the donor niche when it is published on
- * /jobs/dermatology/city/houston-tx, and 2,650 of the 4,135 cities carry the
- * flag — so an ungated surface reaches most of a 42-category × 4.1K-city
- * corpus, which is exactly what the niche-copy ratchets exist to prevent.
+ * -discipline HRSA column (see ./city-data/types.ts). Naming the discipline
+ * in the copy is necessary but NOT sufficient: a behavioral-health
+ * designation is still the donor niche when it is published on an unrelated
+ * category, and most dataset cities carry the flag.
  *
- * Use this for surfaces that report BOTH polarities (the Community Profile
- * tile renders "Not designated" too, which is a real and useful fact for a
- * behavioral-health job seeker weighing NHSC eligibility). Use
- * `shortageIsOnTopic` for surfaces that only ever make the AFFIRMATIVE claim.
+ * The thin-content program (PLAN T0-4) removed every rendered shortage
+ * surface from this template because the column has no citable source. The
+ * two predicates stay exported because the regression suites pin them
+ * (tests/regressions/p2-pseo-parity-donor-niche-gate.test.ts and
+ * p3-donor-followups-narrative-truth.test.ts), so a later surface that wants
+ * the column has one gate to reuse instead of re-deriving it.
  */
 export function categoryOwnsShortageData(categorySlug: string): boolean {
   return PSYCH_SPECIALTY_SLUG !== undefined && categorySlug === PSYCH_SPECIALTY_SLUG;
 }
 
-/**
- * Is this city's designation an on-topic AFFIRMATIVE claim for this category?
- *
- * Every surface that STATES the designation routes through this one predicate
- * — OG param, meta description, careers FAQ answer — so they cannot drift
- * apart again. The scoring functions below deliberately do NOT use it: they
- * consume the flag as an internal demand signal and publish nothing.
- */
+/** Is this city's designation an on-topic AFFIRMATIVE claim for this category? */
 export function shortageIsOnTopic(city: CityData, categorySlug: string): boolean {
   return city.mentalHealthShortage && categoryOwnsShortageData(categorySlug);
 }
 
-// ─── Market Demand Score ───────────────────────────────────────────────────────
-
-function getMarketDemandScore(city: CityData, totalJobs: number): { score: number; label: string; color: string } {
-  let score = 0;
-
-  // Job availability (0-40 points)
-  if (totalJobs >= 20) score += 40;
-  else if (totalJobs >= 10) score += 30;
-  else if (totalJobs >= 5) score += 20;
-  else if (totalJobs >= 1) score += 10;
-
-  // Shortage designation (0-25 points).
-  // CAVEAT (P2 #7): `mentalHealthShortage` is the donor board's
-  // behavioral-health-discipline HPSA flag — the dataset carries no
-  // primary-care HPSA column, so this is a proxy, not an all-NP shortage
-  // measure. It stays in the composite because the visible "Demand" readout
-  // is an explicitly-labelled index, not a cited statistic; the score is NOT
-  // re-weighted here because that would shift the label on ~100K indexed
-  // pages. Replace the input, not the weight, once primary-care HPSA data
-  // lands in city-data/types.ts.
-  if (city.mentalHealthShortage) score += 25;
-  else if (city.providerRatio === 'low') score += 20;
-  else if (city.providerRatio === 'moderate') score += 10;
-
-  // Population (0-20 points)
-  if (city.population >= 500000) score += 20;
-  else if (city.population >= 100000) score += 15;
-  else if (city.population >= 50000) score += 10;
-  else score += 5;
-
-  // Healthcare infrastructure (0-15 points)
-  if (city.healthcareSystems.length >= 4) score += 15;
-  else if (city.healthcareSystems.length >= 2) score += 10;
-  else if (city.healthcareSystems.length >= 1) score += 5;
-
-  if (score >= 75) return { score, label: 'Very High', color: '#10b981' };
-  if (score >= 55) return { score, label: 'High', color: '#22c55e' };
-  if (score >= 35) return { score, label: 'Moderate', color: '#f59e0b' };
-  return { score, label: 'Growing', color: '#6b7280' };
-}
-
-// ─── Quality Score (for rendering gate) ─────────────────────────────────────
-// GSC Fix: Pages with 0 matching jobs ALWAYS return 404.
-// Previously, big cities (Tampa, NYC) could pass the ≥25 threshold with 0 jobs
-// and render an empty shell → Google flagged as soft 404, wasting crawl budget.
-// Now: totalJobs === 0 → hard 404. No exceptions.
-// The quality score is still used for noindex gating on pages WITH jobs
-// (e.g., a small city with 1 job but no healthcare systems → noindex).
-
-// Minimum jobs threshold for indexing — pages below this are noindex, follow.
-// Enterprise standard: thin doorway pages (1-2 jobs) hurt domain quality signals.
-const MIN_JOBS_FOR_INDEX = 3;
-
-function getPageQualityScore(city: CityData, totalJobs: number): number {
-  if (totalJobs === 0) return 0; // Redirected before reaching here, but belt-and-suspenders
-
-  // Pages with fewer than MIN_JOBS are thin content → noindex but still render
-  if (totalJobs < MIN_JOBS_FOR_INDEX) return 10; // Below the 25-point index threshold
-
-  // Tiered scoring based on content density
-  let score = 0;
-
-  // Job count tiers
-  if (totalJobs >= 10) score += 60;       // Strong content page
-  else if (totalJobs >= 5) score += 50;   // Good content page
-  else score += 30;                        // Meets minimum (3-4 jobs)
-
-  // City quality signals
-  if (city.healthcareSystems.length > 0) score += 15;  // Has named employers
-  if (city.metroArea) score += 10;                       // Metro area = higher demand
-  if (city.population >= 25000) score += 15;             // Major city
-  else if (city.population >= 10000) score += 5;         // Mid-size city
-  if (city.mentalHealthShortage) score += 10;            // behavioral-health HPSA designation
-
-  return score; // Pages with score >= 25 get indexed
-}
-
-// ─── Metadata Generator ────────────────────────────────────────────────────────
+// ─── Metadata Generator (CC-K9) ────────────────────────────────────────────────
 
 export async function buildCategoryCityMetadata(
   categoryKey: string,
@@ -1253,7 +1223,7 @@ export async function buildCategoryCityMetadata(
   if (!config || !city) return { title: 'Not Found' };
 
   // getCityStats falls back to a stale-but-positive cached row on failure, and
-  // rethrows when it has none — a DB outage must surface as 5xx, never as a
+  // rethrows when it has none: a DB outage must surface as 5xx, never as a
   // cacheable 308 to the parent category.
   const stats = await getCityStats(config, city);
 
@@ -1266,84 +1236,157 @@ export async function buildCategoryCityMetadata(
 
   const basePath = `/jobs/${config.slug}/city/${citySlug}`;
 
-  const qualityScore = getPageQualityScore(city, stats.totalJobs);
-  const isHighQuality = qualityScore >= 25;
-  const shouldIndex = isHighQuality && page === 1;
+  // PLAN C.2: robots read the one predicate the sitemaps use. The employer
+  // count comes from the cron's fresh row (what the cities sitemap gates on)
+  // and falls back to the live facts when no fresh row exists.
+  const [facts, storedRow] = await Promise.all([
+    getCategoryCityFacts(config, city),
+    readStoredCategoryCityRow(config.slug, city.slug),
+  ]);
+  const distinctEmployers = storedRow?.distinctEmployers ?? facts.distinctEmployers;
+  const shouldIndex = shouldIndexLocalListingPage({ activeJobs: stats.totalJobs, distinctEmployers, page });
 
-  // Canonical consolidation:
-  //   • Thin pages (1-2 jobs, score < 25)         → canonical to parent category
-  //     so Google consolidates ranking signals upward.
-  //   • High-quality page 1                        → self canonical.
-  //   • High-quality page N>1 (paginated view)     → canonical to page 1 of the
-  //     SAME city (basePath), NOT the parent. Pointing page-2 to the parent
-  //     (the prior bug) caused "Duplicate without canonical" in GSC because
-  //     Google expects pagination to canonical to the first page of the same
-  //     listing, not jump up two levels.
-  const canonicalUrl = isHighQuality
-    ? `${brand.baseUrl}${basePath}`
-    : `${brand.baseUrl}/jobs/${config.slug}`;
+  const noun = labelNoun(config.slug, config.label);
+  const sentenceLabel = labelSentence(config.label);
+  const env = getPracticeEnvironment(city.state);
+  const title = buildCategoryCityTitle({ labelNoun: noun, city: city.name, stateCode: city.stateCode, total: stats.totalJobs });
+  const description = buildCategoryCityDescription({
+    labelSentence: sentenceLabel,
+    city: city.name,
+    stateCode: city.stateCode,
+    facts: { ...facts, total: stats.totalJobs },
+    authorityDescription: env?.authorityDescription ?? null,
+  });
 
-  // Build salary display for OG image (rawAvgSalary is already in thousands, e.g. 130 = $130K)
-  const salaryDisplay = stats.rawAvgSalary && stats.rawAvgSalary > 0
-    ? `$${stats.rawAvgSalary}K`
-    : '';
-
-  // P2 #7: /api/og/city renders this flag as a bare "⚕ Shortage Area" badge,
-  // and the description below states the designation in the SERP snippet.
-  // Both are gated on shortageIsOnTopic — the OG badge cannot be labelled from
-  // here at all, and a labelled snippet is still the donor niche on a
-  // dermatology URL.
-  const shortageMatchesCategory = shortageIsOnTopic(city, config.slug);
-
+  // OG: the count and, only when the category pool clears the publishing
+  // gate, the gated middle half of posted pay. Never a mean.
   const ogParams = new URLSearchParams({
     category: config.label,
     city: `${city.name}, ${city.stateCode}`,
     jobs: String(stats.totalJobs),
-    ...(salaryDisplay && { salary: salaryDisplay }),
-    ...(shortageMatchesCategory && { shortage: 'true' }),
+    ...(facts.benchmark && { salary: `${formatK(facts.benchmark.p25)} to ${formatK(facts.benchmark.p75)}` }),
   });
+  const ogImage = `/api/og/city?${ogParams.toString()}`;
 
+  // Canonical: self on every rendered page 1 (noindex pages keep it, with
+  // follow); page N canonicals to page 1 of the same listing, never the
+  // parent category (that caused "Duplicate without canonical" in GSC).
   return {
-    title: `${config.label} ${brand.niche.short} Jobs in ${city.name}, ${city.stateCode} (${stats.totalJobs} Open)`,
-    // P2 #7: the shortage sentence names the designation's DISCIPLINE *and*
-    // only ships on the category that discipline describes. The dataset holds
-    // only the behavioral-health HPSA flag, so an unqualified "health
-    // professional shortage area" reads as an all-NP shortage claim this board
-    // cannot source — and a correctly-labelled one still puts a
-    // behavioral-health designation in the SERP snippet of every dermatology,
-    // cardiology and aesthetics city page. Gated, not just labelled.
-    // The leading space lives INSIDE the conditional so a withheld claim
-    // leaves no trailing whitespace on the ~1,485 unflagged cities either.
-    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} ${pluralize(stats.totalJobs, 'job')} in ${city.name}, ${city.stateCode}. ${config.heroSubtitle}. Population: ${city.population.toLocaleString()}. COL index: ${city.costOfLivingIndex}.${shortageMatchesCategory ? ' Federally designated behavioral-health HPSA.' : ''}`,
-    keywords: [
-      `${config.label.toLowerCase()} ${brand.niche.short.toLowerCase()} jobs ${city.name}`,
-      `${city.name} ${config.label.toLowerCase()} ${brand.niche.descriptor}`,
-      `${brand.niche.short.toLowerCase()} jobs ${city.name} ${city.stateCode}`,
-    ],
+    title,
+    description,
     openGraph: {
-      title: `${config.label} ${brand.niche.short} Jobs in ${city.name}, ${city.stateCode}`,
-      description: `Browse ${config.label.toLowerCase()} ${brand.niche.short} positions in ${city.name}. ${config.heroSubtitle}.`,
+      title,
+      description,
       type: 'website',
-      images: [{
-        url: `/api/og/city?${ogParams.toString()}`,
-        width: 1200,
-        height: 630,
-        alt: `${config.label} ${brand.niche.short} Jobs in ${city.name}, ${city.stateCode}`,
-      }],
+      images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${config.label} ${brand.niche.short} Jobs in ${city.name}, ${city.stateCode}`,
-      images: [`/api/og/city?${ogParams.toString()}`],
+      title,
+      images: [ogImage],
     },
     alternates: {
-      canonical: canonicalUrl,
+      canonical: `${brand.baseUrl}${basePath}`,
     },
-    ...(!shouldIndex && {
-      robots: { index: false, follow: true },
-    }),
+    robots: { index: shouldIndex, follow: true },
   };
 }
+
+// ─── Page chrome ───────────────────────────────────────────────────────────────
+
+/* Design tokens, matched to the category pages (clay). */
+const clayCard: CSSProperties = {
+  background: '#FFFFFF', borderRadius: '20px',
+  border: '1px solid rgba(255,255,255,0.5)',
+  boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
+};
+
+/** Primary berry pebble button (the alert CTA and the empty state). */
+const clayCtaPrimary: CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+  padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
+  background: '#BE185D', color: '#fff', textDecoration: 'none',
+  boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
+};
+
+/** White clay pebble button (pagination and the secondary empty-state action). */
+const clayPebble: CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+  padding: '10px 18px', borderRadius: '12px', fontWeight: 700, fontSize: '13px',
+  background: '#FFFFFF', color: '#BE185D', textDecoration: 'none',
+  border: '1px solid rgba(255,255,255,0.5)',
+  boxShadow: '3px 3px 8px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)',
+};
+
+/** Disabled pebble: flat, recessed ground, no shadow. */
+const clayPebbleDisabled: CSSProperties = {
+  ...clayPebble,
+  background: '#F9F7F1', color: '#A09080', border: '1px solid #EAE6DF', boxShadow: 'none', cursor: 'default',
+};
+
+/** Card title inside a bespoke bento cell. */
+const cellTitle: CSSProperties = { fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' };
+const cellBody: CSSProperties = { fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 };
+
+const NEARBY_CITY_LIMIT = 6;
+const ACROSS_STATE_LIMIT = 7;
+const EXPLORE_CARD_LIMIT = 12;
+const PAGE_SIZE = 10;
+
+/** A picture in its own clay frame: padding 0, the art edge to edge inside the card. */
+function PictureFrame({ src, alt, minHeight }: { src: string; alt: string; minHeight: number }) {
+  return (
+    <div className="pseo-bento-card" style={{ ...clayCard, padding: 0, overflow: 'hidden', display: 'grid' }}>
+      <ImmersiveImage src={src} alt={alt} minHeight={minHeight} />
+    </div>
+  );
+}
+
+/** Static stylesheet: responsive collapse, hover lifts (reduced motion gated) and the accordion marker. */
+const CATEGORY_CITY_CSS = `
+  .pseo-crumb-band { background: #faf6ef; padding: 24px 56px 0; }
+  .pseo-crumb-band nav { margin-bottom: 0; }
+  .pseo-crumb-band nav ol li:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  @media (max-width: 900px) {
+    .pseo-crumb-band { padding: 16px 24px 0; }
+  }
+  .pseo-cta-primary { transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease; }
+  .pseo-cta-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(190,24,93,0.35) !important; filter: brightness(1.05); }
+  .pseo-pebble { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+  .pseo-pebble:hover { transform: translateY(-2px); box-shadow: 5px 5px 14px rgba(0,0,0,0.08), -2px -2px 6px rgba(255,255,255,0.8) !important; }
+  .pseo-bento-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+  .pseo-bento-card:hover { transform: translateY(-4px); box-shadow: 8px 8px 24px rgba(0,0,0,0.1), -4px -4px 12px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
+  .pseo-bento-span-4 { grid-column: span 4; }
+  .pseo-bento-span-8 { grid-column: span 8; }
+  .pseo-faq-item summary { list-style: none; }
+  .pseo-faq-item summary::-webkit-details-marker { display: none; }
+  .pseo-faq-item summary::after {
+    content: '';
+    width: 28px; height: 28px; border-radius: 8px;
+    background: #FDF2F8;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230D9488' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: center;
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+  .pseo-faq-item[open] summary::after {
+    background-color: #BE185D;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='18 15 12 9 6 15'%3E%3C/polyline%3E%3C/svg%3E");
+    transform: none;
+  }
+  .pseo-faq-item { transition: box-shadow 0.3s ease; }
+  .pseo-faq-item[open] { box-shadow: 6px 6px 20px rgba(0,0,0,0.08), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
+  .pseo-bento-grid > div { min-width: 0; }
+  @media (max-width: 768px) {
+    .pseo-bento-grid { grid-template-columns: 1fr !important; }
+    .pseo-bento-grid > div { grid-column: span 1 !important; grid-template-columns: 1fr !important; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pseo-cta-primary, .pseo-pebble, .pseo-bento-card, .pseo-faq-item { transition: none; }
+    .pseo-cta-primary:hover, .pseo-pebble:hover, .pseo-bento-card:hover { transform: none; }
+  }
+`;
 
 // ─── Page Component ────────────────────────────────────────────────────────────
 
@@ -1351,6 +1394,14 @@ interface CategoryCityPageProps {
   categoryKey: string;
   citySlug: string;
   page: number;
+}
+
+/** An explore card for CC-K5: a sibling category in this city, or the city hub. */
+interface ExploreCardLink {
+  href: string;
+  label: string;
+  sub: string;
+  icon: SectionGlyph;
 }
 
 export default async function CategoryCityPage({ categoryKey, citySlug, page }: CategoryCityPageProps) {
@@ -1362,8 +1413,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
     notFound();
   }
 
-  const limit = 10;
-  const skip = (page - 1) * limit;
+  const skip = (page - 1) * PAGE_SIZE;
 
   // 1. Instantly fetch pre-calculated stats (single indexed row lookup ~2ms)
   const stats = await getCityStats(config, city!);
@@ -1371,10 +1421,8 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
   // ═══ SEO GUARD: 308 permanent redirect for 0-job pages ═══
   // Instead of a hard 404 (which wastes crawl budget and loses link equity),
   // 308 redirect to the parent category page so Google consolidates the signal.
-  // 308 is the modern equivalent of 301 — tells search engines the move is permanent.
   if (stats.totalJobs === 0) {
     const { permanentRedirect } = await import('next/navigation');
-    // Redirect to: /jobs/{category} — the parent enterprise category page
     permanentRedirect(`/jobs/${config.slug}`);
   }
 
@@ -1389,8 +1437,13 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
     notFoundFn();
   }
 
-  // 2. Only fetch actual job rows if we know jobs exist
-  const jobs = await getCityJobs(config, city!, skip, limit);
+  // 2. Job rows plus the two fact pools (category in this city, every
+  // listing in this city) that the thin-content sections read.
+  const [jobs, facts, cityFacts] = await Promise.all([
+    getCityJobs(config, city!, skip, PAGE_SIZE),
+    getCategoryCityFacts(config, city!),
+    getCityPoolFacts(city!),
+  ]);
 
   // 404 for paginated pages beyond available results.
   if (page > 1 && jobs.length === 0) {
@@ -1398,222 +1451,244 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
     notFoundFn();
   }
 
-
-  const totalPages = Math.ceil(stats.totalJobs / limit);
-  const demand = getMarketDemandScore(city!, stats.totalJobs);
+  const totalPages = Math.ceil(stats.totalJobs / PAGE_SIZE);
   const basePath = `/jobs/${config.slug}/city/${citySlug}`;
+  const noun = labelNoun(config.slug, config.label);
+  const sentenceLabel = labelSentence(config.label);
+  // One count on the page: the copy builders read the same total the hero,
+  // the listings heading and the ItemList print (the stats row when fresh,
+  // else the live count), so no sentence can disagree with the badge.
+  const copyFacts: ListingFacts = { ...facts, total: stats.totalJobs };
+  const stateSlug = stateToSlug(city!.state);
 
   // P3 #9: the "All {city} Jobs" CTA below used to link `/jobs/city/${citySlug}`
-  // with the DATASET slug. That route never looks the slug up — it splits it,
-  // title-cases the segments and matches the result against the DB `city` column
-  // — so for the 210 of 4,135 dataset slugs that do not round-trip (dropped
-  // trailing "City"/"Village"/"Town", collapsed punctuation, folded diacritics)
-  // every rendered category×city page carried an outbound link to a hard 404.
+  // with the DATASET slug. That route never looks the slug up; it splits it,
+  // title-cases the segments and matches the result against the DB `city` column,
+  // so for the dataset slugs that do not round-trip (dropped trailing
+  // "City"/"Village"/"Town", collapsed punctuation, folded diacritics) every
+  // rendered category x city page carried an outbound link to a hard 404.
   // Build the ROUTE-shaped slug and emit the link only when the round-trip
-  // actually resolves; otherwise omit it — the state CTA next to it already
-  // gives the empty state somewhere to go. Never link a known 404.
+  // actually resolves; otherwise omit it. Never link a known 404.
   const allCityJobsHref = cityLinkResolves(city!.name, city!.stateCode)
     ? `/jobs/city/${buildCitySlug(city!.name, city!.stateCode)}`
     : null;
 
-  // #13: employers actually hiring in this city, grouped from live postings.
-  // 87.6% of cities carry an empty static `healthcareSystems` list (and the
-  // cross-state repair emptied more), so the "Healthcare" block was mostly a
-  // bare negative. Returns [] below MIN_CITY_EMPLOYERS so the block is omitted
-  // rather than padded — see lib/pseo/city-employers.ts.
-  const topEmployers = await getTopCityEmployers(city!.name, city!.state);
+  // CC-K6: practice environment for this state (AANP tier, compact status,
+  // board) and whether the license guide is live enough to link.
+  const env = getPracticeEnvironment(city!.state);
+  const licenseGuideLive = env ? LICENSE_GUIDE_SERIES_PUBLISHED && await isLicenseGuideLive(env.stateSlug) : false;
 
-  // Practice authority for this state
-  let practiceAuthority: StatePracticeInfo | null = null;
-  try {
-    practiceAuthority = getStatePracticeAuthority(city!.state);
-  } catch {
-    // State not found, skip
-  }
+  // P2 #8: correct certifying body for THIS category (CRNA through NBCRNA,
+  // CNM through AMCB, ...) feeds the practice card and the qualification FAQ.
+  const credentials = getCategoryCredentials(config.slug);
+
+  // CC-K1: employers for this category in this city (2 or more), else the
+  // all-specialty city pool with its disclaimer (2 or more), else nothing.
+  const categoryEmployersRender = employerSentence({ kind: 'category-city', labelSentence: sentenceLabel, city: city!.name }, copyFacts) !== null;
+  const cityEmployersSentence = categoryEmployersRender ? null : employerSentence({ kind: 'city', city: city!.name }, cityFacts);
+  const topEmployers = cityEmployersSentence ? cityFacts.topEmployers.slice(0, CITY_EMPLOYER_LIMIT) : [];
 
   // GSC Fix (P1.5): gate cross-links by the same threshold the target page
-  // renders at. Category×city pages notFound() below MIN_JOBS_FOR_CATEGORY_CITY,
+  // renders at. Category x city pages notFound() below MIN_JOBS_FOR_CATEGORY_CITY,
   // so linking combos sitting at 1-2 jobs produces systematic internal links to
-  // 404s. Pseo stats are pre-aggregated, so these queries are fast.
+  // 404s. Pseo stats are pre-aggregated, so these queries are fast; rows older
+  // than the freshness window are ignored (the sitemaps ignore them too).
+  const freshRowsSince = pseoStatsFreshnessThreshold();
   const allOtherCategoryConfigs = Object.values(ALL_CATEGORY_CONFIGS).filter((c) => c.slug !== config.slug);
-  const otherCategoryRows = await prisma.pseoStats.findMany({
-    where: {
-      type: 'category-city',
-      locationSlug: citySlug,
-      totalJobs: { gte: MIN_JOBS_FOR_CATEGORY_CITY },
-      categorySlug: { in: allOtherCategoryConfigs.map(c => c.slug) },
-    },
-    select: { categorySlug: true },
-  });
-  const validOtherCategorySlugs = new Set(otherCategoryRows.map(r => r.categorySlug));
-  const otherCategories = allOtherCategoryConfigs.filter(c => validOtherCategorySlugs.has(c.slug));
 
-  // Get visual assets from the registry for this category
-  const assets = CATEGORY_ASSET_REGISTRY[config.slug];
-
-  // Explore-card hrefs: only append /city/{slug} to hrefs that are real
-  // category pages AND clear the ≥3 render gate for this city. Non-category
-  // destinations (/salary-guide, /jobs/locations) have no per-city route —
-  // blindly appending produced /salary-guide/city/* 404s and middleware 410s
-  // on every asset-bearing page. Thin category combos fall back to the
-  // category landing page instead of a guaranteed 404.
-  const categorySlugSet = new Set(Object.values(ALL_CATEGORY_CONFIGS).map(c => c.slug));
-  const exploreCardLinks = (assets?.exploreCards ?? []).map(card => {
-    if (card.href.includes('/city/')) return { ...card, resolvedHref: card.href };
-    const cardSlug = card.href.startsWith('/jobs/') ? card.href.slice('/jobs/'.length) : null;
-    if (cardSlug === null || !categorySlugSet.has(cardSlug)) {
-      return { ...card, resolvedHref: card.href };
-    }
-    return {
-      ...card,
-      resolvedHref: validOtherCategorySlugs.has(cardSlug)
-        ? `${card.href}/city/${citySlug}`
-        : card.href,
-    };
-  });
-
-  // Nearby cities — gate by THIS category clearing the render threshold in each
+  // Nearby cities: gate by THIS category clearing the render threshold in each
   // candidate city (the target pages 404 below MIN_JOBS_FOR_CATEGORY_CITY).
   const candidateNearby = city!.nearbyCities
     .map((slug) => getCityBySlug(slug))
     .filter((c): c is CityData => c !== undefined)
-    .slice(0, 12); // overshoot, then filter to 6
-  const nearbyRows = candidateNearby.length > 0
-    ? await prisma.pseoStats.findMany({
-        where: {
-          type: 'category-city',
+    .slice(0, 12); // overshoot, then filter to NEARBY_CITY_LIMIT
+
+  const [otherCategoryRows, nearbyRows, acrossStateRows, stateLinkRow, dbCatCityOverride] = await Promise.all([
+    // CC-K5: sibling categories in this city, with live counts.
+    prisma.pseoStats.findMany({
+      where: {
+        type: 'category-city',
+        locationSlug: citySlug,
+        totalJobs: { gte: MIN_JOBS_FOR_CATEGORY_CITY },
+        categorySlug: { in: allOtherCategoryConfigs.map(c => c.slug) },
+        updatedAt: { gte: freshRowsSince },
+      },
+      select: { categorySlug: true, totalJobs: true },
+      orderBy: { totalJobs: 'desc' },
+    }),
+    candidateNearby.length > 0
+      ? prisma.pseoStats.findMany({
+          where: {
+            type: 'category-city',
+            categorySlug: config.slug,
+            locationSlug: { in: candidateNearby.map(c => c.slug) },
+            totalJobs: { gte: MIN_JOBS_FOR_CATEGORY_CITY },
+          },
+          select: { locationSlug: true },
+        })
+      : Promise.resolve([]),
+    // CC-K4: other cities in this state with this category at the render floor.
+    prisma.pseoStats.findMany({
+      where: {
+        type: 'category-city',
+        categorySlug: config.slug,
+        locationSlug: { endsWith: `-${city!.stateCode.toLowerCase()}`, not: citySlug },
+        totalJobs: { gte: MIN_JOBS_FOR_CATEGORY_CITY },
+        updatedAt: { gte: freshRowsSince },
+      },
+      select: { locationSlug: true, totalJobs: true },
+      orderBy: { totalJobs: 'desc' },
+      take: ACROSS_STATE_LIMIT + NEARBY_CITY_LIMIT,
+    }),
+    // P1.5: the "{label} Jobs in {state}" link only renders when a
+    // setting-state page exists for this taxonomy + state (some taxonomies
+    // are city-only and never have a state page; others may have a state
+    // page with 0 jobs right now). CC-K4 also reads its count.
+    prisma.pseoStats.findUnique({
+      where: {
+        type_categorySlug_locationSlug: {
+          type: 'setting-state',
           categorySlug: config.slug,
-          locationSlug: { in: candidateNearby.map(c => c.slug) },
-          totalJobs: { gte: MIN_JOBS_FOR_CATEGORY_CITY },
+          locationSlug: stateSlug,
         },
-        select: { locationSlug: true },
-      })
-    : [];
+      },
+      select: { totalJobs: true, updatedAt: true },
+    }),
+    // P3.4: per-(taxonomy, city) narrative. DB override wins; otherwise the
+    // deterministic builder produces the market-context paragraph.
+    prisma.categoryCitySnippet.findUnique({
+      where: {
+        categorySlug_citySlug: {
+          categorySlug: config.slug,
+          citySlug,
+        },
+      },
+      select: { body: true, approvedAt: true },
+    }),
+  ]);
+
   const validNearbySlugs = new Set(nearbyRows.map(r => r.locationSlug));
-  const nearbyCities = candidateNearby.filter(c => validNearbySlugs.has(c.slug)).slice(0, 6);
+  const nearbyCities = candidateNearby.filter(c => validNearbySlugs.has(c.slug)).slice(0, NEARBY_CITY_LIMIT);
+  const nearbySlugSet = new Set(nearbyCities.map((c) => c.slug));
 
-  // P1.5: only render the "{config.label} Jobs in {state}" resource link if a
-  // setting-state page actually exists for this taxonomy + state (some
-  // taxonomies are city-only and never have a state page; others may have a
-  // state page but with 0 jobs right now).
-  const cityStateSlug = stateToSlug(city!.state);
-  const stateLinkRow = await prisma.pseoStats.findUnique({
-    where: {
-      type_categorySlug_locationSlug: {
-        type: 'setting-state',
-        categorySlug: config.slug,
-        locationSlug: cityStateSlug,
-      },
-    },
-    select: { totalJobs: true },
-  });
   const showStateLink = (stateLinkRow?.totalJobs ?? 0) >= 1;
+  // CC-K4 state share: only for categories with a state page, from a fresh row.
+  const stateCount = STATE_ELIGIBLE_SET.has(config.slug) && stateLinkRow && isPseoStatsFresh(stateLinkRow.updatedAt)
+    ? stateLinkRow.totalJobs
+    : null;
+  const acrossStateVariant = {
+    kind: 'category-city' as const,
+    city: city!.name,
+    stateName: city!.state,
+    labelSentence: sentenceLabel,
+    cityCount: stats.totalJobs,
+    stateCount,
+  };
+  // Deduped against the nearby band, which links the same pages.
+  const acrossStatePlaces: LocationSpreadPlace[] = acrossStateRows
+    .flatMap((row) => {
+      const other = getCityBySlug(row.locationSlug);
+      if (!other || nearbySlugSet.has(other.slug)) return [];
+      return [{ name: other.name, count: row.totalJobs, link: { href: `/jobs/${config.slug}/city/${other.slug}`, renders: true } }];
+    })
+    .slice(0, ACROSS_STATE_LIMIT);
+  const acrossStateRenders = locationSentences(acrossStateVariant, acrossStatePlaces).length > 0;
 
-  // P3.4: per-(taxonomy, city) narrative. DB override wins; otherwise the
-  // deterministic builder produces unique-per-(city,taxonomy,jobcount) text.
-  // This is the primary defense against GSC "Crawled — currently not indexed"
-  // because every cell now has substantively different copy from its peers.
-  const dbCatCityOverride = await prisma.categoryCitySnippet.findUnique({
-    where: {
-      categorySlug_citySlug: {
-        categorySlug: config.slug,
-        citySlug,
-      },
-    },
-    select: { body: true, approvedAt: true },
-  });
+  // CC-K5: explore cards from the live rows (labels and counts differ per
+  // city), each with the registry's nav tile or glyph. Every href here
+  // cleared the render gate in the query above; the city hub card carries
+  // the all-specialty count.
+  const exploreCardLinks: ExploreCardLink[] = otherCategoryRows
+    .flatMap((row) => {
+      const other = ALL_CATEGORY_CONFIGS[row.categorySlug];
+      if (!other) return [];
+      return [{
+        href: `/jobs/${other.slug}/city/${citySlug}`,
+        label: other.label,
+        sub: formatCount(row.totalJobs, 'open role'),
+        icon: resolveSectionIcon(categoryNavArt(other.slug)),
+      }];
+    })
+    .slice(0, EXPLORE_CARD_LIMIT);
+  const cityHubCard: ExploreCardLink | null = allCityJobsHref
+    ? {
+        href: allCityJobsHref,
+        label: `All ${NP} jobs in ${city!.name}`,
+        sub: cityFacts.total >= 1 ? formatCount(cityFacts.total, 'open role') : 'Every specialty on this board',
+        icon: NAV_ICONS.location,
+      }
+    : null;
+
   const taxonomyCityNarrative = dbCatCityOverride && dbCatCityOverride.approvedAt
     ? dbCatCityOverride.body
     : buildTaxonomyCityNarrative(buildCityFacts(city!), config.slug, stats.totalJobs);
 
-  // P2 #8: correct certifying body for THIS category (CRNA → NBCRNA, CNM →
-  // AMCB, …) — feeds the qualification FAQ answer and its FAQPage schema.
-  const credentials = getCategoryCredentials(config.slug);
+  // T0-7: the sources line names only what this page renders.
+  const sourceLines = [
+    'U.S. Census Bureau (2020 population)',
+    env ? SOP_SOURCE_LINE : null,
+    env ? NLC_SOURCE_LINE : null,
+    receivesNpMedian(config.slug) ? STAT_SOURCES.averageSalary.source : null,
+  ].filter((line): line is string => line !== null);
 
-  // P2 #7 — two gates, one rule: the donor board's behavioral-health HPSA
-  // column may only surface on the category whose specialty it describes.
-  //   • shortageMatchesCategory gates the AFFIRMATIVE claim in the careers FAQ
-  //     answer (which also feeds the FAQPage schema). Same predicate the
-  //     metadata builder uses, so the page and its SERP snippet can never
-  //     disagree about whether the designation is on topic.
-  //   • categoryOwnsShortage gates the Community Profile tile, which reports
-  //     both polarities and so is category-scoped rather than flag-scoped.
-  const shortageMatchesCategory = shortageIsOnTopic(city!, config.slug);
-  const categoryOwnsShortage = categoryOwnsShortageData(config.slug);
+  // CC-K2, K3, K7: the bento cells.
+  const freshness = buildFreshnessSentence(facts.recency);
+  const roleSetupRenders = buildRoleSetup({ slug: config.slug, facts }).rendered;
+  const axisGuide = buildCategoryCityAxisGuide(config.slug, { city: city!.name, label: config.label, labelSentence: sentenceLabel });
+  const assets = getCategoryAssets(config.slug);
+  const salaryGuide = { href: `/salary-guide/${stateSlug}`, renders: true, label: `${city!.state} salary guide` };
+  // CC-K3 three branches: the category pool's gated median; else the
+  // all-specialty city pool's gated median under a title that names the
+  // scope; else the category's disclosed-count sentence with the BLS cite
+  // (PostedPay prints nothing when no listing states a salary, and never the
+  // NP median on the APRN roles).
+  const payFacts = facts.benchmark
+    ? copyFacts
+    : cityFacts.benchmark
+      ? { total: cityFacts.total, salaryDisclosedCount: cityFacts.salaryDisclosedCount, benchmark: cityFacts.benchmark }
+      : copyFacts;
+  const payBenchmark = payFacts.benchmark;
+  const payTitle = facts.benchmark
+    ? `Posted pay for ${sentenceLabel} roles`
+    : cityFacts.benchmark
+      ? `Posted pay across all ${NP} listings in ${city!.name}`
+      : `Posted pay for ${sentenceLabel} roles`;
+  const payChip = !facts.benchmark && cityFacts.benchmark ? 'City pay' : 'Pay';
 
-  /* ═══ Design Tokens — matched to category pages ═══ */
-  const clayCard: React.CSSProperties = {
-    background: '#FFFFFF', borderRadius: '20px',
-    border: '1px solid rgba(255,255,255,0.5)',
-    boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
-  };
-
-  // ═══ FAQ — SINGLE source array (audit B52) ═══
-  // This ONE array feeds BOTH the FAQPage JSON-LD and the visible
-  // accordion below. The template previously maintained two hand-copied
-  // versions that had drifted apart (different practice-authority
-  // wording, truncated health-system lists, a missing salary-range
-  // sentence) — Google treats schema answers that don't match visible
-  // content as spammy structured data. Never fork this array again.
-  const categoryCityFaqs = [
-    {
-      q: `How many ${config.label.toLowerCase()} ${brand.niche.short} jobs are available in ${city!.name}, ${city!.stateCode}?`,
-      a: `There ${stats.totalJobs === 1 ? 'is' : 'are'} currently ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} ${stats.totalJobs === 1 ? 'position' : 'positions'} available in ${city!.name}, ${city!.stateCode}. New positions are posted regularly as demand for ${brand.niche.descriptor}s continues to grow.`,
-    },
-    {
-      q: `What is the average ${brand.niche.short} salary in ${city!.name}?`,
-      a: stats.rawAvgSalary > 0
-        ? `The average ${config.label.toLowerCase()} ${brand.niche.short} salary in ${city!.name} is approximately $${stats.rawAvgSalary}K per year. Adjusted for the local cost of living (index: ${city!.costOfLivingIndex}), this equates to about $${stats.colAdjustedSalary}K in purchasing power. The typical range for ${config.label.toLowerCase()} positions is ${config.salaryRange}.`
-        : `${config.label} ${brand.niche.short} positions in ${city!.name} typically pay ${config.salaryRange}. Actual compensation depends on experience, employer type, and whether the role includes benefits. ${city!.name}'s cost of living index is ${city!.costOfLivingIndex} (national average = 100).`,
-    },
-    {
-      q: `Does ${city!.state} allow ${brand.niche.short}s full practice authority?`,
-      // FIX: this branched on `String(authority).includes('Full')`, but
-      // StatePracticeInfo.authority is the lowercase union 'full' | 'reduced'
-      // | 'restricted' — so BOTH tests were permanently false and every
-      // full-practice state was told its NPs "must practice under physician
-      // supervision", in the visible answer AND the FAQPage schema. Switch on
-      // the union so the compiler catches a new member.
-      a: practiceAuthority
-        ? `${city!.state} has ${getAuthorityLabel(practiceAuthority.authority).toLowerCase()} for ${brand.niche.descriptor}s. ${
-            practiceAuthority.authority === 'full'
-              ? `${brand.niche.short}s can evaluate, diagnose, and prescribe without physician oversight.`
-              : practiceAuthority.authority === 'reduced'
-                ? `${brand.niche.short}s require a collaborative agreement with a physician, but can diagnose and prescribe under that arrangement.`
-                : `${brand.niche.short}s practice under physician supervision for prescribing and some clinical decisions.`
-          } Source: ${STAT_SOURCES.fullPracticeStates.source}. Verify current rules with the ${city!.state} Board of Nursing before accepting a role.`
-        : `Contact the ${city!.state} Board of Nursing for current practice authority information.`,
-    },
-    {
-      q: `Is ${city!.name} a good place for ${brand.niche.short} careers?`,
-      // P2 #7: the dataset's only shortage column is the donor board's
-      // BEHAVIORAL-HEALTH HPSA flag — there is no primary-care HPSA field —
-      // so an unqualified "designated Health Professional Shortage Area,
-      // meaning high demand … for NPs" was an all-NP shortage claim this
-      // board cannot source. The designation is now named with its discipline
-      // and only carried on the page whose specialty it actually describes;
-      // every other category gets the market facts without it.
-      a: `${city!.name} ${
-        shortageMatchesCategory
-          ? 'carries a federal HRSA behavioral-health Health Professional Shortage Area (HPSA) designation, which is what makes NHSC Loan Repayment available to behavioral-health clinicians at approved sites in the area.'
-          : `has growing demand for ${brand.niche.descriptor}s.`
-      } With a population of ${city!.population.toLocaleString('en-US')}${city!.metroArea ? ` and part of the ${city!.metroArea} metro area` : ''}, ${city!.name} offers ${city!.healthcareSystems.length > 0 ? `access to major health systems including ${city!.healthcareSystems.slice(0, 3).join(', ')}` : 'a variety of practice settings'}.`,
-    },
-    {
-      // P2 #8: certifying body comes from the per-category credential facts —
-      // "ANCC or AANP" was wrong for CRNA (NBCRNA), CNM (AMCB), CNS
-      // (ANCC/AACN), PNP (PNCB), NNP/WHNP (NCC) and acute care (ANCC/AACN).
-      q: `What qualifications do I need for ${credentials.standaloneLabel ? config.label.toLowerCase() : `${config.label.toLowerCase()} ${brand.niche.short}`} jobs in ${city!.name}?`,
-      a: `To work as ${credentials.article} ${credentials.role} in ${city!.name}, ${city!.stateCode}, you need: (1) ${credentials.degree}, (2) ${credentials.certification}, (3) an active RN and APRN license in ${city!.state}, and (4) ${credentials.dea}. ${config.label === 'Entry-Level' ? 'Many entry-level positions accept new graduates and provide structured mentorship.' : config.label === 'Senior' ? 'Senior positions typically require 7+ years of experience and may require subspecialty certifications.' : `${config.label} positions may have additional requirements specific to the employer and setting.`}`,
-    },
+  // CC-K9 hero stats: positions; the gated median or the employer count
+  // (2 or more); listings first posted in the last 30 days. Never a mean.
+  const heroStats = [
+    { value: `${stats.totalJobs}`, label: pluralize(stats.totalJobs, 'position') },
+    ...(facts.benchmark
+      ? [{ value: formatK(facts.benchmark.median), label: 'median pay' }]
+      : facts.distinctEmployers >= 2
+        ? [{ value: `${facts.distinctEmployers}`, label: pluralize(facts.distinctEmployers, 'employer') }]
+        : []),
+    ...(facts.recency.last30 > 0 ? [{ value: `${facts.recency.last30}`, label: 'new in 30 days' }] : []),
   ];
 
+  // ═══ FAQ (CC-K8): SINGLE source array (audit B52) ═══
+  // This ONE array feeds BOTH the FAQPage JSON-LD and the visible accordion
+  // below. An entry whose answer would need a fallback figure is absent from
+  // both at once. Never fork this array again.
+  const categoryCityFaqs = buildCategoryCityFaqs({
+    slug: config.slug,
+    label: config.label,
+    labelSentence: sentenceLabel,
+    city: city!.name,
+    stateName: city!.state,
+    facts: copyFacts,
+    cityBenchmark: cityFacts.benchmark,
+    env,
+    qualifications: `To work as ${credentials.article} ${credentials.role} in ${city!.name}, ${city!.stateCode}, you need: (1) ${credentials.degree}, (2) ${credentials.certification}, (3) an active RN and APRN license in ${city!.state}, and (4) ${credentials.dea}.`,
+  });
+
   // P2 #19: ONE breadcrumb array drives the visible <nav> and the
-  // BreadcrumbList JSON-LD (Breadcrumbs renders both) — hrefs are relative
+  // BreadcrumbList JSON-LD (Breadcrumbs renders both); hrefs are relative
   // because the component prefixes the canonical origin itself.
   // State crumb: city-only categories have no /jobs/{cat}/{state} route
   // (middleware 410s that shape), so their state crumb points at the
-  // /jobs/state/{slug} hub instead — never a 410 URL in schema or in the DOM.
+  // /jobs/state/{slug} hub instead; never a 410 URL in schema or in the DOM.
   const breadcrumbItems = [
     { label: 'Home', href: '/' },
     { label: 'Jobs', href: '/jobs' },
@@ -1627,11 +1702,14 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
     { label: `${city!.name}, ${city!.stateCode}` },
   ];
 
+  const pageName = `${noun} Jobs in ${city!.name}, ${city!.stateCode}`;
+  const showInsights = categoryEmployersRender || topEmployers.length > 0 || acrossStateRenders;
+
   return (
     <div style={{ backgroundColor: '#FDFBF7' }}>
       {/* ═══ SCHEMAS ═══ */}
       {/* D9: ItemList schema.
-          B29: job titles are aggregator-sourced — escape < and > so a literal
+          B29: job titles are aggregator-sourced: escape < and > so a literal
           "</script>" in a title can never terminate this element early. */}
       {jobs.length > 0 && (
         <script
@@ -1640,7 +1718,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'ItemList',
-              name: `${config.label} ${brand.niche.short} Jobs in ${city!.name}, ${city!.stateCode}`,
+              name: pageName,
               numberOfItems: stats.totalJobs,
               itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({
                 '@type': 'ListItem',
@@ -1684,43 +1762,33 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
       {/* ═══ P2 #19: visible, linked breadcrumb trail ═══
           Sits in the hero's cream band so it reads as part of the header.
           CategoryHero's own `breadcrumbs` prop is deliberately empty: it
-          renders unlinked <span>s whose labels ('Careers …') did not match
-          the BreadcrumbList schema, and two Breadcrumb navs on one page is
+          renders unlinked <span>s whose labels did not match the
+          BreadcrumbList schema, and two Breadcrumb navs on one page is
           both a duplicate landmark and a duplicate-schema signal. */}
       <div className="pseo-crumb-band">
         <Breadcrumbs items={breadcrumbItems} />
       </div>
 
-      {/* ═══ D2: HERO — CategoryHero with category's watercolor ═══ */}
+      {/* ═══ D2: HERO (CC-K9) ═══
+          The secondary CTA points at the broadest listing the reader can
+          reach (the city hub when its slug round-trips, else the state hub),
+          never at /job-alerts: PLAN C.4 allows exactly ONE alert CTA per
+          page and that one is the sidebar card below. */}
       <CategoryHero
-        bgColor={assets?.bgColor || '#BE185D'}
-        heroImage={assets?.heroImage || DEFAULT_HERO_IMAGE}
-        heroAlt={`${config.label} ${brand.niche.short} working in ${city!.name}, ${city!.stateCode}`}
+        bgColor={assets.bgColor}
+        heroImage={assets.heroImage}
+        heroAlt={`${noun} working in ${city!.name}, ${city!.stateCode}`}
         badgeText={formatStatsBadge(stats.totalJobs, stats.statsAsOf)}
         breadcrumbs={[]}
-        headlineLine1={config.label}
-        headlineLine2={brand.niche.short}
-        headlineSub={`jobs in ${city!.name}, ${city!.stateCode}.`}
-        stats={[
-          { value: `${stats.totalJobs}`, label: pluralize(stats.totalJobs, 'position') },
-          // P3 #13: this used to be `salaryRange.split('–')[0]` — an EN DASH,
-          // while every salaryRange literal is written with an ASCII hyphen.
-          // The split never matched, so the fallback rendered the whole range
-          // ("$110K-150K") under an "avg salary" label. Splitting correctly
-          // would be worse: the low end of an estimated band is not an
-          // average. Show the band, and label it as a band.
-          ...(stats.rawAvgSalary > 0
-            ? [{ value: `${stats.rawAvgSalary}k`, label: 'avg salary' }]
-            : config.salaryRange
-              ? [{ value: config.salaryRange, label: 'typical range' }]
-              : []),
-          { value: demand.label, label: 'demand' },
-        ]}
-        description={`${config.label} ${brand.niche.short} positions in ${city!.name}. ${config.heroSubtitle}.`}
+        headlineLine1={noun}
+        headlineLine2="Jobs"
+        headlineSub={`in ${city!.name}, ${city!.stateCode}.`}
+        stats={heroStats}
+        description={`${config.heroSubtitle}.`}
         ctaLabel={`Browse ${config.label} Jobs`}
         ctaHref={`/jobs/${config.slug}`}
-        secondaryCtaLabel="Set Alert"
-        secondaryCtaHref="/job-alerts"
+        secondaryCtaLabel={allCityJobsHref ? `All ${city!.name} Jobs` : `All ${city!.state} Jobs`}
+        secondaryCtaHref={allCityJobsHref ?? `/jobs/state/${stateSlug}`}
       />
 
       <div className="container mx-auto px-4 py-8 md:py-12">
@@ -1735,46 +1803,44 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                 </h2>
                 <Link
                   href={`/jobs/${config.slug}`}
-                  style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textDecoration: 'none' }}
+                  style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                 >
-                  View All Jobs →
+                  View All Jobs <ArrowRight size={14} />
                 </Link>
               </div>
 
               {jobs.length === 0 ? (
-                <div className="text-center py-12 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                  <MapPin className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-tertiary)' }} />
-                  <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                    No {config.label.toLowerCase()} positions in {city!.name} right now
+                <div className="pseo-bento-card" style={{ ...clayCard, padding: '40px 24px', textAlign: 'center' }}>
+                  <IconWell icon={MapPin} size="lg" style={{ margin: '0 auto 16px' }} />
+                  <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>
+                    No {sentenceLabel} positions in {city!.name} right now
                   </h3>
-                  <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                    Try browsing nearby cities or statewide listings:
+                  <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.6, margin: '0 0 20px' }}>
+                    Try a nearby city or the statewide listings.
                   </p>
                   {nearbyCities.length > 0 && (
-                    <div className="flex flex-wrap justify-center gap-2 mb-6">
+                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
                       {nearbyCities.slice(0, 4).map((nc) => (
-                        <Link key={nc.slug} href={`/jobs/${config.slug}/city/${nc.slug}`}
-                          className="px-3 py-1.5 text-sm rounded-lg transition-colors hover:opacity-90"
-                          style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--color-primary)' }}>
+                        <Link key={nc.slug} href={`/jobs/${config.slug}/city/${nc.slug}`} className="pseo-pebble" style={clayTile}>
                           {nc.name}, {nc.stateCode}
                         </Link>
                       ))}
                     </div>
                   )}
-                  <div className="flex flex-wrap justify-center gap-3">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
                     {/* City-only categories have no /jobs/{cat}/{state} route
-                        (middleware 410) — send those to the state hub. */}
+                        (middleware 410): send those to the state hub. */}
                     {STATE_ELIGIBLE_SET.has(config.slug) ? (
-                      <Link href={`/jobs/${config.slug}/${stateToSlug(city!.state)}`} className="inline-block px-6 py-3 text-white rounded-lg font-medium hover:opacity-90" style={{ backgroundColor: 'var(--color-primary)' }}>
+                      <Link href={`/jobs/${config.slug}/${stateToSlug(city!.state)}`} className="pseo-cta-primary" style={clayCtaPrimary}>
                         {config.label} Jobs in {city!.state}
                       </Link>
                     ) : (
-                      <Link href={`/jobs/state/${stateToSlug(city!.state)}`} className="inline-block px-6 py-3 text-white rounded-lg font-medium hover:opacity-90" style={{ backgroundColor: 'var(--color-primary)' }}>
+                      <Link href={`/jobs/state/${stateToSlug(city!.state)}`} className="pseo-cta-primary" style={clayCtaPrimary}>
                         All {city!.state} Jobs
                       </Link>
                     )}
                     {allCityJobsHref && (
-                      <Link href={allCityJobsHref} className="inline-block px-6 py-3 rounded-lg font-medium" style={{ color: 'var(--color-primary)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
+                      <Link href={allCityJobsHref} className="pseo-pebble" style={clayPebble}>
                         All {city!.name} Jobs
                       </Link>
                     )}
@@ -1789,31 +1855,30 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                   </div>
 
                   {totalPages > 1 && (
-                    <div className="mt-8 flex items-center justify-center gap-4">
+                    <nav aria-label="Pagination" style={{ marginTop: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
                       {page > 1 ? (
-                        <Link href={`${basePath}?page=${page - 1}`} className="px-4 py-2 text-sm font-medium rounded-lg" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                          ← Previous
+                        <Link href={`${basePath}?page=${page - 1}`} className="pseo-pebble" style={clayPebble}>
+                          <ArrowLeft size={14} /> Previous
                         </Link>
                       ) : (
-                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: 'var(--text-tertiary)', backgroundColor: 'var(--bg-tertiary)' }}>← Previous</span>
+                        <span aria-disabled="true" style={clayPebbleDisabled}><ArrowLeft size={14} /> Previous</span>
                       )}
-                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Page {page} of {totalPages}</span>
+                      <span style={{ fontSize: '13px', color: '#7A6A62' }}>Page {page} of {totalPages}</span>
                       {page < totalPages ? (
-                        <Link href={`${basePath}?page=${page + 1}`} className="px-4 py-2 text-sm font-medium rounded-lg" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                          Next →
+                        <Link href={`${basePath}?page=${page + 1}`} className="pseo-pebble" style={clayPebble}>
+                          Next <ArrowRight size={14} />
                         </Link>
                       ) : (
-                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: 'var(--text-tertiary)', backgroundColor: 'var(--bg-tertiary)' }}>Next →</span>
+                        <span aria-disabled="true" style={clayPebbleDisabled}>Next <ArrowRight size={14} /></span>
                       )}
-                    </div>
+                    </nav>
                   )}
                 </>
               )}
             </div>
 
-            {/* Sidebar */}
+            {/* Sidebar: the page's one alert CTA, then the tips (rendered once). */}
             <div className="lg:col-span-1">
-              {/* Job Alert CTA */}
               <div className="pseo-bento-card" style={{ ...clayCard, padding: '0', overflow: 'hidden', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
                 <div style={{ padding: '24px' }}>
                   <Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} />
@@ -1821,21 +1886,15 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                     {config.label} Alerts
                   </h3>
                   <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
-                    New {config.label.toLowerCase()} {brand.niche.short} positions in {city!.name}, delivered daily.
+                    New {sentenceLabel} {NP} positions in {city!.name}, sent to your inbox.
                   </p>
-                  <Link href="/job-alerts" className="pseo-cta-primary" style={{
-                    display: 'block', width: '100%', textAlign: 'center',
-                    padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                    background: '#BE185D', color: '#fff', textDecoration: 'none',
-                    boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
-                  }}>
+                  <Link href="/job-alerts" className="pseo-cta-primary" style={{ ...clayCtaPrimary, display: 'flex', width: '100%' }}>
                     Create Alert
                   </Link>
                 </div>
               </div>
 
-              {/* Tips */}
-              <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
+              <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                   <Lightbulb size={20} style={{ color: '#BE185D' }} />
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>{config.label} Tips</h3>
@@ -1849,258 +1908,131 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                   ))}
                 </ul>
               </div>
-
-              {/* Benefits */}
-              <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', marginBottom: '16px' }}>Why {config.label}?</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  {config.benefits.map((b, i) => (
-                    <div key={i}>
-                      <div style={{ fontWeight: 700, fontSize: '13px', color: '#1A2E35' }}>{b.title}</div>
-                      <p style={{ fontSize: '12px', marginTop: '4px', color: '#5A4A42', lineHeight: 1.5 }}>{b.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* ═══ BENTO GRID — "Why Choose [Category]" ═══ */}
-          {assets && (
-            <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '48px 20px 40px' }}>
-              <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
-                {assets.bentoSectionLabel}
+          {/* ═══ BENTO GRID: "Why Choose [Category]" (CC-K2, K3, K6, K7) ═══ */}
+          <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '48px 20px 40px' }}>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+              {assets.bentoSectionLabel}
+            </p>
+            <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
+              {config.label} Careers in {city!.name}
+            </h2>
+            {freshness && (
+              <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '560px', margin: '0 auto 48px', lineHeight: 1.6 }}>
+                {freshness}
               </p>
-              <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
-                {config.label} Careers in {city!.name}
-              </h2>
-              <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>
-                {config.heroSubtitle}
-              </p>
+            )}
 
-              <div className="pseo-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
-                {/* ROW 1: Hero card (8col) + Side card (4col) */}
+            <div className="pseo-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px', marginTop: freshness ? 0 : '40px' }}>
+              {/* ROW 1: how this page is built (8col, CC-K7) + practice slot (4col, CC-K6) */}
+              {axisGuide && (
                 <div className="pseo-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                   <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>
-                      {`${config.label} in ${city!.name}`}
-                    </h3>
-                    <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                      {config.heroSubtitle}. {config.tips[0] || ''}
-                    </p>
-                  </div>
-                  <ImmersiveImage src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} minHeight={240} />
-                </div>
-
-                <div className="pseo-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <ImmersiveImage src={assets.bentoImages[1]} alt={`${config.label} growth`} minHeight={200} />
-                  <div style={{ padding: '24px 22px', flex: 1 }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>
-                      Practice Authority
-                    </h3>
-                    <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                      {practiceAuthority ? `${city!.state} has ${practiceAuthority.authority} practice authority for ${brand.niche.short}s.` : config.tips[1] || `Advance your ${config.label.toLowerCase()} career in ${city!.name}.`}
-                    </p>
-                  </div>
-                </div>
-
-                {/* ROW 2: Icon cards — dynamic count based on benefits */}
-                {config.benefits.map((benefit, i) => (
-                  <div key={`icon-${i}`} className="pseo-bento-card" style={{ ...clayCard, gridColumn: `span ${Math.floor(12 / config.benefits.length)}`, padding: '24px 18px', textAlign: 'center' }}>
-                    {assets.bentoIcons[i] && <Image src={assets.bentoIcons[i]} alt="" width={48} height={48} sizes="48px" style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />}
-                    <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>
-                      {benefit.title}
-                    </h3>
-                    <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>
-                      {benefit.description}
-                    </p>
-                  </div>
-                ))}
-
-                {/* ROW 3: Salary card (8col) + Alert CTA (4col) */}
-                {assets.bentoImages[2] && (
-                  <div className="pseo-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-                    <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                      <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
-                      <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary & Compensation</h3>
-                      <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                        {config.label} {brand.niche.short}s in {city!.name} earn {stats.rawAvgSalary > 0 ? `$${stats.rawAvgSalary}k` : config.salaryRange} annually.
-                      </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                      <IconWell icon={Info} size="sm" />
+                      <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7A6A62' }}>About this page</span>
                     </div>
-                    <ImmersiveImage src={assets.bentoImages[2]} alt="Salary growth" minHeight={240} />
+                    <h3 style={cellTitle}>How this page is built</h3>
+                    <p style={cellBody}>{axisGuide}</p>
                   </div>
-                )}
-
-                <div className="pseo-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
-                  <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />
-                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>{config.label} Alerts</h3>
-                  <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                    New {config.label.toLowerCase()} listings in {city!.name}, delivered daily.
-                  </p>
-                  <Link href="/job-alerts" className="pseo-cta-primary" style={{
-                    padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                    background: '#BE185D', color: '#fff', textDecoration: 'none',
-                    display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content',
-                    boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
-                  }}>
-                    Create Alert <ArrowRight size={14} />
-                  </Link>
+                  <ImmersiveImage src={assets.bentoImages[0]} alt={`${noun} at work`} minHeight={240} />
                 </div>
+              )}
+
+              <div style={{ gridColumn: 'span 4', display: 'grid', gap: '14px', alignContent: 'start' }}>
+                <PictureFrame src={assets.bentoImages[1]} alt={`Practice rules for ${NP}s in ${city!.state}`} minHeight={200} />
+                <PracticeCard
+                  env={env}
+                  variant={{ kind: 'practicing', certification: credentials.certification }}
+                  licenseGuideLive={licenseGuideLive}
+                  title={`Practicing as ${credentials.article} ${credentials.role} in ${city!.state}`}
+                />
               </div>
+
+              {/* ROW 2: benefit cards, rendered once (CC P4) */}
+              {config.benefits.map((benefit, i) => (
+                <div key={`icon-${i}`} className="pseo-bento-card" style={{ ...clayCard, gridColumn: `span ${Math.floor(12 / config.benefits.length)}`, padding: '24px 18px', textAlign: 'center' }}>
+                  {assets.bentoIcons[i] && <Image src={assets.bentoIcons[i]} alt="" width={48} height={48} sizes="48px" style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />}
+                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>
+                    {benefit.title}
+                  </h3>
+                  <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>
+                    {benefit.description}
+                  </p>
+                </div>
+              ))}
+
+              {/* ROW 3: posted pay (8col, CC-K3; the picture only beside a gated median) + role setup (4col, CC-K2) */}
+              {payBenchmark ? (
+                <div style={{ gridColumn: 'span 8', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', alignItems: 'stretch' }}>
+                  <PostedPay variant={{ kind: 'category', slug: config.slug }} facts={payFacts} salaryGuide={salaryGuide} title={payTitle} chip={payChip} />
+                  <PictureFrame src={assets.bentoImages[2] ?? assets.bentoImages[0]} alt={`Posted pay for ${noun} roles`} minHeight={240} />
+                </div>
+              ) : (
+                <PostedPay variant={{ kind: 'category', slug: config.slug }} facts={payFacts} salaryGuide={salaryGuide} title={payTitle} chip={payChip} className="pseo-bento-span-8" />
+              )}
+              {roleSetupRenders && <RoleSetup slug={config.slug} facts={facts} className="pseo-bento-span-4" />}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* ═══ COMMUNITY · MARKET · HEALTHCARE — Full-width warm section ═══ */}
-      <section style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FDFBF7 100%)', padding: '40px 0', marginTop: '8px' }}>
-        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 20px' }}>
-          <p className="font-lora" style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '6px' }}>Local Insights</p>
-          <h2 className="font-lora" style={{ fontSize: '22px', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '24px' }}>{city!.name} at a Glance</h2>
-          {/* `auto-fit, minmax(260px, 1fr)` collapses to a single column on
-              375px viewports while preserving the 3-up bento on desktop. */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
-            {/* Community Profile */}
-            <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px' }}>
-              <h2 className="font-lora" style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <MapPin size={18} style={{ color: '#BE185D' }} /> {city!.name}
-              </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <div style={{ fontSize: '11px', color: '#7A6A62' }}>Population</div>
-                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35' }}>{city!.population.toLocaleString()}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '11px', color: '#7A6A62' }}>Cost of Living</div>
-                  <div style={{ fontSize: '16px', fontWeight: 700, color: city!.costOfLivingIndex > 110 ? '#ef4444' : city!.costOfLivingIndex > 100 ? '#f59e0b' : '#34D399' }}>
-                    {city!.costOfLivingIndex}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '11px', color: '#7A6A62' }}>Median Income</div>
-                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35' }}>${(city!.medianIncome / 1000).toFixed(0)}k</div>
-                </div>
-                {/* P2 #7: labelled with the designation's DISCIPLINE *and*
-                    gated to the category that discipline describes. The
-                    dataset carries only the donor board's behavioral-health
-                    HPSA column, so a bare "Shortage: Yes" read as an all-NP
-                    shortage claim — but the label alone still puts a
-                    behavioral-health stat in the "… at a Glance" card of every
-                    dermatology, cardiology and aesthetics city page. Gated on
-                    the CATEGORY rather than on the flag, because "Not
-                    designated" is genuinely useful to a behavioral-health
-                    seeker weighing NHSC eligibility; it is only the 41 other
-                    categories that have no business reading either polarity.
-                    Neutral colouring — a designation is context for
-                    loan-repayment eligibility, not a verdict. */}
-                {categoryOwnsShortage && (
-                  <div>
-                    <div style={{ fontSize: '11px', color: '#7A6A62' }}>Behavioral-Health HPSA</div>
-                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35' }}>
-                      {city!.mentalHealthShortage ? 'Designated' : 'Not designated'}
-                    </div>
-                  </div>
-                )}
-              </div>
-              {city!.metroArea && (
-                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.05)', fontSize: '12px', color: '#7A6A62' }}>
-                  Metro: <strong style={{ color: '#1A2E35' }}>{city!.metroArea}</strong>
-                </div>
-              )}
-            </div>
-
-            {/* Market Insights */}
-            <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px' }}>
-              <h2 className="font-lora" style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <TrendingUp size={18} style={{ color: '#BE185D' }} /> Market
-              </h2>
-              <div style={{ marginBottom: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
-                  <span style={{ color: '#5A4A42' }}>Demand</span>
-                  <span style={{ fontWeight: 700, color: demand.color }}>{demand.label} ({demand.score}/100)</span>
-                </div>
-                <div style={{ height: '8px', borderRadius: '8px', background: 'rgba(0,0,0,0.05)' }}>
-                  <div style={{ height: '8px', borderRadius: '8px', width: `${demand.score}%`, backgroundColor: demand.color, transition: 'width 0.6s ease' }} />
-                </div>
-              </div>
-              {stats.rawAvgSalary > 0 && (
-                <div style={{ marginBottom: '14px' }}>
-                  <div style={{ fontSize: '11px', color: '#7A6A62' }}>COL-Adjusted Salary</div>
-                  <div style={{ fontSize: '22px', fontWeight: 800, color: '#1A2E35' }}>
-                    ${stats.colAdjustedSalary}k
-                    <span style={{ fontSize: '11px', fontWeight: 400, marginLeft: '6px', color: '#7A6A62' }}>(${stats.rawAvgSalary}k nominal)</span>
-                  </div>
-                </div>
-              )}
-              {practiceAuthority && (
-                <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                    <Shield size={14} style={{ color: '#BE185D' }} />
-                    {/* getAuthorityLabel, not the raw union member — this
-                        rendered the bare string "full" / "restricted". */}
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#1A2E35' }}>{getAuthorityLabel(practiceAuthority.authority)}</span>
-                  </div>
-                  {/* Rendered only once the license-guide blog series is
-                      published — this template links from ~100K+ pages, so
-                      an unpublished series would be internal 404s at scale.
-                      Flip LICENSE_GUIDE_SERIES_PUBLISHED in
-                      config/niche/content-map.ts when all 51 posts ship. */}
-                  {LICENSE_GUIDE_SERIES_PUBLISHED && (
-                    <Link href={`/blog/${licenseGuideSlug(stateToSlug(city!.state))}`} style={{ fontSize: '11px', color: '#BE185D', textDecoration: 'none' }}>
-                      {city!.state} Licensure Guide →
-                    </Link>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Top employers hiring now (#13).
-                Live employer names + open-role counts from the job table when
-                the city clears the 2-employer floor; the static healthcare
-                system list only as a fallback; and the whole card omitted when
-                we have neither. Nothing here is ever padded to fill space. */}
-            {(topEmployers.length > 0 || city!.healthcareSystems.length > 0) && (
-              <div className="pseo-bento-card" style={{ ...clayCard, padding: '24px' }}>
-                <h2 className="font-lora" style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                  <Building2 size={18} style={{ color: '#BE185D' }} />
-                  {topEmployers.length > 0 ? 'Top Employers Hiring Now' : 'Healthcare'}
-                </h2>
-                {topEmployers.length > 0 ? (
-                  <>
-                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                      {topEmployers.map((emp, i) => (
-                        <li key={emp.name} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '6px 0', borderBottom: i < topEmployers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
-                          <span style={{ fontSize: '13px', color: '#5A4A42' }}>{emp.name}</span>
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', whiteSpace: 'nowrap' }}>
-                            {emp.openRoles} {emp.openRoles === 1 ? 'role' : 'roles'}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    <p style={{ fontSize: '11px', color: '#7A6A62', margin: '10px 0 0', lineHeight: 1.5 }}>
-                      Employers with open {brand.niche.short} roles in {city!.name}, {city!.stateCode} right now, counted across every specialty on this board.
-                    </p>
-                  </>
-                ) : (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {city!.healthcareSystems.map((system, i) => (
-                      <span key={i} style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '8px', background: 'rgba(190,24,93,0.08)', color: '#1A2E35', fontWeight: 500 }}>
-                        {system}
-                      </span>
+      {/* ═══ LOCAL INSIGHTS (CC-K1, CC-K4): full-width warm section ═══ */}
+      {showInsights && (
+        <section style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FDFBF7 100%)', padding: '40px 0', marginTop: '8px' }}>
+          <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 20px' }}>
+            <p className="font-lora" style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '6px' }}>Local Insights</p>
+            <h2 className="font-lora" style={{ fontSize: '22px', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '24px' }}>{city!.name} at a Glance</h2>
+            {/* `auto-fit, minmax(260px, 1fr)` collapses to a single column on
+                375px viewports while preserving the 2-up grid on desktop. */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', alignItems: 'start' }}>
+              {/* CC-K1: employers hiring for this category; the all-specialty
+                  city pool as the fallback (with its disclaimer); nothing
+                  below two employers in either pool. Never padded. */}
+              {categoryEmployersRender ? (
+                <EmployerRoster variant={{ kind: 'category-city', labelSentence: sentenceLabel, city: city!.name }} facts={copyFacts} limit={CITY_EMPLOYER_LIMIT} />
+              ) : topEmployers.length > 0 ? (
+                <ClayCard chip="Employers" title="Top Employers Hiring Now" desc={cityEmployersSentence} icon={Building2}>
+                  <ul className="pseo-clay-list" style={clayList}>
+                    {topEmployers.map((emp, i) => (
+                      <li key={emp.name} style={clayRow(i === topEmployers.length - 1)}>
+                        {emp.companyPath ? (
+                          <Link href={emp.companyPath} style={clayLink}>{emp.name}</Link>
+                        ) : (
+                          <span>{emp.name}</span>
+                        )}
+                        <span style={clayMeta}>{formatCount(emp.count, 'listing')}</span>
+                      </li>
                     ))}
-                  </div>
-                )}
-              </div>
-            )}
+                  </ul>
+                  <p style={{ ...clayMuted, marginTop: '12px' }}>
+                    Employers with open {brand.niche.short} roles in {city!.name}, {city!.stateCode} right now, counted across every specialty on this board.
+                  </p>
+                </ClayCard>
+              ) : null}
+
+              {/* CC-K4: the city's share of the state pool and the other
+                  cities with this category at the render floor. */}
+              {acrossStateRenders && (
+                <LocationSpread
+                  variant={acrossStateVariant}
+                  places={acrossStatePlaces}
+                  title={`${config.label} roles across ${city!.state}`}
+                  tileIcon={NAV_ICONS.location}
+                />
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* D6: Nearby Cities */}
       {nearbyCities.length > 0 && (
         <section style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px' }}>
           <h2 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', marginBottom: '16px', textAlign: 'center' }}>
-            {config.label} {brand.niche.short} Jobs in Nearby Cities
+            {noun} Jobs in Nearby Cities
           </h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px' }}>
             {nearbyCities.map((nc) => (
@@ -2114,69 +2046,63 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
         </section>
       )}
 
-      {/* D6 + D8: Explore More — Warm bg with clay icon cards */}
-      <div style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FFF3E8 50%, #FFF8F0 100%)' }}>
-        <section style={{ maxWidth: '1000px', margin: '0 auto', padding: '56px 20px' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
-            Keep Exploring
-          </p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
-            Other {brand.niche.short} Job Types in {city!.name}
-          </h2>
-          <div className="pseo-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-            {exploreCardLinks.length > 0 ? (
-              exploreCardLinks.map(c => (
-                <Link key={c.href} href={c.resolvedHref} className="pseo-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
-                  <Image src={c.icon} alt="" width={48} height={48} sizes="48px" style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />
-                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', display: 'block', marginBottom: '4px' }}>{c.label}</span>
-                  <span style={{ fontSize: '12px', color: '#7A6A62', display: 'block' }}>{c.sub}</span>
-                </Link>
-              ))
-            ) : (
-              otherCategories.slice(0, 6).map((cat) => (
-                <Link key={cat.slug} href={`/jobs/${cat.slug}/city/${citySlug}`}
-                  className="pseo-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
-                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', display: 'block', marginBottom: '4px' }}>{cat.label}</span>
-                  <span style={{ fontSize: '12px', color: '#7A6A62', display: 'block' }}>in {city!.name}</span>
-                </Link>
-              ))
+      {/* D6 + D8: Explore More (CC-K5): warm bg with clay icon cards */}
+      {(exploreCardLinks.length > 0 || cityHubCard || showStateLink) && (
+        <div style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FFF3E8 50%, #FFF8F0 100%)' }}>
+          <section style={{ maxWidth: '1000px', margin: '0 auto', padding: '56px 20px' }}>
+            {(exploreCardLinks.length > 0 || cityHubCard) && (
+              <>
+                <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+                  Keep Exploring
+                </p>
+                <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
+                  Other {NP} Job Types in {city!.name}
+                </h2>
+                <div className="pseo-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                  {[...exploreCardLinks, ...(cityHubCard ? [cityHubCard] : [])].map((c) => (
+                    <Link key={c.href} href={c.href} className="pseo-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
+                      <IconWell icon={c.icon} size="lg" style={{ margin: '0 auto 12px' }} />
+                      <span style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', display: 'block', marginBottom: '4px' }}>{c.label}</span>
+                      <span style={{ fontSize: '12px', color: '#7A6A62', display: 'block' }}>{c.sub}</span>
+                    </Link>
+                  ))}
+                </div>
+              </>
             )}
-          </div>
 
-          {/* Resource Links */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginTop: '32px' }}>
-            <Link href={`/salary-guide/${stateToSlug(city!.state)}`} className="pseo-bento-card" style={{ ...clayCard, padding: '20px', textDecoration: 'none' }}>
-              <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', marginBottom: '4px' }}>
-                <DollarSign size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> {city!.state} Salary Guide
-              </h3>
-              <p style={{ fontSize: '12px', color: '#5A4A42', margin: 0 }}>Salary data by setting and experience.</p>
-            </Link>
-            {showStateLink && (
-              <Link href={`/jobs/${config.slug}/${stateToSlug(city!.state)}`} className="pseo-bento-card" style={{ ...clayCard, padding: '20px', textDecoration: 'none' }}>
+            {/* Resource Links */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginTop: exploreCardLinks.length > 0 || cityHubCard ? '32px' : 0 }}>
+              <Link href={`/salary-guide/${stateSlug}`} className="pseo-bento-card" style={{ ...clayCard, padding: '20px', textDecoration: 'none' }}>
                 <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', marginBottom: '4px' }}>
-                  <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> {config.label} Jobs in {city!.state}
+                  <DollarSign size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> {city!.state} Salary Guide
                 </h3>
-                <p style={{ fontSize: '12px', color: '#5A4A42', margin: 0 }}>Browse all {config.label.toLowerCase()} positions statewide.</p>
+                <p style={{ fontSize: '12px', color: '#5A4A42', margin: 0 }}>Posted pay and practice rules for {NP}s in {city!.state}.</p>
               </Link>
-            )}
-            <Link href={`/jobs/${config.slug}`} className="pseo-bento-card" style={{ ...clayCard, padding: '20px', textDecoration: 'none' }}>
-              <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', marginBottom: '4px' }}>
-                <Building2 size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> All {config.label} Jobs
-              </h3>
-              <p style={{ fontSize: '12px', color: '#5A4A42', margin: 0 }}>Nationwide {config.label.toLowerCase()} positions.</p>
-            </Link>
-          </div>
-        </section>
-      </div>
+              {showStateLink && (
+                <Link href={`/jobs/${config.slug}/${stateToSlug(city!.state)}`} className="pseo-bento-card" style={{ ...clayCard, padding: '20px', textDecoration: 'none' }}>
+                  <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', marginBottom: '4px' }}>
+                    <MapPin size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> {config.label} Jobs in {city!.state}
+                  </h3>
+                  <p style={{ fontSize: '12px', color: '#5A4A42', margin: 0 }}>Browse all {sentenceLabel} positions statewide.</p>
+                </Link>
+              )}
+              <Link href={`/jobs/${config.slug}`} className="pseo-bento-card" style={{ ...clayCard, padding: '20px', textDecoration: 'none' }}>
+                <h3 className="font-lora" style={{ fontSize: '15px', fontWeight: 700, color: '#BE185D', marginBottom: '4px' }}>
+                  <Building2 size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} /> All {config.label} Jobs
+                </h3>
+                <p style={{ fontSize: '12px', color: '#5A4A42', margin: 0 }}>Nationwide {sentenceLabel} positions.</p>
+              </Link>
+            </div>
+          </section>
+        </div>
+      )}
 
-      {/* GEO + FAQ — in its own container wrapper */}
+      {/* GEO + FAQ schema, in its own container wrapper */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
           {/* ── P3.4: per-(taxonomy, city) market context ─────────────────────── */}
-          {/* Replaces the prior templated "Quick Facts" block. The narrative is
-              substantively unique per (city, taxonomy, totalJobs) tuple — the
-              fix Google's quality model actually rewards (E-E-A-T-like depth,
-              not template substitution). data-speakable preserved for AEO. */}
+          {/* The narrative is unique per (city, taxonomy, totalJobs) tuple.
+              data-speakable preserved for AEO. */}
           <section
             className="pseo-bento-card"
             style={{ ...clayCard, padding: '24px', marginTop: '0' }}
@@ -2184,46 +2110,52 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             data-speakable="true"
           >
             <h2 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', marginBottom: '12px' }}>
-              {config.label} {brand.niche.short} Market in {city!.name}, {city!.stateCode}
+              {noun} Market in {city!.name}, {city!.stateCode}
             </h2>
             <p style={{ fontSize: '14px', lineHeight: 1.7, color: '#5A4A42', margin: 0 }}>
               {taxonomyCityNarrative}
             </p>
-            {/* P2 #7: the HPSA line names the designation's discipline — this
-                board holds no primary-care HPSA data (see city-data/types.ts). */}
+            {/* T0-7: only the sources this page actually renders. */}
             <p style={{ fontSize: '11px', marginTop: '8px', color: '#A09080' }}>
-              Sources: U.S. Census Bureau, Bureau of Labor Statistics, HRSA behavioral-health HPSA designations, {STAT_SOURCES.fullPracticeStates.source}. Job counts and salary averages are computed from live listings on this board.
+              Sources: {sourceLines.join('; ')}. Listing counts, employers and pay figures come from active listings on this board.
             </p>
           </section>
 
-          {/* ── AEO: Frequently Asked Questions with Schema ───────────────────
-              Fed by categoryCityFaqs (hoisted above `return`) — the SAME
-              array renders the visible accordion section below (B52). */}
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
-                '@context': 'https://schema.org',
-                '@type': 'FAQPage',
-                mainEntity: categoryCityFaqs.map(faq => ({
-                  '@type': 'Question',
-                  name: faq.q,
-                  acceptedAnswer: {
-                    '@type': 'Answer',
-                    text: faq.a,
-                  },
-                })),
-              }),
-            }}
-          />
-          {/* Speakable Schema — marks content sections for voice/AI consumption */}
+          {/* ── AEO: FAQPage schema ──────────────────────────────────────────
+              Fed by categoryCityFaqs (hoisted above `return`): the SAME
+              array renders the visible accordion section below (B52). The
+              schema is emitted only at 2 or more entries. */}
+          {categoryCityFaqs.length >= FAQ_SCHEMA_MIN_ENTRIES && (
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify({
+                  '@context': 'https://schema.org',
+                  '@type': 'FAQPage',
+                  mainEntity: categoryCityFaqs.map(faq => ({
+                    '@type': 'Question',
+                    name: faq.question,
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: faq.answer,
+                    },
+                  })),
+                })
+                  .replace(/</g, '\\u003c')
+                  .replace(/>/g, '\\u003e'),
+              }}
+            />
+          )}
+          {/* Speakable Schema: marks content sections for voice/AI consumption.
+              The FAQ array always carries the count, pay and qualification
+              entries, so '.faq-answer' is always rendered on this page. */}
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
               __html: JSON.stringify({
                 '@context': 'https://schema.org',
                 '@type': 'WebPage',
-                name: `${config.label} ${brand.niche.short} Jobs in ${city!.name}, ${city!.stateCode}`,
+                name: pageName,
                 speakable: {
                   '@type': 'SpeakableSpecification',
                   cssSelector: ['#answer-summary', '.faq-answer'],
@@ -2235,21 +2167,22 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
         </div>
       </div>
 
-      {/* FAQ Accordion — Warm bg section matching CategoryFAQ */}
-      <div style={{ background: '#FDFBF7' }}>
-        <section style={{ maxWidth: '1000px', margin: '0 auto', padding: '56px 20px' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
-            Common Questions
-          </p>
-          <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
-            {config.label} {brand.niche.short} Jobs in {city!.name}: FAQ
-          </h2>
+      {/* FAQ Accordion (CC-K8): warm bg section matching CategoryFAQ */}
+      {categoryCityFaqs.length > 0 && (
+        <div style={{ background: '#FDFBF7' }}>
+          <section style={{ maxWidth: '1000px', margin: '0 auto', padding: '56px 20px' }}>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
+              Common Questions
+            </p>
+            <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
+              {noun} Jobs in {city!.name}: FAQ
+            </h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* Same categoryCityFaqs array as the FAQPage JSON-LD above —
-                do NOT fork a second copy here (B52). */}
-            {categoryCityFaqs.map((faq, i) => (
-                <details key={i} className="pseo-faq-item" style={{
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Same categoryCityFaqs array as the FAQPage JSON-LD above:
+                  do NOT fork a second copy here (B52). */}
+              {categoryCityFaqs.map((faq, i) => (
+                <details key={faq.question} className="pseo-faq-item" style={{
                   background: '#FFFFFF',
                   borderRadius: '16px',
                   border: '1px solid rgba(255,255,255,0.5)',
@@ -2261,61 +2194,20 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                     padding: '20px 24px', cursor: 'pointer', listStyle: 'none',
                     fontSize: '15px', fontWeight: 600, color: '#1A2E35', lineHeight: 1.4,
                   }}>
-                    {faq.q}
+                    {faq.question}
                   </summary>
                   <div style={{ padding: '0 24px 20px', borderTop: '1px solid rgba(0,0,0,0.04)' }}>
-                    <p className="faq-answer" style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '16px 0 0' }}>{faq.a}</p>
+                    <p className="faq-answer" style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '16px 0 0' }}>{faq.answer}</p>
                   </div>
                 </details>
-            ))}
-          </div>
-        </section>
-      </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
 
-      {/* D11: Responsive + Hover CSS */}
-      <style>{`
-        /* Breadcrumb band — horizontal padding tracks CategoryHero's own
-           (48px 56px 0, dropping to 32px 24px 0 under 900px) so the trail
-           lines up with the H1 below it. */
-        .pseo-crumb-band { background: #faf6ef; padding: 24px 56px 0; }
-        .pseo-crumb-band nav { margin-bottom: 0; }
-        /* The current page is the H1 directly below, so its crumb is kept for
-           assistive technology but not drawn (owner request, 2026-09-16). */
-        .pseo-crumb-band nav ol li:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-        @media (max-width: 900px) {
-          .pseo-crumb-band { padding: 16px 24px 0; }
-        }
-        .pseo-cta-primary { transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease; }
-        .pseo-cta-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(190,24,93,0.35) !important; filter: brightness(1.05); }
-        .pseo-bento-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .pseo-bento-card:hover { transform: translateY(-4px); box-shadow: 8px 8px 24px rgba(0,0,0,0.1), -4px -4px 12px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
-        .pseo-faq-item summary { list-style: none; }
-        .pseo-faq-item summary::-webkit-details-marker { display: none; }
-        .pseo-faq-item summary::after {
-          content: '';
-          width: 28px; height: 28px; border-radius: 8px;
-          background: #FDF2F8;
-          display: inline-flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230D9488' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-          background-repeat: no-repeat; background-position: center;
-          transition: background 0.2s ease, transform 0.2s ease;
-        }
-        .pseo-faq-item[open] summary::after {
-          background-color: #BE185D;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='18 15 12 9 6 15'%3E%3C/polyline%3E%3C/svg%3E");
-          transform: none;
-        }
-        .pseo-faq-item { transition: box-shadow 0.3s ease; }
-        .pseo-faq-item[open] { box-shadow: 6px 6px 20px rgba(0,0,0,0.08), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
-        /* .pseo-explore-grid uses auto-fit minmax(220px, 1fr) inline so it
-           collapses on its own at narrow widths -- no media override needed. */
-        .pseo-bento-grid > div { min-width: 0; }
-        @media (max-width: 768px) {
-          .pseo-bento-grid { grid-template-columns: 1fr !important; }
-          .pseo-bento-grid > div { grid-column: span 1 !important; grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+      {/* D11: Responsive + Hover CSS (static string, no interpolation) */}
+      <style>{CATEGORY_CITY_CSS}</style>
     </div>
   );
 }

@@ -62,6 +62,8 @@ import {
 } from '@/lib/pseo/taxonomy-registry';
 import { getCategoryFaqs, type CategorySlug } from '@/lib/pseo/category-faq-data';
 import { SETTING_CONFIGS } from '@/lib/pseo/setting-state-config';
+import { buildCategoryCityFaqs } from '@/lib/pseo/listing-narrative';
+import { emptyListingFacts } from '@/lib/pseo/listing-facts';
 
 const ROOT = process.cwd();
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -87,6 +89,7 @@ const CITY_PAGE = 'app/jobs/city/[slug]/page.tsx';
 const METRO_PAGE = 'app/jobs/metro/[slug]/page.tsx';
 const OG_CITY_ROUTE = 'app/api/og/city/route.tsx';
 const STATE_TEMPLATE = 'lib/pseo/setting-state-template.tsx';
+const LOCATION_SPREAD = 'components/seo/pseo/LocationSpread.tsx';
 const FAQ_ACCORDION = 'components/CategoryFAQAccordion.tsx';
 const MIDDLEWARE = 'middleware.ts';
 const DB_REPAIR_SCRIPT = 'scripts/repair-city-slug-diacritics-db.ts';
@@ -105,7 +108,12 @@ describe('P4 (a) — Top Cities links carry the inventory gate, not just the nam
     it('gates the linkable flag on the job count AND the slug round-trip', () => {
         const src = code();
         // The count gate — expressed through the constant, never a literal.
-        expect(src).toMatch(/_count\.city\s*>=\s*MIN_CITY_JOBS_FOR_LINK/);
+        // WHY THIS PIN CHANGED (PLAN T0-1): the hub dropped its private
+        // prisma.job.groupBy(['city']) for the shared getListingFacts loader,
+        // so the count reads facts.cities[].count rather than _count.city.
+        // The gate itself neither moved nor weakened: it is still the AND of
+        // the inventory floor and the slug round trip, on one line.
+        expect(src).toMatch(/city\.count\s*>=\s*MIN_CITY_JOBS_FOR_LINK/);
         // The P3 round-trip guard is still there; this is an AND, not a swap.
         expect(src).toMatch(/cityLinkResolves\(name,\s*stateCode\)/);
         expect(src).toMatch(
@@ -115,7 +123,14 @@ describe('P4 (a) — Top Cities links carry the inventory gate, not just the nam
 
     it('never compares the city count against a bare number', () => {
         // A literal here is how the two gates drift apart again.
-        expect(code()).not.toMatch(/_count\.city\s*>=?\s*\d/);
+        expect(code()).not.toMatch(/city\.count\s*>=?\s*\d/);
+        // The rewrite opened a second place the threshold can drift: the
+        // LocationSpread variant and the sentence builder each take their own
+        // minLinkJobs argument. Both must read the shared constant, or the
+        // prose would name a floor the links do not actually use.
+        expect(code()).toContain('minLinkJobs: MIN_CITY_JOBS_FOR_LINK');
+        expect(code()).not.toMatch(/minLinkJobs:\s*\d/);
+        expect(code()).toContain('buildHubCitiesSentences(facts.cities, MIN_CITY_JOBS_FOR_LINK)');
     });
 
     it('the shared threshold still equals every other pSEO city gate', () => {
@@ -132,9 +147,20 @@ describe('P4 (a) — Top Cities links carry the inventory gate, not just the nam
         const src = code();
         // linkableCities is the filtered list; the raw citiesWithJobs list must
         // not be what the <Link> maps over.
-        expect(src).toMatch(/const\s+linkableCities\s*=\s*citiesWithJobs\.filter/);
-        expect(src).toMatch(/linkableCities\.map\(\(c\)\s*=>/);
+        // WHY THIS PIN CHANGED (HUB-S2): the page-local Top Cities grid became
+        // the shared <LocationSpread> section, so no separately named filtered
+        // array survives to assert on. The gate did NOT move to the renderer:
+        // a rejected city carries slug '' and therefore link: null, and
+        // LocationSpread only builds a tile for a place whose link survives
+        // linkHref. Both halves are pinned so neither can drift alone.
+        expect(src).toMatch(/const cityPlaces: LocationSpreadPlace\[\] = citiesWithJobs\.map/);
+        expect(src).toContain("link: c.slug ? {");
+        expect(src).toContain('places={cityPlaces}');
         expect(src).not.toMatch(/citiesWithJobs\.map\([^)]*\)\s*=>\s*\(?\s*<Link/);
+        // The renderer half: only a place with a surviving href becomes an anchor.
+        const spread = readCode(LOCATION_SPREAD);
+        expect(spread).toMatch(/const tiles = places\.flatMap\([\s\S]{0,160}?linkHref\(place\.link\)[\s\S]{0,80}?href \? \[/);
+        expect(spread).toMatch(/\{tiles\.map\(\(place\) =>[\s\S]{0,80}?<Link/);
     });
 
     it('the rejected cities are still NAMED — the fix drops links, not facts', () => {
@@ -142,7 +168,16 @@ describe('P4 (a) — Top Cities links carry the inventory gate, not just the nam
         // The narrative and the "which cities" FAQ read the ungated list on
         // purpose: withholding a dead link must never rewrite a true claim.
         expect(src).toMatch(/topCityNames:\s*citiesWithJobs\.slice/);
-        expect(src).toMatch(/citiesWithJobs\.length > 0/);
+        // WHY THIS PIN CHANGED (HUB-S2): citiesWithJobs.length > 0 guarded the
+        // old Top Cities card, which the rewrite removed. The invariant is now
+        // stronger, so pin it directly: citiesWithJobs is built from the
+        // UNGATED facts.cities list and a rejected city loses only its slug,
+        // keeping its real name and count for the narrative and the sentence.
+        expect(src).toMatch(/const citiesWithJobs = facts\.cities\.map/);
+        expect(src).toContain("slug: linkable ? buildCitySlug(name, stateCode) : ''");
+        expect(src).not.toMatch(/facts\.cities\.filter\(/);
+        // And the shared section puts every place in its sentence, tile or not.
+        expect(readCode(LOCATION_SPREAD)).toContain('const counts: NamedCount[] = places.map(({ name, count }) => ({ name, count }));');
     });
 });
 
@@ -244,24 +279,32 @@ describe('P4 (c) — setting×state Speakable declares the FAQ answers', () => {
         expect(ifFalse).toContain('#answer-summary');
     });
 
-    it('the gate is the same getCategoryFaqs call the renderer makes', () => {
-        // A gate computed from different inputs than <CategoryFAQ> receives
-        // could disagree with it, which is the whole failure mode. Pin that
-        // both read config.faqCategory + stats.totalJobs and nothing else.
+    it('the gate reads the same array the renderer is handed', () => {
+        // WHY THIS PIN CHANGED (PLAN C.4, CS-S9): the state page now builds
+        // its FAQ entries in lib/pseo/listing-narrative and passes them to
+        // <CategoryFAQ> through customFaqs, and getCategoryFaqs returns
+        // customFaqs verbatim when it is non-empty. So the Speakable gate and
+        // the render no longer compute the same thing from the same inputs,
+        // they read the SAME array. Divergence became structurally impossible
+        // instead of merely checked, which is a stronger form of the property
+        // this case exists for, so the pin follows it to its new mechanism.
         const code = readCode(STATE_TEMPLATE);
-        const gate = code.match(/getCategoryFaqs\(\{([\s\S]{0,200}?)\}\)\.length > 0/);
-        expect(gate).not.toBeNull();
-        expect(gate![1]).toContain('config.faqCategory');
-        expect(gate![1]).toContain('stats.totalJobs');
-        expect(gate![1]).not.toContain('avgSalary');
-        expect(gate![1]).not.toContain('customFaqs');
+        expect(code).toMatch(/const stateFaqs: FaqEntry\[\] = buildSettingStateFaqs\(\{/);
+        expect(code).toMatch(/const rendersFaqAnswers = stateFaqs\.length > 0;/);
+        // The selector's TRUE branch and the band hang off that one flag.
+        expect(code).toMatch(/cssSelector: rendersFaqAnswers[\s\S]{0,120}?'\.faq-answer'/);
+        expect(code).toMatch(/\{rendersFaqAnswers && \(\s*<CategoryFAQ/);
 
-        const render = code.match(/<CategoryFAQ([\s\S]{0,200}?)\/>/);
+        const render = code.match(/<CategoryFAQ([\s\S]{0,400}?)\/>/);
         expect(render).not.toBeNull();
+        expect(render![1]).toContain('customFaqs={stateFaqs}');
         expect(render![1]).toContain('config.faqCategory');
-        expect(render![1]).toContain('stats.totalJobs');
         expect(render![1]).not.toContain('avgSalary');
-        expect(render![1]).not.toContain('customFaqs');
+        // What makes one shared flag safe: the component honours the array it
+        // is handed instead of re-deriving one from the category key.
+        expect(read('lib/pseo/category-faq-data.ts')).toContain(
+            'if (input.customFaqs && input.customFaqs.length > 0) return input.customFaqs;',
+        );
     });
 
     it('#answer-summary is rendered and .faq-answer reaches the page via CategoryFAQ', () => {
@@ -307,14 +350,14 @@ describe('P4 (c) — setting×state Speakable declares the FAQ answers', () => {
         }
     });
 
-    it('the category×city template is NOT affected — its FAQ array is unconditional', () => {
+    it('the category x city template is NOT affected: an answer always renders', () => {
         // Reported as carrying "the identical divergence". It does not:
         // category-city-template.tsx does not use CategoryFAQ/CATEGORY_FAQS at
-        // all. It builds `categoryCityFaqs` as a literal array of five
-        // {q,a} objects that every category gets, each rendered through a <p
-        // className="faq-answer">. So '.faq-answer' always matches there and
-        // its unconditional selector is correct. Pinned so that stops being
-        // true loudly if the array ever becomes conditional.
+        // all. It builds `categoryCityFaqs` through buildCategoryCityFaqs,
+        // whose count and qualifications entries are unconditional, each
+        // rendered through a <p className="faq-answer">. So '.faq-answer'
+        // always matches there and its unconditional selector is correct.
+        // Pinned so that stops being true loudly if the floor reaches zero.
         const city = read('lib/pseo/category-city-template.tsx');
         // It *mentions* getCategoryFaqs / CategoryFAQ in notes about unmapped
         // keys, but never imports or calls either — assert on the import and
@@ -323,14 +366,44 @@ describe('P4 (c) — setting×state Speakable declares the FAQ answers', () => {
         expect(city).not.toMatch(/import\s*\{[^}]*getCategoryFaqs/);
         expect(city).not.toContain('<CategoryFAQ');
         expect(readCode('lib/pseo/category-city-template.tsx')).not.toMatch(/getCategoryFaqs\(/);
-        const arr = city.match(/const categoryCityFaqs = \[([\s\S]*?)\n {2}\];/);
-        expect(arr).not.toBeNull();
-        const body = arr![1];
-        // No spread and no element-level conditional => length is fixed.
-        expect(body).not.toMatch(/\n {4}\.\.\./);
-        expect(body.match(/\n {4}\{/g) ?? []).toHaveLength(5);
+        // WHY THIS PIN CHANGED (thin-spec-2 P6): the fixed five-element
+        // literal became buildCategoryCityFaqs, which drops any entry whose
+        // answer has no support so the accordion and the FAQPage schema shrink
+        // together. That does NOT break the unconditional selector, because
+        // two entries never drop: the count answer is built from facts.total,
+        // and the qualifications answer is a template literal the page always
+        // passes. The old pin asserted a fixed length; this one asserts the
+        // FLOOR that actually makes the Speakable claim true, which is the
+        // thing worth protecting, and proves it by running the builder.
+        expect(city).toContain('const categoryCityFaqs = buildCategoryCityFaqs({');
+        expect(city).toMatch(/qualifications: `To work as /);
+        expect(city).toMatch(/categoryCityFaqs\.length > 0 && \(/);
         expect(city).toMatch(/categoryCityFaqs\.map\(\(faq, i\) =>/);
         expect(city).toContain('<p className="faq-answer"');
+        const starved = {
+            slug: 'acute-care',
+            label: 'Acute Care',
+            labelSentence: 'acute care',
+            city: 'Portland',
+            stateName: 'Maine',
+            facts: emptyListingFacts(new Date('2026-01-01T00:00:00Z')),
+            cityBenchmark: null,
+            env: null,
+        };
+        // Worst case the page can reach: no employers, no benchmark, no
+        // practice data. The count and qualifications answers still render.
+        const floor = buildCategoryCityFaqs({ ...starved, qualifications: 'To work as a nurse practitioner in Portland, ME, you need a licence.' });
+        expect(floor.length).toBeGreaterThanOrEqual(2);
+        expect(floor.map((f) => f.question)).toEqual(
+            expect.arrayContaining([
+                expect.stringContaining('How many'),
+                expect.stringContaining('What qualifications'),
+            ]),
+        );
+        for (const entry of floor) expect(entry.answer.trim().length).toBeGreaterThan(0);
+        // Even with the qualifications answer withheld, one answer survives,
+        // so the selector never points at markup that is absent.
+        expect(buildCategoryCityFaqs({ ...starved, qualifications: null }).length).toBeGreaterThanOrEqual(1);
     });
 });
 

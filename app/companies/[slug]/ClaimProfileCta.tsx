@@ -22,11 +22,22 @@ import { createClient } from '@/lib/supabase/client';
  * Claimed badge. The copy below says that in those words, because a claim CTA
  * that implies instant control over an employer's public page would be making a
  * promise the flow deliberately does not keep.
+ *
+ * THE PROMPT IS ONE SENTENCE (thin plan, CO deletions). It used to be four,
+ * on every profile, above the fold of the page's least-used affordance. The
+ * explanation of what a claim does and does not entitle an employer to now
+ * sits where it is actually needed: next to the form fields for someone who
+ * has opened the form, and in the confirmation after they submit. The prompt
+ * text itself arrives as a prop so the wording lives in the one copy module
+ * the copy lint covers (lib/pseo/listing-narrative.ts COMPANY_CLAIM_CTA)
+ * rather than in a client bundle that cannot import it.
  */
 
 interface ClaimProfileCtaProps {
     companyId: string;
     companyName: string;
+    /** One-sentence prompt (COMPANY_CLAIM_CTA), supplied by the server page. */
+    intro: string;
     /** Path to return to after signing in. */
     profilePath: string;
 }
@@ -54,7 +65,7 @@ const fieldStyle: React.CSSProperties = {
     outline: 'none',
 };
 
-export default function ClaimProfileCta({ companyId, companyName, profilePath }: ClaimProfileCtaProps) {
+export default function ClaimProfileCta({ companyId, companyName, intro, profilePath }: ClaimProfileCtaProps) {
     const [phase, setPhase] = useState<Phase>('idle');
     const [signedIn, setSignedIn] = useState<boolean | null>(null);
     const [role, setRole] = useState('');
@@ -127,9 +138,10 @@ export default function ClaimProfileCta({ companyId, companyName, profilePath }:
                             Claim submitted
                         </h2>
                         <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-                            Our team reviews claims by hand. Nothing on this page changes until a
+                            Our team reviews claims by hand, and nothing on this page changes until a
                             reviewer approves it. If they do, a &ldquo;Claimed by employer&rdquo; badge
-                            appears here.
+                            appears here. An approved claim does not let an employer edit the listings
+                            or the pay figures above; those stay derived from its live postings.
                         </p>
                     </div>
                 </div>
@@ -146,9 +158,7 @@ export default function ClaimProfileCta({ companyId, companyName, profilePath }:
                         Work at {companyName}?
                     </h2>
                     <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-                        This profile was built from public job postings. If you hire here, you can ask
-                        us to recognize you as its owner. A reviewer checks every claim by hand, and
-                        nothing on this page changes unless one is approved.
+                        {intro}
                     </p>
 
                     {signedIn === false && (
@@ -209,6 +219,8 @@ export default function ClaimProfileCta({ companyId, companyName, profilePath }:
                                     We compare your account email&apos;s domain to this employer&apos;s website as one
                                     signal among several. A mismatch is not a rejection; agencies, health
                                     systems, and small practices routinely send mail from another domain.
+                                    This profile is built from public job postings, and a reviewer checks
+                                    every claim by hand before anything on it changes.
                                 </p>
                             </div>
 

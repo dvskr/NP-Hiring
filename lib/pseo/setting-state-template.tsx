@@ -1,35 +1,49 @@
 /**
- * Setting Ã— State pSEO Template Factory
- * 
- * Shared server component used by all /jobs/[setting]/[state] pages.
- * Each setting page just provides the setting key and state slug;
- * this factory handles data fetching, rendering, and SEO metadata.
+ * Setting x State pSEO Template Factory
+ *
+ * Shared server component used by all /jobs/[setting]/[state] pages. Each
+ * setting page provides the setting key and state slug; this factory handles
+ * data fetching, rendering, and SEO metadata.
+ *
+ * Thin-content program (PLAN.md C.4 item 3, thin-spec 1 section 4): every
+ * count on the page comes from one canonical facts loader
+ * (lib/pseo/listing-facts.ts), every sentence from the pure builders in
+ * lib/pseo/listing-narrative.ts, and every data section from the shared clay
+ * components in components/seo/pseo. A section whose facts miss its floor
+ * renders nothing; nothing here is padded or invented. Pay prints only
+ * through the gated median or the cited BLS figure, never a typed band or a
+ * posting mean. Robots read the cron's stored verdict (PseoStats.indexable)
+ * while its row is fresh and the live facts through the same render-gate
+ * function otherwise, so the page and the sitemaps cannot disagree.
  */
-import { cache } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import type { Metadata } from 'next';
+import type { CSSProperties } from 'react';
+import type { Prisma } from '@prisma/client';
 import ImmersiveImage from '@/components/ImmersiveImage';
 import { getCitiesByState } from './city-data/cities';
-import { MIN_JOBS_FOR_CATEGORY_CITY } from './render-gate';
-import { Metadata } from 'next';
+import {
+  isPseoStatsFresh,
+  pseoStatsFreshnessThreshold,
+  PSEO_STATS_MAX_AGE_HOURS,
+  shouldIndexSettingState,
+  type SettingStateIndexFacts,
+  MIN_JOBS_FOR_CATEGORY_CITY } from './render-gate';
 import { JOB_LISTING_OMIT } from './job-listing-omit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import { brand } from '@/config/brand';
-import {
-  TrendingUp, Building2, Bell, MapPin, Lightbulb,
-  DollarSign, Users, ArrowRight,
-} from 'lucide-react';
+import { Bell, MapPin, Lightbulb, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 import JobCard from '@/components/JobCard';
-// P2 #19: Breadcrumbs renders the VISIBLE trail *and* the BreadcrumbList
+// P2 #19: Breadcrumbs renders the VISIBLE trail and the BreadcrumbList
 // JSON-LD from one items array, replacing the schema-only BreadcrumbSchema
-// that used to sit here. Never render both — that emits two BreadcrumbList
+// that used to sit here. Never render both: that emits two BreadcrumbList
 // graphs for the same page.
 import Breadcrumbs from '@/components/Breadcrumbs';
 import CategoryHero from '@/components/CategoryHero';
 import CategoryFAQ from '@/components/CategoryFAQ';
-import { getCategoryFaqs, type CategorySlug } from './category-faq-data';
+import { type CategorySlug } from './category-faq-data';
 import { Job } from '@/lib/types';
 import { PseoPageViewTracker } from '@/components/analytics/ViewTrackers';
 import {
@@ -37,65 +51,85 @@ import {
   SETTING_CONFIGS,
   resolveStateSlug,
   stateToSlug,
-  NEIGHBORING_STATES,
   getAllStateSlugs,
   STATE_CODES,
 } from './setting-state-config';
-import { CATEGORY_ASSET_REGISTRY, DEFAULT_HERO_IMAGE } from './category-asset-registry';
-import { getStatePracticeAuthority, getAuthorityLabel } from '@/lib/state-practice-authority';
+import { getNeighboringStates } from './neighboring-states';
+import { getCategoryAssets } from './category-asset-registry';
 import { buildSettingStateNarrative } from './state-narrative';
-// P2 #15: ONE freshness formatter for both pSEO templates — a local copy is
-// how the city and state surfaces drift apart. P2 #7: same reasoning for the
-// behavioral-health-HPSA gate, which must agree across both surfaces.
-import { formatStatsBadge, categoryOwnsShortageData } from './category-city-template';
+// P2 #15: ONE freshness formatter for both pSEO templates; a local copy is
+// how the city and state surfaces drift apart.
+import { formatStatsBadge } from './category-city-template';
 import { pluralize } from '@/lib/pseo/plural';
 import { withListingQuarantine } from '@/lib/pseo/listing-where';
+import { canonicalBucketWhere } from '@/lib/canonical-counts';
+import { getListingFacts, type ListingFacts } from './listing-facts';
+import {
+  buildRecencySentence,
+  buildRoleSetup,
+  buildSettingStateDescription,
+  buildSettingStateFaqs,
+  buildSettingStateTitle,
+  formatCountLabel,
+  formatUtcDate,
+  type FaqEntry,
+} from './listing-narrative';
+import {
+  getPracticeEnvironment,
+  isLicenseGuideLive,
+  NLC_VERIFIED_LABEL,
+  type PracticeEnvironment,
+} from './practice-environment';
+import { buildLicenseGuideFaq, getLicenseGuideState } from '@/lib/blog-license-guides';
+import {
+  ClayStyles,
+  EmployerRoster,
+  LocationSpread,
+  PostedPay,
+  PracticeCard,
+  RoleSetup,
+  postedPaySentence,
+  type LocationSpreadPlace,
+} from '@/components/seo/pseo';
 
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-interface EmployerGroupResult {
-  employer: string;
-  _count: { employer: number };
-}
-
-interface ProcessedEmployer {
-  name: string;
+/** A cross-link pill: the target page, its label and its fresh canonical count. */
+interface CountedLink {
+  href: string;
+  label: string;
   count: number;
 }
 
-interface Stats {
-  totalJobs: number;
-  avgSalary: number;
-  topEmployers: ProcessedEmployer[];
-  /**
-   * When the counts were actually computed: pseoStats.updatedAt for fresh
-   * cached rows, "now" for live-count fallbacks, null when no data exists
-   * (the page 404s before rendering in that case). Mirrors CityStats in
-   * category-city-template.tsx — the hero badge derives its freshness claim
-   * from this instead of asserting "updated today" unconditionally.
-   */
-  statsAsOf: Date | null;
+/**
+ * The PseoStats columns the robots decision reads, typed locally.
+ *
+ * WHY RAW: the generated Prisma client predates the `indexable` column
+ * (prisma/migrations/20260916120000_pseo_stats_index_gate) and must not be
+ * regenerated on this branch, so the stored verdict is only reachable through
+ * a $queryRaw tagged template (parameterized; the column names are literals).
+ */
+interface SettingStateGateRow {
+  indexable: boolean;
+  updatedAt: Date;
 }
 
-// Staleness window for cached pseoStats rows. Matches STATS_STALENESS_HOURS in
-// category-city-template.tsx and the sitemap/aggregator probes — 3x the cron
-// cadence. Rows older than this are treated as unreliable: a stale positive
-// count would otherwise render frozen job counts (soft-404 pattern) and a
-// false "updated today" badge. Used for BOTH the stats read below and the
-// cross-link freshness gates in the page component.
-const PSEO_STALENESS_HOURS = 36;
-const PSEO_STALENESS_MS = PSEO_STALENESS_HOURS * 60 * 60 * 1000;
+/** Listings per page; the count drives the pagination controls. */
+const PAGE_SIZE = 10;
 
-const EMPTY_STATS: Stats = { totalJobs: 0, avgSalary: 0, topEmployers: [], statsAsOf: null };
+/** Pills shown in the "more job types" row. */
+const MAX_OTHER_SETTING_PILLS = 12;
 
-// â”€â”€â”€ Data Fetching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/** Nearby-state links offered on an empty listings page. */
+const MAX_EMPTY_STATE_NEIGHBORS = 4;
 
-async function getJobs(config: SettingConfig, stateName: string, skip = 0, take = 20) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where = withListingQuarantine(config.buildWhere(stateName) as any);
+// ─── Data Fetching ───────────────────────────────────────────────────────────
+
+/** The listing cards: the same bucket the facts count, on the canonical predicate. */
+async function getJobs(config: SettingConfig, stateName: string, skip = 0, take = PAGE_SIZE) {
+  const where = withListingQuarantine(config.buildWhere(stateName) as Prisma.JobWhereInput);
   return prisma.job.findMany({
-    where,
+    where: canonicalBucketWhere(where),
     omit: JOB_LISTING_OMIT, // Perf1: don't pull the multi-KB description for cards
     orderBy: BEST_SORT_ORDER_BY,
     skip,
@@ -103,107 +137,174 @@ async function getJobs(config: SettingConfig, stateName: string, skip = 0, take 
   });
 }
 
-// Perf2: cache() dedupes the duplicate call within a render (generateMetadata +
-// the page component both call getStats with the same module-level config ref).
-const getStats = cache(async function getStats(config: SettingConfig, stateName: string, stateSlug: string): Promise<Stats> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where = withListingQuarantine(config.buildWhere(stateName) as any);
+/**
+ * Every fact the page prints, from the one canonical loader. React cache()
+ * dedupes the metadata and page calls on the scope key within a request. A
+ * failed total count rethrows (PLAN C.3): a 5xx is retried by crawlers and
+ * never removes a URL, while a false 0 would be written into the route cache
+ * as a 404 for an hour across every setting x state URL.
+ */
+function getSettingStateFacts(config: SettingConfig, stateName: string, stateSlug: string): Promise<ListingFacts> {
+  const where = withListingQuarantine(config.buildWhere(stateName) as Prisma.JobWhereInput);
+  return getListingFacts(`setting-state:${config.slug}:${stateSlug}`, where);
+}
 
-  let totalJobs = 0;
-  let avgSalary = 0;
-  let statsAsOf: Date | null = null;
-  let cachedRow: { totalJobs: number; rawAvgSalary: number; updatedAt: Date } | null = null;
-
+/** The cron's stored index verdict for this combo, or null when unavailable. */
+async function readStoredIndexVerdict(config: SettingConfig, stateSlug: string): Promise<SettingStateGateRow | null> {
   try {
-    const pseo = await prisma.pseoStats.findUnique({
-      where: {
-        type_categorySlug_locationSlug: {
-          type: 'setting-state',
+    const rows = await prisma.$queryRaw<SettingStateGateRow[]>`
+      SELECT "indexable", "updatedAt"
+      FROM "PseoStats"
+      WHERE "type" = 'setting-state'
+        AND "categorySlug" = ${config.slug}
+        AND "locationSlug" = ${stateSlug}
+      LIMIT 1`;
+    return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  } catch (error) {
+    // A failed gate read must never take the page down: robots fall back to
+    // the live facts, the same decision the cron would have stored.
+    console.error(
+      `[setting-state] stored index verdict unavailable for ${config.slug}/${stateSlug}; robots use the live facts (freshness window ${PSEO_STATS_MAX_AGE_HOURS}h):`,
+      error,
+    );
+    return null;
+  }
+}
+
+/** The facts shouldIndexSettingState reads, computed exactly as the cron computes them. */
+export function settingStateIndexFacts(slug: string, facts: ListingFacts): SettingStateIndexFacts {
+  return {
+    totalJobs: facts.total,
+    employerCount: facts.distinctEmployers,
+    namedCityCount: facts.cities.length,
+    hasBenchmark: facts.benchmark !== null,
+    postedLast30Days: facts.recency.last30,
+    roleSetupRenders: buildRoleSetup({ slug, facts }).rendered,
+  };
+}
+
+/**
+ * Robots verdict (PLAN C.2): only page 1 can index; a fresh PseoStats row
+ * carries the cron's stored verdict, which the sitemaps also read; a stale
+ * or missing row falls back to the live facts through the same function.
+ */
+export function resolveSettingStateIndexable(input: {
+  stored: SettingStateGateRow | null;
+  indexFacts: SettingStateIndexFacts;
+  page: number;
+  now?: number;
+}): boolean {
+  const { stored, indexFacts, page, now = Date.now() } = input;
+  if (page !== 1) return false;
+  if (stored && isPseoStatsFresh(stored.updatedAt, now)) return stored.indexable;
+  return shouldIndexSettingState(indexFacts, page);
+}
+
+/** Other settings with fresh inventory in this state (CS-S8), most listings first. */
+async function loadOtherSettings(config: SettingConfig, stateSlug: string, threshold: Date): Promise<CountedLink[]> {
+  const rows = await prisma.pseoStats.findMany({
+    where: {
+      type: 'setting-state',
+      locationSlug: stateSlug,
+      totalJobs: { gte: 1 },
+      categorySlug: { not: config.slug },
+      updatedAt: { gte: threshold },
+    },
+    select: { categorySlug: true, totalJobs: true },
+  });
+  return rows
+    .flatMap((row): CountedLink[] => {
+      const setting = SETTING_CONFIGS[row.categorySlug];
+      if (!setting || setting.slug === config.slug) return [];
+      return [{ href: `/jobs/${setting.slug}/${stateSlug}`, label: setting.label, count: row.totalJobs }];
+    })
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+/** Nearby states where this setting has fresh inventory (CS-S7), most listings first. */
+async function loadNearbyStates(config: SettingConfig, stateName: string, threshold: Date): Promise<CountedLink[]> {
+  const nearby = getNeighboringStates(stateName).map((name) => ({ name, slug: stateToSlug(name) }));
+  if (nearby.length === 0) return [];
+  const rows = await prisma.pseoStats.findMany({
+    where: {
+      type: 'setting-state',
+      categorySlug: config.slug,
+      locationSlug: { in: nearby.map((n) => n.slug) },
+      totalJobs: { gte: 1 },
+      updatedAt: { gte: threshold },
+    },
+    select: { locationSlug: true, totalJobs: true },
+  });
+  const countBySlug = new Map(rows.map((row) => [row.locationSlug, row.totalJobs]));
+  return nearby
+    .flatMap((n): CountedLink[] => {
+      const count = countBySlug.get(n.slug);
+      return count ? [{ href: `/jobs/${config.slug}/${n.slug}`, label: n.name, count }] : [];
+    })
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+/**
+ * The cities the listings name (CS-S2), each joined to its dataset slug and
+ * to the render gate of its category x city page: a city links only when
+ * that page's fresh PseoStats row clears MIN_JOBS_FOR_CATEGORY_CITY (the
+ * page 404s below it, so a link would be a link to a 404). Every city stays
+ * in the sentence as plain text either way.
+ */
+async function loadCityPlaces(
+  config: SettingConfig,
+  stateCode: string | undefined,
+  facts: ListingFacts,
+  threshold: Date,
+): Promise<LocationSpreadPlace[]> {
+  const slugByName = new Map(
+    (stateCode ? getCitiesByState(stateCode) : []).map((city) => [city.name.toLowerCase(), city.slug]),
+  );
+  const candidateSlugs = facts.cities.flatMap((city) => {
+    const slug = slugByName.get(city.name.toLowerCase());
+    return slug ? [slug] : [];
+  });
+  const validCityRows = candidateSlugs.length > 0
+    ? await prisma.pseoStats.findMany({
+        where: {
+          type: 'category-city',
           categorySlug: config.slug,
-          locationSlug: stateSlug,
-        }
-      }
-    });
+          locationSlug: { in: candidateSlugs },
+          totalJobs: { gte: MIN_JOBS_FOR_CATEGORY_CITY },
+          updatedAt: { gte: threshold },
+        },
+        select: { locationSlug: true },
+      })
+    : [];
+  const validCitySlugs = new Set(validCityRows.map((row) => row.locationSlug));
+  return facts.cities.map((city): LocationSpreadPlace => {
+    const slug = slugByName.get(city.name.toLowerCase());
+    return {
+      name: city.name,
+      count: city.count,
+      link: slug ? { href: `/jobs/${config.slug}/city/${slug}`, renders: validCitySlugs.has(slug) } : null,
+    };
+  });
+}
 
-    // SEO Fix #15 (ported from the city template): a cached row is only
-    // trusted while fresh. A stale positive row is NOT used — if the live
-    // recount is 0 the page 404s below instead of rendering frozen counts
-    // under an "updated today" badge.
-    if (pseo && pseo.totalJobs > 0) {
-      cachedRow = pseo;
-      if (Date.now() - pseo.updatedAt.getTime() <= PSEO_STALENESS_MS) {
-        totalJobs = pseo.totalJobs;
-        avgSalary = pseo.rawAvgSalary;
-        statsAsOf = pseo.updatedAt;
-      }
-    }
+/** The physician and compact answers the license guide publishes for this state (CS-S9). */
+function licenseGuideAnswers(env: PracticeEnvironment | null): { physicianAnswer: string | null; nlcAnswer: string | null } {
+  const row = env ? getLicenseGuideState(env.stateSlug) : null;
+  if (!row) return { physicianAnswer: null, nlcAnswer: null };
+  const faqs = buildLicenseGuideFaq(row);
+  return {
+    physicianAnswer: faqs.find((f) => /collaborating or supervising physician/i.test(f.name))?.text ?? null,
+    nlcAnswer: faqs.find((f) => /Nurse Licensure Compact/i.test(f.name))?.text ?? null,
+  };
+}
 
-    // Fallback: live count when the pseoStats cache is empty, zero, or stale.
-    if (statsAsOf === null) {
-      const liveCount = await prisma.job.count({ where });
-      if (liveCount > 0) {
-        totalJobs = liveCount;
-        // Quick salary estimate from live data
-        const salaryData = await prisma.job.aggregate({
-          where: { ...where, minSalary: { gt: 0 } },
-          _avg: { minSalary: true, maxSalary: true },
-        });
-        const rawAvg = salaryData._avg?.maxSalary || salaryData._avg?.minSalary || 0;
-        avgSalary = rawAvg > 1000 ? Math.round(rawAvg / 1000) : Math.round(rawAvg);
-        statsAsOf = new Date();
-      }
-    }
-  } catch (error) {
-    console.error(`[setting-state] Failed to fetch stats for ${config.slug}/${stateSlug}:`, error);
-    // If the live recount failed but we hold a (possibly stale) positive row,
-    // prefer it — with its REAL date — over 404ing a page that likely still
-    // has jobs. Transient DB errors must not remove live pages.
-    if (cachedRow) {
-      totalJobs = cachedRow.totalJobs;
-      avgSalary = cachedRow.rawAvgSalary;
-      statsAsOf = cachedRow.updatedAt;
-    } else {
-      // No trusted row to fall back on. `cachedRow` is only ever assigned
-      // INSIDE the try after a successful findUnique returning a positive
-      // row, so reaching this branch means the FIRST query failed and we hold
-      // zero evidence that this combo is empty. Returning EMPTY_STATS here
-      // would make the caller notFound() (line ~272), and every setting×state
-      // route sets `revalidate = 3600`, so that 404 is written into the full
-      // route cache for up to an hour across ~663 indexed URLs — a DB blip
-      // would deindex the surface. Rethrow instead: a 5xx is retried by
-      // crawlers and never removes a URL. Absence of data is not evidence of
-      // an empty page.
-      throw error;
-    }
-  }
+/** The first sentence of a description, for the share card subtitle. */
+function leadSentence(text: string): string {
+  const end = text.indexOf('. ');
+  return end === -1 ? text : text.slice(0, end + 1);
+}
 
-  if (totalJobs === 0) {
-    return EMPTY_STATS;
-  }
-
-  // Only run the heavy groupBy query if we know jobs exist. A failure here
-  // omits the employer block rather than taking down the whole page.
-  let topEmployers: ProcessedEmployer[] = [];
-  try {
-    const employerRows = await prisma.job.groupBy({
-      by: ['employer'],
-      where,
-      _count: { employer: true },
-      orderBy: { _count: { employer: 'desc' } },
-      take: 8,
-    });
-    topEmployers = employerRows.map((e: EmployerGroupResult) => ({
-      name: e.employer,
-      count: e._count.employer,
-    }));
-  } catch (error) {
-    console.error(`[setting-state] Failed to group employers for ${config.slug}/${stateSlug}:`, error);
-  }
-
-  return { totalJobs, avgSalary, topEmployers, statsAsOf };
-});
-
-// â”€â”€â”€ Metadata Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Metadata Generator ──────────────────────────────────────────────────────
 
 export async function buildSettingStateMetadata(
   settingKey: string,
@@ -214,50 +315,107 @@ export async function buildSettingStateMetadata(
   const stateName = resolveStateSlug(stateSlug);
   if (!config || !stateName) return { title: 'Not Found' };
 
-  const stats = await getStats(config, stateName, stateSlug);
+  const [facts, stored] = await Promise.all([
+    getSettingStateFacts(config, stateName, stateSlug),
+    readStoredIndexVerdict(config, stateSlug),
+  ]);
   const basePath = `/jobs/${config.slug}/${stateSlug}`;
+  const env = getPracticeEnvironment(stateName);
+  const title = buildSettingStateTitle({ titleLabel: config.label, stateName, total: facts.total });
+  const description = buildSettingStateDescription({
+    label: config.label,
+    slug: config.slug,
+    stateName,
+    facts,
+    authorityDescription: env?.authorityDescription ?? null,
+    statsAsOf: facts.computedAt,
+  });
+  const indexable = resolveSettingStateIndexable({
+    stored,
+    indexFacts: settingStateIndexFacts(config.slug, facts),
+    page,
+  });
 
   return {
-    title: `${stats.totalJobs} ${config.label} ${brand.niche.short} ${pluralize(stats.totalJobs, 'Job')} in ${stateName} (${config.salaryRange})`,
-    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} ${pluralize(stats.totalJobs, 'job')} in ${stateName} paying ${config.salaryRange}. ${config.heroSubtitle}. Browse ${config.label.toLowerCase()} ${brand.niche.descriptor} positions in ${stateName} updated daily.`,
-    keywords: [
-      ...config.keywords,
-      `${config.label.toLowerCase()} ${brand.niche.short.toLowerCase()} jobs ${stateName.toLowerCase()}`,
-      `${stateName.toLowerCase()} ${config.label.toLowerCase()} ${brand.niche.descriptor}`,
-    ],
+    title,
+    description,
     openGraph: {
-      title: `${stats.totalJobs} ${config.label} ${brand.niche.short} ${pluralize(stats.totalJobs, 'Job')} in ${stateName}`,
-      description: `Browse ${config.label.toLowerCase()} ${brand.niche.descriptor} positions in ${stateName}. ${config.heroSubtitle}.`,
+      title,
+      description,
       type: 'website',
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} ${config.label} ${brand.niche.short} ${pluralize(stats.totalJobs, 'Job')} in ${stateName}`)}&subtitle=${encodeURIComponent(config.heroSubtitle)}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(title)}&subtitle=${encodeURIComponent(leadSentence(description))}`,
         width: 1200,
         height: 630,
-        alt: `${config.label} ${brand.niche.short} Jobs in ${stateName}`,
+        alt: title,
       }],
     },
     alternates: {
+      // Self canonical on every page; paginated views canonical to page 1.
       canonical: `${brand.baseUrl}${basePath}`,
     },
-    // SEO Fix #9: noindex thin state pages with 1-2 jobs (mirrors the
-    // category-city-template MIN_JOBS_FOR_INDEX=3 gate). 0-job pages still
-    // return 404 in the component below; pages with 1-2 jobs render with
-    // noindex,follow so PageRank flows through but the page doesn't compete
-    // for SERP space as a thin doorway. Paginated views (page > 1) are
-    // always noindexed.
-    ...((page > 1 || stats.totalJobs < 3) && {
-      robots: { index: false, follow: true },
-    }),
+    // Noindex pages keep follow so PageRank flows through the internal links.
+    robots: { index: indexable, follow: true },
   };
 }
 
-// â”€â”€â”€ Static Params Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Static Params Generator ─────────────────────────────────────────────────
 
 export function buildSettingStateStaticParams() {
   return getAllStateSlugs().map((slug) => ({ state: slug }));
 }
 
-// â”€â”€â”€ Page Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Design Tokens (matched to category-city-template) ──────────────────────
+
+const clayCard: CSSProperties = {
+  background: '#FFFFFF', borderRadius: '20px',
+  border: '1px solid rgba(255,255,255,0.5)',
+  boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
+};
+
+const pillStyle: CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 16px', borderRadius: '12px',
+  textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#1A2E35', background: '#FFFFFF',
+  border: '1px solid rgba(255,255,255,0.5)',
+  boxShadow: '3px 3px 8px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)',
+};
+
+const crossLinkHeadingStyle: CSSProperties = {
+  fontSize: '13px', fontWeight: 700, color: '#7A6A62', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px',
+};
+
+const bandEyebrowStyle: CSSProperties = {
+  fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px',
+};
+
+const bandHeadingStyle: CSSProperties = {
+  fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '32px',
+};
+
+const sidebarCardTitleStyle: CSSProperties = { fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 };
+
+/** Hover lift for the clay pills and the breadcrumb band chrome. Static, no interpolation. */
+const PAGE_CSS = `
+  .pseo-pill { transition: transform 0.25s ease, box-shadow 0.25s ease; cursor: pointer; }
+  .pseo-pill:hover { transform: translateY(-3px) !important; box-shadow: 6px 6px 16px rgba(0,0,0,0.1), -3px -3px 10px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
+  .pseo-pill:active { transform: translateY(-1px) !important; }
+  /* Breadcrumb band: horizontal padding tracks CategoryHero's own
+     (48px 56px 0, dropping to 32px 24px 0 under 900px). */
+  .pseo-crumb-band { background: #faf6ef; padding: 24px 56px 0; }
+  .pseo-crumb-band nav { margin-bottom: 0; }
+  /* The current page is the H1 directly below, so its crumb is kept for
+     assistive technology but not drawn (owner request, 2026-09-16). */
+  .pseo-crumb-band nav ol li:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  @media (max-width: 900px) {
+    .pseo-crumb-band { padding: 16px 24px 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pseo-pill { transition: none; }
+    .pseo-pill:hover { transform: none !important; }
+  }
+`;
+
+// ─── Page Component ──────────────────────────────────────────────────────────
 
 interface SettingStatePageProps {
   settingKey: string;
@@ -274,114 +432,66 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
     notFound();
   }
 
-  const limit = 10;
-  const skip = (page - 1) * limit;
+  const skip = (page - 1) * PAGE_SIZE;
 
-  // 1. Fetch fast pre-calculated stats
-  const stats = await getStats(config, stateName!, stateSlug);
+  // 1. The canonical facts (one loader, shared with generateMetadata).
+  const facts = await getSettingStateFacts(config, stateName!, stateSlug);
 
-  // SEO Fix: Return real 404 for categoryÃ—state combos with no matching jobs.
-  // Stops the server from trying to fetch jobs that don't exist.
-  if (stats.totalJobs === 0) {
+  // A category x state combo with no matching jobs is a real 404: nothing
+  // below is worth rendering for it.
+  if (facts.total === 0) {
     const { notFound: notFoundFn } = await import('next/navigation');
     notFoundFn();
   }
 
-  // 2. Fetch jobs only if they exist
-  const jobs = await getJobs(config, stateName!, skip, limit);
-
-  const totalPages = Math.ceil(stats.totalJobs / limit);
-  const rawNeighbors = NEIGHBORING_STATES[stateName!] || [];
+  // 2. Listings and the cross-link inventory.
+  const jobs = await getJobs(config, stateName!, skip, PAGE_SIZE);
+  const totalPages = Math.ceil(facts.total / PAGE_SIZE);
   const basePath = `/jobs/${config.slug}/${stateSlug}`;
-
-  // GSC Fix (P1.5): gate cross-links by pseoStats.totalJobs ≥ 1 so we never
-  // link Googlebot to empty pages. Empty cross-links generated thousands of
-  // "Discovered — currently not indexed" entries before. One pseoStats fan-out
-  // query per concern; all rows pre-aggregated, so this is fast.
-  //
-  // SEO Fix #18: also gate on pseoStats freshness (36h, 3x the 12h aggregator
-  // cadence). If the aggregator silently fails, stale rows can advertise
-  // pages whose underlying jobs already expired — same root cause as the
-  // sitemap freshness gate. Same window as the stats read (module constant).
-  const pseoFreshnessThreshold = new Date(Date.now() - PSEO_STALENESS_MS);
-
-  // Other-settings for THIS state with ≥1 job
-  const otherSettingRows = await prisma.pseoStats.findMany({
-    where: {
-      type: 'setting-state',
-      locationSlug: stateSlug,
-      totalJobs: { gte: 1 },
-      categorySlug: { not: config.slug },
-      updatedAt: { gte: pseoFreshnessThreshold },
-    },
-    select: { categorySlug: true },
-  });
-  const otherSettingSlugs = new Set(otherSettingRows.map(r => r.categorySlug));
-  const otherSettings = Object.values(SETTING_CONFIGS).filter(
-    (s) => s.slug !== config.slug && otherSettingSlugs.has(s.slug),
-  );
-
-  // Neighbor states where THIS setting has ≥1 job
-  const neighborSlugs = rawNeighbors.map(n => stateToSlug(n));
-  const validNeighborRows = neighborSlugs.length > 0
-    ? await prisma.pseoStats.findMany({
-        where: {
-          type: 'setting-state',
-          categorySlug: config.slug,
-          locationSlug: { in: neighborSlugs },
-          totalJobs: { gte: 1 },
-          updatedAt: { gte: pseoFreshnessThreshold },
-        },
-        select: { locationSlug: true },
-      })
-    : [];
-  const validNeighborSlugs = new Set(validNeighborRows.map(r => r.locationSlug));
-  const neighbors = rawNeighbors.filter(n => validNeighborSlugs.has(stateToSlug(n)));
-
-  // Top cities in this state where THIS setting clears the category×city
-  // render gate — those pages 404 below MIN_JOBS_FOR_CATEGORY_CITY, so linking
-  // 1-2-job combos creates internal links to 404s.
   const stateCode = STATE_CODES[stateName!];
-  const candidateCities = stateCode
-    ? getCitiesByState(stateCode)
-        .sort((a, b) => b.population - a.population)
-        .slice(0, 30) // overshoot — we'll filter then trim to 10
-    : [];
-  const candidateSlugs = candidateCities.map(c => c.slug);
-  const validCityRows = candidateSlugs.length > 0
-    ? await prisma.pseoStats.findMany({
-        where: {
-          type: 'category-city',
-          categorySlug: config.slug,
-          locationSlug: { in: candidateSlugs },
-          totalJobs: { gte: MIN_JOBS_FOR_CATEGORY_CITY },
-          updatedAt: { gte: pseoFreshnessThreshold },
-        },
-        select: { locationSlug: true },
-      })
-    : [];
-  const validCitySlugs = new Set(validCityRows.map(r => r.locationSlug));
-  const topCities = candidateCities.filter(c => validCitySlugs.has(c.slug)).slice(0, 10);
-  const assets = CATEGORY_ASSET_REGISTRY[config.slug];
-  const practiceAuthority = getStatePracticeAuthority(stateName!);
+  // The facts are recounted live on every render (ISR), so this is a real
+  // recount time; the hero badge and the sources line read it.
+  const statsAsOf = facts.computedAt;
 
-  // Compute average COL for top cities in this state
-  const avgCOL = topCities.length > 0
-    ? Math.round(topCities.reduce((sum, c) => sum + c.costOfLivingIndex, 0) / topCities.length)
-    : 100;
-  // P2 #7: `mentalHealthShortage` is the donor board's BEHAVIORAL-HEALTH
-  // discipline HPSA flag — city-data/types.ts holds no primary-care HPSA
-  // column — so every surface below names the discipline rather than
-  // implying an all-NP shortage figure this board cannot source.
-  const shortageCount = topCities.filter(c => c.mentalHealthShortage).length;
-  // …and naming it is not enough. This template renders the specialty state
-  // pages as well as the setting ones, so an ungated card published a
-  // behavioral-health statistic on the cardiology, dermatology and aesthetics
-  // state pages too. Gated on the category that owns the column, using the
-  // same registry-derived predicate as the city template so the two surfaces
-  // cannot drift. (`shortageCount` itself still feeds the narrative below,
-  // which is prose owned by lib/pseo/state-narrative.ts.)
-  const shortageMatchesCategory = categoryOwnsShortageData(config.slug);
+  // Cross-links are gated on PseoStats.totalJobs of 1 or more so the page
+  // never links Googlebot to an empty page, and on row freshness so a
+  // silently failing aggregator cannot advertise pages whose jobs expired.
+  // One window for every gate: PSEO_STATS_MAX_AGE_HOURS in render-gate.ts.
+  const freshnessThreshold = pseoStatsFreshnessThreshold();
+  const [otherSettings, nearbyStates, places] = await Promise.all([
+    loadOtherSettings(config, stateSlug, freshnessThreshold),
+    loadNearbyStates(config, stateName!, freshnessThreshold),
+    loadCityPlaces(config, stateCode, facts, freshnessThreshold),
+  ]);
+
+  const assets = getCategoryAssets(config.slug);
+  const env = getPracticeEnvironment(stateName!);
+  const licenseGuideLive = env ? await isLicenseGuideLive(env.stateSlug) : false;
+
+  // The two retired positional arguments of the narrative are ignored by the
+  // builder; they stay until the signature is trimmed with its owner.
+  const narrative = buildSettingStateNarrative(config.slug, stateName!, stateCode || '', 0, 0, facts.total);
+  const recencySentence = buildRecencySentence(facts.recency);
+  // The BLS figure is cited only on the below-gate pay branch; the sources
+  // line names it only then.
+  const paySentence = postedPaySentence({ kind: 'category', slug: config.slug }, facts);
+  const citesBls = paySentence !== null && facts.benchmark === null;
+  const extraSources = citesBls ? `; ${STAT_SOURCES.averageSalary.source}` : '';
+
+  // CS-S9: ONE array feeds the visible accordion and the FAQPage JSON-LD
+  // (CategoryFAQ builds both from customFaqs), so an entry that loses its
+  // answer disappears from both at once.
+  const stateFaqs: FaqEntry[] = buildSettingStateFaqs({
+    label: config.label,
+    stateName: stateName!,
+    slug: config.slug,
+    facts,
+    ...licenseGuideAnswers(env),
+  });
+  // The Speakable '.faq-answer' selector is declared only when the FAQ band
+  // renders, which is exactly when this array is non-empty (the band is
+  // rendered from it and from nothing else).
+  const rendersFaqAnswers = stateFaqs.length > 0;
 
   // P2 #19: ONE breadcrumb array drives the visible <nav> and the
   // BreadcrumbList JSON-LD (Breadcrumbs renders both); hrefs are relative
@@ -393,53 +503,20 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
     { label: stateName! },
   ];
 
-  // P4 follow-up: does THIS page actually render an FAQ block?
-  // CATEGORY_FAQS (lib/pseo/category-faq-data.ts) is a Partial<Record<...>>,
-  // and one state-eligible category still has no entry (see the note on
-  // buildNpSpecialtyConfig in setting-state-config.ts). For that key
-  // getCategoryFaqs returns [], <CategoryFAQ> returns null, and NO .faq-answer
-  // element exists in the markup — across all 51 of its state URLs. This call
-  // mirrors the <CategoryFAQ> invocation at the bottom of the render EXACTLY
-  // (same category, same totalJobs, no avgSalary, no customFaqs) so the
-  // Speakable selector below can never outlive the element it points at.
-  // 27 of the 28 state-eligible categories render FAQs; one does not.
-  const rendersFaqAnswers =
-    getCategoryFaqs({
-      category: config.faqCategory as CategorySlug,
-      totalJobs: stats.totalJobs,
-    }).length > 0;
-
-  /* Design Tokens — matched to category-city-template */
-  const clayCard: React.CSSProperties = {
-    background: '#FFFFFF', borderRadius: '20px',
-    border: '1px solid rgba(255,255,255,0.5)',
-    boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
-  };
+  const heroStats = [
+    { value: `${facts.total}`, label: pluralize(facts.total, 'position') },
+    // CS-T12: the distinct employer count, never the length of a capped list.
+    ...(facts.distinctEmployers > 0
+      ? [{ value: `${facts.distinctEmployers}`, label: pluralize(facts.distinctEmployers, 'employer') }]
+      : []),
+  ];
 
   return (
     <div style={{ backgroundColor: '#FDFBF7' }}>
-      {/* Hover effects — inline to guarantee they load */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        .pseo-pill { transition: transform 0.25s ease, box-shadow 0.25s ease; cursor: pointer; }
-        .pseo-pill:hover { transform: translateY(-3px) !important; box-shadow: 6px 6px 16px rgba(0,0,0,0.1), -3px -3px 10px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
-        .pseo-pill:active { transform: translateY(-1px) !important; }
-        .pseo-resource { transition: transform 0.25s ease, box-shadow 0.25s ease; cursor: pointer; }
-        .pseo-resource:hover { transform: translateY(-4px) !important; box-shadow: 8px 8px 20px rgba(0,0,0,0.1), -4px -4px 12px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6) !important; }
-        .pseo-resource:active { transform: translateY(-1px) !important; }
-        /* Breadcrumb band — horizontal padding tracks CategoryHero's own
-           (48px 56px 0, dropping to 32px 24px 0 under 900px). */
-        .pseo-crumb-band { background: #faf6ef; padding: 24px 56px 0; }
-        .pseo-crumb-band nav { margin-bottom: 0; }
-        /* The current page is the H1 directly below, so its crumb is kept for
-           assistive technology but not drawn (owner request, 2026-09-16). */
-        .pseo-crumb-band nav ol li:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-        @media (max-width: 900px) {
-          .pseo-crumb-band { padding: 16px 24px 0; }
-        }
-      `}} />
+      <style>{PAGE_CSS}</style>
       {/* Schemas */}
       {/* ItemList schema.
-          B29: job titles are aggregator-sourced — escape < and > so a literal
+          B29: job titles are aggregator-sourced; escape < and > so a literal
           "</script>" in a title can never terminate this element early. */}
       {jobs.length > 0 && (
         <script
@@ -449,8 +526,8 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
               '@context': 'https://schema.org',
               '@type': 'ItemList',
               name: `${config.label} ${brand.niche.short} Jobs in ${stateName}`,
-              numberOfItems: stats.totalJobs,
-              itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({
+              numberOfItems: facts.total,
+              itemListElement: jobs.slice(0, PAGE_SIZE).map((job: Job, idx: number) => ({
                 '@type': 'ListItem',
                 position: idx + 1,
                 name: job.title,
@@ -462,7 +539,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
           }}
         />
       )}
-      {/* P2 #15: State (Place subtype) schema — the state-page counterpart of
+      {/* P2 #15: State (Place subtype) schema, the state-page counterpart of
           the city template's Place graph, so the page names the geography it
           is about in machine-readable form. */}
       <script
@@ -482,26 +559,13 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
             .replace(/>/g, '\\u003e'),
         }}
       />
-      {/* P2 #15 / P4: Speakable schema — marks the answer summary and the FAQ
-          answers for voice/AI consumption, matching the city template's
-          contract exactly.
-          Only selectors that ACTUALLY exist in the rendered markup are
-          declared. #answer-summary is the State Insights section below, which
-          renders unconditionally.
-          '.faq-answer' was withheld until P3 because this page's FAQ comes
-          from components/CategoryFAQAccordion (via components/CategoryFAQ) and
-          its answer <p> carried no such class — declaring a selector that
-          matches nothing would have been a false claim about the page. P3 added
-          `className="faq-answer"` to that <p>.
-
-          The class existing is necessary but NOT sufficient: <CategoryFAQ>
-          renders nothing at all for a faqCategory with no CATEGORY_FAQS entry,
-          and one state-eligible category is still exactly that key — so
-          widening the array unconditionally re-created the very false claim
-          the rule above forbids, across that category's 51 state URLs. The
-          selector is therefore gated on the same getCategoryFaqs() call the
-          renderer makes: declared for the 27 categories that render answers,
-          omitted for the one that does not. */}
+      {/* P2 #15 / P4: Speakable schema marks the answer summary and the FAQ
+          answers for voice and AI consumption. Only selectors that ACTUALLY
+          exist in the rendered markup are declared: #answer-summary is the
+          intro of the hiring band below and renders unconditionally;
+          '.faq-answer' is the <p> CategoryFAQAccordion renders per entry, so
+          it is declared only when the FAQ array feeding that band is
+          non-empty. dateModified is the real recount time. */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -509,6 +573,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
             '@context': 'https://schema.org',
             '@type': 'WebPage',
             name: `${config.label} ${brand.niche.short} Jobs in ${stateName}`,
+            dateModified: statsAsOf.toISOString(),
             speakable: {
               '@type': 'SpeakableSpecification',
               cssSelector: rendersFaqAnswers
@@ -526,52 +591,36 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
         pageType="setting_state"
         category={config.slug}
         state={stateName!}
-        jobCount={stats.totalJobs}
+        jobCount={facts.total}
       />
 
       {/* P2 #19: visible, linked breadcrumb trail.
           CategoryHero's own `breadcrumbs` prop is deliberately empty below:
-          it renders unlinked <span>s whose labels ('Careers …') did not match
-          the BreadcrumbList schema, and two Breadcrumb navs on one page is
-          both a duplicate landmark and a duplicate-schema signal. */}
+          it renders unlinked <span>s whose labels did not match the
+          BreadcrumbList schema, and two Breadcrumb navs on one page is both
+          a duplicate landmark and a duplicate-schema signal. */}
       <div className="pseo-crumb-band">
         <Breadcrumbs items={breadcrumbItems} />
       </div>
 
       {/* Hero */}
       <CategoryHero
-        bgColor={assets?.bgColor || '#BE185D'}
-        heroImage={assets?.heroImage || DEFAULT_HERO_IMAGE}
+        bgColor={assets.bgColor}
+        heroImage={assets.heroImage}
         heroAlt={`${config.label} ${brand.niche.short} jobs in ${stateName}`}
         // P2 #15: freshness comes from when the counts were actually computed
-        // (shared formatter with the city template) — this used to assert
-        // "updated today" on every render, including pages served from a
-        // pseoStats row the aggregator last touched days ago.
-        badgeText={formatStatsBadge(stats.totalJobs, stats.statsAsOf)}
+        // (shared formatter with the city template).
+        badgeText={formatStatsBadge(facts.total, statsAsOf)}
         breadcrumbs={[]}
         headlineLine1={config.label}
         headlineLine2={brand.niche.short}
         headlineSub={`jobs in ${stateName}.`}
-        stats={[
-          { value: `${stats.totalJobs}`, label: pluralize(stats.totalJobs, 'position') },
-          // P3 #13: this used to be `salaryRange.split('–')[0]` — an EN DASH,
-          // while every salaryRange literal is written with an ASCII hyphen.
-          // The split never matched, so the fallback rendered the whole range
-          // ("$110K-150K") under an "avg salary" label. Splitting correctly
-          // would be worse: the low end of an estimated band is not an
-          // average. Show the band, and label it as a band.
-          ...(stats.avgSalary > 0
-            ? [{ value: `${stats.avgSalary}k`, label: 'avg salary' }]
-            : config.salaryRange
-              ? [{ value: config.salaryRange, label: 'typical range' }]
-              : []),
-          { value: `${stats.topEmployers.length}`, label: pluralize(stats.topEmployers.length, 'employer') },
-        ]}
+        stats={heroStats}
         description={`${config.label} ${brand.niche.short} positions in ${stateName}. ${config.heroSubtitle}.`}
         ctaLabel={`Browse ${config.label} Jobs`}
         ctaHref={`/jobs/${config.slug}`}
-        secondaryCtaLabel="Set Alert"
-        secondaryCtaHref="/job-alerts"
+        secondaryCtaLabel={`All ${stateName} Jobs`}
+        secondaryCtaHref={`/jobs/state/${stateSlug}`}
       />
 
       <div className="container mx-auto px-4 py-8 md:py-12">
@@ -581,10 +630,10 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
             <div className="lg:col-span-3">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                 <h2 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>
-                  {config.label} Positions in {stateName} ({stats.totalJobs})
+                  {config.label} Positions in {stateName} ({facts.total})
                 </h2>
                 <Link href={`/jobs/${config.slug}`} style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textDecoration: 'none' }}>
-                  View All Jobs →
+                  View All Jobs <ArrowRight size={12} style={{ display: 'inline', verticalAlign: 'middle' }} />
                 </Link>
               </div>
 
@@ -592,17 +641,17 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 <div className="text-center py-12 rounded-xl" style={{ ...clayCard, padding: '48px 24px' }}>
                   <MapPin className="h-12 w-12 mx-auto mb-4" style={{ color: '#7A6A62' }} />
                   <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>
-                    No {config.label.toLowerCase()} positions in {stateName} right now
+                    No {config.label.toLowerCase()} positions in {stateName} on this page
                   </h3>
                   <p style={{ fontSize: '14px', color: '#5A4A42', marginBottom: '16px' }}>
-                    Check back soon or browse nearby states:
+                    Start from page 1 or browse nearby states:
                   </p>
-                  {neighbors.length > 0 && (
+                  {nearbyStates.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 mb-6">
-                      {neighbors.slice(0, 4).map((neighbor) => (
-                        <Link key={neighbor} href={`/jobs/${config.slug}/${stateToSlug(neighbor)}`}
+                      {nearbyStates.slice(0, MAX_EMPTY_STATE_NEIGHBORS).map((neighbor) => (
+                        <Link key={neighbor.href} href={neighbor.href}
                           className="px-3 py-1.5 text-sm rounded-lg" style={{ backgroundColor: '#FDF2F8', color: '#BE185D', fontWeight: 600 }}>
-                          {neighbor}
+                          {formatCountLabel({ name: neighbor.label, count: neighbor.count })}
                         </Link>
                       ))}
                     </div>
@@ -620,18 +669,18 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     <div className="mt-8 flex items-center justify-center gap-4">
                       {page > 1 ? (
                         <Link href={`${basePath}?page=${page - 1}`} className="px-4 py-2 text-sm font-medium rounded-lg" style={{ ...clayCard, color: '#1A2E35', padding: '8px 16px' }}>
-                          ← Previous
+                          Previous
                         </Link>
                       ) : (
-                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: '#7A6A62', backgroundColor: '#F5F0EB' }}>← Previous</span>
+                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: '#7A6A62', backgroundColor: '#F5F0EB' }}>Previous</span>
                       )}
                       <span className="text-sm" style={{ color: '#5A4A42' }}>Page {page} of {totalPages}</span>
                       {page < totalPages ? (
                         <Link href={`${basePath}?page=${page + 1}`} className="px-4 py-2 text-sm font-medium rounded-lg" style={{ ...clayCard, color: '#1A2E35', padding: '8px 16px' }}>
-                          Next →
+                          Next
                         </Link>
                       ) : (
-                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: '#7A6A62', backgroundColor: '#F5F0EB' }}>Next →</span>
+                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: '#7A6A62', backgroundColor: '#F5F0EB' }}>Next</span>
                       )}
                     </div>
                   )}
@@ -639,9 +688,11 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
               )}
             </div>
 
-            {/* Sidebar */}
+            {/* Sidebar: the ONE alert CTA on the page, then the category's
+                tips and benefits, each rendered once. */}
             <div className="lg:col-span-1">
-              {/* Alert CTA */}
+              {/* Alert CTA. "Delivered daily" is the send-alerts cron cadence
+                  (config/cron-schedule.ts, daily group). */}
               <div style={{ ...clayCard, padding: '0', overflow: 'hidden', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
                 <div style={{ padding: '24px' }}>
                   <Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} />
@@ -662,34 +713,16 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 </div>
               </div>
 
-              {/* Top Employers */}
-              {stats.topEmployers.length > 0 && (
-                <div style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                    <Building2 size={20} style={{ color: '#BE185D' }} />
-                    <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Top Employers</h3>
-                  </div>
-                  <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                    {stats.topEmployers.map((emp: ProcessedEmployer, i: number) => (
-                      <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i < stats.topEmployers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
-                        <span style={{ fontSize: '13px', color: '#5A4A42' }}>{emp.name}</span>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>{emp.count}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
               {/* Tips */}
               <div style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                   <Lightbulb size={20} style={{ color: '#BE185D' }} />
-                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>{config.label} Tips</h3>
+                  <h3 style={sidebarCardTitleStyle}>{config.label} Tips</h3>
                 </div>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                   {config.tips.map((tip, i) => (
                     <li key={i} style={{ display: 'flex', gap: '8px', padding: '6px 0', borderBottom: i < config.tips.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none', fontSize: '13px', color: '#5A4A42', lineHeight: 1.5 }}>
-                      <span style={{ color: '#BE185D', fontWeight: 700 }}>•</span>
+                      <span style={{ color: '#BE185D', fontWeight: 700 }}>&bull;</span>
                       <span>{tip}</span>
                     </li>
                   ))}
@@ -698,7 +731,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
 
               {/* Benefits */}
               <div style={{ ...clayCard, padding: '24px' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', marginBottom: '16px' }}>Why {config.label}?</h3>
+                <h3 style={{ ...sidebarCardTitleStyle, marginBottom: '16px' }}>Why {config.label}?</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   {config.benefits.map((b, i) => (
                     <div key={i}>
@@ -713,293 +746,118 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
         </div>
       </div>
 
-      {/* Bento Grid */}
-      {assets && (
-        <section style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FDFBF7 100%)', padding: '48px 0' }}>
+      {/* Hiring in {State}: the thin-content data sections (CS-S1 to S6) in
+          the page's bento chrome. Each card is a shared clay section that
+          renders nothing below its floor; the intro carries the category
+          lead and the recency sentence (CS-S5) beside the category art. */}
+      <section style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FDFBF7 100%)', padding: '48px 0' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 20px' }}>
+          <ClayStyles />
+          <p style={bandEyebrowStyle}>Hiring in {stateName}</p>
+          <h2 className="font-lora" style={bandHeadingStyle}>
+            {config.label} Careers in {stateName}
+          </h2>
+
+          {/* P2 #15: the answer-summary block the Speakable schema points at. */}
+          <div className="pseo-clay-split" style={{ ...clayCard, padding: 0, overflow: 'hidden', marginBottom: '20px' }}>
+            <div id="answer-summary" data-speakable="true" style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '12px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>
+                {config.label} in {stateName}
+              </h3>
+              <p className="font-lora" style={{ fontSize: '15px', lineHeight: 1.7, color: '#3A4A53', margin: 0 }}>
+                {narrative}
+              </p>
+              {recencySentence && (
+                <p style={{ fontSize: '14px', lineHeight: 1.65, color: '#5A4A42', margin: 0 }}>{recencySentence}</p>
+              )}
+            </div>
+            {assets.bentoImages[0] && (
+              <ImmersiveImage src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} minHeight={240} />
+            )}
+          </div>
+
+          <div className="pseo-clay-grid pseo-clay-cols-2">
+            <EmployerRoster
+              variant={{ kind: 'scoped', label: config.label, scope: `in ${stateName}` }}
+              facts={facts}
+            />
+            <LocationSpread variant={{ kind: 'scoped', slug: config.slug }} places={places} />
+            <RoleSetup slug={config.slug} facts={facts} />
+            <PostedPay
+              variant={{ kind: 'category', slug: config.slug }}
+              facts={facts}
+              salaryGuide={{ href: `/salary-guide/${stateSlug}`, label: `${stateName} ${brand.niche.short} salary guide`, renders: true }}
+            />
+            <PracticeCard
+              env={env}
+              variant={{ kind: 'licensure', slug: config.slug }}
+              licenseGuideLive={licenseGuideLive}
+              title={`Licensure and practice rules in ${stateName}`}
+            />
+          </div>
+
+          {/* P2 #15: sources line. Only what this page actually renders is
+              claimed: AANP for the practice card, the NCSBN roster for its
+              compact sentence, BLS only when the pay card cites it. */}
+          {env && (
+            <p style={{ fontSize: '11px', color: '#A09080', textAlign: 'center', maxWidth: '760px', margin: '28px auto 0' }}>
+              Sources: {STAT_SOURCES.fullPracticeStates.source} (practice authority); NCSBN Nurse Licensure Compact roster (verified {NLC_VERIFIED_LABEL}){extraSources}. Counts come from live listings on this board, recounted {formatUtcDate(statsAsOf)}.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Cross-links (CS-S7, CS-S8): nearby states and other job types, each
+          pill carrying its fresh canonical count, most listings first. */}
+      {(nearbyStates.length > 0 || otherSettings.length > 0) && (
+        <section style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FDFBF7 100%)', padding: '40px 0' }}>
           <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 20px' }}>
-            <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>
-              {assets.bentoSectionLabel}
-            </p>
-            <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>
-              {config.label} Careers in {stateName}
-            </h2>
-            <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>
-              {config.heroSubtitle}
-            </p>
-
-            <div className="state-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
-              {/* ROW 1: Hero card (8col) + Side card (4col) */}
-              <div style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-                <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>
-                    {config.label} in {stateName}
+            <div style={{ ...clayCard, padding: '28px 32px' }}>
+              {nearbyStates.length > 0 && (
+                <div style={otherSettings.length > 0 ? { marginBottom: '24px', paddingBottom: '24px', borderBottom: '1px solid rgba(0,0,0,0.06)' } : undefined}>
+                  <h3 style={crossLinkHeadingStyle}>
+                    {config.label} {brand.niche.short} jobs in nearby states
                   </h3>
-                  <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                    {config.heroSubtitle}. {config.tips[0] ? `${config.tips[0]}.` : ''}
-                  </p>
-                </div>
-                <ImmersiveImage src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} minHeight={240} />
-              </div>
-
-              <div style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <ImmersiveImage src={assets.bentoImages[1]} alt={`${config.label} growth`} minHeight={200} />
-                <div style={{ padding: '24px 22px', flex: 1 }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>
-                    Salary & Compensation
-                  </h3>
-                  <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                    {config.label} {brand.niche.short}s in {stateName} earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : config.salaryRange} annually.
-                  </p>
-                </div>
-              </div>
-
-              {/* ROW 2: Icon cards */}
-              {config.benefits.map((benefit, i) => (
-                <div key={`icon-${i}`} style={{ ...clayCard, gridColumn: `span ${Math.floor(12 / config.benefits.length)}`, padding: '24px 18px', textAlign: 'center' }}>
-                  {assets.bentoIcons[i] && <Image src={assets.bentoIcons[i]} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />}
-                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>{benefit.title}</h3>
-                  <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>{benefit.description}</p>
-                </div>
-              ))}
-
-              {/* ROW 3: Salary card (8col) + Alert CTA (4col) */}
-              {assets.bentoImages[2] && (
-                <div style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-                  <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
-                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growth & Outlook</h3>
-                    <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                      {config.label} {brand.niche.short} demand in {stateName} continues to grow with {stats.totalJobs} active {pluralize(stats.totalJobs, 'position')}.
-                    </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {nearbyStates.map((neighbor) => (
+                      <Link key={neighbor.href} href={neighbor.href} className="pseo-pill" style={pillStyle}>
+                        {formatCountLabel({ name: neighbor.label, count: neighbor.count })} <ArrowRight size={12} style={{ color: '#BE185D' }} />
+                      </Link>
+                    ))}
                   </div>
-                  <ImmersiveImage src={assets.bentoImages[2]} alt="Career growth" minHeight={240} />
                 </div>
               )}
 
-              <div style={{ ...clayCard, gridColumn: 'span 4', padding: '28px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
-                <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />
-                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>{config.label} Alerts</h3>
-                <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                  New {config.label.toLowerCase()} listings in {stateName}, delivered daily.
-                </p>
-                <Link href="/job-alerts" style={{
-                  padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                  background: '#BE185D', color: '#fff', textDecoration: 'none',
-                  display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content',
-                  boxShadow: '3px 3px 8px rgba(190,24,93,0.15)',
-                }}>
-                  Create Alert <ArrowRight size={14} />
-                </Link>
-              </div>
+              {otherSettings.length > 0 && (
+                <div>
+                  <h3 style={crossLinkHeadingStyle}>
+                    More job types in {stateName}
+                  </h3>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {otherSettings.slice(0, MAX_OTHER_SETTING_PILLS).map((setting) => (
+                      <Link key={setting.href} href={setting.href} className="pseo-pill" style={pillStyle}>
+                        {formatCountLabel({ name: setting.label, count: setting.count })} <ArrowRight size={12} style={{ color: '#BE185D' }} />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
       )}
 
-      {/* State Market Insights — Practice Authority + COL + Shortage */}
-      <section style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FDFBF7 100%)', padding: '40px 0', marginTop: '8px' }}>
-        {/* P2 #15: the answer-summary block the Speakable schema above points
-            at — same id/data-speakable contract as the city template. */}
-        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 20px' }} id="answer-summary" data-speakable="true">
-          <p className="font-lora" style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '6px' }}>State Insights</p>
-          <h2 className="font-lora" style={{ fontSize: '22px', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '24px' }}>{stateName} at a Glance</h2>
-
-          {/* SEO Fix #8: per-(setting, state) narrative — defeats the
-              "Crawled — currently not indexed" thin-content flag by giving
-              every state page 2-3 sentences of facts that vary by setting AND
-              by state (practice authority, COL, shortage count, demand tier).
-              Layer 1 deterministic templates (lib/pseo/state-narrative.ts);
-              future Layer 2 can override per-pair via DB. */}
-          <p
-            className="font-lora"
-            style={{
-              fontSize: '15px',
-              lineHeight: 1.7,
-              color: '#3A4A53',
-              maxWidth: '760px',
-              margin: '0 auto 12px',
-              textAlign: 'center',
-            }}
-          >
-            {buildSettingStateNarrative(
-              config.slug,
-              stateName!,
-              stateCode || '',
-              avgCOL,
-              shortageCount,
-              stats.totalJobs,
-            )}
-          </p>
-
-          {/* P2 #15: sources line, matching the city template's answer block.
-              Only what this page actually renders is claimed. */}
-          <p style={{ fontSize: '11px', color: '#A09080', textAlign: 'center', maxWidth: '760px', margin: '0 auto 28px' }}>
-            Sources: {STAT_SOURCES.fullPracticeStates.source} (practice authority), HRSA behavioral-health HPSA designations, U.S. Census Bureau population data. Job counts and salary averages are computed from live listings on this board{stats.statsAsOf ? `, last recounted ${stats.statsAsOf.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}` : ''}.
-          </p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-            {/* Practice Authority */}
-            {practiceAuthority && (
-              <div className="pseo-pill" style={{ ...clayCard, padding: '20px', textAlign: 'center' }}>
-                <div style={{ fontSize: '11px', color: '#7A6A62', marginBottom: '6px' }}>Practice Authority</div>
-                <div style={{
-                  fontSize: '16px', fontWeight: 700,
-                  color: practiceAuthority.authority === 'full' ? '#22c55e' : practiceAuthority.authority === 'reduced' ? '#f59e0b' : '#ef4444',
-                }}>{getAuthorityLabel(practiceAuthority.authority)}</div>
-                <p style={{ fontSize: '11px', color: '#7A6A62', marginTop: '8px', lineHeight: 1.4 }}>{practiceAuthority.details}</p>
-              </div>
-            )}
-            {/* Cost of Living */}
-            <div className="pseo-pill" style={{ ...clayCard, padding: '20px', textAlign: 'center' }}>
-              <div style={{ fontSize: '11px', color: '#7A6A62', marginBottom: '6px' }}>Avg Cost of Living</div>
-              <div style={{ fontSize: '28px', fontWeight: 800, color: avgCOL > 110 ? '#ef4444' : avgCOL > 100 ? '#f59e0b' : '#22c55e' }}>{avgCOL}</div>
-              <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '4px' }}>
-                {avgCOL > 110 ? 'Above national average' : avgCOL > 100 ? 'Near national average' : 'Below national average'} (100 = US average)
-              </div>
-            </div>
-            {/* Shortage designations — P2 #7.
-                Was "MH Shortage Areas … top cities with HPSA designation": an
-                unexplained abbreviation over a discipline-specific count, read
-                on an all-{niche} page as an all-{niche} shortage figure. The
-                dataset holds only the behavioral-health HPSA flag, so the card
-                names that discipline outright — and, because labelling alone
-                still hands a behavioral-health statistic to every one of the
-                28 setting/category state pages, it renders ONLY on the
-                category that discipline describes. Both polarities are useful
-                there (a low count is a real NHSC-eligibility signal), so the
-                gate is the category, not the count. Still omitted when there
-                are no gated top cities — "0/0" is not a statistic. */}
-            {shortageMatchesCategory && topCities.length > 0 && (
-              <div className="pseo-pill" style={{ ...clayCard, padding: '20px', textAlign: 'center' }}>
-                <div style={{ fontSize: '11px', color: '#7A6A62', marginBottom: '6px' }}>Behavioral-Health HPSA</div>
-                <div style={{ fontSize: '28px', fontWeight: 800, color: '#1A2E35' }}>{shortageCount}/{topCities.length}</div>
-                <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '4px' }}>
-                  top cities below with an HRSA behavioral-health shortage designation
-                </div>
-              </div>
-            )}
-            {/* Salary */}
-            {stats.avgSalary > 0 && (
-              <div className="pseo-pill" style={{ ...clayCard, padding: '20px', textAlign: 'center' }}>
-                <div style={{ fontSize: '11px', color: '#7A6A62', marginBottom: '6px' }}>Avg {config.label} Salary</div>
-                <div style={{ fontSize: '28px', fontWeight: 800, color: '#1A2E35' }}>${stats.avgSalary}K</div>
-                <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '4px' }}>
-                  across {stats.totalJobs} active {pluralize(stats.totalJobs, 'position')}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* 7.3: Top Cities in State */}
-      {topCities.length > 0 && (
-        <section style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px 0' }}>
-          <h2 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', marginBottom: '16px', textAlign: 'center' }}>
-            Top Cities for {config.label} Jobs in {stateName}
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
-            {topCities.map((c) => (
-              <Link key={c.slug} href={`/jobs/${config.slug}/city/${c.slug}`}
-                className="pseo-pill"
-                style={{ ...clayCard, display: 'block', padding: '14px 10px', textAlign: 'center', textDecoration: 'none' }}>
-                <div style={{ fontWeight: 700, fontSize: '13px', color: '#1A2E35' }}>{c.name}</div>
-                <div style={{ fontSize: '11px', marginTop: '3px', color: '#7A6A62' }}>{c.stateCode} · Pop {Math.round(c.population / 1000)}K</div>
-              </Link>
-            ))}
-          </div>
-        </section>
+      {/* FAQ (CS-S9): state-aware questions built from the facts above. The
+          band renders only from this array, so the Speakable gate and the
+          FAQPage schema can never outlive the answers. */}
+      {rendersFaqAnswers && (
+        <CategoryFAQ
+          category={config.faqCategory as CategorySlug}
+          totalJobs={facts.total}
+          customFaqs={stateFaqs}
+          heading={`${config.label} ${brand.niche.short} Jobs in ${stateName} FAQ`}
+        />
       )}
-
-      {/* Cross-Links — Consolidated */}
-      <section style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FDFBF7 100%)', padding: '40px 0' }}>
-        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 20px' }}>
-          <div style={{ ...clayCard, padding: '28px 32px' }}>
-
-            {/* Nearby States — clay pills */}
-            {neighbors.length > 0 && (
-              <div style={{ marginBottom: '24px', paddingBottom: '24px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-                <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#7A6A62', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
-                  {config.label} Jobs Nearby
-                </h3>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {neighbors.map((neighbor) => (
-                    <Link key={neighbor} href={`/jobs/${config.slug}/${stateToSlug(neighbor)}`}
-                      className="pseo-pill"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 16px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#1A2E35', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '3px 3px 8px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                      {neighbor} <ArrowRight size={12} style={{ color: '#BE185D' }} />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Other Job Types — clay pills */}
-            <div style={{ marginBottom: '24px', paddingBottom: '24px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#7A6A62', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
-                More Job Types in {stateName}
-              </h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {otherSettings.slice(0, 12).map((setting) => (
-                  <Link key={setting.slug} href={`/jobs/${setting.slug}/${stateSlug}`}
-                    className="pseo-pill"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 16px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 600, color: '#1A2E35', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '3px 3px 8px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                    {setting.label} <ArrowRight size={12} style={{ color: '#BE185D' }} />
-                  </Link>
-                ))}
-                <Link href={`/jobs/state/${stateSlug}`}
-                  className="pseo-pill"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 16px', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 700, color: '#BE185D', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '1px solid rgba(190,24,93,0.15)', boxShadow: '3px 3px 8px rgba(190,24,93,0.1), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                  All {stateName} Jobs <ArrowRight size={12} />
-                </Link>
-              </div>
-            </div>
-
-            {/* Resources — clay row */}
-            <div>
-              <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#7A6A62', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>
-                Explore More
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
-                <Link href={`/salary-guide/${stateSlug}`}
-                  className="pseo-resource"
-                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', textDecoration: 'none', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                  <DollarSign size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>{stateName} Salary Guide</div>
-                    <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Compensation data by setting</div>
-                  </div>
-                </Link>
-                <Link href={`/jobs/state/${stateSlug}`}
-                  className="pseo-resource"
-                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', textDecoration: 'none', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                  <MapPin size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>All {stateName} Jobs</div>
-                    <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Browse all positions</div>
-                  </div>
-                </Link>
-                <Link href={`/jobs/${config.slug}`}
-                  className="pseo-resource"
-                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', textDecoration: 'none', background: '#FFFFFF', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                  <Users size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>All {config.label} Jobs</div>
-                    <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Nationwide listings</div>
-                  </div>
-                </Link>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-
-
-      {/* FAQ */}
-      {/* Unmapped faqCategory keys render nothing (getCategoryFaqs returns []). */}
-      <CategoryFAQ category={config.faqCategory as CategorySlug} totalJobs={stats.totalJobs} />
     </div>
   );
 }
