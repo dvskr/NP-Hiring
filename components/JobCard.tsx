@@ -30,6 +30,11 @@ import { normalizeDisplaySalary } from '@/lib/salary-display';
 // and in JSON-LD; every visible render point goes through displayText so the
 // card never prints a dash (lib/display-text.ts).
 import { displayText } from '@/lib/display-text';
+// GA4 select_item is the only event that joins a list impression to the
+// detail-page view, so without it no click-through rate can be computed for
+// any listing surface on the board.
+import { trackJobClick } from '@/lib/analytics';
+import { buildTrackedJobItem } from '@/components/analytics/ViewTrackers';
 
 type JobCardJob = Job & {
   companyRecruitmentType?: RecruitmentTypeValue | null;
@@ -38,6 +43,24 @@ type JobCardJob = Job & {
 interface JobCardProps {
   job: JobCardJob;
   viewMode?: 'grid' | 'list';
+  /**
+   * GA4 list attribution, supplied by whichever surface renders the list:
+   * only it knows which list this is and where the card sits in it. Both
+   * are needed together, because a select_item carrying one of them cannot
+   * be joined back to the matching view_item_list. Omit them and the card
+   * tracks nothing, which is the honest outcome: a guessed list name would
+   * silently corrupt the click-through rate the event exists to measure.
+   *
+   * No render site passes them yet, so select_item is currently emitted
+   * nowhere. The first surface to wire them should be /jobs, whose
+   * impression already exists: pass JOBS_BOARD_LIST_NAME from
+   * components/analytics/ViewTrackers and the map index from
+   * app/jobs/JobsPageClient. That index is page-local, which is the right
+   * one, because trackJobListView numbers its items from zero within the
+   * same page slice.
+   */
+  listName?: string;
+  listIndex?: number;
 }
 
 /** Neutral badge label for a classified company; null hides the badge. */
@@ -92,7 +115,7 @@ import { isDirectApplyUrl } from '@/lib/direct-apply';
 // "5 years of accredited training" in the description.
 import { effectiveExperienceLabel, effectiveNewGradFriendly } from '@/lib/experience-label';
 
-function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
+function JobCard({ job, viewMode = 'grid', listName, listIndex }: JobCardProps) {
   const { isApplied } = useAppliedJobs();
   const { isSaved, saveJob, removeJob } = useSavedJobs();
   const { isViewed, markAsViewed, isHydrated } = useViewedJobs();
@@ -150,12 +173,35 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
   // tier), and job.isFeatured additionally honors admin-featured listings.
   const showFeaturedBadge = job.isFeatured || job.sourceType === 'employer';
 
+  // Fires select_item for a card opened from a named list. Both halves of
+  // the attribution must be present: see the listName/listIndex prop note.
+  // Every route out of the card that lands on the job detail page calls
+  // this, and they are mutually exclusive (the Easy Apply handler stops
+  // propagation), so a single click can never be counted twice.
+  const trackListClick = () => {
+    if (!listName || typeof listIndex !== 'number') return;
+    trackJobClick(
+      buildTrackedJobItem({
+        id: job.id,
+        title: job.title,
+        employer: job.employer,
+        jobType: job.jobType,
+        stateCode: job.stateCode,
+        sourceProvider: job.sourceProvider,
+        normalizedMinSalary: job.normalizedMinSalary,
+      }),
+      listName,
+      listIndex,
+    );
+  };
+
   // Card "Easy Apply" → navigate to job detail with ?apply=1 so the apply
   // popup auto-opens. Stops the surrounding card-link from firing too.
   const handleEasyApplyClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     markAsViewed(jobSlug);
+    trackListClick();
     router.push(`${jobUrl}?apply=1`);
   };
 
@@ -173,6 +219,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
   // Mark job as viewed when card is clicked
   const handleCardClick = () => {
     markAsViewed(jobSlug);
+    trackListClick();
   };
 
   const handleMessageClick = (e: React.MouseEvent) => {

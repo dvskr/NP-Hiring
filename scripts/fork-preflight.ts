@@ -188,45 +188,85 @@ function checkEmailEnv(): void {
     checkEmailSender('EMAIL_FROM_MARKETING');
 }
 
+/**
+ * IndexNow key naming.
+ *
+ * The old two-name drift is gone: lib/indexnow.ts (every submission) and
+ * lib/indexnow-key-file.ts (the key file middleware.ts serves) both resolve
+ * INDEXNOW_KEY first and fall back to INDEXNOW_API_KEY. So EITHER name alone
+ * works everywhere, and the only thing left to warn about is an unconfigured
+ * pipeline, plus the cosmetic case of two names holding different values.
+ */
 function checkIndexNow(): void {
     const apiKey = envValue('INDEXNOW_API_KEY');
     const key = envValue('INDEXNOW_KEY');
-    if (apiKey && key && apiKey === key) {
-        pass('INDEXNOW_API_KEY and INDEXNOW_KEY are both set to the same value');
-    } else if (apiKey && key) {
-        warn('INDEXNOW_API_KEY and INDEXNOW_KEY are set to DIFFERENT values — lib/search-indexing.ts reads INDEXNOW_API_KEY, lib/indexnow.ts reads INDEXNOW_KEY. Set BOTH to the same value (see .env.example note)');
-    } else if (apiKey) {
-        warn('INDEXNOW_KEY is not set (only INDEXNOW_API_KEY) — lib/indexnow.ts reads INDEXNOW_KEY, so the enrich-thin-jds IndexNow pings silently no-op. Set both to the same value');
-    } else if (key) {
-        warn('INDEXNOW_API_KEY is not set (only INDEXNOW_KEY) — lib/search-indexing.ts reads INDEXNOW_API_KEY, so the index-urls / index-pseo / deindex-expired crons silently no-op. Set both to the same value');
-    } else {
-        warn('IndexNow is unconfigured (INDEXNOW_API_KEY + INDEXNOW_KEY) — indexing crons return 200 OK with zero submissions, indistinguishable from success');
+    if (!apiKey && !key) {
+        warn('IndexNow is unconfigured (neither INDEXNOW_KEY nor INDEXNOW_API_KEY). Indexing crons return 200 OK with zero submissions, indistinguishable from success');
+        return;
     }
+    if (apiKey && key && apiKey !== key) {
+        // Not an outage: both the served key file and the submitted key follow
+        // INDEXNOW_KEY. It is still worth one line, because the value the
+        // engines fetch and the value an operator reads in the dashboard for
+        // INDEXNOW_API_KEY would disagree.
+        warn('INDEXNOW_KEY and INDEXNOW_API_KEY hold DIFFERENT values. Every reader uses INDEXNOW_KEY, so INDEXNOW_API_KEY is dead weight that will mislead the next reader. Unset it');
+        return;
+    }
+    pass(`IndexNow key is set (${key ? 'INDEXNOW_KEY' : 'INDEXNOW_API_KEY'}; either name is resolved by every reader)`);
+}
+
+/**
+ * Search Console is read by the gsc-health-check cron and the admin panels.
+ * It is NOT what arms the de-indexing crons: historical-deindex reads neither
+ * GSC var. lib/gsc-client.ts falls back to GOOGLE_INDEXING_CREDENTIALS for the
+ * key, so the key alone is enough; GSC_SITE_URL is the part that is usually
+ * wrong, because the fallback guesses the sc-domain property while this repo
+ * verifies a URL prefix.
+ */
+function checkSearchConsoleEnv(): void {
+    const hasKey = isSet('GSC_SERVICE_ACCOUNT_KEY') || isSet('GOOGLE_INDEXING_CREDENTIALS');
+    if (!hasKey) {
+        warn('No Search Console service-account key (GSC_SERVICE_ACCOUNT_KEY, or GOOGLE_INDEXING_CREDENTIALS as fallback). The gsc-health-check cron and the admin Search Console panels skip their work');
+        return;
+    }
+    if (!isSet('GSC_SITE_URL')) {
+        warn(`GSC_SITE_URL is not set. lib/gsc-client.ts falls back to 'sc-domain:${brand.domain}', but this repo verifies a URL PREFIX property (public/google*.html), which does not create a domain property. Expect 403 on every Search Console call. Set it to the property you verified, normally ${brand.baseUrl}/`);
+        return;
+    }
+    pass(`Search Console is configured (service-account key + GSC_SITE_URL='${envValue('GSC_SITE_URL')}')`);
+}
+
+/**
+ * GOOGLE_INDEXING_CREDENTIALS is the only key in this file whose PRESENCE is
+ * the risk. It arms app/api/cron/historical-deindex, which runs unattended
+ * three times a day and asks Google to remove queued URLs from the index.
+ * An operator should be told that here rather than discover it from a traffic
+ * drop, so this warns when set and only notes when unset.
+ */
+function checkGoogleIndexingCredentials(): void {
+    if (isSet('GOOGLE_INDEXING_CREDENTIALS')) {
+        warn('GOOGLE_INDEXING_CREDENTIALS is SET, which ARMS app/api/cron/historical-deindex: it runs unattended at 01:00, 07:00 and 19:00 and submits URL_DELETED to Google for queued URLs it can prove are gone. Check what is queued before a launch: SELECT status, count(*) FROM deindex_queue GROUP BY status');
+        return;
+    }
+    warn('GOOGLE_INDEXING_CREDENTIALS is not set. Google Indexing API submissions (net-new + URL_DELETED) silently no-op, and the historical-deindex cron returns before it reads its queue, so the backlog stays whole until you arm it');
 }
 
 function checkIndexingEnv(): void {
     checkIndexNow();
+    checkSearchConsoleEnv();
 
-    if (isSet('GSC_SERVICE_ACCOUNT_KEY') && isSet('GSC_SITE_URL')) {
-        pass('Google Search Console credentials are set (GSC_SERVICE_ACCOUNT_KEY + GSC_SITE_URL)');
-    } else {
-        warn('GSC_SERVICE_ACCOUNT_KEY / GSC_SITE_URL not fully set — gsc-health-check and historical-deindex crons silently no-op');
-    }
     if (isSet('BING_WEBMASTER_API_KEY')) {
         pass('BING_WEBMASTER_API_KEY is set');
     } else {
-        warn('BING_WEBMASTER_API_KEY is not set — per-site Bing URL submissions silently no-op');
+        warn('BING_WEBMASTER_API_KEY is not set. Per-site Bing URL submissions silently no-op');
     }
     if (isSet('BING_WEBMASTER_VERIFICATION')) {
         pass('BING_WEBMASTER_VERIFICATION is set');
     } else {
-        warn('BING_WEBMASTER_VERIFICATION is not set — IndexNow pipeline runs blind (no Bing dashboard visibility into submissions/coverage)');
+        warn('BING_WEBMASTER_VERIFICATION is not set. The IndexNow pipeline runs blind (no Bing dashboard visibility into submissions/coverage)');
     }
-    if (isSet('GOOGLE_INDEXING_CREDENTIALS')) {
-        pass('GOOGLE_INDEXING_CREDENTIALS is set');
-    } else {
-        warn('GOOGLE_INDEXING_CREDENTIALS is not set — Google Indexing API submissions (net-new + URL_DELETED) silently no-op');
-    }
+
+    checkGoogleIndexingCredentials();
 }
 
 function checkPushEnv(): void {

@@ -352,7 +352,24 @@ export default function SignUpForm() {
         {/* Google — seeker only */}
         {role === 'seeker' && (
           <>
-            <GoogleSignInButton mode="signup" redirectTo={redirectTo} />
+            {/* GoogleSignInButton owns its own click handler and exposes no
+                callback, so the OAuth cohort is tracked from this wrapper
+                instead. Capture phase, so the event is queued before the
+                handshake starts and the tab leaves for Google.
+
+                Two known limits, documented rather than hidden: this counts
+                the start of the handshake, so a visitor who cancels at
+                Google's account chooser is still counted, and an EXISTING
+                account arriving through the signup page is counted as a
+                sign_up. Only /auth/callback knows which it was (it creates
+                the profile row), so the authoritative event belongs there,
+                server side. Until that lands, an optimistic google cohort
+                beats the current state, which is no google cohort at all.
+                The role is always job_seeker here: the button renders for
+                seekers only, employers have no OAuth path. */}
+            <div onClickCapture={() => trackSignUp('google', 'job_seeker')}>
+              <GoogleSignInButton mode="signup" redirectTo={redirectTo} />
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '16px 0' }}>
               <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
               <span style={{ fontSize: '11px', fontWeight: 600, color: '#94A3B0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>or</span>

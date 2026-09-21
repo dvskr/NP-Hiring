@@ -4,9 +4,14 @@ import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { X, Bell, ArrowRight } from 'lucide-react';
 import { useOverlaySlot } from '@/components/OverlayCoordinator';
 import { brand } from '@/config/brand';
+import { trackEmailSubscribe } from '@/lib/analytics';
 
 const STORAGE_KEY = 'pmhnp_exit_popup_dismissed';
 const SUPPRESS_DAYS = 14;
+// subscribe_source for this surface. Separate from the job-alert modal on
+// purpose: an interrupted visitor and a visitor who opened the alert form
+// are different intents and should never be read as one number.
+const SUBSCRIBE_SOURCE = 'exit_intent_popup';
 
 /**
  * Exit-intent popup for job alerts
@@ -75,11 +80,31 @@ export default function ExitIntentPopup() {
         if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return;
         setStatus('loading');
         try {
-            await fetch('/api/job-alerts', {
+            const response = await fetch('/api/job-alerts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: trimmed, frequency: 'daily', newsletterOptIn }),
             });
+            // Gated on the response, while the confirmation below is not:
+            // the popup has always told the visitor "subscribed" whatever
+            // happened, and changing that is a copy decision, not an
+            // analytics one. Counting a rejected email as a conversion,
+            // though, would put a number in GA4 that no alert row backs.
+            //
+            // `isNew` matters more here than on the alert modal. The popup
+            // posts no search criteria at all, so every submission from one
+            // address collides on the same all-null criteria key and
+            // app/api/job-alerts/route.ts updates the existing row rather
+            // than storing a second one. The dismissal latch does not
+            // prevent that: it lives in this browser's localStorage, so the
+            // same person meets the popup again after the suppression
+            // window, on a second device, or once site data is cleared, and
+            // each of those used to report another subscribe against the
+            // one alert they already have. Tested against false rather than
+            // for truth so a route build that predates the flag still
+            // reports its real signups.
+            const body = await response.json().catch(() => null);
+            if (response.ok && body?.isNew !== false) trackEmailSubscribe(SUBSCRIBE_SOURCE);
         } catch { /* silent */ }
         setStatus('done');
         setTimeout(dismiss, 2000);

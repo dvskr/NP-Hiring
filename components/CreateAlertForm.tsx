@@ -3,6 +3,12 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { brand } from '@/config/brand';
+import { trackEmailSubscribe } from '@/lib/analytics';
+
+// subscribe_source for this surface. A job board has several places to hand
+// over an email, and they convert at very different rates, so the parameter
+// is what makes the event worth reporting on at all.
+const SUBSCRIBE_SOURCE = 'job_alert_modal';
 
 interface InitialFilters {
   keyword?: string;
@@ -96,6 +102,21 @@ export default function CreateAlertForm({ initialFilters = {}, onSuccess }: Crea
       }
 
       setIsSuccess(true);
+      // Fired after the route answered, not on submit: the throw above
+      // catches validation rejections and route failures, so counting
+      // clicks would report a signup rate no alert row supports.
+      //
+      // A resubmission is NOT a rejection. app/api/job-alerts/route.ts
+      // matches on the email plus every criteria column and updates the row
+      // it finds, answering 200 either way, so the same visitor submitting
+      // the same search twice stores one alert. `isNew` is the route's own
+      // answer to which of the two happened.
+      //
+      // Tested against false rather than for truth on purpose: a route
+      // build that predates the flag omits the field, and suppressing every
+      // subscribe until the two deploys line up would lose real signups to
+      // fix a double count.
+      if (result.isNew !== false) trackEmailSubscribe(SUBSCRIBE_SOURCE);
       onSuccess?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');

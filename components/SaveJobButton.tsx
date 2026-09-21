@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { trackJobSave, trackJobUnsave, buildJobItem } from '@/lib/analytics';
+import { trackJobSave, trackJobUnsave } from '@/lib/analytics';
+import { buildTrackedJobItem, type TrackedJob } from '@/components/analytics/ViewTrackers';
 // B82: go through the shared useSavedJobs hook (same as JobCard) instead of
 // writing localStorage directly. The hook is auth-aware — for signed-in users
 // it POSTs/DELETEs /api/saved-jobs so the detail-page save survives across
@@ -12,9 +13,33 @@ import useSavedJobs from '@/lib/hooks/useSavedJobs';
 
 interface SaveJobButtonProps {
   jobId: string;
+  /**
+   * Analytics-only job dimensions for the add_to_wishlist item. Optional
+   * because the job detail page still passes only jobId: until it forwards
+   * the rest, the event reports those dimensions as absent instead of
+   * carrying a stand-in. Nothing here affects what the button renders.
+   *
+   * There is deliberately no salary prop. trackJobSave sends the item's
+   * price as the event's monetary `value`, so forwarding a $120,000 listing
+   * would book a $120,000 conversion for a bookmark, which is the number
+   * Google Ads would optimise against. Salary belongs on the impression and
+   * detail-view items, where it is an item attribute and not a value.
+   */
+  jobTitle?: string;
+  employer?: string | null;
+  jobType?: string | null;
+  stateCode?: string | null;
+  sourceProvider?: string | null;
 }
 
-export default function SaveJobButton({ jobId }: SaveJobButtonProps) {
+export default function SaveJobButton({
+  jobId,
+  jobTitle,
+  employer = null,
+  jobType = null,
+  stateCode = null,
+  sourceProvider = null,
+}: SaveJobButtonProps) {
   const { isSaved: isJobSaved, saveJob, removeJob } = useSavedJobs();
   // Mount guard: SSR markup renders "unsaved" (no localStorage on the server),
   // so the first client paint must match it to avoid a hydration mismatch.
@@ -29,13 +54,27 @@ export default function SaveJobButton({ jobId }: SaveJobButtonProps) {
   }, []);
   const isSaved = mounted && isJobSaved(jobId);
 
+  // `title` is passed through undefined when the caller did not supply one,
+  // and buildTrackedJobItem then drops item_name rather than sending the
+  // empty string this button used to send. GA4 keys the item on item_id, so
+  // the save still joins the same job's view_item; the label reads
+  // "(not set)" until the detail page forwards the title it already has.
+  const trackedJob: TrackedJob = {
+    id: jobId,
+    title: jobTitle,
+    employer,
+    jobType,
+    stateCode,
+    sourceProvider,
+  };
+
   const toggleSave = () => {
     if (isSaved) {
       removeJob(jobId);
-      trackJobUnsave(buildJobItem({ id: jobId, title: '' }));
+      trackJobUnsave(buildTrackedJobItem(trackedJob));
     } else {
       saveJob(jobId);
-      trackJobSave(buildJobItem({ id: jobId, title: '' }));
+      trackJobSave(buildTrackedJobItem(trackedJob));
     }
   };
 

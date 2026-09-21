@@ -44,6 +44,12 @@ export interface GscEnv {
  * Resolve GSC credentials + property from env. Returns null when no service
  * account key is configured so callers can skip (not fail) in local dev.
  * Accepts raw JSON or base64-encoded JSON (matches lib/search-indexing.ts).
+ *
+ * The "sc-domain:" fallback is kept for back compat, but it is a guess: this
+ * repo verifies a URL prefix property via public/google*.html, and that does
+ * not create a domain property. Set GSC_SITE_URL explicitly. When the guess is
+ * wrong every call 403s, which is why gscForbiddenMessage() below spells out
+ * both candidate fixes instead of forwarding Google's ambiguous error body.
  */
 export function getGscConfig(env: GscEnv = process.env): GscConfig | null {
     const keyJsonRaw = env.GSC_SERVICE_ACCOUNT_KEY ?? env.GOOGLE_INDEXING_CREDENTIALS;
@@ -57,6 +63,55 @@ export function getGscConfig(env: GscEnv = process.env): GscConfig | null {
     } catch {
         return { keyJson: Buffer.from(keyJsonRaw, 'base64').toString('utf-8'), siteUrl };
     }
+}
+
+/**
+ * The service account address the configured key belongs to, or null when no
+ * key is configured or it does not parse. Only the address is ever read: the
+ * private key in the same blob must never reach a log or an error message.
+ */
+export function getGscServiceAccountEmail(env: GscEnv = process.env): string | null {
+    const config = getGscConfig(env);
+    if (!config) return null;
+    try {
+        const parsed = JSON.parse(config.keyJson) as { client_email?: unknown };
+        return typeof parsed.client_email === 'string' ? parsed.client_email : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * The message for a 403 from Search Console.
+ *
+ * WHY THIS EXISTS: Google's 403 body says "User does not have sufficient
+ * permission for site X" and stops there, which is true of BOTH mistakes an
+ * owner can make on a first run, and they need opposite fixes. Either the
+ * service account was never added as a user on the property, or GSC_SITE_URL
+ * names a property that does not exist. The second is the likely one here,
+ * because getGscConfig() defaults to the "sc-domain:" form while the only
+ * verification artifact in this repo is the URL prefix file
+ * public/google*.html, and a URL prefix verification does not create a domain
+ * property. Naming the resolved property and the account that was used turns a
+ * guess into a check the owner can do in one visit to Search Console.
+ */
+export function gscForbiddenMessage(
+    context: string,
+    siteUrl: string,
+    env: GscEnv = process.env,
+): string {
+    const account = getGscServiceAccountEmail(env);
+    const who = account
+        ? `service account ${account}`
+        : 'a service account whose key did not parse (check GSC_SERVICE_ACCOUNT_KEY or GOOGLE_INDEXING_CREDENTIALS)';
+    const grantee = account ?? 'the service account';
+    return (
+        `${context}: Search Console returned 403 for property "${siteUrl}" using ${who}. ` +
+        `Fix: in Search Console, either add ${grantee} as a user on this exact property, ` +
+        `or set GSC_SITE_URL to the property you actually verified, which for this board is ` +
+        `normally "${brand.baseUrl}/" rather than the "sc-domain:${brand.domain}" form this code ` +
+        `falls back to, because public/google*.html verifies a URL prefix and not a domain.`
+    );
 }
 
 /** Exchange a service-account key for a webmasters.readonly access token. */
@@ -128,6 +183,9 @@ export async function fetchSearchAnalyticsAggregate(
             }),
         }
     );
+    if (res.status === 403) {
+        throw new Error(gscForbiddenMessage(`Search Analytics ${startDate}`, siteUrl));
+    }
     if (!res.ok) {
         const txt = await res.text();
         throw new Error(`Search Analytics ${startDate}: ${res.status} ${txt}`);
@@ -206,9 +264,17 @@ export async function fetchSearchAnalyticsByDimension(
             }),
         }
     );
+    if (res.status === 403) {
+        throw new Error(
+            gscForbiddenMessage(
+                `Search Analytics ${opts.dimension} ${opts.startDate} to ${opts.endDate}`,
+                siteUrl,
+            ),
+        );
+    }
     if (!res.ok) {
         const txt = await res.text();
-        throw new Error(`Search Analytics ${opts.dimension} ${opts.startDate}–${opts.endDate}: ${res.status} ${txt}`);
+        throw new Error(`Search Analytics ${opts.dimension} ${opts.startDate} to ${opts.endDate}: ${res.status} ${txt}`);
     }
     const data = (await res.json()) as { rows?: RawDimensionRow[] };
     return (data.rows ?? [])
@@ -294,6 +360,9 @@ export async function fetchSitemapsList(
             headers: { Authorization: `Bearer ${token}` },
         }
     );
+    if (res.status === 403) {
+        throw new Error(gscForbiddenMessage('Sitemaps list', siteUrl));
+    }
     if (!res.ok) {
         const txt = await res.text();
         throw new Error(`Sitemaps list: ${res.status} ${txt}`);
