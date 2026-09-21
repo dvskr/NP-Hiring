@@ -78,14 +78,14 @@ export default function AdminSettingsPage() {
                 <ConfigRow
                     icon={<Clock size={18} style={{ color: '#A855F7' }} />}
                     label="Ingestion Schedule"
-                    description="Automated job ingestion runs via Vercel CRON"
+                    description="Automated job ingestion runs via Vercel Cron"
                 >
                     <EnvIndicator name="CRON_SECRET" />
                 </ConfigRow>
                 <ConfigRow
                     icon={<RefreshCw size={18} style={{ color: '#F59E0B' }} />}
                     label="Deduplication"
-                    description="Automatic dedup on slug, employer, and title similarity"
+                    description="Automatic deduplication by slug, employer, and title similarity"
                 >
                     <StatusBadge status="active" label="Enabled" />
                 </ConfigRow>
@@ -99,14 +99,14 @@ export default function AdminSettingsPage() {
                 <ConfigRow
                     icon={<Zap size={18} style={{ color: '#3B82F6' }} />}
                     label="Facebook Posting"
-                    description="Daily job highlights posted via Graph API"
+                    description="Daily job highlights posted via the Graph API"
                 >
                     <EnvIndicator name="FB_PAGE_ACCESS_TOKEN" />
                 </ConfigRow>
                 <ConfigRow
                     icon={<Zap size={18} style={{ color: '#E1306C' }} />}
                     label="Instagram Posting"
-                    description="Daily image-based job posts via IG Graph API"
+                    description="Daily image-based job posts via the Instagram Graph API"
                 >
                     <EnvIndicator name="IG_USER_ID" />
                 </ConfigRow>
@@ -120,14 +120,14 @@ export default function AdminSettingsPage() {
                 <ConfigRow
                     icon={<Bell size={18} style={{ color: '#22C55E' }} />}
                     label="Job Alerts"
-                    description="Automated email alerts for subscribers (daily/weekly)"
+                    description="Automated email alerts for subscribers (daily or weekly)"
                 >
                     <StatusBadge status="active" label="Active" />
                 </ConfigRow>
                 <ConfigRow
                     icon={<Globe size={18} style={{ color: '#3B82F6' }} />}
                     label="Search Indexing"
-                    description="Auto-ping Google, Bing, and IndexNow on new content"
+                    description="Automatically pings Google, Bing, and IndexNow when new content is published"
                 >
                     <EnvIndicator name="INDEXNOW_KEY" />
                 </ConfigRow>
@@ -141,7 +141,7 @@ export default function AdminSettingsPage() {
                 <ConfigRow
                     icon={<Bot size={18} style={{ color: '#A855F7' }} />}
                     label="Autofill Extension"
-                    description="Chrome extension for automatic job application form filling"
+                    description="Chrome extension that fills job application forms automatically"
                 >
                     <StatusBadge status="active" label="Active" />
                 </ConfigRow>
@@ -155,7 +155,7 @@ export default function AdminSettingsPage() {
                 <ConfigRow
                     icon={<Globe size={18} style={{ color: '#3B82F6' }} />}
                     label="Blog Generation"
-                    description="AI-powered blog post creation via API"
+                    description="AI-powered blog post creation via the API"
                 >
                     <EnvIndicator name="BLOG_API_KEY" />
                 </ConfigRow>
@@ -169,14 +169,14 @@ export default function AdminSettingsPage() {
                 <ConfigRow
                     icon={<Settings size={18} style={{ color: '#BE185D' }} />}
                     label="Auth Provider"
-                    description="Supabase authentication with email + social login"
+                    description="Supabase authentication with email and social login"
                 >
                     <StatusBadge status="active" label="Supabase" />
                 </ConfigRow>
                 <ConfigRow
                     icon={<Settings size={18} style={{ color: '#F59E0B' }} />}
                     label="Admin Rate Limiting"
-                    description="20 requests/minute per IP on admin endpoints"
+                    description="20 requests per minute per IP on admin endpoints"
                 >
                     <StatusBadge status="active" label="20 req/min" />
                 </ConfigRow>

@@ -94,9 +94,9 @@ function MatchCard({ match, rank }: { match: SpecialtyMatch; rank: number }) {
             {match.premium && (
                 <p style={{ fontSize: '13px', color: '#5A4A42', margin: '0 0 12px', lineHeight: 1.6 }}>
                     <strong>
-                        +{match.premium.minPct}–{match.premium.maxPct}% premium
+                        +{match.premium.minPct} to {match.premium.maxPct}% premium
                     </strong>{' '}
-                    over the all-{brand.niche.short} median — as published in our salary guide and applied to that
+                    over the all-{brand.niche.short} median, as published in our salary guide and applied to that
                     median as an estimate. Driver: {match.premium.driver.toLowerCase()}.
                 </p>
             )}
@@ -238,7 +238,7 @@ export default function SpecialtyFinderQuiz() {
                     Specialties that match your preferences
                 </h2>
                 <p style={{ fontSize: '13.5px', color: '#5A4A42', margin: '0 0 16px', lineHeight: 1.6 }}>
-                    Ranked by how many of your answers each specialty matches — not by aptitude, demand, or pay.
+                    Ranked by how many of your answers each specialty matches, not by aptitude, demand, or pay.
                     Percentages are over the questions you answered, so they move as you answer more.
                 </p>
 
@@ -264,7 +264,7 @@ export default function SpecialtyFinderQuiz() {
                 {rest.length > 0 && (
                     <div style={{ ...clayCard, padding: '20px 22px', marginTop: '14px' }}>
                         <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 12px' }}>
-                            Also worth a look
+                            Also worth considering
                         </h3>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {rest.map((match) => (

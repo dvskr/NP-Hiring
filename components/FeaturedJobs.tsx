@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { normalizeDisplaySalary } from '@/lib/salary-display';
+import { displayText } from '@/lib/display-text';
 import Link from 'next/link';
 import { MapPin, ArrowUpRight } from 'lucide-react';
 import { LazyMotion, domAnimation, m, useReducedMotion } from 'framer-motion';
@@ -55,10 +57,10 @@ const stagger = {
 
 /* Step copy carried over verbatim from the previous design. */
 const STEPS = [
-    { title: 'Build Your Profile', desc: 'Upload your resume once — add license states, credentials, years of experience, and salary range. Re-use it on every application.' },
+    { title: 'Build Your Profile', desc: 'Upload your resume once, then add license states, credentials, years of experience, and salary range. Reuse it on every application.' },
     { title: 'Search & Get Matched', desc: 'Semantic AI search understands phrases like "new grad outpatient telehealth." A weekly digest emails fresh roles matched to your experience level, location, and pay.' },
-    { title: 'Apply or Message Directly', desc: 'One-click Easy Apply on employer-posted roles, or message the hiring manager in-app. No recruiters, no portals, no copy-pasting.' },
-    { title: 'Start Practicing', desc: 'Save jobs, track applications, and follow up with employers — all in one dashboard. Then accept your offer and start your next clinical role.' },
+    { title: 'Apply or Message Directly', desc: 'Use one-click Easy Apply on employer-posted roles, or message the hiring manager in-app. No recruiters, no portals, and no copy-pasting.' },
+    { title: 'Start Practicing', desc: 'Save jobs, track applications, and follow up with employers, all in one dashboard. Then accept your offer and start your next clinical role.' },
 ];
 
 /* Faint background "+" marks (healthcare cross motif) — position/size/tilt.
@@ -409,19 +411,19 @@ export default function FeaturedJobs({ jobs }: FeaturedJobsProps) {
                                 <Link href={href} className="fjs-job">
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <p className="fjs-jmeta">
-                                            <span style={{ fontWeight: 700, color: '#6b5a5e' }}>{job.employer}</span>
+                                            <span style={{ fontWeight: 700, color: '#6b5a5e' }}>{displayText(job.employer)}</span>
                                             {job.jobType && <><span>·</span><span>{job.jobType}</span></>}
                                             <span>·</span>
                                             <span>{mounted ? relativeTime(postedDate) : ''}</span>
                                         </p>
-                                        <h3 className="fjs-jtitle font-heading">{job.title}</h3>
+                                        <h3 className="fjs-jtitle font-heading">{displayText(job.title)}</h3>
                                         <p className="fjs-jmeta">
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                                 <MapPin size={13} style={{ color: '#BE185D' }} />
-                                                {job.location}
+                                                {displayText(job.location)}
                                             </span>
                                             {job.displaySalary && (
-                                                <span className="fjs-jsal">{job.displaySalary}</span>
+                                                <span className="fjs-jsal">{normalizeDisplaySalary(job.displaySalary)}</span>
                                             )}
                                         </p>
                                     </div>

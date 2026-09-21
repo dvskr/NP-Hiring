@@ -12,8 +12,9 @@ import { Metadata } from 'next';
  * belt-and-suspenders guard the sibling auth surfaces use.
  */
 export const metadata: Metadata = {
-    title: `My Applications | ${brand.name}`,
-    description: `Track the ${brand.niche.short} jobs you have applied to on ${brand.name} — application status, dates, and next steps.`,
+    // Root layout title.template appends " | brand"; hardcoding it here doubled the suffix.
+    title: 'My Applications',
+    description: `Track the ${brand.niche.short} jobs you have applied to on ${brand.name}, including application status, dates, and next steps.`,
     alternates: {
         canonical: `${brand.baseUrl}/my-applications`,
     },

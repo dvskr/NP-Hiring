@@ -219,7 +219,7 @@ export default function SalaryCalculator({ stateSalaries, national }: Props) {
             {formatSalary(result.estimated)}
           </div>
           <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 20px', fontWeight: 500 }}>
-            Range: {formatSalary(result.low)} – {formatSalary(result.high)}
+            Range: {formatSalary(result.low)} to {formatSalary(result.high)}
           </p>
 
           {/* Breakdown */}
@@ -272,11 +272,11 @@ export default function SalaryCalculator({ stateSalaries, national }: Props) {
               editorial estimates and say so. */}
           <p style={{ fontSize: '10px', color: '#94A3B8', marginTop: '14px', lineHeight: 1.4 }}>
             {result.basis === 'postings' ? (
-              <>* Estimate from the median of {result.basisCount ?? 'current'} {result.stateName === 'National' ? '' : `${result.stateName} `}live job postings on {brand.name} with disclosed salary. </>
+              <>* Estimate based on the median of {result.basisCount ?? 'current'} {result.stateName === 'National' ? '' : `${result.stateName} `}live job postings on {brand.name} with disclosed salary. </>
             ) : (
-              <>* Base: BLS OEWS national median wage ({formatStatVintage(STAT_SOURCES.averageSalary.asOf)} release) — too few disclosed-salary postings to use board data. </>
+              <>* Base: BLS OEWS national median wage ({formatStatVintage(STAT_SOURCES.averageSalary.asOf)} release). Too few disclosed-salary postings were available to use board data. </>
             )}
-            Experience, setting, and specialty multipliers are {brand.name}&apos;s editorial estimates, not survey data. Figures rounded to the nearest $1,000; actual salary varies by employer.
+            Experience, setting, and specialty multipliers are {brand.name}&apos;s editorial estimates, not survey data. Figures are rounded to the nearest $1,000; actual salaries vary by employer.
           </p>
         </div>
       </div>

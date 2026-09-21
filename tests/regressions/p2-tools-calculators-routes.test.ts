@@ -454,8 +454,12 @@ describe('employer salary benchmark (P2 #17)', () => {
   it('aggregates on the server and passes only summarized rows to the client', () => {
     const widget = read('components/tools/EmployerBenchmarkWidget.tsx');
     expect(widget).not.toContain("'use client'");
-    expect(widget).toContain('summarizeBenchmarks');
-    expect(widget).toContain('salaryIsEstimated: false');
+    // P10: the widget aggregates the salary guide's gated analytics pool
+    // (npSalaryAnalyticsWhere carries salaryIsEstimated: false) rather than a
+    // private query, so the two surfaces cannot publish different gates.
+    expect(widget).toContain('summarizeBenchmarkPool');
+    expect(widget).toContain('fetchNpAnalyticsRows');
+    expect(read('lib/salary-utils.ts')).toContain('salaryIsEstimated: false');
 
     const picker = read('components/tools/EmployerBenchmarkPicker.tsx');
     expect(picker).toContain("'use client'");

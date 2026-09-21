@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { mintResumeReadUrl, extractRequestContext } from '@/lib/resume-storage';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { scopeJobIdsToOwned } from './scope';
 
 /**
  * GET /api/employer/applicants
@@ -58,9 +59,16 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ applicants: [], jobs: [] });
     }
 
-    // Build filter conditions
+    // Build filter conditions. The jobId filter must NARROW the ownership
+    // scope, never replace it: a jobId the caller does not own answers 404
+    // (same shape as a job that does not exist) so it cannot be used to
+    // read another employer's applicants or to probe which job ids exist.
+    const scopedJobIds = scopeJobIdsToOwned(jobIds, jobIdFilter);
+    if (scopedJobIds === null) {
+        return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
     const where: Record<string, unknown> = {
-        jobId: jobIdFilter ? { in: [jobIdFilter] } : { in: jobIds },
+        jobId: { in: scopedJobIds },
     };
     if (statusFilter && statusFilter !== 'all') {
         where.status = statusFilter;
@@ -115,7 +123,7 @@ export async function GET(req: NextRequest) {
                   action: 'view',
                   ip: reqCtx.ip,
                   userAgent: reqCtx.userAgent,
-                  reason: `applicants list — application ${app.id}`,
+                  reason: `applicants list: application ${app.id}`,
               })
             : null;
 

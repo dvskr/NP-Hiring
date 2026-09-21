@@ -19,15 +19,15 @@ const ABOUT_OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`Abou
 // of companies" against a directory of ~100 — metadata is a count surface too,
 // so it stays count-free rather than quoting a number that drifts.
 export const metadata: Metadata = {
-  title: `About Us - The #1 Job Board for ${brand.niche.medium}s`,
-  description: `Learn about ${brand.name} - the #1 dedicated job board for ${brand.niche.long}s. Active ${brand.niche.short} listings from employers across all 50 states.`,
+  title: `About Us: The #1 Job Board for ${brand.niche.medium}s`,
+  description: `Learn about ${brand.name}, the #1 dedicated job board for ${brand.niche.long}s. Active ${brand.niche.short} listings from employers across all 50 states.`,
   openGraph: {
     // OG block was previously images-only — when a non-overriding child page
     // inherits this layout's defaults the social card pulled the wrong title
     // and description (audit 09 M-22). Spelled-out fields ensure the share
     // card matches the page identity.
-    title: `About ${brand.name} — The #1 ${brand.niche.medium} Job Board`,
-    description: `Built for the ${brand.niche.short} community — ${brand.niche.descriptor} jobs across all 50 states, free for job seekers, transparent for employers.`,
+    title: `About ${brand.name}: The #1 ${brand.niche.medium} Job Board`,
+    description: `Built for the ${brand.niche.short} community: ${brand.niche.descriptor} jobs across all 50 states, free for job seekers and transparent for employers.`,
     type: 'website',
     url: `${brand.baseUrl}/about`,
     siteName: brand.name,

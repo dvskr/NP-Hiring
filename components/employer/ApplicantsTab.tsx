@@ -208,7 +208,7 @@ export default function ApplicantsTab() {
     const handleStatusChange = async (applicationId: string, newStatus: string) => {
         const ok = await performStatusChange(applicationId, newStatus);
         if (!ok) {
-            toast('Couldn’t update applicant status — please try again.', 'error');
+            toast('Couldn’t update applicant status. Please try again.', 'error');
         }
     };
 
@@ -233,7 +233,7 @@ export default function ApplicantsTab() {
         } catch (err) {
             console.error('Error saving notes:', err);
             // Keep the editor open so the typed note isn't lost on failure.
-            toast('Couldn’t save notes — please try again.', 'error');
+            toast('Couldn’t save notes. Please try again.', 'error');
         }
     };
 
@@ -252,7 +252,7 @@ export default function ApplicantsTab() {
             const failedIds = ids.filter((_, i) => !results[i]);
             if (failedIds.length > 0) {
                 toast(
-                    `${failedIds.length} of ${ids.length} status updates failed — the failed applicants are still selected so you can retry.`,
+                    `${failedIds.length} of ${ids.length} status updates failed. The failed applicants are still selected so you can retry.`,
                     'error',
                 );
                 setSelectedIds(new Set(failedIds));
@@ -809,7 +809,7 @@ export default function ApplicantsTab() {
                                                             <p style={{ fontSize: '12px', fontWeight: 700, color: '#1A2E35', margin: '0 0 4px' }}>📚 Education</p>
                                                             {app.candidate.education.map((edu, i) => (
                                                                 <p key={i} style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 2px', paddingLeft: '16px' }}>
-                                                                    {edu.degreeType}{edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ''} — {edu.schoolName}
+                                                                    {edu.degreeType}{edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ''}, {edu.schoolName}
                                                                     {edu.graduationDate && ` (${new Date(edu.graduationDate).getFullYear()})`}
                                                                 </p>
                                                             ))}
@@ -823,7 +823,7 @@ export default function ApplicantsTab() {
                                                             {app.candidate.workExperience.map((exp, i) => (
                                                                 <p key={i} style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 2px', paddingLeft: '16px' }}>
                                                                     {exp.jobTitle} at {exp.employerName}
-                                                                    {exp.startDate && ` (${new Date(exp.startDate).getFullYear()} - ${exp.isCurrent ? 'Present' : exp.endDate ? new Date(exp.endDate).getFullYear() : '?'})`}
+                                                                    {exp.startDate && ` (${new Date(exp.startDate).getFullYear()} to ${exp.isCurrent ? 'Present' : exp.endDate ? new Date(exp.endDate).getFullYear() : '?'})`}
                                                                     {exp.practiceSetting && ` · ${exp.practiceSetting}`}
                                                                 </p>
                                                             ))}
@@ -849,7 +849,7 @@ export default function ApplicantsTab() {
                                                             <p style={{ fontSize: '12px', fontWeight: 700, color: '#1A2E35', margin: '0 0 4px' }}>🔑 Licenses</p>
                                                             {app.candidate.licenses.map((lic, i) => (
                                                                 <p key={i} style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 2px', paddingLeft: '16px' }}>
-                                                                    {lic.type} — {lic.state} ({lic.status})
+                                                                    {lic.type}, {lic.state} ({lic.status})
                                                                 </p>
                                                             ))}
                                                         </div>

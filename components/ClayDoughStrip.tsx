@@ -131,7 +131,7 @@ export default function ClayDoughStrip({ employers, jobCountDisplay }: ClayDough
                 }
                 .cds-tag em {
                     font-style: normal;
-                    color: #BE185D;
+                    color: #9D174D;
                     font-size: 12.5px;
                     font-variant-numeric: tabular-nums;
                 }

@@ -52,7 +52,7 @@ describe('P6 #9 — the widget stamps its figures with real provenance', () => {
         // P9 #2c/#2d: the state figure is a gated median now, and the stamp
         // says so (disclosed AND non-estimated — the analytics pool's terms).
         expect(src).toContain(
-            'median computed from live postings with disclosed, non-estimated salary on {brand.name}',
+            'median is computed from live postings with disclosed, non-estimated salary on {brand.name}',
         );
         // No live-count sentence: the widget receives no N, so it must not
         // claim one (the "Based on N…" clause is reserved for surfaces that

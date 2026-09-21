@@ -87,7 +87,7 @@ describe('deriveExperienceLabel', () => {
           maxYearsExperience: 2,
           newGradFriendly: false,
         }),
-      ).toBe('1-2 yrs');
+      ).toBe('1 to 2 yrs');
     });
 
     it('handles wider ranges', () => {
@@ -97,7 +97,7 @@ describe('deriveExperienceLabel', () => {
           maxYearsExperience: 7,
           newGradFriendly: false,
         }),
-      ).toBe('5-7 yrs');
+      ).toBe('5 to 7 yrs');
     });
 
     it('collapses to "N+ yrs" when max <= min (invalid range)', () => {
@@ -195,7 +195,7 @@ describe('normalizeExperienceFromInput', () => {
     expect(result.minYearsExperience).toBe(5);
     expect(result.maxYearsExperience).toBe(7); // bucket 5 → max 7
     expect(result.newGradFriendly).toBe(false);
-    expect(result.experienceLabel).toBe('5-7 yrs');
+    expect(result.experienceLabel).toBe('5 to 7 yrs');
   });
 
   it('forces max to match the bucket — client cannot smuggle an inconsistent max', () => {
@@ -270,7 +270,7 @@ describe('normalizeExperienceFromInput', () => {
       newGradFriendly: true,
       experienceQualifier: null,
     });
-    expect(result.experienceLabel).toBe('5-7 yrs · new grads welcome');
+    expect(result.experienceLabel).toBe('5 to 7 yrs · new grads welcome');
   });
 
   it('trims whitespace from the qualifier and collapses empty strings to null', () => {

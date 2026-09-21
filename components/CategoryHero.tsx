@@ -1,11 +1,66 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
+import { brand } from '@/config/brand';
+
+/** The hero art is square and letterboxed to the panel height (380px, 240px under 900px). */
+const HERO_ART_SIZES = '(max-width: 900px) 240px, 380px';
 
 /* ═══════════════════════════════════════════════════════════════
    CategoryHero — Layout 5: Oversized type / asymmetric collage
    Fonts: Lora (heading), Inter (body/ui)
    ═══════════════════════════════════════════════════════════════ */
+
+export type CategoryHeroCrumb = string | { label: string; href?: string };
+
+interface NormalizedCrumb {
+  label: string;
+  href: string | null;
+}
+
+/**
+ * Site-relative href for a crumb. BreadcrumbSchema items carry absolute
+ * `${brand.baseUrl}/...` URLs; the visible link is rendered relative so it
+ * stays on the current origin (preview and local builds included). Only
+ * same-site paths are accepted: anything else renders as plain text rather
+ * than an off-site link.
+ */
+export function crumbHref(href: string | undefined, baseUrl: string): string | null {
+  if (!href) return null;
+  if (href.startsWith('/') && !href.startsWith('//')) return href;
+  const base = baseUrl.replace(/\/+$/, '');
+  if (href === base) return '/';
+  if (href.startsWith(`${base}/`)) return href.slice(base.length);
+  return null;
+}
+
+/** Normalise the trail; the current page (last item) is never a link. */
+export function normalizeCrumbs(crumbs: readonly CategoryHeroCrumb[], baseUrl: string): NormalizedCrumb[] {
+  return crumbs.map((crumb, i) => {
+    const isLast = i === crumbs.length - 1;
+    if (typeof crumb === 'string') return { label: crumb, href: null };
+    return { label: crumb.label, href: isLast ? null : crumbHref(crumb.href, baseUrl) };
+  });
+}
+
+/** One BreadcrumbList item, as the page hands it to components/BreadcrumbSchema. */
+export interface SchemaCrumb {
+  name: string;
+  url: string;
+}
+
+/**
+ * Hero trail from the page's BreadcrumbSchema items, so the visible crumbs
+ * carry exactly the labels and URLs the JSON-LD declares (Google requires
+ * breadcrumb structured data to describe visible content). P10 pseo-jobs #2:
+ * the per-route category landings, the state hub, the city hub and the metro
+ * guides still passed label-only string arrays ('Careers', 'By State', ...)
+ * after the shared template was converted, so those pages rendered plain
+ * spans whose labels did not even match their schema.
+ */
+export function crumbsFromSchema(items: readonly SchemaCrumb[]): CategoryHeroCrumb[] {
+  return items.map(({ name, url }) => ({ label: name, href: url }));
+}
 
 interface CategoryHeroProps {
   /** Category background color (from the watercolor asset) */
@@ -16,8 +71,12 @@ interface CategoryHeroProps {
   heroAlt: string;
   /** Live badge text, e.g. "395 live roles · updated 4 min ago" */
   badgeText: string;
-  /** Breadcrumb trail labels */
-  breadcrumbs: string[];
+  /**
+   * Breadcrumb trail. Pass `{ label, href }` items built from the same array
+   * as the page's BreadcrumbSchema so the visible trail links to exactly the
+   * URLs the JSON-LD declares. A bare string renders as unlinked text.
+   */
+  breadcrumbs: CategoryHeroCrumb[];
   /** Category index label, e.g. "№ 04 / 26" */
   indexLabel?: string;
   /** Line 1 of the oversized heading */
@@ -124,6 +183,7 @@ export default function CategoryHero({
   // See stripUnverifiableFreshness above: the count survives, an unverifiable
   // freshness claim does not.
   const badge = stripUnverifiableFreshness(badgeText ?? '');
+  const crumbs = normalizeCrumbs(breadcrumbs ?? [], brand.baseUrl);
 
   return (
     <section className="cath5" style={{ background: '#faf6ef', padding: '48px 56px 0', position: 'relative', overflow: 'hidden' }}>
@@ -143,11 +203,12 @@ export default function CategoryHero({
 
             The breadcrumb trail keeps its own contract: BreadcrumbSchema emits
             the JSON-LD, this renders the same hierarchy in the DOM so users can
-            orient themselves (WCAG 2.4.8). The prop is `string[]` of labels
-            only, so these are spans, not links; the last item carries
-            aria-current="page". Callers that render their own linked breadcrumb
-            band pass [] and only the pill shows. */}
-        {(badge || indexLabel || (breadcrumbs && breadcrumbs.length > 0)) && (
+            orient themselves (WCAG 2.4.8). Ancestor crumbs given an href render
+            as links to the same URLs the JSON-LD declares; the last item is
+            the current page, carries aria-current="page" and is not a link.
+            Callers that render their own linked breadcrumb band pass [] and
+            only the pill shows. */}
+        {(badge || indexLabel || crumbs.length > 0) && (
           <div className="cath5-row1">
             {badge && (
               <span className="cath5-badge">
@@ -155,16 +216,25 @@ export default function CategoryHero({
                 {badge}
               </span>
             )}
-            {breadcrumbs && breadcrumbs.length > 0 && (
+            {crumbs.length > 0 && (
               <nav aria-label="Breadcrumb" className="cath5-crumbs-slot">
                 <ol className="cath5-crumbs" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap' }}>
-                  {breadcrumbs.map((label, i) => {
-                    const isLast = i === breadcrumbs.length - 1;
+                  {crumbs.map(({ label, href }, i) => {
+                    const isLast = i === crumbs.length - 1;
+                    // The current page is announced to assistive technology
+                    // but not shown: the H1 directly below names it, so the
+                    // visible trail ends at the parent (owner request,
+                    // 2026-09-16). The parent therefore draws no separator.
+                    const liClass = isLast ? 'cath5-crumb-current' : i === crumbs.length - 2 ? 'cath5-crumb-tail' : undefined;
                     return (
-                      <li key={`${label}-${i}`}>
-                        <span aria-current={isLast ? 'page' : undefined} className={isLast ? 'cath5-crumb-now' : undefined}>
-                          {label}
-                        </span>
+                      <li key={`${label}-${i}`} className={liClass}>
+                        {href ? (
+                          <Link href={href} className="cath5-crumb-link">{label}</Link>
+                        ) : (
+                          <span aria-current={isLast ? 'page' : undefined} className={isLast ? 'cath5-crumb-now' : undefined}>
+                            {label}
+                          </span>
+                        )}
                       </li>
                     );
                   })}
@@ -184,14 +254,24 @@ export default function CategoryHero({
             </span>
           </h1>
           <div className="cath5-photo">
-            <Image
-              src={heroImage}
-              alt={heroAlt}
-              width={560}
-              height={560}
-              priority
-              style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center bottom', display: 'block' }}
-            />
+            {/* The art is letterboxed so nothing is cropped. The bands beside
+                it are painted by the art's own outermost columns, stretched
+                across the band (one copy clamped to each edge), so the color
+                at the seam is exactly the picture's edge, row by row: flat
+                grounds stay flat and the state dioramas' vignettes continue
+                outward (owner request, 2026-09-16). All three layers share
+                one URL, so the panel costs one download. The art is square
+                and renders at the panel height, so the size hint is the
+                panel height, not the column width. */}
+            <div aria-hidden="true" className="cath5-photo-edge" style={{ left: 0, transformOrigin: 'left center' }}>
+              <Image src={heroImage} alt="" fill sizes={HERO_ART_SIZES} style={{ objectFit: 'fill' }} />
+            </div>
+            <div aria-hidden="true" className="cath5-photo-edge" style={{ right: 0, transformOrigin: 'right center' }}>
+              <Image src={heroImage} alt="" fill sizes={HERO_ART_SIZES} style={{ objectFit: 'fill' }} />
+            </div>
+            <div className="cath5-photo-art">
+              <Image src={heroImage} alt={heroAlt} fill priority sizes={HERO_ART_SIZES} style={{ objectFit: 'contain' }} />
+            </div>
             {/* Same defect as the badge: both photo-tag props were
                 destructured and dropped while .cath5-photo-tag sat unused in
                 the stylesheet. No caller passes them today, so this renders
@@ -343,7 +423,27 @@ export default function CategoryHero({
         .cath5-crumbs li:not(:last-child)::after {
           content: "·"; margin-left: 14px;
         }
+        /* The current page stays in the list for assistive technology but is
+           not drawn (the H1 names it), so its parent draws no separator. */
+        .cath5-crumbs li.cath5-crumb-tail::after { content: none; margin-left: 0; }
+        .cath5-crumbs li.cath5-crumb-current {
+          position: absolute; width: 1px; height: 1px; overflow: hidden;
+          clip: rect(0 0 0 0); white-space: nowrap;
+        }
         .cath5-crumb-now { color: var(--ink) !important; opacity: 1; }
+        .cath5-crumb-link {
+          color: inherit;
+          text-decoration: underline;
+          text-decoration-color: transparent;
+          text-underline-offset: 4px;
+          transition: text-decoration-color 0.2s ease, color 0.2s ease;
+        }
+        .cath5-crumb-link:hover { color: var(--teal-deep); text-decoration-color: currentColor; }
+        .cath5-crumb-link:focus-visible {
+          outline: 2px solid var(--teal);
+          outline-offset: 3px;
+          border-radius: 2px;
+        }
         .cath5-index {
           font: 500 12px/1 'Inter', var(--font-inter), monospace;
           letter-spacing: .1em;
@@ -388,6 +488,14 @@ export default function CategoryHero({
           height: clamp(260px, 28vw, 380px);
           background: var(--cat-color);
         }
+        /* Square boxes the height of the panel: the art centered, and one
+           copy clamped to each edge with its outermost columns stretched
+           across the band beside the art. */
+        .cath5-photo-edge, .cath5-photo-art {
+          position: absolute; top: 0; bottom: 0; height: auto; aspect-ratio: 1 / 1;
+        }
+        .cath5-photo-edge { transform: scaleX(40); }
+        .cath5-photo-art { left: 50%; transform: translateX(-50%); max-width: 100%; }
         .cath5-photo-tag {
           position: absolute;
           left: 16px; bottom: 16px;

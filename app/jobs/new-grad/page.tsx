@@ -2,6 +2,8 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import MedianFigure from '@/components/MedianFigure';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { GraduationCap, TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -10,13 +12,16 @@ import { buildCategoryWhereClause } from '@/lib/filters';
 import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
-
+import { pluralize, cappedCount } from '@/lib/pseo/plural';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
-const STORAGE_BASE = brand.assets.storageBase;
+/** Top-employer groupBy cap; a list that hits it renders as "8+". The hero
+ *  shows the exact job count (the title states it exactly too). */
+const TOP_EMPLOYERS_TAKE = 8;
+
 
 // Force dynamic rendering - don't try to statically generate during build
 // force-dynamic removed: it overrides revalidate and defeats ISR caching
@@ -87,7 +92,7 @@ async function getNewGradStats() {
                 employer: 'desc',
             },
         },
-        take: 8,
+        take: TOP_EMPLOYERS_TAKE,
     });
 
     // Process with explicit typing
@@ -108,9 +113,9 @@ async function getNewGradStats() {
  */
 
 const newGradFaqs = [
-  { question: `Can new grads get ${brand.niche.short} jobs?`, answer: `Yes! Many employers actively recruit new ${brand.niche.short} graduates, especially in underserved areas and community health settings.` },
-  { question: 'What should new grads expect?', answer: 'Structured onboarding, clinical supervision, mentorship programs, and gradual caseload increase over 3-6 months.' },
-  { question: 'What is the starting salary?', answer: `New grad ${brand.niche.short}s typically start around $95K-$120K, with meaningful increases after the first year of experience.` },
+  { question: `Can new grads get ${brand.niche.short} jobs?`, answer: `Yes. Many employers actively recruit new ${brand.niche.short} graduates, especially in underserved areas and community health settings.` },
+  { question: 'What should new grads expect?', answer: 'New graduates can expect structured onboarding, clinical supervision, mentorship programs, and a gradual caseload increase over 3 to 6 months.' },
+  { question: 'What is the starting salary?', answer: `New grad ${brand.niche.short}s typically start around $95K to $120K, with meaningful increases after the first year of experience.` },
   { question: 'Do I need experience to apply?', answer: 'Clinical rotation hours count as experience. Highlight your RN background, rotation settings, and any relevant certifications.' },
 ];
 
@@ -119,12 +124,12 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     const page = parseInt(params.page || '1');
 
     return {
-        title: `${stats.totalJobs} New Grad ${brand.niche.short} Jobs — Entry-Level Positions`,
-        description: `Find ${stats.totalJobs} new grad ${brand.niche.short} jobs. Entry-level ${brand.niche.descriptor} positions with mentorship, fellowships, and residency programs. No experience required — start your ${brand.niche.short} career today.`,
+        title: `${stats.totalJobs} New Grad ${brand.niche.short} Jobs: Entry-Level Positions`,
+        description: `Find ${stats.totalJobs} new grad ${brand.niche.short} jobs. Entry-level ${brand.niche.descriptor} positions with mentorship, fellowships, and residency programs. No experience required. Start your ${brand.niche.short} career today.`,
         keywords: ['new grad np jobs', 'entry level nurse practitioner', 'np fellowship programs', 'new graduate nurse practitioner jobs', 'np residency'],
         openGraph: {
-            title: `${stats.totalJobs} New Grad ${brand.niche.short} Jobs - Entry Level Positions`,
-            description: `Browse new graduate and entry-level ${brand.niche.descriptor} positions. Fellowships, residencies, mentorship programs.`,
+            title: `${stats.totalJobs} New Grad ${brand.niche.short} Jobs: Entry-Level Positions`,
+            description: `Browse new graduate and entry-level ${brand.niche.descriptor} positions, including fellowships, residencies, and mentorship programs.`,
             type: 'website',
             images: [{
                 url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} New Grad ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent(`Entry-level ${brand.niche.descriptor} positions`)}`,
@@ -166,26 +171,35 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
 
     const totalPages = Math.ceil(stats.totalJobs / limit);
 
+    // One trail drives the BreadcrumbList JSON-LD and the hero's linked crumbs
+    // (P10 pseo-jobs #2), so the two can never disagree on labels or URLs.
+    const breadcrumbTrail = [
+        { name: 'Home', url: brand.baseUrl },
+        { name: 'Jobs', url: `${brand.baseUrl}/jobs` },
+        { name: 'New Grad', url: `${brand.baseUrl}/jobs/new-grad` },
+    ];
+
     return (
         <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <BreadcrumbSchema items={breadcrumbTrail} />
       {jobs.length > 0 && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `New Grad ${brand.niche.short} Jobs`, numberOfItems: stats.totalJobs, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#99a7d4"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_newgrad.webp`}
+        heroImage="/images/categories/heroes/new-grad.webp"
         heroAlt={`New grad ${brand.niche.short} career launch`}
-        badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'New Grad']}
+        badgeText={`${stats.totalJobs} live ${pluralize(stats.totalJobs, 'role')} · updated today`}
+        breadcrumbs={crumbsFromSchema(breadcrumbTrail)}
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('new-grad') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="New Grad"
         headlineLine2={brand.niche.short}
-        headlineSub="jobs, launch your career."
+        headlineSub="jobs to launch your career."
         stats={[
-          { value: `${stats.totalJobs}+`, label: 'positions' },
+          { value: `${stats.totalJobs}`, label: pluralize(stats.totalJobs, 'position') },
           { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$100K+', label: 'median salary' },
-          { value: `${stats.topEmployers.length}+`, label: 'employers' },
+          { value: cappedCount(stats.topEmployers.length, TOP_EMPLOYERS_TAKE), label: pluralize(stats.topEmployers.length, 'employer') },
         ]}
         description="Entry-level positions with structured mentorship, clinical supervision, fellowships, and clear paths to independent practice."
         ctaLabel="Browse New Grad Jobs"
@@ -214,7 +228,7 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
             <div style={{ ...clayCard, padding: '24px', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}>
               <Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} />
               <h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 8px' }}>New Grad Alerts</h3>
-              <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px' }}>New listings delivered daily.</p>
+              <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px' }}>New listings are delivered daily.</p>
               <Link href="/job-alerts" className="cat-cta-primary" style={{ display: 'block', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none' }}>Create Alert</Link>
             </div>
             {stats.topEmployers.length > 0 && (
@@ -234,7 +248,7 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
             {stats.medianSalaryK > 0 && (
               <div style={{ ...clayCard, padding: '24px' }}>
                 <TrendingUp size={20} style={{ color: '#34D399', marginBottom: '8px' }} />
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}>${stats.medianSalaryK}k</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}><MedianFigure k={stats.medianSalaryK} /></div>
                 <div style={{ fontSize: '13px', color: '#7A6A62' }}>Median salary</div>
               </div>
             )}
@@ -245,62 +259,58 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
       {/* ═══ BENTO ═══ */}
       <div style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #FDF2F8 50%, #FDF2F8 100%)' }}>
         <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 20px 40px' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose New Grad</p>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Why Choose a New Grad Role</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Built for New Graduates</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1 */}
-            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-                <div>
+            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Mentorship Programs</h3>
                   <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>Structured clinical supervision with experienced {brand.niche.adjective} providers. Graduate from supervised practice to independent caseload management.</p>
                 </div>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_newgrad_mentorship.webp`} alt={`${brand.niche.short} mentorship`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
-              </div>
+                <ImmersiveImage src="/images/categories/bento/entry-level-mentorship.webp" alt={`${brand.niche.short} mentorship`} minHeight={240} />
             </div>
             <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FEF3C7, #FDE68A)', textAlign: 'center' }}>
               <GraduationCap size={36} style={{ color: '#D97706', marginBottom: '14px' }} />
-              <div style={{ fontSize: '36px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>{stats.totalJobs}+</div>
-              <div style={{ fontSize: '13px', color: '#92400E', fontWeight: 600, marginTop: '6px' }}>Entry-Level Openings</div>
+              <div style={{ fontSize: '36px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>{stats.totalJobs}</div>
+              <div style={{ fontSize: '13px', color: '#92400E', fontWeight: 600, marginTop: '6px' }}>Entry-Level {pluralize(stats.totalJobs, 'Opening')}</div>
             </div>
 
             {/* ROW 2: Icon Cards */}
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_newgrad_diploma.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/new-grad-diploma.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>New Grad Welcome</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Employers actively seeking newly certified {brand.niche.short}s.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Employers are actively seeking newly certified {brand.niche.short}s.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_newgrad_bulb.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/new-grad-bulb.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Mentorship</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Structured mentorship with experienced providers.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_newgrad_stairs.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/new-grad-stairs.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Career Growth</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Clear advancement paths from entry to senior roles.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_newgrad_cert.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/new-grad-cert.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Get Certified</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Support for specialty certifications and CE credits.</p>
             </div>
 
             {/* ROW 3 */}
-            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-                <div>
+            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <TrendingUp size={24} style={{ color: '#BE185D', marginBottom: '10px' }} />
                   <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Starting Salary</h3>
-                  <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>New grad {brand.niche.short}s typically earn ${stats.medianSalaryK}k+ with rapid salary growth after year one. Many roles include signing bonuses and loan repayment.</p>
+                  <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>{stats.medianSalaryK > 0 ? `New grad ${brand.niche.short}s post a median of ${stats.medianSalaryK}k on current listings, with rapid salary growth after year one.` : `New grad ${brand.niche.short} pay grows quickly after year one.`} Many roles include signing bonuses and loan repayment.</p>
                 </div>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_newgrad_salary.webp`} alt={`New grad ${brand.niche.short} salary`} width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
-              </div>
+                <ImmersiveImage src="/images/categories/bento/new-grad-salary.webp" alt={`New grad ${brand.niche.short} salary`} minHeight={240} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', textAlign: 'center' }}>
               <Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} />
               <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#831843', margin: '0 0 8px' }}>Get Notified</h3>
-              <p style={{ fontSize: '12px', color: '#BE185D', marginBottom: '16px' }}>New grad roles delivered daily.</p>
+              <p style={{ fontSize: '12px', color: '#BE185D', marginBottom: '16px' }}>New grad roles are delivered daily.</p>
               <Link href="/job-alerts" className="cat-cta-primary" style={{ padding: '10px 28px', borderRadius: '12px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none' }}>Set Alerts</Link>
             </div>
           </div>
@@ -344,12 +354,12 @@ export default async function NewGradJobsPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More Ways to Find Your Next Role</h2>
           <div className="cat-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
             {[
-              { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-              { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
-              { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
-              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
+              { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: '/images/categories/nav/remote.webp' },
+              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: '/images/categories/nav/telehealth.webp' },
+              { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: '/images/categories/nav/inpatient.webp' },
+              { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: '/images/categories/nav/outpatient.webp' },
+              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 pay data', icon: '/images/categories/nav/salary.webp' },
+              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: '/images/categories/nav/location.webp' },
             ].map(c => (
               <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
                 <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />

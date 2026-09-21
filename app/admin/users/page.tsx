@@ -133,7 +133,7 @@ export default function AdminUsersPage() {
                 setUsers(prev => prev.map(u => u.id === userId ? { ...u, profileVisible: false, openToOffers: false } : u));
                 showMsg('User deactivated', false);
             }
-        } catch { showMsg('Failed to deactivate', true); }
+        } catch { showMsg('Failed to deactivate user', true); }
     };
 
     const viewProfile = async (userId: string) => {
@@ -248,7 +248,7 @@ export default function AdminUsersPage() {
                     <div style={{ padding: '14px 20px', borderBottom: '1px solid #E8ECF0', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                         <div style={{ position: 'relative', flex: '1 1 200px' }}>
                             <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
-                            <input type="text" placeholder="Search name or email..." value={userSearch} onChange={e => setUserSearch(e.target.value)}
+                            <input type="text" placeholder="Search by name or email…" value={userSearch} onChange={e => setUserSearch(e.target.value)}
                                 style={{ ...inputStyle, width: '100%', paddingLeft: 32 }} />
                         </div>
                         <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
@@ -276,7 +276,7 @@ export default function AdminUsersPage() {
                                 {filteredUsers.map(user => (
                                     <tr key={user.id}>
                                         <td style={{ ...td, fontWeight: 600, color: '#1A2E35', cursor: 'pointer' }} onClick={() => viewProfile(user.id)}>
-                                            {[user.firstName, user.lastName].filter(Boolean).join(' ') || '—'}
+                                            {[user.firstName, user.lastName].filter(Boolean).join(' ') || 'None'}
                                         </td>
                                         <td style={td}>{user.email}</td>
                                         <td style={td}>
@@ -294,7 +294,7 @@ export default function AdminUsersPage() {
                                                 <option value="admin">Admin</option>
                                             </select>
                                         </td>
-                                        <td style={td}>{user.company || '—'}</td>
+                                        <td style={td}>{user.company || 'None'}</td>
                                         <td style={td}>
                                             <div className="flex gap-1">
                                                 {user.openToOffers && badge('Open', 'green')}
@@ -304,7 +304,7 @@ export default function AdminUsersPage() {
                                         </td>
                                         <td style={td}>{formatCT(user.createdAt, 'date')}</td>
                                         <td style={{ ...td, textAlign: 'center' }}>
-                                            <button onClick={() => deactivateUser(user.id)} title="Deactivate"
+                                            <button onClick={() => deactivateUser(user.id)} title="Deactivate user"
                                                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#EF4444' }}>
                                                 <Trash2 size={14} />
                                             </button>
@@ -342,9 +342,9 @@ export default function AdminUsersPage() {
                                 {filteredSubs.map(lead => (
                                     <tr key={lead.id}>
                                         <td style={{ ...td, fontWeight: 600, color: '#1A2E35' }}>{lead.email}</td>
-                                        <td style={td}>{lead.source || '—'}</td>
+                                        <td style={td}>{lead.source || 'None'}</td>
                                         <td style={td}>{lead.hasAccount ? badge('Yes', 'green') : badge('No', 'orange')}</td>
-                                        <td style={td}>{lead.isSubscribed ? badge('Active', 'green') : badge('Unsub', 'red')}</td>
+                                        <td style={td}>{lead.isSubscribed ? badge('Active', 'green') : badge('Unsubscribed', 'red')}</td>
                                         <td style={td}>{lead.newsletterOptIn ? badge('Yes', 'green') : badge('No', 'gray')}</td>
                                         <td style={td}>{lead.jobAlerts.length > 0 ? badge(`${lead.jobAlerts.filter(a => a.isActive).length} active`, 'blue') : badge('None', 'gray')}</td>
                                         <td style={td}>{formatCT(lead.createdAt, 'date')}</td>
@@ -386,8 +386,8 @@ export default function AdminUsersPage() {
                                         <td style={{ ...td, fontWeight: 600, color: '#1A2E35' }}>
                                             {lead.website ? <a href={lead.website} target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'none' }}>{lead.companyName}</a> : lead.companyName}
                                         </td>
-                                        <td style={td}>{lead.contactName || '—'}</td>
-                                        <td style={td}>{lead.contactEmail || '—'}</td>
+                                        <td style={td}>{lead.contactName || 'None'}</td>
+                                        <td style={td}>{lead.contactEmail || 'None'}</td>
                                         <td style={td}>{lead.hasAccount ? badge('Yes', 'green') : badge('No', 'orange')}</td>
                                         <td style={td}>
                                             {lead.status === 'prospect' && badge('Prospect', 'orange')}
@@ -459,12 +459,12 @@ export default function AdminUsersPage() {
                         {/* Profile info */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                             {[
-                                { l: 'Name', v: `${selectedUser.firstName || ''} ${selectedUser.lastName || ''}`.trim() || '—' },
+                                { l: 'Name', v: `${selectedUser.firstName || ''} ${selectedUser.lastName || ''}`.trim() || 'None' },
                                 { l: 'Email', v: selectedUser.email },
                                 { l: 'Role', v: selectedUser.role },
-                                { l: 'Company', v: selectedUser.company || '—' },
-                                { l: 'Phone', v: selectedUser.phone || '—' },
-                                { l: 'Headline', v: selectedUser.headline || '—' },
+                                { l: 'Company', v: selectedUser.company || 'None' },
+                                { l: 'Phone', v: selectedUser.phone || 'None' },
+                                { l: 'Headline', v: selectedUser.headline || 'None' },
                                 { l: 'Joined', v: formatCT(selectedUser.createdAt, 'date') },
                                 { l: 'Status', v: `${selectedUser.profileVisible ? 'Visible' : 'Hidden'} / ${selectedUser.openToOffers ? 'Open' : 'Closed'}` },
                             ].map(f => (
@@ -520,7 +520,7 @@ export default function AdminUsersPage() {
                                         <div key={af.id} style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: '#F8FAF9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <div>
                                                 <div style={{ fontSize: 13, fontWeight: 600, color: '#1A2E35' }}>{af.atsName || 'Unknown ATS'}</div>
-                                                <div style={muted}>{af.fieldsFilled} fields filled</div>
+                                                <div style={muted}>{af.fieldsFilled} field{af.fieldsFilled === 1 ? '' : 's'} filled</div>
                                             </div>
                                             <div style={muted}>{formatCT(af.createdAt, 'date')}</div>
                                         </div>

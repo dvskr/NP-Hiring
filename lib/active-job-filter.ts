@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { GLOBAL_EXCLUSIONS } from '@/lib/filters';
 
 /**
  * Dead-link gate (S6, audit 2026-05-31).
@@ -16,7 +17,18 @@ export const DEAD_LINK_MISS_THRESHOLD = 5;
 
 /**
  * Prisma `where` for jobs that should appear in indexable surfaces (sitemaps):
- * published, not expired, and not flagged as a repeated dead link.
+ * published, not expired, not flagged as a repeated dead link, and not vetoed
+ * by the site-wide GLOBAL_EXCLUSIONS (profession-class quarantine plus the
+ * non-NP title vetoes).
+ *
+ * P10 platform-routing-db #3: the exclusions used to be missing here, so the
+ * job sitemap batches, feed and every surface built on this helper advertised
+ * quarantined non-NP rows (e.g. a Podiatrist with professionClass
+ * other_clinical) whose detail URL answers 410. `NOT: [...]` excludes a row
+ * matching ANY clause. It sits under its own top-level key so callers that
+ * spread this object beside their own `state` / `city` keys keep it, and
+ * lib/canonical-counts.ts (which re-applies the same set inside AND) stays
+ * equivalent.
  *
  * `now` is injectable for deterministic tests.
  */
@@ -24,6 +36,7 @@ export function activeIndexableJobWhere(now: Date = new Date()): Prisma.JobWhere
     return {
         isPublished: true,
         healthConsecutiveMissing: { lt: DEAD_LINK_MISS_THRESHOLD },
+        NOT: [...GLOBAL_EXCLUSIONS],
         OR: [
             { expiresAt: null },
             { expiresAt: { gt: now } },

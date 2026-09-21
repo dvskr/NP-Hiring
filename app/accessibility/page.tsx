@@ -16,23 +16,23 @@
  *         role="status"/aria-live region, so toast feedback is visual only;
  *       · data tables — zero `<th scope>` attributes exist across app/
  *         and components/;
- *       · dialogs — exactly five files import lib/hooks/useFocusTrap
+ *       · dialogs — nine files import lib/hooks/useFocusTrap
  *         (app/jobs/JobsPageClient.tsx, components/InPlatformApplyForm.tsx,
  *         components/MobileFilterDrawer.tsx, components/ReportJobButton.tsx,
- *         components/employer/ComposeMessageModal.tsx). Six further
- *         role="dialog" surfaces have NO focus containment and no focus
- *         restore: components/ui/ConfirmDialog.tsx, components/CookieConsent.tsx
- *         (also the one dialog with no aria-modal and no Escape handler),
- *         components/Header.tsx (mobile nav), components/profile/
+ *         components/employer/ComposeMessageModal.tsx, components/Header.tsx
+ *         (mobile nav), components/ui/ConfirmDialog.tsx, app/messages/page.tsx
+ *         (delete confirmation), app/admin/jobs/page.tsx (job editor)).
+ *         Three role="dialog" files still have NO focus containment and
+ *         no focus restore: components/CookieConsent.tsx (also the one
+ *         dialog with no aria-modal), components/profile/
  *         ResumeAutofillReview.tsx, and the three modals in
  *         components/post-job/JdStarterPanel.tsx;
- *       · reduced motion — app/globals.css gates the CSS animations, but
- *         framer-motion is JS-driven and cannot be reached from CSS. Five
- *         components import it; only three call useReducedMotion()
- *         (EmployerHowItWorks, FeaturedJobs, TopStatesList). HomepageHero
- *         (ungated staggered entrance) and Header (ungated mobile-nav fade)
- *         do not, and there is no <MotionConfig reducedMotion="user">
- *         anywhere in the repo, so nothing gates them globally either;
+ *       · reduced motion — app/globals.css gates the CSS animations, and
+ *         framer-motion is JS-driven and cannot be reached from CSS. All
+ *         five components that import it call useReducedMotion()
+ *         (EmployerHowItWorks, FeaturedJobs, TopStatesList, HomepageHero,
+ *         Header); there is still no <MotionConfig reducedMotion="user">,
+ *         so any NEW importer must check the preference itself;
  *       · the lead-magnet PDF is printed by headless Chromium
  *         (scripts/generate-salary-pdf.ts), which emits an untagged PDF.
  *   - No conformance level is claimed outright. This is a self-assessment
@@ -61,7 +61,7 @@ import { brand } from '@/config/brand';
  * whenever a claim below is added, removed, or re-verified — a stale date
  * on an accessibility statement is itself a trust problem.
  */
-export const ACCESSIBILITY_LAST_REVIEWED = '2026-07-29';
+export const ACCESSIBILITY_LAST_REVIEWED = '2026-09-15';
 
 /** Target we build to. Deliberately described as a target, not a claim. */
 const CONFORMANCE_TARGET = 'WCAG 2.2 Level AA';
@@ -145,7 +145,7 @@ const SHIPPED_CONTROLS: { claim: string; criterion: string }[] = [
         criterion: 'WCAG 2.4.7 Focus Visible',
     },
     {
-        claim: 'The five dialogs in the search-and-apply path — the apply modal and its confirmation, the job-alert modal, the mobile filter drawer, the employer message composer, and the report-job flow — share one focus-trap hook: focus moves into the dialog, Tab cycles inside it, Escape closes it, and focus returns to the control that opened it. Other dialogs on the site do not do this yet, and they are listed as a known gap below.',
+        claim: 'The nine dialogs built on our shared focus-trap hook (the apply modal and its confirmation, the job-alert modal, the mobile filter drawer, the employer message composer, the report-job flow, the mobile navigation menu, the shared confirm dialog, the message delete confirmation, and the admin job editor) behave the same way: focus moves into the dialog, Tab cycles inside it, Escape closes it, and focus returns to the control that opened it. A few other dialogs do not do this yet, and they are listed as a known gap below.',
         criterion: 'WCAG 2.1.2 No Keyboard Trap · 2.4.3 Focus Order',
     },
     {
@@ -153,15 +153,15 @@ const SHIPPED_CONTROLS: { claim: string; criterion: string }[] = [
         criterion: 'WCAG 4.1.2 Name, Role, Value',
     },
     {
-        claim: 'Motion honors prefers-reduced-motion in CSS: smooth scrolling becomes instant jumps, and CSS entrance animations, scroll reveals, and the skeleton shimmer are switched off. Three of the JavaScript-animated sections — the employer how-it-works steps, the featured-jobs grid, and the top-states list — check the preference themselves and render straight to their resting state. Two other JavaScript-driven animations do not yet, and they are listed as a known gap below.',
+        claim: 'Motion honors prefers-reduced-motion in CSS: smooth scrolling becomes instant jumps, and CSS entrance animations, scroll reveals, and the skeleton shimmer are switched off. All five of the JavaScript-animated sections (the employer how-it-works steps, the featured-jobs grid, the top-states list, the homepage hero entrance, and the mobile navigation menu) check the preference themselves and render straight to their resting state.',
         criterion: 'WCAG 2.3.3 Animation from Interactions',
     },
     {
-        claim: 'Form fields — including employer screening questions on the apply form — have programmatic labels, client-side validation with in-context error text, and visible character limits rather than silent server-side truncation.',
+        claim: 'Form fields, including employer screening questions on the apply form, have programmatic labels, client-side validation with in-context error text, and visible character limits rather than silent server-side truncation.',
         criterion: 'WCAG 3.3.1 Error Identification · 3.3.2 Labels or Instructions',
     },
     {
-        claim: 'Blocking window.alert() has been removed from the product surfaces in favour of in-page messaging, and the removal is enforced by a test so it cannot creep back.',
+        claim: 'Blocking window.alert() has been removed from the product surfaces in favor of in-page messaging, and the removal is enforced by a test so it cannot creep back.',
         criterion: 'WCAG 2.2.1 Timing Adjustable (supporting)',
     },
 ];
@@ -173,18 +173,13 @@ const SHIPPED_CONTROLS: { claim: string; criterion: string }[] = [
 const KNOWN_GAPS: { gap: string; impact: string; plan: string }[] = [
     {
         gap: 'Low-contrast secondary text.',
-        impact: 'Several muted grey tokens used for metadata, helper text, and captions measure between roughly 1.9:1 and 4.2:1 against our light backgrounds — below the 4.5:1 minimum for normal-size text. Anyone with low vision, or reading on a bright screen outdoors, may lose that text.',
-        plan: 'We are darkening the muted text tokens site-wide. The primary body and heading colours already pass comfortably; this affects secondary copy.',
+        impact: 'Several muted gray tokens used for metadata, helper text, and captions measure between roughly 1.9:1 and 4.2:1 against our light backgrounds, which is below the 4.5:1 minimum for normal-size text. Anyone with low vision, or reading on a bright screen outdoors, may lose that text.',
+        plan: 'We are darkening the muted text tokens site-wide. The primary body and heading colors already pass comfortably; this affects secondary copy.',
     },
     {
         gap: 'Focus is not trapped in every dialog.',
-        impact: 'Five dialogs share our focus-trap hook, but the rest do not: the cookie banner, the mobile navigation menu, the shared confirm dialog, the resume-autofill review, and the three job-description starter modals. In those, Tab can walk out of the dialog into the page behind it, and closing the dialog does not return focus to the control that opened it — so a keyboard or screen-reader user loses their place. The cookie banner is also the one dialog missing aria-modal and an Escape handler.',
+        impact: 'Nine dialogs share our focus-trap hook, but a few do not: the cookie banner, the resume-autofill review, and the three job-description starter modals. In those, Tab can walk out of the dialog into the page behind it, and closing the dialog does not return focus to the control that opened it, so a keyboard or screen-reader user loses their place. The cookie banner is also the one dialog missing aria-modal.',
         plan: 'We are moving the remaining dialogs onto the same shared hook. Each one that moves across leaves this list and joins the list above in the same change.',
-    },
-    {
-        gap: 'Two JavaScript-driven animations ignore reduced motion.',
-        impact: 'Our site-wide reduced-motion rule is written in CSS, and the animation library a handful of sections use drives its movement from JavaScript, where that CSS rule cannot reach it. Three of those sections check the preference themselves; the homepage hero entrance and the mobile navigation overlay do not, so they still animate for people who have asked their system for less motion.',
-        plan: 'Both are moving onto the same reduced-motion check the other three already use. When they do, this entry is deleted in the same change.',
     },
     {
         gap: 'Status messages are not announced.',
@@ -193,7 +188,7 @@ const KNOWN_GAPS: { gap: string; impact: string; plan: string }[] = [
     },
     {
         gap: 'Some data tables lack header associations.',
-        impact: 'Several tables — including the salary-guide and pricing tables — use visually styled header rows without scope attributes or a caption, so a screen reader may not tie a cell back to its column heading.',
+        impact: 'Several tables, including the salary-guide and pricing tables, use visually styled header rows without scope attributes or a caption, so a screen reader may not tie a cell back to its column heading.',
         plan: 'We are adding scope attributes and captions table by table. The employer comparison table, the press data table, and the resource-guide tables have been corrected already.',
     },
     {
@@ -203,7 +198,7 @@ const KNOWN_GAPS: { gap: string; impact: string; plan: string }[] = [
     },
     {
         gap: 'Employer-authored job descriptions.',
-        impact: 'Job description HTML is written by the hiring organisation. We sanitise it for safety, but we cannot guarantee its heading order, link text, or image alternatives.',
+        impact: 'Job description HTML is written by the hiring organization. We sanitize it for safety, but we cannot guarantee its heading order, link text, or image alternatives.',
         plan: 'Report a specific listing and we will contact the employer or correct the markup.',
     },
     {
@@ -299,7 +294,7 @@ export default function AccessibilityPage() {
                     </ul>
                 </Section>
 
-                <Section icon={<AlertTriangle size={20} />} title="Known gaps — the honest list">
+                <Section icon={<AlertTriangle size={20} />} title="Known gaps: the honest list">
                     <p style={{ marginBottom: '14px' }}>
                         These are real barriers on the site today. We publish them because you deserve to know what
                         you will run into before you run into it.
@@ -363,7 +358,7 @@ export default function AccessibilityPage() {
                     </ul>
                     <p style={{ marginTop: '12px' }}>
                         We aim to acknowledge accessibility reports within five business days. If a fix will take
-                        longer than that, we will tell you what the timeline is — and in the meantime we will get you
+                        longer than that, we will tell you what the timeline is, and in the meantime we will get you
                         the information or complete the task with you another way, by email or phone, at no
                         disadvantage to you.
                     </p>
@@ -393,14 +388,14 @@ export default function AccessibilityPage() {
                         <li>
                             <Link href="/editorial-policy" style={linkStyle}>
                                 Editorial Policy
-                            </Link>{' '}
-                            — how our content and statistics are produced and sourced.
+                            </Link>
+                            : how our content and statistics are produced and sourced.
                         </li>
                         <li>
                             <Link href="/security" style={linkStyle}>
                                 Security &amp; Trust
-                            </Link>{' '}
-                            — how we protect your data.
+                            </Link>
+                            : how we protect your data.
                         </li>
                         <li>
                             <Link href="/privacy" style={linkStyle}>

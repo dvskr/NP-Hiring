@@ -29,6 +29,26 @@ interface AboutEmployerProps {
     companyWebsite?: string | null;
 }
 
+/**
+ * Returns the value only when it parses as an absolute http: or https: URL
+ * with a host; otherwise null. Fails closed on anything unparseable.
+ */
+export function safeExternalHref(raw: string | null | undefined): string | null {
+    if (typeof raw !== 'string') return null;
+    const trimmed = raw.trim();
+    if (!trimmed || /[\u0000-\u001F\u007F\s]/.test(trimmed) || trimmed.startsWith('//')) return null;
+    // A bare host ("www.example.com") is a common legacy value; give it
+    // https:// rather than rendering it as a broken relative link.
+    const candidate = /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$)/i.test(trimmed) ? `https://${trimmed}` : trimmed;
+    try {
+        const parsed = new URL(candidate);
+        if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || !parsed.hostname.includes('.')) return null;
+        return parsed.toString();
+    } catch {
+        return null;
+    }
+}
+
 /* ═══ Clay card tokens ═══ */
 const clayCard: React.CSSProperties = {
     backgroundColor: '#F7FBF8',
@@ -70,7 +90,7 @@ const iconContainer: React.CSSProperties = {
 function ClaimedByEmployerBadge({ gapLeft = false }: { gapLeft?: boolean }) {
     return (
         <span
-            title="An employer asked to be recognised as the owner of this profile and our team approved the request."
+            title="An employer asked to be recognized as the owner of this profile, and our team approved the request."
             style={{
                 display: 'inline-flex', alignItems: 'center', gap: '4px',
                 padding: '2px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
@@ -91,8 +111,11 @@ export default function AboutEmployer({
     otherJobsCount = 0,
     companyWebsite,
 }: AboutEmployerProps) {
-    // Resolve website: prefer company record, fall back to job-level data
-    const websiteUrl = company?.website || companyWebsite || null;
+    // Resolve website: prefer company record, fall back to job-level data.
+    // Only an absolute http(s) URL may become an href: stored values can
+    // predate server-side sanitising, so a javascript:, data: or relative
+    // value is dropped here rather than rendered as a clickable link.
+    const websiteUrl = safeExternalHref(company?.website) || safeExternalHref(companyWebsite);
     const displayName = company?.name || employerName;
 
     // Employer jobs link — uses the employer filter param which is handled by the filter system
@@ -243,7 +266,7 @@ export default function AboutEmployer({
             <p style={{ fontSize: '14px', lineHeight: 1.65, color: 'var(--text-secondary)', margin: '0 0 14px' }}>
                 {employerName} is hiring for this {brand.niche.short} position. {brand.niche.long}s
                 play a critical role in addressing the growing demand for {brand.niche.category} services across the United States.
-                This employer is actively seeking qualified candidates to join their team.
+                This employer is actively seeking qualified candidates to join its team.
             </p>
 
             {otherJobsCount > 0 && (

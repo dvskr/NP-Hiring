@@ -178,7 +178,7 @@ export default function PracticeRevenueProjector() {
                 <p style={{ fontSize: '12.5px', color: '#78350F', margin: 0, lineHeight: 1.6 }}>
                     <strong>This is an illustration of arithmetic, not a financial projection.</strong> It multiplies
                     the volume and per-visit collections you enter and subtracts the overhead you enter. It knows
-                    nothing about your payer contracts, your market, or your ramp — and the sensitivity table below
+                    nothing about your payer contracts, your market, or your ramp, and the sensitivity table below
                     exists to show how much the answer moves when those inputs are wrong.
                 </p>
             </div>
@@ -200,7 +200,7 @@ export default function PracticeRevenueProjector() {
                 </select>
                 <p id="practice-scenario-hint" style={{ fontSize: '11.5px', color: '#94A3B8', margin: '5px 0 0', lineHeight: 1.45 }}>
                     Loads the midpoint of that scenario&rsquo;s published volume and overhead bands. Selecting a
-                    scenario overwrites the fields below — then change whatever you like.
+                    scenario overwrites the fields below; you can then change any value.
                 </p>
             </div>
 
@@ -209,21 +209,21 @@ export default function PracticeRevenueProjector() {
                 <NumberField
                     id="practice-visits"
                     label="Scheduled visits per week"
-                    hint={`Guide band for ${scenario.label.toLowerCase()}: ${scenario.visitsPerWeek.min}–${scenario.visitsPerWeek.max}.`}
+                    hint={`Guide band for ${scenario.label.toLowerCase()}: ${scenario.visitsPerWeek.min} to ${scenario.visitsPerWeek.max}.`}
                     value={draft.visitsPerWeek}
                     onChange={set('visitsPerWeek')}
                 />
                 <NumberField
                     id="practice-weeks"
                     label="Working weeks per year"
-                    hint={`Guide default: ${GUIDE_MODEL.workingWeeksPerYear} — 52 less about six for holidays, vacation, and admin days.`}
+                    hint={`Guide default: ${GUIDE_MODEL.workingWeeksPerYear}, which is 52 less about six for holidays, vacation, and admin days.`}
                     value={draft.weeksPerYear}
                     onChange={set('weeksPerYear')}
                 />
                 <NumberField
                     id="practice-collected"
                     label="Collected per completed visit"
-                    hint={`What you COLLECT, not what you bill. Guide planning inputs: $${GUIDE_MODEL.insuranceCollectedPerVisit} insurance, $${GUIDE_MODEL.cashCollectedPerVisit} cash-pay. Replace with your contracted rates.`}
+                    hint={`What you collect, not what you bill. Guide planning inputs: $${GUIDE_MODEL.insuranceCollectedPerVisit} insurance, $${GUIDE_MODEL.cashCollectedPerVisit} cash-pay. Replace with your contracted rates.`}
                     value={draft.collectedPerVisit}
                     prefix="$"
                     step={5}
@@ -232,7 +232,7 @@ export default function PracticeRevenueProjector() {
                 <NumberField
                     id="practice-overhead"
                     label="Overhead, share of collections"
-                    hint={`Guide band for ${scenario.label.toLowerCase()}: ${Math.round(scenario.overhead.min * 100)}–${Math.round(scenario.overhead.max * 100)}%. Covers the costs that scale with volume.`}
+                    hint={`Guide band for ${scenario.label.toLowerCase()}: ${Math.round(scenario.overhead.min * 100)} to ${Math.round(scenario.overhead.max * 100)}%. Covers the costs that scale with volume.`}
                     value={draft.overheadPct}
                     suffix="%"
                     onChange={set('overheadPct')}
@@ -240,7 +240,7 @@ export default function PracticeRevenueProjector() {
                 <NumberField
                     id="practice-noshow"
                     label="No-shows and late cancellations"
-                    hint="Your assumption — we publish no figure for this. Starts at 0, which assumes every scheduled visit completes."
+                    hint="Your assumption; we publish no figure for this. Starts at 0, which assumes every scheduled visit completes."
                     value={draft.noShowPct}
                     suffix="%"
                     onChange={set('noShowPct')}
@@ -248,7 +248,7 @@ export default function PracticeRevenueProjector() {
                 <NumberField
                     id="practice-fixed"
                     label="Fixed annual costs on top"
-                    hint="Your assumption — a lease, a specific EHR or billing contract. Starts at 0 because vendor pricing changes and we will not print a figure that expires."
+                    hint="Your assumption, such as a lease or a specific EHR or billing contract. Starts at 0 because vendor pricing changes and we will not print a figure that expires."
                     value={draft.fixedAnnualCosts}
                     prefix="$"
                     step={1000}
@@ -299,9 +299,9 @@ export default function PracticeRevenueProjector() {
                     <Link href={PRACTICE_GUIDE_PATH} className="tool-link" style={{ color: TOOL_ACCENT, fontWeight: 700, textDecoration: 'none' }}>
                         private practice guide
                     </Link>{' '}
-                    publishes {scenario.label.toLowerCase()} as {formatUsdK(band.grossMin)}–{formatUsdK(band.grossMax)}{' '}
-                    gross and {formatUsdK(band.netMin)}–{formatUsdK(band.netMax)} net, pairing its lowest volume with
-                    its highest overhead and vice versa. The figure above is a single point inside that method — the
+                    publishes {scenario.label.toLowerCase()} as {formatUsdK(band.grossMin)} to {formatUsdK(band.grossMax)}{' '}
+                    gross and {formatUsdK(band.netMin)} to {formatUsdK(band.netMax)} net, pairing its lowest volume with
+                    its highest overhead and vice versa. The figure above is a single point inside that method; the
                     preset loads the midpoint of both bands.
                 </p>
             </div>
@@ -312,17 +312,17 @@ export default function PracticeRevenueProjector() {
             </h3>
             <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: '0 0 12px', lineHeight: 1.55 }}>
                 Each row moves one input and holds the rest. The column headings are moves relative to the value you
-                entered, <strong>not percentage points</strong>
+                entered, <strong>not percentage points</strong>.
                 {overheadRow && overheadUp && overheadRow.baseValue > 0 && (
                     <>
-                        {' '}— on your {trim(overheadRow.baseValue)}% overhead share, the{' '}
+                        {' '}On your {trim(overheadRow.baseValue)}% overhead share, the{' '}
                         {pctLabel(overheadUp.step)} column is {trim(overheadUp.value)}% of collections, not{' '}
-                        {trim(overheadRow.baseValue + overheadUp.step * 100)}%
+                        {trim(overheadRow.baseValue + overheadUp.step * 100)}%.
                     </>
                 )}
-                . Each cell prints the value the model actually used underneath the net it produced. The swing column
-                is what that single input is worth to your net across the range; the largest swing is the number to go
-                and verify first.
+                {' '}Each cell prints the value the model used beneath the net it produced. The swing column
+                is what that single input is worth to your net across the range; the largest swing is the number to
+                verify first.
             </p>
             <div style={{ overflowX: 'auto', marginBottom: '16px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', minWidth: '520px' }}>

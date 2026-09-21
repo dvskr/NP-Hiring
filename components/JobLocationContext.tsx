@@ -105,7 +105,7 @@ export function buildProfessionNote(
 ): string | null {
     const label = professionClass ? APRN_PROFESSION_LABELS[professionClass] : undefined;
     if (!label) return null;
-    return `This listing is a ${label} role — an APRN profession in its own right, not a nurse practitioner position. The state practice rules below describe the NP practice environment.`;
+    return `This listing is a ${label} role, an APRN profession in its own right rather than a nurse practitioner position. The state practice rules below describe the NP practice environment.`;
 }
 
 export interface AdjustedSalaryContext {
@@ -314,7 +314,7 @@ export default function JobLocationContext({ model }: JobLocationContextProps) {
                             }}
                         >
                             {model.colDeltaPct > 0 ? '+' : ''}
-                            {model.colDeltaPct}% vs national average
+                            {model.colDeltaPct}% vs. national average
                         </span>
                     </p>
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.55 }}>
@@ -323,10 +323,10 @@ export default function JobLocationContext({ model }: JobLocationContextProps) {
                     {model.adjustedSalary && (
                         <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '6px 0 0', lineHeight: 1.55 }}>
                             Adjusted for local costs, this job&apos;s posted range of{' '}
-                            {formatUsd(model.adjustedSalary.nominalMin)}–{formatUsd(model.adjustedSalary.nominalMax)} is
+                            {formatUsd(model.adjustedSalary.nominalMin)} to {formatUsd(model.adjustedSalary.nominalMax)} is
                             worth about{' '}
                             <strong style={{ color: 'var(--text-primary)' }}>
-                                {formatUsd(model.adjustedSalary.adjustedMin)}–{formatUsd(model.adjustedSalary.adjustedMax)}
+                                {formatUsd(model.adjustedSalary.adjustedMin)} to {formatUsd(model.adjustedSalary.adjustedMax)}
                             </strong>{' '}
                             in national-average dollars.
                         </p>

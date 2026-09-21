@@ -6,6 +6,7 @@ import { sendEmployerMessageNotification } from '@/lib/email-service';
 import { canSendInMail, getEmployerTier } from '@/lib/tier-limits';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { sanitizeText } from '@/lib/sanitize';
+import { readJsonObject, validateEmployerSendPayload } from '@/app/api/conversations/_lib/message-payload';
 
 /**
  * GET /api/employer/messages — List sent messages for the employer
@@ -86,17 +87,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const body = await req.json();
-        const { recipientId, subject, body: messageBody, jobId } = body;
-
-        if (!recipientId || !subject || !messageBody
-            || typeof subject !== 'string' || typeof messageBody !== 'string') {
-            return NextResponse.json({ error: 'recipientId, subject, and body are required' }, { status: 400 });
+        // Type-checked payload: object-valued recipientId / jobId (Prisma
+        // operator injection), malformed JSON, and oversized subjects are all
+        // rejected with 400. The returned subject is already sanitized and
+        // capped, so both the Conversation and EmployerMessage rows get it.
+        const payload = validateEmployerSendPayload(await readJsonObject(req));
+        if (!payload.ok) {
+            return NextResponse.json({ error: payload.error }, { status: 400 });
         }
-
-        if (messageBody.length > 2000) {
-            return NextResponse.json({ error: 'Message body must be under 2000 characters' }, { status: 400 });
-        }
+        const { recipientId, subject, body: messageBody, jobId } = payload.value;
 
         // Look up recipient first (needed for conversation check)
         const recipient = await prisma.userProfile.findUnique({
@@ -227,9 +226,14 @@ export async function POST(req: NextRequest) {
                 },
             });
 
+            // A new message restores the thread for anyone who deleted it,
+            // matching the reply route (POST /api/conversations/[id]) and the
+            // candidate send route. Without clearing both flags, a candidate
+            // who deleted the thread would never see the employer's follow-up:
+            // GET /api/conversations filters on deletedByA / deletedByB.
             await tx.conversation.update({
                 where: { id: conversation.id },
-                data: { lastMessageAt: new Date() },
+                data: { lastMessageAt: new Date(), deletedByA: false, deletedByB: false },
             });
 
             return { conversation, message };
@@ -260,7 +264,7 @@ export async function POST(req: NextRequest) {
                     senderName,
                     senderProfile.company,
                     subject,
-                    messageBody,
+                    message.body,
                     jobTitle
                 ).catch(err => logger.error('Email notification error', err))
             );

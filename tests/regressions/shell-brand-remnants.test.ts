@@ -38,7 +38,7 @@ describe('F2 — no donor-brand copy on shell surfaces', () => {
 
   it('middleware 410 pages derive branding from config/brand.ts', () => {
     const mw = read('middleware.ts');
-    expect(mw).toContain('${opts.badge} — ${brand.name}');
+    expect(mw).toContain('${opts.badge} | ${brand.name}');
     expect(mw).toContain('Browse all ${safe(brand.niche.short)} jobs');
     // Donor-specialty copy on the telehealth quick-card is gone.
     expect(mw).not.toContain('Virtual psychiatric care');

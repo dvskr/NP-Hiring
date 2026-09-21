@@ -54,6 +54,8 @@ describe('C1 — employer job update emits embedding.refresh.job', () => {
       id: 'ej-1', jobId: 'job-abc', contactEmail: 'employer@example.com',
       companyWebsite: null, companyLogoUrl: null, editToken: 'valid-token-abc',
     } as never);
+    // The route now reads the stored mode/setting/population before validating.
+    vi.mocked(prisma.job.findUnique).mockResolvedValue({ mode: 'In-Person', setting: null, population: null } as never);
     vi.mocked(prisma.job.update).mockResolvedValue({
       id: 'job-abc', title: 'PMHNP Outpatient', isPublished: true,
     } as never);
@@ -77,6 +79,8 @@ describe('C1 — employer job update emits embedding.refresh.job', () => {
       id: 'ej-2', jobId: 'job-xyz', contactEmail: 'employer@example.com',
       companyWebsite: null, companyLogoUrl: null, editToken: 'valid-token-abc',
     } as never);
+    // The route now reads the stored mode/setting/population before validating.
+    vi.mocked(prisma.job.findUnique).mockResolvedValue({ mode: 'In-Person', setting: null, population: null } as never);
     vi.mocked(prisma.job.update).mockResolvedValue({
       id: 'job-xyz', title: 'PMHNP Inpatient', isPublished: true,
     } as never);

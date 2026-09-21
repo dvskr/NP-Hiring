@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Bell, MapPin, Briefcase, Zap, CheckCircle, AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
@@ -10,7 +10,6 @@ import { SALARY_FILTER_BUCKETS } from '@/config/niche/stats';
 import { EXPERIENCE_FILTER_BUCKETS } from '@/lib/filters';
 import { ALERT_KEYWORD_SUGGESTIONS, ALERT_KEYWORD_PLACEHOLDER } from '@/config/niche/alert-keywords';
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 /**
  * P2 #3 — query params this page accepts as prefill, so any surface that
@@ -126,6 +125,7 @@ function JobAlertsContent() {
   const [minYears, setMinYears] = useState('');
   const [frequency, setFrequency] = useState('daily');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitInFlightRef = useRef(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | ''; text: string }>({ type: '', text: '' });
   const [emailError, setEmailError] = useState('');
 
@@ -155,12 +155,16 @@ function JobAlertsContent() {
   // Form submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // In-flight guard. `disabled={isSubmitting}` only lands after React
+    // re-renders, so two clicks in the same task (a fast double click) would
+    // both reach fetch. A ref flips synchronously and blocks the second one.
+    if (submitInFlightRef.current) return;
     setEmailError('');
     setMessage({ type: '', text: '' });
 
     // Validate email
     if (!email.trim()) {
-      setEmailError('Email is required');
+      setEmailError('Email address is required');
       return;
     }
     if (!validateEmail(email)) {
@@ -168,6 +172,7 @@ function JobAlertsContent() {
       return;
     }
 
+    submitInFlightRef.current = true;
     setIsSubmitting(true);
 
     try {
@@ -193,7 +198,7 @@ function JobAlertsContent() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setMessage({ type: 'success', text: 'Job alert created! Check your email to confirm.' });
+        setMessage({ type: 'success', text: 'Job alert created! Your alert is active, and matching jobs will arrive in your inbox.' });
         // Reset form
         setEmail('');
         setKeyword('');
@@ -210,6 +215,7 @@ function JobAlertsContent() {
     } catch {
       setMessage({ type: 'error', text: 'Network error. Please try again.' });
     } finally {
+      submitInFlightRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -237,8 +243,8 @@ function JobAlertsContent() {
     <div style={{ minHeight: '100vh', background: '#FBEFE4' }}>
       {/* ═══ Hero Section ═══ */}
       <CategoryHero
-        bgColor="#BE185D"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_alerts.webp`}
+        bgColor="#1b9688"
+        heroImage="/images/categories/heroes/job-alerts.webp"
         heroAlt="Job Alerts"
         badgeText="Job Alerts"
         breadcrumbs={['Home', 'Job Alerts']}
@@ -474,9 +480,9 @@ function JobAlertsContent() {
                       ))}
                     </select>
                     <p id="alert-min-years-note" style={{ fontSize: '11px', color: '#B0C4BC', marginTop: '4px' }}>
-                      Pick your years and we&apos;ll only send roles you qualify for —
-                      jobs asking for at most that much experience, plus jobs that
-                      don&apos;t state a minimum.
+                      Select your years of experience and we&apos;ll only send roles you
+                      qualify for: jobs asking for at most that much experience, plus
+                      jobs that don&apos;t state a minimum.
                     </p>
                   </div>
 
@@ -532,10 +538,10 @@ function JobAlertsContent() {
                     <p id="alert-min-salary-note" style={{ fontSize: '11px', color: '#B0C4BC', marginTop: '4px' }}>
                       Your alert matches a job when the top of its posted range reaches
                       this figure, and it keeps jobs that don&apos;t publish a salary at
-                      all — filtering those out would hide most postings. Jobs
+                      all, because filtering those out would hide most postings. Jobs
                       advertising a single figure rather than a range (&ldquo;$130,000/yr&rdquo;)
                       are missed even when that figure clears your minimum, and the jobs
-                      board does show those — so the two lists won&apos;t be identical.
+                      board does show those, so the two lists won&apos;t be identical.
                     </p>
                   </div>
 

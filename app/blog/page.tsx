@@ -336,9 +336,18 @@ export default async function BlogIndexPage({
                                     No posts found
                                 </h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42' }}>
-                                    {categoryFilter
-                                        ? 'No posts in this category yet. Check back soon!'
-                                        : 'No blog posts published yet. Check back soon!'}
+                                    {/* A page number past the end must not claim nothing
+                                        is published while posts exist on earlier pages. */}
+                                    {totalCount > 0 ? (
+                                        <>
+                                            This page is past the end of the list.{' '}
+                                            <Link href={buildUrl(1, categoryFilter)} style={{ color: '#BE185D', fontWeight: 600 }}>
+                                                Go to the first page
+                                            </Link>
+                                        </>
+                                    ) : categoryFilter
+                                        ? 'There are no posts in this category yet. Please check back soon.'
+                                        : 'No blog posts have been published yet. Please check back soon.'}
                                 </p>
                             </div>
                         )}
@@ -435,7 +444,7 @@ export default async function BlogIndexPage({
                             { href: '/salary-guide', IconComp: DollarSign, title: 'Salary Guide', desc: '2026 data with state breakdowns' },
                             // P0 #5: evergreen cadence claim — was a fabricated five-digit inventory count.
                             { href: '/jobs', IconComp: Search, title: 'Browse Jobs', desc: `New ${brand.niche.short} positions daily` },
-                            { href: '/resources', IconComp: BookOpen, title: 'Resources', desc: 'Licensure guides & tools' },
+                            { href: '/resources', IconComp: BookOpen, title: 'Resources', desc: 'Licensure guides and tools' },
                         ].map(item => {
                             const IconC = item.IconComp;
                             return (

@@ -59,27 +59,27 @@ export interface JdTemplate {
 
 const REQUIRED_QUALS_BLOCK = `<h3>Required qualifications</h3>
 <ul>
-<li>Master's or Doctoral degree (MSN, DNP) from an accredited ${brand.niche.short} program</li>
+<li>Master's or doctoral degree (MSN or DNP) from an accredited ${brand.niche.short} program</li>
 <li>Active, unrestricted national ${brand.niche.short} board certification (ANCC or AANP) in your population focus</li>
 <li>Active RN and APRN/NP licensure in {{state}}</li>
-<li>Active, unrestricted DEA registration with Schedule II authority (or willingness to obtain by start date)</li>
-<li>[Set your experience requirement — e.g. "New grads welcome", "1+ year preferred", "3+ years required"]</li>
+<li>Active, unrestricted DEA registration with Schedule II authority (or willingness to obtain it by the start date)</li>
+<li>[Set your experience requirement, for example "New grads welcome", "1+ year preferred", or "3+ years required"]</li>
 </ul>`;
 
 const COMP_BENEFITS_BLOCK = `<h2>Compensation and benefits</h2>
 <ul>
-<li>Base salary: $[XXX,000 – XXX,000] commensurate with experience</li>
-<li>[Bonus structure — e.g. quarterly outcomes bonus, productivity bonus, sign-on, none]</li>
+<li>Base salary: $[XXX,000 to XXX,000], commensurate with experience</li>
+<li>[Bonus structure, for example a quarterly outcomes bonus, productivity bonus, sign-on bonus, or none]</li>
 <li>Health, dental, and vision insurance</li>
 <li>$[X,XXX] annual CME stipend plus [X] paid CME days</li>
-<li>Full malpractice with tail coverage</li>
+<li>Full malpractice insurance with tail coverage</li>
 <li>401(k) or 403(b) with employer match</li>
-<li>[X] weeks paid time off plus [X] paid holidays</li>
-<li>[Optional: loan repayment, relocation, parental leave specifics]</li>
+<li>[X] weeks of paid time off plus [X] paid holidays</li>
+<li>[Optional: loan repayment, relocation assistance, and parental leave specifics]</li>
 </ul>`;
 
 const APPLY_BLOCK = `<h2>How to apply</h2>
-<p>Submit your CV with a brief cover note describing your interest in this role. We typically respond within [N] business days. Equal-opportunity employer; we strongly encourage applications from clinicians of all backgrounds.</p>`;
+<p>Submit your CV with a brief cover note describing your interest in this role. We typically respond within [N] business days. We are an equal-opportunity employer and strongly encourage applications from clinicians of all backgrounds.</p>`;
 
 function buildTemplate(parts: {
   aboutBlurb: string;
@@ -106,14 +106,14 @@ function buildTemplate(parts: {
 
 const OUTPATIENT_ADULT_BODY = buildTemplate({
   aboutBlurb:
-    'We are a [mission/values phrase — e.g. clinician-led, evidence-based] outpatient primary-care practice serving adults with [patient mix — e.g. preventive care, chronic disease management, acute visits].',
+    'We are a [mission or values phrase, for example clinician-led and evidence-based] outpatient primary-care practice serving adults with [patient mix, for example preventive care, chronic disease management, and acute visits].',
   positionSummary:
-    `This is a [full-time / part-time] outpatient ${brand.niche.short} role with autonomy over your panel and treatment decisions. You will conduct patient evaluations, manage acute and chronic conditions, and coordinate care with our [specialty / behavioral health / care management] team. Our EHR is [Athena / Epic / NextGen / specify] with [templated notes / AI-assisted documentation / specify any tooling].`,
+    `This is a [full-time / part-time] outpatient ${brand.niche.short} role with autonomy over your panel and treatment decisions. You will conduct patient evaluations, manage acute and chronic conditions, and coordinate care with our [specialty / behavioral health / care management] team. Our EHR is [Athena / Epic / NextGen / specify], with [templated notes / AI-assisted documentation / specify any tooling].`,
   responsibilities: [
     'Conduct [30 / 45]-minute new-patient evaluations and [15 / 20]-minute follow-up visits',
-    'Diagnose and manage [list common conditions you see — e.g. hypertension, diabetes, asthma, thyroid disorders]',
+    'Diagnose and manage [list the common conditions you see, for example hypertension, diabetes, asthma, and thyroid disorders]',
     'Prescribe and titrate medications, including controlled substances where clinically appropriate',
-    'Order and interpret labs, imaging, and screening tests per evidence-based guidelines',
+    'Order and interpret labs, imaging, and screening tests according to evidence-based guidelines',
     'Provide preventive care, patient education, and chronic-disease counseling',
     'Coordinate referrals with behavioral health, specialty, and community resources',
     'Document encounters in the EHR within [24 / 48] hours',
@@ -122,26 +122,26 @@ const OUTPATIENT_ADULT_BODY = buildTemplate({
     `[N]+ years of outpatient or primary-care ${brand.niche.short} experience`,
     'Experience with quality measures and value-based care metrics (HEDIS, MIPS)',
     '[Spanish / Mandarin / other language] fluency for our patient population',
-    '[Specific procedural skill: joint injections, suturing, skin biopsies]',
+    '[Specific procedural skill, for example joint injections, suturing, or skin biopsies]',
   ],
   schedule:
-    'Monday through Friday, [8:30 a.m. – 5:00 p.m. / your hours], with [one administrative half-day per week / specify]. [No weekend, on-call, or after-hours coverage required / specify any call duties].',
+    'Monday through Friday, [8:30 a.m. to 5:00 p.m. / your hours], with [one administrative half-day per week / specify]. [No weekend, on-call, or after-hours coverage required / specify any call duties].',
   whyJoin:
-    '[1–2 sentences about what makes your practice distinctive — clinician-led leadership, manageable panel sizes, administrative support, growth path, etc.]',
+    '[One or two sentences about what makes your practice distinctive: clinician-led leadership, manageable panel sizes, administrative support, a growth path, and so on.]',
 });
 
 const OUTPATIENT_PEDIATRIC_BODY = buildTemplate({
   aboutBlurb:
-    'We are a pediatric outpatient practice serving patients ages [0–18 / 0–21 / specify] for [well-child care, acute visits, chronic-condition management — adjust to your population].',
+    'We are a pediatric outpatient practice serving patients ages [0 to 18 / 0 to 21 / specify] for [well-child care, acute visits, and chronic-condition management; adjust to your population].',
   positionSummary:
-    `This is a pediatric ${brand.niche.short} role focused on developmentally-informed care. You will conduct well-child and sick visits, manage common pediatric conditions, and partner closely with parents, schools, and specialty providers.`,
+    `This is a pediatric ${brand.niche.short} role focused on developmentally informed care. You will conduct well-child and sick visits, manage common pediatric conditions, and partner closely with parents, schools, and specialty providers.`,
   responsibilities: [
     'Conduct well-child exams, developmental screenings, and immunization visits',
-    'Diagnose and treat common pediatric conditions — [asthma, ADHD, infections, allergies — specify]',
+    'Diagnose and treat common pediatric conditions: [asthma, ADHD, infections, allergies; specify]',
     'Prescribe and dose medications appropriately for pediatric populations',
     'Counsel families on growth, development, nutrition, and safety',
     'Coordinate with schools, early-intervention programs, and pediatric specialists',
-    'Document per [your state] pediatric care requirements',
+    'Document according to [your state] pediatric care requirements',
   ],
   preferredQuals: [
     `[N]+ years of pediatric ${brand.niche.short} experience`,
@@ -150,100 +150,100 @@ const OUTPATIENT_PEDIATRIC_BODY = buildTemplate({
     '[Spanish / specify] fluency for our patient population',
   ],
   schedule:
-    'Monday through Friday with [after-school slots / extended hours] to accommodate school schedules. [Weekend sick-visit rotation / no weekends]; [phone-triage rotation / no on-call].',
+    'Monday through Friday, with [after-school slots / extended hours] to accommodate school schedules. [Weekend sick-visit rotation / no weekends]; [phone-triage rotation / no on-call].',
   whyJoin:
-    '[Describe your practice: team culture, panel size, mission, training opportunities, etc.]',
+    '[Describe your practice: team culture, panel size, mission, training opportunities, and so on.]',
 });
 
 const OUTPATIENT_GERIATRIC_BODY = buildTemplate({
   aboutBlurb:
-    'We are a geriatric practice serving older adults (age [55+ / 65+]) across [clinic / long-term-care / home-based — specify] settings, with a focus on complex chronic disease and healthy aging.',
+    'We are a geriatric practice serving older adults (age [55+ / 65+]) across [clinic / long-term-care / home-based; specify] settings, with a focus on complex chronic disease and healthy aging.',
   positionSummary:
-    `This is a geriatric ${brand.niche.short} role centered on careful medication management in medically complex older adults, often in collaboration with primary care, specialty, and skilled nursing teams.`,
+    `This is a geriatric ${brand.niche.short} role centered on careful medication management for medically complex older adults, often in collaboration with primary care, specialty, and skilled nursing teams.`,
   responsibilities: [
-    'Conduct comprehensive geriatric assessments including cognitive screening (MoCA / MMSE), fall-risk review, and functional evaluation',
-    'Diagnose and manage chronic conditions common in later life — [heart failure, COPD, diabetes, dementia — specify]',
-    'Prescribe with attention to polypharmacy, renal/hepatic adjustments, and fall risk',
+    'Conduct comprehensive geriatric assessments, including cognitive screening (MoCA / MMSE), fall-risk review, and functional evaluation',
+    'Diagnose and manage chronic conditions common in later life: [heart failure, COPD, diabetes, dementia; specify]',
+    'Prescribe with attention to polypharmacy, renal and hepatic adjustments, and fall risk',
     'Coordinate with primary care, specialists, and [SNF / ALF / memory-care facility] staff',
     'Lead family meetings on diagnosis, prognosis, and goals of care',
     '[Optional: conduct in-facility visits at assisted-living or skilled-nursing partners]',
   ],
   preferredQuals: [
     `[N]+ years of geriatric or general adult ${brand.niche.short} experience`,
-    'Familiarity with Beers Criteria and STOPP/START prescribing in older adults',
+    'Familiarity with the Beers Criteria and STOPP/START prescribing in older adults',
     'Comfort with dementia care, capacity assessments, and end-of-life conversations',
     '[Spanish / specify] fluency',
   ],
   schedule:
-    'Monday through Friday daytime hours. [Some in-facility visits at partner sites / clinic-based only]. No weekends or on-call.',
+    'Monday through Friday, daytime hours. [Some in-facility visits at partner sites / clinic-based only]. No weekends or on-call.',
   whyJoin:
-    '[What makes your geriatric practice unique — interdisciplinary team, memory-care partnership, research, mission, etc.]',
+    '[What makes your geriatric practice unique: an interdisciplinary team, a memory-care partnership, research, mission, and so on.]',
 });
 
 const OUTPATIENT_WOMENS_HEALTH_BODY = buildTemplate({
   aboutBlurb:
-    "We are an outpatient women's health practice providing [gynecologic care, family planning, prenatal and postpartum care, menopause management — adjust to your services].",
+    "We are an outpatient women's health practice providing [gynecologic care, family planning, prenatal and postpartum care, and menopause management; adjust to your services].",
   positionSummary:
-    `This is a women's health ${brand.niche.short} role with a focus on [well-woman care / family planning / obstetric support — specify]. You will manage a full spectrum of women's health visits and coordinate with our [OB/GYN / midwifery / primary-care] team.`,
+    `This is a women's health ${brand.niche.short} role with a focus on [well-woman care / family planning / obstetric support; specify]. You will manage the full spectrum of women's health visits and coordinate with our [OB/GYN / midwifery / primary-care] team.`,
   responsibilities: [
     'Conduct well-woman exams, contraceptive counseling, and preventive screenings',
     'Diagnose and manage common gynecologic conditions',
-    'Provide [prenatal and postpartum care / menopause management — specify scope]',
-    'Perform in-office procedures — [IUD insertion, implant placement, colposcopy — adjust to your privileges]',
+    'Provide [prenatal and postpartum care / menopause management; specify scope]',
+    'Perform in-office procedures: [IUD insertion, implant placement, colposcopy; adjust to your privileges]',
     'Order and interpret labs, ultrasounds, and screening studies',
     'Coordinate referrals to OB/GYN, maternal-fetal medicine, and specialty care',
   ],
   preferredQuals: [
     "WHNP-BC certification, or FNP certification with women's health experience",
     "[N]+ years of women's health experience",
-    'Procedural experience — [IUD / implant / colposcopy — specify]',
+    'Procedural experience: [IUD / implant / colposcopy; specify]',
     '[Spanish / specify] fluency',
   ],
   schedule:
-    'Monday through Friday, [8–5 / your hours]. [No call / shared phone-triage rotation — specify].',
+    'Monday through Friday, [8 to 5 / your hours]. [No call / shared phone-triage rotation; specify].',
   whyJoin:
-    '[Describe your practice — collaborative team, patient population, procedural scope, growth path, etc.]',
+    '[Describe your practice: a collaborative team, patient population, procedural scope, growth path, and so on.]',
 });
 
 // ─── Inpatient templates ─────────────────────────────────────────
 
 const INPATIENT_ADULT_ACUTE_BODY = buildTemplate({
   aboutBlurb:
-    'We are a [N]-bed [hospitalist / medical-surgical / step-down] service at [community hospital / academic medical center / specify], caring for acutely ill adult inpatients.',
+    'We are a [N]-bed [hospitalist / medical-surgical / step-down] service at a [community hospital / academic medical center / specify], caring for acutely ill adult inpatients.',
   positionSummary:
-    `This is an inpatient ${brand.niche.short} role with shared admitting and rounding responsibility alongside a [hospitalist physician group / attending team]. Caseload is [10–16] patients with average length of stay [N] days.`,
+    `This is an inpatient ${brand.niche.short} role with shared admitting and rounding responsibility alongside a [hospitalist physician group / attending team]. The caseload is [10 to 16] patients, with an average length of stay of [N] days.`,
   responsibilities: [
     'Perform admission histories and physicals within [4] hours of arrival, including assessment and provisional diagnosis',
-    'Round daily on assigned patients with progress notes documenting clinical status, response to treatment, and discharge readiness',
-    'Manage acute medication regimens and titrations, including [anticoagulation / insulin protocols — specify]',
+    'Round daily on assigned patients, with progress notes documenting clinical status, response to treatment, and discharge readiness',
+    'Manage acute medication regimens and titrations, including [anticoagulation / insulin protocols; specify]',
     'Order and interpret labs, imaging, and diagnostic studies',
     'Participate in daily multidisciplinary treatment-team rounds',
-    'Respond to rapid-response and escalation calls per unit protocol',
+    'Respond to rapid-response and escalation calls according to unit protocol',
     'Lead family meetings for discharge planning and goals-of-care conversations',
   ],
   preferredQuals: [
     `[N]+ years of acute-care or hospitalist ${brand.niche.short} experience`,
     'AGACNP-BC certification preferred for adult acute-care scope',
     'BLS required; ACLS preferred',
-    'Experience with [bedside procedures — specify per your credentialing]',
+    'Experience with [bedside procedures; specify per your credentialing]',
   ],
   schedule:
-    '[12-hour shifts on a 7-on/7-off rotation / Monday–Friday day shifts / specify]. [Weekend coverage shared equitably / specify]. Holiday rotation [details].',
+    '[12-hour shifts on a 7-on/7-off rotation / Monday through Friday day shifts / specify]. [Weekend coverage shared equitably / specify]. Holiday rotation: [details].',
   whyJoin:
-    '[Distinctive features — teaching hospital, low readmission rates, clinical scholarship support, pension/benefits, etc.]',
+    '[Distinctive features: a teaching hospital, low readmission rates, clinical scholarship support, pension and benefits, and so on.]',
 });
 
 const INPATIENT_PEDIATRIC_BODY = buildTemplate({
   aboutBlurb:
-    'We are a [N]-bed pediatric inpatient unit serving patients ages [0–18 / specify] with acute medical conditions requiring hospitalization.',
+    'We are a [N]-bed pediatric inpatient unit serving patients ages [0 to 18 / specify] with acute medical conditions that require hospitalization.',
   positionSummary:
     `This is a pediatric inpatient ${brand.niche.short} role focused on acute stabilization, family-centered care, and coordinated discharge into outpatient follow-up.`,
   responsibilities: [
-    'Perform admissions including history, physical exam, and family interview',
-    'Round daily; document clinical status, treatment response, and discharge criteria',
+    'Perform admissions, including history, physical exam, and family interview',
+    'Round daily and document clinical status, treatment response, and discharge criteria',
     'Manage medication regimens with pediatric weight-based dosing',
     'Lead daily multidisciplinary rounds with nursing, social work, and child-life teams',
-    'Coordinate with parents/guardians, schools, and community providers as needed',
+    'Coordinate with parents or guardians, schools, and community providers as needed',
     'Lead family meetings on diagnosis, treatment, and post-discharge planning',
   ],
   preferredQuals: [
@@ -253,43 +253,43 @@ const INPATIENT_PEDIATRIC_BODY = buildTemplate({
     'Comfort with family-centered communication in high-stress situations',
   ],
   schedule:
-    '[Schedule details — 12-hour shifts, weekday days, weekend rotation, etc.]',
+    '[Schedule details: 12-hour shifts, weekday days, weekend rotation, and so on.]',
   whyJoin:
-    '[Distinctive features of your program — family integration, child-life services, step-down partnership, etc.]',
+    '[Distinctive features of your program: family integration, child-life services, a step-down partnership, and so on.]',
 });
 
 // ─── Telehealth templates ────────────────────────────────────────
 
 const TELEHEALTH_ADULT_BODY = buildTemplate({
   aboutBlurb:
-    'We are a 100% remote telehealth practice serving adults in [single state / {{state}} only — specify if multi-state]. We operate exclusively over [HIPAA-compliant video platform] with [asynchronous messaging / chat as adjunct, specify].',
+    'We are a 100% remote telehealth practice serving adults in [a single state / {{state}} only; specify if multi-state]. We operate exclusively over [HIPAA-compliant video platform], with [asynchronous messaging / chat as an adjunct; specify].',
   positionSummary:
-    `This is a fully-remote ${brand.niche.short} role. You see patients exclusively over video from a home office of your choosing. We have invested in [low panel cap / measurement-based care / clinician-led policy / specify your differentiator].`,
+    `This is a fully remote ${brand.niche.short} role. You will see patients exclusively over video from a home office of your choosing. We have invested in [a low panel cap / measurement-based care / clinician-led policy / specify your differentiator].`,
   responsibilities: [
-    'Conduct [30–45]-minute initial telehealth evaluations and [15–20]-minute follow-ups',
-    'Diagnose and treat [primary-care / urgent-care / chronic-condition — specify] presentations appropriate for virtual care',
-    'Prescribe medications via [EPCS] in compliance with state telehealth and DEA controlled-substance rules',
-    'Manage an active panel of approximately [250–350] patients',
+    'Conduct [30 to 45]-minute initial telehealth evaluations and [15 to 20]-minute follow-ups',
+    'Diagnose and treat [primary-care / urgent-care / chronic-condition; specify] presentations appropriate for virtual care',
+    'Prescribe medications via [EPCS] in compliance with state telehealth rules and DEA controlled-substance rules',
+    'Manage an active panel of approximately [250 to 350] patients',
     'Respond to asynchronous patient messages within [N] business days',
     'Escalate patients who need in-person evaluation to local care with clear documentation',
   ],
   preferredQuals: [
     `[N]+ years of clinical ${brand.niche.short} experience (any setting)`,
-    'Existing multi-state licensure (compact RN preferred)',
-    'Comfort with asynchronous patient messaging workflows',
+    'Existing multi-state licensure (compact RN license preferred)',
+    'Comfort with asynchronous patient-messaging workflows',
     '[Spanish / specify] fluency',
   ],
   schedule:
-    'Monday through Friday [hours]. [Optional Saturday morning availability]. Full-time defined as [N] clinical hours per week. No nights, no weekends, no call.',
+    'Monday through Friday, [hours]. [Optional Saturday morning availability]. Full-time is defined as [N] clinical hours per week. No nights, no weekends, and no call.',
   whyJoin:
-    '[Telehealth-specific differentiators — clinician-led, measurement-based outcomes, no commute, home-office stipend, etc.]',
+    '[Telehealth-specific differentiators: clinician-led policy, measurement-based outcomes, no commute, a home-office stipend, and so on.]',
 });
 
 const TELEHEALTH_MULTISTATE_BODY = buildTemplate({
   aboutBlurb:
-    'We are a multi-state telehealth practice licensed in [N] states, serving patients across the country. We invest heavily in licensing support — our credentialing team handles the paperwork for additional state licenses.',
+    'We are a multi-state telehealth practice licensed in [N] states, serving patients across the country. We invest heavily in licensing support, and our credentialing team handles the paperwork for additional state licenses.',
   positionSummary:
-    `This is a fully-remote multi-state ${brand.niche.short} role. You will see patients across multiple states using a unified video platform and EHR. We support clinicians in expanding their state portfolio over time.`,
+    `This is a fully remote multi-state ${brand.niche.short} role. You will see patients across multiple states using a unified video platform and EHR. We support clinicians in expanding their state portfolio over time.`,
   responsibilities: [
     'Conduct telehealth evaluations and follow-ups across [N] states',
     'Maintain awareness of state-specific prescribing restrictions and telehealth rules',
@@ -298,27 +298,27 @@ const TELEHEALTH_MULTISTATE_BODY = buildTemplate({
     'Participate in monthly virtual case-consultation and clinical-supervision meetings',
   ],
   preferredQuals: [
-    'Multi-state licensure (compact RN strongly preferred) — we support adding additional states',
-    '[N]+ years clinical experience',
+    'Multi-state licensure (compact RN license strongly preferred); we support adding additional states',
+    '[N]+ years of clinical experience',
     'Comfort with state-by-state telehealth nuances',
     '[Spanish / specify] fluency',
   ],
   schedule:
-    'Flexible. Full-time is [N] clinical hours per week within hours of operation across your licensed time zones.',
+    'Flexible. Full-time is [N] clinical hours per week within our hours of operation across your licensed time zones.',
   whyJoin:
-    '[What makes your multi-state operation distinctive — licensing support team, clinician-led policy, transparent outcomes, etc.]',
+    '[What makes your multi-state operation distinctive: a licensing support team, clinician-led policy, transparent outcomes, and so on.]',
 });
 
 // ─── Specialty / setting templates ───────────────────────────────
 
 const FQHC_COMMUNITY_HEALTH_BODY = buildTemplate({
   aboutBlurb:
-    'We are a Federally Qualified Health Center (FQHC) serving [rural / urban underserved / specify] patients. Our care team integrates primary care, behavioral health, and [dental / pharmacy — specify] services under one roof.',
+    'We are a Federally Qualified Health Center (FQHC) serving [rural / urban underserved / specify] patients. Our care team integrates primary care, behavioral health, and [dental / pharmacy; specify] services under one roof.',
   positionSummary:
     `This is an ${brand.niche.short} role embedded in our primary-care team. You will see patients of all ages and acuity levels, with a strong emphasis on accessibility, harm reduction, and culturally responsive care.`,
   responsibilities: [
-    'Conduct patient evaluations for adults [and pediatrics — specify scope]',
-    'Provide warm hand-offs with behavioral-health and care-management colleagues',
+    'Conduct patient evaluations for adults [and pediatric patients; specify scope]',
+    'Provide warm hand-offs to behavioral-health and care-management colleagues',
     'Manage medications across diagnostic categories',
     'Coordinate with [care managers / community-health workers / social services]',
     'Document in our EHR ([NextGen / Epic / OCHIN / specify])',
@@ -326,14 +326,14 @@ const FQHC_COMMUNITY_HEALTH_BODY = buildTemplate({
   ],
   preferredQuals: [
     'Comfort with high-acuity, underserved populations',
-    'Experience with [Medicaid / sliding-scale / HRSA-funded] care environments',
-    '[Spanish / specify] strongly preferred',
-    'Interest in HRSA NHSC service commitment a plus',
+    'Experience in [Medicaid / sliding-scale / HRSA-funded] care environments',
+    '[Spanish / specify] fluency strongly preferred',
+    'Interest in an HRSA NHSC service commitment is a plus',
   ],
   schedule:
-    'Monday through Friday [8–5 / specify]. No nights, weekends, or call. [X] weeks PTO plus paid CME.',
+    'Monday through Friday, [8 to 5 / specify]. No nights, weekends, or call. [X] weeks of PTO plus paid CME.',
   whyJoin:
-    'HRSA NHSC loan repayment eligible — up to $[50,000+] for a 2-year service commitment. [Add specifics about your mission and team.]',
+    'HRSA NHSC loan repayment eligible: up to $[50,000+] for a 2-year service commitment. [Add specifics about your mission and team.]',
 });
 
 const CORRECTIONAL_HEALTH_BODY = buildTemplate({
@@ -343,10 +343,10 @@ const CORRECTIONAL_HEALTH_BODY = buildTemplate({
     `This is a correctional ${brand.niche.short} role focused on patient evaluation, chronic-disease management, and urgent response within a [secure facility / specify]. You will work as part of a multidisciplinary team alongside corrections staff, behavioral-health providers, and medical colleagues.`,
   responsibilities: [
     'Conduct intake evaluations for newly incarcerated individuals and chronic-care follow-ups',
-    'Diagnose and manage chronic conditions — [diabetes, hypertension, hepatitis C, HIV — specify]',
+    'Diagnose and manage chronic conditions: [diabetes, hypertension, hepatitis C, HIV; specify]',
     'Respond to urgent medical needs and acute decompensations within the facility',
     'Coordinate with corrections officers, behavioral-health staff, and outside specialists',
-    'Document per [your state DOC / NCCHC / ACA] standards',
+    'Document according to [your state DOC / NCCHC / ACA] standards',
     'Participate in facility health-review and quality-improvement processes',
   ],
   preferredQuals: [
@@ -356,47 +356,47 @@ const CORRECTIONAL_HEALTH_BODY = buildTemplate({
     'Experience with [substance use / chronic infectious disease / complex populations]',
   ],
   schedule:
-    '[Monday-Friday day shifts / specify]. [No on-call / on-call rotation specifics].',
+    '[Monday through Friday day shifts / specify]. [No on-call / on-call rotation specifics].',
   whyJoin:
-    '[Mission language — public service, underserved population, loan repayment, retirement benefits, etc.]',
+    '[Mission language: public service, an underserved population, loan repayment, retirement benefits, and so on.]',
 });
 
 const URGENT_CARE_BODY = buildTemplate({
   aboutBlurb:
     'We operate [N] urgent-care clinics in and around {{city}}, treating walk-in patients for acute illness and minor injury [7 days a week / specify hours].',
   positionSummary:
-    `This is an urgent-care ${brand.niche.short} role with high patient variety and procedural opportunity. You will evaluate and treat acute presentations, perform minor procedures, and disposition patients to emergency or follow-up care when needed.`,
+    `This is an urgent-care ${brand.niche.short} role with high patient variety and procedural opportunity. You will evaluate and treat acute presentations, perform minor procedures, and direct patients to emergency or follow-up care when needed.`,
   responsibilities: [
-    'Evaluate and treat acute presentations — [respiratory illness, sprains, lacerations, infections — specify]',
-    'Perform minor procedures: suturing, splinting, incision and drainage, [foreign-body removal — adjust to your scope]',
+    'Evaluate and treat acute presentations: [respiratory illness, sprains, lacerations, infections; specify]',
+    'Perform minor procedures, including suturing, splinting, incision and drainage, and [foreign-body removal; adjust to your scope]',
     'Order and interpret point-of-care labs, X-rays, and rapid diagnostics',
-    'Disposition patients appropriately — discharge with follow-up, referral, or ED transfer',
+    'Determine the appropriate disposition for each patient: discharge with follow-up, referral, or ED transfer',
     'Document efficiently in a high-throughput environment ([N] patients per shift)',
     'Complete [DOT / occupational-health / sports-physical] visits as applicable',
   ],
   preferredQuals: [
     `[N]+ years of urgent-care, emergency, or primary-care ${brand.niche.short} experience`,
-    'Procedural competence: suturing, splinting, incision and drainage',
-    'ENP certification, or FNP certification with emergency experience, a plus',
-    'Comfort seeing all ages [if applicable to your clinics]',
+    'Procedural competence in suturing, splinting, and incision and drainage',
+    'ENP certification, or FNP certification with emergency experience, is a plus',
+    'Comfort seeing patients of all ages [if applicable to your clinics]',
   ],
   schedule:
-    '[12-hour shifts / 10-hour shifts] on a rotating schedule including [weekends / holidays — specify rotation].',
+    '[12-hour shifts / 10-hour shifts] on a rotating schedule that includes [weekends / holidays; specify rotation].',
   whyJoin:
-    '[Distinctive features — shift flexibility, procedural variety, growth into lead-clinician roles, etc.]',
+    '[Distinctive features: shift flexibility, procedural variety, growth into lead-clinician roles, and so on.]',
 });
 
 const EMERGENCY_DEPARTMENT_BODY = buildTemplate({
   aboutBlurb:
-    'We are a [N]-bed emergency department at [community hospital / trauma center — specify], serving approximately [N] visits annually.',
+    'We are a [N]-bed emergency department at a [community hospital / trauma center; specify], serving approximately [N] visits annually.',
   positionSummary:
     `This is an emergency ${brand.niche.short} role focused on rapid evaluation, risk stratification, disposition planning, and stabilization. You will work alongside ED physicians, nurses, and case managers.`,
   responsibilities: [
-    'Evaluate patients in [fast-track / main ED — specify] with rapid assessment and disposition',
-    'Initiate stabilization including medications, fluids, and [interventions within your credentialed scope]',
+    'Evaluate patients in the [fast-track / main ED; specify] with rapid assessment and disposition',
+    'Initiate stabilization, including medications, fluids, and [interventions within your credentialed scope]',
     'Order and interpret labs, imaging, and diagnostic studies under time pressure',
     'Coordinate admissions, transfers, and outpatient follow-up',
-    'Perform procedures: [suturing, splinting, reductions — adjust to credentialing]',
+    'Perform procedures: [suturing, splinting, reductions; adjust to credentialing]',
     'Participate in team debriefs and quality reviews',
   ],
   preferredQuals: [
@@ -406,9 +406,9 @@ const EMERGENCY_DEPARTMENT_BODY = buildTemplate({
     'Comfort with high-acuity, high-volume environments',
   ],
   schedule:
-    '[12-hour shifts / 8-hour rotations / specify]. [Weekend and overnight coverage / day-shift only].',
+    '[12-hour shifts / 8-hour rotations / specify]. [Weekend and overnight coverage / day shift only].',
   whyJoin:
-    '[Distinctive features — interdisciplinary team, public-health mission, salary differentials for nights/weekends, etc.]',
+    '[Distinctive features: an interdisciplinary team, a public-health mission, salary differentials for nights and weekends, and so on.]',
 });
 
 // ─── Exported registry ────────────────────────────────────────────
@@ -418,8 +418,8 @@ export const JD_TEMPLATES: ReadonlyArray<JdTemplate> = Object.freeze([
   {
     id: 'outpatient-adult',
     category: 'outpatient',
-    label: 'Outpatient — Adult / Primary Care',
-    summary: 'General adult outpatient care. Chronic-disease management + preventive visits in a clinic setting.',
+    label: 'Outpatient: Adult / Primary Care',
+    summary: 'General adult outpatient care, with chronic-disease management and preventive visits in a clinic setting.',
     setting: 'Outpatient',
     population: 'Adults',
     body: OUTPATIENT_ADULT_BODY,
@@ -427,8 +427,8 @@ export const JD_TEMPLATES: ReadonlyArray<JdTemplate> = Object.freeze([
   {
     id: 'outpatient-pediatric',
     category: 'outpatient',
-    label: 'Outpatient — Pediatrics',
-    summary: 'Well-child and acute pediatric care. Developmentally-informed visits, parent/school collaboration.',
+    label: 'Outpatient: Pediatrics',
+    summary: 'Well-child and acute pediatric care, with developmentally informed visits and collaboration with parents and schools.',
     setting: 'Outpatient',
     population: 'Pediatric',
     body: OUTPATIENT_PEDIATRIC_BODY,
@@ -436,8 +436,8 @@ export const JD_TEMPLATES: ReadonlyArray<JdTemplate> = Object.freeze([
   {
     id: 'outpatient-geriatric',
     category: 'outpatient',
-    label: 'Outpatient — Geriatrics',
-    summary: 'Older-adult care. Complex chronic disease, cognitive screening, polypharmacy management.',
+    label: 'Outpatient: Geriatrics',
+    summary: 'Older-adult care, including complex chronic disease, cognitive screening, and polypharmacy management.',
     setting: 'Outpatient',
     population: 'Geriatric',
     body: OUTPATIENT_GERIATRIC_BODY,
@@ -445,7 +445,7 @@ export const JD_TEMPLATES: ReadonlyArray<JdTemplate> = Object.freeze([
   {
     id: 'outpatient-womens-health',
     category: 'outpatient',
-    label: "Outpatient — Women's Health",
+    label: "Outpatient: Women's Health",
     summary: 'Well-woman care, family planning, and gynecologic visits with in-office procedures.',
     setting: 'Outpatient',
     population: "Women's Health",
@@ -456,7 +456,7 @@ export const JD_TEMPLATES: ReadonlyArray<JdTemplate> = Object.freeze([
   {
     id: 'inpatient-adult-acute',
     category: 'inpatient',
-    label: 'Inpatient — Hospitalist / Acute Care',
+    label: 'Inpatient: Hospitalist / Acute Care',
     summary: 'Acute admissions and daily rounding on adult medical inpatients.',
     setting: 'Inpatient',
     population: 'Adults',
@@ -465,8 +465,8 @@ export const JD_TEMPLATES: ReadonlyArray<JdTemplate> = Object.freeze([
   {
     id: 'inpatient-pediatric',
     category: 'inpatient',
-    label: 'Inpatient — Pediatrics',
-    summary: 'Acute pediatric inpatient care. Family-centered stabilization and discharge planning.',
+    label: 'Inpatient: Pediatrics',
+    summary: 'Acute pediatric inpatient care, with family-centered stabilization and discharge planning.',
     setting: 'Inpatient',
     population: 'Pediatric',
     body: INPATIENT_PEDIATRIC_BODY,
@@ -476,8 +476,8 @@ export const JD_TEMPLATES: ReadonlyArray<JdTemplate> = Object.freeze([
   {
     id: 'telehealth-adult',
     category: 'telehealth',
-    label: 'Telehealth — Adult',
-    summary: 'Fully-remote video-based adult care, single state.',
+    label: 'Telehealth: Adult',
+    summary: 'Fully remote, video-based adult care in a single state.',
     setting: 'Telehealth',
     population: 'Adults',
     body: TELEHEALTH_ADULT_BODY,
@@ -485,8 +485,8 @@ export const JD_TEMPLATES: ReadonlyArray<JdTemplate> = Object.freeze([
   {
     id: 'telehealth-multistate',
     category: 'telehealth',
-    label: 'Telehealth — Multi-State',
-    summary: 'Multi-state telehealth with licensing-support team.',
+    label: 'Telehealth: Multi-State',
+    summary: 'Multi-state telehealth with a licensing-support team.',
     setting: 'Telehealth',
     population: 'Adults',
     body: TELEHEALTH_MULTISTATE_BODY,
@@ -497,7 +497,7 @@ export const JD_TEMPLATES: ReadonlyArray<JdTemplate> = Object.freeze([
     id: 'fqhc-community-health',
     category: 'specialty',
     label: 'FQHC / Community Health',
-    summary: 'Integrated primary care in a federally-qualified or community health center.',
+    summary: 'Integrated primary care in a federally qualified health center or community health center.',
     setting: 'Community Health',
     population: 'All Ages',
     body: FQHC_COMMUNITY_HEALTH_BODY,

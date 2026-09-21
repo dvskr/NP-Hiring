@@ -76,6 +76,39 @@ function applyMap(next: AppliedJobsMap, persistLocal = true) {
   notify();
 }
 
+export interface AppliedJobRow {
+  jobId: string;
+  appliedAt: string;
+  withdrawnAt?: string | null;
+  status?: string | null;
+}
+
+function isWithdrawnRow(row: AppliedJobRow): boolean {
+  return Boolean(row.withdrawnAt) || row.status === 'withdrawn';
+}
+
+/**
+ * Server rows -> applied map. A withdrawn application is NOT applied: the
+ * job page must offer "Easy Apply" again, matching /api/applications/check,
+ * which also treats a withdrawn row as not applied.
+ */
+export function buildServerAppliedMap(rows: AppliedJobRow[]): AppliedJobsMap {
+  return Object.fromEntries(
+    rows.filter((r) => !isWithdrawnRow(r)).map((r) => [r.jobId, r.appliedAt]),
+  );
+}
+
+/**
+ * Local (pre-login) entries the server has never heard of, which get
+ * migrated up. Checked against EVERY server row, withdrawn ones included:
+ * a stale local entry for a withdrawn job must not be re-posted and merged
+ * back into the map, which would bring "Apply Again" straight back.
+ */
+export function findLocalOnlyJobIds(local: AppliedJobsMap, rows: AppliedJobRow[]): string[] {
+  const known = new Set(rows.map((r) => r.jobId));
+  return Object.keys(local).filter((id) => !known.has(id));
+}
+
 /**
  * Heuristic: if no Supabase auth cookie is present we are anonymous, and
  * `GET /api/applications` will return 401 -- which the browser logs to the
@@ -107,16 +140,14 @@ async function syncFromServer(force = false): Promise<void> {
       }
       if (!res.ok) return;
       // GET /api/applications returns a flat array of JobApplication rows.
-      const rows = (await res.json()) as Array<{ jobId: string; appliedAt: string }>;
-      const serverMap: AppliedJobsMap = Object.fromEntries(
-        rows.map((r) => [r.jobId, r.appliedAt]),
-      );
+      const rows = (await res.json()) as AppliedJobRow[];
+      const serverMap = buildServerAppliedMap(rows);
       isAuth = true;
 
       if (!migrated) {
         migrated = true;
         const local = getStoredAppliedJobs();
-        const localOnly = Object.keys(local).filter((id) => !(id in serverMap));
+        const localOnly = findLocalOnlyJobIds(local, rows);
         if (localOnly.length > 0) {
           await Promise.allSettled(
             localOnly.map((jobId) =>

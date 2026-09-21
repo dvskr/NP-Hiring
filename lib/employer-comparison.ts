@@ -27,12 +27,13 @@
  *     Apply here too; it was an unenforceable guarantee.
  *   - "Free Posting Through <promoEndsLabel>" (2026-09-12, was "First
  *     Post Free") — competitor cells stay 'partial', not false: both
- *     Indeed and LinkedIn offer limited free listings. Our cell is true
- *     only while config.isPromoActive(); the row copy names the end
- *     date so it cannot silently outlive the promo.
- *   - "Flat Per-Post Pricing — No Bidding" — the note states the 2027
- *     ladder (intro → featured → plan) from config tokens; no price is
- *     typed by hand.
+ *     Indeed and LinkedIn offer limited free listings. The row label
+ *     interpolates config.promoEndsLabel, so the claim always carries
+ *     its own end date and cannot silently outlive the promo.
+ *   - "Flat Per-Post Pricing, No Bidding" — the note states the 2027
+ *     ladder (intro price, then the standard per-post price, or the
+ *     monthly Employer plan) from config tokens; no price is typed by
+ *     hand.
  *   - Listing duration — competitor cells never assert "Others: 30
  *     days" (unverifiable, plan-dependent); every post here runs
  *     config.durationDays, so there is no shorter free window to

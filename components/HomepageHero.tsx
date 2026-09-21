@@ -4,7 +4,8 @@ import { useEffect, useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, MapPin, Globe, Monitor, Clock, Clock3, GraduationCap } from 'lucide-react';
-import { LazyMotion, domAnimation, m } from 'framer-motion';
+import { LazyMotion, domAnimation, m, useReducedMotion } from 'framer-motion';
+import { getHeroVariants } from '@/components/header-nav-motion';
 
 /* ── "No Sugar" palette (user-approved mock, 2026-07-09) ──
    Oxblood ink + berry accent + soft-green highlight on the site's cream.
@@ -67,15 +68,6 @@ const STICKERS: RoleSticker[] = [
 ];
 const RESTAMP_INTERVAL_MS = 4000;
 
-const container = {
-    hidden: {},
-    show: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
-};
-const fadeUp = {
-    hidden: { opacity: 0, y: 12 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] } },
-};
-
 export default function HomepageHero() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
@@ -85,6 +77,11 @@ export default function HomepageHero() {
        re-stamp twice in a row (key change forces the remount that replays
        the stamp-in animation). */
     const [restamp, setRestamp] = useState({ idx: -1, n: 0 });
+    /* Entrance stagger. Under prefers-reduced-motion the variants carry a
+       zero-duration, zero-delay transition, so the headline, search and chips
+       snap to their resting state instead of rising and fading in. */
+    const reduceMotion = useReducedMotion();
+    const { container, fadeUp } = getHeroVariants(reduceMotion);
 
     /* Cycle the stamped role. Skipped entirely under prefers-reduced-motion
        (the word stays "NP" and nothing animates). */

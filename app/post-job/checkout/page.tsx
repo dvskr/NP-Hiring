@@ -256,7 +256,7 @@ export default function CheckoutPage() {
         <div className="bg-white rounded-lg shadow-md p-8 text-center">
           <h1 className="text-2xl font-bold mb-2">Paid posting is coming soon</h1>
           <p className="text-gray-600 mb-6">
-            Checkout isn&apos;t open yet, so paid job posts can&apos;t be purchased
+            Checkout is not open yet, so paid job posts cannot be purchased
             right now. Your job details are saved, and we will have this ready shortly.
           </p>
           <div className="flex flex-col gap-3">

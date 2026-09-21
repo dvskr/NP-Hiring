@@ -1,7 +1,30 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+
+/**
+ * CSS custom property (on <html>) carrying the rendered height of the mobile
+ * BottomNav, safe-area padding included. Fixed bottom overlays (the cookie
+ * banner) sit at `bottom: var(--bottom-nav-h)` so they end exactly where the
+ * nav begins instead of guessing its height. 0px when the nav is hidden (md+)
+ * or not mounted.
+ */
+export const BOTTOM_NAV_HEIGHT_VAR = '--bottom-nav-h';
+
+/**
+ * Static estimate used before the first measurement: py-2 container (8px top,
+ * 8px pb-safe) + a 48px-min link whose content (py-2.5, 24px icon, 4px gap,
+ * 16.5px label) renders about 64.5px, plus the 1px top border. Measured 81.5px
+ * at 375x812, so round up.
+ */
+export const BOTTOM_NAV_FALLBACK_HEIGHT = 'calc(82px + env(safe-area-inset-bottom))';
+
+/** Value written to BOTTOM_NAV_HEIGHT_VAR for a measured border-box height. */
+export function bottomNavHeightValue(height: number): string {
+  return `${Number.isFinite(height) && height > 0 ? Math.ceil(height) : 0}px`;
+}
 import { Home, Briefcase, Bookmark, Mail, LayoutDashboard, Users, FileText, Send } from 'lucide-react';
 
 // Marketing / logged-out default — Home + Jobs + Saved + Messages
@@ -71,6 +94,28 @@ function matchesPrefix(pathname: string, prefix: string): boolean {
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+
+  // Publish the nav's real height for bottom-anchored overlays. A
+  // ResizeObserver tracks label wrapping, safe-area changes and the md
+  // breakpoint (display:none reports 0).
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const root = document.documentElement;
+    const publish = () => {
+      root.style.setProperty(BOTTOM_NAV_HEIGHT_VAR, bottomNavHeightValue(nav.getBoundingClientRect().height));
+    };
+    publish();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(publish) : null;
+    observer?.observe(nav);
+    window.addEventListener('resize', publish);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', publish);
+      root.style.setProperty(BOTTOM_NAV_HEIGHT_VAR, '0px');
+    };
+  }, []);
 
   const isEmployerShell = EMPLOYER_PREFIXES.some((p) => matchesPrefix(pathname, p));
   const isSeekerAppShell = SEEKER_APP_PREFIXES.some((p) => matchesPrefix(pathname, p));
@@ -92,6 +137,7 @@ export default function BottomNav() {
   return (
     <>
       <nav
+        ref={navRef}
         // safe-area inset is applied once on the inner container via `pb-safe`;
         // applying `safe-bottom` here too would double the bottom inset on iOS.
         className="md:hidden fixed bottom-0 inset-x-0 z-50 shadow-lg"

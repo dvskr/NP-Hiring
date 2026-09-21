@@ -124,10 +124,10 @@ function projectScenario(s: PracticeScenario): ScenarioRow {
   const netHigh = grossHigh * (1 - s.overhead.min);
   return {
     label: s.label,
-    visits: `${s.visitsPerWeek.min}–${s.visitsPerWeek.max}`,
-    gross: `${asK(grossLow)}–${asK(grossHigh)}`,
-    overhead: `${Math.round(s.overhead.min * 100)}–${Math.round(s.overhead.max * 100)}%`,
-    net: `${asK(netLow)}–${asK(netHigh)}`,
+    visits: `${s.visitsPerWeek.min} to ${s.visitsPerWeek.max}`,
+    gross: `${asK(grossLow)} to ${asK(grossHigh)}`,
+    overhead: `${Math.round(s.overhead.min * 100)}% to ${Math.round(s.overhead.max * 100)}%`,
+    net: `${asK(netLow)} to ${asK(netHigh)}`,
   };
 }
 
@@ -141,18 +141,18 @@ const HEADLINE_GROSS = SCENARIO_ROWS[1].gross;
 const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`How to Start an ${brand.niche.short} Private Practice`)}&type=page`;
 
 export const metadata: Metadata = {
-  title: `How to Start an ${brand.niche.short} Private Practice — Step-by-Step Guide 2026`,
+  title: `How to Start an ${brand.niche.short} Private Practice: Step-by-Step Guide 2026`,
   description: `Complete guide to starting your own ${brand.niche.short} private practice: PLLC formation, insurance credentialing (CAQH, NPI), EHR setup, malpractice coverage, billing, overhead, and a transparent revenue model you can re-run with your own numbers.`,
   keywords: [`${brand.niche.short} private practice`, `how to start an ${brand.niche.short} private practice`, `${brand.niche.short} private practice income`, `${brand.niche.descriptor} own practice`, `${brand.niche.short} business startup`, `independent ${brand.niche.descriptor} practice`],
   openGraph: {
-    title: `How to Start an ${brand.niche.short} Private Practice — 2026 Guide`,
+    title: `How to Start an ${brand.niche.short} Private Practice: 2026 Guide`,
     description: `Step-by-step guide to launching your own ${brand.niche.descriptor} private practice.`,
     type: 'article',
-    images: [{ url: HERO_IMAGE, width: 1200, height: 630, alt: `How to Start an ${brand.niche.short} Private Practice — 2026 Guide` }],
+    images: [{ url: HERO_IMAGE, width: 1200, height: 630, alt: `How to Start an ${brand.niche.short} Private Practice: 2026 Guide` }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `How to Start an ${brand.niche.short} Private Practice — 2026 Guide`,
+    title: `How to Start an ${brand.niche.short} Private Practice: 2026 Guide`,
     images: [HERO_IMAGE],
   },
   alternates: { canonical: `${brand.baseUrl}/resources/private-practice-guide` },
@@ -164,7 +164,7 @@ export default function PrivatePracticeGuidePage() {
       number: 1,
       title: 'Verify Your State Requirements',
       icon: Shield,
-      content: `Check your state's practice authority laws before anything else — they decide whether an independent practice is even available to you. ${FULL_PRACTICE_STATE_COUNT} states plus Washington D.C. grant Full Practice Authority (${STAT_SOURCES.fullPracticeStates.source}), where you can practice without a physician agreement. In reduced and restricted states you must have a collaborating or supervising physician in place first, and that relationship is usually a paid one. Several full-practice states also apply a transition-to-practice period before autonomy begins.`,
+      content: `Check your state's practice authority laws before anything else, because they decide whether an independent practice is available to you at all. ${FULL_PRACTICE_STATE_COUNT} states plus Washington D.C. grant Full Practice Authority (${STAT_SOURCES.fullPracticeStates.source}), where you can practice without a physician agreement. In reduced and restricted states, you must have a collaborating or supervising physician in place first, and that relationship is usually a paid one. Several full-practice states also apply a transition-to-practice period before autonomy begins.`,
       link: { href: '/resources/fpa-guide', text: 'View FPA Guide →' },
     },
     {
@@ -173,9 +173,9 @@ export default function PrivatePracticeGuidePage() {
       icon: Landmark,
       content: `Most ${brand.niche.short}s choose a Professional Limited Liability Company (PLLC) for liability protection and tax flexibility. Key steps: choose a business name, file with your Secretary of State, get an EIN from the IRS (free), and open a business bank account before any patient revenue lands.`,
       details: [
-        'LLC/PLLC: the usual choice for solo practitioners — formation fees are set per state, so check your Secretary of State fee schedule rather than budgeting a national average',
-        'S-Corp election: worth modelling with a CPA once net profit is high enough that the payroll-tax saving clearly exceeds the added payroll and compliance cost — it is a threshold specific to your numbers, not a fixed income figure',
-        'Professional liability: a PLLC shields personal assets from business debts, but it does not shield you from your own clinical liability — you still need malpractice coverage',
+        'LLC/PLLC: the usual choice for solo practitioners. Formation fees are set per state, so check your Secretary of State fee schedule rather than budgeting a national average',
+        'S-Corp election: worth modelling with a CPA once net profit is high enough that the payroll-tax saving clearly exceeds the added payroll and compliance cost. That threshold is specific to your numbers, not a fixed income figure',
+        'Professional liability: a PLLC shields personal assets from business debts, but it does not shield you from your own clinical liability, so you still need malpractice coverage',
         'Consult a healthcare attorney for state-specific requirements; several states restrict who may own a professional entity',
       ],
     },
@@ -183,13 +183,13 @@ export default function PrivatePracticeGuidePage() {
       number: 3,
       title: 'Get Insurance Credentialing',
       icon: FileText,
-      content: 'Insurance credentialing allows you to bill insurance companies directly. This process takes 90-180 days, so start early.',
+      content: 'Insurance credentialing allows you to bill insurance companies directly. This process takes 90 to 180 days, so start early.',
       details: [
         'Create your CAQH ProView profile (universal credentialing application)',
         'Apply for an individual NPI number (Type 1) and organizational NPI (Type 2)',
         'Credential with major payers: Aetna, BCBS, Cigna, UnitedHealthcare, Medicare',
         'Consider Medicaid credentialing for your state',
-        'Typical timeline: 90-180 days from application to approval',
+        'Typical timeline: 90 to 180 days from application to approval',
       ],
     },
     {
@@ -198,10 +198,10 @@ export default function PrivatePracticeGuidePage() {
       icon: BookOpen,
       content: `Choose an EHR (Electronic Health Records) system with integrated billing. Popular options for ${brand.niche.short} private practices include:`,
       details: [
-        'SimplePractice — popular for solo and telehealth practices',
-        'DrChrono — full-featured, better suited to larger practices',
-        'Tebra (formerly Kareo) — built for independent medical practices',
-        'Outsourced billing is usually priced either as a monthly retainer or as a percentage of collections — get both quoted and compare against your modelled volume',
+        'SimplePractice: popular for solo and telehealth practices',
+        'DrChrono: full-featured and better suited to larger practices',
+        'Tebra (formerly Kareo): built for independent medical practices',
+        'Outsourced billing is usually priced either as a monthly retainer or as a percentage of collections. Get both quoted and compare them against your modelled volume',
         'Vendor pricing changes often and is not reproduced here; get a current quote directly, and confirm the plan tier includes the billing and telehealth modules you need',
       ],
     },
@@ -212,23 +212,23 @@ export default function PrivatePracticeGuidePage() {
       content: `Individual malpractice (professional liability) insurance is essential. Most private practice ${brand.niche.short}s need:`,
       details: [
         'Prefer an occurrence-based policy over claims-made: it covers incidents that happened during the policy period even after you cancel, so you do not need to buy tail coverage later',
-        'A commonly requested limit structure is $1M per occurrence / $3M aggregate — confirm what your payers and any collaborating physician require',
+        'A commonly requested limit structure is $1M per occurrence / $3M aggregate; confirm what your payers and any collaborating physician require',
         'Get quotes from several carriers (NSO, HPSO, CM&F, and Berxi all write individual APRN policies); premiums vary by state, specialty, and limits, so a quote is the only reliable number',
         'Add cyber liability if you deliver telehealth or store records electronically',
-        'Add general liability separately if you lease office space — it covers premises claims that malpractice does not',
+        'Add general liability separately if you lease office space, since it covers premises claims that malpractice does not',
       ],
     },
     {
       number: 6,
       title: 'Launch & Build Your Caseload',
       icon: Users,
-      content: `Plan on several months to fill a schedule. The revenue model below assumes ${PRACTICE_SCENARIOS[1].visitsPerWeek.min}-${PRACTICE_SCENARIOS[1].visitsPerWeek.max} visits a week at full-time capacity — that is the number every projection hangs on, so track it weekly from day one.`,
+      content: `Plan on several months to fill a schedule. The revenue model below assumes ${PRACTICE_SCENARIOS[1].visitsPerWeek.min} to ${PRACTICE_SCENARIOS[1].visitsPerWeek.max} visits a week at full-time capacity. That is the number every projection depends on, so track it weekly from day one.`,
       details: [
         'Create a professional website with online scheduling',
         'Register on provider directories like Zocdoc and Healthgrades',
         'Network with local physicians, specialists, and community organizations for referrals',
         'Consider contract work initially to maintain income while building',
-        'Set your fee schedule from your contracted payer rates and local cash-pay market, then track what you actually COLLECT per visit — collections, not charges, are what the revenue model runs on',
+        'Set your fee schedule from your contracted payer rates and local cash-pay market, then track what you actually collect per visit, because collections, not charges, are what the revenue model runs on',
       ],
     },
   ];
@@ -236,23 +236,23 @@ export default function PrivatePracticeGuidePage() {
   const ppFaqs = [
     {
       question: `How much does it cost to start an ${brand.niche.short} private practice?`,
-      answer: `Build the number from your own quotes rather than a headline range. The line items are consistent: state filing fees for a PLLC, an EHR subscription, individual malpractice coverage, credentialing and application fees, a website and scheduling, and initial marketing. A telehealth-first practice skips the largest cost — a lease and its fit-out — which is why most ${brand.niche.short}s start virtual and add space later if demand justifies it. Filing fees vary by state and vendor pricing changes, so this guide points you at live quotes instead of printing figures that expire.`
+      answer: `Build the number from your own quotes rather than a headline range. The line items are consistent: state filing fees for a PLLC, an EHR subscription, individual malpractice coverage, credentialing and application fees, a website and scheduling, and initial marketing. A telehealth-first practice skips the largest cost, a lease and its fit-out, which is why most ${brand.niche.short}s start virtually and add space later if demand justifies it. Filing fees vary by state and vendor pricing changes, so this guide points you to live quotes instead of printing figures that expire.`
     },
     {
       question: `How much can an ${brand.niche.short} private practice owner earn?`,
-      answer: `It is a volume-times-collections calculation, so model it rather than trusting a headline number. The table on this page works it through: at ${PRACTICE_SCENARIOS[1].visitsPerWeek.min}–${PRACTICE_SCENARIOS[1].visitsPerWeek.max} visits a week over ${PRACTICE_MODEL.workingWeeksPerYear} working weeks, collecting about $${PRACTICE_MODEL.insuranceCollectedPerVisit} per visit on an insurance panel, a full-time telehealth practice models ${HEADLINE_GROSS} of gross collections, and ${SCENARIO_ROWS[1].net} net after ${SCENARIO_ROWS[1].overhead} overhead. An office-based practice models the same gross with materially higher overhead, and a cash-pay panel models higher collections per visit at lower volume. Change any input — your real reimbursement rate, your no-show rate, your weeks worked — and the answer changes with it. The national median annual wage for employed ${brand.niche.descriptor}s, for comparison, is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`
+      answer: `It is a volume-times-collections calculation, so model it rather than trusting a headline number. The table on this page works it through: at ${PRACTICE_SCENARIOS[1].visitsPerWeek.min} to ${PRACTICE_SCENARIOS[1].visitsPerWeek.max} visits a week over ${PRACTICE_MODEL.workingWeeksPerYear} working weeks, collecting about $${PRACTICE_MODEL.insuranceCollectedPerVisit} per visit on an insurance panel, a full-time telehealth practice models ${HEADLINE_GROSS} of gross collections, and ${SCENARIO_ROWS[1].net} net after ${SCENARIO_ROWS[1].overhead} overhead. An office-based practice models the same gross with materially higher overhead, and a cash-pay panel models higher collections per visit at lower volume. Change any input (your real reimbursement rate, your no-show rate, your weeks worked) and the answer changes with it. The national median annual wage for employed ${brand.niche.descriptor}s, for comparison, is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`
     },
     {
       question: "How long does it take to build a full private practice caseload?",
-      answer: `Most ${brand.niche.short}s reach a full caseload within 6-12 months. Factors that speed this up include accepting insurance (vs cash-only), being in an underserved area, directory listings (Zocdoc, Healthgrades), networking with local providers, and having a specialty niche. Many ${brand.niche.short}s maintain part-time employment while building their practice.`
+      answer: `Most ${brand.niche.short}s reach a full caseload within 6 to 12 months. Factors that speed this up include accepting insurance (rather than cash-only), being in an underserved area, directory listings (Zocdoc, Healthgrades), networking with local providers, and having a specialty niche. Many ${brand.niche.short}s maintain part-time employment while building their practice.`
     },
     {
       question: "Should I accept insurance or go cash-pay only?",
-      answer: `Insurance panels fill faster and reach more patients, at a lower collected amount per visit and with real billing and credentialing overhead. Cash-pay collects more per visit with far less paperwork, but fills slowly and is sensitive to your local market. Many practices run a mix. The model on this page uses $${PRACTICE_MODEL.insuranceCollectedPerVisit} collected per insurance visit and $${PRACTICE_MODEL.cashCollectedPerVisit} per cash-pay visit as planning inputs — replace both with the contracted rates you are actually offered before you commit to a model, since payer contracts vary widely by state and specialty.`
+      answer: `Insurance panels fill faster and reach more patients, at a lower collected amount per visit and with real billing and credentialing overhead. Cash-pay collects more per visit with far less paperwork, but fills slowly and is sensitive to your local market. Many practices run a mix. The model on this page uses $${PRACTICE_MODEL.insuranceCollectedPerVisit} collected per insurance visit and $${PRACTICE_MODEL.cashCollectedPerVisit} per cash-pay visit as planning inputs. Replace both with the contracted rates you are actually offered before you commit to a model, since payer contracts vary widely by state and specialty.`
     },
     {
       question: `Can new grad ${brand.niche.short}s open a private practice?`,
-      answer: `It is possible but not recommended. Most experts suggest gaining 2-3 years of clinical experience in structured settings (community health centers, group practices) before opening a private practice. This builds clinical confidence, medication management skills, and a professional network for referrals.`
+      answer: `It is possible but not recommended. Most experts suggest gaining 2 to 3 years of clinical experience in structured settings (community health centers, group practices) before opening a private practice. This builds clinical confidence, medication management skills, and a professional network for referrals.`
     },
   ];
 
@@ -286,8 +286,8 @@ export default function PrivatePracticeGuidePage() {
           __html: ldJson({
             '@context': 'https://schema.org',
             '@type': 'Article',
-            headline: `How to Start an ${brand.niche.short} Private Practice — 2026 Step-by-Step Guide`,
-            description: `Complete guide to starting your own ${brand.niche.short} private practice — LLC formation, insurance credentialing, EHR setup, malpractice, billing, and income projections.`,
+            headline: `How to Start an ${brand.niche.short} Private Practice: 2026 Step-by-Step Guide`,
+            description: `Complete guide to starting your own ${brand.niche.short} private practice: LLC formation, insurance credentialing, EHR setup, malpractice, billing, and income projections.`,
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
             image: HERO_IMAGE,
@@ -335,7 +335,7 @@ export default function PrivatePracticeGuidePage() {
               Last Updated: {new Date(`${LAST_REVIEWED}T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })} | Step-by-step startup guide
             </p>
             <p className="text-lg md:text-xl text-pink-100 mb-6">
-              From LLC formation to full caseload — everything you need to launch your {brand.niche.short} practice
+              From LLC formation to a full caseload: everything you need to launch your {brand.niche.short} practice
             </p>
             <div className="flex flex-wrap justify-center gap-6 md:gap-8 mt-8">
               {/* Headline figure is the MODELLED full-time telehealth gross
@@ -345,7 +345,7 @@ export default function PrivatePracticeGuidePage() {
                 <div className="text-sm text-pink-100">Modelled full-time gross</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold">6-12 mo</div>
+                <div className="text-3xl font-bold">6 to 12 mo</div>
                 <div className="text-sm text-pink-100">Typical ramp to a full caseload</div>
               </div>
               <div className="text-center">
@@ -417,9 +417,9 @@ export default function PrivatePracticeGuidePage() {
                 <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>What this model assumes</h3>
                 <ul className="text-xs space-y-1" style={{ color: 'var(--text-secondary)' }}>
                   <li><strong>Gross collections = visits per week × {PRACTICE_MODEL.workingWeeksPerYear} working weeks × amount collected per visit.</strong> {PRACTICE_MODEL.workingWeeksPerYear} weeks leaves roughly six for holidays, vacation, and admin days.</li>
-                  <li>Collections of <strong>${PRACTICE_MODEL.insuranceCollectedPerVisit} per visit</strong> on an insurance panel and <strong>${PRACTICE_MODEL.cashCollectedPerVisit} per visit</strong> cash-pay — planning inputs, not contracted rates. Replace them with your own payer contracts.</li>
+                  <li>Collections of <strong>${PRACTICE_MODEL.insuranceCollectedPerVisit} per visit</strong> on an insurance panel and <strong>${PRACTICE_MODEL.cashCollectedPerVisit} per visit</strong> cash-pay are planning inputs, not contracted rates. Replace them with your own payer contracts.</li>
                   <li>Net is collections less overhead. Each net band pairs the <em>lowest</em> volume with the <em>highest</em> overhead and vice versa, so it brackets outcomes rather than stacking best cases.</li>
-                  <li>Net is <strong>before</strong> self-employment tax and income tax. A practice owner is a contractor for tax purposes — see the <Link href="/resources/1099-vs-w2" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</Link> for what comes off next.</li>
+                  <li>Net is <strong>before</strong> self-employment tax and income tax. A practice owner is a contractor for tax purposes; see the <Link href="/resources/1099-vs-w2" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</Link> for what comes off next.</li>
                   <li>This is a model you can re-run with your own inputs, not a survey of what practices earn.</li>
                 </ul>
               </div>
@@ -452,7 +452,7 @@ export default function PrivatePracticeGuidePage() {
                 </table>
               </div>
               <p className="text-xs mt-4" style={{ color: 'var(--text-tertiary)' }}>
-                For comparison, the national median annual wage for employed {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}) — with malpractice, health coverage, and payroll taxes largely handled by an employer. Our <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>salary guide</Link> computes state-level averages from live postings.
+                For comparison, the national median annual wage for employed {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}), with malpractice, health coverage, and payroll taxes largely handled by an employer. Our <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>salary guide</Link> computes state-level averages from live postings.
               </p>
             </div>
           </div>
@@ -475,15 +475,15 @@ export default function PrivatePracticeGuidePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <Link href="/resources/fpa-guide" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Full Practice Authority guide</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Whether your state allows an independent practice at all — check before anything else.</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Whether your state allows an independent practice at all. Check this before anything else.</p>
             </Link>
             <Link href="/resources/1099-vs-w2" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Self-employment tax, deductions, and retirement capacity — what comes off your net.</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Self-employment tax, deductions, and retirement capacity: what comes off your net.</p>
             </Link>
             <Link href="/salary-guide" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>{brand.niche.short} salary guide</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>What employed roles pay in your state — the opportunity cost of going independent.</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>What employed roles pay in your state: the opportunity cost of going independent.</p>
             </Link>
             <Link href="/jobs/private-practice" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Private practice jobs</h3>

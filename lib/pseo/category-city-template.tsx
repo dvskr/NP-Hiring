@@ -15,6 +15,7 @@
  */
 import Link from 'next/link';
 import Image from 'next/image';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { Metadata } from 'next';
 import {
   TrendingUp, Building2, Bell, MapPin, Lightbulb,
@@ -35,12 +36,14 @@ import JobCard from '@/components/JobCard';
 // see. It replaces the schema-only BreadcrumbSchema that used to sit here —
 // do not add both, or the page emits two BreadcrumbList graphs.
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { pluralize } from '@/lib/pseo/plural';
+import { withListingQuarantine } from '@/lib/pseo/listing-where';
 import CategoryHero from '@/components/CategoryHero';
 import { Job } from '@/lib/types';
 import { CityData } from './city-data/types';
 import { getCityBySlug } from './city-data/cities';
 import { SETTING_CONFIGS, SettingConfig, stateToSlug } from './setting-state-config';
-import { CATEGORY_ASSET_REGISTRY } from './category-asset-registry';
+import { CATEGORY_ASSET_REGISTRY, DEFAULT_HERO_IMAGE } from './category-asset-registry';
 import {
   getStatePracticeAuthority,
   getAuthorityLabel,
@@ -65,7 +68,6 @@ import { PSYCH_SPECIALTY_SLUG } from './taxonomy-registry';
 // hub for them instead of emitting a guaranteed-410 URL.
 const STATE_ELIGIBLE_SET = new Set<string>(STATE_ELIGIBLE_CATEGORY_SLUGS);
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 // ─── Category Configuration (extends SettingConfig for specialties) ────────────
 
@@ -108,7 +110,7 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Mentorship', description: `Many new grad positions include structured mentorship and supervision from experienced physicians and senior ${brand.niche.short}s.`, iconName: 'Users' },
-      { title: 'High Demand', description: `${brand.niche.short} shortage means even new graduates are highly sought after with strong starting salaries.`, iconName: 'TrendingUp' },
+      { title: 'High Demand', description: `The ${brand.niche.short} shortage means even new graduates are highly sought after and receive strong starting salaries.`, iconName: 'TrendingUp' },
       { title: 'Career Foundation', description: 'Build clinical confidence and skills that set you up for advanced roles or private practice later.', iconName: 'Shield' },
     ],
     tips: [
@@ -134,16 +136,16 @@ export const SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('per-diem'),
     }),
     benefits: [
-      { title: 'Maximum Flexibility', description: 'Set your own schedule — work as many or as few shifts as you want, when you want.', iconName: 'Activity' },
-      { title: 'Higher Hourly Rate', description: 'Per diem roles pay $60-$110+/hr — a premium over the hourly equivalent of salaried full-time work.', iconName: 'DollarSign' },
-      { title: 'Income Supplement', description: 'Perfect for supplementing a full-time position or private practice while maintaining clinical variety.', iconName: 'TrendingUp' },
+      { title: 'Maximum Flexibility', description: 'Set your own schedule and work as many or as few shifts as you want, when you want.', iconName: 'Activity' },
+      { title: 'Higher Hourly Rate', description: 'Per diem roles pay $60-$110+/hr, a premium over the hourly equivalent of salaried full-time work.', iconName: 'DollarSign' },
+      { title: 'Income Supplement', description: 'Per diem work is ideal for supplementing a full-time position or private practice while maintaining clinical variety.', iconName: 'TrendingUp' },
     ],
     tips: [
       'Maintain your own malpractice insurance',
       'Track hours carefully for tax purposes',
       'Build relationships at multiple facilities',
       'Negotiate competitive hourly rates',
-      'Consider 1099 vs W-2 per diem arrangements',
+      'Consider 1099 versus W-2 per diem arrangements',
     ],
   },
 };
@@ -167,13 +169,13 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('full-time'),
     }),
     benefits: [
-      { title: 'Comprehensive Benefits', description: 'Full health insurance, dental, vision, retirement plans, and PTO — typically 20-30 days off.', iconName: 'Heart' },
+      { title: 'Comprehensive Benefits', description: 'Full health insurance, dental, vision, retirement plans, and PTO, typically 20-30 days off.', iconName: 'Heart' },
       { title: 'Job Security', description: 'Stable employment with consistent income, malpractice coverage, and professional development support.', iconName: 'Shield' },
       { title: 'Career Growth', description: 'Access to leadership tracks, CME funding ($2,000-$5,000/year), and promotion opportunities.', iconName: 'TrendingUp' },
     ],
     tips: [
       'Negotiate sign-on bonuses (often $10K-$25K)',
-      'Ask about panel size — aim for 14-18 patients/day',
+      'Ask about panel size and aim for 14-18 patients/day',
       'Clarify on-call requirements before accepting',
       'Review non-compete clauses carefully',
       'Confirm CME budget and time-off allowance',
@@ -194,7 +196,7 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('part-time'),
     }),
     benefits: [
-      { title: 'Work-Life Balance', description: 'Set your own schedule — work 2-3 days per week while maintaining clinical skills and income.', iconName: 'Activity' },
+      { title: 'Work-Life Balance', description: 'Set your own schedule and work 2-3 days per week while maintaining clinical skills and income.', iconName: 'Activity' },
       { title: 'Multiple Income Streams', description: 'Combine part-time with private practice, telehealth, or consulting for maximum earning.', iconName: 'DollarSign' },
       { title: 'Reduced Burnout', description: `Lower caseloads and schedule flexibility help prevent the burnout epidemic in ${brand.niche.category}.`, iconName: 'Heart' },
     ],
@@ -221,7 +223,7 @@ export const JOB_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('contract'),
     }),
     benefits: [
-      { title: 'Premium Pay', description: 'Contract rates are typically 20-50% higher than permanent positions — $70-$150+/hour.', iconName: 'DollarSign' },
+      { title: 'Premium Pay', description: 'Contract rates are typically 20-50% higher than permanent positions, at $70-$150+/hour.', iconName: 'DollarSign' },
       { title: 'Tax Advantages', description: '1099 contractors can deduct travel, housing, CME, malpractice insurance, and home office expenses.', iconName: 'TrendingUp' },
       { title: 'Geographic Freedom', description: 'Try different cities, practice settings, and patient populations before committing long-term.', iconName: 'MapPin' },
     ],
@@ -255,14 +257,14 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Structured Mentorship', description: `Most entry-level positions include 6-12 months of supervised practice with experienced physicians or senior ${brand.niche.short}s.`, iconName: 'Users' },
-      { title: 'Competitive Starting Pay', description: `${brand.niche.short} shortage means entry-level pay starts at $95K-$140K — strong compensation right out of school.`, iconName: 'DollarSign' },
+      { title: 'Competitive Starting Pay', description: `The ${brand.niche.short} shortage means entry-level pay starts at $95K-$140K, which is strong compensation right out of school.`, iconName: 'DollarSign' },
       { title: 'Career Launchpad', description: 'Build your clinical foundation with manageable caseloads (8-12 patients/day) before scaling up.', iconName: 'TrendingUp' },
     ],
     tips: [
       'Prioritize positions offering structured supervision',
       'Start with collaborative practice models when possible',
       'Negotiate sign-on bonuses ($5K-$15K common for new grads)',
-      'Ask about ramp-up period and initial caseload expectations',
+      'Ask about the ramp-up period and initial caseload expectations',
       `Join AANP or your state ${brand.niche.short} association for networking and CE opportunities`,
     ],
   },
@@ -286,7 +288,7 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
       { title: 'Specialization Options', description: 'Pivot into urgent care, dermatology, cardiology, palliative care, or private practice consulting.', iconName: 'Shield' },
     ],
     tips: [
-      'Leverage experience for higher base salary (benchmark $140K+)',
+      'Leverage your experience for a higher base salary (benchmark $140K+)',
       'Negotiate productivity bonuses or profit-sharing',
       'Consider adding niche certifications (ENP, GS-C, wound care)',
       'Explore leadership tracks (clinical director, program manager)',
@@ -297,7 +299,7 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
     slug: 'senior',
     label: 'Senior',
     fullLabel: `Senior ${brand.niche.short}`,
-    heroSubtitle: 'Leadership & advanced practice positions for 7+ years experience',
+    heroSubtitle: 'Leadership & advanced practice positions for 7+ years of experience',
     salaryRange: '$150K-200K+',
     keywords: ['senior np', 'lead np', 'director np', 'advanced practice nurse practitioner'],
     faqCategory: 'remote',
@@ -317,7 +319,7 @@ export const EXPERIENCE_LEVEL_CONFIGS: Record<string, CategoryConfig> = {
       'Negotiate equity or partnership opportunities',
       'Consider building your own private practice or telehealth group',
       'Pursue board certification in subspecialties for premium positioning',
-      'Mentor the next generation — it builds your network and reputation',
+      'Mentor the next generation; it builds your network and reputation',
     ],
   },
 };
@@ -348,7 +350,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     tips: [
       'Large systems (HCA, Kaiser, Ascension) offer the best benefits',
       'Academic medical centers often include teaching opportunities',
-      'Ask about call schedules — hospital roles may require weekend coverage',
+      'Ask about call schedules, since hospital roles may require weekend coverage',
       'Negotiate CME days (5-10 per year is standard for hospital systems)',
       'Union hospitals may offer higher base pay and better protections',
     ],
@@ -401,8 +403,8 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
     ],
     tips: [
       'Check NHSC loan repayment eligibility for your site (hpsa.hrsa.gov)',
-      'FQHCs provide malpractice coverage under FTCA — a major benefit',
-      'Expect higher patient volumes (16-22/day) but broader scope',
+      'FQHCs provide malpractice coverage under the FTCA, a major benefit',
+      'Expect higher patient volumes (16-22 per day) but a broader scope',
       'Bilingual skills are highly valued and may qualify for pay differentials',
       'Community health experience is excellent for future leadership roles',
     ],
@@ -422,16 +424,16 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('va'),
     }),
     benefits: [
-      { title: 'Federal Benefits', description: 'Federal pension (FERS), TSP retirement matching, FEHB health insurance, and 26 days PTO starting.', iconName: 'Shield' },
-      { title: 'Full Practice Authority', description: `VA grants ${brand.niche.short}s full practice authority nationwide regardless of state laws — prescribe independently.`, iconName: 'Heart' },
+      { title: 'Federal Benefits', description: 'Federal pension (FERS), TSP retirement matching, FEHB health insurance, and 26 days of PTO to start.', iconName: 'Shield' },
+      { title: 'Full Practice Authority', description: `The VA grants ${brand.niche.short}s full practice authority nationwide, regardless of state laws, so you can prescribe independently.`, iconName: 'Heart' },
       { title: 'Student Loan Repayment', description: 'EDRP offers up to $200K in student loan repayment for qualifying VA positions.', iconName: 'DollarSign' },
     ],
     tips: [
-      'VA applications go through USAJobs.gov — create your profile early',
+      'VA applications go through USAJobs.gov, so create your profile early',
       'Apply under Direct Hire Authority for faster processing',
       'PTSD and TBI experience is highly valued at VA facilities',
-      'Federal pay is based on GS/GP scales — negotiate within the grade',
-      'VA offers some of the best work-life balance in healthcare',
+      'Federal pay is based on GS/GP scales; negotiate within the grade',
+      'The VA offers some of the best work-life balance in healthcare',
     ],
   },
 };
@@ -455,7 +457,7 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('geriatric'),
     }),
     benefits: [
-      { title: 'Growing Demand', description: `10,000 baby boomers turn 65 daily — geriatric care is one of the fastest-growing ${brand.niche.short} niches.`, iconName: 'TrendingUp' },
+      { title: 'Growing Demand', description: `10,000 baby boomers turn 65 daily, and geriatric care is one of the fastest-growing ${brand.niche.short} niches.`, iconName: 'TrendingUp' },
       { title: 'Meaningful Care', description: `Help older adults maintain independence and quality of life through expert medication management.`, iconName: 'Heart' },
       { title: 'Diverse Settings', description: 'Work in SNFs, memory care units, home health, outpatient clinics, or palliative care programs.', iconName: 'Building2' },
     ],
@@ -482,7 +484,7 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('veterans'),
     }),
     benefits: [
-      { title: 'Critical Mission', description: `Veterans carry distinct health burdens — polytrauma, TBI, toxic exposures, chronic pain — and veteran-focused ${brand.niche.short}s close real care gaps.`, iconName: 'Heart' },
+      { title: 'Critical Mission', description: `Veterans carry distinct health burdens, including polytrauma, TBI, toxic exposures, and chronic pain, and veteran-focused ${brand.niche.short}s close real care gaps.`, iconName: 'Heart' },
       { title: 'Specialized Training', description: 'VA-funded continuing education and fellowship pathways span primary care, rehabilitation, and specialty medicine.', iconName: 'Shield' },
       { title: 'Federal Benefits', description: 'VA positions include federal pension, TSP matching, 26+ days PTO, and up to $200K loan repayment.', iconName: 'DollarSign' },
     ],
@@ -491,7 +493,7 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       'Learn VA disability and service-connected documentation requirements',
       'Military-connected clinicians are especially valued',
       `Community-based veteran organizations also hire ${brand.niche.short}s`,
-      'Tri-care network providers serve military families outside VA system',
+      'TRICARE network providers serve military families outside the VA system',
     ],
   },
   lgbtq: {
@@ -509,7 +511,7 @@ export const POPULATION_SPECIALTY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('lgbtq'),
     }),
     benefits: [
-      { title: 'Underserved Niche', description: `LGBTQ+ individuals face well-documented health disparities — affirming, trained providers are critically needed.`, iconName: 'Heart' },
+      { title: 'Underserved Niche', description: `LGBTQ+ individuals face well-documented health disparities, and affirming, trained providers are critically needed.`, iconName: 'Heart' },
       { title: 'Growing Demand', description: 'Gender-affirming care is expanding rapidly with new clinics and telehealth platforms specifically serving the community.', iconName: 'TrendingUp' },
       { title: 'Meaningful Impact', description: `Help reduce health disparities by providing culturally competent care to marginalized populations.`, iconName: 'Users' },
     ],
@@ -588,7 +590,7 @@ function buildNpCategoryConfig(input: NpCategoryConfigInput): CategoryConfig {
     tips: [
       'Verify state APRN licensure and prescriptive authority requirements',
       'Keep national certification and CE credits current',
-      'Compare total compensation — base, incentives, CME, and benefits',
+      'Compare total compensation: base, incentives, CME, and benefits',
       'Ask about caseload, support staffing, and documentation time',
       'Confirm collaborative or supervisory agreement requirements in this state',
     ],
@@ -813,7 +815,7 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('1099'),
     }),
     benefits: [
-      { title: 'Higher Gross Pay', description: `1099 ${brand.niche.short}s earn $75-$150+/hr — 20-40% higher than W2 rates with significant tax deduction opportunities.`, iconName: 'DollarSign' },
+      { title: 'Higher Gross Pay', description: `1099 ${brand.niche.short}s earn $75-$150+/hr, which is 20-40% higher than W-2 rates, with significant tax deduction opportunities.`, iconName: 'DollarSign' },
       { title: 'Schedule Control', description: 'Set your own hours, work with multiple clients, and control your patient volume and caseload.', iconName: 'Clock' },
       { title: 'Tax Advantages', description: 'Deduct business expenses, contribute $66K/year to SEP-IRA, and write off home office and mileage.', iconName: 'DollarSign' },
     ],
@@ -843,7 +845,7 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
     }),
     benefits: [
       { title: 'Premium Pay', description: `Correctional ${brand.niche.short}s earn $130K-$190K+ due to the challenging environment and high demand for correctional healthcare providers.`, iconName: 'DollarSign' },
-      { title: 'Loan Repayment', description: 'Many correctional facilities qualify for NHSC and state loan repayment programs — up to $50K for 2 years of service.', iconName: 'DollarSign' },
+      { title: 'Loan Repayment', description: 'Many correctional facilities qualify for NHSC and state loan repayment programs, with up to $50K for 2 years of service.', iconName: 'DollarSign' },
       { title: 'Unique Clinical Skills', description: 'Develop expertise in correctional medicine, emergency response, and managing complex comorbidities in underserved populations.', iconName: 'Shield' },
     ],
     tips: [
@@ -869,7 +871,7 @@ export const ALL_CATEGORY_CONFIGS: Record<string, CategoryConfig> = {
       ...withTagFallback('locum-tenens'),
     }),
     benefits: [
-      { title: 'Highest Hourly Rates', description: `Locum tenens ${brand.niche.short}s earn $80-$160/hr — the highest hourly rates in ${brand.niche.adjective} nursing with full travel expenses covered.`, iconName: 'DollarSign' },
+      { title: 'Highest Hourly Rates', description: `Locum tenens ${brand.niche.short}s earn $80-$160/hr, the highest hourly rates in ${brand.niche.adjective} nursing, with full travel expenses covered.`, iconName: 'DollarSign' },
       { title: 'No Long-Term Commitment', description: 'Assignments from 2 weeks to 6+ months. Take breaks between assignments and maintain complete career flexibility.', iconName: 'Calendar' },
       { title: 'Nationwide Opportunities', description: 'Work across multiple states, experience different healthcare systems, and build a diverse clinical portfolio.', iconName: 'MapPin' },
     ],
@@ -893,7 +895,7 @@ export function getAllCategorySlugs(): string[] {
 async function getCityJobs(config: CategoryConfig, city: CityData, skip = 0, take = 10) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where = config.buildWhere(city.state, city.name) as any;
+    const where = withListingQuarantine(config.buildWhere(city.state, city.name) as any);
     return await prisma.job.findMany({
       where,
       omit: JOB_LISTING_OMIT, // Perf1: don't pull the multi-KB description for cards
@@ -962,7 +964,7 @@ const getCityStats = cache(async function getCityStats(config: CategoryConfig, c
     // A stale positive row is NOT trusted — if the live count is 0 the page
     // correctly redirects instead of rendering frozen counts.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where = config.buildWhere(city.state, city.name) as any;
+    const where = withListingQuarantine(config.buildWhere(city.state, city.name) as any);
     const liveCount = await prisma.job.count({ where });
     if (liveCount > 0) {
       // Compute rough avg salary from live data
@@ -1018,7 +1020,7 @@ export function formatStatsBadge(totalJobs: number, statsAsOf: Date | null): str
   const freshness = isToday
     ? 'updated today'
     : `updated ${asOf.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}`;
-  return `${totalJobs} live roles · ${freshness}`;
+  return `${totalJobs} live ${pluralize(totalJobs, 'role')} · ${freshness}`;
 }
 
 // ─── Qualification facts per category (P2 #8) ─────────────────────────────────
@@ -1069,7 +1071,7 @@ const CATEGORY_CREDENTIALS: Record<string, CategoryCredentialFacts> = {
     role: 'CRNA',
     article: 'a',
     standaloneLabel: true,
-    degree: 'a graduate degree from a nurse anesthesia program accredited by the Council on Accreditation (COA) — admission requires critical-care RN experience, and entry-level programs now award a doctorate',
+    degree: 'a graduate degree from a nurse anesthesia program accredited by the Council on Accreditation (COA); admission requires critical-care RN experience, and entry-level programs now award a doctorate',
     certification: 'national certification through the NBCRNA (National Board of Certification and Recertification of Nurse Anesthetists), maintained through its Continued Professional Certification program',
     dea: 'DEA registration where the role includes ordering or prescribing controlled substances',
   },
@@ -1086,7 +1088,7 @@ const CATEGORY_CREDENTIALS: Record<string, CategoryCredentialFacts> = {
     article: 'a',
     standaloneLabel: true,
     degree: 'a graduate CNS program in a defined specialty population',
-    certification: 'national certification for that population — for example AGCNS-BC through ANCC, or an ACCNS credential through the American Association of Critical-Care Nurses (AACN)',
+    certification: 'national certification for that population, for example AGCNS-BC through ANCC or an ACCNS credential through the American Association of Critical-Care Nurses (AACN)',
     dea: 'DEA registration where the state grants CNS prescriptive authority',
   },
   pediatric: {
@@ -1094,7 +1096,7 @@ const CATEGORY_CREDENTIALS: Record<string, CategoryCredentialFacts> = {
     article: 'a',
     standaloneLabel: false,
     degree: `a master's or doctoral degree from a pediatric ${brand.niche.descriptor} program`,
-    certification: 'national certification through the Pediatric Nursing Certification Board (PNCB) — CPNP-PC for primary care or CPNP-AC for acute care',
+    certification: 'national certification through the Pediatric Nursing Certification Board (PNCB): CPNP-PC for primary care or CPNP-AC for acute care',
     dea: 'DEA registration for prescribing controlled substances',
   },
   neonatal: {
@@ -1118,7 +1120,7 @@ const CATEGORY_CREDENTIALS: Record<string, CategoryCredentialFacts> = {
     article: 'an',
     standaloneLabel: false,
     degree: `a master's or doctoral degree from an acute-care-focused ${brand.niche.descriptor} program`,
-    certification: 'national certification on the acute care track — AGACNP-BC through ANCC or ACNPC-AG through the American Association of Critical-Care Nurses (AACN)',
+    certification: 'national certification on the acute care track: AGACNP-BC through ANCC or ACNPC-AG through the American Association of Critical-Care Nurses (AACN)',
     dea: 'DEA registration for prescribing controlled substances',
   },
 };
@@ -1311,7 +1313,7 @@ export async function buildCategoryCityMetadata(
     // cardiology and aesthetics city page. Gated, not just labelled.
     // The leading space lives INSIDE the conditional so a withheld claim
     // leaves no trailing whitespace on the ~1,485 unflagged cities either.
-    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${city.name}, ${city.stateCode}. ${config.heroSubtitle}. Population: ${city.population.toLocaleString()}. COL index: ${city.costOfLivingIndex}.${shortageMatchesCategory ? ' Federally designated behavioral-health HPSA.' : ''}`,
+    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} ${pluralize(stats.totalJobs, 'job')} in ${city.name}, ${city.stateCode}. ${config.heroSubtitle}. Population: ${city.population.toLocaleString()}. COL index: ${city.costOfLivingIndex}.${shortageMatchesCategory ? ' Federally designated behavioral-health HPSA.' : ''}`,
     keywords: [
       `${config.label.toLowerCase()} ${brand.niche.short.toLowerCase()} jobs ${city.name}`,
       `${city.name} ${config.label.toLowerCase()} ${brand.niche.descriptor}`,
@@ -1691,7 +1693,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
       {/* ═══ D2: HERO — CategoryHero with category's watercolor ═══ */}
       <CategoryHero
         bgColor={assets?.bgColor || '#BE185D'}
-        heroImage={assets?.heroImage || `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
+        heroImage={assets?.heroImage || DEFAULT_HERO_IMAGE}
         heroAlt={`${config.label} ${brand.niche.short} working in ${city!.name}, ${city!.stateCode}`}
         badgeText={formatStatsBadge(stats.totalJobs, stats.statsAsOf)}
         breadcrumbs={[]}
@@ -1699,7 +1701,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
         headlineLine2={brand.niche.short}
         headlineSub={`jobs in ${city!.name}, ${city!.stateCode}.`}
         stats={[
-          { value: `${stats.totalJobs}`, label: 'positions' },
+          { value: `${stats.totalJobs}`, label: pluralize(stats.totalJobs, 'position') },
           // P3 #13: this used to be `salaryRange.split('–')[0]` — an EN DASH,
           // while every salaryRange literal is written with an ASCII hyphen.
           // The split never matched, so the fallback rendered the whole range
@@ -1816,7 +1818,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                     {config.label} Alerts
                   </h3>
                   <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
-                    New {config.label.toLowerCase()} {brand.niche.short} positions in {city!.name} — delivered daily.
+                    New {config.label.toLowerCase()} {brand.niche.short} positions in {city!.name}, delivered daily.
                   </p>
                   <Link href="/job-alerts" className="pseo-cta-primary" style={{
                     display: 'block', width: '100%', textAlign: 'center',
@@ -1875,8 +1877,8 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
 
               <div className="pseo-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
                 {/* ROW 1: Hero card (8col) + Side card (4col) */}
-                <div className="pseo-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-                  <div style={{ padding: '32px 28px' }}>
+                <div className="pseo-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                  <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>
                       {`${config.label} in ${city!.name}`}
                     </h3>
@@ -1884,15 +1886,11 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                       {config.heroSubtitle}. {config.tips[0] || ''}
                     </p>
                   </div>
-                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                    <Image src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} width={280} height={200} sizes="(max-width: 768px) 90vw, 280px" style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-                  </div>
+                  <ImmersiveImage src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} minHeight={240} />
                 </div>
 
                 <div className="pseo-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Image src={assets.bentoImages[1]} alt={`${config.label} growth`} width={200} height={140} sizes="(max-width: 768px) 90vw, 200px" style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
-                  </div>
+                  <ImmersiveImage src={assets.bentoImages[1]} alt={`${config.label} growth`} minHeight={200} />
                   <div style={{ padding: '24px 22px', flex: 1 }}>
                     <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>
                       Practice Authority
@@ -1918,17 +1916,15 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
 
                 {/* ROW 3: Salary card (8col) + Alert CTA (4col) */}
                 {assets.bentoImages[2] && (
-                  <div className="pseo-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-                    <div style={{ padding: '32px 28px' }}>
+                  <div className="pseo-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                    <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                       <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                       <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary & Compensation</h3>
                       <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                         {config.label} {brand.niche.short}s in {city!.name} earn {stats.rawAvgSalary > 0 ? `$${stats.rawAvgSalary}k` : config.salaryRange} annually.
                       </p>
                     </div>
-                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                      <Image src={assets.bentoImages[2]} alt="Salary growth" width={280} height={200} sizes="(max-width: 768px) 90vw, 280px" style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-                    </div>
+                    <ImmersiveImage src={assets.bentoImages[2]} alt="Salary growth" minHeight={240} />
                   </div>
                 )}
 
@@ -1936,7 +1932,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                   <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />
                   <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>{config.label} Alerts</h3>
                   <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                    New {config.label.toLowerCase()} listings in {city!.name} — delivered daily.
+                    New {config.label.toLowerCase()} listings in {city!.name}, delivered daily.
                   </p>
                   <Link href="/job-alerts" className="pseo-cta-primary" style={{
                     padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
@@ -2029,7 +2025,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                   <div style={{ fontSize: '11px', color: '#7A6A62' }}>COL-Adjusted Salary</div>
                   <div style={{ fontSize: '22px', fontWeight: 800, color: '#1A2E35' }}>
                     ${stats.colAdjustedSalary}k
-                    <span style={{ fontSize: '11px', fontWeight: 400, marginLeft: '6px', color: '#7A6A62' }}>(${stats.rawAvgSalary}k nom.)</span>
+                    <span style={{ fontSize: '11px', fontWeight: 400, marginLeft: '6px', color: '#7A6A62' }}>(${stats.rawAvgSalary}k nominal)</span>
                   </div>
                 </div>
               )}
@@ -2079,7 +2075,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
                       ))}
                     </ul>
                     <p style={{ fontSize: '11px', color: '#7A6A62', margin: '10px 0 0', lineHeight: 1.5 }}>
-                      Employers with open {brand.niche.short} roles in {city!.name}, {city!.stateCode} right now — counted across every specialty on this board.
+                      Employers with open {brand.niche.short} roles in {city!.name}, {city!.stateCode} right now, counted across every specialty on this board.
                     </p>
                   </>
                 ) : (
@@ -2108,7 +2104,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
               <Link key={nc.slug} href={`/jobs/${config.slug}/city/${nc.slug}`}
                 className="pseo-bento-card" style={{ ...clayCard, display: 'block', padding: '14px', textAlign: 'center', textDecoration: 'none' }}>
                 <div style={{ fontWeight: 700, fontSize: '14px', color: '#1A2E35' }}>{nc.name}</div>
-                <div style={{ fontSize: '11px', marginTop: '4px', color: '#7A6A62' }}>{nc.stateCode} · Pop {Math.round(nc.population / 1000)}K</div>
+                <div style={{ fontSize: '11px', marginTop: '4px', color: '#7A6A62' }}>{nc.stateCode} · Pop. {Math.round(nc.population / 1000)}K</div>
               </Link>
             ))}
           </div>
@@ -2243,7 +2239,7 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
             Common Questions
           </p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>
-            {config.label} {brand.niche.short} Jobs in {city!.name} — FAQ
+            {config.label} {brand.niche.short} Jobs in {city!.name}: FAQ
           </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -2280,6 +2276,9 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
            lines up with the H1 below it. */
         .pseo-crumb-band { background: #faf6ef; padding: 24px 56px 0; }
         .pseo-crumb-band nav { margin-bottom: 0; }
+        /* The current page is the H1 directly below, so its crumb is kept for
+           assistive technology but not drawn (owner request, 2026-09-16). */
+        .pseo-crumb-band nav ol li:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
         @media (max-width: 900px) {
           .pseo-crumb-band { padding: 16px 24px 0; }
         }

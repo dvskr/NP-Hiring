@@ -2,7 +2,9 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import CategoryHero from '@/components/CategoryHero';
+import MedianFigure from '@/components/MedianFigure';
+import ImmersiveImage from '@/components/ImmersiveImage';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import { FileText, DollarSign, Scale, Calculator, Building2, Lightbulb, Bell, Briefcase, TrendingUp, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -15,7 +17,6 @@ import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 /* Design Tokens */
 const clayCard: React.CSSProperties = {
@@ -77,11 +78,11 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} 1099 ${brand.niche.short} Jobs — Independent Contractor Roles`,
+    title: `${stats.totalJobs} 1099 ${brand.niche.short} Jobs: Independent Contractor Roles`,
     description: `Find ${stats.totalJobs} 1099 independent contractor ${brand.niche.descriptor} jobs with schedule flexibility, Schedule C tax deductions, and higher gross pay than comparable W-2 roles.`,
     keywords: ['1099 np jobs', '1099 nurse practitioner', 'independent contractor nurse practitioner', 'contract np jobs', '1099 np telehealth', 'independent contractor np'],
     openGraph: {
-      title: `${stats.totalJobs} 1099 ${brand.niche.short} Jobs - Independent Contractor`,
+      title: `${stats.totalJobs} 1099 ${brand.niche.short} Jobs: Independent Contractor`,
       description: `Browse 1099 and independent contractor ${brand.niche.descriptor} positions.`,
       type: 'website',
       url: `${brand.baseUrl}/jobs/1099`,
@@ -116,23 +117,23 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
   const icFaqs = [
     {
       question: `What is a 1099 ${brand.niche.short} position?`,
-      answer: `A 1099 ${brand.niche.short} works as an independent contractor rather than a W2 employee. You receive a 1099-NEC tax form instead of a W-2. You set your own schedule, pay your own taxes (including self-employment tax), and provide your own benefits. In exchange, you typically earn higher gross pay than comparable W2 positions.`
+      answer: `A 1099 ${brand.niche.short} works as an independent contractor rather than a W2 employee. You receive a 1099-NEC tax form instead of a W-2. You set your own schedule, pay your own taxes (including self-employment tax), and provide your own benefits. In exchange, you typically earn higher gross pay than in comparable W2 positions.`
     },
     {
       question: `How much do 1099 ${brand.niche.short}s earn compared to W2?`,
-      answer: `1099 rates are quoted gross and usually run meaningfully higher than comparable W2 hourly rates, because no benefits or employer payroll taxes are attached. After accounting for self-employment tax (15.3%), health insurance, malpractice coverage, and retirement contributions, net take-home is often closer to W2 pay than the headline rate suggests — model both before accepting an offer.`
+      answer: `1099 rates are quoted gross and usually run meaningfully higher than comparable W2 hourly rates because no benefits or employer payroll taxes are attached. After accounting for self-employment tax (15.3%), health insurance, malpractice coverage, and retirement contributions, net take-home pay is often closer to W2 pay than the headline rate suggests. Model both before accepting an offer.`
     },
     {
       question: `What are the tax advantages of 1099 ${brand.niche.short} work?`,
-      answer: `1099 ${brand.niche.short}s can deduct business expenses including home office, mileage, professional development, malpractice insurance, health insurance premiums, retirement plan contributions (SEP-IRA or Solo 401k), technology/equipment, and professional memberships. These deductions can significantly reduce taxable income.`
+      answer: `1099 ${brand.niche.short}s can deduct business expenses including home office, mileage, professional development, malpractice insurance, health insurance premiums, retirement plan contributions (SEP-IRA or Solo 401k), technology and equipment, and professional memberships. These deductions can significantly reduce taxable income.`
     },
     {
       question: `Should new grad ${brand.niche.short}s take 1099 positions?`,
-      answer: `We generally recommend new grads start with W2 positions that offer mentorship, malpractice coverage, and benefits. 1099 work requires clinical confidence, business management skills, and financial discipline. Most ${brand.niche.short}s transition to 1099 after 2-3 years of experience when they can negotiate better rates and manage the business aspects.`
+      answer: `We generally recommend that new graduates start with W2 positions that offer mentorship, malpractice coverage, and benefits. 1099 work requires clinical confidence, business management skills, and financial discipline. Most ${brand.niche.short}s transition to 1099 work after 2 to 3 years of experience, when they can negotiate better rates and manage the business side of practice.`
     },
     {
       question: `What do 1099 ${brand.niche.short}s need to set up?`,
-      answer: `1099 ${brand.niche.short}s should: 1) Form an LLC or PLLC for liability protection, 2) Get individual malpractice insurance, 3) Set up a business bank account, 4) Obtain an EIN from the IRS, 5) Register for quarterly estimated tax payments, 6) Open a SEP-IRA or Solo 401k, 7) Secure health insurance through the marketplace or spouse's plan.`
+      answer: `1099 ${brand.niche.short}s should: 1) form an LLC or PLLC for liability protection; 2) obtain individual malpractice insurance; 3) set up a business bank account; 4) obtain an EIN from the IRS; 5) register for quarterly estimated tax payments; 6) open a SEP-IRA or Solo 401k; and 7) secure health insurance through the marketplace or a spouse's plan.`
     },
   ];
 
@@ -180,20 +181,20 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
 
       {/* ═══ HERO ═══ */}
       <CategoryHero
-        bgColor="#d19b99"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v2_1099.webp`}
+        bgColor="#f6dfa7"
+        heroImage="/images/categories/bento/1099-tax.webp"
         heroAlt={`${brand.niche.short} independent contractor workspace`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', `1099 ${brand.niche.short}`]}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "1099 / Independent Contractor", url: `${brand.baseUrl}/jobs/1099` }])}
         indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('1099') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="1099"
         headlineLine2={brand.niche.short}
-        headlineSub="jobs, on your terms."
+        headlineSub="jobs on your terms."
         photoTagTitle="This week"
         photoTagBody="New 1099 postings across telehealth, group, and private practice."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
-          { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '—', label: 'median salary' },
+          { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : 'N/A', label: 'median salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
         description={`Independent contractor ${brand.niche.short} roles with Schedule C deductions, flexible caseloads, and full control of your schedule.`}
@@ -260,7 +261,7 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
                   <TrendingUp size={20} style={{ color: '#34D399' }} />
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Salary Insights</h3>
                 </div>
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.medianSalaryK}k</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}><MedianFigure k={stats.medianSalaryK} /></div>
                 <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Median annual salary</div>
                 <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>1099 gross rates before self-employment tax.</p>
               </div>
@@ -278,61 +279,55 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Higher Pay (8) + Tax Advantages (4) */}
-            <div className="cat-bento-hero-1 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="cat-bento-hero-1 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Higher Gross Pay</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>1099 {brand.niche.short} contracts typically pay a higher gross rate than comparable W2 roles — you trade employer-paid benefits for headline pay and tax deduction opportunities.</p>
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>1099 {brand.niche.short} contracts typically pay a higher gross rate than comparable W2 roles. You trade employer-paid benefits for higher headline pay and tax deduction opportunities.</p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_1099_freedom.webp`} alt={`1099 ${brand.niche.short} independent workspace`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/contract-flexibility.webp" alt={`1099 ${brand.niche.short} independent workspace`} minHeight={240} />
             </div>
 
             <div className="cat-bento-hero-2 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_1099_tax.webp`} alt="1099 tax planning" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/locum-pay.webp" alt="1099 tax planning" minHeight={200} />
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Tax Advantages</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  Deduct business expenses, make large pre-tax SEP-IRA or Solo 401k contributions, and write off home office and mileage.
+                  Deduct business expenses, make large pre-tax SEP-IRA or Solo 401k contributions, and write off home office and mileage costs.
                 </p>
               </div>
             </div>
 
             {/* ROW 2: 4 compact cards (3 cols each) */}
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_1099_schedule.webp`} alt="Schedule flexibility" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/1099-schedule.webp" alt="Schedule flexibility" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Schedule Control</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Set your own hours, work with multiple clients, and control your patient volume.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_1099_autonomy.webp`} alt="Clinical autonomy" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/1099-autonomy.webp" alt="Clinical autonomy" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Clinical Autonomy</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Choose your clinical focus, treatment approach, and patient population freely.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Choose your clinical focus, treatment approach, and patient population.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_1099_multi.webp`} alt="Multiple clients" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/1099-multi.webp" alt="Multiple clients" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Multi-Client</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Contract with multiple practices simultaneously to diversify income streams.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_1099_llc.webp`} alt="LLC protection" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/1099-llc.webp" alt="LLC protection" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>LLC Protection</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Operate under an LLC for liability protection and business tax flexibility.</p>
             </div>
 
             {/* ROW 3: Salary (8) + Alert CTA (4) */}
-            <div className="cat-bento-hero-3 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="cat-bento-hero-3 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Comparison</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>1099 {brand.niche.short}s {stats.medianSalaryK > 0 ? `post a median of $${stats.medianSalaryK}k gross on current listings` : 'typically earn more gross than comparable W2 roles'} — before accounting for self-employment tax and the benefits you fund yourself.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>1099 {brand.niche.short}s {stats.medianSalaryK > 0 ? `post a median of $${stats.medianSalaryK}k gross on current listings` : 'typically earn more gross pay than comparable W2 roles'}, before accounting for self-employment tax and the benefits you fund yourself.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_1099_salary.webp`} alt="1099 vs W2 salary comparison" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/1099-salary.webp" alt="1099 vs W2 salary comparison" minHeight={240} />
             </div>
 
             <div className="cat-bento-cta cat-bento-card" style={{
@@ -343,7 +338,7 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
               <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Job Alerts</h3>
               <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                New 1099 listings delivered to your inbox — be first to apply.
+                New 1099 listings delivered to your inbox, so you can be the first to apply.
               </p>
               <Link href="/job-alerts" className="cat-cta-primary" style={{
                 padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
@@ -367,7 +362,7 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
             {[
               { step: '01', title: 'Form an LLC', text: 'Create an LLC or PLLC for liability protection and tax flexibility before signing your first contract.' },
               { step: '02', title: 'Get Insurance', text: 'Secure individual malpractice insurance and health coverage through the marketplace or a spouse\'s plan.' },
-              { step: '03', title: 'Tax Setup', text: 'Get an EIN, open a business bank account, and register for quarterly estimated tax payments with the IRS.' },
+              { step: '03', title: 'Tax Setup', text: 'Obtain an EIN, open a business bank account, and register for quarterly estimated tax payments with the IRS.' },
               { step: '04', title: 'Retirement Plan', text: 'Open a SEP-IRA or Solo 401k to maximize your tax-advantaged retirement savings.' },
             ].map(r => (
               <div key={r.step} className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
@@ -387,12 +382,12 @@ export default async function IndependentContractorJobsPage({ searchParams }: Pa
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More Ways to Find Your Next Role</h2>
           <div className="cat-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
             {[
-              { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-              { href: '/jobs/locum-tenens', label: 'Locum Tenens', sub: 'Travel assignments', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_locumtenens.webp` },
-              { href: '/jobs/per-diem', label: 'Per Diem', sub: 'Flexible shifts', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_perdiem.webp` },
-              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
+              { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: '/images/categories/nav/remote.webp' },
+              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: '/images/categories/nav/telehealth.webp' },
+              { href: '/jobs/locum-tenens', label: 'Locum Tenens', sub: 'Travel assignments', icon: '/images/categories/nav/locum-tenens.webp' },
+              { href: '/jobs/per-diem', label: 'Per Diem', sub: 'Flexible shifts', icon: '/images/categories/nav/per-diem.webp' },
+              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 pay data', icon: '/images/categories/nav/salary.webp' },
+              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: '/images/categories/nav/location.webp' },
             ].map(c => (
               <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
                 <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />

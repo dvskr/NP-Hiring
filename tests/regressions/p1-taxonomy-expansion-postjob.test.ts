@@ -53,7 +53,10 @@ describe('P1 #20 — post-job form derives options from the classifier maps', ()
   });
 
   it('the zod schema carries the optional specialty field', () => {
-    expect(src).toContain('specialty: z.string().optional()');
+    // The wizard schema lives beside the page since P10 (unit-testable).
+    const schemaSrc = fs.readFileSync(path.join(ROOT, 'app', 'post-job', '_lib', 'job-posting-schema.ts'), 'utf-8');
+    expect(src).toContain("from './_lib/job-posting-schema'");
+    expect(schemaSrc).toContain('specialty: z.string().optional()');
   });
 
   it('SETTING/POPULATION option lists are map-derived, not hand-written arrays', () => {

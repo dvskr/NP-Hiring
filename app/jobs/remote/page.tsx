@@ -2,6 +2,8 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import MedianFigure from '@/components/MedianFigure';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { Home, Globe, TrendingUp, Building2, Bell, ArrowRight, Briefcase, DollarSign } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -12,11 +14,10 @@ import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CategoryFAQ from '@/components/CategoryFAQ';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 /* ═══ Design Tokens — matched to employer page ═══ */
 const clayCard: React.CSSProperties = {
@@ -117,11 +118,11 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} Remote ${brand.niche.short} Jobs — Work From Home`,
+    title: `${stats.totalJobs} Remote ${brand.niche.short} Jobs: Work From Home`,
     // SEO Fix #7: trim to ≤160 chars (Google SERP cap).
-    description: `Find ${stats.totalJobs} remote ${brand.niche.short} jobs you can do from home — telehealth, utilization review, and case management roles. Flexible schedules, no commute. Updated daily.`,
+    description: `Find ${stats.totalJobs} remote ${brand.niche.short} jobs you can do from home: telehealth, utilization review, and case management roles. Flexible schedules with no commute. Updated daily.`,
     openGraph: {
-      title: `${stats.totalJobs} Remote ${brand.niche.short} Jobs - Work From Home`,
+      title: `${stats.totalJobs} Remote ${brand.niche.short} Jobs: Work From Home`,
       description: `Browse telehealth and remote ${brand.niche.descriptor} positions. Flexible schedules, competitive pay.`,
       type: 'website',
       images: [{
@@ -196,15 +197,15 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
       <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName={`Remote ${brand.niche.short} Jobs`} />
       {/* ═══ HERO ═══ */}
       <CategoryHero
-        bgColor="#e8af9b"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
+        bgColor="#fbf5ec"
+        heroImage="/images/categories/heroes/remote.webp"
         heroAlt={`${brand.niche.short} working remotely from home via telehealth`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'Remote']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Remote", url: `${brand.baseUrl}/jobs/remote` }])}
         indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('remote') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Remote"
         headlineLine2={brand.niche.short}
-        headlineSub="jobs, work from anywhere."
+        headlineSub="jobs from anywhere."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$110K+', label: 'median salary' },
@@ -326,7 +327,7 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
                     <TrendingUp size={20} style={{ color: '#34D399' }} />
                     <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Salary Insights</h3>
                   </div>
-                  <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.medianSalaryK}k</div>
+                  <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}><MedianFigure k={stats.medianSalaryK} /></div>
                   <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Median annual salary</div>
                   <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Based on remote {brand.niche.short} positions with salary data.</p>
                 </div>
@@ -351,63 +352,57 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
 
           <div className="remote-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Work From Anywhere (8) + Multi-State (4) */}
-            <div className="remote-bento-hero-1 remote-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="remote-bento-hero-1 remote-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Location Independence</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Practice from home, a private office, or anywhere with secure internet — no commute required.
+                  Practice from home, a private office, or anywhere with secure internet. No commute is required.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_remote_office.webp`} alt={`Remote ${brand.niche.short} home office setup`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/remote-office.webp" alt={`Remote ${brand.niche.short} home office setup`} minHeight={240} />
             </div>
 
             <div className="remote-bento-hero-2 remote-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_multi_state_impact.webp`} alt="Multi-state licensure map" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/multistate-map.webp" alt="Multi-state licensure map" minHeight={200} />
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Multi-State Licensure</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  Care for patients in multiple states — many employers sponsor and pay for additional state licenses.
+                  Care for patients in multiple states. Many employers sponsor and pay for additional state licenses.
                 </p>
               </div>
             </div>
 
             {/* ROW 2: 4 compact cards (3 cols each) */}
             <div className="remote-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_perdiem.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/telehealth-flex.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Flexible Hours</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Design a schedule around your life — mornings, evenings, or weekends.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Design a schedule around your life: mornings, evenings, or weekends.</p>
             </div>
             <div className="remote-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_telehealth.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/telehealth.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>High Demand</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Health systems keep expanding virtual care — remote NP openings are posted daily.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Health systems keep expanding virtual care, and remote NP openings are posted daily.</p>
             </div>
             <div className="remote-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_shield_lock.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/shield-lock.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>HIPAA Compliant</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>End-to-end encrypted platforms with audit trails and secure EHR integration.</p>
             </div>
             <div className="remote-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_newgrad.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/grad-cap.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>New Grad Friendly</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Supervised entry-level positions with structured onboarding and mentorship.</p>
             </div>
 
             {/* ROW 3: Salary (8) + Alert CTA (4) */}
-            <div className="remote-bento-hero-3 remote-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="remote-bento-hero-3 remote-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Parity</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Remote {brand.niche.short}s {stats.medianSalaryK > 0 ? `post a median of $${stats.medianSalaryK}k on current listings` : 'typically earn $95K–$160K'} — competitive with comparable in-office roles.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Remote {brand.niche.short}s {stats.medianSalaryK > 0 ? `post a median of $${stats.medianSalaryK}k on current listings` : 'typically earn $95K to $160K'}, which is competitive with comparable in-office roles.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_salary_growth.webp`} alt={`Remote ${brand.niche.short} salary growth chart`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/remote-salary-growth.webp" alt={`Remote ${brand.niche.short} salary growth chart`} minHeight={240} />
             </div>
 
             <div className="remote-bento-cta remote-bento-card" style={{
@@ -415,10 +410,10 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
               display: 'flex', flexDirection: 'column', justifyContent: 'center',
               background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)',
             }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_clay_bell.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '14px' }} />
+              <Image src="/images/categories/icons/alert-bell.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '14px' }} />
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Job Alerts</h3>
               <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                New listings delivered to your inbox — be first to apply.
+                New listings delivered to your inbox so you can be first to apply.
               </p>
               <Link href="/job-alerts?mode=Remote" className="remote-cta-primary" style={{
                 padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
@@ -445,9 +440,9 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
             {[
               { step: '01', title: 'Platform Setup', text: 'Most employers provide HIPAA-compliant platforms like Zoom for Healthcare or Doxy.me with full onboarding.' },
-              { step: '02', title: 'Licensure', text: 'Plan for an active license in every state where your patients are located — many employers sponsor additional licenses.' },
+              { step: '02', title: 'Licensure', text: 'Plan for an active license in every state where your patients are located. Many employers sponsor additional licenses.' },
               { step: '03', title: 'Equipment', text: 'Reliable internet (10+ Mbps), quality webcam, noise-cancelling headset, and private workspace.' },
-              { step: '04', title: 'Workspace', text: 'A quiet, well-lit room with neutral background and locked door meets HIPAA standards.' },
+              { step: '04', title: 'Workspace', text: 'A quiet, well-lit room with a neutral background and a locked door meets HIPAA standards.' },
             ].map(r => (
               <div key={r.step} className="remote-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px', fontFamily: 'var(--font-mono)' }}>{r.step}</span>
@@ -470,12 +465,12 @@ export default async function RemoteJobsPage({ searchParams }: PageProps) {
           </h2>
           <div className="remote-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
             {[
-              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual patient care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-              { href: '/jobs/travel', label: 'Travel', sub: 'Locum tenens', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_travel.webp` },
-              { href: '/jobs/new-grad', label: 'New Grad', sub: 'Entry-level roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_newgrad.webp` },
-              { href: '/jobs/per-diem', label: 'Per Diem', sub: 'Flexible shifts', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_perdiem.webp` },
-              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
+              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual patient care', icon: '/images/categories/nav/telehealth.webp' },
+              { href: '/jobs/travel', label: 'Travel', sub: 'Locum tenens', icon: '/images/categories/nav/travel.webp' },
+              { href: '/jobs/new-grad', label: 'New Grad', sub: 'Entry-level roles', icon: '/images/categories/nav/new-grad.webp' },
+              { href: '/jobs/per-diem', label: 'Per Diem', sub: 'Flexible shifts', icon: '/images/categories/nav/per-diem.webp' },
+              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 compensation data', icon: '/images/categories/nav/salary.webp' },
+              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: '/images/categories/nav/location.webp' },
             ].map(c => (
               <Link key={c.href} href={c.href} className="remote-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
                 <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />

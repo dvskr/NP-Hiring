@@ -98,17 +98,17 @@ export async function generateMetadata({ searchParams }: CompaniesPageProps): Pr
   const page = parsePageParam((await searchParams).page);
   const totalPages = totalPageCount(directoryCount);
   const currentPage = Math.min(page, totalPages);
-  const pageSuffix = currentPage > 1 ? ` — Page ${currentPage} of ${totalPages}` : '';
+  const pageSuffix = currentPage > 1 ? ` (Page ${currentPage} of ${totalPages})` : '';
   const companyCountDisplay = totalCompanies > 1000
     ? `${(Math.floor(totalCompanies / 100) * 100).toLocaleString()}+`
     : totalCompanies.toLocaleString();
 
   return {
-    title: `${brand.niche.short} Employers — Companies Hiring ${brand.niche.long}s${pageSuffix}`,
+    title: `${brand.niche.short} Employers: Companies Hiring ${brand.niche.long}s${pageSuffix}`,
     description:
       `Browse companies actively hiring ${brand.niche.short}s. See open positions, salary data, and apply directly. Updated daily with ${companyCountDisplay} employers nationwide.`,
     openGraph: {
-      title: `Companies Hiring ${brand.niche.short}s — ${brand.name}`,
+      title: `Companies Hiring ${brand.niche.short}s | ${brand.name}`,
       description: `Explore employers with open ${brand.niche.descriptor} positions.`,
       url: `${brand.baseUrl}${buildCompaniesPath(currentPage)}`,
       type: 'website',
@@ -174,8 +174,34 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
     normalizedName: true,
     logoUrl: true,
     isVerified: true,
+    // P10 admin-revalidate #5: the hub marks employers whose profile claim an
+    // admin approved, the same signal the profile and AboutEmployer badges read.
+    claimVerifiedAt: true,
     _count: { select: { jobs: { where: activeJobWhere } } },
   } as const;
+  type DirectoryRow = {
+    id: string;
+    name: string;
+    normalizedName: string;
+    logoUrl: string | null;
+    isVerified: boolean;
+    claimVerifiedAt: Date | null;
+    _count: { jobs: number };
+  };
+  const toEntry = (company: DirectoryRow): DirectoryEntry => ({
+    id: company.id,
+    name: company.name,
+    // B30 inverse (app/sitemap.ts): rows inserted before the normalizer
+    // changed still store the space form ("life stance"), which interpolates
+    // to a %20 URL that mismatches the canonical kebab URL the sitemap emits.
+    // Single-space→hyphen is the exact inverse of the profile resolver's
+    // legacy fallback, so the link round-trips.
+    href: `/companies/${company.normalizedName.replace(/ /g, '-')}`,
+    logoUrl: company.logoUrl,
+    isVerified: company.isVerified,
+    isClaimed: company.claimVerifiedAt !== null,
+    activeJobs: company._count.jobs,
+  });
 
   // P2 #11: the hub took a hardcoded 200-row slice with no pagination and no
   // index — see the git history for the original clause. Beyond 200
@@ -199,19 +225,7 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
     take: COMPANIES_PER_PAGE,
   });
 
-  const entries = companies.map((company) => ({
-    id: company.id,
-    name: company.name,
-    // B30 inverse (app/sitemap.ts): rows inserted before the normalizer
-    // changed still store the space form ("life stance"), which interpolates
-    // to a %20 URL that mismatches the canonical kebab URL the sitemap emits.
-    // Single-space→hyphen is the exact inverse of the profile resolver's
-    // legacy fallback, so the link round-trips.
-    href: `/companies/${company.normalizedName.replace(/ /g, '-')}`,
-    logoUrl: company.logoUrl,
-    isVerified: company.isVerified,
-    activeJobs: company._count.jobs,
-  }));
+  const entries = companies.map(toEntry);
 
   // The `some: activeJobWhere` filter guarantees ≥1, but keep the guard so a
   // future relaxation of the where clause can't advertise "0 open positions".
@@ -230,14 +244,7 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
         select: directorySelect,
         orderBy: { jobCount: 'desc' },
         take: SPOTLIGHT_CANDIDATES,
-      })).map((company) => ({
-        id: company.id,
-        name: company.name,
-        href: `/companies/${company.normalizedName.replace(/ /g, '-')}`,
-        logoUrl: company.logoUrl,
-        isVerified: company.isVerified,
-        activeJobs: company._count.jobs,
-      }));
+      })).map(toEntry);
   const spotlight = currentPage === 1 ? topByActiveJobs(spotlightSource, SPOTLIGHT_COUNT) : [];
 
   const canonicalPath = buildCompaniesPath(currentPage);
@@ -315,7 +322,7 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
           <p style={{ fontSize: '16px', color: '#5A4A42', maxWidth: '560px', margin: '0 auto', lineHeight: 1.6 }}>
             {/* Honest range label — never claims to show more than it renders. */}
             Showing {pageRangeLabel(currentPage, listed.length, totalCompanies)} employers with active{' '}
-            {brand.niche.descriptor} positions. Jump to a letter, or browse the full A–Z list below.
+            {brand.niche.descriptor} positions. Jump to a letter, or browse the full A to Z list below.
           </p>
         </section>
 
@@ -330,10 +337,10 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
           <div style={{ fontSize: '15px', color: '#3D3530', lineHeight: 1.75 }}>
             <p style={{ marginBottom: '16px' }}>
               Every employer below has at least one currently published {brand.niche.short} role on
-              {' '}{brand.name}. The list is a mix of <strong>direct employers</strong> —
-              health systems, community health centers, Federally
+              {' '}{brand.name}. The list is a mix of <strong>direct employers</strong>, which
+              include health systems, community health centers, Federally
               Qualified Health Centers (FQHCs), VA medical centers, telehealth
-              platforms, and private practices — alongside <strong>staffing agencies</strong>{' '}
+              platforms, and private practices, alongside <strong>staffing agencies</strong>{' '}
               that place {brand.niche.short}s into locum and travel assignments. We pull active
               postings from each employer&apos;s career pages and ATS feeds twice
               daily, so the company list reflects who is genuinely hiring now, not
@@ -344,7 +351,7 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
               practical: <strong>practice authority</strong> in the states they hire
               for (full vs. reduced vs. restricted, plus Nurse Licensure Compact
               membership), <strong>caseload structure</strong> (15-minute follow-ups
-              vs. 30-60 minute comprehensive visits), <strong>productivity expectations</strong>{' '}
+              vs. 30 to 60 minute comprehensive visits), <strong>productivity expectations</strong>{' '}
               (RVU targets, pace), <strong>collaborative-physician requirements</strong>{' '}
               if your state needs them, and what they cover on{' '}
               <strong>malpractice, CME, and EMR/billing infrastructure</strong>.
@@ -353,11 +360,11 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
               widely.
             </p>
             <p style={{ marginBottom: 0 }}>
-              Compensation patterns differ by employer type too. VA roles bundle
-              federal pension + EDRP loan repayment up to $200K; FQHCs and CMHCs
+              Compensation patterns differ by employer type too. VA roles bundle a
+              federal pension with EDRP loan repayment up to $200K; FQHCs and CMHCs
               qualify for NHSC repayment; telehealth platforms typically offer the
               highest hourly rates but no benefits; hospital systems offer signing
-              bonuses + relocation. Open one of the listings below to see specific
+              bonuses and relocation. Open one of the listings below to see specific
               roles, compensation ranges, and apply paths for that employer.
             </p>
           </div>
@@ -393,7 +400,7 @@ export default async function CompaniesIndexPage({ searchParams }: CompaniesPage
             id="a-z"
             style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: 700, color: '#1A2E35', margin: '0 0 16px' }}
           >
-            All employers A–Z
+            All employers A to Z
           </h2>
 
           {/* Jump nav. Letters with no employers on this page render as plain
@@ -562,6 +569,8 @@ interface DirectoryEntry {
   href: string;
   logoUrl: string | null;
   isVerified: boolean;
+  /** Company.claimVerifiedAt is set: an admin approved this employer's profile claim. */
+  isClaimed: boolean;
   activeJobs: number;
 }
 
@@ -631,9 +640,31 @@ function CompanyCard({ entry }: { entry: DirectoryEntry }) {
               </svg>
             )}
           </div>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
-            {entry.activeJobs} open {entry.activeJobs === 1 ? 'position' : 'positions'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D' }}>
+              {entry.activeJobs} open {entry.activeJobs === 1 ? 'position' : 'positions'}
+            </span>
+            {entry.isClaimed && (
+              // Same wording and palette as the profile page badge, so the
+              // hub never asserts anything the profile does not.
+              <span
+                title="An employer asked to be recognized as the owner of this profile, and our team approved the request."
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  lineHeight: 1.4,
+                  backgroundColor: '#D1FAE5',
+                  color: '#065F46',
+                }}
+              >
+                Claimed by employer
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </Link>

@@ -107,7 +107,7 @@ describe('F33 client: toggleSave surfaces failures instead of swallowing them', 
     });
 
     it('tells the employer the save/unsave failed', () => {
-        expect(toggleSave).toContain('Couldn’t save this candidate — please try again.');
-        expect(toggleSave).toContain('Couldn’t remove this saved candidate — please try again.');
+        expect(toggleSave).toContain('Couldn’t save this candidate. Please try again.');
+        expect(toggleSave).toContain('Couldn’t remove this saved candidate. Please try again.');
     });
 });

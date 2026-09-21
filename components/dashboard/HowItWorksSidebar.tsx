@@ -65,7 +65,7 @@ export default function HowItWorksSidebar(): React.JSX.Element {
                     How this platform works
                 </h2>
                 <p style={{ margin: 0, fontSize: '12px', color: '#8A9BA6' }}>
-                    Three ways to apply — what the badges mean.
+                    Three ways to apply, and what the badges mean.
                 </p>
             </header>
 
@@ -75,7 +75,7 @@ export default function HowItWorksSidebar(): React.JSX.Element {
                     iconBg="#A7F3D0"
                     iconColor="#065F46"
                     title="⚡ Easy Apply"
-                    body={`One-click application right here. Fastest path. Posted by employers who hire on ${brand.name}.`}
+                    body={`One-click application on this platform. This is the fastest path. Posted by employers who hire on ${brand.name}.`}
                 />
 
                 <Row
@@ -83,7 +83,7 @@ export default function HowItWorksSidebar(): React.JSX.Element {
                     iconBg="#FCE7F3"
                     iconColor="#9D174D"
                     title="↗ Direct Apply"
-                    body="Goes straight to the employer's careers site — no aggregator middlemen. Either employer-posted or a vetted partner link."
+                    body="Goes straight to the employer's careers site, with no aggregator in between. Either employer-posted or a vetted partner link."
                 />
 
                 <Row
@@ -91,7 +91,7 @@ export default function HowItWorksSidebar(): React.JSX.Element {
                     iconBg="#E5E7EB"
                     iconColor="#4B5563"
                     title="Other listings"
-                    body="Aggregated from partner sources. May redirect through their site and occasionally have stale links."
+                    body="Aggregated from partner sources. These may redirect through the partner's site and occasionally have outdated links."
                 />
             </div>
 
@@ -102,7 +102,7 @@ export default function HowItWorksSidebar(): React.JSX.Element {
                     <ExternalLink size={14} strokeWidth={2.5} />
                 </span>
                 <p style={{ margin: 0, fontSize: '12px', color: '#6B7F8A', lineHeight: 1.5 }}>
-                    Your <strong style={{ color: '#1A2E35' }}>Recommended for you</strong> feed prioritizes Easy Apply and Direct Apply first — they convert faster and won&apos;t send you on a wild goose chase.
+                    Your <strong style={{ color: '#1A2E35' }}>Recommended for you</strong> feed prioritizes Easy Apply and Direct Apply listings, because they convert faster and do not send you through unnecessary redirects.
                 </p>
             </div>
         </aside>

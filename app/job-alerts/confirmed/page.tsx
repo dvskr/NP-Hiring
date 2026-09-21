@@ -4,7 +4,7 @@ import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { brand } from '@/config/brand';
 
 export const metadata: Metadata = {
-    title: 'Job alert confirmed',
+    title: 'Job Alert Confirmed',
     description: `Your ${brand.niche.short} job alert subscription has been confirmed.`,
     robots: { index: false, follow: false },
 };
@@ -23,14 +23,14 @@ export default async function JobAlertConfirmedPage({
 }) {
     const { status } = await searchParams;
     const ok = status === 'ok' || status === undefined;
-    const headline = ok ? 'You’re all set' : status === 'invalid' ? 'Confirmation link invalid' : status === 'missing' ? 'Confirmation link incomplete' : 'Something went wrong';
+    const headline = ok ? 'You are all set' : status === 'invalid' ? 'Confirmation link invalid' : status === 'missing' ? 'Confirmation link incomplete' : 'Something went wrong';
     const message = ok
-        ? `Your job alert is now active. We’ll email matching ${brand.niche.short} positions on your chosen schedule. You can change frequency or unsubscribe at any time from any alert email.`
+        ? `Your job alert is now active. We will email you matching ${brand.niche.short} positions on your chosen schedule. You can change the frequency or unsubscribe at any time from any alert email.`
         : status === 'invalid'
-            ? 'This confirmation link is no longer valid. It may have already been used. If your alert isn’t firing, sign up again from the Job Alerts page and we’ll send a fresh link.'
+            ? 'This confirmation link is no longer valid. It may have already been used. If your alert is not arriving, sign up again from the Job Alerts page and we will send you a new link.'
             : status === 'missing'
                 ? 'The link is missing the confirmation token. Please use the original link from the confirmation email.'
-                : 'We hit an unexpected error. Please try the link in your confirmation email again, or sign up fresh.';
+                : 'We encountered an unexpected error. Please try the link in your confirmation email again, or sign up again.';
 
     return (
         <div style={{ background: '#F5F0EB', minHeight: '100vh', padding: '64px 16px 80px' }}>

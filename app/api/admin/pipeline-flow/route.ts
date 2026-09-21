@@ -79,8 +79,8 @@ function summarize(rows: Array<{
     return [...bySource.values()].sort((a, b) => b.fetched - a.fetched);
 }
 
-export async function GET() {
-    const authError = await requireApiAdmin();
+export async function GET(request: Request) {
+    const authError = await requireApiAdmin(request);
     if (authError) return authError;
 
     try {

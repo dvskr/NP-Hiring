@@ -185,7 +185,7 @@ function ManageAlertsContent() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to fetch alerts');
+        throw new Error(data.error || 'Failed to load alerts.');
       }
 
       if (data.alert) {
@@ -196,7 +196,7 @@ function ManageAlertsContent() {
         if (data.alerts.length > 0 && data.alerts[0].email) setUserEmail(data.alerts[0].email);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
       setLoading(false);
     }
@@ -215,10 +215,10 @@ function ManageAlertsContent() {
         body: JSON.stringify({ isActive: !alert.isActive }),
       });
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || 'Failed');
+      if (!response.ok || !data.success) throw new Error(data.error || 'The request failed.');
       setAlerts(prev => prev.map(a => a.id === alert.id ? { ...a, isActive: !a.isActive } : a));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update');
+      setError(err instanceof Error ? err.message : 'Failed to update the alert.');
     } finally {
       setActionLoading(null);
     }
@@ -233,10 +233,10 @@ function ManageAlertsContent() {
         body: JSON.stringify({ frequency: newFreq }),
       });
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || 'Failed');
+      if (!response.ok || !data.success) throw new Error(data.error || 'The request failed.');
       setAlerts(prev => prev.map(a => a.id === alert.id ? { ...a, frequency: newFreq } : a));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update');
+      setError(err instanceof Error ? err.message : 'Failed to update the alert.');
     } finally {
       setActionLoading(null);
     }
@@ -247,11 +247,11 @@ function ManageAlertsContent() {
     try {
       const response = await fetch(`/api/job-alerts?token=${encodeURIComponent(alert.token)}`, { method: 'DELETE' });
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || 'Failed');
+      if (!response.ok || !data.success) throw new Error(data.error || 'The request failed.');
       setAlerts(prev => prev.filter(a => a.id !== alert.id));
       setDeleteConfirm(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete');
+      setError(err instanceof Error ? err.message : 'Failed to delete the alert.');
     } finally {
       setActionLoading(null);
     }
@@ -302,7 +302,7 @@ function ManageAlertsContent() {
         setCreateMsg({ type: 'error', text: data.error || 'Failed to create alert.' });
       }
     } catch {
-      setCreateMsg({ type: 'error', text: 'Network error.' });
+      setCreateMsg({ type: 'error', text: 'Network error. Please try again.' });
     } finally {
       setCreating(false);
     }
@@ -479,7 +479,7 @@ function ManageAlertsContent() {
                     Matches when the top of a posted range reaches this figure; jobs with
                     no published salary are kept. Jobs advertising a single figure rather
                     than a range are missed even when it clears your minimum, and the
-                    jobs board does show those — so the two lists won&apos;t be identical.
+                    jobs board does show those, so the two lists won&apos;t be identical.
                   </p>
                 </div>
 
@@ -503,7 +503,7 @@ function ManageAlertsContent() {
                     ))}
                   </select>
                   <p id="new-alert-min-years-note" style={{ fontSize: '10px', color: '#B0C4BC', marginTop: '4px', lineHeight: 1.4 }}>
-                    Only roles you qualify for — jobs asking for at most this many
+                    Only roles you qualify for: jobs asking for at most this many
                     years, plus jobs that don&apos;t state a minimum.
                   </p>
                 </div>

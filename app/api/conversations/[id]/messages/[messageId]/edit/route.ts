@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { sanitizeText } from '@/lib/sanitize';
+import { readJsonObject } from '@/app/api/conversations/_lib/message-payload';
 
 // PATCH /api/conversations/[id]/messages/[messageId]
 export async function PATCH(
@@ -10,7 +11,20 @@ export async function PATCH(
 ) {
     try {
         const { id, messageId } = await params;
-        const { body } = await req.json();
+        // Authenticate before touching the payload so an anonymous caller always
+        // gets 401, whatever it sends.
+        const supabase = await createClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Malformed JSON or a non-object payload is a 400, not a 500.
+        const payload = await readJsonObject(req);
+        if (!payload) {
+            return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+        }
+        const { body } = payload;
 
         if (!body || typeof body !== 'string' || body.trim().length === 0) {
             return NextResponse.json({ error: 'Message body is required' }, { status: 400 });
@@ -26,12 +40,6 @@ export async function PATCH(
         const sanitizedBody = sanitizeText(body.trim(), 2000);
         if (!sanitizedBody) {
             return NextResponse.json({ error: 'Message body is required' }, { status: 400 });
-        }
-
-        const supabase = await createClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const profile = await prisma.userProfile.findUnique({

@@ -8,7 +8,21 @@ import { getSiteStats } from '@/lib/site-stats';
 const BASE_URL = brand.baseUrl;
 
 /**
- * RSS Feed — /feed.xml
+ * Feed text is visible copy in every reader, so it follows the site copy rule
+ * (no em or en dashes; aggregated titles arrive as "Nurse Practitioner — Remote") and
+ * can never close its CDATA section early. Not exported: a route module may
+ * only export route handlers and segment config.
+ */
+function feedText(value: string): string {
+  return value
+    .replace(/\s*[–—―]\s*/g, ' - ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/]]>/g, ']] >')
+    .trim();
+}
+
+/**
+ * RSS Feed at /feed.xml
  *
  * Serves the 50 most recent active, indexable jobs as an RSS 2.0 feed.
  * Used by Google News, Feedly, AI systems, and job aggregators.
@@ -64,15 +78,15 @@ export async function GET() {
       // pointed elsewhere for titles with apostrophes/slashes/parens.
       const slug = job.slug || slugify(job.title, job.id);
       const salary = job.normalizedMinSalary && job.normalizedMaxSalary
-        ? ` | $${Math.round(Number(job.normalizedMinSalary) / 1000)}K-$${Math.round(Number(job.normalizedMaxSalary) / 1000)}K`
+        ? ` | $${Math.round(Number(job.normalizedMinSalary) / 1000)}K to $${Math.round(Number(job.normalizedMaxSalary) / 1000)}K`
         : '';
       const desc = job.descriptionSummary || job.description?.slice(0, 300) || '';
       
       return `    <item>
-      <title><![CDATA[${job.title} at ${job.employer}${salary}]]></title>
+      <title><![CDATA[${feedText(`${job.title} at ${job.employer}${salary}`)}]]></title>
       <link>${BASE_URL}/jobs/${slug}</link>
       <guid isPermaLink="true">${BASE_URL}/jobs/${slug}</guid>
-      <description><![CDATA[${desc}]]></description>
+      <description><![CDATA[${feedText(desc)}]]></description>
       <pubDate>${new Date(job.createdAt).toUTCString()}</pubDate>
       <category>${job.isRemote ? 'Remote' : (job.location || 'United States')}</category>
       <author>${brand.email.contact} (${brand.name})</author>
@@ -82,9 +96,9 @@ export async function GET() {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>${brand.name} — Latest ${brand.niche.medium} Jobs</title>
+    <title>${brand.name}: Latest ${brand.niche.medium} Jobs</title>
     <link>${BASE_URL}</link>
-    <description>The latest ${brand.niche.short} job listings from ${brand.name} — ${jobCountDisplay} positions across the United States, updated daily.</description>
+    <description>The latest ${brand.niche.short} job listings from ${brand.name}, with ${jobCountDisplay} positions across the United States, updated daily.</description>
     <language>en-us</language>
     <lastBuildDate>${pubDate}</lastBuildDate>
     <atom:link href="${BASE_URL}/feed.xml" rel="self" type="application/rss+xml"/>

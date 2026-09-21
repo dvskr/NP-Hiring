@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
 import { logger } from '@/lib/logger';
+import { logAudit } from '@/lib/audit-log';
+import { createClient } from '@/lib/supabase/server';
+import { revalidateTestimonialSurfaces } from '../../_lib/public-revalidation';
 
 /**
  * PATCH /api/admin/testimonials/:id
@@ -40,6 +43,28 @@ const TESTIMONIAL_SELECT = {
     createdAt: true,
 } as const;
 
+/**
+ * Supabase id of the reviewing admin. requireApiAdmin only answers
+ * pass/fail, so the session is read again rather than trusting the client.
+ */
+async function resolveAdminActorId(): Promise<string | null> {
+    try {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        return user?.id ?? null;
+    } catch (err) {
+        logger.error('[Admin Testimonials] could not resolve the acting admin', err);
+        return null;
+    }
+}
+
+/** One audit action per write; featuring takes precedence over narrowing. */
+function testimonialAuditAction(data: { featuredAt?: Date | null; displayAs?: string }): string {
+    if (data.featuredAt instanceof Date) return 'testimonial.feature';
+    if (data.featuredAt === null) return 'testimonial.unfeature';
+    return 'testimonial.display_as.narrow';
+}
+
 export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> },
@@ -62,7 +87,7 @@ export async function PATCH(
 
         if (featured === undefined && displayAs === undefined) {
             return NextResponse.json(
-                { success: false, error: 'Nothing to update — pass featured and/or displayAs.' },
+                { success: false, error: 'Nothing to update. Pass featured and/or displayAs.' },
                 { status: 400 }
             );
         }
@@ -118,7 +143,7 @@ export async function PATCH(
                 return NextResponse.json(
                     {
                         success: false,
-                        error: `Cannot widen attribution beyond the employer's consented '${existing.displayAs}' setting — displayAs may only move toward more privacy.`,
+                        error: `Cannot widen attribution beyond the employer's consented '${existing.displayAs}' setting. displayAs may only move toward more privacy.`,
                     },
                     { status: 400 }
                 );
@@ -131,11 +156,39 @@ export async function PATCH(
             return NextResponse.json({ success: true, testimonial: existing });
         }
 
+        // Fail closed: a public-display decision is never left unattributed.
+        const actorId = await resolveAdminActorId();
+        if (!actorId) {
+            return NextResponse.json(
+                { success: false, error: 'Authentication required' },
+                { status: 401 }
+            );
+        }
+
         const testimonial = await prisma.employerTestimonial.update({
             where: { id },
             data,
             select: TESTIMONIAL_SELECT,
         });
+
+        await logAudit({
+            action: testimonialAuditAction(data),
+            actorType: 'admin',
+            actorId,
+            targetType: 'employer_testimonial',
+            targetId: testimonial.id,
+            metadata: {
+                previouslyFeatured: existing.featuredAt !== null,
+                featured: testimonial.featuredAt !== null,
+                previousDisplayAs: existing.displayAs,
+                displayAs: testimonial.displayAs,
+            },
+        });
+
+        // P10 admin-revalidate #3: /testimonials (and the other surfaces that
+        // render featured testimonials) are ISR; refresh them now so a feature
+        // or unfeature is public immediately, not after the hourly window.
+        revalidateTestimonialSurfaces();
 
         logger.info('[Admin Testimonials] updated', {
             id,

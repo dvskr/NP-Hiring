@@ -2,6 +2,8 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import MedianFigure from '@/components/MedianFigure';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { Shield, TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -11,11 +13,10 @@ import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 /* Design Tokens */
 const clayCard: React.CSSProperties = {
@@ -77,7 +78,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} Correctional ${brand.niche.short} Jobs — Prison & Jail Healthcare`,
+    title: `${stats.totalJobs} Correctional ${brand.niche.short} Jobs: Prison & Jail Healthcare`,
     // SEO Fix #7: trim description to ≤160 chars.
     description: `Find ${stats.totalJobs} correctional ${brand.niche.short} jobs in prisons, jails, and detention facilities. Structured schedules, strong benefits, and loan forgiveness eligibility.`,
     keywords: ['correctional np jobs', 'prison nurse practitioner', 'jail NP jobs', 'correctional healthcare nurse practitioner', 'corrections NP jobs'],
@@ -129,7 +130,7 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
     },
     {
       question: `Do you need special certification for correctional ${brand.niche.short} work?`,
-      answer: "No specialty certification is required — an active APRN license and national NP certification are the baseline, and most employers provide facility-specific orientation and security training. Experience with chronic disease management, substance use treatment, and complex patient populations is highly valued."
+      answer: "No specialty certification is required. An active APRN license and national NP certification are the baseline, and most employers provide facility-specific orientation and security training. Experience with chronic disease management, substance use treatment, and complex patient populations is highly valued."
     },
   ];
 
@@ -178,10 +179,10 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#95aabd"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v2_correctional.webp`}
+        heroImage="/images/categories/heroes/correctional.webp"
         heroAlt={`Correctional ${brand.niche.short} in a secure facility`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'Correctional']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Correctional", url: `${brand.baseUrl}/jobs/correctional` }])}
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('correctional') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Correctional"
         headlineLine2={brand.niche.short}
@@ -258,7 +259,7 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
                   <TrendingUp size={20} style={{ color: '#34D399' }} />
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Salary Insights</h3>
                 </div>
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.medianSalaryK}k</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}><MedianFigure k={stats.medianSalaryK} /></div>
                 <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Median annual salary</div>
                 <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Correctional roles often pay above typical NP rates.</p>
               </div>
@@ -276,22 +277,18 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Secure Facility (8) + Loan Repayment (4) */}
-            <div className="cat-bento-hero-1 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="cat-bento-hero-1 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Secure Facility Care</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                   Work in structured correctional medical units with full security support, set patient panels, and predictable schedules.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_corr_facility.webp`} alt="Correctional facility medical unit" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/correctional-facility.webp" alt="Correctional facility medical unit" minHeight={240} />
             </div>
 
             <div className="cat-bento-hero-2 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_corr_loan.webp`} alt="Student loan forgiveness" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/correctional-loan.webp" alt="Student loan forgiveness" minHeight={200} />
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Loan Repayment</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
@@ -302,37 +299,35 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
 
             {/* ROW 2: 4 clay icon cards (3 cols each) */}
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_corr_structured.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/correctional-structured.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Structured Setting</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Predictable schedules in jails, prisons, and detention centers with set patient panels.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_corr_loan.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/correctional-loan.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Competitive Pay</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Hard-to-fill settings often pay above typical {brand.niche.short} rates, with strong federal and state benefits.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_corr_security.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/correctional-security.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Security Provided</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Full custody support, safety protocols, and security training provided.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Full custody support, safety protocols, and security training are provided.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_corr_pathology.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/hospital-team.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Complex Case Mix</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Manage chronic disease, infectious disease, substance use, and mental health needs in one panel.</p>
             </div>
 
             {/* ROW 3: Salary (8) + Alert CTA (4) */}
-            <div className="cat-bento-hero-3 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="cat-bento-hero-3 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary + Benefits</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Correctional {brand.niche.short}s earn {stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$95K–$160K'} annually, and government roles add pension, health insurance, and loan repayment.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Correctional {brand.niche.short}s earn {stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$95K to $160K'} annually, and government roles add pension, health insurance, and loan repayment.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_corr_salary.webp`} alt={`Correctional ${brand.niche.short} salary premium`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/correctional-salary.webp" alt={`Correctional ${brand.niche.short} salary premium`} minHeight={240} />
             </div>
 
             <div className="cat-bento-cta cat-bento-card" style={{
@@ -367,17 +362,17 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
               <div key="01" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>01</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Background Check</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Prepare for extensive background investigation required for correctional facility clearance.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Prepare for the extensive background investigation required for correctional facility clearance.</p>
               </div>
               <div key="02" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>02</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Formulary Review</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Understand restricted formularies common in correctional settings and prescribing limitations.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Understand the restricted formularies and prescribing limitations common in correctional settings.</p>
               </div>
               <div key="03" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>03</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Safety Training</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Complete required safety orientation including crisis intervention and de-escalation training.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Complete the required safety orientation, including crisis intervention and de-escalation training.</p>
               </div>
               <div key="04" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>04</span>
@@ -395,12 +390,12 @@ export default async function CorrectionalJobsPage({ searchParams }: PageProps) 
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More Ways to Find Your Next Role</h2>
           <div className="cat-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
             {[
-              { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-              { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
-              { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
-              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
+              { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: '/images/categories/nav/remote.webp' },
+              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: '/images/categories/nav/telehealth.webp' },
+              { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: '/images/categories/nav/inpatient.webp' },
+              { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: '/images/categories/nav/outpatient.webp' },
+              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 pay data', icon: '/images/categories/nav/salary.webp' },
+              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: '/images/categories/nav/location.webp' },
             ].map(c => (
               <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
                 <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />

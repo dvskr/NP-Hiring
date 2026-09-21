@@ -179,7 +179,7 @@ export async function generateMetadata({ params }: StateDirectoryPageProps): Pro
   const cityCount = data.directory.linkable.length;
 
   return {
-    title: `${brand.niche.short} Jobs by City in ${stateName} — ${cityCount} Cities Hiring`,
+    title: `${brand.niche.short} Jobs by City in ${stateName} | ${cityCount} Cities Hiring`,
     description:
       `${data.totalStateJobs} active ${brand.niche.descriptor} openings across ${data.directory.trackedCities} ${stateName} cities. ` +
       `Compare open roles and posted pay city by city, then open the local job page.`,
@@ -424,7 +424,7 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
                     {city.salary && (
                       <p style={{ fontSize: '12px', color: '#5A4A42', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                         <DollarSign className="h-3.5 w-3.5" aria-hidden="true" />
-                        Avg posted range {formatK(city.salary.avgMin)}–{formatK(city.salary.avgMax)}
+                        Avg posted range {formatK(city.salary.avgMin)} to {formatK(city.salary.avgMax)}
                       </p>
                     )}
                     <span style={{ fontSize: '13px', fontWeight: 700, color: '#BE185D', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -439,7 +439,7 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
             {data.salaryByCity.size > 0 && (
               <p style={{ fontSize: '12px', color: '#7A6A62', marginTop: '14px', lineHeight: 1.6 }}>
                 Posted ranges average only the roles in that city that disclose <em>both</em> ends of the
-                pay range — one-sided and undisclosed postings are excluded rather than estimated, so both
+                pay range. One-sided and undisclosed postings are excluded rather than estimated, so both
                 numbers describe the same set of jobs.
               </p>
             )}
@@ -452,8 +452,8 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
                 Also hiring in {stateName}
               </h2>
               <p style={{ fontSize: '13px', color: '#7A6A62', margin: '0 0 16px', lineHeight: 1.6 }}>
-                These cities do not have their own page yet — either they carry fewer than{' '}
-                {MIN_CITY_JOBS_FOR_LINK} open roles, or their name has no stable city URL. Every listing
+                These cities do not have their own page yet, either because they carry fewer than{' '}
+                {MIN_CITY_JOBS_FOR_LINK} open roles or because their name has no stable city URL. Every listing
                 below is still in the statewide feed.
               </p>
               <ul style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', listStyle: 'none', padding: 0, margin: 0 }}>

@@ -332,7 +332,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
             const result = await response.json();
 
             if (!response.ok || result.error) {
-                throw new Error(result.error || 'Failed to create checkout');
+                throw new Error(result.error || 'Failed to create checkout.');
             }
 
             if (result.url) {
@@ -342,7 +342,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
             }
         } catch (err) {
             console.error('Renewal checkout error:', err);
-            toast(err instanceof Error ? err.message : 'Failed to start renewal process', 'error');
+            toast(err instanceof Error ? err.message : 'Failed to start renewal process.', 'error');
             setRenewingJobId(null);
         }
     };
@@ -619,7 +619,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                     color: '#1A2E35', marginBottom: '6px',
                                 }}>Welcome! Let&apos;s get started</h3>
                                 <p style={{ fontSize: '13px', color: '#8A9BA6', marginBottom: '24px' }}>
-                                    Follow these steps to start hiring qualified {brand.niche.short}s
+                                    Follow these steps to start hiring qualified {brand.niche.short}s.
                                 </p>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', maxWidth: '560px', marginInline: 'auto', marginBottom: '24px' }}>
@@ -1016,7 +1016,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                         <li>Removed from the public job board immediately</li>
                                         <li>Stays in your dashboard under <strong>Archived</strong></li>
                                         <li>Existing applications and analytics are preserved</li>
-                                        <li>You can restore it any time, then republish manually</li>
+                                        <li>You can restore it at any time, then republish manually</li>
                                     </ul>
                                 </div>
 

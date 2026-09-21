@@ -115,57 +115,57 @@ export default function SecurityPage() {
 
                 <p style={{ fontSize: '15px', color: '#4A5568', lineHeight: 1.75, marginTop: '32px' }}>
                     {brand.name} (operated by <strong>{brand.legal.entityName}</strong>) handles personal information
-                    that matters — resumes, contact details, sometimes credentialing identifiers. This page explains
-                    how we protect that data, which vendors we share it with, and what to do if you spot a security
-                    issue. It is intentionally specific. If a customer or auditor wants more detail, the documents
-                    linked below back every claim with code and policy references.
+                    that matters: resumes, contact details, and sometimes credentialing identifiers. This page explains
+                    how we protect that data, which vendors we share it with, and what to do if you notice a security
+                    issue. It is intentionally specific. If a customer or auditor needs more detail, the documents
+                    linked below support every claim with code and policy references.
                 </p>
 
                 <Practice icon={<Lock size={20} />} title="Encryption everywhere">
                     All traffic is served over TLS 1.3 with HSTS enabled (`includeSubDomains; preload`).
                     Data at rest is encrypted by default in Supabase Postgres and Supabase Storage.
-                    Resume files are stored in a private bucket and only accessed via signed URLs that
+                    Resume files are stored in a private bucket and are accessed only through signed URLs that
                     expire after one hour, so a leaked link cannot be replayed days later.
                 </Practice>
 
                 <Practice icon={<FileLock2 size={20} />} title="Resume & file safety">
                     Resume uploads are virus-scanned before they are written to storage. The scan
-                    refuses executables, scripts, macro-laden Office files, password-protected
-                    archives, and XML external-entity payloads. In the rare case the scanning
-                    service itself is unreachable we accept the upload and log the gap, rather
+                    rejects executables, scripts, macro-laden Office files, password-protected
+                    archives, and XML external-entity payloads. In the rare case that the scanning
+                    service itself is unreachable, we accept the upload and log the gap rather
                     than block legitimate users. Aggregate counters track scanner availability so
-                    we know quickly if it stays offline.
+                    that we know quickly if it stays offline.
                 </Practice>
 
                 <Practice icon={<Eye size={20} />} title="Privacy by default">
                     <p>
-                        Analytics and advertising cookies default to <strong>denied</strong> and only
-                        load after the visitor explicitly accepts. Vercel Speed Insights waits for
+                        Analytics and advertising cookies default to <strong>denied</strong> and load
+                        only after the visitor explicitly accepts them. Vercel Speed Insights waits for
                         the same consent. Visitors from the EEA, UK, Switzerland, Canada, Brazil, and
                         Australia see a strict opt-in banner; visitors in implied-consent regions
-                        keep one-click control via the &quot;Cookie Settings&quot; link in the footer
+                        keep one-click control through the &quot;Cookie Settings&quot; link in the footer
                         and the <Link href="/do-not-sell" style={linkStyle}>Do Not Sell or Share</Link>{' '}
                         page.
                     </p>
                     <p>
                         We honor the Global Privacy Control (Sec-GPC) and Do Not Track (DNT) browser
-                        signals as a binding opt-out — no banner appears, no analytics fire.
+                        signals as a binding opt-out: no banner appears and no analytics fire.
                     </p>
                 </Practice>
 
                 <Practice icon={<ShieldCheck size={20} />} title="Authentication & access">
                     <p>
-                        Authentication is handled by Supabase Auth. Session cookies are HttpOnly +
-                        Secure + SameSite=Lax. Password resets are rate-limited to 3 requests per
+                        Authentication is handled by Supabase Auth. Session cookies are HttpOnly,
+                        Secure, and SameSite=Lax. Password resets are rate-limited to 3 requests per
                         hour per IP and respond identically whether or not the email is registered,
-                        so attackers can&apos;t enumerate accounts.
+                        so attackers cannot enumerate accounts.
                     </p>
                     <p>
-                        Account deletion is soft-delete with a 30-day grace window — accidental
-                        deletions are reversible. After the grace period, a daily cron hard-purges
+                        Account deletion is a soft delete with a 30-day grace window, so accidental
+                        deletions are reversible. After the grace period, a daily cron job hard-purges
                         the record and the matching Supabase Auth identity. Inactive accounts that
-                        haven&apos;t logged in for 23 months receive a warning email and are then
-                        soft-deleted; total dormancy lifecycle to hard delete is ~25 months.
+                        have not logged in for 23 months receive a warning email and are then
+                        soft-deleted; the total dormancy lifecycle to hard deletion is approximately 25 months.
                     </p>
                 </Practice>
 
@@ -174,16 +174,16 @@ export default function SecurityPage() {
                         Every sensitive action (account deletion, data export, role change, DSAR
                         receipt, soft-delete purge) is recorded in an append-only audit log. We
                         operate a written incident-response runbook with a 72-hour notification
-                        commitment that aligns with GDPR Art. 33 — privacy regulators get notified,
+                        commitment that aligns with GDPR Art. 33: privacy regulators are notified,
                         affected users receive a plain-language email, and a post-incident review is
                         published within 30 days.
                     </p>
                     <p>
-                        Spotted something suspicious? Email{' '}
+                        If you notice something suspicious, email{' '}
                         <a href={`mailto:${brand.email.security}`} style={linkStyle}>
                             {brand.email.security}
                         </a>
-                        . We acknowledge within one business day.
+                        . We acknowledge reports within one business day.
                     </p>
                 </Practice>
 
@@ -199,7 +199,7 @@ export default function SecurityPage() {
                     Compliance posture
                 </h2>
                 <p style={{ fontSize: '14px', color: '#4A5568', lineHeight: 1.75 }}>
-                    We are committed to good privacy hygiene now and progressively to formal
+                    We are committed to good privacy hygiene today and, progressively, to formal
                     attestations as the platform grows.
                 </p>
                 <div style={{ ...clayCard, padding: '20px 24px', marginTop: '12px' }}>
@@ -214,32 +214,32 @@ export default function SecurityPage() {
                             <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                                 <td style={{ padding: '12px 8px 12px 0' }}>GDPR / UK GDPR</td>
                                 <td style={{ padding: '12px 8px' }}>
-                                    Aligned. DPIA on file — see <Link href="/privacy" style={linkStyle}>Privacy Policy</Link> §11–§16.
+                                    Aligned. A DPIA is on file; see the <Link href="/privacy" style={linkStyle}>Privacy Policy</Link>, §11 to §16.
                                 </td>
                             </tr>
                             <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                                 <td style={{ padding: '12px 8px 12px 0' }}>CCPA / CPRA</td>
                                 <td style={{ padding: '12px 8px' }}>
                                     Aligned. <Link href="/do-not-sell" style={linkStyle}>Opt-out endpoint</Link>{' '}
-                                    + GPC honored.
+                                    provided and GPC honored.
                                 </td>
                             </tr>
                             <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                                 <td style={{ padding: '12px 8px 12px 0' }}>PCI-DSS</td>
                                 <td style={{ padding: '12px 8px' }}>
-                                    SAQ-A. Card data captured by Stripe Checkout — never stored on our infrastructure.
+                                    SAQ-A. Card data is captured by Stripe Checkout and is never stored on our infrastructure.
                                 </td>
                             </tr>
                             <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                                 <td style={{ padding: '12px 8px 12px 0' }}>SOC 2</td>
                                 <td style={{ padding: '12px 8px' }}>
-                                    In progress — Type 1 attestation planned when our first enterprise customer requires it. Most controls are already in place; see audit summary below.
+                                    In progress. A Type 1 attestation is planned when our first enterprise customer requires it. Most controls are already in place; see the audit summary below.
                                 </td>
                             </tr>
                             <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                                 <td style={{ padding: '12px 8px 12px 0' }}>HIPAA</td>
                                 <td style={{ padding: '12px 8px' }}>
-                                    Not applicable — we do not process Protected Health Information. Job seekers may voluntarily disclose health-related items in resumes; that content is not parsed for clinical data.
+                                    Not applicable. We do not process Protected Health Information. Job seekers may voluntarily disclose health-related items in resumes; that content is not parsed for clinical data.
                                 </td>
                             </tr>
                             <tr>
@@ -265,24 +265,24 @@ export default function SecurityPage() {
                 </h2>
                 <ul style={{ fontSize: '14px', color: '#4A5568', lineHeight: 1.85, paddingLeft: '20px' }}>
                     <li>
-                        <Link href="/privacy" style={linkStyle}>Privacy Policy</Link> — what we collect, why, retention.
+                        <Link href="/privacy" style={linkStyle}>Privacy Policy</Link>: what we collect, why we collect it, and how long we retain it.
                     </li>
                     <li>
-                        <Link href="/sub-processors" style={linkStyle}>Sub-processors</Link> — every vendor with DPA + privacy-policy links.
+                        <Link href="/sub-processors" style={linkStyle}>Sub-processors</Link>: every vendor, with DPA and privacy policy links.
                     </li>
                     <li>
-                        <Link href="/data-request" style={linkStyle}>Data Request</Link> — file access / deletion / correction requests.
+                        <Link href="/data-request" style={linkStyle}>Data Request</Link>: file access, deletion, or correction requests.
                     </li>
                     <li>
-                        <Link href="/do-not-sell" style={linkStyle}>Do Not Sell or Share</Link> — CCPA / CPRA one-click opt-out.
+                        <Link href="/do-not-sell" style={linkStyle}>Do Not Sell or Share</Link>: the CCPA / CPRA one-click opt-out.
                     </li>
                     <li>
                         <Link href="/terms" style={linkStyle}>Terms of Service</Link>.
                     </li>
                 </ul>
                 <p style={{ fontSize: '14px', color: '#4A5568', lineHeight: 1.75, marginTop: '12px' }}>
-                    Internal documents we&apos;ll share on request to enterprise prospects: incident-response
-                    runbook, DPIA, and the 25-gap compliance audit with closure evidence.
+                    Internal documents we will share with enterprise prospects on request: the incident-response
+                    runbook, the DPIA, and the 25-gap compliance audit with closure evidence.
                 </p>
 
                 <h2
@@ -297,11 +297,11 @@ export default function SecurityPage() {
                     Reporting a vulnerability
                 </h2>
                 <p style={{ fontSize: '14px', color: '#4A5568', lineHeight: 1.75 }}>
-                    If you believe you&apos;ve found a security vulnerability, please email{' '}
+                    If you believe you have found a security vulnerability, please email{' '}
                     <a href={`mailto:${brand.email.security}`} style={linkStyle}>
                         {brand.email.security}
                     </a>{' '}
-                    with reproduction steps and any affected URLs. We commit to:
+                    with reproduction steps and any affected URLs. We commit to the following:
                 </p>
                 <ul style={{ fontSize: '14px', color: '#4A5568', lineHeight: 1.85, paddingLeft: '20px' }}>
                     <li>Acknowledge receipt within one business day.</li>
@@ -310,8 +310,8 @@ export default function SecurityPage() {
                     <li>Credit you publicly (if you wish) once the issue is resolved.</li>
                 </ul>
                 <p style={{ fontSize: '14px', color: '#4A5568', lineHeight: 1.75, marginTop: '12px' }}>
-                    Please do not exfiltrate data, run automated denial-of-service, or test against
-                    accounts that aren&apos;t yours. We do not currently run a paid bug bounty program;
+                    Please do not exfiltrate data, run automated denial-of-service tests, or test against
+                    accounts that are not yours. We do not currently run a paid bug bounty program;
                     we acknowledge contributions in writing.
                 </p>
 

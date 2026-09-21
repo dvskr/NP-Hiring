@@ -29,7 +29,7 @@ const median = STAT_SOURCES.averageSalary;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Salary by Specialty`)}&type=page`;
 
 export const metadata: Metadata = {
-    title: `${brand.niche.short} & APRN Salary by Specialty 2026 — FNP, CRNA, CNM`,
+    title: `${brand.niche.short} & APRN Salary by Specialty 2026: FNP, CRNA, CNM`,
     description: `Compare ${brand.niche.descriptor} pay across ${SALARY_SPECIALTY_PAGES.length} specialties. National all-${brand.niche.short} median ${median.formatted} (BLS), specialty premiums, and live salary data updated daily.`,
     alternates: { canonical: `${brand.baseUrl}/salary-guide/specialty` },
     openGraph: {
@@ -105,7 +105,7 @@ export default async function SalarySpecialtyIndexPage() {
                     </h1>
                     <p style={{ fontSize: '16px', color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
                         The national median across all {brand.niche.short}s is{' '}
-                        <strong>{median.formatted}</strong> per year ({median.source}) — but specialty
+                        <strong>{median.formatted}</strong> per year ({median.source}), but specialty
                         choice moves pay more than almost any other factor. Pick a specialty for its full
                         breakdown: premiums, top-paying states, and live postings. The nurse anesthetist
                         and nurse midwife guides cover neighbouring APRN roles, which that median does not
@@ -171,9 +171,9 @@ export default async function SalarySpecialtyIndexPage() {
                                 </div>
                                 {range && page.premium ? (
                                     <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                                        {formatSalary(range.min)} – {formatSalary(range.max)}
+                                        {formatSalary(range.min)} to {formatSalary(range.max)}
                                         <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', marginLeft: '6px' }}>
-                                            estimated · +{page.premium.minPct}–{page.premium.maxPct}% vs median
+                                            estimated · +{page.premium.minPct} to {page.premium.maxPct}% vs median
                                         </span>
                                     </span>
                                 ) : page.isNicheRole ? (

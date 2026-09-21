@@ -163,7 +163,7 @@ export default function AnalyticsPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
                 <div>
                     <h1 style={{ ...heading, fontSize: 26 }}>Analytics</h1>
-                    <p style={muted}>Deep dive into user engagement and platform performance</p>
+                    <p style={muted}>A detailed view of user engagement and platform performance</p>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
                     {[7, 30, 90].map(d => (
@@ -377,7 +377,7 @@ export default function AnalyticsPage() {
                                                         color: job.viewToClickRate >= 5 ? '#22C55E' : job.viewToClickRate >= 2 ? '#EAB308' : '#94A3B8',
                                                     }}>{job.viewToClickRate}%</span>
                                                 </td>
-                                                <td style={{ ...td, textTransform: 'capitalize' }}>{job.source || '—'}</td>
+                                                <td style={{ ...td, textTransform: 'capitalize' }}>{job.source || 'None'}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -421,7 +421,7 @@ export default function AnalyticsPage() {
                         </h2>
                         {data.feedback.avgRating !== null && (
                             <span style={{ fontSize: 14, fontWeight: 700, color: '#F59E0B' }}>
-                                Avg: {'⭐'.repeat(Math.round(data.feedback.avgRating))} ({data.feedback.avgRating.toFixed(1)})
+                                Average: {'⭐'.repeat(Math.round(data.feedback.avgRating))} ({data.feedback.avgRating.toFixed(1)})
                             </span>
                         )}
                     </div>
@@ -453,7 +453,7 @@ export default function AnalyticsPage() {
                         </h2>
                     </div>
                     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {data.reports.length === 0 && <p style={sub}>No reports 🎉</p>}
+                        {data.reports.length === 0 && <p style={sub}>No reports yet</p>}
                         {data.reports.map(r => (
                             <div key={r.id} style={{
                                 padding: '14px 18px', borderRadius: '10px',
@@ -514,7 +514,7 @@ export default function AnalyticsPage() {
                                                 padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
                                                 backgroundColor: 'rgba(234,179,8,0.12)', color: '#EAB308',
                                             }}>
-                                                expired
+                                                Expired
                                             </span>
                                         )}
                                     </div>

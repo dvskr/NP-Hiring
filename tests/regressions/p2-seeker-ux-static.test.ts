@@ -273,9 +273,11 @@ describe('P2 #3 — the salary field does not claim parity with the /jobs filter
     const digestMatcher = read('lib/job-alerts-service.ts');
 
     // /jobs: min >= X OR max >= X → salary-less EXCLUDED, floor-only INCLUDED.
+    // The clause now lives in salaryClause(salaryMin), called with filters.salaryMin.
     expect(boardFilter).toMatch(
-      /normalizedMinSalary:\s*\{\s*gte:\s*filters\.salaryMin\s*\}[\s\S]{0,120}normalizedMaxSalary:\s*\{\s*gte:\s*filters\.salaryMin\s*\}/,
+      /normalizedMinSalary:\s*\{\s*gte:\s*(?:filters\.)?salaryMin\s*\}[\s\S]{0,120}normalizedMaxSalary:\s*\{\s*gte:\s*(?:filters\.)?salaryMin\s*\}/,
     );
+    expect(boardFilter).toMatch(/salaryClause\(filters\.salaryMin\)/);
     // digest: max >= X OR both null → salary-less INCLUDED, floor-only EXCLUDED.
     expect(digestMatcher).toMatch(
       /normalizedMaxSalary:\s*\{\s*gte:\s*alert\.minSalary\s*\}[\s\S]{0,200}AND:\s*\[\{\s*normalizedMinSalary:\s*null\s*\},\s*\{\s*normalizedMaxSalary:\s*null\s*\}\]/,

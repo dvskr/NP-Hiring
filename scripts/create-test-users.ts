@@ -1,6 +1,11 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
+import { assertNotProduction } from '../tests/support/production-db-guard';
 import { prisma } from '../lib/prisma.js';
+
+// Creates test accounts. Never against production (incident 2026-09-15).
+// Run with DOTENV_CONFIG_PATH=.env.test so it reads the test database.
+assertNotProduction({ context: 'scripts/create-test-users.ts', mutating: true });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;

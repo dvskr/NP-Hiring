@@ -469,6 +469,20 @@ const NP_TITLE_RESCUE_SIGNALS = [
   'Practitioner', 'PMHNP', 'APRN', 'ARNP', ' NP', 'NP-C', 'CRNA', 'Midwife',
 ];
 
+/**
+ * Practitioner nouns (never the field: 'Obstetrician' not 'Obstetrics',
+ * 'Pediatrician' not 'Pediatric') that name an MD/DO specialist role, plus
+ * 'Pharmacist' (the classifier's other_clinical class). Multi-character
+ * substrings only; none occurs inside an NP title word.
+ */
+export const PHYSICIAN_SPECIALTY_TITLE_MARKERS: readonly string[] = [
+  'Obstetrician', 'Gynecologist', 'Anesthesiologist', 'Radiologist', 'Surgeon',
+  'Cardiologist', 'Pediatrician', 'Neurologist', 'Oncologist', 'Dermatologist',
+  'Gastroenterologist', 'Pulmonologist', 'Nephrologist', 'Urologist',
+  'Endocrinologist', 'Rheumatologist', 'Pathologist', 'Intensivist',
+  'Nocturnist', 'Internist', 'Ophthalmologist', 'Hematologist', 'Pharmacist',
+];
+
 export const GLOBAL_EXCLUSIONS: Prisma.JobWhereInput[] = [
   // ── Profession-class gate (live-review fix #1, the durable exclusion) ──
   // Rows the classifier has marked as a non-NP profession are excluded from
@@ -504,6 +518,29 @@ export const GLOBAL_EXCLUSIONS: Prisma.JobWhereInput[] = [
       {
         NOT: {
           OR: NP_TITLE_RESCUE_SIGNALS.map((w): Prisma.JobWhereInput => ({ title: { contains: w, mode: 'insensitive' } })),
+        },
+      },
+    ],
+  },
+  // ── Physician-specialty title veto for unclassified rows (P10 jobs #3) ──
+  // The classifier's physician rule keys on psychiatrist / physician / MD
+  // tokens, so specialty-named physician posts ('Obstetrician/Gynecologist-
+  // Hospitalist', 'Anesthesiologist', 'Radiologist') reach a NULL
+  // professionClass and passed every clause here. Scoped to NULL rows: a
+  // classified row is governed by the class gate above. Rescued by the same
+  // NP signals as the provider-class veto plus 'Nurse' and 'Advanced
+  // Practice' ('Nurse Practitioner, OB/GYN Hospitalist' stays listed).
+  {
+    AND: [
+      { professionClass: null },
+      {
+        OR: PHYSICIAN_SPECIALTY_TITLE_MARKERS.map((m): Prisma.JobWhereInput => ({ title: { contains: m, mode: 'insensitive' } })),
+      },
+      {
+        NOT: {
+          OR: [...NP_TITLE_RESCUE_SIGNALS, 'Nurse', 'Advanced Practice'].map(
+            (w): Prisma.JobWhereInput => ({ title: { contains: w, mode: 'insensitive' } }),
+          ),
         },
       },
     ],
@@ -755,10 +792,189 @@ export function isRemoteLocationAlias(location: string): boolean {
     return location.trim().toLowerCase() === 'remote';
 }
 
-export function buildWhereClause(filters: RecruitmentFilterState): Prisma.JobWhereInput {
+/* ─── Facet clauses ──────────────────────────────────────────────────────────
+ *
+ * The eight sidebar facets whose option badges are counted by
+ * /api/jobs/filter-counts. Each builder is the ONE place its predicate is
+ * written: buildWhereClause composes them, and the counts route evaluates the
+ * very same clause objects, so a badge count and the filter it previews can
+ * never diverge. A builder returns null when its facet is inactive.
+ */
+export type FacetKey =
+  | 'workMode'
+  | 'jobType'
+  | 'salary'
+  | 'postedWithin'
+  | 'specialty'
+  | 'experienceLevel'
+  | 'newGrad'
+  | 'minYears';
+
+export const FACET_KEYS: readonly FacetKey[] = [
+  'workMode', 'jobType', 'salary', 'postedWithin',
+  'specialty', 'experienceLevel', 'newGrad', 'minYears',
+];
+
+export function workModeClause(workMode: readonly string[]): Prisma.JobWhereInput | null {
+  const conditions: Prisma.JobWhereInput[] = [];
+  if (workMode.includes('remote')) conditions.push({ isRemote: true });
+  if (workMode.includes('hybrid')) conditions.push({ isHybrid: true });
+  if (workMode.includes('onsite')) conditions.push({ isRemote: false, isHybrid: false });
+  return conditions.length > 0 ? { OR: conditions } : null;
+}
+
+export function jobTypeClause(jobType: readonly string[]): Prisma.JobWhereInput | null {
+  if (jobType.length === 0) return null;
+  const hasOther = jobType.includes('Other');
+  const namedTypes = jobType.filter((t) => t !== 'Other');
+  if (hasOther && namedTypes.length > 0) {
+    // Match named types OR NULL
+    return { OR: [{ jobType: { in: namedTypes } }, { jobType: null }] };
+  }
+  if (hasOther) return { jobType: null };
+  return { jobType: { in: namedTypes } };
+}
+
+export function salaryClause(salaryMin: number | null): Prisma.JobWhereInput | null {
+  if (!salaryMin) return null;
+  return {
+    OR: [
+      { normalizedMinSalary: { gte: salaryMin } },
+      { normalizedMaxSalary: { gte: salaryMin } },
+    ],
+  };
+}
+
+/** "Has any salary" — the salary facet's `any` badge. */
+export function anySalaryClause(): Prisma.JobWhereInput {
+  return {
+    OR: [
+      { normalizedMinSalary: { not: null } },
+      { normalizedMaxSalary: { not: null } },
+    ],
+  };
+}
+
+export function postedWithinClause(postedWithin: string | null, now: Date): Prisma.JobWhereInput | null {
+  if (!postedWithin || postedWithin === 'all') return null;
+  if (postedWithinToMs(postedWithin) === null) return null;
+  return freshnessClause(now, postedWithin as PostedWithinWindow);
+}
+
+/** Legacy 'Telehealth' work-type matcher (title + description keywords). */
+export function telehealthSpecialtyClause(): Prisma.JobWhereInput {
+  return {
+    OR: [
+      { title: { contains: 'telehealth', mode: 'insensitive' } },
+      { title: { contains: 'telemedicine', mode: 'insensitive' } },
+      { title: { contains: 'telepsychiatry', mode: 'insensitive' } },
+      { description: { contains: 'telehealth', mode: 'insensitive' } },
+      { description: { contains: 'telemedicine', mode: 'insensitive' } },
+    ],
+  };
+}
+
+/** Legacy 'Travel' work-type matcher (title keywords). */
+export function travelSpecialtyClause(): Prisma.JobWhereInput {
+  return {
+    OR: [
+      { title: { contains: 'travel', mode: 'insensitive' } },
+      { title: { contains: 'locum', mode: 'insensitive' } },
+    ],
+  };
+}
+
+// Specialty (OR within the section when multiple values are checked).
+//   • Clinical specialties: UI values are the taxonomy registry's specialty
+//     slugs, matched via the precomputed categoryTags column (withTagFallback
+//     keeps not-yet-backfilled rows visible through the ingest classifier's
+//     legacy keyword OR).
+//   • Work-type values ('Telehealth' / 'Travel'): legacy keyword matchers —
+//     this URL contract predates the registry and is preserved as-is.
+export function specialtyClause(specialty: readonly string[] | undefined): Prisma.JobWhereInput | null {
+  if (!specialty || specialty.length === 0) return null;
+  const conditions: Prisma.JobWhereInput[] = [];
+  if (specialty.includes('Telehealth')) conditions.push(telehealthSpecialtyClause());
+  if (specialty.includes('Travel')) conditions.push(travelSpecialtyClause());
+  for (const selected of specialty) {
+    if (SPECIALTY_FILTER_SLUG_SET.has(selected) && isCanonicalCategorySlug(selected)) {
+      conditions.push(withTagFallback(selected) as Prisma.JobWhereInput);
+    }
+  }
+  return conditions.length > 0 ? { OR: conditions } : null;
+}
+
+// Experience Level (from DB column — LEGACY, frozen 2026-05-13)
+export function experienceLevelClause(experienceLevel: readonly string[] | undefined): Prisma.JobWhereInput | null {
+  if (!experienceLevel || experienceLevel.length === 0) return null;
+  return { experienceLevel: { in: [...experienceLevel] } };
+}
+
+/**
+ * Every active facet's clause for a filter state, keyed by facet. Inactive
+ * facets are absent. buildWhereClause(filters) is exactly
+ * buildWhereClause(clearFacets(filters), { hasExplicitWorkMode }) ANDed with
+ * these clauses — the identity the filter-counts route relies on.
+ */
+export function buildFacetClauses(
+  filters: RecruitmentFilterState,
+  now: Date = new Date(),
+): Partial<Record<FacetKey, Prisma.JobWhereInput>> {
+  const clauses: Partial<Record<FacetKey, Prisma.JobWhereInput>> = {};
+  const set = (key: FacetKey, clause: Prisma.JobWhereInput | null) => {
+    if (clause) clauses[key] = clause;
+  };
+  set('workMode', workModeClause(filters.workMode));
+  set('jobType', jobTypeClause(filters.jobType));
+  set('salary', salaryClause(filters.salaryMin));
+  set('postedWithin', postedWithinClause(filters.postedWithin, now));
+  set('specialty', specialtyClause(filters.specialty));
+  set('experienceLevel', experienceLevelClause(filters.experienceLevel));
+  set('newGrad', filters.newGradFriendly === true ? newGradWhereClause() : null);
+  set(
+    'minYears',
+    typeof filters.minYearsExperience === 'number' && filters.minYearsExperience >= 0
+      ? minYearsQualifyClause(filters.minYearsExperience)
+      : null,
+  );
+  return clauses;
+}
+
+/** The filter state with every counted facet reset to inactive. */
+export function clearFacets<T extends RecruitmentFilterState>(filters: T): T {
+  return {
+    ...filters,
+    workMode: [],
+    jobType: [],
+    salaryMin: null,
+    postedWithin: null,
+    specialty: [],
+    experienceLevel: [],
+    newGradFriendly: null,
+    minYearsExperience: null,
+  };
+}
+
+export interface BuildWhereOptions {
+  /**
+   * Override for the search MERGE RULE's "an explicit Work Mode facet is
+   * checked" input (defaults to filters.workMode.length > 0). The counts
+   * route passes the ORIGINAL state's value when it builds the facet-free
+   * base, so the query's work-mode terms stay suppressed exactly when the
+   * real filter would suppress them.
+   */
+  hasExplicitWorkMode?: boolean;
+}
+
+export function buildWhereClause(
+  filters: RecruitmentFilterState,
+  options: BuildWhereOptions = {},
+): Prisma.JobWhereInput {
   const where: Prisma.JobWhereInput = {
     isPublished: true,
   };
+  const now = new Date();
+  const facets = buildFacetClauses(filters, now);
 
   const andConditions: Prisma.JobWhereInput[] = [];
 
@@ -789,7 +1005,7 @@ export function buildWhereClause(filters: RecruitmentFilterState): Prisma.JobWhe
   if (filters.search && filters.search.trim()) {
     const intent = extractSearchQueryIntent(filters.search);
     const searchConditions = buildSearchConditionSet(intent, {
-      hasExplicitWorkMode: filters.workMode.length > 0,
+      hasExplicitWorkMode: options.hasExplicitWorkMode ?? filters.workMode.length > 0,
       hasExplicitLocation: Boolean(filters.location || filters.stateCode),
     });
     if (searchConditions.workMode) andConditions.push(searchConditions.workMode);
@@ -822,65 +1038,12 @@ export function buildWhereClause(filters: RecruitmentFilterState): Prisma.JobWhe
     andConditions.push(withTagFallback(filters.category) as Prisma.JobWhereInput);
   }
 
-  // Work Mode (OR within category)
-  if (filters.workMode.length > 0) {
-    const workModeConditions: Prisma.JobWhereInput[] = [];
-
-    if (filters.workMode.includes('remote')) {
-      workModeConditions.push({ isRemote: true });
-    }
-    if (filters.workMode.includes('hybrid')) {
-      workModeConditions.push({ isHybrid: true });
-    }
-    if (filters.workMode.includes('onsite')) {
-      workModeConditions.push({ isRemote: false, isHybrid: false });
-    }
-
-    if (workModeConditions.length > 0) {
-      andConditions.push({ OR: workModeConditions });
-    }
-  }
-
-  // Job Type (OR within category)
-  if (filters.jobType.length > 0) {
-    const hasOther = filters.jobType.includes('Other');
-    const namedTypes = filters.jobType.filter(t => t !== 'Other');
-
-    if (hasOther && namedTypes.length > 0) {
-      // Match named types OR NULL
-      andConditions.push({
-        OR: [
-          { jobType: { in: namedTypes } },
-          { jobType: null },
-        ],
-      });
-    } else if (hasOther) {
-      // Only "Other" selected — match NULL
-      andConditions.push({ jobType: null });
-    } else {
-      // Only named types
-      andConditions.push({ jobType: { in: namedTypes } });
-    }
-  }
-
-  // Salary
-  if (filters.salaryMin) {
-    andConditions.push({
-      OR: [
-        { normalizedMinSalary: { gte: filters.salaryMin } },
-        { normalizedMaxSalary: { gte: filters.salaryMin } },
-      ],
-    });
-  }
-
-  // Posted Within — see `freshnessClause` for the windowed semantics.
-  if (filters.postedWithin && filters.postedWithin !== 'all') {
-    if (postedWithinToMs(filters.postedWithin) !== null) {
-      andConditions.push(
-        freshnessClause(new Date(), filters.postedWithin as PostedWithinWindow),
-      );
-    }
-  }
+  // Work Mode (OR within category), Job Type ("Other" = NULL), Salary, and
+  // Posted Within (see `freshnessClause`) — facet builders above.
+  if (facets.workMode) andConditions.push(facets.workMode);
+  if (facets.jobType) andConditions.push(facets.jobType);
+  if (facets.salary) andConditions.push(facets.salary);
+  if (facets.postedWithin) andConditions.push(facets.postedWithin);
 
   // Location. Mirrors /jobs/state/[s] composition: state name OR state
   // code, plus the 'Remote' alias the location box advertises (see
@@ -917,54 +1080,9 @@ export function buildWhereClause(filters: RecruitmentFilterState): Prisma.JobWhe
     });
   }
 
-  // Specialty (OR within the section when multiple values are checked).
-  //   • Clinical specialties: UI values are the taxonomy registry's
-  //     specialty slugs, matched via the precomputed categoryTags column
-  //     (withTagFallback keeps not-yet-backfilled rows visible through
-  //     the ingest classifier's legacy keyword OR).
-  //   • Work-type values ('Telehealth' / 'Travel'): legacy keyword
-  //     matchers — this URL contract predates the registry and is
-  //     preserved as-is.
-  if (filters.specialty && filters.specialty.length > 0) {
-    const specialtyConditions: Prisma.JobWhereInput[] = [];
-
-    if (filters.specialty.includes('Telehealth')) {
-      specialtyConditions.push({
-        OR: [
-          { title: { contains: 'telehealth', mode: 'insensitive' } },
-          { title: { contains: 'telemedicine', mode: 'insensitive' } },
-          { title: { contains: 'telepsychiatry', mode: 'insensitive' } },
-          { description: { contains: 'telehealth', mode: 'insensitive' } },
-          { description: { contains: 'telemedicine', mode: 'insensitive' } },
-        ],
-      });
-    }
-    if (filters.specialty.includes('Travel')) {
-      specialtyConditions.push({
-        OR: [
-          { title: { contains: 'travel', mode: 'insensitive' } },
-          { title: { contains: 'locum', mode: 'insensitive' } },
-        ],
-      });
-    }
-
-    for (const selected of filters.specialty) {
-      if (SPECIALTY_FILTER_SLUG_SET.has(selected) && isCanonicalCategorySlug(selected)) {
-        specialtyConditions.push(withTagFallback(selected) as Prisma.JobWhereInput);
-      }
-    }
-
-    if (specialtyConditions.length > 0) {
-      andConditions.push({ OR: specialtyConditions });
-    }
-  }
-
-  // Experience Level (from DB column — LEGACY, frozen 2026-05-13)
-  if (filters.experienceLevel && filters.experienceLevel.length > 0) {
-    andConditions.push({
-      experienceLevel: { in: filters.experienceLevel },
-    });
-  }
+  // Specialty (see specialtyClause) and legacy Experience Level.
+  if (facets.specialty) andConditions.push(facets.specialty);
+  if (facets.experienceLevel) andConditions.push(facets.experienceLevel);
 
   // "Open to new grads" — unified with the /jobs/new-grad category
   // page so the checkbox and the pSEO page never disagree on what
@@ -975,16 +1093,12 @@ export function buildWhereClause(filters: RecruitmentFilterState): Prisma.JobWhe
   //        program / recent graduate)
   // ...AND none of CATEGORY_EXCLUSIONS['new-grad'] apply (director,
   // instructor, "no new grad", etc.).
-  if (filters.newGradFriendly === true) {
-    andConditions.push(newGradWhereClause());
-  }
+  if (facets.newGrad) andConditions.push(facets.newGrad);
 
   // "Your experience" (candidate-qualifies). Clause shape + null handling live
   // in minYearsQualifyClause / EXPERIENCE_NULL_QUALIFIES so this predicate and
   // the filter-counts badges can never diverge.
-  if (typeof filters.minYearsExperience === 'number' && filters.minYearsExperience >= 0) {
-    andConditions.push(minYearsQualifyClause(filters.minYearsExperience));
-  }
+  if (facets.minYears) andConditions.push(facets.minYears);
 
   // Employer
   if (filters.employer) {

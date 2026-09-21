@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { FileText, Upload, CheckCircle, Loader2, AlertCircle, X, ShieldCheck, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { displayText } from '@/lib/display-text';
 
 interface InPlatformApplyFormProps {
     jobId: string;
@@ -54,8 +55,15 @@ export default function InPlatformApplyForm({
     const [consentGiven, setConsentGiven] = useState(false);
     const [similarJobs, setSimilarJobs] = useState<Array<{ id: string; title: string; employer: string; location: string; slug: string | null }>>([]);
     const [screeningQuestions, setScreeningQuestions] = useState<ScreeningQuestion[]>([]);
+    // Submit stays disabled until the screening-question request settles, so
+    // the client-side required check below always runs against the real
+    // question list (it loads independently of the profile).
+    const [loadingQuestions, setLoadingQuestions] = useState(true);
     const [screeningAnswers, setScreeningAnswers] = useState<Record<string, string>>({});
     const [screeningErrors, setScreeningErrors] = useState<Record<string, string>>({});
+    // Employer-authored title rendered through displayText so a dash used as
+    // a separator never reaches the dialog (lib/display-text.ts).
+    const displayJobTitle = displayText(jobTitle);
 
     // Records an answer and clears any validation error for that question so
     // the inline "required" message disappears as soon as the user fixes it.
@@ -117,7 +125,10 @@ export default function InPlatformApplyForm({
                     }
                 }
             } catch {
-                // Non-critical — form works without questions
+                // Non-critical — form works without questions; the server
+                // still enforces required answers.
+            } finally {
+                setLoadingQuestions(false);
             }
         }
         loadScreeningQuestions();
@@ -134,12 +145,12 @@ export default function InPlatformApplyForm({
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ];
         if (!allowedTypes.includes(file.type)) {
-            setError('Please upload a PDF or Word document');
+            setError('Please upload a PDF or Word document.');
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            setError('Resume must be under 5MB');
+            setError('Your resume must be under 5MB.');
             return;
         }
 
@@ -178,13 +189,13 @@ export default function InPlatformApplyForm({
 
         // Validate file type
         if (file.type !== 'application/pdf') {
-            setError('Cover letter must be a PDF file');
+            setError('Your cover letter must be a PDF file.');
             return;
         }
 
         // Validate file size (5MB)
         if (file.size > 5 * 1024 * 1024) {
-            setError('Cover letter must be under 5MB');
+            setError('Your cover letter must be under 5MB.');
             return;
         }
 
@@ -215,6 +226,9 @@ export default function InPlatformApplyForm({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // Enter in a text field can submit even while the button is disabled
+        // in some browsers; never validate against a list still loading.
+        if (loadingQuestions) return;
 
         // Client-side required-question validation. The API enforces the same
         // rule with a 400, but catching it here gives inline, per-question
@@ -222,7 +236,7 @@ export default function InPlatformApplyForm({
         const missing: Record<string, string> = {};
         for (const q of screeningQuestions) {
             if (q.isRequired && !(screeningAnswers[q.id] || '').trim()) {
-                missing[q.id] = 'This question is required';
+                missing[q.id] = 'This question is required.';
             }
         }
         setScreeningErrors(missing);
@@ -292,15 +306,15 @@ export default function InPlatformApplyForm({
                         <CheckCircle size={28} style={{ color: '#22C55E' }} />
                     </div>
                     <h3 id="apply-success-title" className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Application Submitted!</h3>
-                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your application for <strong>{jobTitle}</strong> has been sent to the employer. They&apos;ll be notified by email.</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your application for <strong>{displayJobTitle}</strong> has been sent to the employer. They will be notified by email.</p>
                     {similarJobs.length > 0 && (
                         <div className="mt-6 text-left">
                             <p className="text-sm font-semibold mb-3 flex items-center gap-1.5" style={{ color: 'var(--text-secondary)' }}><Briefcase size={14} /> Similar positions you might like</p>
                             <div className="space-y-2">
                                 {similarJobs.map(job => (
                                     <Link key={job.id} href={`/jobs/${job.slug || job.id}`} className="block p-3 rounded-lg transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-                                        <p className="text-sm font-medium" style={{ color: 'var(--color-primary)' }}>{job.title}</p>
-                                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{job.employer} · {job.location}</p>
+                                        <p className="text-sm font-medium" style={{ color: 'var(--color-primary)' }}>{displayText(job.title)}</p>
+                                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{displayText(job.employer)} · {displayText(job.location)}</p>
                                     </Link>
                                 ))}
                             </div>
@@ -342,7 +356,7 @@ export default function InPlatformApplyForm({
                         Apply for this position
                     </h3>
                     <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                        {jobTitle}
+                        {displayJobTitle}
                     </p>
                 </div>
                 <button
@@ -413,7 +427,7 @@ export default function InPlatformApplyForm({
                                     Using your profile resume
                                 </p>
                                 <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                                    Your saved resume will be shared with the employer
+                                    Your saved resume will be shared with the employer.
                                 </p>
                             </div>
                             <CheckCircle size={16} style={{ color: '#BE185D' }} />
@@ -454,6 +468,12 @@ export default function InPlatformApplyForm({
                 </div>
 
                 {/* Screening Questions */}
+                {loadingQuestions && (
+                    <div role="status" className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                        <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                        Loading screening questions...
+                    </div>
+                )}
                 {screeningQuestions.length > 0 && (
                     <div>
                         <label className="block text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>
@@ -595,7 +615,7 @@ export default function InPlatformApplyForm({
                                 id="coverLetter"
                                 value={coverLetter}
                                 onChange={(e) => setCoverLetter(e.target.value)}
-                                placeholder="Tell the employer why you're a great fit for this role..."
+                                placeholder="Tell the employer why you are a strong fit for this role..."
                                 rows={5}
                                 maxLength={COVER_LETTER_MAX}
                                 aria-describedby="cover-letter-counter"
@@ -616,7 +636,7 @@ export default function InPlatformApplyForm({
                             />
                             <p id="cover-letter-counter" className="text-xs mt-1" style={{ color: coverLetter.length >= COVER_LETTER_MAX ? '#ef4444' : 'var(--text-tertiary)' }}>
                                 {coverLetter.length > 0
-                                    ? `${coverLetter.length.toLocaleString('en-US')} / ${COVER_LETTER_MAX.toLocaleString('en-US')} characters${coverLetter.length >= COVER_LETTER_MAX ? ' — limit reached' : ''}`
+                                    ? `${coverLetter.length.toLocaleString('en-US')} / ${COVER_LETTER_MAX.toLocaleString('en-US')} characters${coverLetter.length >= COVER_LETTER_MAX ? ' (limit reached)' : ''}`
                                     : `A brief note can help you stand out (up to ${COVER_LETTER_MAX.toLocaleString('en-US')} characters)`}
                             </p>
                         </>
@@ -687,7 +707,7 @@ export default function InPlatformApplyForm({
                 {/* Submit Button */}
                 <button
                     type="submit"
-                    disabled={submitting || uploadingResume || !consentGiven}
+                    disabled={submitting || uploadingResume || loadingQuestions || !consentGiven}
                     className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                         background: 'linear-gradient(135deg, #BE185D, #9D174D)',

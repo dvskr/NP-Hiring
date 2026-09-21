@@ -5,7 +5,7 @@ import CandidateSearchClient from '@/components/employer/CandidateSearchClient'
 
 export const metadata = {
     title: `${brand.niche.short} Talent Pool | Browse Candidates`,
-    description: `Browse qualified ${brand.niche.long}s actively looking for new opportunities.`,
+    description: `Browse qualified ${brand.niche.long}s who are actively seeking new opportunities.`,
 }
 
 export default async function CandidatesPage() {

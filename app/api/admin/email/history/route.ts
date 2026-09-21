@@ -7,7 +7,7 @@ import { requireApiAdmin } from '@/lib/auth/require-api-admin';
  * Returns a paginated list of past broadcasts.
  */
 export async function GET(req: Request) {
-    const authError = await requireApiAdmin();
+    const authError = await requireApiAdmin(req);
     if (authError) return authError;
 
     const { searchParams } = new URL(req.url);

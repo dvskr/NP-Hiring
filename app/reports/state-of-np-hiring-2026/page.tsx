@@ -161,8 +161,8 @@ function SampleTooSmallNote({ what }: { what: string }) {
             }}
         >
             Sample too small to publish. We do not print {what} until the underlying sample clears
-            the minimums stated in the methodology below — a small-sample figure would read as
-            market signal it isn&apos;t.
+            the minimums stated in the methodology below, because a small-sample figure would read
+            as market signal that it is not.
         </p>
     );
 }
@@ -215,11 +215,11 @@ function buildSchemas(snapshot: HiringReportSnapshot | null) {
         ? {
               '@context': 'https://schema.org',
               '@type': 'Dataset',
-              name: `${EDITION.title} — live posting aggregates`,
+              name: `${EDITION.title}: live posting aggregates`,
               description:
                   `Aggregates over ${brand.name}'s own active ${brand.niche.descriptor} job postings ` +
                   `as of ${snapshot.asOf.slice(0, 10)} (${snapshot.inventory.totalActive} active postings). ` +
-                  `Describes this job board's inventory only — not a national census and not a wage survey.`,
+                  `Describes this job board's inventory only; it is not a national census and not a wage survey.`,
               url: PAGE_URL,
               creator: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
               dateModified: snapshot.asOf.slice(0, 10),
@@ -320,7 +320,7 @@ export default async function StateOfHiring2026Page() {
                     <p style={{ fontSize: '15px', color: MUTED_TEXT, margin: 0, lineHeight: 1.6 }}>
                         First published {formatDay(EDITION.datePublished)}
                         {snapshot && <> · Live figures as of {formatDay(snapshot.asOf)}</>} · Free to
-                        quote with attribution —{' '}
+                        quote with attribution:{' '}
                         <Link href="/press" style={linkStyle}>
                             how to cite us
                         </Link>
@@ -330,8 +330,8 @@ export default async function StateOfHiring2026Page() {
                 <p style={{ fontSize: '15px', color: '#4A5568', lineHeight: 1.75, marginTop: '28px' }}>
                     This report is built from one dataset we know completely: the active{' '}
                     {brand.niche.descriptor} postings on {brand.name} itself. That makes it precise
-                    about what it covers and silent about what it doesn&apos;t — it describes this
-                    board&apos;s inventory, not the national {brand.niche.short} labour market. Where a
+                    about what it covers and silent about what it does not: it describes this
+                    board&apos;s inventory, not the national {brand.niche.short} labor market. Where a
                     figure&apos;s sample is too small to mean anything, we say so instead of printing
                     it. National context, where shown, is cited to the federal and professional
                     sources that actually publish it.
@@ -350,7 +350,7 @@ export default async function StateOfHiring2026Page() {
                     <Section icon={<Building2 size={20} />} title="The board at a glance" id="inventory">
                         <p>
                             A live count of this board&apos;s indexable inventory at the timestamp
-                            above — the population every figure below is computed from:
+                            above, which is the population every figure below is computed from:
                         </p>
                         <div
                             style={{
@@ -362,7 +362,7 @@ export default async function StateOfHiring2026Page() {
                         >
                             {[
                                 { n: snapshot.inventory.totalActive.toLocaleString('en-US'), label: 'Active postings' },
-                                { n: snapshot.inventory.totalEmployers.toLocaleString('en-US'), label: 'Hiring organisations' },
+                                { n: snapshot.inventory.totalEmployers.toLocaleString('en-US'), label: 'Hiring organizations' },
                                 { n: snapshot.inventory.totalStates.toLocaleString('en-US'), label: 'States represented' },
                             ].map((s) => (
                                 <div key={s.label} style={{ ...clayCard, padding: '16px 18px' }}>
@@ -493,7 +493,7 @@ export default async function StateOfHiring2026Page() {
                                 <strong style={{ color: '#BE185D', fontSize: '17px' }}>{newGradShare.pct}%</strong>{' '}
                                 of active postings ({newGradShare.numerator.toLocaleString('en-US')} of{' '}
                                 {newGradShare.denominator.toLocaleString('en-US')}) are flagged open to new
-                                graduates — either an explicit zero-experience requirement or an
+                                graduates, meaning either an explicit zero-experience requirement or an
                                 employer&apos;s &quot;new grads welcome&quot; flag. Browse them under{' '}
                                 <Link href="/jobs/new-grad" style={linkStyle}>
                                     new-grad roles
@@ -509,8 +509,8 @@ export default async function StateOfHiring2026Page() {
                 {snapshot && (
                     <Section icon={<Wallet size={20} />} title={LIVE_SECTION_TITLES.pay} id="pay">
                         <p>
-                            What employers advertise, from postings that state a real pay range —
-                            figures our pipeline estimated are excluded, and a state publishes only
+                            What employers advertise, from postings that state a real pay range.
+                            Figures our pipeline estimated are excluded, and a state publishes only
                             with at least {BENCHMARK_MIN_POSTINGS} salaried postings from at least{' '}
                             {BENCHMARK_MIN_EMPLOYERS} distinct employers (the same gates as our{' '}
                             <Link href="/tools/salary-benchmark" style={linkStyle}>
@@ -563,8 +563,8 @@ export default async function StateOfHiring2026Page() {
                             <SampleTooSmallNote what="an advertised-pay distribution" />
                         )}
                         <p style={{ fontSize: '13px', color: MUTED_TEXT, marginTop: '10px' }}>
-                            How many postings disclose pay at all — and how we hold ourselves to that
-                            number — is its own report:{' '}
+                            How many postings disclose pay at all, and how we hold ourselves to that
+                            number, is its own report:{' '}
                             <Link href="/reports/pay-transparency" style={linkStyle}>
                                 pay transparency on {brand.name}
                             </Link>
@@ -576,7 +576,7 @@ export default async function StateOfHiring2026Page() {
                 <Section icon={<Landmark size={20} />} title="National context, cited" id="context">
                     <p>
                         For scale beyond this board, the figures we republish come from the sources
-                        below — we do not survey, model, or adjust them, and each is quoted with its
+                        below. We do not survey, model, or adjust them, and each is quoted with its
                         vintage:
                     </p>
                     <div style={{ ...clayCard, padding: '16px 20px', marginTop: '12px', overflowX: 'auto' }}>
@@ -624,7 +624,7 @@ export default async function StateOfHiring2026Page() {
                     <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: 1.85 }}>
                         <li>
                             <strong>Basis.</strong> Every live figure is computed from {brand.name}&apos;s
-                            own active postings at the &quot;as of&quot; timestamp shown in the header —
+                            own active postings at the &quot;as of&quot; timestamp shown in the header,
                             counted with the same published, unexpired, not-repeatedly-dead-linked
                             filter our sitemaps use. Nothing is sampled, imputed, or carried over from
                             a previous run.
@@ -633,7 +633,7 @@ export default async function StateOfHiring2026Page() {
                             <strong>This is not a national census.</strong> It describes one job
                             board&apos;s inventory. Postings that were never listed here are invisible
                             to it, and employers who list many roles here weigh more than those who
-                            don&apos;t.
+                            do not.
                         </li>
                         <li>
                             <strong>Not a wage survey.</strong> Pay figures are midpoints of
@@ -646,7 +646,7 @@ export default async function StateOfHiring2026Page() {
                             only with at least {REPORT_MIN_GROUP_COUNT} postings; pay rows require at
                             least {BENCHMARK_MIN_POSTINGS} salaried postings from at least{' '}
                             {BENCHMARK_MIN_EMPLOYERS} distinct employers. Below a gate, the section says
-                            &quot;sample too small&quot; — it never renders a padded number.
+                            &quot;sample too small&quot;; it never renders a padded number.
                         </li>
                         <li>
                             <strong>National context is republished, not produced.</strong> Those

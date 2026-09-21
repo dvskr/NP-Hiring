@@ -29,7 +29,7 @@ function EmailPreferencesContent() {
   useEffect(() => {
     const fetchPreferences = async () => {
       if (!token) {
-        setError('No token provided');
+        setError('No token was provided.');
         setLoading(false);
         return;
       }
@@ -39,7 +39,7 @@ function EmailPreferencesContent() {
         const data = await response.json();
 
         if (!response.ok || !data.success) {
-          setError(data.message || 'Invalid or expired link');
+          setError(data.message || 'This link is invalid or has expired.');
           return;
         }
 
@@ -50,7 +50,7 @@ function EmailPreferencesContent() {
           preferences: data.preferences ?? {},
         });
       } catch {
-        setError('Failed to load preferences');
+        setError('We could not load your preferences.');
       } finally {
         setLoading(false);
       }
@@ -91,14 +91,14 @@ function EmailPreferencesContent() {
         });
         setSuccessMessage(
           newSubscribed
-            ? 'You have been resubscribed to job alerts!'
+            ? 'You have been resubscribed to job alerts.'
             : 'You have been unsubscribed from all emails.'
         );
       } else {
-        setError(data.message || 'Failed to update preferences');
+        setError(data.message || 'We could not update your preferences.');
       }
     } catch {
-      setError('Failed to update preferences');
+      setError('We could not update your preferences.');
     } finally {
       setUpdating(false);
     }
@@ -125,14 +125,14 @@ function EmailPreferencesContent() {
         });
         setSuccessMessage(
           !preferences.newsletterOptIn
-            ? 'You are now subscribed to the newsletter!'
+            ? 'You are now subscribed to the newsletter.'
             : 'You have been unsubscribed from the newsletter.'
         );
       } else {
-        setError(data.message || 'Failed to update preferences');
+        setError(data.message || 'We could not update your preferences.');
       }
     } catch {
-      setError('Failed to update preferences');
+      setError('We could not update your preferences.');
     } finally {
       setUpdating(false);
     }
@@ -160,10 +160,10 @@ function EmailPreferencesContent() {
         const label = key === 'profileNudge' ? 'profile nudge emails' : 'saved job reminders';
         setSuccessMessage(newValue ? `You will now receive ${label}.` : `You have been unsubscribed from ${label}.`);
       } else {
-        setError(data.message || 'Failed to update preferences');
+        setError(data.message || 'We could not update your preferences.');
       }
     } catch {
-      setError('Failed to update preferences');
+      setError('We could not update your preferences.');
     } finally {
       setUpdating(false);
     }
@@ -270,7 +270,7 @@ function EmailPreferencesContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-gray-900 text-sm">Monthly Newsletter</p>
-                <p className="text-xs text-gray-500 mt-1">{brand.niche.short} industry news, salary trends & career tips</p>
+                <p className="text-xs text-gray-500 mt-1">{brand.niche.short} industry news, salary trends, and career tips</p>
               </div>
               <div className="flex items-center gap-2">
                 {preferences?.newsletterOptIn ? (
@@ -297,7 +297,7 @@ function EmailPreferencesContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-gray-900 text-sm">Profile Completion Nudges</p>
-                <p className="text-xs text-gray-500 mt-1">Reminders to finish your profile for more visibility</p>
+                <p className="text-xs text-gray-500 mt-1">Reminders to complete your profile for greater visibility</p>
               </div>
               <div className="flex items-center gap-2">
                 {(preferences?.preferences?.profileNudge ?? true) ? (
@@ -324,7 +324,7 @@ function EmailPreferencesContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-gray-900 text-sm">Saved Job Reminders</p>
-                <p className="text-xs text-gray-500 mt-1">Nudges about jobs you saved but haven&apos;t applied to</p>
+                <p className="text-xs text-gray-500 mt-1">Reminders about jobs you saved but have not yet applied to</p>
               </div>
               <div className="flex items-center gap-2">
                 {(preferences?.preferences?.savedJobReminder ?? true) ? (

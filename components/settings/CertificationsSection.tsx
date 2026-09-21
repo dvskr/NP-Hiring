@@ -44,13 +44,13 @@ const btnPrimary = clayBtnPrimary
 const btnOutline = clayBtnOutlineSmall
 
 function maskNumber(num: string | null): string {
-    if (!num) return '—'
+    if (!num) return 'Not set'
     if (num.length <= 4) return num
     return '•'.repeat(num.length - 4) + num.slice(-4)
 }
 
 function formatDate(iso: string | null): string {
-    if (!iso) return '—'
+    if (!iso) return 'Not set'
     return new Date(iso).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -346,7 +346,7 @@ export default function CertificationsSection({ showMsg }: Props) {
 
                     {certs.length === 0 && !showForm && (
                         <p style={{ color: clayPalette.textMuted, fontSize: '13px', marginBottom: '16px' }}>
-                            No certifications added yet. Add your professional certifications for autofilling applications.
+                            No certifications added yet. Add your professional certifications to autofill applications.
                         </p>
                     )}
 

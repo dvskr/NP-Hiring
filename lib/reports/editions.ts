@@ -43,8 +43,8 @@ const STATE_OF_HIRING_2026: ReportEdition = {
     title: `The State of ${brand.niche.short} Hiring 2026`,
     description:
         `What active ${brand.niche.descriptor} job postings on ${brand.name} show about ` +
-        `specialty demand, geography, work mode, and advertised pay — with the sample ` +
-        `limits stated, and national context cited to its sources.`,
+        `specialty demand, geography, work mode, and advertised pay, with the sample ` +
+        `limits stated and national context cited to its sources.`,
     datePublished: '2026-08-06',
 };
 
@@ -67,7 +67,7 @@ export const PAY_TRANSPARENCY_REPORT: ReportEdition = {
     title: `${brand.niche.short} Job Pay Transparency: Our Numbers, Live`,
     description:
         `The share of active postings on ${brand.name} that disclose a real pay range, ` +
-        `computed live from the database — plus how we label estimates, and dated ` +
+        `computed live from the database, plus how we label estimates and dated ` +
         `observations on how other boards handle pay disclosure.`,
     datePublished: '2026-08-06',
 };

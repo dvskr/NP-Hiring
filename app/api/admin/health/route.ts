@@ -21,8 +21,8 @@ export const revalidate = 0;
  * Heavy queries are scoped to small windows (24h / 7d) and grouped on the
  * DB side so the payload stays small and the page stays snappy.
  */
-export async function GET() {
-    const authError = await requireApiAdmin();
+export async function GET(request: Request) {
+    const authError = await requireApiAdmin(request);
     if (authError) return authError;
 
     try {

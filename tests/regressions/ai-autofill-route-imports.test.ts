@@ -4,8 +4,18 @@
  * ai-autofill regression files assert on SOURCE TEXT; this one catches what
  * they can't: syntax errors, broken import paths (e.g. the new ../_lib
  * helpers), and module-level throw on load.
+ *
+ * TIMEOUT: every case here is a bare `await import()` of a Next route, so the
+ * whole cost is Vite transforming that route's import graph. On a warm cache a
+ * case runs in ~0.5s; on a COLD cache the transform alone exceeds the 5s
+ * default and the case fails with "Test timed out" even though nothing is
+ * wrong with the module (verified: the same case passes in 545ms once the
+ * cache is warm, so there is no module-level IO to blame). The budget below is
+ * for transform time only -- no assertion is relaxed by it.
  */
 import { describe, it, expect } from 'vitest';
+
+const COLD_CACHE_IMPORT_TIMEOUT_MS = 30_000;
 
 describe('autofill AI modules import cleanly', () => {
     it('classify-fields route exposes POST', async () => {
@@ -61,4 +71,4 @@ describe('autofill AI modules import cleanly', () => {
         const mod = await import('@/lib/inngest/functions/recommendations');
         expect(mod.recommendationFunctions.length).toBeGreaterThan(0);
     });
-});
+}, COLD_CACHE_IMPORT_TIMEOUT_MS);

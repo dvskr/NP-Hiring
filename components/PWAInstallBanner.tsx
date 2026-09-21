@@ -112,7 +112,7 @@ export default function PWAInstallBanner() {
                         </button>
                     ) : (
                         <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                            Tap share → Add to Home Screen
+                            Tap Share → Add to Home Screen
                         </span>
                     )}
                     <button onClick={dismiss} className="p-1 cursor-pointer" style={{ color: 'var(--text-muted)' }} aria-label="Dismiss">

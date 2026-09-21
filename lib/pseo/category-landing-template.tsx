@@ -49,6 +49,10 @@ import { CATEGORY_ASSET_REGISTRY } from '@/lib/pseo/category-asset-registry';
 import { getCategoryLandingContent } from '@/lib/pseo/category-landing-content';
 import { ALL_CATEGORY_SLUGS, CATEGORY_AXES, STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { CODE_TO_STATE, STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
+import { pluralize, cappedCount } from '@/lib/pseo/plural';
+
+/** Top-employer groupBy cap; a list that hits it renders as "8+". */
+const TOP_EMPLOYERS_TAKE = 8;
 
 // ─── Category copy ───────────────────────────────────────────────────────────
 
@@ -81,7 +85,7 @@ export const NEW_CATEGORY_COPY: Record<string, CategoryCopy> = {
     'adult-gerontology': {
         label: 'Adult-Gerontology',
         role: 'Adult-Gerontology Nurse Practitioner (AGNP)',
-        blurb: 'AGNP roles — primary and acute care for adult and older-adult populations.',
+        blurb: 'AGNP roles in primary and acute care for adult and older-adult populations.',
     },
     pediatric: {
         label: 'Pediatric',
@@ -220,7 +224,7 @@ async function getStats(slug: string): Promise<Stats> {
             where,
             _count: { employer: true },
             orderBy: { _count: { employer: 'desc' } },
-            take: 8,
+            take: TOP_EMPLOYERS_TAKE,
         }),
     ]);
     const avgSalary = Math.round(
@@ -294,7 +298,7 @@ export async function buildCategoryLandingMetadata(
     const totalJobs = await prisma.job.count({ where: categoryWhere(slug) });
     const countPrefix = totalJobs > 0 ? `${totalJobs} ` : '';
     const description = totalJobs > 0
-        ? `Find ${totalJobs} ${role} jobs. Salaries, top employers, and new openings updated daily.`
+        ? `Find ${totalJobs} ${role} ${pluralize(totalJobs, 'job')}. Salaries, top employers, and new openings updated daily.`
         : `Browse ${role} jobs. New openings, salary data, and top employers updated daily.`;
     return {
         title: `${countPrefix}${role} Jobs`,
@@ -306,7 +310,7 @@ export async function buildCategoryLandingMetadata(
             description,
             type: 'website',
             images: [{
-                url: `/api/og?type=page&title=${encodeURIComponent(`${role} Jobs`)}&subtitle=${encodeURIComponent(totalJobs > 0 ? `${totalJobs} open positions — updated daily` : 'Salaries, top employers, and new openings')}`,
+                url: `/api/og?type=page&title=${encodeURIComponent(`${role} Jobs`)}&subtitle=${encodeURIComponent(totalJobs > 0 ? `${totalJobs} open ${pluralize(totalJobs, 'position')} · updated daily` : 'Salaries, top employers, and new openings')}`,
                 width: 1200,
                 height: 630,
                 alt: `${role} Jobs`,
@@ -377,17 +381,23 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
     // pseoStats-based "Top States" block in CategoryLocationsExplore so the
     // two never duplicate (cities still render there).
     const coversStates = STATE_ELIGIBLE_CATEGORY_SLUGS.includes(slug);
-    const heroBadge = stats.totalJobs > 0
-        ? `${stats.totalJobs} live roles · updated daily`
-        : 'Nurse Practitioner Careers';
+    const heroBadge = stats.totalJobs === 1
+        ? '1 live role · updated daily'
+        : stats.totalJobs > 0
+            ? `${stats.totalJobs} live roles · updated daily`
+            : 'Nurse Practitioner Careers';
+
+    // One array drives the BreadcrumbList JSON-LD and the hero's visible,
+    // linked trail, so the two can never disagree on labels or URLs.
+    const breadcrumbTrail = [
+        { name: 'Home', url: brand.baseUrl },
+        { name: 'Jobs', url: `${brand.baseUrl}/jobs` },
+        { name: label, url: `${brand.baseUrl}/jobs/${slug}` },
+    ];
 
     return (
         <div style={{ backgroundColor: '#FDFBF7' }}>
-            <BreadcrumbSchema items={[
-                { name: 'Home', url: brand.baseUrl },
-                { name: 'Jobs', url: `${brand.baseUrl}/jobs` },
-                { name: label, url: `${brand.baseUrl}/jobs/${slug}` },
-            ]} />
+            <BreadcrumbSchema items={breadcrumbTrail} />
             <JobListViewTracker
                 jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))}
                 listName={`${label} Jobs`}
@@ -419,15 +429,15 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                     heroImage={heroArt.heroImage}
                     heroAlt={`${role} illustration`}
                     badgeText={heroBadge}
-                    breadcrumbs={['Careers', brand.niche.long, label]}
+                    breadcrumbs={breadcrumbTrail.map((crumb) => ({ label: crumb.name, href: crumb.url }))}
                     indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf(slug) + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
                     headlineLine1={label}
                     headlineLine2={`${brand.niche.short} Jobs`}
                     headlineSub="find your next role."
                     stats={[
-                        { value: `${stats.totalJobs}`, label: 'positions' },
+                        { value: `${stats.totalJobs}`, label: pluralize(stats.totalJobs, 'position') },
                         ...(stats.avgSalary > 0 ? [{ value: `$${stats.avgSalary}k`, label: 'avg salary' }] : []),
-                        ...(stats.topEmployers.length > 0 ? [{ value: `${stats.topEmployers.length}+`, label: 'employers' }] : []),
+                        ...(stats.topEmployers.length > 0 ? [{ value: cappedCount(stats.topEmployers.length, TOP_EMPLOYERS_TAKE), label: pluralize(stats.topEmployers.length, 'employer') }] : []),
                     ]}
                     description={copy?.blurb ?? `Browse ${label.toLowerCase()} nurse practitioner positions from employers nationwide.`}
                     ctaLabel={`Browse ${label} Jobs`}
@@ -473,7 +483,7 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                         ) : (
                             <div style={{ ...clayCard, textAlign: 'center', padding: '48px 24px' }}>
                                 <p style={{ color: '#5A4A42', fontSize: '15px', margin: '0 0 16px' }}>
-                                    No {label.toLowerCase()} positions right now — new roles are added daily.
+                                    No {label.toLowerCase()} positions right now. New roles are added daily.
                                 </p>
                                 <Link href="/jobs" style={{ fontWeight: 700, fontSize: '14px', color: '#BE185D', textDecoration: 'none' }}>
                                     Browse all nurse practitioner jobs →

@@ -13,7 +13,8 @@ import { Metadata } from 'next';
  * use.
  */
 export const metadata: Metadata = {
-    title: `Confirm Your Account | ${brand.name}`,
+    // Root layout title.template appends " | brand"; hardcoding it here doubled the suffix.
+    title: 'Confirm Your Account',
     description: `Confirming your ${brand.name} sign-in link.`,
     robots: { index: false, follow: false },
 };

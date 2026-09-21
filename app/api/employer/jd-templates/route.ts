@@ -13,11 +13,11 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { sanitizeHtmlContent } from '@/lib/sanitize';
 import { logger } from '@/lib/logger';
+import { requireJdTemplateOwner } from './auth';
 
 const MAX_PER_USER = 20;
 
@@ -27,21 +27,13 @@ const createSchema = z.object({
   body: z.string().min(50, 'Body must be at least 50 characters').max(30_000),
 });
 
-async function getEmployerUserId(): Promise<string | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const profile = await prisma.userProfile.findUnique({ where: { supabaseId: user.id } });
-  if (!profile || profile.role !== 'employer') return null;
-  return user.id;
-}
-
 export async function GET(req: NextRequest) {
   const rateLimitResult = await rateLimit(req, 'jd-templates:list', RATE_LIMITS.employer);
   if (rateLimitResult) return rateLimitResult;
 
-  const userId = await getEmployerUserId();
-  if (!userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const gate = await requireJdTemplateOwner();
+  if (!gate.ok) return gate.response;
+  const { userId } = gate;
 
   const items = await prisma.jdTemplate.findMany({
     where: { userId },
@@ -56,8 +48,9 @@ export async function POST(req: NextRequest) {
   const rateLimitResult = await rateLimit(req, 'jd-templates:create', RATE_LIMITS.employer);
   if (rateLimitResult) return rateLimitResult;
 
-  const userId = await getEmployerUserId();
-  if (!userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const gate = await requireJdTemplateOwner();
+  if (!gate.ok) return gate.response;
+  const { userId } = gate;
 
   let parsed: z.infer<typeof createSchema>;
   try {

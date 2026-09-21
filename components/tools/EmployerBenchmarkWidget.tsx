@@ -7,37 +7,30 @@
  * (/tools/salary-benchmark) and inside /for-employers, so the aggregation
  * lives here rather than in either page.
  *
- * TRUTH RULE — `salaryIsEstimated` rows are excluded. Those rows carry
- * LLM-inferred or clamped pay written by the enrichment cron, the inline
- * ingestion rescue path, and the salary normalizer (see the extended note in
- * app/companies/[slug]/page.tsx). Aggregating them and calling the result
- * "what employers post" would publish a fabricated benchmark.
+ * ONE PIPELINE — the rows come from lib/salary-analytics (fetchNpAnalyticsRows),
+ * the same pool /salary-guide and /salary-guide/<state> publish from:
+ * published, non-expired, `salaryIsEstimated: false`, salary confidence at
+ * or above the analytics floor, annual cadence, NP-eligible titles. A
+ * private findMany here once published states that /salary-guide gates out
+ * as "sample too small", from a national sample that disagreed with the
+ * state pages, and let psychiatrist, PA, and expired pay into an NP figure.
+ *
+ * TRUTH RULE — estimated rows carry LLM-inferred or clamped pay written by
+ * the enrichment cron, the inline ingestion rescue path, and the salary
+ * normalizer (see the extended note in app/companies/[slug]/page.tsx).
+ * Aggregating them and calling the result "what employers post" would
+ * publish a fabricated benchmark.
  */
 import EmployerBenchmarkPicker from './EmployerBenchmarkPicker';
-import { summarizeBenchmarks, type BenchmarkSummary } from './benchmark-model';
-import { prisma } from '@/lib/prisma';
+import { summarizeBenchmarkPool, type BenchmarkSummary } from './benchmark-model';
+import { fetchNpAnalyticsRows } from '@/lib/salary-analytics';
 import { logger } from '@/lib/logger';
 
 const EMPTY_SUMMARY: BenchmarkSummary = { national: null, states: [] };
 
 export async function loadBenchmarkSummary(): Promise<BenchmarkSummary> {
   try {
-    const rows = await prisma.job.findMany({
-      where: {
-        isPublished: true,
-        salaryIsEstimated: false,
-        state: { not: null },
-        normalizedMinSalary: { not: null },
-        normalizedMaxSalary: { not: null },
-      },
-      select: {
-        state: true,
-        employer: true,
-        normalizedMinSalary: true,
-        normalizedMaxSalary: true,
-      },
-    });
-    return summarizeBenchmarks(rows);
+    return summarizeBenchmarkPool(await fetchNpAnalyticsRows());
   } catch (error) {
     // A failed aggregation renders the widget's "not enough data" state
     // rather than taking down /for-employers.

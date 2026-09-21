@@ -136,18 +136,18 @@ describe('P1 #4 — generator copy mirrors the published /salary-guide page (dri
     // generator (and regenerating the PDF) fails here on purpose.
     const mirroredLiterals = [
         // Experience bands
-        "{ exp: 'New Grad (0-1 yr)', range: '$95,000 - $115,000', roles: `Staff ${brand.niche.short}, Outpatient Clinic` }",
-        "{ exp: 'Early Career (1-3 yrs)', range: '$110,000 - $130,000', roles: `Staff ${brand.niche.short}, Telehealth Provider` }",
-        "{ exp: 'Mid-Career (3-7 yrs)', range: '$125,000 - $150,000', roles: `Senior ${brand.niche.short}, Team Lead` }",
-        "{ exp: 'Experienced (7-15 yrs)', range: '$150,000 - $180,000', roles: 'Clinical Director, Supervisor' }",
-        "{ exp: 'Expert (15+ yrs)', range: '$180,000 - $250,000+', roles: 'Director, Consultant, Private Practice' }",
+        "{ exp: 'New Grad (0-1 yr)', range: '$95,000 to $115,000', roles: `Staff ${brand.niche.short}, Outpatient Clinic` }",
+        "{ exp: 'Early Career (1-3 yrs)', range: '$110,000 to $130,000', roles: `Staff ${brand.niche.short}, Telehealth Provider` }",
+        "{ exp: 'Mid-Career (3-7 yrs)', range: '$125,000 to $150,000', roles: `Senior ${brand.niche.short}, Team Lead` }",
+        "{ exp: 'Experienced (7-15 yrs)', range: '$150,000 to $180,000', roles: 'Clinical Director, Supervisor' }",
+        "{ exp: 'Expert (15+ yrs)', range: '$180,000 to $250,000+', roles: 'Director, Consultant, Private Practice' }",
         // Setting ranges
-        "setting: 'Private Practice (Owner)', range: '$180,000 - $300,000+', notes: 'Highest earning potential, requires business skills'",
-        "setting: 'Travel / Locum Tenens', range: '$150,000 - $250,000', notes: 'Includes housing, travel, higher hourly rates'",
-        "setting: 'Telehealth / Remote', range: '$130,000 - $180,000', notes: 'Growing rapidly, flexible schedules'",
-        "setting: 'Outpatient Clinic', range: '$120,000 - $160,000', notes: 'Most common setting, steady patient load'",
-        "setting: 'Hospital / Inpatient', range: '$115,000 - $150,000', notes: 'Often includes shift differentials, benefits'",
-        "setting: 'Community Health (FQHC)', range: '$100,000 - $130,000', notes: 'May qualify for loan forgiveness programs'",
+        "setting: 'Private Practice (Owner)', range: '$180,000 to $300,000+', notes: 'Highest earning potential, requires business skills'",
+        "setting: 'Travel / Locum Tenens', range: '$150,000 to $250,000', notes: 'Includes housing, travel, higher hourly rates'",
+        "setting: 'Telehealth / Remote', range: '$130,000 to $180,000', notes: 'Growing rapidly, flexible schedules'",
+        "setting: 'Outpatient Clinic', range: '$120,000 to $160,000', notes: 'Most common setting, steady patient load'",
+        "setting: 'Hospital / Inpatient', range: '$115,000 to $150,000', notes: 'Often includes shift differentials, benefits'",
+        "setting: 'Community Health (FQHC)', range: '$100,000 to $130,000', notes: 'May qualify for loan forgiveness programs'",
         // Specialty premiums — prefix only (no closing brace): the hub rows
         // additionally carry a `slug` link field (P1 #7) the PDF omits.
         "specialty: 'Acute Care / Hospitalist', premium: '+10-20%', notes: 'AGACNP certification, hospital demand'",
@@ -199,7 +199,7 @@ describe('P1 #4 — generator copy mirrors the published /salary-guide page (dri
 
     it('the replacement FPA copy is mirrored between the hub and the PDF', () => {
         const replacement =
-            'Practice authority is a legal classification, not a pay scale — it decides which ways of earning are open to you in that state.';
+            'Practice authority is a legal classification, not a pay scale. It decides which ways of earning are open to you in that state.';
         expect(hubSrc).toContain(replacement);
         expect(generatorSrc).toContain(replacement);
         for (const bullet of [

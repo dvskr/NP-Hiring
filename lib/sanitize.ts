@@ -121,7 +121,10 @@ export function sanitizeUrl(url: string): string {
 /**
  * Sanitize email address
  */
-export function sanitizeEmail(email: string): string {
+export function sanitizeEmail(email: unknown): string {
+    // Request bodies are untrusted: a missing or non-string email must yield
+    // '' (which every caller's format check rejects with a 400), never throw.
+    if (typeof email !== 'string') return '';
     // Strip any HTML tags, trim, lowercase, and limit length
     const cleaned = email
         .replace(/<[^>]+>/g, '')
@@ -228,17 +231,33 @@ export interface JobAlertInput {
     frequency?: string;
 }
 
-export function sanitizeJobAlert(input: JobAlertInput): JobAlertInput {
+/** Sanitize an optional text field that arrived in an untrusted JSON body. */
+function optionalText(value: unknown, maxLength: number): string | undefined {
+    return typeof value === 'string' && value ? sanitizeText(value, maxLength) : undefined;
+}
+
+export function sanitizeJobAlert(input: Partial<Record<keyof JobAlertInput, unknown>>): JobAlertInput {
+    // Every field is unknown on the way in: the body is parsed JSON, so a
+    // number or object where a string belongs must not throw (that surfaced
+    // as a 500). Non-string text fields are dropped. The salary fields pass
+    // through untouched so the route's own typeof checks reject bad values,
+    // and a non-string frequency is stringified so the allow-list rejects it.
+    const { frequency } = input;
     return {
         email: sanitizeEmail(input.email),
-        name: input.name ? sanitizeText(input.name, 100) : undefined,
-        keyword: input.keyword ? sanitizeText(input.keyword, 100) : undefined,
-        location: input.location ? sanitizeText(input.location, 200) : undefined,
-        mode: input.mode ? sanitizeText(input.mode, 50) : undefined,
-        jobType: input.jobType ? sanitizeText(input.jobType, 50) : undefined,
-        minSalary: input.minSalary,
-        maxSalary: input.maxSalary,
-        frequency: input.frequency ? sanitizeText(input.frequency, 20) : undefined,
+        name: optionalText(input.name, 100),
+        keyword: optionalText(input.keyword, 100),
+        location: optionalText(input.location, 200),
+        mode: optionalText(input.mode, 50),
+        jobType: optionalText(input.jobType, 50),
+        minSalary: input.minSalary as number | undefined,
+        maxSalary: input.maxSalary as number | undefined,
+        frequency:
+            frequency === undefined || frequency === null || frequency === ''
+                ? undefined
+                : typeof frequency === 'string'
+                    ? sanitizeText(frequency, 20)
+                    : String(frequency),
     };
 }
 

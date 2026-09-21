@@ -1,5 +1,5 @@
-# NP Hiring — Site Information for AI Systems
-# llms-full.txt — Extended version of llms.txt
+# NP Hiring: Site Information for AI Systems
+# llms-full.txt: Extended version of llms.txt
 
 > NP Hiring (nphiring.com) is a specialized job board for Nurse Practitioners in the United States, covering every NP specialty plus the wider APRN cohort across all 50 states.
 
@@ -13,23 +13,23 @@ Help every Nurse Practitioner find the right role through a transparent, data-ri
 - Live inventory changes daily; no fixed headline count is published here. For a
   current machine-readable snapshot, fetch https://nphiring.com/feed.xml (RSS 2.0,
   newest active listings) or the sitemap index at https://nphiring.com/api/sitemaps/index
-- Sources: 8 employer applicant-tracking systems — Greenhouse, Lever, Workday, SmartRecruiters, Ashby, BambooHR, JazzHR, Workable
+- Sources: 8 employer applicant-tracking systems (Greenhouse, Lever, Workday, SmartRecruiters, Ashby, BambooHR, JazzHR, Workable)
 - Updated: daily
-- Expired, filled, and dead-link postings are removed from feeds and sitemaps rather than left to rot
-- Salary shown whenever the employer's posting provides it — we do not fabricate or estimate pay for individual listings
+- Expired, filled, and dead-link postings are removed from feeds and sitemaps rather than left in place
+- Salary is shown whenever the employer's posting provides it. We do not fabricate or estimate pay for individual listings
 - Searchable by: keyword (/jobs?q=), location, specialty, setting, job type, and experience level
 
 ### Specialties Covered
-- FNP — Family Nurse Practitioner
-- AGNP / AGACNP — Adult-Gerontology (primary and acute care)
-- PNP — Pediatric Nurse Practitioner
-- NNP — Neonatal Nurse Practitioner
-- WHNP — Women's Health Nurse Practitioner
-- ACNP — Acute Care Nurse Practitioner
-- PMHNP — Psychiatric Mental Health Nurse Practitioner
-- CRNA — Certified Registered Nurse Anesthetist
-- CNM — Certified Nurse Midwife
-- CNS — Clinical Nurse Specialist
+- FNP: Family Nurse Practitioner
+- AGNP / AGACNP: Adult-Gerontology (primary and acute care)
+- PNP: Pediatric Nurse Practitioner
+- NNP: Neonatal Nurse Practitioner
+- WHNP: Women's Health Nurse Practitioner
+- ACNP: Acute Care Nurse Practitioner
+- PMHNP: Psychiatric Mental Health Nurse Practitioner
+- CRNA: Certified Registered Nurse Anesthetist
+- CNM: Certified Nurse Midwife
+- CNS: Clinical Nurse Specialist
 
 ### Category Pages (45)
 Category hubs cover seven taxonomy axes:
@@ -52,33 +52,33 @@ All category pages live under https://nphiring.com/jobs/<slug>.
 
 ## Career Resources
 
-- /salary-guide — NP salary guide, with a page per state
-- /salary-guide/specialty — NP salary by specialty
-- /resources — Licensure and career tools, including a state licensure checker
-- /resources/1099-vs-w2 — 1099 vs W-2 for nurse practitioners
-- /resources/fpa-guide — Full practice authority by state
-- /resources/private-practice-guide — Starting an NP private practice
-- /blog — Career guides, per-state licensure guides, and industry insights
-- /job-alerts — Email alerts for new NP jobs
-- /faq — Frequently asked questions
+- /salary-guide: NP salary guide, with a page per state
+- /salary-guide/specialty: NP salary by specialty
+- /resources: Licensure and career tools, including a state licensure checker
+- /resources/1099-vs-w2: 1099 vs W-2 for nurse practitioners
+- /resources/fpa-guide: Full practice authority by state
+- /resources/private-practice-guide: Starting an NP private practice
+- /blog: Career guides, per-state licensure guides, and industry insights
+- /job-alerts: Email alerts for new NP jobs
+- /faq: Frequently asked questions
 
 ## For Employers
 
-- /post-job — Post an NP job listing
-- /for-employers — Employer hiring solutions
-- /for-employers/resources — Employer hiring guides
-- /for-employers/resources/how-to-hire — How to hire a nurse practitioner
-- /for-employers/resources/job-description-guide — Writing an NP job description
-- /for-employers/resources/job-description-templates — NP job description templates
-- /pricing — Listing options
-- /companies — Browse employers with active listings
-- /for-programs — For NP program directors
+- /post-job: Post an NP job listing
+- /for-employers: Employer hiring solutions
+- /for-employers/resources: Employer hiring guides
+- /for-employers/resources/how-to-hire: How to hire a nurse practitioner
+- /for-employers/resources/job-description-guide: Writing an NP job description
+- /for-employers/resources/job-description-templates: NP job description templates
+- /pricing: Listing options
+- /companies: Browse employers with active listings
+- /for-programs: For NP program directors
 
 ## Editorial Standards
 
-- /editorial-policy — How content is researched, sourced, and reviewed
+- /editorial-policy: How content is researched, sourced, and reviewed
 - Cited statistics on our pages carry a named source and an as-of date; descriptive
-  market context is labelled as the estimate it is rather than dressed up as a cited
+  market context is labelled as the estimate it is rather than presented as a cited
   statistic
 - Job-level salary is reproduced from the employer's posting, never modeled
 

@@ -1,9 +1,11 @@
 import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { MapPin, Building2, Shield, TrendingUp, Users, Briefcase, ArrowRight, Bell, DollarSign, Video, Stethoscope } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
+import { pluralize } from '@/lib/pseo/plural';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import {
   getMetroCity,
@@ -18,7 +20,7 @@ import {
 import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryFAQ from '@/components/CategoryFAQ';
 import { stateDioramaSrc, stateDioramaBg } from '@/components/StateImage';
 import { notFound } from 'next/navigation';
@@ -124,7 +126,7 @@ function truncateOnWord(text: string, max: number): string {
 async function getMetroStats(metro: MetroCity) {
   const { city, stateCode } = metro;
   const where = {
-    isPublished: true,
+    ...PUBLISHED_LISTING_WHERE,
     OR: [
       { city: { contains: city, mode: 'insensitive' as const } },
       // Query list, not display list: it carries alternate spellings
@@ -171,11 +173,11 @@ async function getMetroStats(metro: MetroCity) {
 /** Also fetch statewide stats for comparison */
 async function getStateStats(stateCode: string) {
   const stateJobs = await prisma.job.count({
-    where: { isPublished: true, stateCode: { equals: stateCode, mode: 'insensitive' } },
+    where: { ...PUBLISHED_LISTING_WHERE, stateCode: { equals: stateCode, mode: 'insensitive' } },
   });
   const stateSalary = await prisma.job.aggregate({
     where: {
-      isPublished: true,
+      ...PUBLISHED_LISTING_WHERE,
       stateCode: { equals: stateCode, mode: 'insensitive' },
       normalizedMinSalary: { not: null },
       normalizedMaxSalary: { not: null },
@@ -331,13 +333,13 @@ export default async function MetroLandingPage({ params }: PageProps) {
         bgColor={heroBgColor}
         heroImage={heroImage}
         heroAlt={`${brand.niche.short} jobs in ${metro.city}, ${metro.stateCode}`}
-        badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', metro.state, metro.city]}
+        badgeText={`${stats.totalJobs} live ${pluralize(stats.totalJobs, 'role')} · updated today`}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: metro.state, url: `${brand.baseUrl}/jobs/state/${metro.stateSlug}` }, { name: `${metro.city} ${brand.niche.short} Jobs`, url: `${brand.baseUrl}/jobs/metro/${slug}` }])}
         headlineLine1={metro.city}
         headlineLine2={brand.niche.short}
-        headlineSub={`jobs in ${metro.stateCode}, find your fit.`}
+        headlineSub={`jobs in ${metro.stateCode}. Find your fit.`}
         stats={[
-          { value: `${stats.totalJobs}`, label: 'positions' },
+          { value: `${stats.totalJobs}`, label: pluralize(stats.totalJobs, 'position') },
           // TRUTH RULE: no invented fallback salary. When this metro's live
           // listings carry no posted pay, show the statewide inventory instead
           // of a made-up band.
@@ -374,7 +376,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
                 say so rather than letting the number read as city-limits only. */}
             <p style={{ fontSize: '12px', color: '#A09080', margin: '0 0 20px', lineHeight: 1.5 }}>
               {nearbyCities.length > 0
-                ? `Counts ${metro.city} plus nearby ${nearbyCities.slice(0, 4).join(', ')}. Browsing by location filters to ${metro.city} itself.`
+                ? `This count includes ${metro.city} plus nearby ${nearbyCities.slice(0, 4).join(', ')}. Browsing by location filters to ${metro.city} itself.`
                 : `Live ${metro.city} listings, refreshed hourly.`}
             </p>
 
@@ -505,26 +507,22 @@ export default async function MetroLandingPage({ params }: PageProps) {
 
           <div className="metro-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Practice Authority (8) + Cost of Living (4) */}
-            <div className="metro-bento-hero-1 metro-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="metro-bento-hero-1 metro-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>{metro.practiceAuthority} Practice Authority</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                   {truncateOnWord(metro.licensureNote, 165)}
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                <Image src={ART_PRACTICE} alt="" width={280} height={280} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src={ART_PRACTICE} alt="" minHeight={240} />
             </div>
 
             <div className="metro-bento-hero-2 metro-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image src={ART_GROWTH} alt="" width={280} height={200} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
-              </div>
+              <ImmersiveImage src={ART_GROWTH} alt="" minHeight={200} />
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Cost of Living</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  {metro.avgCostOfLiving} — {costOfLivingSplice(metro)}.
+                  {metro.avgCostOfLiving}: {costOfLivingSplice(metro)}.
                 </p>
               </div>
             </div>
@@ -550,20 +548,18 @@ export default async function MetroLandingPage({ params }: PageProps) {
             ))}
 
             {/* ROW 3: Salary (8) + Alert CTA (4) */}
-            <div className="metro-bento-hero-3 metro-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="metro-bento-hero-3 metro-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Outlook</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                   {stats.avgSalary > 0
                     ? `${metro.city} ${brand.niche.short} listings with posted pay average $${stats.avgSalary}k`
                     : `${metro.city} ${brand.niche.short} listings do not yet post enough salary data to average`}
-                  {' — '}{costOfLivingSplice(metro)}.
+                  {'; '}{costOfLivingSplice(metro)}.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={ART_SALARY} alt="" width={280} height={280} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src={ART_SALARY} alt="" minHeight={240} />
             </div>
 
             <div className="metro-bento-cta metro-card" style={{
@@ -574,7 +570,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
               <Bell size={28} style={{ color: '#BE185D', marginBottom: '14px' }} />
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Job Alerts</h3>
               <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                New {metro.city} listings delivered to your inbox — be first to apply.
+                New {metro.city} listings delivered to your inbox so you can be first to apply.
               </p>
               <Link href={`/job-alerts?location=${encodeURIComponent(metro.city)}`} className="metro-cta" style={{
                 padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
@@ -604,7 +600,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
             <div className="lg:col-span-5">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <Users size={18} style={{ color: '#E86C2C' }} />
-                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Who you&rsquo;ll be caring for</h3>
+                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Who you will be caring for</h3>
               </div>
               <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.75, margin: '0 0 24px' }}>
                 {metro.careDemandContext}
@@ -635,7 +631,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
                   )}
                   {salaryGap !== null && (
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '16px', borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: '14px' }}>
-                      <dt style={{ fontSize: '13px', color: '#B7C7CC' }}>Posted pay vs statewide</dt>
+                      <dt style={{ fontSize: '13px', color: '#B7C7CC' }}>Posted pay vs. statewide</dt>
                       <dd style={{ fontSize: '22px', fontWeight: 800, color: salaryGap >= 0 ? '#86c1a8' : '#F0B27A', margin: 0, fontFamily: 'var(--font-mono)' }}>
                         {salaryGap >= 0 ? '+' : '−'}${Math.abs(salaryGap)}k
                       </dd>
@@ -643,7 +639,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
                   )}
                 </dl>
                 <p style={{ fontSize: '11px', color: '#8FA3A9', margin: '18px 0 0', lineHeight: 1.6 }}>
-                  Counted from live listings on this board and refreshed hourly — not a national survey.
+                  Counted from live listings on this board and refreshed hourly, not from a national survey.
                   {stats.avgSalary > 0 ? ' Pay figures use only listings that post a salary, so they lag the full market.' : ''}
                 </p>
               </div>
@@ -653,7 +649,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
             <div className="lg:col-span-7">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                 <MapPin size={18} style={{ color: '#BE185D' }} />
-                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Where the jobs actually are</h3>
+                <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Where the jobs are</h3>
               </div>
               {/* role="list" keeps list semantics in Safari, which drops them
                   when list-style is none. */}
@@ -679,9 +675,9 @@ export default async function MetroLandingPage({ params }: PageProps) {
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginTop: '4px', padding: '14px 16px', borderRadius: '14px', background: 'rgba(190,24,93,0.05)' }}>
                 <Shield size={16} style={{ color: '#BE185D', flexShrink: 0, marginTop: '2px' }} />
                 <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.6 }}>
-                  Practice authority follows the state, not the metro — {metro.state} is a{' '}
+                  Practice authority follows the state, not the metro. {metro.state} is a{' '}
                   {metro.practiceAuthority === 'Full' ? 'full' : metro.practiceAuthority.toLowerCase()}-practice
-                  {' '}jurisdiction on the AANP State Practice Environment map. Editorial for this metro last reviewed {METRO_DATA_LAST_REVIEWED}.
+                  {' '}jurisdiction on the AANP State Practice Environment map. Editorial content for this metro was last reviewed {METRO_DATA_LAST_REVIEWED}.
                 </p>
               </div>
             </div>
@@ -702,7 +698,7 @@ export default async function MetroLandingPage({ params }: PageProps) {
             {[
               { step: '01', title: 'Licensure', text: `${metro.state} has ${metro.practiceAuthority} Practice Authority. ${firstSentence(metro.licensureNote)}.` },
               { step: '02', title: 'Cost of Living', text: `${metro.city} cost of living is ${metro.avgCostOfLiving}. ${firstSentence(metro.costOfLivingNote)}.` },
-              { step: '03', title: 'Top Settings', text: `Popular settings include ${metro.topSettings.slice(0, 3).join(', ')}. Explore all options.` },
+              { step: '03', title: 'Top Settings', text: `Popular settings include ${metro.topSettings.slice(0, 3).join(', ')}. Explore all available options.` },
               { step: '04', title: 'Apply', text: `Browse ${stats.totalJobs}+ positions in ${metro.city} and set up job alerts to be first to apply.` },
             ].map(r => (
               <div key={r.step} className="metro-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
+import { resolvePoolSizing } from '@/lib/prisma-pool-config'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -16,27 +17,24 @@ if (!globalForPrisma.pool) {
     throw new Error('DATABASE_URL must be set')
   }
 
-  console.log('[Prisma] Initializing connection pool...')
+  // Pool sizing is runtime-aware (see lib/prisma-pool-config.ts): the old
+  // hard-coded max=2 was right for Vercel serverless (one Pool per function
+  // instance, burst headroom comes from PgBouncer) but starved a long-lived
+  // `next start` server, where a single Pool serves every request and
+  // concurrent /jobs loads 500ed with "timeout exceeded when trying to
+  // connect". Override with DATABASE_POOL_MAX / DATABASE_POOL_CONNECT_TIMEOUT_MS.
+  const sizing = resolvePoolSizing(process.env)
+
+  console.log(`[Prisma] Initializing connection pool (${sizing.runtime}, max ${sizing.max})...`)
 
   globalForPrisma.pool = new Pool({
     connectionString,
-    // Pool sizing for Vercel serverless + Supabase PgBouncer:
-    // Each function instance gets its own Pool. Vercel cold-starts can
-    // spin up 50-100 instances during bot crawl bursts. With max=10 that
-    // produced 500-1000 simultaneous conns to PgBouncer → EMAXCONN
-    // (observed 2026-04-30 05:55-05:57 UTC: 108 EMAXCONN errors during
-    // a Mozilla/Googlebot/GPTBot burst on /jobs/* SEO pages).
-    //
-    // PgBouncer in transaction mode multiplexes — each query borrows a
-    // backend conn for the statement only, so 1 client conn per instance
-    // is plenty. Burst headroom comes from PgBouncer's 200-500 client
-    // capacity, not from per-instance pooling.
-    max: 2,
-    idleTimeoutMillis: 20000, // 20 seconds
-    connectionTimeoutMillis: 10000, // 10 seconds to connect
-    allowExitOnIdle: true, // Allow cleanup in serverless
+    max: sizing.max,
+    idleTimeoutMillis: sizing.idleTimeoutMillis,
+    // Bounds both the TCP connect and the wait for a free pool slot.
+    connectionTimeoutMillis: sizing.connectionTimeoutMillis,
+    allowExitOnIdle: sizing.allowExitOnIdle,
     // NOTE: statement_timeout is NOT supported by PgBouncer in transaction mode.
-    // connectionTimeoutMillis handles connection-level timeouts instead.
   })
 
   // Handle pool errors gracefully

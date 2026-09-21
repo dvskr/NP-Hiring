@@ -67,7 +67,57 @@ function isCsrfExemptPath(pathname: string): boolean {
  */
 function isAllowedOrigin(origin: string, request: NextRequest): boolean {
     if (ALLOWED_ORIGINS.includes(origin)) return true;
-    return origin === request.nextUrl.origin;
+    if (origin === request.nextUrl.origin) return true;
+    return isLoopbackSameHostOrigin(origin, request.headers.get('host'));
+}
+
+/**
+ * Loopback hostnames a local server is reached on. `localhost` is already in
+ * the static allowlist; 127.0.0.1 and [::1] are the same machine under a
+ * different spelling.
+ */
+const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/** Hostname part of a Host header value ("127.0.0.1:3000" -> "127.0.0.1"). */
+export function hostnameFromHostHeader(host: string | null | undefined): string | null {
+    if (!host) return null;
+    const trimmed = host.trim().toLowerCase();
+    if (!trimmed) return null;
+    if (trimmed.startsWith('[')) {
+        const close = trimmed.indexOf(']');
+        return close > 0 ? trimmed.slice(0, close + 1) : null;
+    }
+    const colon = trimmed.indexOf(':');
+    return colon === -1 ? trimmed : trimmed.slice(0, colon);
+}
+
+export function isLoopbackHostname(hostname: string | null | undefined): boolean {
+    return hostname ? LOOPBACK_HOSTNAMES.has(hostname.toLowerCase()) : false;
+}
+
+/**
+ * P10 platform-routing-db #7: under `next start` request.nextUrl.origin is
+ * always http://localhost:<port>, so a browser on http://127.0.0.1:3000 got
+ * 403 "cross-origin request blocked" on every mutation. Accept an Origin
+ * ONLY when it names a loopback host AND is exactly the host the request was
+ * sent to (the Host header). This never widens production: a deployed site's
+ * requests carry its public Host, and a cross-site attacker cannot make a
+ * victim's browser send a loopback Host to that site, so a loopback Origin
+ * there still fails. Scheme must be http or https; anything else fails closed.
+ */
+export function isLoopbackSameHostOrigin(origin: string, hostHeader: string | null | undefined): boolean {
+    let parsed: URL;
+    try {
+        parsed = new URL(origin);
+    } catch {
+        return false;
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    if (parsed.origin !== origin) return false;
+    if (!isLoopbackHostname(parsed.hostname)) return false;
+    const host = hostHeader?.trim().toLowerCase();
+    if (!host) return false;
+    return parsed.host === host;
 }
 
 /**

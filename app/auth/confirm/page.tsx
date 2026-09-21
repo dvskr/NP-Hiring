@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { safeInternalPath } from '@/lib/auth/safe-redirect'
+import { classifyCodeExchangeFailure, confirmHeading } from './confirm-state'
 
 /**
  * /auth/confirm
@@ -104,18 +105,22 @@ export default function AuthConfirmPage() {
           if (error) {
             console.warn('PKCE code exchange failed:', error.message)
 
-            // PKCE verifier mismatch — happens when the confirmation email
-            // opens in a different tab/browser than where signup occurred.
-            // Supabase already confirmed the user server-side during the
-            // redirect (before appending ?code=), so the email IS confirmed.
-            // We just can't establish a client session without the verifier.
-            // Carry the return target into login so the intent survives.
-            setMessage('Email confirmed! Please log in to continue.')
-            setStatus('success')
-            const loginUrl = nextPath !== '/dashboard'
-              ? `/login?confirmed=true&redirectTo=${encodeURIComponent(nextPath)}`
-              : '/login?confirmed=true'
-            setTimeout(() => router.push(loginUrl), 2000)
+            // Only a well formed code with no PKCE verifier in THIS browser
+            // is the "opened the email in a different browser" case. Even
+            // then the code cannot be checked here, so the page never claims
+            // the email is confirmed (a garbage ?code= used to be reported
+            // as a successful confirmation). Carry the return target into
+            // login so the intent survives; login offers a resend when the
+            // account is in fact still unconfirmed.
+            const loginUrl = `/login?redirectTo=${encodeURIComponent(nextPath)}`
+            setStatus('error')
+            if (classifyCodeExchangeFailure(code, error) === 'other_browser') {
+              setMessage('We could not finish signing you in on this browser. If the link was opened in a different browser than the one you signed up with, please log in to continue.')
+              setTimeout(() => router.push(loginUrl), 4000)
+            } else {
+              setMessage('This link is invalid or has expired. Redirecting to login...')
+              setTimeout(() => router.push('/login'), 3000)
+            }
             return
           }
 
@@ -124,14 +129,14 @@ export default function AuthConfirmPage() {
             urlParams.get('type') === 'recovery'
 
           if (isRecovery) {
-            setMessage('Verified! Redirecting to reset password...')
+            setMessage('Verified. Redirecting you to reset your password...')
             setStatus('success')
             router.push('/reset-password')
             return
           }
 
           // Email confirmation — user is now logged in
-          setMessage('Email confirmed! Redirecting...')
+          setMessage('Email confirmed. Redirecting...')
           setStatus('success')
           // F27: bootstrap the UserProfile server-side NOW. The signup-time
           // profile POST 401'd (no session existed), so ensureProfileFromAuth
@@ -160,7 +165,7 @@ export default function AuthConfirmPage() {
         if (!hash) {
           console.log('No code or hash fragment found, redirecting to login')
           setStatus('error')
-          setMessage('Invalid or expired link. Redirecting to login...')
+          setMessage('This link is invalid or has expired. Redirecting to login...')
           setTimeout(() => router.push('/login'), 2000)
           return
         }
@@ -199,7 +204,7 @@ export default function AuthConfirmPage() {
         if (error) {
           console.error('Failed to set session:', error.message)
           setStatus('error')
-          setMessage('Session expired or invalid. Please try again.')
+          setMessage('Your session has expired or is invalid. Please try again.')
           setTimeout(() => router.push('/login'), 3000)
           return
         }
@@ -207,14 +212,14 @@ export default function AuthConfirmPage() {
 
         // Handle different auth types
         if (type === 'recovery') {
-          setMessage('Verified! Redirecting to reset password...')
+          setMessage('Verified. Redirecting you to reset your password...')
           setStatus('success')
           router.push('/reset-password')
           return
         }
 
         // Magic link / email confirmation — user is now logged in
-        setMessage('Email confirmed! Redirecting...')
+        setMessage('Email confirmed. Redirecting...')
         setStatus('success')
         // F27: same server-side profile + opt-in bootstrap as the PKCE path
         // above — see that comment for why this must precede the welcome call.
@@ -284,7 +289,18 @@ export default function AuthConfirmPage() {
         {status === 'expired' && (
           <div style={{ fontSize: '40px', marginBottom: '16px' }}>⏳</div>
         )}
+        <h1
+          style={{
+            color: 'var(--text-primary, #F1F5F9)',
+            fontSize: '22px',
+            fontWeight: 700,
+            margin: '0 0 10px',
+          }}
+        >
+          {confirmHeading(status)}
+        </h1>
         <p
+          role="status"
           style={{
             color: status === 'error' ? '#EF4444' : 'var(--text-primary, #F1F5F9)',
             fontSize: '16px',
@@ -303,7 +319,7 @@ export default function AuthConfirmPage() {
               htmlFor="resend-email"
               style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary, #94A3B8)', marginBottom: '6px' }}
             >
-              Enter your email and we&apos;ll send a fresh confirmation link:
+              Enter your email address and we will send you a new confirmation link:
             </label>
             <input
               id="resend-email"
@@ -345,12 +361,12 @@ export default function AuthConfirmPage() {
               {resendStatus === 'sending'
                 ? 'Sending...'
                 : resendStatus === 'sent'
-                  ? '✓ Confirmation email sent — check your inbox'
+                  ? '✓ Confirmation email sent. Please check your inbox.'
                   : 'Resend confirmation email'}
             </button>
             {resendStatus === 'error' && (
               <p style={{ fontSize: '12px', color: '#EF4444', margin: '8px 0 0' }}>
-                Could not send the email. Wait a minute and try again, or sign in to resend from there.
+                We could not send the email. Please wait a minute and try again, or sign in to resend it from your account.
               </p>
             )}
             <p style={{ fontSize: '12px', color: 'var(--text-secondary, #94A3B8)', margin: '12px 0 0', textAlign: 'center' }}>

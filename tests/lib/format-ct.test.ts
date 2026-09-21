@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { formatCT, ctDayBounds } from '@/lib/format-ct';
 
 describe('formatCT', () => {
-    it('returns "—" for null/undefined', () => {
-        expect(formatCT(null)).toBe('—');
-        expect(formatCT(undefined)).toBe('—');
+    it('returns "N/A" for null/undefined', () => {
+        expect(formatCT(null)).toBe('N/A');
+        expect(formatCT(undefined)).toBe('N/A');
     });
 
-    it('returns "—" for invalid date', () => {
-        expect(formatCT('not-a-date')).toBe('—');
-        expect(formatCT(new Date('garbage'))).toBe('—');
+    it('returns "N/A" for invalid date', () => {
+        expect(formatCT('not-a-date')).toBe('N/A');
+        expect(formatCT(new Date('garbage'))).toBe('N/A');
     });
 
     it('appends " CT" suffix in datetime mode', () => {

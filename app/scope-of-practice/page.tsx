@@ -48,7 +48,7 @@ const ldJson = (obj: unknown): string =>
 const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Scope of Practice by State`)}&type=page`;
 
 export const metadata: Metadata = {
-    title: `${brand.niche.short} Scope of Practice by State 2026 — All 50 States + DC`,
+    title: `${brand.niche.short} Scope of Practice by State 2026: All 50 States + DC`,
     description: `Interactive ${brand.niche.short} scope-of-practice explorer: sort and filter all 50 states + DC by full, reduced, or restricted practice authority, with per-state details, board of nursing links, licensure guides, salary data, and open jobs.`,
     keywords: [
         `${brand.niche.short} scope of practice by state`,
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
         `${brand.niche.short} collaborative agreement states`,
     ],
     openGraph: {
-        title: `${brand.niche.short} Scope of Practice by State — 2026 Interactive Explorer`,
+        title: `${brand.niche.short} Scope of Practice by State: 2026 Interactive Explorer`,
         description: `Sortable, filterable practice-authority classifications for all 50 states + DC, with board links and live per-state pay and job data.`,
         type: 'article',
         images: [{ url: HERO_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} scope of practice by state` }],
@@ -78,7 +78,7 @@ const TIER_LEGEND = [
         authority: 'full' as const,
         icon: CheckCircle,
         heading: 'Full Practice Authority',
-        body: 'Evaluate, diagnose, order and interpret tests, and prescribe under the licensure authority of the state board of nursing — no mandated physician relationship. Some full-practice states phase this in through a transition-to-practice period.',
+        body: 'Evaluate, diagnose, order and interpret tests, and prescribe under the licensure authority of the state board of nursing, with no mandated physician relationship. Some full-practice states phase this in through a transition-to-practice period.',
         iconClass: 'text-green-600',
         headingClass: 'text-green-800',
         bodyClass: 'text-green-700',
@@ -88,7 +88,7 @@ const TIER_LEGEND = [
         authority: 'reduced' as const,
         icon: AlertTriangle,
         heading: 'Reduced Practice',
-        body: 'A documented collaborative agreement with a physician is required for at least one element of practice — most commonly prescribing. The collaborating physician typically does not need to be on-site.',
+        body: 'A documented collaborative agreement with a physician is required for at least one element of practice, most commonly prescribing. The collaborating physician typically does not need to be on-site.',
         iconClass: 'text-yellow-600',
         headingClass: 'text-yellow-800',
         bodyClass: 'text-yellow-700',
@@ -138,7 +138,7 @@ export default function ScopeOfPracticePage() {
                     __html: ldJson({
                         '@context': 'https://schema.org',
                         '@type': 'Article',
-                        headline: `${brand.niche.short} Scope of Practice by State 2026 — All 50 States + DC`,
+                        headline: `${brand.niche.short} Scope of Practice by State 2026: All 50 States + DC`,
                         description: `Interactive state-by-state scope-of-practice explorer for ${brand.niche.descriptor}s.`,
                         datePublished: SOP_PUBLISHED_AT,
                         dateModified: SOP_LAST_REVIEWED,
@@ -161,7 +161,7 @@ export default function ScopeOfPracticePage() {
                         </h1>
                         <p className="text-lg md:text-xl text-pink-100 mb-4">
                             Every state&apos;s practice-authority classification in one
-                            sortable, filterable view — with each state&apos;s board of
+                            sortable, filterable view, with each state&apos;s board of
                             nursing, licensure guide, live salary data, and open jobs one
                             click away.
                         </p>
@@ -204,7 +204,7 @@ export default function ScopeOfPracticePage() {
                             <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
                                 The AANP classifies each state&apos;s regulatory environment
                                 for {brand.niche.descriptor}s into one of three tiers. The
-                                tier tells you the legal structure around practice — it is
+                                tier tells you the legal structure around practice. It is
                                 not a pay scale, and it is not the fine print: prescribing
                                 schedules, agreement contents, fees, and renewal rules are
                                 set by each state board of nursing, which is why every
@@ -251,7 +251,7 @@ export default function ScopeOfPracticePage() {
                             </h2>
                             <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
                                 The compact covers the <strong>RN license</strong> that
-                                underpins your APRN credential — a multistate RN license is
+                                underpins your APRN credential; a multistate RN license is
                                 recognized across member states. It does not change your
                                 scope of practice: APRN licensure is issued state by state,
                                 and the practice environment above is what governs how you
@@ -259,8 +259,8 @@ export default function ScopeOfPracticePage() {
                             </p>
                             <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
                                 The Compact (NLC) column in the table above marks each
-                                jurisdiction as a member, not a member, or — the
-                                in-between case — <strong>enacted, implementation
+                                jurisdiction as a member, not a member, or, in the
+                                in-between case, <strong>enacted, implementation
                                 pending</strong>: the state has passed compact legislation
                                 but its board has not completed implementation, so
                                 multistate licenses are neither issued nor honored there
@@ -290,7 +290,7 @@ export default function ScopeOfPracticePage() {
                                 What we track here: the AANP classification and what it
                                 means in that state. What we deliberately leave to the
                                 authorities: prescribing schedules, agreement contents,
-                                fees, and renewal rules — those change too often to restate,
+                                fees, and renewal rules. Those change too often to restate,
                                 so each state links its board of nursing, and the{' '}
                                 <a href={AANP_STATE_PRACTICE_URL} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>
                                     AANP State Practice Environment page

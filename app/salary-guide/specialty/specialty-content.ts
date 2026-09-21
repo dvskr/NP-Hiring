@@ -118,9 +118,9 @@ export function configRange(page: SpecialtySalaryPage): { min: number; max: numb
     return null;
 }
 
-/** Human sentence fragment for an estimated range ("$142K–$155K per year"). */
+/** Human sentence fragment for an estimated range ("$142K to $155K per year"). */
 function bandText(band: { min: number; max: number }): string {
-    return `${formatSalary(band.min)}–${formatSalary(band.max)} per year`;
+    return `${formatSalary(band.min)} to ${formatSalary(band.max)} per year`;
 }
 
 /**
@@ -219,12 +219,12 @@ export function buildSpecialtyFaqs(
     if (page.premium) {
         const r = premiumEstimateRange(page.premium);
         payParts.push(
-            `${page.label} roles typically carry a +${page.premium.minPct}–${page.premium.maxPct}% premium over that median — an estimated ${bandText(r)}.`,
+            `${page.label} roles typically carry a ${page.premium.minPct} to ${page.premium.maxPct}% premium over that median, an estimated ${bandText(r)}.`,
         );
     }
     if (!page.isNicheRole) {
         payParts.push(
-            `${brand.name} publishes ${noun} pay only from live ${noun} postings that disclose salary — no national ${noun} wage figure is cited on this board.`,
+            `${brand.name} publishes ${noun} pay only from live ${noun} postings that disclose salary. No national ${noun} wage figure is cited on this board.`,
         );
     }
     // P9 #2d: only a GATED median may be quoted (benchmark policy — n ≥ 5
@@ -234,7 +234,7 @@ export function buildSpecialtyFaqs(
         // a set where no posting discloses an upper bound would otherwise
         // publish "range $98K–$0".
         const spread = hasReportedRange(live)
-            ? ` (disclosed ranges span ${formatSalary(live.minSalary)}–${formatSalary(live.maxSalary)})`
+            ? ` (disclosed ranges span ${formatSalary(live.minSalary)} to ${formatSalary(live.maxSalary)})`
             : '';
         payParts.push(
             `Across ${live.jobCount} active ${noun} postings with disclosed pay on ${brand.name}, the median is ${formatSalary(live.medianSalary)} per year${spread}.`,
@@ -246,7 +246,7 @@ export function buildSpecialtyFaqs(
     if (page.premium) {
         faqs.push({
             q: `Why do ${specialtyNounPlural(page)} earn a premium?`,
-            a: `The +${page.premium.minPct}–${page.premium.maxPct}% premium reflects: ${page.premium.driver}. Typical practice settings include ${settingsList(page.settings)}.`,
+            a: `The ${page.premium.minPct} to ${page.premium.maxPct}% premium reflects ${page.premium.driver}. Typical practice settings include ${settingsList(page.settings)}.`,
         });
     }
 
@@ -267,13 +267,13 @@ export function buildSpecialtyFaqs(
     // 4. Certification — correct body per specialty (config-enforced).
     faqs.push({
         q: `What certification does ${indefiniteArticle(page.role)} ${page.role} need?`,
-        a: `${page.certification}. State licensure requirements vary — check your state board of nursing for specifics.`,
+        a: `${page.certification}. State licensure requirements vary, so check your state board of nursing for specifics.`,
     });
 
     // 5. Increasing pay — FPA stat is the only figure, and it is cited.
     faqs.push({
         q: `How can I increase my ${noun} salary?`,
-        a: `Compare offers across practice settings (${settingsList(page.settings)}), consider states granting full practice authority (${fpa.formatted} per ${fpa.source}), and negotiate total compensation — base, bonuses, CME allowance, and loan-repayment support — rather than base salary alone.`,
+        a: `Compare offers across practice settings (${settingsList(page.settings)}), consider states that grant full practice authority (${fpa.formatted} per ${fpa.source}), and negotiate total compensation (base pay, bonuses, CME allowance, and loan-repayment support) rather than base salary alone.`,
     });
 
     return faqs;

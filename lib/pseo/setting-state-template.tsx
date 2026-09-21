@@ -8,6 +8,7 @@
 import { cache } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { getCitiesByState } from './city-data/cities';
 import { MIN_JOBS_FOR_CATEGORY_CITY } from './render-gate';
 import { Metadata } from 'next';
@@ -40,15 +41,16 @@ import {
   getAllStateSlugs,
   STATE_CODES,
 } from './setting-state-config';
-import { CATEGORY_ASSET_REGISTRY } from './category-asset-registry';
+import { CATEGORY_ASSET_REGISTRY, DEFAULT_HERO_IMAGE } from './category-asset-registry';
 import { getStatePracticeAuthority, getAuthorityLabel } from '@/lib/state-practice-authority';
 import { buildSettingStateNarrative } from './state-narrative';
 // P2 #15: ONE freshness formatter for both pSEO templates — a local copy is
 // how the city and state surfaces drift apart. P2 #7: same reasoning for the
 // behavioral-health-HPSA gate, which must agree across both surfaces.
 import { formatStatsBadge, categoryOwnsShortageData } from './category-city-template';
+import { pluralize } from '@/lib/pseo/plural';
+import { withListingQuarantine } from '@/lib/pseo/listing-where';
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -91,7 +93,7 @@ const EMPTY_STATS: Stats = { totalJobs: 0, avgSalary: 0, topEmployers: [], stats
 
 async function getJobs(config: SettingConfig, stateName: string, skip = 0, take = 20) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where = config.buildWhere(stateName) as any;
+  const where = withListingQuarantine(config.buildWhere(stateName) as any);
   return prisma.job.findMany({
     where,
     omit: JOB_LISTING_OMIT, // Perf1: don't pull the multi-KB description for cards
@@ -105,7 +107,7 @@ async function getJobs(config: SettingConfig, stateName: string, skip = 0, take 
 // the page component both call getStats with the same module-level config ref).
 const getStats = cache(async function getStats(config: SettingConfig, stateName: string, stateSlug: string): Promise<Stats> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where = config.buildWhere(stateName) as any;
+  const where = withListingQuarantine(config.buildWhere(stateName) as any);
 
   let totalJobs = 0;
   let avgSalary = 0;
@@ -216,19 +218,19 @@ export async function buildSettingStateMetadata(
   const basePath = `/jobs/${config.slug}/${stateSlug}`;
 
   return {
-    title: `${stats.totalJobs} ${config.label} ${brand.niche.short} Jobs in ${stateName} (${config.salaryRange})`,
-    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} jobs in ${stateName} paying ${config.salaryRange}. ${config.heroSubtitle}. Browse ${config.label.toLowerCase()} ${brand.niche.descriptor} positions in ${stateName} updated daily.`,
+    title: `${stats.totalJobs} ${config.label} ${brand.niche.short} ${pluralize(stats.totalJobs, 'Job')} in ${stateName} (${config.salaryRange})`,
+    description: `Find ${stats.totalJobs} ${config.label.toLowerCase()} ${brand.niche.short} ${pluralize(stats.totalJobs, 'job')} in ${stateName} paying ${config.salaryRange}. ${config.heroSubtitle}. Browse ${config.label.toLowerCase()} ${brand.niche.descriptor} positions in ${stateName} updated daily.`,
     keywords: [
       ...config.keywords,
       `${config.label.toLowerCase()} ${brand.niche.short.toLowerCase()} jobs ${stateName.toLowerCase()}`,
       `${stateName.toLowerCase()} ${config.label.toLowerCase()} ${brand.niche.descriptor}`,
     ],
     openGraph: {
-      title: `${stats.totalJobs} ${config.label} ${brand.niche.short} Jobs in ${stateName}`,
+      title: `${stats.totalJobs} ${config.label} ${brand.niche.short} ${pluralize(stats.totalJobs, 'Job')} in ${stateName}`,
       description: `Browse ${config.label.toLowerCase()} ${brand.niche.descriptor} positions in ${stateName}. ${config.heroSubtitle}.`,
       type: 'website',
       images: [{
-        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} ${config.label} ${brand.niche.short} Jobs in ${stateName}`)}&subtitle=${encodeURIComponent(config.heroSubtitle)}`,
+        url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} ${config.label} ${brand.niche.short} ${pluralize(stats.totalJobs, 'Job')} in ${stateName}`)}&subtitle=${encodeURIComponent(config.heroSubtitle)}`,
         width: 1200,
         height: 630,
         alt: `${config.label} ${brand.niche.short} Jobs in ${stateName}`,
@@ -428,6 +430,9 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
            (48px 56px 0, dropping to 32px 24px 0 under 900px). */
         .pseo-crumb-band { background: #faf6ef; padding: 24px 56px 0; }
         .pseo-crumb-band nav { margin-bottom: 0; }
+        /* The current page is the H1 directly below, so its crumb is kept for
+           assistive technology but not drawn (owner request, 2026-09-16). */
+        .pseo-crumb-band nav ol li:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
         @media (max-width: 900px) {
           .pseo-crumb-band { padding: 16px 24px 0; }
         }
@@ -536,7 +541,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
       {/* Hero */}
       <CategoryHero
         bgColor={assets?.bgColor || '#BE185D'}
-        heroImage={assets?.heroImage || `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_remote.webp`}
+        heroImage={assets?.heroImage || DEFAULT_HERO_IMAGE}
         heroAlt={`${config.label} ${brand.niche.short} jobs in ${stateName}`}
         // P2 #15: freshness comes from when the counts were actually computed
         // (shared formatter with the city template) — this used to assert
@@ -548,7 +553,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
         headlineLine2={brand.niche.short}
         headlineSub={`jobs in ${stateName}.`}
         stats={[
-          { value: `${stats.totalJobs}`, label: 'positions' },
+          { value: `${stats.totalJobs}`, label: pluralize(stats.totalJobs, 'position') },
           // P3 #13: this used to be `salaryRange.split('–')[0]` — an EN DASH,
           // while every salaryRange literal is written with an ASCII hyphen.
           // The split never matched, so the fallback rendered the whole range
@@ -558,7 +563,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
           stats.avgSalary > 0
             ? { value: `$${stats.avgSalary}k`, label: 'avg salary' }
             : { value: config.salaryRange, label: 'typical range' },
-          { value: `${stats.topEmployers.length}`, label: 'employers' },
+          { value: `${stats.topEmployers.length}`, label: pluralize(stats.topEmployers.length, 'employer') },
         ]}
         description={`${config.label} ${brand.niche.short} positions in ${stateName}. ${config.heroSubtitle}.`}
         ctaLabel={`Browse ${config.label} Jobs`}
@@ -577,7 +582,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                   {config.label} Positions in {stateName} ({stats.totalJobs})
                 </h2>
                 <Link href={`/jobs/${config.slug}`} style={{ fontSize: '13px', fontWeight: 600, color: '#BE185D', textDecoration: 'none' }}>
-                  View All Jobs â†’
+                  View All Jobs →
                 </Link>
               </div>
 
@@ -613,18 +618,18 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     <div className="mt-8 flex items-center justify-center gap-4">
                       {page > 1 ? (
                         <Link href={`${basePath}?page=${page - 1}`} className="px-4 py-2 text-sm font-medium rounded-lg" style={{ ...clayCard, color: '#1A2E35', padding: '8px 16px' }}>
-                          â† Previous
+                          ← Previous
                         </Link>
                       ) : (
-                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: '#7A6A62', backgroundColor: '#F5F0EB' }}>â† Previous</span>
+                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: '#7A6A62', backgroundColor: '#F5F0EB' }}>← Previous</span>
                       )}
                       <span className="text-sm" style={{ color: '#5A4A42' }}>Page {page} of {totalPages}</span>
                       {page < totalPages ? (
                         <Link href={`${basePath}?page=${page + 1}`} className="px-4 py-2 text-sm font-medium rounded-lg" style={{ ...clayCard, color: '#1A2E35', padding: '8px 16px' }}>
-                          Next â†’
+                          Next →
                         </Link>
                       ) : (
-                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: '#7A6A62', backgroundColor: '#F5F0EB' }}>Next â†’</span>
+                        <span className="px-4 py-2 text-sm rounded-lg cursor-not-allowed" style={{ color: '#7A6A62', backgroundColor: '#F5F0EB' }}>Next →</span>
                       )}
                     </div>
                   )}
@@ -642,7 +647,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                     {config.label} Alerts
                   </h3>
                   <p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px', lineHeight: 1.6, fontWeight: 500 }}>
-                    New {config.label.toLowerCase()} {brand.niche.short} positions in {stateName} — delivered daily.
+                    New {config.label.toLowerCase()} {brand.niche.short} positions in {stateName}, delivered daily.
                   </p>
                   <Link href="/job-alerts" style={{
                     display: 'block', width: '100%', textAlign: 'center',
@@ -722,24 +727,20 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
 
             <div className="state-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
               {/* ROW 1: Hero card (8col) + Side card (4col) */}
-              <div style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-                <div style={{ padding: '32px 28px' }}>
+              <div style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>
                     {config.label} in {stateName}
                   </h3>
                   <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                    {config.heroSubtitle}. {config.tips[0] || ''}
+                    {config.heroSubtitle}. {config.tips[0] ? `${config.tips[0]}.` : ''}
                   </p>
                 </div>
-                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                  <Image src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-                </div>
+                <ImmersiveImage src={assets.bentoImages[0]} alt={`${config.label} ${brand.niche.short}`} minHeight={240} />
               </div>
 
               <div style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Image src={assets.bentoImages[1]} alt={`${config.label} growth`} width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
-                </div>
+                <ImmersiveImage src={assets.bentoImages[1]} alt={`${config.label} growth`} minHeight={200} />
                 <div style={{ padding: '24px 22px', flex: 1 }}>
                   <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>
                     Salary & Compensation
@@ -761,17 +762,15 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
 
               {/* ROW 3: Salary card (8col) + Alert CTA (4col) */}
               {assets.bentoImages[2] && (
-                <div style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-                  <div style={{ padding: '32px 28px' }}>
+                <div style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                  <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                     <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growth & Outlook</h3>
                     <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                      {config.label} {brand.niche.short} demand in {stateName} continues to grow with {stats.totalJobs} active positions.
+                      {config.label} {brand.niche.short} demand in {stateName} continues to grow with {stats.totalJobs} active {pluralize(stats.totalJobs, 'position')}.
                     </p>
                   </div>
-                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                    <Image src={assets.bentoImages[2]} alt="Career growth" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-                  </div>
+                  <ImmersiveImage src={assets.bentoImages[2]} alt="Career growth" minHeight={240} />
                 </div>
               )}
 
@@ -779,7 +778,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>{config.label} Alerts</h3>
                 <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                  New {config.label.toLowerCase()} listings in {stateName} — delivered daily.
+                  New {config.label.toLowerCase()} listings in {stateName}, delivered daily.
                 </p>
                 <Link href="/job-alerts" style={{
                   padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
@@ -853,7 +852,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
               <div style={{ fontSize: '11px', color: '#7A6A62', marginBottom: '6px' }}>Avg Cost of Living</div>
               <div style={{ fontSize: '28px', fontWeight: 800, color: avgCOL > 110 ? '#ef4444' : avgCOL > 100 ? '#f59e0b' : '#22c55e' }}>{avgCOL}</div>
               <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '4px' }}>
-                {avgCOL > 110 ? 'Above national avg' : avgCOL > 100 ? 'Near national avg' : 'Below national avg'} (100 = US avg)
+                {avgCOL > 110 ? 'Above national average' : avgCOL > 100 ? 'Near national average' : 'Below national average'} (100 = US average)
               </div>
             </div>
             {/* Shortage designations — P2 #7.
@@ -883,7 +882,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                 <div style={{ fontSize: '11px', color: '#7A6A62', marginBottom: '6px' }}>Avg {config.label} Salary</div>
                 <div style={{ fontSize: '28px', fontWeight: 800, color: '#1A2E35' }}>${stats.avgSalary}K</div>
                 <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '4px' }}>
-                  across {stats.totalJobs} active positions
+                  across {stats.totalJobs} active {pluralize(stats.totalJobs, 'position')}
                 </div>
               </div>
             )}
@@ -966,7 +965,7 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
                   <DollarSign size={18} style={{ color: '#BE185D', flexShrink: 0 }} />
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E35' }}>{stateName} Salary Guide</div>
-                    <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Comp data by setting</div>
+                    <div style={{ fontSize: '11px', color: '#7A6A62', marginTop: '2px' }}>Compensation data by setting</div>
                   </div>
                 </Link>
                 <Link href={`/jobs/state/${stateSlug}`}

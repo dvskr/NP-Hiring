@@ -256,7 +256,7 @@ export default function CostOfLivingComparator({ options, defaultPair }: Props) 
             </p>
             <p style={{ fontSize: '13.5px', color: '#5A4A42', margin: 0, lineHeight: 1.65 }}>
               Posted pay differs by {formatUsd(Math.abs(comparison.nominalDelta))}
-              {comparison.nominalDelta === 0 ? '' : comparison.nominalDelta > 0 ? ` in ${cityB.name}’s favour` : ` in ${cityA.name}’s favour`}.
+              {comparison.nominalDelta === 0 ? '' : comparison.nominalDelta > 0 ? ` in ${cityB.name}’s favor` : ` in ${cityA.name}’s favor`}.
               {' '}Once the cost-of-living gap is applied, {comparison.realDelta >= 0 ? cityB.name : cityA.name} comes out ahead.
             </p>
             <p style={{ fontSize: '13.5px', color: '#5A4A42', margin: '10px 0 0', lineHeight: 1.65 }}>

@@ -50,9 +50,17 @@ describe.each(ROUTES)('P6 #11 — $layout', ({ layout, page, hasCanonical }) => 
 
     it('exports metadata with a branded title and a description', () => {
         expect(src).toContain('export const metadata: Metadata');
-        // Title interpolates the brand name — never a hardcoded board name
-        // and never the bare root-layout default.
-        expect(src).toMatch(/title: `[^`]*\$\{brand\.name\}`/);
+        // Title is branded, never a hardcoded board name and never the bare
+        // root-layout default. Either it interpolates the brand name itself,
+        // or it is a plain page title and the root title.template
+        // (`%s | ${brand.name}`) appends the brand (P10 fix: interpolating it
+        // as well doubled the suffix).
+        const explicitBrand = /title: `[^`]*\$\{brand\.name\}`/.test(src);
+        const templated = /title: '[^'|]+'/.test(src);
+        expect(explicitBrand || templated, 'title neither branded nor left to the root template').toBe(true);
+        if (templated) {
+            expect(read('app/layout.tsx')).toMatch(/template:\s*`%s \| \$\{brand\.name\}`/);
+        }
         expect(src).toMatch(/description: `[^`]+`/);
     });
 

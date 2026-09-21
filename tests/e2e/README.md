@@ -33,15 +33,15 @@ By default, tests run against `http://localhost:3000`. Override with `PLAYWRIGHT
 # Against a Vercel preview deploy
 PLAYWRIGHT_BASE_URL=https://pmhnp-job-board-<deploy>.vercel.app npm run test:e2e
 
-# Against production (read-only tests only — mutations auto-skip)
-PLAYWRIGHT_BASE_URL=https://pmhnphiring.com npm run test:e2e:smoke
+# Against production: read-only mode is required, or setup refuses to run
+E2E_READONLY=1 PLAYWRIGHT_BASE_URL=https://nphiring.com npm run test:e2e:smoke
 ```
 
 The `webServer` block in `playwright.config.ts` only auto-starts the dev server when the URL is `localhost` or `127.0.0.1`.
 
 ## Credentials & .env.test
 
-Tests load credentials from `.env.test` (gitignored). If a credential is missing, dependent tests `test.skip()` cleanly. See `.env.test.example` for the full list:
+Tests load credentials from `.env.test` (gitignored) and nothing else. The checkout's `.env` is the **production** database, so it is never loaded. `.env.test` must set `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL` and the matching keys for a separate test database (a Supabase branch or a second project). The production guard in `tests/support/production-db-guard.ts` runs in Playwright global setup, in every database helper and in `scripts/create-test-users.ts`; it refuses to run when a database setting names the production project or a writing run targets the live site, and it has no override. If a credential is missing, dependent tests `test.skip()` cleanly. See `.env.test.example` for the full list:
 
 | Variable | Used by | If unset |
 |---|---|---|
@@ -52,10 +52,10 @@ Tests load credentials from `.env.test` (gitignored). If a credential is missing
 | `E2E_TEST_JOB_ID` | seeker apply test | falls back to first job from listings |
 | `E2E_STRIPE_TEST_CARD` etc. | (reserved for future post-job checkout) | n/a |
 
-To create the seeker + employer test users in your local DB:
+To create the seeker and employer test users in the test database:
 
 ```bash
-npx ts-node scripts/create-test-users.ts
+DOTENV_CONFIG_PATH=.env.test npx ts-node scripts/create-test-users.ts
 ```
 
 ## Suite map
@@ -69,7 +69,7 @@ npx ts-node scripts/create-test-users.ts
 | `journeys/employer.spec.ts` | 13 tests — login/post-job/applicants/settings/signup | Yes (local only) |
 | `journeys/admin.spec.ts` | 17 tests — gate checks, all admin pages, blog/email/jobs | Yes (local only) |
 
-**Mutation tests auto-skip when `PLAYWRIGHT_BASE_URL` contains `pmhnphiring.com`.** This protects production from test pollution. Against localhost they run fully.
+**A writing run against the live site is refused before any test starts.** For read-only checks against a preview or the live site, set `E2E_READONLY=1`; sign-in and database credentials are then removed and mutation tests skip. Against localhost backed by the test database they run fully.
 
 ## Reading test output
 

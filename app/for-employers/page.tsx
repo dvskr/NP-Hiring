@@ -121,7 +121,7 @@ const employerFaqs = [
     // than implying a guarantee. Posting fees are generally non-refundable;
     // a request inside 7 days is reviewed, not automatically granted.
     q: 'Do you offer refunds or volume discounts?',
-    a: `Posting fees are generally non-refundable, but if you're unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we'll review the request case by case. Postings removed for a Terms violation aren't refunded, promo posts involve no payment to refund, and Employer plan months already billed are not refunded. Need more than ${config.planSlots} active jobs at once? Email us.`,
+    a: `Posting fees are generally non-refundable, but if you are unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we will review the request case by case. Postings removed for a Terms violation are not refunded, promo posts involve no payment to refund, and Employer plan months already billed are not refunded. Need more than ${config.planSlots} active jobs at once? Email us.`,
   },
 ];
 

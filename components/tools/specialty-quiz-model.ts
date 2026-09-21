@@ -77,9 +77,9 @@ export const QUIZ_QUESTIONS: readonly QuizQuestion[] = [
         id: 'population',
         dimension: 'Patient population',
         prompt: 'Who do you want in front of you?',
-        help: 'Population is the single biggest divider between specialties — and the one your certification is tied to.',
+        help: 'Population is the single biggest divider between specialties, and the one your certification is tied to.',
         options: [
-            { value: 'lifespan', label: 'Any age — cradle to grave' },
+            { value: 'lifespan', label: 'Any age, cradle to grave' },
             { value: 'adults', label: 'Adults and older adults' },
             { value: 'children', label: 'Infants, children, and adolescents' },
             { value: 'newborns', label: 'Newborns, including critically ill ones' },
@@ -93,9 +93,9 @@ export const QUIZ_QUESTIONS: readonly QuizQuestion[] = [
         prompt: 'How sick do you want your patients to be?',
         help: 'Acuity drives your pace, your hours, and how much of the day is unplanned.',
         options: [
-            { value: 'low', label: 'Stable — chronic conditions managed over time' },
-            { value: 'mixed', label: 'Mixed — routine visits with real urgency in the day' },
-            { value: 'high', label: 'High — unstable and critically ill patients' },
+            { value: 'low', label: 'Stable: chronic conditions managed over time' },
+            { value: 'mixed', label: 'Mixed: routine visits with real urgency in the day' },
+            { value: 'high', label: 'High: unstable and critically ill patients' },
         ],
     },
     {
@@ -115,9 +115,9 @@ export const QUIZ_QUESTIONS: readonly QuizQuestion[] = [
         id: 'autonomy',
         dimension: 'Autonomy',
         prompt: 'How much do you want to be the decision-maker?',
-        help: 'What is legally available also depends on your state — the licensure checker covers that separately.',
+        help: 'What is legally available also depends on your state; the licensure checker covers that separately.',
         options: [
-            { value: 'independent', label: 'I want to own a panel and make the calls' },
+            { value: 'independent', label: 'I want to own a panel and make the decisions' },
             { value: 'collaborative', label: 'I want a team and someone to escalate to' },
             { value: 'either', label: 'Either works' },
         ],
@@ -531,7 +531,7 @@ function distinctRoleNoteFor(slug: string, label: string): string | null {
     const page = SALARY_PAGES_BY_SLUG.get(slug);
     const name = page?.credential ?? label;
     return (
-        `${name} is a distinct advanced practice role with its own graduate program and certifying board — ` +
+        `${name} is a distinct advanced practice role with its own graduate program and certifying board, ` +
         `not a ${brand.niche.short} specialty you can move into with extra experience alone.`
     );
 }

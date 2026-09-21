@@ -80,8 +80,8 @@ const W2_FIELDS: readonly FieldDef[] = [
 ];
 
 const CONTRACT_FIELDS: readonly FieldDef[] = [
-  { key: 'contractHourlyRate', label: 'Contract hourly rate', hint: 'Placeholder annualises the top of this board’s typical band. Replace it with your rate.', prefix: '$', step: 1 },
-  { key: 'contractBusinessExpenses', label: 'Deductible business expenses', hint: 'Malpractice, licensure, CME, equipment, home office — annual total.', prefix: '$', step: 500 },
+  { key: 'contractHourlyRate', label: 'Contract hourly rate', hint: 'Placeholder annualizes the top of this board’s typical band. Replace it with your rate.', prefix: '$', step: 1 },
+  { key: 'contractBusinessExpenses', label: 'Deductible business expenses', hint: 'Annual total for malpractice, licensure, CME, equipment, and home office.', prefix: '$', step: 500 },
   { key: 'contractHealthPremium', label: 'Health insurance you buy', hint: 'Annual premium you pay yourself. Deducted above the line where income allows.', prefix: '$', step: 500 },
   { key: 'contractRetirement', label: 'Retirement you fund', hint: 'Annual cash into a SEP-IRA or solo 401(k). Counted as money you keep, not as a deduction.', prefix: '$', step: 500 },
 ];
@@ -114,7 +114,7 @@ function StatRow({ label, value, tone }: { label: string; value: string; tone?: 
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px', fontSize: '13.5px' }}>
       <span style={{ color: '#64748B' }}>{label}</span>
-      <span style={{ fontWeight: 700, color: tone === 'negative' ? '#B91C1C' : tone === 'muted' ? '#94A3B8' : '#1A2E35', fontVariantNumeric: 'tabular-nums' }}>
+      <span style={{ fontWeight: 700, color: tone === 'negative' ? '#B91C1C' : tone === 'muted' ? '#64748B' : '#1A2E35', fontVariantNumeric: 'tabular-nums' }}>
         {value}
       </span>
     </div>
@@ -184,7 +184,7 @@ export default function TakeHomeCalculator() {
         <label htmlFor={inputId} style={labelStyle}>{field.label}</label>
         <div style={{ position: 'relative' }}>
           {field.prefix && (
-            <span aria-hidden="true" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '15px', fontWeight: 600, color: '#94A3B8' }}>
+            <span aria-hidden="true" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '15px', fontWeight: 600, color: '#64748B' }}>
               {field.prefix}
             </span>
           )}
@@ -205,12 +205,12 @@ export default function TakeHomeCalculator() {
             }}
           />
           {field.suffix && (
-            <span aria-hidden="true" style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', fontWeight: 600, color: '#94A3B8' }}>
+            <span aria-hidden="true" style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', fontWeight: 600, color: '#64748B' }}>
               {field.suffix}
             </span>
           )}
         </div>
-        <p id={hintId} style={{ fontSize: '11.5px', color: '#94A3B8', margin: '5px 0 0', lineHeight: 1.45 }}>{field.hint}</p>
+        <p id={hintId} style={{ fontSize: '11.5px', color: '#64748B', margin: '5px 0 0', lineHeight: 1.45 }}>{field.hint}</p>
       </div>
     );
   };
@@ -230,7 +230,7 @@ export default function TakeHomeCalculator() {
             <div>
               <h2 style={{ fontSize: '17px', fontWeight: 800, color: '#1A2E35', margin: '0 0 4px' }}>Your numbers</h2>
               <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                Every field starts on a placeholder. Replace them with the offers in front of you —
+                Every field starts on a placeholder. Replace them with the offers in front of you;
                 nothing here is a published benchmark.
               </p>
             </div>
@@ -261,7 +261,7 @@ export default function TakeHomeCalculator() {
                 <option key={status} value={status}>{FILING_STATUS_LABELS[status]}</option>
               ))}
             </select>
-            <p id="takehome-filing-hint" style={{ fontSize: '11.5px', color: '#94A3B8', margin: '5px 0 0' }}>
+            <p id="takehome-filing-hint" style={{ fontSize: '11.5px', color: '#64748B', margin: '5px 0 0' }}>
               Sets the standard deduction and bracket table for tax year {TAX_MODEL_YEAR}.
             </p>
           </div>
@@ -328,14 +328,14 @@ export default function TakeHomeCalculator() {
               <span style={{ fontSize: '15px', fontWeight: 600, color: '#7A6A62' }}> / year</span>
             </p>
             <p style={{ fontSize: '13px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-              Difference in <strong>net position</strong> — cash after federal tax and insurance, measured the
+              Difference in <strong>net position</strong>: cash after federal tax and insurance, measured the
               same way on both sides, plus any retirement dollars an <em>employer</em> adds. Retirement you fund
               yourself is already inside your own cash, so it is shown but not added again.
               Both columns work {Math.round(result.billableHours).toLocaleString('en-US')} hours.
             </p>
             {result.breakEvenHourlyRate !== null && (
               <p style={{ fontSize: '13px', color: '#5A4A42', margin: '10px 0 0', lineHeight: 1.6 }}>
-                Break-even contract rate: <strong>{formatUsd(result.breakEvenHourlyRate)}/hr</strong> — below that,
+                Break-even contract rate: <strong>{formatUsd(result.breakEvenHourlyRate)}/hr</strong>. Below that,
                 the W-2 offer wins on these inputs.
               </p>
             )}
@@ -393,8 +393,8 @@ export default function TakeHomeCalculator() {
               <StatRow label="Deduction: self-employed health premium" value={`-${formatUsd(result.contract.healthPremiumDeduction)}`} />
               <StatRow label="Taxable income after standard deduction" value={formatUsd(result.contract.taxableIncome)} />
             </div>
-            <p style={{ fontSize: '12px', color: '#94A3B8', margin: '12px 0 0', lineHeight: 1.55 }}>
-              Federal only, tax year {TAX_MODEL_YEAR}. State and local income tax are not modeled — see the
+            <p style={{ fontSize: '12px', color: '#64748B', margin: '12px 0 0', lineHeight: 1.55 }}>
+              Federal only, tax year {TAX_MODEL_YEAR}. State and local income tax are not modeled; see the
               assumptions below before you rely on any figure here.
             </p>
           </div>
@@ -402,7 +402,7 @@ export default function TakeHomeCalculator() {
           {/* Cross-links */}
           <div style={{ ...clayCard, padding: '20px 22px' }}>
             <h3 style={{ fontSize: '13px', fontWeight: 800, color: '#1A2E35', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Put a real rate in the box
+              Find a real rate to enter
             </h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {[

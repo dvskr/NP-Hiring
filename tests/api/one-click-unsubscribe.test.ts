@@ -4,9 +4,20 @@
  * Gmail/Yahoo POST `List-Unsubscribe=One-Click` to the List-Unsubscribe URL with
  * no human interaction. That URL must resolve to a real POST handler that
  * suppresses the address and returns 2xx. Before this fix it pointed at a
- * client-only page (405 on POST).
+ * client-only page (405 on POST). The write matches the human unsubscribe
+ * (reason, suppressedAt, profile mirror): see p10-alerts-unsubscribe-*.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('@/lib/prisma', () => ({
+  prisma: {
+    emailLead: { findUnique: vi.fn(), update: vi.fn() },
+    userProfile: { updateMany: vi.fn() },
+    $transaction: vi.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
+  },
+}));
+vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+
 import { prisma } from '@/lib/prisma';
 
 function postReq(token?: string): Request {
@@ -24,8 +35,9 @@ describe('POST /api/one-click-unsubscribe', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('suppresses a valid token and returns 200', async () => {
-    vi.mocked(prisma.emailLead.findUnique).mockResolvedValue({ id: 'lead-1' } as never);
+    vi.mocked(prisma.emailLead.findUnique).mockResolvedValue({ email: 'x@example.com', isSuppressed: false, suppressionReason: null } as never);
     vi.mocked(prisma.emailLead.update).mockResolvedValue({} as never);
+    vi.mocked(prisma.userProfile.updateMany).mockResolvedValue({ count: 1 } as never);
 
     const { POST } = await import('@/app/api/one-click-unsubscribe/route');
     const res = await POST(postReq('valid-token-abc') as never);
@@ -33,7 +45,7 @@ describe('POST /api/one-click-unsubscribe', () => {
     expect(res.status).toBe(200);
     expect(prisma.emailLead.update).toHaveBeenCalledWith({
       where: { unsubscribeToken: 'valid-token-abc' },
-      data: { isSubscribed: false, newsletterOptIn: false, isSuppressed: true },
+      data: expect.objectContaining({ isSubscribed: false, newsletterOptIn: false, isSuppressed: true, suppressionReason: 'unsubscribe' }),
     });
   });
 

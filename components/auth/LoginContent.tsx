@@ -104,7 +104,7 @@ export default function LoginContent() {
         const msg = signInError.message.toLowerCase();
         if (msg.includes('email not confirmed') || msg.includes('not confirmed') || msg.includes('confirm')) {
           setIsUnconfirmed(true);
-          setError('Your email has not been confirmed yet. Check your inbox (and spam) for the confirmation link.');
+          setError('Your email address has not been confirmed yet. Please check your inbox (and your spam folder) for the confirmation link.');
         } else {
           setError(signInError.message);
         }
@@ -132,7 +132,7 @@ export default function LoginContent() {
         router.push(dest);
       }
     } catch {
-      setError('An unexpected error occurred');
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -157,10 +157,10 @@ export default function LoginContent() {
       }}>
         Sign in
       </h1>
-      <p style={{ fontSize: '14px', color: '#6B7F8A', marginBottom: '14px', textAlign: 'center' }}>
+      <p style={{ fontSize: '14px', color: '#5A6B76', marginBottom: '14px', textAlign: 'center' }}>
         {role === 'employer'
-          ? `Manage your job listings and find top ${brand.niche.short} talent`
-          : 'Access your saved jobs, applications, and profile'}
+          ? `Manage your job listings and find top ${brand.niche.short} talent.`
+          : 'Access your saved jobs, applications, and profile.'}
       </p>
 
       {/* ═══ ROLE TOGGLE ═══ */}
@@ -180,7 +180,7 @@ export default function LoginContent() {
             borderRadius: '11px', border: 'none', cursor: 'pointer',
             transition: 'all 0.2s ease',
             background: role === 'seeker' ? '#FFFFFF' : 'transparent',
-            color: role === 'seeker' ? '#BE185D' : '#94A3B0',
+            color: role === 'seeker' ? '#BE185D' : '#475569',
             boxShadow: role === 'seeker' ? '0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)' : 'none',
           }}
         >
@@ -195,7 +195,7 @@ export default function LoginContent() {
             borderRadius: '11px', border: 'none', cursor: 'pointer',
             transition: 'all 0.2s ease',
             background: role === 'employer' ? '#FFFFFF' : 'transparent',
-            color: role === 'employer' ? '#B45309' : '#94A3B0',
+            color: role === 'employer' ? '#B45309' : '#475569',
             boxShadow: role === 'employer' ? '0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)' : 'none',
           }}
         >
@@ -218,7 +218,7 @@ export default function LoginContent() {
             <GoogleSignInButton mode="login" redirectTo={redirectTo} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '16px 0' }}>
               <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
-              <span style={{ fontSize: '11px', fontWeight: 600, color: '#94A3B0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>or</span>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>or</span>
               <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
             </div>
           </>
@@ -232,8 +232,8 @@ export default function LoginContent() {
                 <p style={{ fontSize: '13px', color: '#DC2626', margin: 0 }}>{error}</p>
                 {isUnconfirmed && (
                   <div style={{ marginTop: '8px' }}>
-                    {resendStatus === 'sent' && <p style={{ fontSize: '12px', color: '#059669', marginBottom: '4px' }}>✓ Confirmation email resent!</p>}
-                    {resendStatus === 'error' && <p style={{ fontSize: '12px', color: '#DC2626', marginBottom: '4px' }}>Failed to resend.</p>}
+                    {resendStatus === 'sent' && <p style={{ fontSize: '12px', color: '#059669', marginBottom: '4px' }}>✓ Confirmation email resent.</p>}
+                    {resendStatus === 'error' && <p style={{ fontSize: '12px', color: '#DC2626', marginBottom: '4px' }}>Unable to resend. Please try again.</p>}
                     <button type="button" onClick={handleResendConfirmation}
                       disabled={resendCooldown > 0 || resendStatus === 'sending'}
                       style={{ fontSize: '12px', fontWeight: 600, color: accent, background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -251,7 +251,7 @@ export default function LoginContent() {
           {/* Email */}
           <div>
             <label htmlFor="login-email" style={labelStyle}>
-              {role === 'employer' ? 'Work Email' : 'Email address'}
+              {role === 'employer' ? 'Work email' : 'Email address'}
             </label>
             <input id="login-email" type="email" value={email}
               onChange={(e) => setEmail(e.target.value)} required autoComplete="email"
@@ -294,7 +294,7 @@ export default function LoginContent() {
         </form>
 
         {/* Sign up link */}
-        <p style={{ textAlign: 'center', fontSize: '13px', color: '#6B7F8A', marginTop: '14px', marginBottom: 0 }}>
+        <p style={{ textAlign: 'center', fontSize: '13px', color: '#5A6B76', marginTop: '14px', marginBottom: 0 }}>
           Don&apos;t have an account?{' '}
           <Link href={role === 'employer' ? '/signup?role=employer' : '/signup'}
             style={{ fontWeight: 700, color: accent, textDecoration: 'none' }}>

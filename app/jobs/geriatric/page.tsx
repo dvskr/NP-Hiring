@@ -2,6 +2,8 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import MedianFigure from '@/components/MedianFigure';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -11,11 +13,9 @@ import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
-
-const STORAGE_BASE = brand.assets.storageBase;
 
 const clayCard: React.CSSProperties = { background: '#FFFFFF', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)' };
 export const revalidate = 3600;
@@ -36,16 +36,16 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: `What does a geriatric ${brand.niche.short} do?`, a: `Geriatric ${brand.niche.short}s specialize in caring for older adults: chronic disease management, polypharmacy review, cognitive and functional assessment, fall prevention, and care coordination with families and facility teams — across nursing homes, assisted living, home-based care, and outpatient clinics.` },
-  { q: `What salary do geriatric ${brand.niche.short}s earn?`, a: `Geriatric ${brand.niche.short} salaries typically fall within the standard NP range of roughly $95K-$160K. Facility circuit roles covering multiple nursing homes often pay more due to travel and autonomous practice requirements.` },
-  { q: 'What qualifications are needed?', a: 'An active APRN license, national NP certification, DEA registration, and experience with geriatric populations. Knowledge of Medicare billing, capacity evaluations, and age-specific pharmacokinetics is highly valued.' },
-  { q: `What settings hire geriatric ${brand.niche.short}s?`, a: 'Skilled nursing facilities (SNFs), memory care units, assisted living communities, geriatric outpatient clinics, home-based primary care programs, home health agencies, and hospital medicine teams.' },
-  { q: `Why is demand for geriatric ${brand.niche.short}s growing?`, a: `Roughly 10,000 Americans turn 65 every day, and older adults manage more chronic conditions and more medications than any other age group — creating steady demand for ${brand.niche.short}s in long-term care and geriatric practice.` },
+  { q: `What does a geriatric ${brand.niche.short} do?`, a: `Geriatric ${brand.niche.short}s specialize in caring for older adults: chronic disease management, polypharmacy review, cognitive and functional assessment, fall prevention, and care coordination with families and facility teams across nursing homes, assisted living, home-based care, and outpatient clinics.` },
+  { q: `What salary do geriatric ${brand.niche.short}s earn?`, a: `Geriatric ${brand.niche.short} salaries typically fall within the standard NP range of roughly $95K to $160K. Facility circuit roles that cover multiple nursing homes often pay more because of travel and autonomous practice requirements.` },
+  { q: 'What qualifications are needed?', a: 'Requirements include an active APRN license, national NP certification, DEA registration, and experience with geriatric populations. Knowledge of Medicare billing, capacity evaluations, and age-specific pharmacokinetics is highly valued.' },
+  { q: `What settings hire geriatric ${brand.niche.short}s?`, a: 'Settings include skilled nursing facilities (SNFs), memory care units, assisted living communities, geriatric outpatient clinics, home-based primary care programs, home health agencies, and hospital medicine teams.' },
+  { q: `Why is demand for geriatric ${brand.niche.short}s growing?`, a: `Roughly 10,000 Americans turn 65 every day, and older adults manage more chronic conditions and more medications than any other age group, which creates steady demand for ${brand.niche.short}s in long-term care and geriatric practice.` },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
-  return { title: `${stats.totalJobs} Geriatric ${brand.niche.short} Jobs — Long-Term Care & Senior Health`, description: `Find ${stats.totalJobs} geriatric ${brand.niche.short} jobs. Skilled nursing, assisted living, memory care, and home-based primary care positions focused on older adults.`, alternates: { canonical: `${brand.baseUrl}/jobs/geriatric` } };
+  return { title: `${stats.totalJobs} Geriatric ${brand.niche.short} Jobs: Long-Term Care & Senior Health`, description: `Find ${stats.totalJobs} geriatric ${brand.niche.short} jobs. Skilled nursing, assisted living, memory care, and home-based primary care positions focused on older adults.`, alternates: { canonical: `${brand.baseUrl}/jobs/geriatric` } };
 }
 
 interface PageProps { searchParams: Promise<{ page?: string }>; }
@@ -66,10 +66,10 @@ export default async function GeriatricPage({ searchParams }: PageProps) {
       {/* 1. HERO */}
       <CategoryHero
         bgColor="#d5c6e7"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_geriatric.webp`}
+        heroImage="/images/categories/heroes/geriatric.webp"
         heroAlt={`Geriatric ${brand.niche.short} with elderly patient`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'Geriatric']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Geriatric", url: `${brand.baseUrl}/jobs/geriatric` }])}
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('geriatric') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Geriatric"
         headlineLine2={brand.niche.short}
@@ -91,13 +91,13 @@ export default async function GeriatricPage({ searchParams }: PageProps) {
         <div className="grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
             <h2 className="font-lora mb-6" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>Geriatric Positions ({stats.totalJobs})</h2>
-            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions right now.</p></div>)}
+            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions are available right now.</p></div>)}
             <div style={{ textAlign: 'center', marginTop: '32px' }}><Link href="/jobs?category=geriatric" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>Browse All Geriatric Jobs <ArrowRight size={16} /></Link></div>
           </div>
           <div className="lg:col-span-1">
-            <div style={{ ...clayCard, padding: '24px', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}><Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 8px' }}>Geriatric Alerts</h3><p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px' }}>New elder care positions daily.</p><Link href="/job-alerts" style={{ display: 'block', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none' }}>Create Alert</Link></div>
+            <div style={{ ...clayCard, padding: '24px', marginBottom: '20px', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', border: '2px solid rgba(190,24,93,0.15)' }}><Bell size={28} style={{ color: '#BE185D', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 8px' }}>Geriatric Alerts</h3><p style={{ fontSize: '13px', color: '#BE185D', marginBottom: '16px' }}>New elder care positions are posted daily.</p><Link href="/job-alerts" style={{ display: 'block', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none' }}>Create Alert</Link></div>
             {stats.topEmployers.length > 0 && (<div style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}><Building2 size={20} style={{ color: '#BE185D', marginBottom: '8px' }} /><h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: '0 0 12px' }}>Top Employers</h3><ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>{stats.topEmployers.map((employer: ProcessedEmployer, index: number) => (<li key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: index < stats.topEmployers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}><span style={{ fontSize: '13px', color: '#5A4A42', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{employer.name}</span><span style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', marginLeft: '8px' }}>{employer.count}</span></li>))}</ul></div>)}
-            {stats.medianSalaryK > 0 && (<div style={{ ...clayCard, padding: '24px' }}><TrendingUp size={20} style={{ color: '#34D399', marginBottom: '8px' }} /><div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}>${stats.medianSalaryK}k</div><div style={{ fontSize: '13px', color: '#7A6A62' }}>Median salary</div></div>)}
+            {stats.medianSalaryK > 0 && (<div style={{ ...clayCard, padding: '24px' }}><TrendingUp size={20} style={{ color: '#34D399', marginBottom: '8px' }} /><div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}><MedianFigure k={stats.medianSalaryK} /></div><div style={{ fontSize: '13px', color: '#7A6A62' }}>Median salary</div></div>)}
           </div>
         </div>
       </div>
@@ -109,27 +109,29 @@ export default async function GeriatricPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Built for Older-Adult Care</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1 */}
-            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Memory Care Expertise</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Support residents living with dementia through cognitive assessment, careful medication review, and close coordination with families and facility care teams.</p></div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ge_memory.webp`} alt="Memory care assessment" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Memory Care Expertise</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Support residents living with dementia through cognitive assessment, careful medication review, and close coordination with families and facility care teams.</p></div>
+              <ImmersiveImage src="/images/categories/bento/geriatric-memory.webp" alt="Memory care assessment" minHeight={240} />
             </div>
-            <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ge_snf.webp`} alt="Senior nursing facility" width={200} height={140} style={{ width: '100%', maxWidth: '180px', height: 'auto', borderRadius: '12px', marginBottom: '16px' }} />
-              <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>SNF & Assisted Living</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Work across nursing homes, memory care, and assisted living facilities.</p>
+            <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', textAlign: 'center' }}>
+              <ImmersiveImage src="/images/categories/bento/geriatric-snf.webp" alt="Senior nursing facility" minHeight={200} />
+              <div style={{ padding: '22px 22px 26px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>SNF & Assisted Living</h3>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Work across nursing homes, memory care, and assisted living facilities.</p>
+              </div>
             </div>
             {/* ROW 2: Icon Cards */}
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ge_aging.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Aging Population</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Growing demand as 10,000+ Americans turn 65 daily.</p></div>
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ge_brain.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Memory Care</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Work in dedicated dementia and memory-support units.</p></div>
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ge_home.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Nursing Homes</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Work in long-term care, assisted living, and SNF facilities.</p></div>
-            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ge_pills.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Polypharmacy</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Expert medication management for complex geriatric patients.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src="/images/categories/icons/geriatric-aging.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Aging Population</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Demand is growing as 10,000+ Americans turn 65 daily.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src="/images/categories/icons/geriatric-memory.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Memory Care</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Work in dedicated dementia and memory-support units.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src="/images/categories/icons/geriatric-home.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Nursing Homes</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Work in long-term care, assisted living, and SNF facilities.</p></div>
+            <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}><Image src="/images/categories/icons/geriatric-pills.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} /><h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Polypharmacy</h3><p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Expert medication management for complex geriatric patients.</p></div>
             {/* ROW 3 */}
-            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Geriatric Salary</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Median geriatric {brand.niche.short} salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.medianSalaryK}k</p></div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ge_salary.webp`} alt="Geriatric salary" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}><TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} /><h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Geriatric Salary</h3><p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Median geriatric {brand.niche.short} salary:</p><p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}><MedianFigure k={stats.medianSalaryK} /></p></div>
+              <ImmersiveImage src="/images/categories/bento/geriatric-salary.webp" alt="Geriatric salary" minHeight={240} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)' }}>
-              <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} /><h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 10px' }}>Get Geriatric Alerts</h3><p style={{ fontSize: '13px', color: '#BE185D', lineHeight: 1.6, margin: '0 0 20px' }}>New elder care positions daily.</p>
+              <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} /><h3 className="font-lora" style={{ fontSize: '18px', fontWeight: 700, color: '#831843', margin: '0 0 10px' }}>Get Geriatric Alerts</h3><p style={{ fontSize: '13px', color: '#BE185D', lineHeight: 1.6, margin: '0 0 20px' }}>New elder care positions are posted daily.</p>
               <Link href="/job-alerts" className="cat-cta-primary" style={{ padding: '12px 28px', borderRadius: '12px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', boxShadow: '3px 3px 10px rgba(190,24,93,0.2)' }}>Create Alert</Link>
             </div>
           </div>
@@ -155,7 +157,7 @@ export default async function GeriatricPage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Keep Exploring</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More Categories</h2>
           <div className="cat-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-            {[{ href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` }, { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` }, { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` }, { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` }, { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` }, { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` }].map(c => (
+            {[{ href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: '/images/categories/nav/inpatient.webp' }, { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: '/images/categories/nav/outpatient.webp' }, { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: '/images/categories/nav/remote.webp' }, { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: '/images/categories/nav/telehealth.webp' }, { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: '/images/categories/nav/salary.webp' }, { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: '/images/categories/nav/location.webp' }].map(c => (
               <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', textAlign: 'center' }}><Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} /><span style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', display: 'block', marginBottom: '4px' }}>{c.label}</span><span style={{ fontSize: '12px', color: '#7A6A62', display: 'block' }}>{c.sub}</span></Link>
             ))}
           </div>

@@ -11,8 +11,9 @@ import { Metadata } from 'next';
  * belt-and-suspenders guard the sibling auth surfaces use.
  */
 export const metadata: Metadata = {
-    title: `Saved Jobs | ${brand.name}`,
-    description: `Your saved and applied ${brand.niche.short} jobs on ${brand.name} — review, sort, and pick up where you left off.`,
+    // Root layout title.template appends " | brand"; hardcoding it here doubled the suffix.
+    title: 'Saved Jobs',
+    description: `Your saved and applied ${brand.niche.short} jobs on ${brand.name}. Review them, sort them, and pick up where you left off.`,
     alternates: {
         canonical: `${brand.baseUrl}/saved`,
     },

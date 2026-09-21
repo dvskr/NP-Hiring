@@ -26,7 +26,7 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user || !user.email) {
-      return NextResponse.json({ found: false }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', found: false }, { status: 401 });
     }
 
     const profile = await prisma.userProfile.findUnique({
@@ -35,7 +35,7 @@ export async function GET() {
     });
 
     if (!profile || profile.role !== 'employer') {
-      return NextResponse.json({ found: false, reason: 'not-employer' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden', found: false, reason: 'not-employer' }, { status: 403 });
     }
 
     // Pull the most recent post that has any company data populated.
@@ -106,6 +106,6 @@ export async function GET() {
     });
   } catch (err) {
     logger.error('Error fetching employer profile snapshot', err);
-    return NextResponse.json({ found: false, reason: 'server-error' }, { status: 500 });
+    return NextResponse.json({ error: 'Unable to load company profile', found: false, reason: 'server-error' }, { status: 500 });
   }
 }

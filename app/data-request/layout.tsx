@@ -6,7 +6,7 @@ import { Metadata } from 'next';
 // Without it, /data-request shipped the generic root-layout title and no
 // canonical — a duplicate-title cluster with every other bare page.
 export const metadata: Metadata = {
-    title: `Data Request — Exercise Your Privacy Rights | ${brand.name}`,
+    title: `Data Request: Exercise Your Privacy Rights | ${brand.name}`,
     description: `Submit a GDPR, CCPA/CPRA, LGPD, or PIPEDA privacy request to ${brand.name}: access, delete, correct, export, or restrict the personal data we hold about you.`,
     alternates: {
         canonical: `${brand.baseUrl}/data-request`,

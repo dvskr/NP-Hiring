@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireApiAdmin } from '@/lib/auth/require-api-admin';
-import { parseFaqJson, parseReviewedAt } from '@/app/api/admin/blog/validate';
+import { logAudit } from '@/lib/audit-log';
+import {
+    parseBlogStatus,
+    parseBlogTitle,
+    parseFaqJson,
+    parseReviewedAt,
+} from '@/app/api/admin/blog/validate';
+import { resolveAdminActorId } from '@/app/api/admin/blog/admin-actor';
 
 /**
  * GET /api/admin/blog
@@ -46,15 +53,28 @@ export async function POST(request: NextRequest) {
     if (authError) return authError;
 
     try {
-        const body = await request.json();
-        const { title, content, category, status, metaDescription, targetKeyword, imageUrl } = body;
+        const body = await request.json().catch(() => null);
+        if (!body || typeof body !== 'object' || Array.isArray(body)) {
+            return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 });
+        }
+        const { content, category, metaDescription, targetKeyword, imageUrl } = body;
 
-        if (!title || !content || !category) {
+        if (!body.title || !content || !category) {
             return NextResponse.json(
                 { success: false, error: 'title, content, and category are required' },
                 { status: 400 },
             );
         }
+        const titleResult = parseBlogTitle(body.title);
+        if (!titleResult.ok) {
+            return NextResponse.json({ success: false, error: titleResult.error }, { status: 400 });
+        }
+        const title = titleResult.value;
+        const statusResult = parseBlogStatus(body.status ?? 'draft');
+        if (!statusResult.ok) {
+            return NextResponse.json({ success: false, error: statusResult.error }, { status: 400 });
+        }
+        const status = statusResult.value;
 
         // Editorially-authored schema fields (FAQPage JSON-LD + dateModified).
         const faqResult = parseFaqJson(body.faqJson);
@@ -64,6 +84,12 @@ export async function POST(request: NextRequest) {
         const reviewedResult = parseReviewedAt(body.reviewedAt);
         if (!reviewedResult.ok) {
             return NextResponse.json({ success: false, error: reviewedResult.error }, { status: 400 });
+        }
+
+        // Fail closed: no unattributed content change.
+        const actorId = await resolveAdminActorId();
+        if (!actorId) {
+            return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
         }
 
         // Generate slug
@@ -80,7 +106,7 @@ export async function POST(request: NextRequest) {
                 slug,
                 content,
                 category,
-                status: status || 'draft',
+                status,
                 metaDescription: metaDescription || null,
                 targetKeyword: targetKeyword || null,
                 imageUrl: imageUrl || null,
@@ -95,6 +121,15 @@ export async function POST(request: NextRequest) {
                     ? Prisma.DbNull
                     : (faqResult.value as unknown as Prisma.InputJsonValue),
             },
+        });
+
+        await logAudit({
+            action: 'blog.post.create',
+            actorType: 'admin',
+            actorId,
+            targetType: 'blog_post',
+            targetId: post.id,
+            metadata: { slug: post.slug, status: post.status, category: post.category },
         });
 
         return NextResponse.json({ success: true, post }, { status: 201 });

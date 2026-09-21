@@ -24,6 +24,12 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
 // never a guess). Labels are shared with the /jobs facet and the company
 // profile via lib/filters.ts so the three surfaces can't drift.
 import { RECRUITMENT_TYPE_LABELS, type RecruitmentTypeValue } from '@/lib/filters';
+import { normalizeDisplaySalary } from '@/lib/salary-display';
+// Employer-authored title / employer / location strings often carry dashes
+// as separators ("NP — Remote", "Remote - USA"). They stay raw in the row
+// and in JSON-LD; every visible render point goes through displayText so the
+// card never prints a dash (lib/display-text.ts).
+import { displayText } from '@/lib/display-text';
 
 type JobCardJob = Job & {
   companyRecruitmentType?: RecruitmentTypeValue | null;
@@ -61,7 +67,7 @@ function stripHtml(html: string | null | undefined): string {
 
 // Helper to build a salary string when displaySalary is missing
 function buildSalaryDisplay(job: Job): string | null {
-  if (job.displaySalary) return job.displaySalary;
+  if (job.displaySalary) return normalizeDisplaySalary(job.displaySalary);
   const min = job.normalizedMinSalary;
   const max = job.normalizedMaxSalary;
   if (!min && !max) return job.salaryRange || null;
@@ -70,7 +76,7 @@ function buildSalaryDisplay(job: Job): string | null {
     return `$${n.toLocaleString()}`;
   };
   const period = job.salaryPeriod === 'hourly' ? '/hr' : '/yr';
-  if (min && max && min !== max) return `${fmt(min)} - ${fmt(max)}${period}`;
+  if (min && max && min !== max) return `${fmt(min)} to ${fmt(max)}${period}`;
   if (min) return `${fmt(min)}${period}`;
   if (max) return `${fmt(max)}${period}`;
   return null;
@@ -108,10 +114,12 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
   // in styled badge spans — screen readers and Google's accessibility-tree
   // parser miss them. The aria-label fills in city/state context so the
   // link's purpose is clear (audit 07 M-1).
-  const cardLocation = job.isRemote
+  const displayTitle = displayText(job.title);
+  const displayEmployer = displayText(job.employer);
+  const cardLocation = displayText(job.isRemote
     ? 'Remote'
-    : (job.city && job.state ? `${job.city}, ${job.state}` : (job.state || job.location || ''));
-  const cardAriaLabel = `${job.title} at ${job.employer}${cardLocation ? ` — ${cardLocation}` : ''}`;
+    : (job.city && job.state ? `${job.city}, ${job.state}` : (job.state || job.location || '')));
+  const cardAriaLabel = `${displayTitle} at ${displayEmployer}${cardLocation ? `, ${cardLocation}` : ''}`;
   // S5 fix (2026-06-01): getJobFreshness computes against `new Date()`,
   // which differs by milliseconds-to-seconds between server SSR and the
   // hydration tick on the client — producing strings like "Posted today"
@@ -120,8 +128,8 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
   // logs). Mount-guard: emit empty server-side, swap to live label after
   // hydration. isHydrated is already wired via useViewedJobs() above.
   const freshness = isHydrated ? getJobFreshness(job) : '';
-  const shareTitle = `${job.title} at ${job.employer}`;
-  const shareDescription = `Check out this ${brand.niche.short} job: ${job.title} at ${job.employer}`;
+  const shareTitle = `${displayTitle} at ${displayEmployer}`;
+  const shareDescription = `Check out this ${brand.niche.short} job: ${displayTitle} at ${displayEmployer}`;
   const viewed = isHydrated && isViewed(jobSlug);
   const easyApply = job.applyOnPlatform === true;
   // "Direct Apply" = employer posted the job here AND links to their own
@@ -158,7 +166,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
   // Truncate long locations: take first part before semicolons, cap at 35 chars
   const shortLocation = (() => {
     if (!job.location) return 'Remote';
-    const first = job.location.split(';')[0].split(',').slice(0, 2).join(',').trim();
+    const first = displayText(job.location).split(';')[0].split(',').slice(0, 2).join(',').trim();
     return first.length > 35 ? first.slice(0, 33) + '…' : first;
   })();
 
@@ -210,9 +218,9 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
   if (viewMode === 'list') {
     // Build dot-separated metadata
     const metaParts: string[] = [];
-    if (job.employer) metaParts.push(job.employer);
+    if (job.employer) metaParts.push(displayEmployer);
     if (displayMode) metaParts.push(displayMode);
-    if (job.location) metaParts.push(job.location);
+    if (job.location) metaParts.push(displayText(job.location));
     if (salaryDisplay) metaParts.push(salaryDisplay.startsWith('$') ? salaryDisplay : `$${salaryDisplay}`);
     metaParts.push(freshness);
 
@@ -232,7 +240,8 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
             border: '1px solid rgba(255,255,255,0.5)',
             boxShadow: '8px 8px 20px rgba(0,0,0,0.07), -4px -4px 12px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02)',
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            opacity: viewed ? 0.7 : 1,
+            // Viewed state is carried by the Eye icon, not by dimming: opacity
+            // on the whole card pulled every line of text below WCAG AA.
             marginBottom: '12px',
           }}
         >
@@ -246,7 +255,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
             {job.companyLogoUrl ? (
               <Image
                 src={job.companyLogoUrl}
-                alt={`${job.employer} logo`}
+                alt={`${displayEmployer} logo`}
                 width={48}
                 height={48}
                 quality={90}
@@ -290,7 +299,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
               margin: '0 0 3px', lineHeight: 1.3,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-              {job.title}
+              {displayTitle}
             </h3>
             {/* Company · Location. Inline on one line so the row reads
                 "Sol Mental Health · Washington, DC". Both halves truncate
@@ -299,7 +308,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
                 location to show. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '0 0 8px', minWidth: 0 }}>
               <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1, minWidth: 0 }}>
-                {job.employer}
+                {displayEmployer}
               </p>
               {shortLocation && (
                 <>
@@ -436,8 +445,8 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
           <MessageEmployerModal
             isOpen={showMessageModal}
             jobId={job.id}
-            jobTitle={job.title}
-            employerName={job.employer}
+            jobTitle={displayTitle}
+            employerName={displayEmployer}
             onClose={() => setShowMessageModal(false)}
           />
         )}
@@ -480,7 +489,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
           display: 'flex', flexDirection: 'column', gap: '12px',
           width: '100%', height: '100%',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          opacity: viewed ? 0.75 : 1,
+          // Viewed state is carried by the Eye icon, not by dimming (WCAG 1.4.3).
           position: 'relative',
           boxShadow: '8px 8px 20px rgba(0,0,0,0.07), -4px -4px 12px rgba(255,255,255,0.9), inset 2px 2px 4px rgba(255,255,255,0.6), inset -1px -1px 2px rgba(0,0,0,0.02)',
         }}
@@ -494,7 +503,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
             {job.companyLogoUrl ? (
               <Image
                 src={job.companyLogoUrl}
-                alt={`${job.employer} logo`}
+                alt={`${displayEmployer} logo`}
                 width={44}
                 height={44}
                 quality={90}
@@ -543,7 +552,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
               overflow: 'hidden', textOverflow: 'ellipsis',
               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
             }}>
-              {job.title}
+              {displayTitle}
             </h3>
             {/* Company · Location — inline, full row width. Company
                 capped at 2 words (when >20 chars) so it never reads as
@@ -561,7 +570,7 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
                   // Health" isn't needlessly cut to "Sol Mental". Anything
                   // longer falls back to first 2 words to avoid the ugly
                   // CSS ellipsis we were seeing on aggregator-long names.
-                  const full = job.employer.trim();
+                  const full = displayEmployer.trim();
                   if (full.length <= 20) return full;
                   return full.split(/\s+/).slice(0, 2).join(' ');
                 })()}
@@ -614,8 +623,8 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
                     background: 'none', border: 'none', cursor: 'pointer',
                     transition: 'all 0.2s',
                   }}
-                  aria-label={`Message ${job.employer}`}
-                  title={`Message ${job.employer}`}
+                  aria-label={`Message ${displayEmployer}`}
+                  title={`Message ${displayEmployer}`}
                 >
                   <Mail size={18} strokeWidth={2} />
                 </button>
@@ -738,8 +747,8 @@ function JobCard({ job, viewMode = 'grid' }: JobCardProps) {
           <MessageEmployerModal
             isOpen={showMessageModal}
             jobId={job.id}
-            jobTitle={job.title}
-            employerName={job.employer}
+            jobTitle={displayTitle}
+            employerName={displayEmployer}
             onClose={() => setShowMessageModal(false)}
           />
         )}

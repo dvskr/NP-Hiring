@@ -7,6 +7,7 @@ import { verifyCsrf } from '@/lib/csrf';
 import { logAudit } from '@/lib/audit-log';
 import { logger } from '@/lib/logger';
 import { companySelect } from '../company-select';
+import { revalidateCompanySurfaces } from '../../_lib/public-revalidation';
 
 /**
  * PATCH /api/admin/companies/:id
@@ -68,7 +69,7 @@ export async function PATCH(
         return NextResponse.json(
             {
                 success: false,
-                error: "Invalid request — pass { recruitmentType: 'direct_hire' | 'staffing_agency' | null }.",
+                error: "Invalid request. Pass { recruitmentType: 'direct_hire' | 'staffing_agency' | null }.",
                 details: err instanceof Error ? err.message : 'unknown',
             },
             { status: 400 },
@@ -107,6 +108,10 @@ export async function PATCH(
                 recruitmentType: parsed.recruitmentType,
             },
         });
+
+        // P10 admin-revalidate #4: the profile, the A to Z hub and the job
+        // pages are ISR; refresh them so the classification is public now.
+        await revalidateCompanySurfaces(existing.id, 'Admin Companies');
 
         logger.info('[Admin Companies] recruitment type updated', {
             companyId: existing.id,

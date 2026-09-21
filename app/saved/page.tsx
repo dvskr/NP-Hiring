@@ -24,6 +24,9 @@ type SortOption = 'recent' | 'salary' | 'title';
  */
 const APPLICATIONS_API_PAGE_SIZE = 50;
 
+/** Login page reads ?redirectTo= (app/login/page.tsx) and returns here after sign-in. */
+const SIGN_IN_HREF = '/login?redirectTo=/saved';
+
 /* ── Clay design tokens (matches dashboard) ── */
 const cardBase: React.CSSProperties = {
     background: '#F7FBF8',
@@ -41,7 +44,12 @@ export default function SavedJobsPage() {
   const [sortBy, setSortBy] = useState<SortOption>('recent');
 
   // Saved jobs hook - single source of truth
-  const { savedJobs: savedIds, removeJob, clearAll: clearSavedJobs } = useSavedJobs();
+  const { savedJobs: savedIds, removeJob, clearAll: clearSavedJobs, authStatus } = useSavedJobs();
+  // Signed-out visitors get a sign-in gate instead of an empty list that
+  // looks like their account has no saves. Any saves made on this device
+  // while signed out are still listed below the gate.
+  const isSignedOut = authStatus === 'anonymous';
+  const isAuthResolving = authStatus === 'unknown';
 
   // Applied jobs hook
   const { appliedJobs, getAppliedDate, removeApplied, clearAll: clearAppliedJobs } = useAppliedJobs();
@@ -67,12 +75,12 @@ export default function SavedJobsPage() {
     try {
       const response = await fetch(`/api/jobs?ids=${ids.join(',')}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch jobs');
+        throw new Error('Failed to load jobs.');
       }
       const data: { jobs: Job[] } = await response.json();
       setJobs(data.jobs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
       setLoading(false);
     }
@@ -91,12 +99,12 @@ export default function SavedJobsPage() {
     try {
       const response = await fetch(`/api/jobs?ids=${ids.join(',')}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch jobs');
+        throw new Error('Failed to load jobs.');
       }
       const data: { jobs: Job[] } = await response.json();
       setAppliedJobsData(data.jobs);
     } catch (err) {
-      setAppliedError(err instanceof Error ? err.message : 'An error occurred');
+      setAppliedError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
       setAppliedLoading(false);
     }
@@ -150,7 +158,7 @@ export default function SavedJobsPage() {
   const handleClearAll = () => {
     setConfirm({
       title: 'Clear all saved jobs?',
-      description: `This removes all ${savedIds.length} saved job${savedIds.length !== 1 ? 's' : ''} from your list. This cannot be undone.`,
+      description: `This removes all ${savedIds.length} saved job${savedIds.length !== 1 ? 's' : ''} from your list. This action cannot be undone.`,
       confirmLabel: 'Clear all',
       variant: 'danger',
       onConfirm: () => {
@@ -238,12 +246,12 @@ export default function SavedJobsPage() {
       const keptCount = appliedJobs.length - clearable.length;
       if (keptCount > 0) {
         toast(
-          `Cleared ${clearable.length} — ${keptCount} kept. Submitted applications are never removed here; manage them from My Applications.`,
+          `Cleared ${clearable.length} and kept ${keptCount}. Submitted applications are never removed here. You can manage them from My Applications.`,
           'success',
         );
       }
     } catch {
-      toast('Couldn’t clear your history — please try again.', 'error');
+      toast('We could not clear your history. Please try again.', 'error');
     } finally {
       setClearingApplied(false);
     }
@@ -252,7 +260,7 @@ export default function SavedJobsPage() {
   const handleClearApplied = () => {
     setConfirm({
       title: 'Clear application history?',
-      description: 'This clears jobs you clicked through to from this list. Applications you submitted on this site are kept — employers still see them, and you can withdraw any of them from My Applications.',
+      description: 'This clears the jobs you clicked through to from this list. Applications you submitted on this site are kept: employers can still see them, and you can withdraw any of them from My Applications.',
       confirmLabel: 'Clear history',
       variant: 'danger',
       onConfirm: () => {
@@ -287,7 +295,10 @@ export default function SavedJobsPage() {
   const sortedJobs = getSortedJobs(jobs);
 
   const currentJobs = activeTab === 'saved' ? sortedJobs : appliedJobsData;
-  const currentLoading = activeTab === 'saved' ? loading : appliedLoading;
+  // Until the saved-jobs store knows whether a session exists, the saved tab
+  // stays on the skeleton so it never flashes "No saved jobs yet".
+  const savedLoading = loading || isAuthResolving;
+  const currentLoading = activeTab === 'saved' ? savedLoading : appliedLoading;
   const currentError = activeTab === 'saved' ? error : appliedError;
   const currentCount = activeTab === 'saved' ? savedIds.length : appliedJobs.length;
 
@@ -313,6 +324,23 @@ export default function SavedJobsPage() {
                 Jobs you&apos;ve saved and applications you&apos;ve submitted.
             </p>
         </div>
+
+        {/* ═══ Account notices ═══ */}
+        {isSignedOut && savedIds.length > 0 && (
+            <SignInNotice
+                title="These saved jobs live on this device only"
+                body="Sign in to keep them in your account and see them on any device."
+            />
+        )}
+        {authStatus === 'error' && (
+            <div role="status" style={{
+                ...cardBase, padding: '14px 18px', marginBottom: '20px',
+                borderColor: '#FECACA', background: '#FEF7F7',
+                color: '#6B7F8A', fontSize: '14px',
+            }}>
+                We could not load the saved jobs in your account right now. The list below shows the jobs saved on this device.
+            </div>
+        )}
 
         {/* ═══ Clay Tab Bar ═══ */}
         <div style={{
@@ -393,7 +421,7 @@ export default function SavedJobsPage() {
                             >
                                 <option value="recent">Recently Saved</option>
                                 <option value="salary">Highest Salary</option>
-                                <option value="title">Title A–Z</option>
+                                <option value="title">Title A to Z</option>
                             </select>
                         </div>
                     )}
@@ -507,8 +535,53 @@ export default function SavedJobsPage() {
             </div>
         )}
 
+        {/* ═══ Sign-in gate — Saved (signed out, nothing saved on this device) ═══ */}
+        {!currentLoading && !currentError && activeTab === 'saved' && isSignedOut && savedIds.length === 0 && (
+            <div style={{
+                ...cardBase,
+                textAlign: 'center', padding: '60px 24px',
+            }}>
+                <img src="/illustrations/spot-saved.png" alt="" style={{ width: '120px', height: '120px', objectFit: 'contain', marginBottom: '16px', marginInline: 'auto', display: 'block' }} />
+                <h2 style={{
+                    fontSize: '18px', fontWeight: 700,
+                    fontFamily: 'var(--font-lora), Georgia, serif',
+                    color: '#1A2E35', marginBottom: '8px',
+                }}>
+                    Sign in to see your saved jobs
+                </h2>
+                <p style={{
+                    color: '#8A9BA6', fontSize: '14px', marginBottom: '24px',
+                    maxWidth: '360px', marginInline: 'auto', lineHeight: 1.6,
+                }}>
+                    Jobs you save while signed in are kept in your account, so they are here on every device.
+                </p>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <Link href={SIGN_IN_HREF} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '8px',
+                        padding: '10px 20px', borderRadius: '12px',
+                        background: 'linear-gradient(145deg, #9D174D, #BE185D)',
+                        color: '#fff', fontSize: '13px', fontWeight: 600,
+                        textDecoration: 'none',
+                        boxShadow: '4px 4px 10px rgba(190,24,93,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
+                    }}>
+                        Sign in
+                        <ArrowRight size={14} />
+                    </Link>
+                    <Link href="/jobs" style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '8px',
+                        padding: '10px 20px', borderRadius: '12px',
+                        background: '#EDF5F0', border: '1px solid #D5E8E0',
+                        color: '#1A2E35', fontSize: '13px', fontWeight: 600,
+                        textDecoration: 'none',
+                    }}>
+                        Browse Jobs
+                    </Link>
+                </div>
+            </div>
+        )}
+
         {/* ═══ Empty State — Saved ═══ */}
-        {!currentLoading && !currentError && activeTab === 'saved' && jobs.length === 0 && (
+        {!currentLoading && !currentError && activeTab === 'saved' && !isSignedOut && jobs.length === 0 && (
             <div style={{
                 ...cardBase,
                 textAlign: 'center', padding: '60px 24px',
@@ -525,7 +598,7 @@ export default function SavedJobsPage() {
                     color: '#8A9BA6', fontSize: '14px', marginBottom: '24px',
                     maxWidth: '340px', marginInline: 'auto', lineHeight: 1.6,
                 }}>
-                    Bookmark jobs you&apos;re interested in — they&apos;ll show up here.
+                    Bookmark the jobs you&apos;re interested in, and they&apos;ll appear here.
                 </p>
                 <Link href="/jobs" style={{
                     display: 'inline-flex', alignItems: 'center', gap: '8px',
@@ -580,7 +653,7 @@ export default function SavedJobsPage() {
             for saved IDs whose underlying job is no longer published, so the
             badge count matches the rendered cards and stale entries are
             visible-and-prunable rather than silently dropped. */}
-        {!loading && !error && activeTab === 'saved' && savedIds.length > 0 && (
+        {!savedLoading && !error && activeTab === 'saved' && savedIds.length > 0 && (
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
@@ -696,6 +769,32 @@ export default function SavedJobsPage() {
       `}</style>
     </>
   );
+}
+
+/** Inline banner that tells a signed-out visitor where their saves live. */
+function SignInNotice({ title, body }: { title: string; body: string }) {
+    return (
+        <div role="status" style={{
+            ...cardBase, padding: '16px 20px', marginBottom: '20px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: '12px', flexWrap: 'wrap',
+        }}>
+            <div style={{ minWidth: 0, flex: '1 1 240px' }}>
+                <p style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#1A2E35' }}>{title}</p>
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#6B7F8A' }}>{body}</p>
+            </div>
+            <Link href={SIGN_IN_HREF} style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                padding: '8px 16px', borderRadius: '12px',
+                background: 'linear-gradient(145deg, #9D174D, #BE185D)',
+                color: '#fff', fontSize: '13px', fontWeight: 600,
+                textDecoration: 'none',
+            }}>
+                Sign in
+                <ArrowRight size={14} />
+            </Link>
+        </div>
+    );
 }
 
 /**

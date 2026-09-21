@@ -49,15 +49,58 @@ const experienceCriteriaSchema = z.object({
   minYearsExperience: z.number().int().min(0).max(60).optional(),
 });
 
+/** Newsletter consent counts only when the body says exactly true. */
+function isExplicitNewsletterOptIn(value: unknown): boolean {
+  return value === true;
+}
+
+/**
+ * Suppression an explicit signup may lift. Only a user-initiated unsubscribe
+ * qualifies (mirrors the resubscribe path in app/api/email/unsubscribe);
+ * 'bounce' and 'complaint' stay suppressed.
+ */
+function shouldLiftSuppressionOnSignup(
+  lead: { isSuppressed: boolean; suppressionReason: string | null } | null
+): boolean {
+  return !!lead && lead.isSuppressed && lead.suppressionReason === 'unsubscribe';
+}
+
+/**
+ * Advisory-lock key that serializes alert creation per address, so the
+ * dedupe below cannot race. A namespaced string keeps it from colliding with
+ * any other advisory lock taken on the same database.
+ */
+function jobAlertLockKey(normalizedEmail: string): string {
+  return `job_alert:create:${normalizedEmail}`;
+}
+
 // POST - Create new job alert
 export async function POST(request: NextRequest) {
   // Rate limiting
   const rateLimitResult = await rateLimit(request, 'jobAlerts', RATE_LIMITS.jobAlerts);
   if (rateLimitResult) return rateLimitResult;
 
+  // Parse JSON on its own so a malformed body is the client's 400, not the
+  // catch-all 500 below. A parsed value that is not a plain object (null, an
+  // array, a bare string) is equally malformed.
+  let body: CreateAlertBody;
   try {
-    const body: CreateAlertBody = await request.json();
+    const parsed: unknown = await request.json();
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return NextResponse.json(
+        { success: false, error: 'Request body must be a JSON object' },
+        { status: 400 }
+      );
+    }
+    body = parsed as CreateAlertBody;
+  } catch {
+    return NextResponse.json(
+      { success: false, error: 'Invalid JSON body' },
+      { status: 400 }
+    );
+  }
 
+  try {
     // Sanitize inputs
     const sanitized = sanitizeJobAlert(body);
     const { email, name, keyword, location, mode, jobType, minSalary, maxSalary } = sanitized;
@@ -124,9 +167,13 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase();
 
-    // Upsert EmailLead — create if new, optionally flip newsletterOptIn
-    const newsletterOptIn = body.newsletterOptIn !== false; // default true
-    await prisma.emailLead.upsert({
+    // Newsletter consent is opt-in ONLY. A job alert signup is consent to job
+    // alerts, not to the newsletter: the /job-alerts form has no newsletter
+    // checkbox, so an absent flag must never be read as "yes". Only an
+    // explicit boolean true (the exit-intent popup's checkbox) opts in, and a
+    // stored false is never flipped by a submit that did not say true.
+    const newsletterOptIn = isExplicitNewsletterOptIn(body.newsletterOptIn);
+    const lead = await prisma.emailLead.upsert({
       where: { email: normalizedEmail },
       update: newsletterOptIn ? { newsletterOptIn: true } : {},
       create: {
@@ -134,55 +181,92 @@ export async function POST(request: NextRequest) {
         source: 'job_alert',
         newsletterOptIn,
       },
+      select: { isSuppressed: true, suppressionReason: true },
     });
 
-    // Sync to Beehiiv newsletter (fire-and-forget)
-    syncToBeehiiv(normalizedEmail, { utmSource: 'job_alert' });
+    // An explicit alert signup from an address that previously clicked
+    // Unsubscribe is a fresh request for email. Every digest send gates on
+    // isEmailSuppressed() (lead OR profile), so without lifting the
+    // unsubscribe suppression the alert would be created but never send.
+    // Bounce and complaint suppression protects deliverability and is never
+    // lifted here (fail closed).
+    if (shouldLiftSuppressionOnSignup(lead)) {
+      await prisma.$transaction([
+        prisma.emailLead.update({
+          where: { email: normalizedEmail },
+          data: {
+            isSubscribed: true,
+            isSuppressed: false,
+            suppressedAt: null,
+            suppressionReason: null,
+          },
+        }),
+        prisma.userProfile.updateMany({
+          where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
+          data: { emailSuppressed: false, emailSuppressedAt: null },
+        }),
+      ]);
+    }
+
+    // Sync to the Beehiiv newsletter only with explicit consent (fire-and-forget)
+    if (newsletterOptIn) {
+      syncToBeehiiv(normalizedEmail, { utmSource: 'job_alert' });
+    }
 
     // Dedup: match BOTH confirmed (is_active = true) and unconfirmed
     // alerts. Without checking the unconfirmed bucket too, a user who
     // resubmits the same form before clicking the confirmation link
     // would receive a fresh email per submission. We dedupe instead and
     // re-send the existing confirmation if the original is still pending.
-    let jobAlert;
-    const existing = await prisma.jobAlert.findFirst({
-      where: {
-        email: normalizedEmail,
-        keyword: keyword || null,
-        location: location || null,
-        mode: mode || null,
-        jobType: jobType || null,
-        minSalary: minSalary || null,
-        maxSalary: maxSalary || null,
-        // Experience criteria are part of the alert's identity: the same
-        // search with a different experience constraint is a different alert.
-        newGradFriendly,
-        minYearsExperience,
-      },
-    });
+    //
+    // The find-then-create runs inside one transaction that first takes a
+    // Postgres advisory lock keyed on the email. Without it, two concurrent
+    // submits (a double click) both miss in findFirst and both create,
+    // storing duplicate alerts. The nullable criteria columns cannot be
+    // covered by a plain unique index (NULLs are distinct), so the lock is
+    // what makes the dedupe atomic: the second request waits, then finds the
+    // first request's row and lands as an update.
+    const { jobAlert, existing } = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${jobAlertLockKey(normalizedEmail)}))`;
 
-    // Single opt-in: alerts are created already confirmed. Skipping the double-
-    // opt-in confirmation email increases conversion through the funnel. Tradeoff:
-    // weaker signal to ISPs (Gmail/Yahoo) about consent, slightly higher abuse risk
-    // (someone signing up another person's email). The /api/job-alerts/confirm
-    // endpoint stays in place for grandfathering any in-flight pending alerts from
-    // the old flow.
-    const now = new Date();
-
-    if (existing) {
-      jobAlert = await prisma.jobAlert.update({
-        where: { id: existing.id },
-        data: {
-          frequency,
-          name: name || existing.name,
-          isActive: true,
-          confirmedAt: existing.confirmedAt ?? now,
+      const existing = await tx.jobAlert.findFirst({
+        where: {
+          email: normalizedEmail,
+          keyword: keyword || null,
+          location: location || null,
+          mode: mode || null,
+          jobType: jobType || null,
+          minSalary: minSalary || null,
+          maxSalary: maxSalary || null,
+          // Experience criteria are part of the alert's identity: the same
+          // search with a different experience constraint is a different alert.
+          newGradFriendly,
+          minYearsExperience,
         },
       });
-    }
 
-    if (!jobAlert) {
-      jobAlert = await prisma.jobAlert.create({
+      // Single opt-in: alerts are created already confirmed. Skipping the double-
+      // opt-in confirmation email increases conversion through the funnel. Tradeoff:
+      // weaker signal to ISPs (Gmail/Yahoo) about consent, slightly higher abuse risk
+      // (someone signing up another person's email). The /api/job-alerts/confirm
+      // endpoint stays in place for grandfathering any in-flight pending alerts from
+      // the old flow.
+      const now = new Date();
+
+      if (existing) {
+        const updated = await tx.jobAlert.update({
+          where: { id: existing.id },
+          data: {
+            frequency,
+            name: name || existing.name,
+            isActive: true,
+            confirmedAt: existing.confirmedAt ?? now,
+          },
+        });
+        return { jobAlert: updated, existing };
+      }
+
+      const created = await tx.jobAlert.create({
         data: {
           email: normalizedEmail,
           name,
@@ -199,7 +283,8 @@ export async function POST(request: NextRequest) {
           confirmedAt: now,
         },
       });
-    }
+      return { jobAlert: created, existing: null };
+    });
 
     // Send the welcome / "alerts are active" email immediately. This is what users
     // would have received after clicking Confirm under the old double-opt-in flow.

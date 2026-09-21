@@ -114,7 +114,7 @@ function buildPsychEntry(slug: string): SpecialtySalaryPage {
         premium: {
             minPct: 10,
             maxPct: 20,
-            driver: `${credential}-BC certification, nationwide prescriber shortage`,
+            driver: `${credential}-BC certification and a nationwide prescriber shortage`,
         },
         blurb:
             `${credential}s diagnose and treat behavioral-health conditions, manage medications, ` +
@@ -144,7 +144,7 @@ export const SALARY_SPECIALTY_PAGES: readonly SpecialtySalaryPage[] = [
         certification: 'AANPCB (FNP-C) or ANCC (FNP-BC)',
         blurb:
             'FNPs deliver primary care across the lifespan in clinics, health systems, and ' +
-            `community practices — the broadest and most portable ${brand.niche.short} specialty.`,
+            `community practices. Family practice is the broadest and most portable ${brand.niche.short} specialty.`,
         settings: ['Primary care clinics', 'Health systems', 'FQHCs', 'Telehealth'],
     },
     ...(PSYCH_SPECIALTY_SLUG ? [buildPsychEntry(PSYCH_SPECIALTY_SLUG)] : []),
@@ -188,7 +188,7 @@ export const SALARY_SPECIALTY_PAGES: readonly SpecialtySalaryPage[] = [
         credential: 'AGNP',
         shortTitle: `AGNP (Adult-Gerontology ${brand.niche.short})`,
         certification: 'ANCC (AGACNP-BC / AGPCNP-BC) or AANPCB (A-GNP)',
-        premium: { minPct: 5, maxPct: 10, driver: 'Growing aging population' },
+        premium: { minPct: 5, maxPct: 10, driver: 'a growing aging population' },
         blurb:
             'AGNPs provide primary and acute care for adult and older-adult populations across ' +
             'clinics, hospitals, and long-term-care settings.',
@@ -228,10 +228,10 @@ export const SALARY_SPECIALTY_PAGES: readonly SpecialtySalaryPage[] = [
         credential: 'ACNP',
         shortTitle: `ACNP (Acute Care ${brand.niche.short})`,
         certification: 'ANCC (AGACNP-BC) or AACN (ACNPC-AG)',
-        premium: { minPct: 10, maxPct: 20, driver: 'AGACNP certification, hospital demand' },
+        premium: { minPct: 10, maxPct: 20, driver: 'AGACNP certification and hospital demand' },
         blurb:
             'ACNPs manage complex, high-acuity patients in ICUs, step-down units, and hospital ' +
-            'specialty services — typically on shift-based schedules with differentials.',
+            'specialty services, typically on shift-based schedules with differentials.',
         settings: ['ICUs', 'Step-down units', 'Hospital specialty services', 'Rapid response teams'],
     },
     {
@@ -242,7 +242,7 @@ export const SALARY_SPECIALTY_PAGES: readonly SpecialtySalaryPage[] = [
         credential: 'ENP',
         shortTitle: `ENP (Emergency ${brand.niche.short})`,
         certification: 'AANPCB (ENP-C), typically built on FNP certification',
-        premium: { minPct: 10, maxPct: 20, driver: 'Dynamic environment, flexible scheduling' },
+        premium: { minPct: 10, maxPct: 20, driver: 'a dynamic environment and flexible scheduling' },
         blurb:
             'ENPs staff emergency departments, fast tracks, and freestanding ERs, treating ' +
             'undifferentiated patients across every acuity level.',
@@ -255,10 +255,10 @@ export const SALARY_SPECIALTY_PAGES: readonly SpecialtySalaryPage[] = [
         role: `Hospitalist ${brand.niche.long}`,
         shortTitle: `Hospitalist ${brand.niche.short}`,
         certification: 'Typically ANCC (AGACNP-BC) or FNP certification with inpatient experience',
-        premium: { minPct: 10, maxPct: 20, driver: 'Inpatient acuity, hospital demand' },
+        premium: { minPct: 10, maxPct: 20, driver: 'inpatient acuity and hospital demand' },
         blurb:
             'Hospitalist NPs round on inpatient medicine teams, covering admissions, ' +
-            'cross-coverage, and discharge planning — often with shift differentials.',
+            'cross-coverage, and discharge planning, often with shift differentials.',
         settings: ['Inpatient medicine teams', 'Community hospitals', 'Academic medical centers', 'Night coverage'],
     },
     {
@@ -268,10 +268,10 @@ export const SALARY_SPECIALTY_PAGES: readonly SpecialtySalaryPage[] = [
         role: `Dermatology ${brand.niche.long}`,
         shortTitle: `Dermatology ${brand.niche.short}`,
         certification: 'Typically FNP or AGNP certification (AANPCB / ANCC) plus dermatology experience',
-        premium: { minPct: 10, maxPct: 25, driver: 'Procedure-driven, cash-pay revenue' },
+        premium: { minPct: 10, maxPct: 25, driver: 'procedure-driven, cash-pay revenue' },
         blurb:
-            'Dermatology NPs practice medical, surgical, and cosmetic dermatology — ' +
-            'procedure volume and cash-pay services drive the specialty’s pay premium.',
+            'Dermatology NPs practice medical, surgical, and cosmetic dermatology. ' +
+            'Procedure volume and cash-pay services drive the specialty’s pay premium.',
         settings: ['Dermatology practices', 'Medical spas', 'Academic clinics', 'Private practice'],
     },
 ];

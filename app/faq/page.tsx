@@ -39,7 +39,7 @@ export default function FAQPage() {
   const jobSeekerFaqs = [
     {
       question: `Is ${brand.name} free to use?`,
-      answer: "Yes! Job seekers can browse, save, and apply to jobs completely free. There are no hidden fees, subscriptions, or charges for candidates."
+      answer: "Yes. Job seekers can browse, save, and apply to jobs completely free. There are no hidden fees, subscriptions, or charges for candidates."
     },
     {
       question: "How do I save jobs?",
@@ -47,7 +47,7 @@ export default function FAQPage() {
     },
     {
       question: "How do job alerts work?",
-      answer: "Create an alert with your search criteria (location, job type, salary, etc.). We'll email you when new matching jobs are posted. You can manage or unsubscribe from alerts at any time."
+      answer: "Create an alert with your search criteria (location, job type, salary, and so on). We will email you when new matching jobs are posted. You can manage or unsubscribe from alerts at any time."
     },
     {
       question: "Where do the jobs come from?",
@@ -55,11 +55,11 @@ export default function FAQPage() {
     },
     {
       question: "How do I apply to a job?",
-      answer: "Click 'Apply Now' on any job listing. You'll be directed to the employer's application page where you can submit your resume and information directly to them."
+      answer: "Click 'Apply Now' on any job listing. You will be directed to the employer's application page, where you can submit your resume and information directly to them."
     },
     {
       question: "Can I track my applications?",
-      answer: "Yes! When you apply to a job and confirm that you've completed the application, the job is automatically tracked in your 'Applications' tab on the Saved Jobs page."
+      answer: "Yes. When you apply to a job and confirm that you have completed the application, the job is automatically tracked in the 'Applications' tab on the Saved Jobs page."
     },
   ];
 
@@ -94,15 +94,15 @@ export default function FAQPage() {
     },
     {
       question: "What happens to candidates I've unlocked when my posting expires?",
-      answer: "You keep them. Once you've unlocked a candidate (paid 1 of your 25 unlocks to view their full profile), their contact info, resume, and details remain accessible in your dashboard forever, even after the posting expires. To unlock new candidates or send new InMails, you'll need an active posting."
+      answer: "You keep them. Once you've unlocked a candidate (paid 1 of your 25 unlocks to view their full profile), their contact info, resume, and details remain accessible in your dashboard forever, even after the posting expires. To unlock new candidates or send new InMails, you will need an active posting."
     },
     {
       question: "Can I edit my job posting?",
-      answer: "Yes! Open your employer dashboard (link is in your confirmation email) and click Edit on any posting. You can update the salary, requirements, description, or any other details, and changes go live immediately."
+      answer: "Yes. Open your employer dashboard (the link is in your confirmation email) and click Edit on any posting. You can update the salary, requirements, description, or any other details, and changes go live immediately."
     },
     {
       question: "How do I access my employer dashboard?",
-      answer: `Check your confirmation email for a dashboard link. The dashboard allows you to view analytics, edit your posting, browse candidates, and manage all your job postings in one place. If you've lost the link, contact us at ${brand.email.support}.`
+      answer: `Check your confirmation email for a dashboard link. The dashboard allows you to view analytics, edit your posting, browse candidates, and manage all your job postings in one place. If you have lost the link, contact us at ${brand.email.support}.`
     },
     {
       question: "Do you offer refunds?",
@@ -113,7 +113,7 @@ export default function FAQPage() {
   const generalFaqs = [
     {
       question: "How do I contact support?",
-      answer: `Email us at ${brand.email.support} and we'll respond within 24 hours (usually much faster). You can also use our contact form for general inquiries.`
+      answer: `Email us at ${brand.email.support} and we will respond within 24 hours (usually much faster). You can also use our contact form for general inquiries.`
     },
     {
       question: "Is my information secure?",
@@ -125,7 +125,7 @@ export default function FAQPage() {
     },
     {
       question: "Can I post jobs in multiple locations?",
-      answer: "Yes! When creating your job posting, you can specify multiple locations or select 'Remote' for positions that can be done from anywhere."
+      answer: "Yes. When creating your job posting, you can specify multiple locations or select 'Remote' for positions that can be done from anywhere."
     },
   ];
 
@@ -148,7 +148,7 @@ export default function FAQPage() {
     },
     {
       question: `Can I complete an ${brand.niche.short} program online?`,
-      answer: `Yes, many accredited universities offer online ${brand.niche.short} programs. Didactic coursework is completed online, but you'll still need to complete 500+ clinical hours in person at approved sites. Top online programs include Vanderbilt, Rush, and University of Cincinnati.`
+      answer: `Yes, many accredited universities offer online ${brand.niche.short} programs. Didactic coursework is completed online, but you will still need to complete 500+ clinical hours in person at approved sites. Top online programs include Vanderbilt, Rush, and University of Cincinnati.`
     },
     {
       question: `What is the ROI of an ${brand.niche.short} degree?`,
@@ -346,7 +346,7 @@ export default function FAQPage() {
               Still Have Questions?
             </h2>
             <p className="mb-6 max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
-              Didn&apos;t find your answer? We&apos;re here to help. Reach out and we&apos;ll get back to you within 24 hours.
+              Did not find your answer? We are here to help. Reach out and we will get back to you within 24 hours.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-lg mx-auto">
               <a href={`mailto:${brand.email.support}`} className="w-full sm:w-auto">

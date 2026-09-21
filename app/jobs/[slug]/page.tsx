@@ -1,8 +1,10 @@
 import { brand } from '@/config/brand';
-import { cache } from 'react';
+import { cache, Suspense } from 'react';
 import Image from 'next/image';
 import { formatSalary, slugify, getJobFreshness, getExpiryStatus, expandInlineBullets, splitAtSectionMarkers } from '@/lib/utils';
 import { sanitizeHtmlContent } from '@/lib/sanitize';
+import { normalizeDisplaySalary } from '@/lib/salary-display';
+import StickyApplyBar from './StickyApplyBar';
 import { MapPin, Briefcase, Monitor, BadgeCheck, ArrowRight, Search, Laptop, Video, Plane, Building2, BedDouble, DollarSign, type LucideIcon } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import { Job, Company } from '@/lib/types';
@@ -36,11 +38,17 @@ import JobLocationContext, {
 import { classifyProfession, type ProfessionClass } from '@/lib/profession-classifier';
 import { CareerPulseCard, ApplicationTipsCard } from '@/components/jobs/SidebarVisualCards';
 import { prisma } from '@/lib/prisma';
+import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
 // P3 #9: the city breadcrumb is both an internal link and a BreadcrumbList
 // ListItem, so it must not carry a URL the city route cannot resolve.
 import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
 import { getPostBySlug } from '@/lib/blog';
+// Employer-authored title / employer / location strings often carry dashes as
+// separators. They stay raw in the row, in every DB query and in JSON-LD
+// (JobStructuredData / BreadcrumbSchema); only the visible render points go
+// through displayText (lib/display-text.ts).
+import { displayText } from '@/lib/display-text';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -82,7 +90,8 @@ interface JobPageProps {
 type JobResult =
   | { status: 'found'; job: Job }
   | { status: 'expired'; employer?: string; title?: string }
-  | { status: 'gone' };
+  | { status: 'gone' }
+  | { status: 'quarantined' };
 
 const getJob = cache(async function getJob(id: string): Promise<JobResult> {
   try {
@@ -117,15 +126,25 @@ const getJob = cache(async function getJob(id: string): Promise<JobResult> {
     }
 
     // Job is published — fetch full data with employer info
-    const jobWithRelation = await prisma.job.findUnique({
-      where: { id },
+    //
+    // P10 pseo-jobs #1: the fetch carries the site-wide profession quarantine
+    // (GLOBAL_EXCLUSIONS via PUBLISHED_LISTING_WHERE). A published, unexpired
+    // row it rejects is a non-NP listing (e.g. professionClass other_clinical)
+    // that every browse surface already hides; its slug-plus-UUID URL must not
+    // be the one place it still renders as a live, indexable 200. Middleware
+    // answers such a row with a real 410 first (P10 not-found-status #1, the
+    // same GLOBAL_EXCLUSIONS via lib/pseo/listing-gates-edge.ts); this branch
+    // is the fallback when that gate cannot run. Its notFound() alone cannot
+    // set the status: this route streams behind loading.tsx.
+    const jobWithRelation = await prisma.job.findFirst({
+      where: { id, ...PUBLISHED_LISTING_WHERE },
       include: {
         employerJobs: {
           select: { companyLogoUrl: true, companyWebsite: true, userId: true },
         },
       },
     });
-    if (!jobWithRelation) return { status: 'gone' };
+    if (!jobWithRelation) return { status: 'quarantined' };
 
     // Increment view count AND create view event for analytics funnel
     Promise.all([
@@ -185,7 +204,7 @@ export async function getInternalLinkBuckets(params: {
   newGradFriendly?: boolean;
 }) {
   const { currentJobId, employer, city, state, newGradFriendly } = params;
-  const baseWhere = { id: { not: currentJobId }, isPublished: true } as const;
+  const baseWhere = { id: { not: currentJobId }, ...PUBLISHED_LISTING_WHERE };
   const baseOrder = { createdAt: 'desc' as const };
 
   const [moreFromEmployer, moreInCity, moreNewGrad] = await Promise.all([
@@ -229,7 +248,7 @@ async function getRelatedJobs({
   // detail render. Parallelizing fetches up to `limit` candidates per
   // bucket (slightly more bytes) but cuts wall-clock latency by ~3x on
   // a typical render. Dedup happens in-memory below in priority order.
-  const baseWhere = { id: { not: currentJobId }, isPublished: true } as const;
+  const baseWhere = { id: { not: currentJobId }, ...PUBLISHED_LISTING_WHERE };
   const baseOrder = { createdAt: 'desc' as const };
 
   const [sameEmployerJobs, sameCityJobs, sameStateJobs, sameModeJobs] = await Promise.all([
@@ -315,7 +334,7 @@ async function getCompanyInfo(companyId: string | null, employerName: string, jo
   // No Company record — synthesize one from the EmployerJob fields.
   if (employerJobRow && (employerJobRow.companyLogoUrl || employerJobRow.companyDescription)) {
     const jobCount = await prisma.job.count({
-      where: { employer: employerName, isPublished: true },
+      where: { employer: employerName, ...PUBLISHED_LISTING_WHERE },
     });
     return {
       id: 'employer-' + (jobId ?? 'unknown'),
@@ -339,7 +358,7 @@ async function getEmployerJobCount(employerName: string, currentJobId: string) {
   const count = await prisma.job.count({
     where: {
       employer: { equals: employerName, mode: 'insensitive' },
-      isPublished: true,
+      ...PUBLISHED_LISTING_WHERE,
       id: { not: currentJobId },
     },
   });
@@ -408,7 +427,7 @@ export async function generateMetadata({ params }: JobPageProps) {
     // not a 410 (deleted job). Use generic page-not-found metadata.
     return {
       title: 'Page Not Found',
-      description: `The page you are trying to access doesn’t exist. Browse current ${brand.niche.short} jobs on ${brand.name}.`,
+      description: `The page you are trying to access does not exist. Browse current ${brand.niche.short} jobs on ${brand.name}.`,
       robots: { index: false, follow: true },
     };
   }
@@ -419,7 +438,7 @@ export async function generateMetadata({ params }: JobPageProps) {
   // the page body. Metadata here only matters if Next.js skips the body
   // render (it doesn't, but defensive). The old 'X-Status: 410' meta tag
   // was misleading — it claimed 410 while the actual response was 200.
-  if (result.status === 'gone') {
+  if (result.status === 'gone' || result.status === 'quarantined') {
     return {
       title: 'Page Not Found',
       // Live-review fix #1 (copy honesty): the row is deleted, so its
@@ -434,10 +453,10 @@ export async function generateMetadata({ params }: JobPageProps) {
   // A 200 + noindex + rich content (links to similar jobs) tells Google to de-index
   // the URL without wasting crawl budget re-crawling 404s.
   if (result.status === 'expired') {
-    const expiredTitle = result.title || `${brand.niche.short} Position`;
-    const expiredEmployer = result.employer || 'Employer';
+    const expiredTitle = displayText(result.title) || `${brand.niche.short} Position`;
+    const expiredEmployer = displayText(result.employer) || 'Employer';
     return {
-      title: `${expiredTitle} — Position Filled`,
+      title: `${expiredTitle}: Position Filled`,
       description: `This ${expiredTitle} position at ${expiredEmployer} is no longer available. Browse similar ${brand.niche.short} jobs on ${brand.name}.`,
       robots: {
         index: false,
@@ -447,6 +466,8 @@ export async function generateMetadata({ params }: JobPageProps) {
   }
 
   const job = result.job;
+  const displayTitle = displayText(job.title);
+  const displayEmployer = displayText(job.employer);
 
   // Strip HTML tags before slicing — Quill-edited employer postings and many
   // scraped descriptions arrive as HTML, and slicing raw HTML stuffs <p>/<ul>
@@ -465,7 +486,7 @@ export async function generateMetadata({ params }: JobPageProps) {
 
     // Must have REAL non-zero values (at least 1000 to be valid)
     if (min >= 1000 && max >= 1000) {
-      return `$${Math.round(min / 1000)}k-$${Math.round(max / 1000)}k`;
+      return `$${Math.round(min / 1000)}k to $${Math.round(max / 1000)}k`;
     }
     if (min >= 1000) return `$${Math.round(min / 1000)}k+`;
     if (max >= 1000) return `Up to $${Math.round(max / 1000)}k`;
@@ -489,8 +510,8 @@ export async function generateMetadata({ params }: JobPageProps) {
 
   // Build dynamic OG image URL
   const ogImageUrl = new URL('/api/og', BASE_URL);
-  ogImageUrl.searchParams.set('title', job.title);
-  ogImageUrl.searchParams.set('company', job.employer);
+  ogImageUrl.searchParams.set('title', displayTitle);
+  ogImageUrl.searchParams.set('company', displayEmployer);
 
   // ONLY add salary if formatOGSalary returns a valid value
   const salary = formatOGSalary();
@@ -498,7 +519,7 @@ export async function generateMetadata({ params }: JobPageProps) {
     ogImageUrl.searchParams.set('salary', salary);
   }
 
-  const location = formatOGLocation();
+  const location = displayText(formatOGLocation());
   if (location) ogImageUrl.searchParams.set('location', location);
 
   if (job.jobType) ogImageUrl.searchParams.set('jobType', job.jobType);
@@ -527,14 +548,14 @@ export async function generateMetadata({ params }: JobPageProps) {
   // Title includes location when available so SERP listings differentiate
   // identical job titles posted in multiple cities. Capped at ~60 chars so
   // Google doesn't truncate; falls back to "{title} at {employer}" only.
-  const titleLocation = job.isRemote
+  const titleLocation = displayText(job.isRemote
     ? 'Remote'
-    : (job.city && job.stateCode ? `${job.city}, ${job.stateCode}` : (job.state || ''));
+    : (job.city && job.stateCode ? `${job.city}, ${job.stateCode}` : (job.state || '')));
   const fullTitle = titleLocation
-    ? `${job.title} at ${job.employer} — ${titleLocation}`
-    : `${job.title} at ${job.employer}`;
+    ? `${displayTitle} at ${displayEmployer} (${titleLocation})`
+    : `${displayTitle} at ${displayEmployer}`;
   const titleWithLocation = fullTitle.length > 65
-    ? `${job.title} — ${titleLocation || job.employer}`.slice(0, 65)
+    ? `${displayTitle}, ${titleLocation || displayEmployer}`.slice(0, 65)
     : fullTitle;
 
   return {
@@ -551,7 +572,7 @@ export async function generateMetadata({ params }: JobPageProps) {
           url: ogImageUrl.toString(),
           width: 1200,
           height: 630,
-          alt: `${job.title} at ${job.employer}`,
+          alt: `${displayTitle} at ${displayEmployer}`,
           type: 'image/png',
         },
       ],
@@ -635,7 +656,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
           <p style={{ fontSize: '15px', color: '#7A6A62', marginBottom: '0', lineHeight: 1.6 }}>
             {subtext}
           </p>
-          <p style={{ fontSize: '14px', color: '#7A6A62', marginTop: '8px' }}>Don&apos;t worry — we have hundreds of similar {brand.niche.short} positions available right now.</p>
+          <p style={{ fontSize: '14px', color: '#7A6A62', marginTop: '8px' }}>Hundreds of similar {brand.niche.short} positions are available right now.</p>
         </div>
 
         {/* Action Cards — 3×2 Grid */}
@@ -667,7 +688,7 @@ function renderRemovedPage({ badge, badgeGradient, heading, subtext, title, empl
 
         {/* Salary Guide CTA */}
         <div style={{ ...clayCard, padding: '28px 32px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#7A6A62', marginBottom: '16px' }}>While you&apos;re here, check out the latest {brand.niche.short} salary data:</p>
+          <p style={{ fontSize: '14px', color: '#7A6A62', marginBottom: '16px' }}>While you are here, review the latest {brand.niche.short} salary data:</p>
           <Link href="/salary-guide"
             className="gone-cta"
             style={{
@@ -708,6 +729,11 @@ export default async function JobPage({ params }: JobPageProps) {
   // indexation (the page is treated as valid but de-prioritized,
   // burning crawl budget on dead URLs). notFound() returns 404 and
   // Next.js renders our app/not-found.tsx template.
+  // A quarantined non-NP row answers the same 404: it is not a listing on
+  // this board, and a noindexed Position Filled shell would misstate why.
+  if (result.status === 'quarantined') {
+    notFound();
+  }
   if (result.status === 'gone') {
     notFound();
   }
@@ -715,8 +741,8 @@ export default async function JobPage({ params }: JobPageProps) {
   // Job exists but expired/unpublished → render rich expired page
   // (not notFound() — see generateMetadata for rationale)
   if (result.status === 'expired') {
-    const expiredTitle = result.title || `${brand.niche.short} Position`;
-    const expiredEmployer = result.employer || 'an employer';
+    const expiredTitle = displayText(result.title) || `${brand.niche.short} Position`;
+    const expiredEmployer = displayText(result.employer) || 'an employer';
 
     return renderRemovedPage({
       badge: 'Position Filled',
@@ -729,6 +755,11 @@ export default async function JobPage({ params }: JobPageProps) {
   }
 
   const job = result.job;
+  // Visible-text forms of the employer-authored strings. Every DB query,
+  // JSON-LD block and analytics call below keeps reading the raw job.* values.
+  const displayTitle = displayText(job.title);
+  const displayEmployer = displayText(job.employer);
+  const displayLocation = displayText(job.location);
 
   // B34: single canonical URL for every surface on this page. Must match
   // generateMetadata's alternates.canonical and JobStructuredData's `url`
@@ -792,7 +823,7 @@ export default async function JobPage({ params }: JobPageProps) {
     locationCityRecord && job.city
       ? prisma.job.count({
           where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: job.city, mode: 'insensitive' },
             OR: [
               { state: locationCityRecord.state },
@@ -829,7 +860,9 @@ export default async function JobPage({ params }: JobPageProps) {
     locationCityJobCount,
   );
 
-  const salary = formatSalary(job.minSalary, job.maxSalary, job.salaryPeriod);
+  // normalizeDisplaySalary is idempotent on formatSalary's " to " output; it
+  // is the render-point guard that keeps any dashed range off the hero badge.
+  const salary = normalizeDisplaySalary(formatSalary(job.minSalary, job.maxSalary, job.salaryPeriod)) ?? '';
   const freshness = getJobFreshness(job.createdAt);
   const expiryStatus = getExpiryStatus(job.expiresAt);
 
@@ -847,7 +880,7 @@ export default async function JobPage({ params }: JobPageProps) {
   // Add state if available
   if (job.state) {
     breadcrumbItems.push({
-      label: job.state,
+      label: displayText(job.state),
       href: `/jobs/state/${job.state.toLowerCase().replace(/\s+/g, '-')}`,
     });
   }
@@ -865,7 +898,7 @@ export default async function JobPage({ params }: JobPageProps) {
   if (job.city && job.stateCode) {
     if (cityLinkResolves(job.city, job.stateCode)) {
       breadcrumbItems.push({
-        label: job.city,
+        label: displayText(job.city),
         href: `/jobs/city/${buildCitySlug(job.city, job.stateCode)}`,
       });
     }
@@ -878,14 +911,14 @@ export default async function JobPage({ params }: JobPageProps) {
     // the dataset-wide assertion in
     // tests/regressions/p2-mesh-directories-state-cities.test.ts.
     breadcrumbItems.push({
-      label: job.city,
+      label: displayText(job.city),
       href: `/jobs/city/${job.city.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}`,
     });
   }
 
   // Current page (no link)
   breadcrumbItems.push({
-    label: `${job.title} at ${job.employer}`,
+    label: `${displayTitle} at ${displayEmployer}`,
     href: '',
   });
 
@@ -922,11 +955,11 @@ export default async function JobPage({ params }: JobPageProps) {
               <div className="rounded-2xl overflow-hidden mb-5 lg:mb-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '20px', boxShadow: '6px 6px 12px rgba(0,0,0,0.06), -2px -2px 8px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)', position: 'relative', padding: '24px 24px 28px', }}>
                 {/* Report Button - Top Right */}
                 <div style={{ position: 'absolute', top: '16px', right: '16px' }}>
-                  <ReportJobButton jobId={job.id} jobTitle={job.title} />
+                  <ReportJobButton jobId={job.id} jobTitle={displayTitle} />
                 </div>
 
                 {/* Title */}
-                <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: 'var(--text-primary)', marginBottom: '16px', lineHeight: 1.2, paddingRight: '40px' }}>{job.title}</h1>
+                <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: 'var(--text-primary)', marginBottom: '16px', lineHeight: 1.2, paddingRight: '40px' }}>{displayTitle}</h1>
 
                 {/* Company Info Row: Avatar + Name + Location.
                     Avatar always renders (logo if available, else a
@@ -947,7 +980,7 @@ export default async function JobPage({ params }: JobPageProps) {
                       // produced visible softness at 52px on 2x/3x screens.
                       <Image
                         src={job.companyLogoUrl}
-                        alt={`${job.employer} logo`}
+                        alt={`${displayEmployer} logo`}
                         width={52}
                         height={52}
                         quality={90}
@@ -979,7 +1012,11 @@ export default async function JobPage({ params }: JobPageProps) {
                       // White-disc background under the bluecheck so it
                       // reads cleanly on any avatar color. Same treatment
                       // as the JobCard avatar bluecheck.
+                      // role="img" makes aria-label permitted (axe
+                      // aria-prohibited-attr: a generic div may not carry
+                      // one); the decorative svg inside is hidden.
                       <div
+                        role="img"
                         aria-label="Verified employer"
                         style={{
                           position: 'absolute', bottom: '-2px', right: '-2px',
@@ -989,7 +1026,7 @@ export default async function JobPage({ params }: JobPageProps) {
                           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                         }}
                       >
-                        <BadgeCheck size={18} fill="#1d9bf0" color="#ffffff" />
+                        <BadgeCheck size={18} fill="#1d9bf0" color="#ffffff" aria-hidden="true" />
                       </div>
                     )}
                   </div>
@@ -1001,14 +1038,14 @@ export default async function JobPage({ params }: JobPageProps) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
                     {companyInfo ? (
                       <Link href={`/companies/${companyInfo.normalizedName}`} className="text-lg sm:text-xl font-semibold hover:text-pink-600 transition-colors" style={{ color: 'var(--text-secondary)' }}>
-                        {job.employer}
+                        {displayEmployer}
                       </Link>
                     ) : (
-                      <span className="text-lg sm:text-xl font-semibold" style={{ color: 'var(--text-secondary)' }}>{job.employer}</span>
+                      <span className="text-lg sm:text-xl font-semibold" style={{ color: 'var(--text-secondary)' }}>{displayEmployer}</span>
                     )}
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '14px', color: 'var(--text-secondary)' }}>
                       <MapPin size={14} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
-                      {job.location}
+                      {displayLocation}
                     </span>
                   </div>
                 </div>
@@ -1215,17 +1252,19 @@ export default async function JobPage({ params }: JobPageProps) {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <p className="text-sm font-medium">
-                      {expiryStatus.text}{expiryStatus.isUrgent && ' — Apply soon!'}
+                      {expiryStatus.text}{expiryStatus.isUrgent && '. Apply soon.'}
                     </p>
                   </div>
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                  <ApplyButton jobId={job.id} applyLink={job.applyLink} jobTitle={job.title} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />
+                  <Suspense fallback={<ApplyButtonPlaceholder />}>
+                    <ApplyButton jobId={job.id} applyLink={job.applyLink} jobTitle={job.title} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />
+                  </Suspense>
                   <div style={{ display: 'grid', gridTemplateColumns: job.sourceType === 'employer' ? '1fr 1fr' : '1fr', gap: '8px' }}>
                     <SaveJobButton jobId={job.id} />
                     {job.sourceType === 'employer' && (
-                      <MessageEmployerButton jobId={job.id} jobTitle={job.title} employerName={job.employer} employerUserId={employerUserId} />
+                      <MessageEmployerButton jobId={job.id} jobTitle={displayTitle} employerName={displayEmployer} employerUserId={employerUserId} />
                     )}
                   </div>
                 </div>
@@ -1236,8 +1275,8 @@ export default async function JobPage({ params }: JobPageProps) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <ShareButtons
                       url={canonicalJobUrl}
-                      title={job.title}
-                      company={job.employer}
+                      title={displayTitle}
+                      company={displayEmployer}
                     />
                   </div>
                 </div>
@@ -1255,8 +1294,8 @@ export default async function JobPage({ params }: JobPageProps) {
                 <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
                   <ShareButtons
                     url={canonicalJobUrl}
-                    title={job.title}
-                    company={job.employer}
+                    title={displayTitle}
+                    company={displayEmployer}
                   />
                 </div>
               </div>
@@ -1334,14 +1373,14 @@ export default async function JobPage({ params }: JobPageProps) {
           <RelatedJobs
             jobs={internalLinkBuckets.moreFromEmployer}
             currentJobId={job.id}
-            title={`More from ${job.employer}`}
+            title={`More from ${displayEmployer}`}
           />
         )}
         {internalLinkBuckets.moreInCity.length > 0 && internalLinkBuckets.cityName && (
           <RelatedJobs
             jobs={internalLinkBuckets.moreInCity}
             currentJobId={job.id}
-            title={`More ${brand.niche.short} jobs in ${internalLinkBuckets.cityName}`}
+            title={`More ${brand.niche.short} jobs in ${displayText(internalLinkBuckets.cityName)}`}
           />
         )}
         {internalLinkBuckets.moreNewGrad.length > 0 && (
@@ -1357,20 +1396,34 @@ export default async function JobPage({ params }: JobPageProps) {
       </div>
 
       {/* Sticky Apply Button - Mobile Only */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-[60] shadow-lg safe-bottom" style={{ backgroundColor: '#FFFFFF', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+      <StickyApplyBar>
         <div className="px-4 py-2 pb-safe">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <ApplyButton jobId={job.id} applyLink={job.applyLink} jobTitle={job.title} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />
+            <Suspense fallback={<ApplyButtonPlaceholder />}>
+              <ApplyButton jobId={job.id} applyLink={job.applyLink} jobTitle={job.title} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />
+            </Suspense>
             <div style={{ display: 'grid', gridTemplateColumns: job.sourceType === 'employer' ? '1fr 1fr' : '1fr', gap: '8px' }}>
               <SaveJobButton jobId={job.id} />
               {job.sourceType === 'employer' && (
-                <MessageEmployerButton jobId={job.id} jobTitle={job.title} employerName={job.employer} employerUserId={employerUserId} />
+                <MessageEmployerButton jobId={job.id} jobTitle={displayTitle} employerName={displayEmployer} employerUserId={employerUserId} />
               )}
             </div>
           </div>
         </div>
-      </div>
+      </StickyApplyBar>
     </>
   );
+}
+
+/**
+ * Server-rendered stand-in for ApplyButton while its Suspense boundary is
+ * pending. ApplyButton reads useSearchParams() (the ?apply=1 auto-open), and
+ * on this ISR route an unwrapped search-param read bails the WHOLE page out
+ * to client rendering: the SSR HTML then carries no H1 and no JobPosting
+ * JSON-LD. The boundary confines the bailout to the button; the placeholder
+ * reserves the button's 52px min-height so hydration causes no layout shift.
+ */
+function ApplyButtonPlaceholder() {
+  return <div aria-hidden="true" style={{ minHeight: '52px', width: '100%' }} />;
 }
 

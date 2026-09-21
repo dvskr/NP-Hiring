@@ -89,7 +89,7 @@ export const CEU_GUIDE_TAGS: ReadonlyArray<string> = [
     'aprn license renewal',
 ];
 export const CEU_GUIDE_DESCRIPTION =
-    `Continuing education for ${brand.niche.descriptor}s runs on two clocks — state license renewal and national certification. ` +
+    `Continuing education for ${brand.niche.descriptor}s runs on two clocks: state license renewal and national certification. ` +
     `Find the board that publishes your state's CE rules, what CE usually has to cover, and how the two renewals fit together.`;
 
 const NP = brand.niche.short; // 'NP'
@@ -118,7 +118,7 @@ function authorityLabel(s: LicenseGuideState): string {
  */
 export function buildCeuStateTable(): string {
     const header = [
-        `| State | Board that publishes CE + renewal rules | Practice authority |`,
+        `| State | Board that publishes CE and renewal rules | Practice authority |`,
         `|---|---|---|`,
     ];
     const rows = LICENSE_GUIDE_STATES.map(
@@ -146,14 +146,14 @@ export function buildCeuGuideFaq(): CeuGuideFaq[] {
         {
             name: `How many CE hours do ${NP}s need?`,
             text:
-                `It depends entirely on the jurisdiction, and boards revise the requirement — so we deliberately do not publish hour counts here. ` +
+                `It depends entirely on the jurisdiction, and boards revise the requirement, so we deliberately do not publish hour counts here. ` +
                 `Use the table above to open your board's current renewal page, which is the only authoritative source for hours, the renewal cycle, accepted providers, and fees. ` +
                 `If you hold licenses in more than one state, each one renews on its own board's rules.`,
         },
         {
             name: `Is certification renewal the same as license renewal?`,
             text:
-                `No — they are two separate clocks with separate requirements, and meeting one does not satisfy the other. ` +
+                `No. They are two separate clocks with separate requirements, and meeting one does not satisfy the other. ` +
                 `Your state board renews your APRN license; your certifying body renews the national certification the board requires you to keep current. ` +
                 `For ${NP}s that body is AANP or ANCC; nurse anesthetists recertify through NBCRNA and certified nurse-midwives through AMCB. ` +
                 `Track both dates, because a lapsed certification can put the license renewal that depends on it at risk.`,
@@ -161,27 +161,27 @@ export function buildCeuGuideFaq(): CeuGuideFaq[] {
         {
             name: `Do ${NP}s need pharmacology CE?`,
             text:
-                `Commonly, yes — many boards attach a pharmacotherapeutics or prescribing component to prescriptive authority rather than to the base license, ` +
+                `Commonly, yes. Many boards attach a pharmacotherapeutics or prescribing component to prescriptive authority rather than to the base license, ` +
                 `and some add required topics such as controlled-substance or opioid prescribing. Whether it applies to you, and in what amount, is set by your board; ` +
                 `open your state's row in the table above before assuming general-purpose CE will cover it.`,
         },
         {
             name: `Does CE earned in one state count in another?`,
             text:
-                `Sometimes, but never assume it. Multistate RN privileges under the Nurse Licensure Compact cover the RN license, not APRN licensure or its CE — ` +
-                `each APRN license renews under its own board's rules, and boards differ on which accrediting organizations they accept. ` +
+                `Sometimes, but never assume it. Multistate RN privileges under the Nurse Licensure Compact cover the RN license, not APRN licensure or its CE. ` +
+                `Each APRN license renews under its own board's rules, and boards differ on which accrediting organizations they accept. ` +
                 `Confirm acceptance with the board you are renewing with before you pay for a course.`,
         },
         {
             name: `What happens if my CE is audited?`,
             text:
-                `Boards audit a share of renewals and ask for documentation after the fact, so keep completion certificates, provider names and accreditation numbers, dates, and hour breakdowns for every activity — ` +
+                `Boards audit a share of renewals and ask for documentation after the fact, so keep completion certificates, provider names and accreditation numbers, dates, and hour breakdowns for every activity, ` +
                 `not just a total. Retention periods and the consequences of an incomplete response are set by each board and published on its site.`,
         },
         {
             name: `Do free CE courses count toward renewal?`,
             text:
-                `Often, yes — what usually matters to a board is the accrediting organization behind the activity, not the price. ` +
+                `Often, yes. What usually matters to a board is the accrediting organization behind the activity, not the price. ` +
                 `Employer-provided education, conference sessions, and manufacturer-sponsored programs vary in whether they qualify. ` +
                 `Check the accepted-provider language on your board's renewal page before counting an activity toward a requirement.`,
         },
@@ -194,7 +194,7 @@ export function buildCeuGuideMarkdown(): string {
         .map((f) => `### ${f.name}\n\n${f.text}`)
         .join('\n\n');
 
-    return `**Quick answer:** Continuing education for ${NP_PROSE}s runs on two independent clocks — your state APRN license and your national certification — and meeting one does not satisfy the other. Hour counts, renewal cycles, accepted providers, and fees are set by each state board and revised periodically, so this page links all 51 boards directly instead of publishing numbers that go stale.
+    return `**Quick answer:** Continuing education for ${NP_PROSE}s runs on two independent clocks (your state APRN license and your national certification), and meeting one does not satisfy the other. Hour counts, renewal cycles, accepted providers, and fees are set by each state board and revised periodically, so this page links all 51 boards directly instead of publishing numbers that go stale.
 
 ---
 
@@ -205,7 +205,7 @@ The single most expensive CE mistake is treating renewal as one deadline.
 - **Your state APRN license** renews with the board of nursing (or equivalent agency) in each state where you hold a license. The board sets the hours, the cycle, which topics are mandatory, which accrediting organizations it recognizes, and the audit rules.
 - **Your national certification** renews with the body that issued it: AANP or ANCC for ${NP}s, NBCRNA for nurse anesthetists through its Continued Professional Certification program, and AMCB for certified nurse-midwives. Each has its own cycle, its own category rules, and its own documentation standards.
 
-The two overlap but are not interchangeable. Most boards require current national certification as a *condition* of license renewal, which means a lapsed certification can jeopardize a license that is otherwise in good standing. And hours that satisfy a certifying body's category rules will not necessarily satisfy a board's mandatory-topic requirement. Plan the certification cycle first — it is usually the longer one — then map the state requirements onto it.
+The two overlap but are not interchangeable. Most boards require current national certification as a *condition* of license renewal, which means a lapsed certification can jeopardize a license that is otherwise in good standing. And hours that satisfy a certifying body's category rules will not necessarily satisfy a board's mandatory-topic requirement. Plan the certification cycle first, since it is usually the longer one, and then map the state requirements onto it.
 
 ## Find your board
 
@@ -219,23 +219,23 @@ ${buildCeuStateTable()}
 
 Requirements differ, but the same categories recur across boards:
 
-- **General clinical CE** — the bulk of the requirement, usually accepted from any recognized accrediting organization.
-- **Pharmacology or pharmacotherapeutics** — frequently tied to prescriptive authority rather than the base license, and often required in a specific amount. In reduced- and restricted-practice states this can be bundled with the collaborative or supervisory paperwork your board requires.
-- **Controlled-substance and prescribing topics** — many boards require prescribers to complete education on safe prescribing, and clinicians registering with the DEA are subject to a separate federal training requirement for controlled-substance registrants; the current terms are published by the [DEA Diversion Control Division](https://www.deadiversion.usdoj.gov/).
-- **State-mandated topics** — boards add jurisdiction-specific subjects, and the list changes by legislative session. This is the category most often missed by clinicians relying on last cycle's plan.
-- **Practice hours** — some boards accept or require a minimum number of practice hours alongside CE, particularly for reactivating an inactive license.
+- **General clinical CE.** The bulk of the requirement, usually accepted from any recognized accrediting organization.
+- **Pharmacology or pharmacotherapeutics.** Frequently tied to prescriptive authority rather than the base license, and often required in a specific amount. In reduced- and restricted-practice states this can be bundled with the collaborative or supervisory paperwork your board requires.
+- **Controlled-substance and prescribing topics.** Many boards require prescribers to complete education on safe prescribing, and clinicians registering with the DEA are subject to a separate federal training requirement for controlled-substance registrants; the current terms are published by the [DEA Diversion Control Division](https://www.deadiversion.usdoj.gov/).
+- **State-mandated topics.** Boards add jurisdiction-specific subjects, and the list changes by legislative session. This is the category most often missed by clinicians relying on last cycle's plan.
+- **Practice hours.** Some boards accept or require a minimum number of practice hours alongside CE, particularly for reactivating an inactive license.
 
 ## Documentation is the part people lose
 
-Boards audit renewals after the fact. Attestation at renewal is not proof; the certificate is. For every activity, keep the completion certificate, the provider's name and accreditation number, the completion date, and the hour breakdown by category — because an audit asks for the breakdown, not the total. Store them somewhere that survives a job change, since employer learning-management systems are the most common place NPs discover a lost record.
+Boards audit renewals after the fact. Attestation at renewal is not proof; the certificate is. For every activity, keep the completion certificate, the provider's name and accreditation number, the completion date, and the hour breakdown by category, because an audit asks for the breakdown, not the total. Store them somewhere that survives a job change, since employer learning-management systems are the most common place NPs discover a lost record.
 
-If you hold licenses in more than one state, keep a single ledger with a column per license and a column per certification. Overlapping activities usually count in several places at once — but only if you can show the documentation each one wants.
+If you hold licenses in more than one state, keep a single ledger with a column per license and a column per certification. Overlapping activities usually count in several places at once, but only if you can show the documentation each one wants.
 
 ## How CE fits the rest of your career
 
-CE is a negotiable line item, not just a compliance chore. A CME/CE allowance and dedicated CE days are standard components of ${NP} compensation packages and are frequently easier to move than base salary — see the [salary negotiation guide](/blog/np-salary-negotiation-guide) for how to ask, and the [salary guide](/salary-guide) for what the market pays in your state. In 1099 and contract work the allowance usually does not exist, and CE becomes an out-of-pocket cost you should price into your rate; the [1099 vs W-2 breakdown](/blog/np-1099-vs-w2) walks through the full comparison.
+CE is a negotiable line item, not just a compliance chore. A CME/CE allowance and dedicated CE days are standard components of ${NP} compensation packages and are frequently easier to move than base salary. See the [salary negotiation guide](/blog/np-salary-negotiation-guide) for how to ask, and the [salary guide](/salary-guide) for what the market pays in your state. In 1099 and contract work the allowance usually does not exist, and CE becomes an out-of-pocket cost you should price into your rate; the [1099 vs W-2 breakdown](/blog/np-1099-vs-w2) walks through the full comparison.
 
-Relocating or picking up a second license? Open your target state's [licensure guide](/resources) — linked from the first column above — which covers the application path, practice authority, and Nurse Licensure Compact status alongside the same board link.
+Relocating or picking up a second license? Open your target state's [licensure guide](/resources), linked from the first column above, which covers the application path, practice authority, and Nurse Licensure Compact status alongside the same board link.
 
 ## Frequently asked questions
 

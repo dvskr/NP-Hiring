@@ -39,7 +39,7 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 const PAGE_PATH = '/tools/private-practice-revenue-calculator';
 const PAGE_URL = `${brand.baseUrl}${PAGE_PATH}`;
 const PAGE_TITLE = `Private Practice Revenue Calculator for ${brand.niche.short}s`;
-const PAGE_DESCRIPTION = `Model a ${brand.niche.short} private practice line by line: visits per week × collections per visit × working weeks, less overhead and fixed costs — with a sensitivity table showing how far the answer moves when your volume or reimbursement is off. An illustration, not a financial projection.`;
+const PAGE_DESCRIPTION = `Model a ${brand.niche.short} private practice line by line: visits per week × collections per visit × working weeks, less overhead and fixed costs, with a sensitivity table showing how far the answer moves when your volume or reimbursement is off. An illustration, not a financial projection.`;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent('Private Practice Revenue Calculator')}&type=page`;
 
 const WIDEST_STEP_PCT = Math.round(Math.max(...SENSITIVITY_STEPS.map(Math.abs)) * 100);
@@ -79,26 +79,26 @@ export const metadata: Metadata = {
 const ASSUMPTIONS: readonly string[] = [
   `The whole model is one line of arithmetic: scheduled visits per week × working weeks × the amount collected per completed visit, less overhead as a share of collections, less any fixed annual costs you add.`,
   `The presets are the ${GUIDE_SCENARIOS.length} scenarios published in our private practice guide (${SCENARIO_LABELS}). Selecting one loads the MIDPOINT of that scenario's volume and overhead bands; the guide's full band is shown next to the result so you can see what the midpoint left out.`,
-  `Working weeks default to ${GUIDE_MODEL.workingWeeksPerYear} — 52 less roughly six for holidays, vacation, and admin days, the same figure the guide uses.`,
-  `Per-visit amounts are what a practice COLLECTS, not what it bills. The guide's planning inputs are $${GUIDE_MODEL.insuranceCollectedPerVisit} on an insurance panel and $${GUIDE_MODEL.cashCollectedPerVisit} cash-pay, and both are planning inputs rather than contracted rates — replace them with the rates you are actually offered.`,
+  `Working weeks default to ${GUIDE_MODEL.workingWeeksPerYear}: 52 less roughly six for holidays, vacation, and admin days, the same figure the guide uses.`,
+  `Per-visit amounts are what a practice COLLECTS, not what it bills. The guide's planning inputs are $${GUIDE_MODEL.insuranceCollectedPerVisit} on an insurance panel and $${GUIDE_MODEL.cashCollectedPerVisit} cash-pay, and both are planning inputs rather than contracted rates; replace them with the rates you are actually offered.`,
   `Two inputs are yours alone and start at zero: the no-show and late-cancellation rate, and fixed annual costs such as a lease or a specific software or billing contract. We publish no figure for either, because vendor pricing changes and inventing one would put an expiring number on the page.`,
-  `The sensitivity table moves one input at a time by up to ±${WIDEST_STEP_PCT}% and holds the rest, so the "swing" column reads as what that single assumption is worth to your net. Those percentages are relative moves on the value you entered, not percentage points — +${WIDEST_STEP_PCT}% on an overhead share of ${EXAMPLE_OVERHEAD_PCT}% of collections is ${EXAMPLE_OVERHEAD_STEPPED}%, not ${EXAMPLE_OVERHEAD_WRONG}% — and every cell prints the input value it used so there is nothing to infer.`,
+  `The sensitivity table moves one input at a time by up to ±${WIDEST_STEP_PCT}% and holds the rest, so the "swing" column reads as what that single assumption is worth to your net. Those percentages are relative moves on the value you entered, not percentage points: +${WIDEST_STEP_PCT}% on an overhead share of ${EXAMPLE_OVERHEAD_PCT}% of collections is ${EXAMPLE_OVERHEAD_STEPPED}%, not ${EXAMPLE_OVERHEAD_WRONG}%. Every cell prints the input value it used, so there is nothing to infer.`,
   `Net is before self-employment tax and income tax. A practice owner is a contractor for tax purposes, so a substantial further deduction applies to the figure shown.`,
 ];
 
 const EXCLUSIONS: readonly string[] = [
   'Tax of any kind. Net here is pre-tax; self-employment tax alone takes a large bite, and the 1099 vs W-2 calculator models it properly.',
-  'Startup costs. Formation fees, credentialing, equipment, and a website are one-off costs this annual model does not carry — the guide covers them without printing figures that expire.',
-  'The ramp. A new practice does not open at full volume: payer credentialing has to complete before you can bill an insurer, and a panel fills gradually after that. We are not putting a number of days on either here — we have no defensible figure for how long your payers take, and it varies by payer and state. Ask each payer for its current processing time, then model your first year at a fraction of the steady-state volume you enter above.',
+  'Startup costs. Formation fees, credentialing, equipment, and a website are one-off costs this annual model does not carry; the guide covers them without printing figures that expire.',
+  'The ramp. A new practice does not open at full volume: payer credentialing has to complete before you can bill an insurer, and a panel fills gradually after that. We do not put a number of days on either here, because we have no defensible figure for how long your payers take, and it varies by payer and state. Ask each payer for its current processing time, then model your first year at a fraction of the steady-state volume you enter above.',
   'Vendor pricing. No software, billing, or insurance prices are published here or in the guide. Get current quotes.',
-  'Any per-category overhead breakdown. Overhead is a single share of collections, because a per-line dollar default would be an invented figure — put your own line items into the fixed-costs field.',
+  'Any per-category overhead breakdown. Overhead is a single share of collections, because a per-line dollar default would be an invented figure; put your own line items into the fixed-costs field.',
   'What a practice will actually earn. This computes your inputs. It has no knowledge of your payer mix, your market, or your referral base.',
 ];
 
 const FAQS = [
   {
     q: `How much can an ${brand.niche.short} private practice make?`,
-    a: `It is a volume-times-collections calculation, which is exactly why a headline number is the wrong thing to look for. Enter your own visits per week, what you actually collect per visit, and your overhead share, and the tool works it through. Then read the sensitivity table: at typical inputs, being 10% out on either volume or reimbursement moves the answer by tens of thousands of dollars a year, which tells you the honest answer is a range whose width depends on how well you know your own numbers. For comparison, the national median annual wage for employed ${brand.niche.descriptor}s is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}) — with malpractice, health coverage, and payroll taxes largely handled by an employer.`,
+    a: `It is a volume-times-collections calculation, which is exactly why a headline number is the wrong thing to look for. Enter your own visits per week, what you actually collect per visit, and your overhead share, and the tool works it through. Then read the sensitivity table: at typical inputs, being 10% out on either volume or reimbursement moves the answer by tens of thousands of dollars a year, which tells you the honest answer is a range whose width depends on how well you know your own numbers. For comparison, the national median annual wage for employed ${brand.niche.descriptor}s is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}), with malpractice, health coverage, and payroll taxes largely handled by an employer.`,
   },
   {
     q: 'Why does this ask for collections instead of what I charge?',
@@ -106,7 +106,7 @@ const FAQS = [
   },
   {
     q: 'What counts as overhead in this model?',
-    a: `Everything that scales with running the practice, expressed as one share of collections: billing, software, supplies, rent if you have it, staff, and the administrative cost of the panel. It is a single percentage rather than a list of line items on purpose — putting default dollar amounts against individual categories would mean publishing vendor prices we cannot stand behind. If you have real quotes for specific fixed costs, put them in the fixed annual costs field instead so they are subtracted as dollars rather than as a percentage.`,
+    a: `Everything that scales with running the practice, expressed as one share of collections: billing, software, supplies, rent if you have it, staff, and the administrative cost of the panel. It is a single percentage rather than a list of line items on purpose; putting default dollar amounts against individual categories would mean publishing vendor prices we cannot stand behind. If you have real quotes for specific fixed costs, put them in the fixed annual costs field instead so they are subtracted as dollars rather than as a percentage.`,
   },
   {
     q: 'Is this a financial projection I can show a lender?',
@@ -114,7 +114,7 @@ const FAQS = [
   },
   {
     q: 'Should I model insurance or cash-pay?',
-    a: `Model both and compare. Insurance panels fill faster and reach more patients at a lower collected amount per visit, with real billing and credentialing overhead attached. Cash-pay collects more per visit with far less paperwork but fills slowly and depends on your local market. Switch the preset between the insurance scenarios and the cash-pay panel and watch what happens to net — then decide which risk you would rather carry.`,
+    a: `Model both and compare. Insurance panels fill faster and reach more patients at a lower collected amount per visit, with real billing and credentialing overhead attached. Cash-pay collects more per visit with far less paperwork but fills slowly and depends on your local market. Switch the preset between the insurance scenarios and the cash-pay panel and watch what happens to net, then decide which risk you would rather carry.`,
   },
   {
     q: 'Does this include what I pay myself?',
@@ -176,7 +176,7 @@ export default function PrivatePracticeRevenueCalculatorPage() {
               Model a practice, then see how wrong it can be
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
-              Visits a week, what you collect per visit, weeks you work, overhead as a share of collections — the
+              Visits a week, what you collect per visit, weeks you work, overhead as a share of collections: the
               same four inputs our private practice guide builds its table from, except here you set them. Every
               preset loads the guide&rsquo;s published figures, and anything the guide has no figure for starts at
               zero and says so.
@@ -203,8 +203,8 @@ export default function PrivatePracticeRevenueCalculatorPage() {
             assumptions={ASSUMPTIONS}
             exclusions={EXCLUSIONS}
             sources={[
-              { label: `${brand.name} private practice guide — the model these defaults come from`, url: PRACTICE_GUIDE_PATH },
-              { label: '1099 vs W-2 calculator — the tax this figure is before', url: '/tools/1099-vs-w2-calculator' },
+              { label: `${brand.name} private practice guide: the model these defaults come from`, url: PRACTICE_GUIDE_PATH },
+              { label: '1099 vs W-2 calculator: the tax this figure is calculated before', url: '/tools/1099-vs-w2-calculator' },
               { label: STAT_SOURCES.averageSalary.source, url: STAT_SOURCES.averageSalary.sourceUrl },
             ]}
           />
@@ -250,8 +250,8 @@ export default function PrivatePracticeRevenueCalculatorPage() {
               { href: PRACTICE_GUIDE_PATH, title: 'Private practice guide', blurb: 'Entity formation, credentialing, EHR, malpractice, and the model this tool runs.' },
               { href: '/resources/fpa-guide', title: 'Practice authority guide', blurb: 'Whether an independent practice is available to you at all.' },
               { href: '/tools/licensure-checker', title: 'Licensure checker', blurb: 'Your state\u2019s authority classification and licensure steps.' },
-              { href: '/tools/1099-vs-w2-calculator', title: '1099 vs W-2 calculator', blurb: 'The tax this net figure sits before, modelled properly.' },
-              { href: '/salary-guide', title: `${brand.niche.short} salary guide`, blurb: 'What employed roles pay — the opportunity cost of going independent.' },
+              { href: '/tools/1099-vs-w2-calculator', title: '1099 vs W-2 calculator', blurb: 'The tax this net figure sits before, modeled properly.' },
+              { href: '/salary-guide', title: `${brand.niche.short} salary guide`, blurb: 'What employed roles pay: the opportunity cost of going independent.' },
               { href: '/jobs/private-practice', title: 'Private practice roles', blurb: 'Work inside an existing practice before you start one.' },
             ].map((l) => (
               <Link key={l.href} href={l.href} className="tool-card" style={{ ...clayCard, padding: '20px 20px 18px', textDecoration: 'none', display: 'block' }}>

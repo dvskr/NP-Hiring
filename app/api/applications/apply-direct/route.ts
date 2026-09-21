@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { buildApplicationStatusFields } from './status-fields';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -224,7 +225,15 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // 5b. Upsert the application (don't duplicate if user already applied)
+        // 5b. Upsert the application (don't duplicate if user already applied).
+        // The existing row's state decides the status: a withdrawn application
+        // that is re-submitted becomes active again (see status-fields.ts).
+        const existingApplication = await prisma.jobApplication.findUnique({
+            where: { userId_jobId: { userId: user.id, jobId } },
+            select: { status: true, withdrawnAt: true },
+        });
+        const statusFields = buildApplicationStatusFields(existingApplication, autoReject, autoRejectReason);
+
         const application = await prisma.jobApplication.upsert({
             where: {
                 userId_jobId: { userId: user.id, jobId },
@@ -237,11 +246,7 @@ export async function POST(request: NextRequest) {
                 consentGivenAt: new Date(),
                 withdrawnAt: null, // un-withdraw if re-applying
                 ...(validatedAnswers && { screeningAnswers: validatedAnswers }),
-                ...(autoReject && {
-                    status: 'rejected',
-                    notes: `Auto-rejected: ${autoRejectReason}`,
-                    statusUpdatedAt: new Date(),
-                }),
+                ...statusFields,
             },
             create: {
                 userId: user.id,
@@ -253,11 +258,7 @@ export async function POST(request: NextRequest) {
                 consentGiven: true,
                 consentGivenAt: new Date(),
                 ...(validatedAnswers && { screeningAnswers: validatedAnswers }),
-                ...(autoReject && {
-                    status: 'rejected',
-                    notes: `Auto-rejected: ${autoRejectReason}`,
-                    statusUpdatedAt: new Date(),
-                }),
+                ...statusFields,
             },
         });
 

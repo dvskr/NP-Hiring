@@ -32,9 +32,9 @@ export default function ForgotPasswordPage() {
       })
       if (!res.ok) {
         if (res.status === 429) {
-          setError('Too many reset attempts. Try again in an hour.')
+          setError('Too many reset attempts. Please try again in an hour.')
         } else {
-          setError('Could not send reset email. Please try again.')
+          setError('We could not send the reset email. Please try again.')
         }
         return
       }
@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
       // exists — show the same success UI to avoid account enumeration.
       setSuccess(true)
     } catch {
-      setError('An unexpected error occurred')
+      setError('An unexpected error occurred.')
     } finally {
       setLoading(false)
     }
@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
         Reset your password
       </h1>
       <p style={{ fontSize: '14px', color: '#6B7F8A', marginBottom: '20px', textAlign: 'center' }}>
-        Enter your email and we&apos;ll send you a reset link
+        Enter your email address and we will send you a reset link.
       </p>
 
       <div style={{
@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
             </div>
             <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: 0 }}>Check your email</h3>
             <p style={{ fontSize: '14px', color: '#6B7F8A', margin: 0 }}>
-              We&apos;ve sent a password reset link to <strong>{email}</strong>
+              We have sent a password reset link to <strong>{email}</strong>.
             </p>
             <Link href="/login" style={{ fontSize: '14px', fontWeight: 600, color: '#BE185D', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
               <ArrowLeft className="w-4 h-4" /> Back to login

@@ -73,7 +73,7 @@ export interface CareerPulseStat {
 }
 
 export const CAREER_PULSE_STATS: readonly CareerPulseStat[] = [
-    { emoji: '📈', value: STAT_SOURCES.blsGrowth2034.formatted, label: 'Projected growth 2024-2034', color: '#D5F5F1' },
+    { emoji: '📈', value: STAT_SOURCES.blsGrowth2034.formatted, label: 'Projected growth 2024 to 2034', color: '#D5F5F1' },
     { emoji: '💰', value: `$${NATIONAL_AVG_SALARY_K}K`, label: 'Median annual salary (BLS)', color: '#FDE68A' },
     { emoji: '🏥', value: 'Daily', label: 'New jobs from employer ATS feeds', color: '#BFDBFE' },
 ];
@@ -256,10 +256,10 @@ export interface SalaryCalcOption {
 }
 
 export const SALARY_CALC_EXPERIENCE_OPTIONS: readonly SalaryCalcOption[] = [
-    { label: 'New Grad (0-1 yr)', value: 'new-grad', multiplier: 0.82 },
-    { label: 'Early Career (1-3 yrs)', value: 'early', multiplier: 0.93 },
-    { label: 'Mid-Career (3-7 yrs)', value: 'mid', multiplier: 1.0 },
-    { label: 'Experienced (7-15 yrs)', value: 'experienced', multiplier: 1.12 },
+    { label: 'New Grad (0 to 1 yr)', value: 'new-grad', multiplier: 0.82 },
+    { label: 'Early Career (1 to 3 yrs)', value: 'early', multiplier: 0.93 },
+    { label: 'Mid-Career (3 to 7 yrs)', value: 'mid', multiplier: 1.0 },
+    { label: 'Experienced (7 to 15 yrs)', value: 'experienced', multiplier: 1.12 },
     { label: 'Expert (15+ yrs)', value: 'expert', multiplier: 1.28 },
 ];
 

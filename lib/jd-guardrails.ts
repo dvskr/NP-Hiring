@@ -145,7 +145,7 @@ export function checkJdGuardrails(jdHtml: string): GuardrailResult {
   const top = topKeywordDensity(text);
   if (top && top.share > MAX_KEYWORD_DENSITY) {
     errors.push(
-      `The word "${top.word}" makes up ${(top.share * 100).toFixed(1)}% of the description — Google may flag this as keyword stuffing. Rewrite for variety.`,
+      `The word "${top.word}" makes up ${(top.share * 100).toFixed(1)}% of the description. Google may flag this as keyword stuffing. Rewrite for variety.`,
     );
   }
 

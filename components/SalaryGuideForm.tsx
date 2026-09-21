@@ -13,7 +13,7 @@ export default function SalaryGuideForm() {
 
     if (!email || !email.includes('@')) {
       setStatus('error');
-      setMessage('Please enter a valid email');
+      setMessage('Please enter a valid email address.');
       return;
     }
 
@@ -30,11 +30,11 @@ export default function SalaryGuideForm() {
 
       if (response.ok && data.success) {
         setStatus('success');
-        setMessage('Check your email!');
+        setMessage('Please check your email.');
         setEmail('');
       } else {
         setStatus('error');
-        setMessage(data.error || 'Something went wrong');
+        setMessage(data.error || 'Something went wrong.');
       }
     } catch {
       setStatus('error');
@@ -99,7 +99,7 @@ export default function SalaryGuideForm() {
           setEmail(e.target.value);
           if (status === 'error') setStatus('idle');
         }}
-        placeholder="Email for free PDF guide"
+        placeholder="Email for the free PDF guide"
         style={{
           flex: 1,
           padding: '8px 0',
@@ -119,7 +119,7 @@ export default function SalaryGuideForm() {
           padding: '8px 14px',
           borderRadius: '6px',
           border: 'none',
-          background: '#059669',
+          background: '#047857',
           color: 'white',
           fontWeight: 600,
           fontSize: '0.8rem',

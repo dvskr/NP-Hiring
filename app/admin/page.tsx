@@ -212,7 +212,7 @@ export default function AdminDashboard() {
       <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ ...heading, fontSize: '30px', marginBottom: '4px', letterSpacing: '-0.5px' }}>Admin Dashboard</h1>
-          <p style={sub}>{brand.name} — Overview · Last 30 days</p>
+          <p style={sub}>{brand.name} · Overview · Last 30 days</p>
         </div>
         <button onClick={fetchAnalytics} style={{
           padding: '10px 22px', borderRadius: '20px', cursor: 'pointer',
@@ -359,7 +359,7 @@ export default function AdminDashboard() {
                     </span>
                   </td>
                   <td style={{ padding: '14px 16px', fontSize: '13px', color: '#94A3B8', borderBottom: '1px solid #F0F3F2', textTransform: 'capitalize' }}>
-                    {job.source || '—'}
+                    {job.source || 'None'}
                   </td>
                 </tr>
               ))}
@@ -456,9 +456,9 @@ export default function AdminDashboard() {
       {/* ─── Quick Actions ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { icon: <Briefcase size={18} style={{ color: '#BE185D' }} />, title: 'Jobs', desc: 'Manage job postings & CRUD', href: '/admin/jobs', color: '#BE185D' },
-          { icon: <BarChart3 size={18} style={{ color: '#3B82F6' }} />, title: 'Analytics', desc: 'Deep-dive engagement data', href: '/admin/analytics', color: '#3B82F6' },
-          { icon: <Users size={18} style={{ color: '#A855F7' }} />, title: 'Users', desc: 'Manage users & subscribers', href: '/admin/users', color: '#A855F7' },
+          { icon: <Briefcase size={18} style={{ color: '#BE185D' }} />, title: 'Jobs', desc: 'Create, edit, and manage job postings', href: '/admin/jobs', color: '#BE185D' },
+          { icon: <BarChart3 size={18} style={{ color: '#3B82F6' }} />, title: 'Analytics', desc: 'Explore engagement data in depth', href: '/admin/analytics', color: '#3B82F6' },
+          { icon: <Users size={18} style={{ color: '#A855F7' }} />, title: 'Users', desc: 'Manage users and subscribers', href: '/admin/users', color: '#A855F7' },
           { icon: <Mail size={18} style={{ color: '#EC4899' }} />, title: 'Email Broadcasts', desc: 'Send personalized emails', href: '/admin/email', color: '#EC4899' },
           { icon: <Target size={18} style={{ color: '#F59E0B' }} />, title: 'Outreach', desc: 'Employer lead pipeline', href: '/admin/outreach', color: '#F59E0B' },
         ].map((a) => (

@@ -203,16 +203,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // generateMetadata and the page handler run in parallel, so DB work
     // here doubles per-request load for marginal benefit).
     const median = STAT_SOURCES.averageSalary;
-    const title = `${page.shortTitle} Salary Guide 2026 — Pay & Top States`;
+    const title = `${page.shortTitle} Salary Guide 2026: Pay & Top States`;
     const premiumClause = page.premium
-        ? ` Typical premium +${page.premium.minPct}–${page.premium.maxPct}% over the all-${brand.niche.short} median.`
+        ? ` Typical premium +${page.premium.minPct} to ${page.premium.maxPct}% over the all-${brand.niche.short} median.`
         : '';
     // The all-<niche> median is this page's own cohort figure only on a
     // niche-role page; on a CRNA / CNM page it must not headline the
     // description as if it were their pay.
     const description = page.isNicheRole
         ? `${page.role} salary guide: national all-${brand.niche.short} median ${median.formatted} (BLS).${premiumClause} Top-paying states and live openings, updated daily.`
-        : `${page.role} salary guide: certification, where ${specialtyNounPlural(page)} work, top-paying states, and live openings with disclosed pay on ${brand.name} — updated daily.`;
+        : `${page.role} salary guide: certification, where ${specialtyNounPlural(page)} work, top-paying states, and live openings with disclosed pay on ${brand.name}, updated daily.`;
     const ogImage = specialtyOgImage(page);
     const url = `${brand.baseUrl}/salary-guide/specialty/${page.slug}`;
 
@@ -274,15 +274,15 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
             value: median.formatted,
             // On a non-niche APRN page this card is a benchmark, not the
             // page's own cohort figure — say so on the card itself.
-            sub: page.isNicheRole ? median.source : `Benchmark — excludes ${nounPlural}`,
+            sub: page.isNicheRole ? median.source : `Benchmark (excludes ${nounPlural})`,
             color: '#F472B6',
         },
         ...(range && page.premium
             ? [{
                 icon: TrendingUp,
                 label: `Estimated ${page.label} Range`,
-                value: `${formatSalary(range.min)} – ${formatSalary(range.max)}`,
-                sub: `Median × +${page.premium.minPct}–${page.premium.maxPct}% premium`,
+                value: `${formatSalary(range.min)} to ${formatSalary(range.max)}`,
+                sub: `Median × +${page.premium.minPct} to ${page.premium.maxPct}% premium`,
                 color: '#E86C2C',
             }]
             : []),
@@ -301,8 +301,8 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
             ? [{
                 icon: Briefcase,
                 label: 'Reported Range',
-                value: `${formatSalary(live.minSalary)} – ${formatSalary(live.maxSalary)}`,
-                sub: 'Min – max across live postings',
+                value: `${formatSalary(live.minSalary)} to ${formatSalary(live.maxSalary)}`,
+                sub: 'Min to max across live postings',
                 color: '#3B82F6',
             }]
             : []),
@@ -340,14 +340,14 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                 dangerouslySetInnerHTML={{ __html: sanitizeJson({
                     '@context': 'https://schema.org',
                     '@type': 'Article',
-                    headline: `${page.role} Salary Guide — Pay, Premium & Top States`,
+                    headline: `${page.role} Salary Guide: Pay, Premium & Top States`,
                     // Mirrors the visible hero: the premium range is labelled
                     // "estimated" (it is median × published premium, not an
                     // observation), and on a non-niche APRN page the cited
                     // median is stated as an excluding benchmark rather than
                     // as that role's pay.
                     description: page.isNicheRole
-                        ? `${page.role} pay: national all-${brand.niche.short} median ${median.formatted} (${median.source})${range ? `, estimated ${page.label} range ${formatSalary(range.min)}–${formatSalary(range.max)}` : ''}.`
+                        ? `${page.role} pay: national all-${brand.niche.short} median ${median.formatted} (${median.source})${range ? `, estimated ${page.label} range ${formatSalary(range.min)} to ${formatSalary(range.max)}` : ''}.`
                         : `${page.role} salary guide: certification, where ${specialtyNounPlural(page)} work, top-paying states, and pay disclosed in live openings on ${brand.name}. ${medianSentence(page)}`,
                     author: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
                     publisher: { '@type': 'Organization', name: brand.name, logo: { '@type': 'ImageObject', url: `${brand.baseUrl}/logo.png` } },
@@ -422,8 +422,8 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                             <>
                                 {' '}
                                 {page.label} pay is estimated at{' '}
-                                <strong>{formatSalary(range.min)}–{formatSalary(range.max)}</strong>
-                                {` (+${page.premium.minPct}–${page.premium.maxPct}% premium)`}.
+                                <strong>{formatSalary(range.min)} to {formatSalary(range.max)}</strong>
+                                {` (+${page.premium.minPct} to ${page.premium.maxPct}% premium)`}.
                             </>
                         )}
                     </p>
@@ -501,7 +501,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                             Top-Paying States for {nounPlural}
                         </h2>
                         <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
-                            Median of active postings with disclosed, non-estimated salary on {brand.name} —
+                            Median of active postings with disclosed, non-estimated salary on {brand.name},
                             published only for states with at least {BENCHMARK_MIN_POSTINGS} postings
                             from {BENCHMARK_MIN_EMPLOYERS}+ employers. Updated daily.
                         </p>
@@ -574,7 +574,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                             Medians across live {page.label.toLowerCase()} postings with disclosed salary on this
                             board, grouped by the experience each posting asks for and published only when a
                             bucket clears the {BENCHMARK_MIN_POSTINGS}-posting, {BENCHMARK_MIN_EMPLOYERS}-employer
-                            minimum. Buckets overlap (a 5+ years role also counts toward 3+).
+                            minimum. Buckets overlap (a role requiring 5+ years also counts toward 3+).
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {experienceBands.map((band) => (
@@ -630,7 +630,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                     </h2>
                     <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '16px' }}>
                         <strong>Certification:</strong> {page.certification}. State licensure requirements
-                        vary — check your state board of nursing for specifics.
+                        vary, so check your state board of nursing for specifics.
                     </p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {page.settings.map((setting) => (
@@ -741,7 +741,7 @@ export default async function SpecialtySalaryGuidePage({ params }: PageProps) {
                 {/* FAQ — rendered from the SAME faqs array as the FAQPage JSON-LD */}
                 <div style={{ marginTop: '32px' }}>
                     <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
-                        {page.role} Salary — FAQ
+                        {page.role} Salary: FAQ
                     </h2>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {faqs.map((faq, i) => (

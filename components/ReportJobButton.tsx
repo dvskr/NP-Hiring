@@ -9,10 +9,10 @@ import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 
 const REPORT_REASONS = [
     { value: 'expired', label: 'Expired / Closed', icon: '⏰' },
-    { value: 'wrong_salary', label: 'Wrong salary', icon: '💰' },
+    { value: 'wrong_salary', label: 'Incorrect salary', icon: '💰' },
     { value: 'scam', label: 'Scam / Spam', icon: '🚫' },
     { value: 'duplicate', label: 'Duplicate', icon: '📋' },
-    { value: 'wrong_info', label: 'Wrong info', icon: '📍' },
+    { value: 'wrong_info', label: 'Incorrect details', icon: '📍' },
     { value: 'other', label: 'Other', icon: '❓' },
 ];
 
@@ -72,7 +72,7 @@ export default function ReportJobButton({ jobId, jobTitle }: ReportJobButtonProp
                 setErrorMsg('Please sign in to report a job.');
             } else {
                 setStatus('error');
-                setErrorMsg(data.error || 'Failed to submit report');
+                setErrorMsg(data.error || 'Failed to submit the report.');
             }
         } catch {
             setStatus('error');
@@ -188,7 +188,7 @@ export default function ReportJobButton({ jobId, jobTitle }: ReportJobButtonProp
                                     Report Submitted
                                 </p>
                                 <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                    Thanks for keeping listings clean.
+                                    Thank you for helping keep listings accurate.
                                 </p>
                             </div>
                         ) : (

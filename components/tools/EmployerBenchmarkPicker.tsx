@@ -17,7 +17,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, BarChart3, Info } from 'lucide-react';
 import { brand } from '@/config/brand';
-import { classifyOffer, type BenchmarkRow, type OfferStanding } from './benchmark-model';
+import { classifyOffer, parseOfferInput, type BenchmarkRow, type OfferStanding } from './benchmark-model';
 import ToolStyles from './ToolStyles';
 import { TOOL_ACCENT, clayCard, controlStyle, formatUsd, labelStyle, selectStyle } from './tool-theme';
 
@@ -39,13 +39,13 @@ const STANDING_META: Record<OfferStanding, { label: string; color: string; bg: s
     label: 'Inside the market range',
     color: '#047857',
     bg: '#D1FAE5',
-    note: 'Your figure sits between the 25th and 75th percentiles of posted pay here — the band most candidates are seeing from other employers.',
+    note: 'Your figure sits between the 25th and 75th percentiles of posted pay here, the band most candidates are seeing from other employers.',
   },
   above: {
     label: 'Above the market range',
     color: '#4338CA',
     bg: '#E0E7FF',
-    note: 'Your figure sits above the 75th percentile of posted pay here. That is a genuine recruiting advantage — say the number in the posting so it does the work.',
+    note: 'Your figure sits above the 75th percentile of posted pay here. That is a genuine recruiting advantage. State the number in the posting so it does the work.',
   },
 };
 
@@ -62,10 +62,7 @@ export default function EmployerBenchmarkPicker({ national, states, compact = fa
     return states.find((s) => s.scope === scope) ?? national;
   }, [scope, states, national]);
 
-  const offerValue = useMemo(() => {
-    const parsed = Number.parseFloat(offer.replace(/[^0-9.]/g, ''));
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-  }, [offer]);
+  const offerValue = useMemo(() => parseOfferInput(offer), [offer]);
 
   const standing = row && offerValue ? classifyOffer(offerValue, row) : null;
 
@@ -142,7 +139,7 @@ export default function EmployerBenchmarkPicker({ national, states, compact = fa
           {formatUsd(row.median)}
         </div>
         <p style={{ fontSize: '13px', color: '#5A4A42', margin: '8px 0 0', lineHeight: 1.6 }}>
-          Middle of the market: <strong>{formatUsd(row.p25)} – {formatUsd(row.p75)}</strong> (25th to 75th
+          Middle of the market: <strong>{formatUsd(row.p25)} to {formatUsd(row.p75)}</strong> (25th to 75th
           percentile), from {row.postings.toLocaleString('en-US')} published {brand.niche.short} postings that
           disclose pay, across {row.employers.toLocaleString('en-US')} employers.
         </p>
@@ -173,7 +170,7 @@ export default function EmployerBenchmarkPicker({ national, states, compact = fa
       {standing && (
         <div style={{ padding: '16px 18px', borderRadius: '14px', background: STANDING_META[standing].bg, marginBottom: '16px' }}>
           <p style={{ fontSize: '13.5px', fontWeight: 800, color: STANDING_META[standing].color, margin: '0 0 5px' }}>
-            {formatUsd(offerValue as number)} — {STANDING_META[standing].label}
+            {formatUsd(offerValue as number)}: {STANDING_META[standing].label}
           </p>
           <p style={{ fontSize: '13px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>{STANDING_META[standing].note}</p>
         </div>

@@ -331,7 +331,7 @@ export default function CandidateSearchClient() {
                 setBrowseError(`Couldn’t load candidates (request failed with status ${res.status}).`);
             }
         } catch {
-            setBrowseError('Couldn’t load candidates — check your connection and try again.');
+            setBrowseError('Couldn’t load candidates. Check your connection and try again.');
         }
         setLoading(false);
     }, [aiMode, jdSearchPostingId, query, experience, selectedSpecialties, selectedStates, workMode, hasResume, page]);
@@ -419,8 +419,8 @@ export default function CandidateSearchClient() {
             });
             toast(
                 wasSaved
-                    ? 'Couldn’t remove this saved candidate — please try again.'
-                    : 'Couldn’t save this candidate — please try again.',
+                    ? 'Couldn’t remove this saved candidate. Please try again.'
+                    : 'Couldn’t save this candidate. Please try again.',
                 'error',
             );
         }
@@ -803,7 +803,7 @@ export default function CandidateSearchClient() {
                                     }}
                                 >
                                     <Sparkles size={11} style={{ opacity: 0.7 }} />
-                                    {used}/{cap} AI searches used today{atLimit ? ' — resets at midnight CT' : ''}
+                                    {used}/{cap} AI searches used today{atLimit ? '. Resets at midnight CT.' : ''}
                                 </p>
                             </div>
 
@@ -832,7 +832,7 @@ export default function CandidateSearchClient() {
                         ...cardRecessed, padding: '12px 16px', marginBottom: '16px',
                         fontSize: '12px', color: '#92400E',
                     }}>
-                        AI search isn&rsquo;t enabled on your account yet — contact support if you&rsquo;d like early access.
+                        AI search isn&rsquo;t enabled on your account yet. Contact support if you&rsquo;d like early access.
                     </div>
                 )}
                 {aiMode && aiState.status === 'unavailable' && (
@@ -840,7 +840,7 @@ export default function CandidateSearchClient() {
                         ...cardRecessed, padding: '12px 16px', marginBottom: '16px',
                         fontSize: '12px', color: '#92400E',
                     }}>
-                        AI search is temporarily unavailable — try again in a moment.
+                        AI search is temporarily unavailable. Please try again in a moment.
                     </div>
                 )}
                 {/* Removed: helper text below the search bar — the placeholder
@@ -987,7 +987,7 @@ export default function CandidateSearchClient() {
                             fontFamily: 'var(--font-lora), Georgia, serif',
                             color: '#1A2E35', marginBottom: '6px',
                         }}>No candidates found</h3>
-                        <p style={{ fontSize: '13px', color: '#8A9BA6' }}>Try adjusting your search or filters</p>
+                        <p style={{ fontSize: '13px', color: '#8A9BA6' }}>Try adjusting your search or filters.</p>
                     </div>
                 ) : (
                     <>
@@ -1046,7 +1046,7 @@ export default function CandidateSearchClient() {
                                 ? jdSearchPostingId
                                     ? `Top ${candidates.length} AI-ranked candidate${candidates.length !== 1 ? 's' : ''} for this posting`
                                     : `Top ${candidates.length} AI-ranked candidate${candidates.length !== 1 ? 's' : ''} for your query`
-                                : `Showing ${(page - 1) * 20 + 1}–${Math.min(page * 20, totalCount)} of ${totalCount} candidate${totalCount !== 1 ? 's' : ''}`}
+                                : `Showing ${(page - 1) * 20 + 1} to ${Math.min(page * 20, totalCount)} of ${totalCount} candidate${totalCount !== 1 ? 's' : ''}`}
                         </p>
 
                         {/* Bulk-unlock selection toolbar. File-manager-style.
@@ -1116,7 +1116,7 @@ export default function CandidateSearchClient() {
                                         setBulkError(`${result.unlocked.length} unlocked, ${result.failed.length} failed.`);
                                     }
                                 } catch {
-                                    setBulkError('Network error — try again.');
+                                    setBulkError('Network error. Please try again.');
                                 } finally {
                                     setBulkSubmitting(false);
                                 }

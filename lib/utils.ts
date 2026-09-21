@@ -109,7 +109,8 @@ export function formatSalary(
   const periodSuffix = suffix[periodKey];
 
   if (min && max && min !== max) {
-    return `${formatNumber(min, periodKey)}-${formatNumber(max, periodKey)}${periodSuffix}`;
+    // Copy rule (owner, 2026-09-12): visible ranges say "to", never a dash.
+    return `${formatNumber(min, periodKey)} to ${formatNumber(max, periodKey)}${periodSuffix}`;
   }
   if (min) {
     return `${formatNumber(min, periodKey)}${periodSuffix}`;

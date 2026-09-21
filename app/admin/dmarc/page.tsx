@@ -22,7 +22,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 3600 // 1 hour — reports arrive daily, no need to hammer
 
 export const metadata: Metadata = {
-  title: 'DMARC — Admin',
+  title: 'DMARC | Admin',
   robots: { index: false, follow: false },
 }
 
@@ -162,9 +162,9 @@ export default async function DmarcAdminPage() {
         </h1>
         <p style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>
           Email authentication health for <strong>{brand.domain}</strong>. Reports
-          arrive daily from Gmail/Yahoo/Outlook receivers and are aggregated
-          into weekly digests by Postmark. First report typically appears
-          24-48 hours after `_dmarc` DNS record activation.
+          arrive daily from Gmail, Yahoo, and Outlook receivers and are aggregated
+          into weekly digests by Postmark. The first report typically appears
+          24 to 48 hours after the <code>_dmarc</code> DNS record is activated.
         </p>
       </header>
 
@@ -186,7 +186,7 @@ export default async function DmarcAdminPage() {
           <AlertTriangle size={18} style={{ marginTop: '2px', flexShrink: 0 }} />
           <div>
             <div style={{ fontWeight: 700, marginBottom: '2px' }}>
-              Couldn&rsquo;t fetch live data
+              Could not fetch live data
             </div>
             <div style={{ fontSize: '13px' }}>{data.error}</div>
             <div style={{ fontSize: '12px', marginTop: '6px' }}>
@@ -280,9 +280,9 @@ export default async function DmarcAdminPage() {
             }}
           >
             Receiving mail servers send DMARC reports daily, so the first
-            digest will appear here within 24-48 hours of your first send
-            from a domain with the new <code>_dmarc</code> TXT record. If it&rsquo;s
-            been longer than 48h, check the DNS propagation.
+            digest will appear here within 24 to 48 hours of your first send
+            from a domain with the new <code>_dmarc</code> TXT record. If it has
+            been longer than 48 hours, check DNS propagation.
           </p>
           <Link
             href="https://dmarc.postmarkapp.com"
@@ -316,8 +316,8 @@ export default async function DmarcAdminPage() {
               Top sending sources this week
             </h2>
             <p style={{ margin: '2px 0 0', color: '#64748B', fontSize: '13px' }}>
-              Where receivers saw <strong>{brand.domain}</strong> coming from.
-              Anything not on this list saying it&rsquo;s you is a spoofing attempt.
+              Where receivers saw mail from <strong>{brand.domain}</strong> originating.
+              Any sender not on this list that claims to be you is a spoofing attempt.
             </p>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>

@@ -26,7 +26,7 @@ import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, clayCard, iconTile } from '@/
 import { TOOLS, TOOLS_HUB_PATH, type ToolAudience, type ToolIconKey } from './tools-registry';
 
 const PAGE_URL = `${brand.baseUrl}${TOOLS_HUB_PATH}`;
-const PAGE_TITLE = `Free ${brand.niche.short} Career Tools — Calculators, Comparisons & Benchmarks`;
+const PAGE_TITLE = `Free ${brand.niche.short} Career Tools: Calculators, Comparisons & Benchmarks`;
 /** Enumerated from the registry so the description cannot omit a live tool. */
 const TOOL_TITLE_LIST = TOOLS.map((tool) => tool.title.toLowerCase()).join('; ');
 const PAGE_DESCRIPTION = `${TOOLS.length} free interactive tools for ${brand.niche.descriptor}s and the teams hiring them: ${TOOL_TITLE_LIST}.`;
@@ -116,8 +116,8 @@ export default function ToolsHubPage() {
               {brand.niche.short} career tools
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
-              {TOOLS.length} tools built on the same data as the rest of this site — live postings, published
-              federal tax figures, sourced regulatory data, and our own published prices. Every one shows its
+              {TOOLS.length} tools built on the same data as the rest of this site: live postings, published
+              federal tax figures, sourced regulatory data, and our own published prices. Each one shows its
               working: what it assumes, what it excludes, and where the numbers came from. Where we have no
               defensible figure, the field starts empty and says so rather than guessing.
             </p>

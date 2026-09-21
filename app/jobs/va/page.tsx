@@ -2,6 +2,7 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import MedianFigure from '@/components/MedianFigure';
 import { Shield, Award, Clock, Building2, TrendingUp, Lightbulb, Bell, GraduationCap, Calendar, Home, Heart, Briefcase , ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -11,11 +12,10 @@ import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 // ISR: cache for 1 hour
 const clayCard: React.CSSProperties = {
@@ -63,12 +63,12 @@ const ldJson = (obj: unknown): string =>
 // serving veteran patients across all sectors.
 const vaFaqs = [
   {
-    question: `How does VA pay work for ${brand.niche.short}s — is it the standard GS scale?`,
+    question: `How does VA pay work for ${brand.niche.short}s, and is it the standard GS scale?`,
     answer: `VA ${brand.niche.short}s are appointed under Title 38 authority, and pay is set from nurse locality pay schedules that vary by facility rather than a single national General Schedule table. Each USAJobs announcement lists the salary range for its facility, and current pay schedules are published on VA.gov.`,
   },
   {
     question: 'What is the Education Debt Reduction Program (EDRP)?',
-    answer: `EDRP reimburses student-loan payments for clinicians hired into eligible, hard-to-fill VA positions. Eligibility is position-specific — the vacancy announcement states whether EDRP is authorized — and you apply after appointment within the program's application window. Current award limits and rules are published on VA.gov.`,
+    answer: `EDRP reimburses student-loan payments for clinicians hired into eligible, hard-to-fill VA positions. Eligibility is position-specific (the vacancy announcement states whether EDRP is authorized), and you apply after appointment within the program's application window. Current award limits and rules are published on VA.gov.`,
   },
   {
     question: 'Do I need a license in the same state as the VA facility?',
@@ -130,11 +130,11 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} VA ${brand.niche.short} Jobs — Federal Benefits, EDRP & Pension`,
+    title: `${stats.totalJobs} VA ${brand.niche.short} Jobs: Federal Benefits, EDRP & Pension`,
     description: `Find ${stats.totalJobs} VA ${brand.niche.short} jobs with federal pension, EDRP loan repayment up to $200K, FEHB coverage, and full practice authority within the VA system. Updated daily.`,
     openGraph: {
-      title: `${stats.totalJobs} VA ${brand.niche.short} Jobs - Veterans Affairs`,
-      description: `Browse VA ${brand.niche.descriptor} positions. Federal benefits, loan repayment, clinical autonomy.`,
+      title: `${stats.totalJobs} VA ${brand.niche.short} Jobs at Veterans Affairs`,
+      description: `Browse VA ${brand.niche.descriptor} positions with federal benefits, loan repayment, and clinical autonomy.`,
       type: 'website',
       images: [{
         url: `/api/og?type=page&title=${encodeURIComponent(`${stats.totalJobs} VA ${brand.niche.short} Jobs`)}&subtitle=${encodeURIComponent('Federal benefits & EDRP loan repayment')}`,
@@ -208,10 +208,10 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#97b0c9"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v2_va.webp`}
+        heroImage="/images/categories/heroes/va.webp"
         heroAlt={`VA ${brand.niche.short} Veterans Affairs medical center`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'VA']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "VA Jobs", url: `${brand.baseUrl}/jobs/va` }])}
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('va') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="VA"
         headlineLine2={brand.niche.short}
@@ -287,7 +287,7 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
                   <TrendingUp size={20} style={{ color: '#34D399' }} />
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Salary Insights</h3>
                 </div>
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.medianSalaryK}k</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}><MedianFigure k={stats.medianSalaryK} /></div>
                 <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Median annual salary</div>
               </div>
             )}
@@ -305,22 +305,22 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_va_flag.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/va-flag.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Serve Veterans</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Care for veterans across primary care, specialty clinics, and mental health services at VA facilities.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_va_pension.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/va-pension.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Federal Benefits</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>FERS pension, TSP matching, 26 vacation days, 13 sick days, and 11 federal holidays.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_va_education.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/va-education.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Loan Repayment</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>EDRP provides up to $200,000 in student loan repayment over 5 years.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_va_veteran.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/va-veteran.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Job Security</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Federal employment with union protection, malpractice coverage under FTCA, and one active state license accepted at any VA facility.</p>
             </div>
@@ -337,22 +337,22 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
               <div key="01" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>01</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>USAJobs Account</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Create a USAJobs.gov profile with a federal-format resume — standard CVs are rejected.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Create a USAJobs.gov profile with a federal-format resume. Standard CVs are rejected.</p>
               </div>
               <div key="02" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>02</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>VetPro Credentialing</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Gather all documents for VHA VetPro credentialing — allow 60-90 days for processing.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Gather all documents for VHA VetPro credentialing, and allow 60 to 90 days for processing.</p>
               </div>
               <div key="03" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>03</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Security Clearance</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Prepare for Tier 1 investigation (SF-85) including fingerprinting and background check.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Prepare for a Tier 1 investigation (SF-85), including fingerprinting and a background check.</p>
               </div>
               <div key="04" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>04</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>EDRP Application</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Apply for Education Debt Reduction Program within 12 months of VA appointment.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Apply for the Education Debt Reduction Program within 12 months of your VA appointment.</p>
               </div>
           </div>
         </section>
@@ -370,12 +370,12 @@ export default async function VAJobsPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More Ways to Find Your Next Role</h2>
           <div className="cat-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
             {[
-              { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-              { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
-              { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
-              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
+              { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: '/images/categories/nav/remote.webp' },
+              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: '/images/categories/nav/telehealth.webp' },
+              { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital roles', icon: '/images/categories/nav/inpatient.webp' },
+              { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: '/images/categories/nav/outpatient.webp' },
+              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 comp data', icon: '/images/categories/nav/salary.webp' },
+              { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: '/images/categories/nav/location.webp' },
             ].map(c => (
               <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
                 <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />

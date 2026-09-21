@@ -2,6 +2,8 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import MedianFigure from '@/components/MedianFigure';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -11,11 +13,9 @@ import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
-
-const STORAGE_BASE = brand.assets.storageBase;
 
 const clayCard: React.CSSProperties = {
   background: '#FFFFFF', borderRadius: '20px',
@@ -45,17 +45,17 @@ async function getStats() {
 }
 
 const faqs = [
-  { q: `What benefits do full-time ${brand.niche.short}s receive?`, a: `Full-time ${brand.niche.short}s typically receive comprehensive health/dental/vision insurance, 401k matching, PTO, CME allowances, malpractice coverage, and loan repayment programs at qualifying employers — nonprofit and public health systems often qualify for PSLF.` },
-  { q: `What is the average full-time ${brand.niche.short} salary?`, a: `Full-time ${brand.niche.short}s typically earn $95K-$160K base salary depending on specialty, location, setting, and experience — acute care, high-cost metros, and in-demand specialties often pay more. Many roles add productivity bonuses, quality incentives, and sign-on bonuses.` },
-  { q: `What schedule do full-time ${brand.niche.short}s work?`, a: 'Most outpatient full-time roles are Monday-Friday, 8am-5pm with no weekends. Inpatient and hospital roles often use 7-on/7-off or shift-based schedules. Some positions offer 4x10-hour day options.' },
-  { q: 'How does full-time compare to contract or PRN?', a: 'Full-time offers job security, benefits, PTO, and retirement contributions. Contract/PRN pay higher hourly rates but lack benefits and stability. Full-time is ideal for long-term career building.' },
-  { q: 'What qualifications are needed?', a: 'An active APRN license, national NP certification in your specialty, DEA registration where prescribing is required, and typically 1+ years of clinical experience. New grads are welcomed at many full-time positions.' },
+  { q: `What benefits do full-time ${brand.niche.short}s receive?`, a: `Full-time ${brand.niche.short}s typically receive comprehensive health/dental/vision insurance, 401k matching, PTO, CME allowances, malpractice coverage, and loan repayment programs at qualifying employers. Nonprofit and public health systems often qualify for PSLF.` },
+  { q: `What is the average full-time ${brand.niche.short} salary?`, a: `Full-time ${brand.niche.short}s typically earn a base salary of $95K to $160K depending on specialty, location, setting, and experience. Acute care, high-cost metros, and in-demand specialties often pay more. Many roles add productivity bonuses, quality incentives, and sign-on bonuses.` },
+  { q: `What schedule do full-time ${brand.niche.short}s work?`, a: 'Most outpatient full-time roles run Monday to Friday, 8am to 5pm, with no weekends. Inpatient and hospital roles often use 7-on/7-off or shift-based schedules. Some positions offer 4x10-hour day options.' },
+  { q: 'How does full-time compare to contract or PRN?', a: 'Full-time roles offer job security, benefits, PTO, and retirement contributions. Contract and PRN roles pay higher hourly rates but lack benefits and stability. Full-time work is ideal for long-term career building.' },
+  { q: 'What qualifications are needed?', a: 'An active APRN license, national NP certification in your specialty, DEA registration where prescribing is required, and typically 1+ years of clinical experience. New grads are welcome at many full-time positions.' },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
   return {
-    title: `${stats.totalJobs} Full-Time ${brand.niche.short} Jobs — Salaried + Benefits`,
+    title: `${stats.totalJobs} Full-Time ${brand.niche.short} Jobs: Salaried + Benefits`,
     description: `Find ${stats.totalJobs} full-time ${brand.niche.short} jobs with benefits, PTO, and retirement. Permanent ${brand.niche.descriptor} positions updated daily.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/full-time` },
   };
@@ -80,10 +80,10 @@ export default async function FullTimePage({ searchParams }: PageProps) {
       {/* ═══ 1. HERO ═══ */}
       <CategoryHero
         bgColor="#88a7c4"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_fulltime.webp`}
+        heroImage="/images/categories/heroes/full-time.webp"
         heroAlt={`Full-time ${brand.niche.short} in clinic office`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'Full-Time']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Full-Time", url: `${brand.baseUrl}/jobs/full-time` }])}
         indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('full-time') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Full-Time"
         headlineLine2={brand.niche.short}
@@ -105,7 +105,7 @@ export default async function FullTimePage({ searchParams }: PageProps) {
         <div className="grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
             <h2 className="font-lora mb-6" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>Full-Time Positions ({stats.totalJobs})</h2>
-            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions right now. Check back soon.</p></div>)}
+            {jobs.length > 0 ? (<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>) : (<div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions are available right now. Check back soon.</p></div>)}
             <div style={{ textAlign: 'center', marginTop: '32px' }}>
               <Link href="/jobs?category=full-time" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>Browse All Full-Time Jobs <ArrowRight size={16} /></Link>
             </div>
@@ -118,7 +118,7 @@ export default async function FullTimePage({ searchParams }: PageProps) {
               <Link href="/job-alerts" style={{ display: 'block', textAlign: 'center', padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px', background: '#BE185D', color: '#fff', textDecoration: 'none' }}>Create Alert</Link>
             </div>
             {stats.topEmployers.length > 0 && (<div style={{ ...clayCard, padding: '24px', marginBottom: '20px' }}><Building2 size={20} style={{ color: '#BE185D', marginBottom: '8px' }} /><h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: '0 0 12px' }}>Top Employers</h3><ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>{stats.topEmployers.map((employer: ProcessedEmployer, index: number) => (<li key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: index < stats.topEmployers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}><span style={{ fontSize: '13px', color: '#5A4A42', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{employer.name}</span><span style={{ fontSize: '12px', fontWeight: 700, color: '#BE185D', marginLeft: '8px' }}>{employer.count}</span></li>))}</ul></div>)}
-            {stats.medianSalaryK > 0 && (<div style={{ ...clayCard, padding: '24px' }}><TrendingUp size={20} style={{ color: '#34D399', marginBottom: '8px' }} /><div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}>${stats.medianSalaryK}k</div><div style={{ fontSize: '13px', color: '#7A6A62' }}>Median salary</div></div>)}
+            {stats.medianSalaryK > 0 && (<div style={{ ...clayCard, padding: '24px' }}><TrendingUp size={20} style={{ color: '#34D399', marginBottom: '8px' }} /><div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}><MedianFigure k={stats.medianSalaryK} /></div><div style={{ fontSize: '13px', color: '#7A6A62' }}>Median salary</div></div>)}
           </div>
         </div>
       </div>
@@ -130,24 +130,26 @@ export default async function FullTimePage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Stability & Benefits</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1 */}
-            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div>
+            <div className="cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Full Benefits Package</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: 0 }}>Health, dental, vision, 401k matching, PTO, CME allowances, malpractice coverage, and student loan repayment at qualifying employers.</p>
               </div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ft_benefits.webp`} alt="Benefits package" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <ImmersiveImage src="/images/categories/bento/full-time-benefits.webp" alt="Benefits package" minHeight={240} />
             </div>
-            <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ft_stability.webp`} alt="Job stability" width={200} height={140} style={{ width: '100%', maxWidth: '180px', height: 'auto', borderRadius: '12px', marginBottom: '16px' }} />
-              <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Long-Term Security</h3>
-              <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Permanent positions with predictable income and career advancement.</p>
+            <div className="cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', textAlign: 'center' }}>
+              <ImmersiveImage src="/images/categories/bento/full-time-stability.webp" alt="Job stability" minHeight={200} />
+              <div style={{ padding: '22px 22px 26px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#1A2E35', margin: '0 0 8px' }}>Long-Term Security</h3>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Permanent positions with predictable income and career advancement.</p>
+              </div>
             </div>
             {/* ROW 2: Icon Cards */}
             {[
-              { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ft_benefits.webp`, t: 'Full Benefits', d: 'Health insurance, 401k, PTO, CME stipends, and loan repayment.' },
-              { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ft_security.webp`, t: 'Job Security', d: 'Permanent positions with stable income and career advancement.' },
-              { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ft_balance.webp`, t: 'Work-Life Balance', d: 'Many full-time roles offer predictable M-F schedules.' },
-              { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_ft_team.webp`, t: 'Team Integration', d: 'Become a core member of multidisciplinary care teams.' },
+              { icon: '/images/categories/icons/full-time-benefits.webp', t: 'Full Benefits', d: 'Health insurance, 401k, PTO, CME stipends, and loan repayment.' },
+              { icon: '/images/categories/icons/full-time-security.webp', t: 'Job Security', d: 'Permanent positions with stable income and career advancement.' },
+              { icon: '/images/categories/icons/full-time-balance.webp', t: 'Work-Life Balance', d: 'Many full-time roles offer predictable Monday to Friday schedules.' },
+              { icon: '/images/categories/icons/full-time-team.webp', t: 'Team Integration', d: 'Become a core member of multidisciplinary care teams.' },
             ].map((c, i) => (
               <div key={i} className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
                 <Image src={c.icon} alt={c.t} width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -156,14 +158,14 @@ export default async function FullTimePage({ searchParams }: PageProps) {
               </div>
             ))}
             {/* ROW 3 */}
-            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '32px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'center' }}>
-              <div>
+            <div className="cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <TrendingUp size={28} style={{ color: '#34D399', marginBottom: '12px' }} />
                 <h3 className="font-lora" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Competitive Salary</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', lineHeight: 1.7, margin: '0 0 6px' }}>Median full-time {brand.niche.short} salary:</p>
-                <p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>${stats.medianSalaryK}k</p>
+                <p style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', margin: 0 }}><MedianFigure k={stats.medianSalaryK} /></p>
               </div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_ft_salary.webp`} alt="Full-time salary" width={280} height={200} style={{ width: '100%', height: 'auto', borderRadius: '14px' }} />
+              <ImmersiveImage src="/images/categories/bento/full-time-salary.webp" alt="Full-time salary" minHeight={240} />
             </div>
             <div className="cat-bento-cta" style={{ ...clayCard, gridColumn: 'span 4', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)' }}>
               <Bell size={32} style={{ color: '#BE185D', marginBottom: '14px' }} />
@@ -198,7 +200,7 @@ export default async function FullTimePage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Keep Exploring</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More Categories</h2>
           <div className="cat-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-            {[{ href: '/jobs/part-time', label: 'Part-Time', sub: 'Flexible hours', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_parttime.webp` }, { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` }, { href: '/jobs/contract', label: 'Contract', sub: 'Fixed-term roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_contract.webp` }, { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` }, { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` }, { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` }].map(c => (
+            {[{ href: '/jobs/part-time', label: 'Part-Time', sub: 'Flexible hours', icon: '/images/categories/nav/part-time.webp' }, { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: '/images/categories/nav/remote.webp' }, { href: '/jobs/contract', label: 'Contract', sub: 'Fixed-term roles', icon: '/images/categories/nav/contract.webp' }, { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based', icon: '/images/categories/nav/outpatient.webp' }, { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: '/images/categories/nav/salary.webp' }, { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: '/images/categories/nav/location.webp' }].map(c => (
               <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', textAlign: 'center' }}>
                 <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />
                 <span style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', display: 'block', marginBottom: '4px' }}>{c.label}</span>

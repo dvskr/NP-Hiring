@@ -321,7 +321,7 @@ export function formatNormalizedSalary(
   const estimatedLabel = isEstimated ? ' (estimated)' : '';
 
   if (min && max) {
-    return `${formatter.format(min)} - ${formatter.format(max)}${estimatedLabel}`;
+    return `${formatter.format(min)} to ${formatter.format(max)}${estimatedLabel}`;
   }
   if (min) {
     return `From ${formatter.format(min)}${estimatedLabel}`;

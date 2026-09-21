@@ -2,6 +2,7 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import MedianFigure from '@/components/MedianFigure';
 import { TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -11,11 +12,9 @@ import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
-
-const STORAGE_BASE = brand.assets.storageBase;
 
 const clayCard: React.CSSProperties = {
   background: '#FFFFFF', borderRadius: '20px',
@@ -50,8 +49,8 @@ async function getStats() {
 // trauma practices). /jobs/va = federal employment with GS pay + FEHB.
 const veteransFaqs = [
   {
-    question: `What's the difference between Veterans ${brand.niche.short} roles and federal VA employment?`,
-    answer: `Veterans ${brand.niche.short} roles span multiple sectors — VA medical centers (federal employment), Vet Centers (community readjustment counseling), Community Care Network (CCN) civilian providers, and community practices that serve veteran patients. /jobs/va focuses specifically on federal Veterans Affairs employment with the GS pay scale, FEHB benefits, and EDRP loan repayment.`,
+    question: `What is the difference between Veterans ${brand.niche.short} roles and federal VA employment?`,
+    answer: `Veterans ${brand.niche.short} roles span multiple sectors: VA medical centers (federal employment), Vet Centers (community readjustment counseling), Community Care Network (CCN) civilian providers, and community practices that serve veteran patients. The /jobs/va page focuses specifically on federal Veterans Affairs employment with the GS pay scale, FEHB benefits, and EDRP loan repayment.`,
   },
   {
     question: `What clinical skills matter most in veterans-focused ${brand.niche.short} work?`,
@@ -59,18 +58,18 @@ const veteransFaqs = [
   },
   {
     question: 'Do I need military experience to work in veterans care?',
-    answer: 'No — military experience is not required, but cultural competency is. Employers look for familiarity with military culture, deployment cycles, and the VA system, which you can build through employer-provided training and time with veteran patients. Prior experience in primary care, rehabilitation, pain management, or community settings that serve veterans translates well.',
+    answer: 'No. Military experience is not required, but cultural competency is. Employers look for familiarity with military culture, deployment cycles, and the VA system, which you can build through employer-provided training and time with veteran patients. Prior experience in primary care, rehabilitation, pain management, or community settings that serve veterans translates well.',
   },
   {
     question: `How does the VA Community Care Network (CCN) affect ${brand.niche.short} employment?`,
-    answer: `CCN contracts civilian providers to deliver care to eligible veterans. ${brand.niche.short}s in private practice, telehealth platforms, and community clinics can join CCN to expand their caseload with VA-funded patients while keeping their existing employer relationship — an alternative path to serving veterans without entering federal employment.`,
+    answer: `CCN contracts civilian providers to deliver care to eligible veterans. ${brand.niche.short}s in private practice, telehealth platforms, and community clinics can join CCN to expand their caseload with VA-funded patients while keeping their existing employer relationship. This is an alternative path to serving veterans without entering federal employment.`,
   },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
   const stats = await getStats();
   return {
-    title: `${stats.totalJobs} Veterans ${brand.niche.short} Jobs — Serve Those Who Served`,
+    title: `${stats.totalJobs} Veterans ${brand.niche.short} Jobs: Serve Those Who Served`,
     description: `Find ${stats.totalJobs} ${brand.niche.short} jobs serving veterans across VA, Vet Centers, Community Care Network civilian providers, and community practices. Primary care, rehabilitation, and specialty roles.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/veterans` },
     openGraph: {
@@ -115,10 +114,10 @@ export default async function VeteransPage({ searchParams }: PageProps) {
             {/* HERO */}
       <CategoryHero
         bgColor="#b8c8d4"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_veterans.webp`}
+        heroImage="/images/categories/heroes/veterans.webp"
         heroAlt={`${brand.niche.short} serving veteran patients`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'Veterans']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Veterans", url: `${brand.baseUrl}/jobs/veterans` }])}
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('veterans') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Veterans"
         headlineLine2={brand.niche.short}
@@ -128,7 +127,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
           { value: stats.medianSalaryK > 0 ? `${stats.medianSalaryK}k` : '$120K+', label: 'median salary' },
           { value: `${stats.topEmployers.length}+`, label: 'employers' },
         ]}
-        description="Care for veterans across VA medical centers, Vet Centers, and community providers — from primary care to specialty services."
+        description="Care for veterans across VA medical centers, Vet Centers, and community providers, from primary care to specialty services."
         ctaLabel="Browse Veterans Jobs"
         ctaHref="/jobs?category=veterans"
         secondaryCtaLabel="Set Alert"
@@ -145,7 +144,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
                 {jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}
               </div>
             ) : (
-              <div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions right now. Check back soon.</p></div>
+              <div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions are available right now. Check back soon.</p></div>
             )}
             <div style={{ textAlign: 'center', marginTop: '32px' }}>
               <Link href="/jobs?category=veterans" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>Browse All Veterans Jobs <ArrowRight size={16} /></Link>
@@ -175,7 +174,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
             {stats.medianSalaryK > 0 && (
               <div style={{ ...clayCard, padding: '24px' }}>
                 <TrendingUp size={20} style={{ color: '#34D399', marginBottom: '8px' }} />
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}>${stats.medianSalaryK}k</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}><MedianFigure k={stats.medianSalaryK} /></div>
                 <div style={{ fontSize: '13px', color: '#7A6A62' }}>Median salary</div>
               </div>
             )}
@@ -195,7 +194,7 @@ export default async function VeteransPage({ searchParams }: PageProps) {
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Federal Benefits</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Federal pension, 13-26 PTO days, and 11 paid holidays.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Federal pension, 13 to 26 PTO days, and 11 paid holidays.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>PSLF Eligible</h3>
@@ -245,12 +244,12 @@ export default async function VeteransPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More Categories</h2>
           <div className="cat-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
             {[
-              { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-              { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_inpatient.webp` },
-              { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_outpatient.webp` },
-              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-              { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
+              { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: '/images/categories/nav/remote.webp' },
+              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: '/images/categories/nav/telehealth.webp' },
+              { href: '/jobs/inpatient', label: 'Inpatient', sub: 'Hospital', icon: '/images/categories/nav/inpatient.webp' },
+              { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic', icon: '/images/categories/nav/outpatient.webp' },
+              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: '/images/categories/nav/salary.webp' },
+              { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: '/images/categories/nav/location.webp' },
             ].map(c => (
               <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', textAlign: 'center' }}>
                 <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />

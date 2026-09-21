@@ -9,8 +9,9 @@ import {
   type ZeroResultSearchHint,
 } from '@/lib/search-query-intent';
 import { logger } from '@/lib/logger';
-import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { rateLimit } from '@/lib/rate-limit';
 import { buildJobsOrderBy, type JobSort } from '@/lib/utils/job-sort';
+import { parsePagination } from './pagination';
 
 export async function GET(request: NextRequest) {
   try {
@@ -69,11 +70,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const page = parseInt(searchParams.get('page') || '1');
-    const rawLimit = parseInt(searchParams.get('limit') || '20');
-    // Security: Cap limit to 50 max to prevent mass data extraction
-    // (a scraper could request limit=100000 and get everything in one call)
-    const limit = Math.min(Math.max(1, rawLimit), 50);
+    // Malformed page/limit (abc, 0, -1, 1.5) clamp to safe values instead of
+    // reaching Prisma as a NaN or negative skip/take (which answered 500).
+    const { page, limit } = parsePagination(searchParams);
     const skip = (page - 1) * limit;
 
     // Parse filters from URL

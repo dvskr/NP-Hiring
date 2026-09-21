@@ -143,8 +143,8 @@ export default function EditorialPolicyPage() {
 
                 <p style={{ fontSize: '15px', color: '#4A5568', lineHeight: 1.75, marginTop: '32px' }}>
                     {brand.name} (operated by <strong>{brand.legal.entityName}</strong>) is a job board
-                    for {brand.niche.descriptor}s. Because our pages discuss careers, pay, and licensure —
-                    topics people make real decisions with — this page explains exactly how our content is
+                    for {brand.niche.descriptor}s. Because our pages discuss careers, pay, and licensure
+                    (topics people make real decisions with), this page explains exactly how our content is
                     produced, where every number comes from, what has and has not been clinically
                     reviewed, and how to get an error corrected.
                 </p>
@@ -156,7 +156,7 @@ export default function EditorialPolicyPage() {
                         and location pages are computed from the live listings in our own database and
                         refresh as inventory changes. Salary figures, growth projections, and
                         practice-authority classifications render from a single audited source file so the
-                        same cited value appears everywhere it is quoted — a number is never retyped page
+                        same cited value appears everywhere it is quoted; a number is never retyped page
                         by page.
                     </p>
                     <p>
@@ -176,8 +176,8 @@ export default function EditorialPolicyPage() {
 
                 <Section icon={<FileSearch size={20} />} title="Where our numbers come from">
                     <p>
-                        The headline statistics we publish — pay, employment growth, shortage
-                        population, and practice-authority counts — all render from a single audited
+                        The headline statistics we publish (pay, employment growth, shortage
+                        population, and practice-authority counts) all render from a single audited
                         source file, and each one traces to a named, verifiable source with an
                         &quot;as of&quot; date:
                     </p>
@@ -216,7 +216,7 @@ export default function EditorialPolicyPage() {
                         State practice-authority classifications derive from the AANP State Practice
                         Environment dataset. We do <em>not</em> hold verified per-state data for
                         application fees, CE hours, renewal cycles, or board processing times, so our{' '}
-                        <strong>state license guide series never quotes them</strong> — each of those
+                        <strong>state license guide series never quotes them</strong>. Each of those
                         questions is answered with a link to that state&apos;s board of nursing, because
                         boards change the details without notice.
                     </p>
@@ -231,7 +231,7 @@ export default function EditorialPolicyPage() {
                     </p>
                 </Section>
 
-                <Section icon={<Stethoscope size={20} />} title="Review status — the honest version">
+                <Section icon={<Stethoscope size={20} />} title="Review status: the honest version">
                     {reviewer ? (
                         <p>
                             Clinical review of our career and licensure content is performed by{' '}
@@ -241,10 +241,11 @@ export default function EditorialPolicyPage() {
                             {reviewer.title ? <> ({reviewer.title})</> : null}
                             {reviewer.profileUrl ? (
                                 <>
-                                    {' '}—{' '}
+                                    {' '}(
                                     <a href={reviewer.profileUrl} rel="noopener noreferrer" style={linkStyle}>
                                         professional profile
                                     </a>
+                                    )
                                 </>
                             ) : null}
                             . Reviewed articles carry a visible byline and matching structured data, both
@@ -263,7 +264,7 @@ export default function EditorialPolicyPage() {
                     )}
                     <p style={{ marginTop: '10px' }}>
                         Where certification is discussed, we attribute it to the correct certifying body
-                        per specialty — AANP or ANCC for {brand.niche.short} certification, NBCRNA for
+                        per specialty: AANP or ANCC for {brand.niche.short} certification, NBCRNA for
                         nurse anesthetists, and AMCB for certified nurse-midwives.
                     </p>
                 </Section>
@@ -277,7 +278,7 @@ export default function EditorialPolicyPage() {
                         </li>
                         <li>Fabricated people: fake authors, reviewers, testimonials, or reviews.</li>
                         <li>
-                            Medical, legal, or financial advice — our content is career information, and
+                            Medical, legal, or financial advice. Our content is career information, and
                             individual decisions belong with a licensed clinician or qualified professional.
                         </li>
                         <li>
@@ -289,8 +290,8 @@ export default function EditorialPolicyPage() {
 
                 <Section icon={<MailWarning size={20} />} title="Corrections">
                     <p>
-                        If you spot an error — a stale figure, a wrong practice-authority classification, a
-                        broken source link — email{' '}
+                        If you spot an error (a stale figure, a wrong practice-authority classification, or a
+                        broken source link), email{' '}
                         <a href={`mailto:${brand.email.contact}`} style={linkStyle}>
                             {brand.email.contact}
                         </a>{' '}
@@ -307,10 +308,10 @@ export default function EditorialPolicyPage() {
                 <Section icon={<ShieldCheck size={20} />} title="Related policies">
                     <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: 1.85 }}>
                         <li>
-                            <Link href="/about" style={linkStyle}>About {brand.name}</Link> — who operates the board.
+                            <Link href="/about" style={linkStyle}>About {brand.name}</Link>: who operates the board.
                         </li>
                         <li>
-                            <Link href="/security" style={linkStyle}>Security &amp; Trust</Link> — how we protect your data.
+                            <Link href="/security" style={linkStyle}>Security &amp; Trust</Link>: how we protect your data.
                         </li>
                         <li>
                             <Link href="/privacy" style={linkStyle}>Privacy Policy</Link> and{' '}

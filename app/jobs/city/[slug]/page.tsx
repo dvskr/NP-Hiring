@@ -7,8 +7,11 @@ import { selectEligibleCities } from '@/lib/pseo/related-cities';
 import { cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
 import Link from 'next/link';
 import Image from 'next/image';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { MapPin, TrendingUp, Building2, Bell, MapPinned, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
+import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
+import { pluralize } from '@/lib/pseo/plural';
 import { JOB_LISTING_OMIT } from '@/lib/pseo/job-listing-omit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import JobCard from '@/components/JobCard';
@@ -16,12 +19,11 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { Job } from '@/lib/types';
 import { getMetroCity } from '@/lib/metro-data';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryFAQ from '@/components/CategoryFAQ';
 import { getCityBySlug } from '@/lib/pseo/city-data/cities';
 import { buildCityFacts, buildCityNarrative } from '@/lib/pseo/city-narrative';
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 // Force dynamic rendering - don't try to statically generate during build
 // force-dynamic removed: it overrides revalidate and defeats ISR caching
@@ -110,7 +112,7 @@ async function resolveAmbiguousSlug(slug: string): Promise<string | null> {
     // Find the first published job in a city matching this name
     const match = await prisma.job.findFirst({
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: cityName, mode: 'insensitive' },
             stateCode: { not: null },
         },
@@ -140,7 +142,7 @@ interface ProcessedEmployer {
 async function getCityJobs(cityName: string, stateName: string, stateCode: string) {
     const jobs = await prisma.job.findMany({
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: cityName, mode: 'insensitive' },
             OR: [
                 { state: stateName },
@@ -158,7 +160,7 @@ async function getCityJobs(cityName: string, stateName: string, stateCode: strin
 async function getCityStats(cityName: string, stateName: string, stateCode: string) {
     const totalJobs = await prisma.job.count({
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: cityName, mode: 'insensitive' },
             OR: [
                 { state: stateName },
@@ -169,7 +171,7 @@ async function getCityStats(cityName: string, stateName: string, stateCode: stri
 
     const salaryData = await prisma.job.aggregate({
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: cityName, mode: 'insensitive' },
             OR: [
                 { state: stateName },
@@ -203,7 +205,7 @@ async function getCityStats(cityName: string, stateName: string, stateCode: stri
     const topEmployers = await prisma.job.groupBy({
         by: ['employer'],
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: cityName, mode: 'insensitive' },
             OR: [
                 { state: stateName },
@@ -229,7 +231,7 @@ async function getCityStats(cityName: string, stateName: string, stateCode: stri
     // True unique employer count (not limited by take:5)
     const uniqueEmployerRows = await prisma.job.findMany({
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { equals: cityName, mode: 'insensitive' },
             OR: [
                 { state: stateName },
@@ -261,7 +263,7 @@ async function getRelatedCities(
     const cityData = await prisma.job.groupBy({
         by: ['city'],
         where: {
-            isPublished: true,
+            ...PUBLISHED_LISTING_WHERE,
             city: { not: null },
             OR: [
                 { state: stateName },
@@ -341,7 +343,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
         // were pushing the title past 60 chars and cutting "Avg" mid-phrase).
         // Salary appended only if there's room.
         const baseTitle = `${stats.totalJobs} ${brand.niche.short} Jobs in ${cityName}, ${stateCode}`;
-        const salarySuffix = stats.avgSalary > 0 ? ` — $${stats.avgSalary}k Avg` : '';
+        const salarySuffix = stats.avgSalary > 0 ? `: $${stats.avgSalary}k Avg` : '';
         const title = (baseTitle + salarySuffix).length <= 60
             ? baseTitle + salarySuffix
             : baseTitle;
@@ -503,7 +505,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
     }
 
     const salaryRange = stats.minSalary > 0 && stats.maxSalary > 0
-        ? `$${stats.minSalary}k–$${stats.maxSalary}k`
+        ? `$${stats.minSalary}k to $${stats.maxSalary}k`
         : null;
 
     return (
@@ -559,20 +561,20 @@ export default async function CityJobsPage({ params }: CityPageProps) {
 
             {/* ═══ HERO ═══ */}
             <CategoryHero
-                bgColor="#7eb8c9"
-                heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_states.webp`}
+                bgColor="#fbf8ee"
+                heroImage="/images/categories/heroes/us-map.webp"
                 heroAlt={`${brand.niche.short} jobs in ${cityName}, ${stateCode}`}
                 badgeText={`${stats.totalJobs} live roles · updated today`}
-                breadcrumbs={['Careers', stateName, cityName]}
+                breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: stateName, url: `${brand.baseUrl}/jobs/state/${stateSlug}` }, { name: cityName, url: `${brand.baseUrl}/jobs/city/${slug}` }])}
                 headlineLine1={cityName}
                 headlineLine2={brand.niche.short}
-                headlineSub={`jobs in ${stateCode}, find your fit.`}
+                headlineSub={`jobs in ${stateCode}. Find your fit.`}
                 stats={[
                     { value: `${stats.totalJobs}`, label: 'positions' },
                     { value: stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K+', label: 'avg salary' },
                     { value: `${stats.uniqueEmployerCount}+`, label: 'employers' },
                 ]}
-                description={`Browse ${stats.totalJobs} ${brand.niche.short} positions in ${cityName}, ${stateName}. ${salaryRange ? `Salary range: ${salaryRange}/yr.` : ''} Remote, telehealth, inpatient, and outpatient roles updated daily.`}
+                description={`Browse ${stats.totalJobs} ${brand.niche.short} positions in ${cityName}, ${stateName}.${salaryRange ? ` Salary range: ${salaryRange} per year.` : ''} Remote, telehealth, inpatient, and outpatient roles updated daily.`}
                 ctaLabel={`View All ${cityName} Jobs`}
                 ctaHref={`/jobs?location=${encodeURIComponent(cityName)}`}
                 secondaryCtaLabel="Set Alert"
@@ -708,27 +710,23 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                     <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '8px' }}>Why {brand.niche.short}s Choose {cityName}
                     </h2>
                     <p style={{ fontSize: '15px', color: '#5A4A42', textAlign: 'center', maxWidth: '480px', margin: '0 auto 48px', lineHeight: 1.6 }}>
-                        {stats.totalJobs} open positions · {stats.uniqueEmployerCount}+ employers · {salaryRange ? `${salaryRange}/yr` : 'Competitive pay'}
+                        {stats.totalJobs} open positions · {stats.uniqueEmployerCount}+ employers · {salaryRange ? `${salaryRange} per year` : 'Competitive pay'}
                     </p>
 
                     <div className="city-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
                         {/* ROW 1: Job Market (8) + Employers (4) */}
-                        <div className="city-bento-hero-1" style={{ gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                            <div style={{ padding: '32px 28px' }}>
+                        <div className="city-bento-hero-1" style={{ gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
+                            <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Growing {brand.niche.short} Market</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                                     {cityName}, {stateName} has {stats.totalJobs} active {brand.niche.short} positions across {stats.uniqueEmployerCount}+ employers, with roles in outpatient, inpatient, and telehealth settings.
                                 </p>
                             </div>
-                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_practice.webp`} alt={`${cityName} ${brand.niche.short} market`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-                            </div>
+                            <ImmersiveImage src="/images/categories/bento/state-practice.webp" alt={`${cityName} ${brand.niche.short} market`} minHeight={240} />
                         </div>
 
                         <div className="city-bento-hero-2" style={{ gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                            <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_growth.webp`} alt="Career growth" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
-                            </div>
+                            <ImmersiveImage src="/images/categories/bento/state-growth.webp" alt="Career growth" minHeight={200} />
                             <div style={{ padding: '24px 22px', flex: 1 }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Top Employers</h3>
                                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
@@ -739,10 +737,10 @@ export default async function CityJobsPage({ params }: CityPageProps) {
 
                         {/* ROW 2: 4 compact cards */}
                         {[
-                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp`, text: `Average salary ${stats.avgSalary > 0 ? `$${stats.avgSalary}k/yr` : '$130K+'} for ${brand.niche.short}s in ${cityName}.` },
-                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_hospital.webp`, text: `${stats.uniqueEmployerCount}+ healthcare employers actively hiring in ${cityName}.` },
-                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_community.webp`, text: `Inpatient, outpatient, community health, and private practice settings available.` },
-                            { icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp`, text: `Telehealth and remote opportunities expanding in ${stateName}.` },
+                            { icon: '/images/categories/nav/salary.webp', text: `Average salary of ${stats.avgSalary > 0 ? `$${stats.avgSalary}k per year` : '$130K+'} for ${brand.niche.short}s in ${cityName}.` },
+                            { icon: '/images/categories/nav/hospital.webp', text: `${stats.uniqueEmployerCount}+ healthcare employers are actively hiring in ${cityName}.` },
+                            { icon: '/images/categories/nav/community-health.webp', text: `Inpatient, outpatient, community health, and private practice settings are available.` },
+                            { icon: '/images/categories/nav/telehealth.webp', text: `Telehealth and remote opportunities are expanding in ${stateName}.` },
                         ].map((card, i) => (
                             <div key={i} style={{ gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
                                 <Image src={card.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
@@ -751,17 +749,15 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                         ))}
 
                         {/* ROW 3: Salary (8) + Alert CTA (4) */}
-                        <div className="city-bento-hero-3" style={{ gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
-                            <div style={{ padding: '32px 28px' }}>
+                        <div className="city-bento-hero-3" style={{ gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#FFF', borderRadius: '18px', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)' }}>
+                            <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Salary Outlook</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                                    {cityName} {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K–$200K'} annually. {salaryRange ? `Range: ${salaryRange}/yr.` : 'Competitive compensation with benefits.'}
+                                    {cityName} {brand.niche.short}s earn {stats.avgSalary > 0 ? `$${stats.avgSalary}k` : '$130K to $200K'} annually. {salaryRange ? `Range: ${salaryRange} per year.` : 'Competitive compensation with benefits.'}
                                 </p>
                             </div>
-                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_state_salary.webp`} alt={`${cityName} ${brand.niche.short} salary`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-                            </div>
+                            <ImmersiveImage src="/images/categories/bento/state-salary.webp" alt={`${cityName} ${brand.niche.short} salary`} minHeight={240} />
                         </div>
 
                         <div className="city-bento-cta" style={{
@@ -773,7 +769,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                             <Bell size={28} style={{ color: '#BE185D', marginBottom: '14px' }} />
                             <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#831843', margin: '0 0 6px' }}>Job Alerts</h3>
                             <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
-                                New {cityName} listings delivered to your inbox — be first to apply.
+                                New {cityName} listings are delivered to your inbox, so you can be the first to apply.
                             </p>
                             <Link href={`/job-alerts?location=${encodeURIComponent(cityName + ', ' + stateCode)}`} style={{
                                 padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
@@ -825,12 +821,12 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                     </h2>
                     <div className="city-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                         {[
-                            { href: `/jobs/state/${stateSlug}`, label: `${stateName} Jobs`, sub: `All ${stateCode} positions`, icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
-                            { href: '/jobs/remote', label: 'Remote', sub: 'Work from anywhere', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-                            { href: '/jobs/new-grad', label: 'New Grad', sub: 'Entry-level roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_newgrad.webp` },
-                            { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual patient care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
-                            { href: `/salary-guide/${stateSlug}`, label: 'Salary Guide', sub: `${stateName} comp data`, icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-                            { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
+                            { href: `/jobs/state/${stateSlug}`, label: `${stateName} Jobs`, sub: `All ${stateCode} positions`, icon: '/images/categories/nav/location.webp' },
+                            { href: '/jobs/remote', label: 'Remote', sub: 'Work from anywhere', icon: '/images/categories/nav/remote.webp' },
+                            { href: '/jobs/new-grad', label: 'New Grad', sub: 'Entry-level roles', icon: '/images/categories/nav/new-grad.webp' },
+                            { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual patient care', icon: '/images/categories/nav/telehealth.webp' },
+                            { href: `/salary-guide/${stateSlug}`, label: 'Salary Guide', sub: `${stateName} pay data`, icon: '/images/categories/nav/salary.webp' },
+                            { href: '/jobs/locations', label: 'By Location', sub: 'All 50 states', icon: '/images/categories/nav/location.webp' },
                         ].map(c => (
                             <Link key={c.href} href={c.href} className="city-card" style={{ background: '#FFF', borderRadius: '18px', padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center', boxShadow: '6px 6px 20px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6)', transition: 'transform 0.3s ease, box-shadow 0.3s ease' }}>
                                 <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />
@@ -866,7 +862,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                                     }}>
                                         <div>
                                             <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35', display: 'block' }}>{city.name}</span>
-                                            <span style={{ fontSize: '12px', color: '#7A6A62' }}>{city.count} jobs</span>
+                                            <span style={{ fontSize: '12px', color: '#7A6A62' }}>{city.count} {pluralize(city.count, 'job')}</span>
                                         </div>
                                         <ArrowRight size={14} style={{ color: '#BE185D' }} />
                                     </Link>
@@ -881,7 +877,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                             { href: `/jobs/state/${stateSlug}`, label: `All ${stateName} ${brand.niche.short} Jobs`, desc: `Browse every open position in ${stateCode}`, icon: '📍' },
                             { href: `/salary-guide/${stateSlug}`, label: `${stateName} Salary Guide`, desc: `Compensation data and trends`, icon: '💰' },
                             { href: '/jobs/locations', label: 'All Locations', desc: `${brand.niche.short} jobs in all 50 states`, icon: '🗺️' },
-                            { href: '/jobs/remote', label: `Remote ${brand.niche.short} Jobs`, desc: 'Work from anywhere positions', icon: '🏠' },
+                            { href: '/jobs/remote', label: `Remote ${brand.niche.short} Jobs`, desc: 'Work-from-anywhere positions', icon: '🏠' },
                             { href: '/jobs/telehealth', label: 'Telehealth Positions', desc: 'Virtual care opportunities', icon: '💻' },
                         ].map(link => (
                             <Link key={link.href} href={link.href} className="city-card" style={{
@@ -920,7 +916,7 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                             className="font-lora"
                             style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', marginBottom: '10px' }}
                         >
-                            {cityName}, {stateCode} — {brand.niche.short} Market Context</h2>
+                            {cityName}, {stateCode}: {brand.niche.short} Market Context</h2>
                         <p style={{ fontSize: '14px', lineHeight: 1.7, color: '#5A4A42', margin: 0 }}>
                             {narrative}
                         </p>
@@ -931,10 +927,10 @@ export default async function CityJobsPage({ params }: CityPageProps) {
             {/* ═══ FAQ ═══ */}
             <CategoryFAQ category="remote" totalJobs={stats.totalJobs} avgSalary={stats.avgSalary} customFaqs={[
                 { question: `How many ${brand.niche.short} jobs are in ${cityName}?`, answer: `There are currently ${stats.totalJobs} active ${brand.niche.short} positions in ${cityName}, ${stateName}. New roles are added daily across outpatient, inpatient, telehealth, and community health settings.` },
-                { question: `What is the average ${brand.niche.short} salary in ${cityName}?`, answer: stats.avgSalary > 0 ? `${brand.niche.short}s in ${cityName} earn an average salary of $${stats.avgSalary}k per year.${salaryRange ? ` The range is ${salaryRange}/yr depending on experience, setting, and whether the position is W-2 or 1099.` : ''}` : `${brand.niche.short} salaries in ${cityName} typically range from $130,000 to $200,000+ per year, depending on experience, practice setting, and employment type.` },
+                { question: `What is the average ${brand.niche.short} salary in ${cityName}?`, answer: stats.avgSalary > 0 ? `${brand.niche.short}s in ${cityName} earn an average salary of $${stats.avgSalary}k per year.${salaryRange ? ` The range is ${salaryRange} per year, depending on experience, setting, and whether the position is W-2 or 1099.` : ''}` : `${brand.niche.short} salaries in ${cityName} typically range from $130,000 to $200,000+ per year, depending on experience, practice setting, and employment type.` },
                 { question: `What types of ${brand.niche.short} jobs are available in ${cityName}?`, answer: `${cityName} offers a variety of ${brand.niche.short} positions including outpatient clinics, inpatient ${brand.niche.adjective} units, community health centers, private practices, telehealth roles, and substance abuse treatment facilities. Both full-time and part-time options are available.` },
                 { question: `Who are the top ${brand.niche.short} employers in ${cityName}?`, answer: `Top employers hiring ${brand.niche.short}s in ${cityName} include ${stats.topEmployers.slice(0, 5).map(e => e.name).join(', ')}. These organizations offer competitive salaries, benefits, and growth opportunities.` },
-                { question: `Do I need a ${stateName} license to work as an ${brand.niche.short} in ${cityName}?`, answer: `Yes, you need an active ${stateName} nursing license and ${brand.niche.short} certification to practice in ${cityName}. Requirements vary by state — check our ${stateName} licensure guide for specific details on scope of practice, prescriptive authority, and continuing education requirements.` },
+                { question: `Do I need a ${stateName} license to work as an ${brand.niche.short} in ${cityName}?`, answer: `Yes, you need an active ${stateName} nursing license and ${brand.niche.short} certification to practice in ${cityName}. Requirements vary by state, so check our ${stateName} licensure guide for specific details on scope of practice, prescriptive authority, and continuing education requirements.` },
             ]} />
 
             {/* ═══ Hover + Responsive CSS ═══ */}

@@ -79,14 +79,14 @@ export default function OnboardingProfessionalForm({ initial }: { initial: Initi
                 }),
             });
             if (!res.ok) {
-                setError('Could not save your details. Try again or skip for now.');
+                setError('We could not save your details. Please try again or skip for now.');
                 setSaving(false);
                 return;
             }
             router.push('/dashboard');
             router.refresh();
         } catch {
-            setError('Could not save your details. Try again or skip for now.');
+            setError('We could not save your details. Please try again or skip for now.');
             setSaving(false);
         }
     }
@@ -120,8 +120,8 @@ export default function OnboardingProfessionalForm({ initial }: { initial: Initi
                         Make yourself findable to employers
                     </h1>
                     <p style={{ fontSize: '14px', color: '#6B7F8A', margin: '0 0 24px', lineHeight: 1.5 }}>
-                        Upload a resume and we&apos;ll fill out everything below for you — or type the
-                        details in by hand. Either way, takes about 30 seconds.
+                        Upload a resume and we&apos;ll fill in everything below for you, or type the
+                        details in by hand. Either way, it takes about 30 seconds.
                     </p>
 
                     {/* ─── Fast path: resume upload + AI autofill ───
@@ -152,7 +152,7 @@ export default function OnboardingProfessionalForm({ initial }: { initial: Initi
                                 fontSize: '15px', fontWeight: 700, color: '#5B21B6', margin: 0,
                                 fontFamily: 'var(--font-lora), Georgia, serif',
                             }}>
-                                Fastest: upload your resume, AI fills the rest
+                                Fastest option: upload your resume and let AI fill in the rest
                             </h2>
                         </div>
                         <ResumeUpload
@@ -183,16 +183,16 @@ export default function OnboardingProfessionalForm({ initial }: { initial: Initi
                                 type="text"
                                 value={headline}
                                 onChange={(e) => setHeadline(e.target.value)}
-                                placeholder="e.g. PMHNP-BC | 5 yrs telehealth, child + adolescent"
+                                placeholder="e.g., PMHNP-BC | 5 yrs telehealth, child + adolescent"
                                 maxLength={120}
                                 style={inputStyle}
                             />
-                            <p style={hintStyle}>One line that introduces you. Surfaces in search and on your profile card.</p>
+                            <p style={hintStyle}>One line that introduces you. It appears in search results and on your profile card.</p>
                         </div>
 
                         <div>
                             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1A2E35', marginBottom: '6px' }}>
-                                Specialties <span style={{ color: '#8A9BA6', fontWeight: 400 }}>(pick what fits)</span>
+                                Specialties <span style={{ color: '#8A9BA6', fontWeight: 400 }}>(select all that apply)</span>
                             </label>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                 {SPECIALTY_PRESETS.map((s) => {
@@ -239,13 +239,13 @@ export default function OnboardingProfessionalForm({ initial }: { initial: Initi
 
                         <div>
                             <label htmlFor="bio" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1A2E35', marginBottom: '6px' }}>
-                                Brief summary <span style={{ color: '#8A9BA6', fontWeight: 400 }}>(optional, but high-impact)</span>
+                                Brief summary <span style={{ color: '#8A9BA6', fontWeight: 400 }}>(optional but high-impact)</span>
                             </label>
                             <textarea
                                 id="bio"
                                 value={bio}
                                 onChange={(e) => setBio(e.target.value.slice(0, 500))}
-                                placeholder="What kinds of patients you love working with, your approach, settings you've worked in…"
+                                placeholder="The patients you enjoy working with, your approach, and the settings you have worked in…"
                                 rows={4}
                                 style={{ ...inputStyle, resize: 'vertical', minHeight: '110px' }}
                             />
@@ -291,7 +291,7 @@ export default function OnboardingProfessionalForm({ initial }: { initial: Initi
 
                     {!minimallyComplete && (
                         <p style={{ fontSize: '12px', color: '#8A9BA6', marginTop: '10px', textAlign: 'center' }}>
-                            Fill at least the headline and one specialty to save.
+                            Enter at least a headline and one specialty to save.
                         </p>
                     )}
                 </div>

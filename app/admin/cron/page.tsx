@@ -135,14 +135,14 @@ export default function CronHealthDashboard() {
             <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                     <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#1A2E35', marginBottom: '4px' }}>Cron Health Dashboard</h1>
-                    <p style={{ color: '#6B7F8A' }}>Automated platform tasks configuration and manual triggers.</p>
+                    <p style={{ color: '#6B7F8A' }}>Configuration and manual triggers for automated platform tasks.</p>
                 </div>
             </div>
 
             {error && (
                 <div style={{ padding: '16px', backgroundColor: '#FEF2F2', color: '#991B1B', borderRadius: '16px', marginBottom: '24px',
                     boxShadow: 'inset 2px 2px 5px rgba(255,255,255,0.5), inset -1px -1px 3px rgba(0,0,0,0.03)' }}>
-                    Error loading crons: {error}
+                    Error loading cron jobs: {error}
                 </div>
             )}
 

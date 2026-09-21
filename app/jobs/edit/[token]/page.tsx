@@ -714,7 +714,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 </label>
                 <input
                   type="text" id="location"
-                  placeholder="e.g. Remote, New York NY"
+                  placeholder="e.g., Remote or New York, NY"
                   {...register('location')}
                   style={errors.location ? clayInputError : clayInput}
                 />
@@ -943,7 +943,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                       />
                       <div>
                         <span style={{ fontSize: '14px', fontWeight: 600, color: '#1A2E35' }}>External Application URL</span>
-                        <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates are redirected to your website or ATS</p>
+                        <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '2px 0 0' }}>Candidates are redirected to your website or ATS.</p>
                       </div>
                     </div>
                   </label>
@@ -1017,7 +1017,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
               color: '#1A2E35', margin: '0 0 4px',
             }}>Contact</h2>
             <p style={{ fontSize: '12px', color: '#8A9BA6', margin: '0 0 20px' }}>
-              Where applicant notifications go and an optional public link to your careers page.
+              The address where applicant notifications are sent, plus an optional public link to your careers page.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -1192,7 +1192,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
               fontSize: '18px', fontWeight: 700,
               fontFamily: 'var(--font-lora), Georgia, serif',
               color: '#1A2E35', margin: '0 0 4px',
-            }}>This free post can&apos;t be renewed</h3>
+            }}>This free post cannot be renewed</h3>
             <p style={{ fontSize: '13px', color: '#8A9BA6', margin: '0 0 16px' }}>{job.title}</p>
 
             <p style={{ fontSize: '14px', color: '#1A2E35', lineHeight: 1.6, margin: '0 0 8px' }}>

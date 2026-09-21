@@ -69,14 +69,14 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 </h1>
 
                 <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, maxWidth: '420px', margin: '0 auto 20px' }}>
-                    Something broke before the page could render. Reloading usually fixes it.
-                    If it keeps happening, email{' '}
+                    An error occurred before the page could render. Reloading usually resolves the issue.
+                    If the problem continues, email{' '}
                     <a href={`mailto:${brand.email.support}`} style={{ color: '#B45309', fontWeight: 600 }}>
                         {brand.email.support}
                     </a>
                     {/* Gated for the same reason as app/error.tsx: no `digest` means no
                         Reference block below, so the instruction must not promise one. */}
-                    {error.digest ? ' and quote the reference below.' : '.'}
+                    {error.digest ? ' and include the reference below.' : '.'}
                 </p>
 
                 {error.digest && (

@@ -166,18 +166,18 @@ const W2_ANNUAL = SALARY_BANDS.typicalW2Annual;
 const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`1099 vs W2 for ${brand.niche.short}s`)}&type=page`;
 
 export const metadata: Metadata = {
-  title: `1099 vs W2 for ${brand.niche.short}s — Complete Compensation Comparison 2026`,
+  title: `1099 vs W2 for ${brand.niche.short}s: Complete Compensation Comparison 2026`,
   description: `Compare 1099 independent contractor vs W2 employee ${brand.niche.short} compensation: how self-employment tax actually works, which costs you self-fund, a worked side-by-side with its assumptions shown, and how much more gross a contract needs to match a salaried offer.`,
   keywords: [`1099 vs W2 ${brand.niche.short}`, `1099 ${brand.niche.descriptor}`, `${brand.niche.short} independent contractor taxes`, 'contractor vs employee NP', `1099 ${brand.niche.short} telehealth pay`, `${brand.niche.short} compensation comparison`],
   openGraph: {
-    title: `1099 vs W2 for ${brand.niche.short}s — Compensation Guide`,
+    title: `1099 vs W2 for ${brand.niche.short}s: Compensation Guide`,
     description: `Which pays more? Complete comparison of independent contractor vs employee compensation for ${brand.niche.descriptor}s.`,
     type: 'article',
     images: [{ url: HERO_IMAGE, width: 1200, height: 630, alt: `1099 vs W2 ${brand.niche.short} Compensation Guide` }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `1099 vs W2 for ${brand.niche.short}s — Compensation Guide`,
+    title: `1099 vs W2 for ${brand.niche.short}s: Compensation Guide`,
     images: [HERO_IMAGE],
   },
   alternates: { canonical: `${brand.baseUrl}/resources/1099-vs-w2` },
@@ -187,15 +187,15 @@ export default function CompensationGuidePage() {
   const compFaqs = [
     {
       question: `Is 1099 or W2 better for ${brand.niche.short}s?`,
-      answer: `It depends on what you are optimizing for. A 1099 contract is quoted gross — nothing is withheld and no benefits are bought out of it — and it lets you deduct real business expenses, but you fund your own health coverage, malpractice, and retirement, and you owe self-employment tax and quarterly estimated payments. A W2 role pays inside a salary band and hands you employer-subsidized health coverage, employer-paid malpractice, a retirement match, paid time off, and withholding someone else calculates. Do not compare the two posted bands directly: contract postings on ${brand.name} validate in a ${CONTRACT_HOURLY.formatted} band spanning every ${brand.niche.short} and APRN specialty, so CRNA work sets its ceiling and its floor sits BELOW the ${W2_HOURLY.formatted} hourly equivalent of the ${W2_ANNUAL.formatted} typical W-2 band — that is an ingest envelope, not a contract floor, and a wider band is not a higher rate. The comparison worth making is the worked one on this page: matching a ${usd(EXAMPLE.w2Salary)} salaried package on cash took about ${contractPremiumNeededPct}% more gross.`
+      answer: `It depends on what you are optimizing for. A 1099 contract is quoted gross (nothing is withheld and no benefits are bought out of it), and it lets you deduct real business expenses, but you fund your own health coverage, malpractice, and retirement, and you owe self-employment tax and quarterly estimated payments. A W2 role pays inside a salary band and provides employer-subsidized health coverage, employer-paid malpractice, a retirement match, paid time off, and withholding that someone else calculates. Do not compare the two posted bands directly: contract postings on ${brand.name} validate in a ${CONTRACT_HOURLY.formatted} band spanning every ${brand.niche.short} and APRN specialty, so CRNA work sets its ceiling and its floor sits below the ${W2_HOURLY.formatted} hourly equivalent of the ${W2_ANNUAL.formatted} typical W-2 band; that is an ingest envelope, not a contract floor, and a wider band is not a higher rate. The comparison worth making is the worked one on this page: matching a ${usd(EXAMPLE.w2Salary)} salaried package on cash took about ${contractPremiumNeededPct}% more gross.`
     },
     {
       question: `How much more does a 1099 contract need to pay to match a W2 offer?`,
-      answer: `Ask which parity you mean, because the two answers differ. In the worked example on this page — a ${usd(EXAMPLE.w2Salary)} W-2 package against contract work with ${usd(EXAMPLE.otherBusinessExpenses)} of business expenses, ${usd(EXAMPLE.contractHealthPremium)} of self-funded health coverage, and ${usd(EXAMPLE.contractMalpractice)} of malpractice — the contract needs roughly ${usd(contractBreakEvenGross)} gross, about ${contractPremiumNeededPct}% above the salary, to leave the same spendable cash before income tax. To also replace the ${usd(w2Match)} employer retirement match out of your own pocket it needs about ${usd(contractBreakEvenGrossWithMatch)}, roughly ${contractPremiumNeededWithMatchPct}%. Your own number moves with your premium, your deductible business spend, and whether a spouse's plan covers you. Run the math on the specific offer rather than assuming a flat percentage.`
+      answer: `Ask which parity you mean, because the two answers differ. In the worked example on this page (a ${usd(EXAMPLE.w2Salary)} W-2 package against contract work with ${usd(EXAMPLE.otherBusinessExpenses)} of business expenses, ${usd(EXAMPLE.contractHealthPremium)} of self-funded health coverage, and ${usd(EXAMPLE.contractMalpractice)} of malpractice), the contract needs roughly ${usd(contractBreakEvenGross)} gross, about ${contractPremiumNeededPct}% above the salary, to leave the same spendable cash before income tax. To also replace the ${usd(w2Match)} employer retirement match out of your own pocket it needs about ${usd(contractBreakEvenGrossWithMatch)}, roughly ${contractPremiumNeededWithMatchPct}%. Your own number moves with your premium, your deductible business spend, and whether a spouse's plan covers you. Run the math on the specific offer rather than assuming a flat percentage.`
     },
     {
       question: `What tax deductions can 1099 ${brand.niche.short}s claim?`,
-      answer: `Ordinary and necessary business expenses: the simplified home-office deduction ($5 per square foot of dedicated space, capped at 300 square feet), business mileage or actual vehicle costs, malpractice and other business insurance, CME and licensure, professional memberships, work devices, software and EHR subscriptions, and business phone and internet. Health insurance premiums are deducted separately as a self-employed health-insurance deduction against income tax rather than as a business expense — an important difference, because business expenses cut self-employment tax and that deduction does not. Retirement contributions through a SEP-IRA or solo 401(k) are deductible up to annual limits the IRS indexes each year; check the current figure before you fund the account.`
+      answer: `Ordinary and necessary business expenses: the simplified home-office deduction ($5 per square foot of dedicated space, capped at 300 square feet), business mileage or actual vehicle costs, malpractice and other business insurance, CME and licensure, professional memberships, work devices, software and EHR subscriptions, and business phone and internet. Health insurance premiums are deducted separately as a self-employed health-insurance deduction against income tax rather than as a business expense. This is an important difference, because business expenses cut self-employment tax and that deduction does not. Retirement contributions through a SEP-IRA or solo 401(k) are deductible up to annual limits the IRS indexes each year; check the current figure before you fund the account.`
     },
     {
       question: `Should new grad ${brand.niche.short}s take 1099 positions?`,
@@ -203,11 +203,11 @@ export default function CompensationGuidePage() {
     },
     {
       question: `Can you do both 1099 and W2 as an ${brand.niche.short}?`,
-      answer: `Yes, and it is common: a W2 role for benefits and predictable income, plus 1099 contracts for additional hours at a rate you negotiate yourself. This is the one case where the cost stack on this page mostly does not apply — because the W2 job already covers your health coverage and malpractice, the contract side keeps far more of its gross rate than it would standalone, so the break-even premium computed below is not the bar you have to clear. Check your W2 contract for non-compete or moonlighting restrictions before you sign anything, and confirm the contract's malpractice terms cover the work.`
+      answer: `Yes, and it is common: a W2 role for benefits and predictable income, plus 1099 contracts for additional hours at a rate you negotiate yourself. This is the one case where the cost stack on this page mostly does not apply: because the W2 job already covers your health coverage and malpractice, the contract side keeps far more of its gross rate than it would standalone, so the break-even premium computed below is not the bar you have to clear. Check your W2 contract for non-compete or moonlighting restrictions before you sign anything, and confirm the contract's malpractice terms cover the work.`
     },
     {
       question: `What retirement accounts should 1099 ${brand.niche.short}s use?`,
-      answer: `A SEP-IRA lets you contribute a percentage of net self-employment earnings up to the annual defined-contribution cap and takes minutes to open. A solo 401(k) stacks an employee elective deferral on top of an employer profit-sharing contribution, so it reaches the same cap at a much lower income and usually offers a Roth option — which is why higher earners generally prefer it. Traditional and Roth IRAs remain available alongside either. Every one of those dollar limits is indexed annually, so this page deliberately does not print them: pull the current figures from IRS Publication 560 and the IRS annual cost-of-living release before you contribute.`
+      answer: `A SEP-IRA lets you contribute a percentage of net self-employment earnings up to the annual defined-contribution cap and takes minutes to open. A solo 401(k) stacks an employee elective deferral on top of an employer profit-sharing contribution, so it reaches the same cap at a much lower income and usually offers a Roth option, which is why higher earners generally prefer it. Traditional and Roth IRAs remain available alongside either. Every one of those dollar limits is indexed annually, so this page deliberately does not print them: pull the current figures from IRS Publication 560 and the IRS annual cost-of-living release before you contribute.`
     },
   ];
 
@@ -238,7 +238,7 @@ export default function CompensationGuidePage() {
           __html: ldJson({
             '@context': 'https://schema.org',
             '@type': 'Article',
-            headline: `1099 vs W2 for ${brand.niche.short}s — Complete Compensation Comparison 2026`,
+            headline: `1099 vs W2 for ${brand.niche.short}s: Complete Compensation Comparison 2026`,
             description: `Compare independent contractor vs employee compensation for ${brand.niche.descriptor}s.`,
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
@@ -269,7 +269,7 @@ export default function CompensationGuidePage() {
               Last Updated: {new Date(`${LAST_REVIEWED}T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })} | Complete compensation comparison
             </p>
             <p className="text-lg md:text-xl text-blue-100 mb-6">
-              Which pays more? Independent contractor vs employee — taxes, benefits, and take-home pay compared
+              Which pays more? Independent contractor vs employee: taxes, benefits, and take-home pay compared
             </p>
           </div>
         </div>
@@ -300,10 +300,10 @@ export default function CompensationGuidePage() {
                     contradicted the claim it was attached to. What is
                     actually true of a contract rate — and what the worked
                     example below quantifies — is that it is quoted gross. */}
-                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span><strong>You price the work:</strong> the rate is negotiated per engagement and quoted gross — nothing withheld, no benefits bought out of it</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span><strong>You price the work:</strong> the rate is negotiated per engagement and quoted gross, with nothing withheld and no benefits bought out of it</span></li>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span><strong>Schedule flexibility:</strong> Choose hours &amp; clients</span></li>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span><strong>Business deductions:</strong> Home office, mileage, CME, equipment</span></li>
-                <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span><strong>Self-employment tax:</strong> {(SE_TAX_RATE * 100).toFixed(1)}% — you pay both halves</span></li>
+                <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span><strong>Self-employment tax:</strong> {(SE_TAX_RATE * 100).toFixed(1)}%, and you pay both halves</span></li>
                 <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span><strong>No employer benefits:</strong> Self-fund health, malpractice, retirement</span></li>
                 <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span><strong>Admin burden:</strong> Quarterly estimated taxes, bookkeeping</span></li>
               </ul>
@@ -339,7 +339,7 @@ export default function CompensationGuidePage() {
               support. Here they are stated with the reason they are not
               comparable. */}
           <p className="text-xs mb-8 md:mb-12 -mt-4" style={{ color: 'var(--text-tertiary)' }}>
-            What {brand.name} publishes as bands: contract postings validate in {CONTRACT_HOURLY.formatted}, salaried postings in {W2_ANNUAL.formatted} — {W2_HOURLY.formatted} as {W2_HOURLY.basis}. Those are {CONTRACT_HOURLY.basis} and {W2_ANNUAL.basis}: what {brand.name} accepts and displays for a real posting, not a survey of what every {brand.niche.short} earns. <strong>They are not comparable end to end.</strong> The contract band spans every specialty, so CRNA work sets its ceiling and its floor sits below the salaried floor — a wider envelope is not a higher rate. Compare a specific offer against a specific offer, the way the worked example below does. For a cited national figure, see the <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>{brand.niche.short} salary guide</Link>.
+            What {brand.name} publishes as bands: contract postings validate in {CONTRACT_HOURLY.formatted}, salaried postings in {W2_ANNUAL.formatted} ({W2_HOURLY.formatted} as {W2_HOURLY.basis}). Those are {CONTRACT_HOURLY.basis} and {W2_ANNUAL.basis}: what {brand.name} accepts and displays for a real posting, not a survey of what every {brand.niche.short} earns. <strong>They are not comparable end to end.</strong> The contract band spans every specialty, so CRNA work sets its ceiling and its floor sits below the salaried floor; a wider envelope is not a higher rate. Compare a specific offer against a specific offer, the way the worked example below does. For a cited national figure, see the <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>{brand.niche.short} salary guide</Link>.
           </p>
 
           {/* Self-employment tax mechanics — statutory rates only. Every
@@ -355,15 +355,15 @@ export default function CompensationGuidePage() {
                 This is the single biggest line item people miss when they compare a contract rate to a salary. As a W2 employee you pay {(FICA_EMPLOYEE_RATE * 100).toFixed(2)}% of wages in FICA and your employer pays a matching share you never see. As a contractor there is no employer, so you pay both halves yourself:
               </p>
               <ul className="space-y-3 text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>The rate is {(SE_TAX_RATE * 100).toFixed(1)}%</strong> — 12.4% Social Security plus 2.9% Medicare. Both halves, combined.</span></li>
-                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>It applies to {(SE_BASE_FACTOR * 100).toFixed(2)}% of your Schedule C net profit</strong>, not to gross receipts — so an effective {(SE_EFFECTIVE_RATE * 100).toFixed(2)}% of net profit. Business expenses reduce this base; the self-employed health-insurance deduction does not.</span></li>
-                <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>The 12.4% Social Security portion stops at the annual wage base.</strong> The IRS indexes that ceiling every year, so we do not print it here — look up the current wage base before you model a high-income year. Above it, only the 2.9% Medicare portion continues, with no cap.</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>The rate is {(SE_TAX_RATE * 100).toFixed(1)}%</strong>: 12.4% Social Security plus 2.9% Medicare, both halves combined.</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>It applies to {(SE_BASE_FACTOR * 100).toFixed(2)}% of your Schedule C net profit</strong>, not to gross receipts, so the effective rate is {(SE_EFFECTIVE_RATE * 100).toFixed(2)}% of net profit. Business expenses reduce this base; the self-employed health-insurance deduction does not.</span></li>
+                <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>The 12.4% Social Security portion stops at the annual wage base.</strong> The IRS indexes that ceiling every year, so we do not print it here; look up the current wage base before you model a high-income year. Above it, only the 2.9% Medicare portion continues, with no cap.</span></li>
                 <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>An extra 0.9% Additional Medicare Tax</strong> applies to earnings above $200,000 (single) or $250,000 (married filing jointly). Those two thresholds are fixed in statute and are <em>not</em> indexed, which is why they are safe to print.</span></li>
-                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Half of your self-employment tax is deductible</strong> against income tax. It does not come back as cash, but it lowers taxable income — which is why the cash comparison below stops before income tax.</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Half of your self-employment tax is deductible</strong> against income tax. It does not come back as cash, but it lowers taxable income, which is why the cash comparison below stops before income tax.</span></li>
                 <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Nobody withholds it for you.</strong> Contractors generally owe quarterly estimated payments, and underpaying triggers a penalty even if you settle up in April.</span></li>
               </ul>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                Rates and the {(SE_BASE_FACTOR * 100).toFixed(2)}% base factor are set by statute and have not changed in years. Every dollar threshold that <em>is</em> indexed — the Social Security wage base, retirement contribution caps, the standard deduction, bracket boundaries, and the standard mileage rate — is deliberately omitted from this page so it cannot publish a stale number. Get those from IRS.gov for the year you are filing, and treat this page as orientation rather than tax advice.
+                Rates and the {(SE_BASE_FACTOR * 100).toFixed(2)}% base factor are set by statute and have not changed in years. Every dollar threshold that <em>is</em> indexed (the Social Security wage base, retirement contribution caps, the standard deduction, bracket boundaries, and the standard mileage rate) is deliberately omitted from this page so it cannot publish a stale number. Get those from IRS.gov for the year you are filing, and treat this page as orientation rather than tax advice.
               </p>
             </div>
           </div>
@@ -382,10 +382,10 @@ export default function CompensationGuidePage() {
                 <ul className="text-xs space-y-1" style={{ color: 'var(--text-secondary)' }}>
                   <li>A {usd(EXAMPLE.w2Salary)} salaried offer with an employer plan costing you {usd(EXAMPLE.w2PremiumShare)}/year, employer-paid malpractice, and a {(EXAMPLE.w2MatchRate * 100).toFixed(0)}% 401(k) match.</li>
                   <li>A contract paying {usd(EXAMPLE.contractGross)} gross, with {usd(EXAMPLE.otherBusinessExpenses)} of deductible business spend (home office, mileage, CME, equipment), {usd(EXAMPLE.contractMalpractice)} of malpractice, and {usd(EXAMPLE.contractHealthPremium)} of individually purchased health coverage.</li>
-                  <li><strong>Federal and state income tax are excluded from both columns.</strong> At similar taxable income they are broadly comparable, and the deductions that differ — half of self-employment tax, the self-employed health-insurance deduction, and any qualified business income deduction — all cut the contractor&apos;s taxable income, not the employee&apos;s. Including a guessed bracket would obscure the comparison rather than sharpen it.</li>
-                  <li><strong>The employer 401(k) match is kept out of the cash subtotal.</strong> It is real compensation, but it is deferred and locked in a retirement account rather than spendable this year, and the contractor column carries no retirement contribution at all — so counting it as &quot;cash&quot; would compare an employee&apos;s cash-plus-deferral against a contractor&apos;s cash alone. It gets its own row and a separate total-value line.</li>
+                  <li><strong>Federal and state income tax are excluded from both columns.</strong> At similar taxable income they are broadly comparable, and the deductions that differ (half of self-employment tax, the self-employed health-insurance deduction, and any qualified business income deduction) all cut the contractor&apos;s taxable income, not the employee&apos;s. Including a guessed bracket would obscure the comparison rather than sharpen it.</li>
+                  <li><strong>The employer 401(k) match is kept out of the cash subtotal.</strong> It is real compensation, but it is deferred and locked in a retirement account rather than spendable this year, and the contractor column carries no retirement contribution at all, so counting it as &quot;cash&quot; would compare an employee&apos;s cash-plus-deferral against a contractor&apos;s cash alone. It gets its own row and a separate total-value line.</li>
                   <li>Payroll tax is computed from statutory rates only: {(FICA_EMPLOYEE_RATE * 100).toFixed(2)}% employee FICA on wages, and {(SE_TAX_RATE * 100).toFixed(1)}% self-employment tax on {(SE_BASE_FACTOR * 100).toFixed(2)}% of Schedule C net profit. Where net profit approaches the Social Security wage base, the true figure is slightly lower than shown, so the contractor column is the conservative side.</li>
-                  <li>These are illustrative inputs chosen to show the mechanics — not survey data, and not a quote for your situation.</li>
+                  <li>These are illustrative inputs chosen to show the mechanics; they are not survey data and not a quote for your situation.</li>
                 </ul>
               </div>
 
@@ -409,7 +409,7 @@ export default function CompensationGuidePage() {
                     </tr>
                     <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
                       <th scope="row" className="py-3 pr-4 font-medium text-left" style={{ color: 'var(--text-primary)' }}>Business expenses (Schedule C)</th>
-                      <td className="py-3 px-4 text-right">None — not available to employees</td>
+                      <td className="py-3 px-4 text-right">None (not available to employees)</td>
                       <td className="py-3 pl-4 text-right text-red-500">−{usd(EXAMPLE.otherBusinessExpenses)}</td>
                     </tr>
                     <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -445,11 +445,11 @@ export default function CompensationGuidePage() {
                       <th scope="row" className="py-3 pr-4 font-medium text-left" style={{ color: 'var(--text-primary)' }}>
                         Employer retirement match
                         <span className="block font-normal text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                          Deferred, not cash — locked in a retirement account, not spendable this year
+                          Deferred, not cash: locked in a retirement account and not spendable this year
                         </span>
                       </th>
                       <td className="py-3 px-4 text-right text-green-600">+{usd(w2Match)}</td>
-                      <td className="py-3 pl-4 text-right">None — you are the employer</td>
+                      <td className="py-3 pl-4 text-right">None (you are the employer)</td>
                     </tr>
                     <tr className="font-bold" style={{ borderTop: '2px solid var(--border-color)' }}>
                       <th scope="row" className="py-3 pr-4 text-left" style={{ color: 'var(--text-primary)' }}>Total value before income tax</th>
@@ -477,11 +477,11 @@ export default function CompensationGuidePage() {
                     stand behind. Do not reintroduce a market-wide premium
                     figure here without a citable source. */}
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                  Matching the {usd(EXAMPLE.w2Salary)} salaried package on <strong>cash</strong> before income tax takes roughly {usd(contractBreakEvenGross)} gross — about <strong>{contractPremiumNeededPct}% above the salary</strong>. That premium buys cash parity and nothing more: it is the employer&apos;s cost stack priced back in, not a raise. Replacing the {usd(w2Match)} employer retirement match out of your own pocket on top of that takes about {usd(contractBreakEvenGrossWithMatch)}, or <strong>{contractPremiumNeededWithMatchPct}%</strong> — which is the number to quote if you are pricing the whole package rather than this year&apos;s take-home. Both figures are computed from the assumptions listed above this table and hold only for them; the premium you actually need moves with your health premium, how much deductible business spend you genuinely have, and whether a spouse&apos;s plan covers you. It shrinks meaningfully if you are already covered elsewhere.
+                  Matching the {usd(EXAMPLE.w2Salary)} salaried package on <strong>cash</strong> before income tax takes roughly {usd(contractBreakEvenGross)} gross, about <strong>{contractPremiumNeededPct}% above the salary</strong>. That premium buys cash parity and nothing more: it is the employer&apos;s cost stack priced back in, not a raise. Replacing the {usd(w2Match)} employer retirement match out of your own pocket on top of that takes about {usd(contractBreakEvenGrossWithMatch)}, or <strong>{contractPremiumNeededWithMatchPct}%</strong>, which is the number to quote if you are pricing the whole package rather than this year&apos;s take-home. Both figures are computed from the assumptions listed above this table and hold only for them; the premium you actually need moves with your health premium, how much deductible business spend you genuinely have, and whether a spouse&apos;s plan covers you. It shrinks meaningfully if you are already covered elsewhere.
                 </p>
               </div>
               <p className="text-xs mt-4" style={{ color: 'var(--text-tertiary)' }}>
-                What this comparison deliberately leaves out: paid time off (already priced into the salary, and unpaid on the contract side, so it favors W2 further), and income tax itself. It also stops at replacing the employer match dollar for dollar, which understates the contract side — a solo 401(k) or SEP-IRA gives a contractor far more tax-advantaged capacity than a {(EXAMPLE.w2MatchRate * 100).toFixed(0)}% match, it is just funded out of the same gross. Contract work wins on the retirement-capacity and deduction axes; salaried work wins on the cost-stack axis. Model your own offer before deciding.
+                What this comparison deliberately leaves out: paid time off (already priced into the salary, and unpaid on the contract side, so it favors W2 further), and income tax itself. It also stops at replacing the employer match dollar for dollar, which understates the contract side: a solo 401(k) or SEP-IRA gives a contractor far more tax-advantaged capacity than a {(EXAMPLE.w2MatchRate * 100).toFixed(0)}% match; it is simply funded out of the same gross. Contract work wins on the retirement-capacity and deduction axes; salaried work wins on the cost-stack axis. Model your own offer before deciding.
               </p>
             </div>
           </div>
@@ -503,8 +503,8 @@ export default function CompensationGuidePage() {
                     <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span>CME courses, conferences, licensure, and clinical subscriptions</span></li>
                     <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span>Professional memberships (AANP, ANCC, state and specialty {brand.niche.short} associations)</span></li>
                     <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span>Work devices, EHR and telehealth software, business phone and internet</span></li>
-                    <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span>Health insurance premiums are deducted <strong>against income tax, not as a business expense</strong> — so they do not reduce self-employment tax</span></li>
-                    <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span>The qualified business income deduction may apply, but clinical care is a specified service trade or business, so it phases out above an income threshold the IRS indexes annually — check eligibility with a CPA rather than assuming it</span></li>
+                    <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span>Health insurance premiums are deducted <strong>against income tax, not as a business expense</strong>, so they do not reduce self-employment tax</span></li>
+                    <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span>The qualified business income deduction may apply, but clinical care is a specified service trade or business, so it phases out above an income threshold the IRS indexes annually; check eligibility with a CPA rather than assuming it</span></li>
                   </ul>
                 </div>
                 <div>
@@ -516,7 +516,7 @@ export default function CompensationGuidePage() {
                     </div>
                     <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
                       <div className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Solo 401(k)</div>
-                      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Two tiers: an employee elective deferral <em>plus</em> an employer profit-sharing contribution, against the same annual cap. Because the deferral stacks on top, it reaches the cap at a much lower income than a SEP-IRA — and usually offers a Roth bucket. This is why higher-earning contractors generally choose it.</div>
+                      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Two tiers: an employee elective deferral <em>plus</em> an employer profit-sharing contribution, against the same annual cap. Because the deferral stacks on top, it reaches the cap at a much lower income than a SEP-IRA, and it usually offers a Roth bucket. This is why higher-earning contractors generally choose it.</div>
                     </div>
                     <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
                       <div className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>W2 employer 401(k)</div>
@@ -581,7 +581,7 @@ export default function CompensationGuidePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <Link href="/resources/fpa-guide" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Full Practice Authority guide</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Whether you can contract independently depends on your state — check its classification first.</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Whether you can contract independently depends on your state, so check its classification first.</p>
             </Link>
             <Link href="/resources/private-practice-guide" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Private practice startup guide</h3>
@@ -589,7 +589,7 @@ export default function CompensationGuidePage() {
             </Link>
             <Link href="/salary-guide" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>{brand.niche.short} salary guide</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Live pay data by state, setting, and experience — anchor your rate to a real market number.</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Live pay data by state, setting, and experience. Anchor your rate to a real market number.</p>
             </Link>
             <Link href="/jobs/1099" className="block p-4 rounded-lg hover:shadow-sm transition-all" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <h3 className="font-semibold" style={{ color: 'var(--color-primary)' }}>Browse 1099 {brand.niche.short} jobs</h3>

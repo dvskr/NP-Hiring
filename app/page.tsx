@@ -59,17 +59,17 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     // SEO Fix #7: trim title to ≤60 chars (Google SERP cap). Previous title
     // ran 77 chars and got truncated mid-phrase, costing CTR.
-    title: `${jobCountDisplay} ${brand.niche.short} Jobs — ${brand.niche.long} Job Board`,
-    description: `Browse ${jobCountDisplay} ${brand.niche.short} jobs updated daily. Remote, telehealth & in-person ${brand.niche.short} positions with salary transparency. Free for job seekers.`,
+    title: `${jobCountDisplay} ${brand.niche.short} Jobs: ${brand.niche.long} Job Board`,
+    description: `Browse ${jobCountDisplay} ${brand.niche.short} jobs updated daily. Remote, telehealth, and in-person ${brand.niche.short} positions with salary transparency. Free for job seekers.`,
     openGraph: {
-      title: `${jobCountDisplay} ${brand.niche.short} Jobs - Find Your Next Position`,
+      title: `${jobCountDisplay} ${brand.niche.short} Jobs: Find Your Next Position`,
       description: `Browse ${jobCountDisplay} ${brand.niche.descriptor} jobs. Remote, hybrid, and in-person positions with salary transparency.`,
       images: [
         {
           url: HOME_OG_IMAGE,
           width: 1200,
           height: 630,
-          alt: `${brand.name} job board — ${jobCountDisplay} ${brand.niche.descriptor} jobs from ${uniqueEmployerCount}+ companies across 50 states`,
+          alt: `${brand.name} job board: ${jobCountDisplay} ${brand.niche.descriptor} jobs from ${uniqueEmployerCount}+ companies across 50 states`,
         },
       ],
     },
@@ -90,19 +90,9 @@ export default async function Home() {
       {/* Note: Organization schema is rendered site-wide in layout.tsx @graph.
           Removed standalone duplicate here to prevent conflicting signals in GSC. */}
       <VideoJsonLd pathname="/" />
-      {/* BreadcrumbList schema — homepage */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'BreadcrumbList',
-            itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: brand.baseUrl },
-            ],
-          }),
-        }}
-      />
+      {/* No BreadcrumbList here: the root page IS the top of the hierarchy,
+          and a one-item trail ("Home") carries no navigational meaning and is
+          flagged by rich-result validators. Child pages emit their own. */}
       {/* FAQ schema + visible FAQ content now live together in
           components/HomepageFAQ.tsx (audit F11): one array feeds both the
           JSON-LD and the rendered accordion so they cannot diverge, and every
@@ -173,35 +163,35 @@ const FREE_TOOLS: readonly FreeTool[] = [
   {
     href: '/salary-guide',
     label: `${brand.niche.short} Salary Calculator`,
-    blurb: 'Filter live posted pay by state, experience and setting.',
+    blurb: 'Filter live posted pay by state, experience, and setting.',
     icon: Calculator,
     chip: 'Calculator',
   },
   {
     href: '/tools/licensure-checker',
     label: 'Licensure Checker',
-    blurb: 'Pick a state for requirements, practice authority and timeline.',
+    blurb: 'Select a state to see requirements, practice authority, and timeline.',
     icon: Stethoscope,
     chip: 'Checker',
   },
   {
     href: '/tools/1099-vs-w2-calculator',
     label: '1099 vs W-2 Calculator',
-    blurb: 'What contract pay really nets after self-employment tax.',
+    blurb: 'See what contract pay actually nets after self-employment tax.',
     icon: Receipt,
     chip: 'Calculator',
   },
   {
     href: '/resources/fpa-guide',
     label: 'Full Practice Authority Guide',
-    blurb: 'All 50 states classified full, reduced or restricted.',
+    blurb: 'All 50 states classified as full, reduced, or restricted.',
     icon: ShieldCheck,
     chip: 'Guide',
   },
   {
     href: '/resources/private-practice-guide',
     label: 'Private Practice Startup',
-    blurb: 'LLC, credentialing, EHR and malpractice, step by step.',
+    blurb: 'LLC, credentialing, EHR, and malpractice, step by step.',
     icon: Building2,
     chip: 'Guide',
   },
@@ -387,7 +377,7 @@ const FREE_TOOLS_CSS = `
   .tool-card__open {
     font-size: 11px;
     font-weight: 800;
-    color: #9b8291;
+    color: #7A5C6B;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     white-space: nowrap;
@@ -414,8 +404,8 @@ function FreeToolsBand() {
               Free {brand.niche.short} career tools
             </h2>
             <p className="ftools-lede">
-              No account, no paywall. Work out what a role should pay, what your state requires, and
-              what contract work actually nets — before you apply.
+              No account and no paywall. Work out what a role should pay, what your state requires, and
+              what contract work actually nets before you apply.
             </p>
           </div>
           {/* The tools hub carries the calculators that did not fit above

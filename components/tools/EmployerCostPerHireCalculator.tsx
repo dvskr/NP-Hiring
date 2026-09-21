@@ -25,6 +25,7 @@ import Link from 'next/link';
 import { ArrowRight, Info, ShieldCheck } from 'lucide-react';
 import { brand } from '@/config/brand';
 import ToolStyles from './ToolStyles';
+import { parsePlainAmount } from './parse-amount';
 import { TOOL_ACCENT, clayCard, controlStyle, formatUsd, labelStyle } from './tool-theme';
 import {
     DEFAULT_INPUTS,
@@ -65,10 +66,14 @@ function toDraft(inputs: CostPerHireInputs): Draft {
     };
 }
 
-const num = (raw: string): number => {
-    const parsed = Number.parseFloat(raw.replace(/[^0-9.]/g, ''));
-    return Number.isFinite(parsed) ? parsed : 0;
-};
+// Rendered when a metric has no value yet (no hires, no applicants, overlay off).
+// Owner direction (2026-09-12): no dashes in visible text, so not an em dash.
+const EMPTY_VALUE = 'n/a';
+
+// A negative or malformed entry is not an amount: it reads as 0, which the
+// model treats as a missing input (for sponsored spend, "Not comparable")
+// instead of pricing "-500" as $500 the way a minus-stripping parse did.
+const num = (raw: string): number => parsePlainAmount(raw) ?? 0;
 
 interface FieldProps {
     id: string;
@@ -337,8 +342,8 @@ export default function EmployerCostPerHireCalculator() {
                 Zero by default, which switches the overlay off entirely. Only you know what an unfilled seat costs
                 per day (coverage, lost visit revenue, overtime), and we will not guess it for you. The three
                 time-to-fill fields start at our {FLAT_FEE_PRICING.durationDays}-day posting window, which is a
-                product fact rather than a market average, and the same number for all three channels so the default
-                cannot favour one.
+                product fact rather than a market average and is the same number for all three channels, so the
+                default cannot favor one.
             </p>
             <div className="tool-two-col" style={{ ...twoCol, marginBottom: '10px' }}>
                 <NumberField
@@ -382,7 +387,7 @@ export default function EmployerCostPerHireCalculator() {
                     Your cost per hire, flat-fee posting
                 </p>
                 <div aria-live="polite" style={{ fontSize: '34px', fontWeight: 800, color: '#831843', lineHeight: 1.05, fontVariantNumeric: 'tabular-nums' }}>
-                    {ourCostPerHire === null ? '—' : formatUsd(ourCostPerHire)}
+                    {ourCostPerHire === null ? EMPTY_VALUE : formatUsd(ourCostPerHire)}
                 </div>
                 <p style={{ fontSize: '13px', color: '#5A4A42', margin: '8px 0 0', lineHeight: 1.6 }}>
                     {flat.mode === 'promo' && (
@@ -461,18 +466,18 @@ export default function EmployerCostPerHireCalculator() {
                                             {formatUsd(result.totalSpend)}
                                         </td>
                                         <td style={{ textAlign: 'right', padding: '11px 10px', color: '#5A4A42', fontVariantNumeric: 'tabular-nums' }}>
-                                            {result.totalApplicants > 0 ? Math.round(result.totalApplicants).toLocaleString('en-US') : '—'}
+                                            {result.totalApplicants > 0 ? Math.round(result.totalApplicants).toLocaleString('en-US') : EMPTY_VALUE}
                                         </td>
                                         <td style={{ textAlign: 'right', padding: '11px 10px', color: '#5A4A42', fontVariantNumeric: 'tabular-nums' }}>
-                                            {result.costPerApplicant === null ? '—' : formatUsd(result.costPerApplicant)}
+                                            {result.costPerApplicant === null ? EMPTY_VALUE : formatUsd(result.costPerApplicant)}
                                         </td>
                                         <td style={{ textAlign: 'right', padding: '11px 10px', fontWeight: 800, color: '#831843', fontVariantNumeric: 'tabular-nums' }}>
-                                            {result.costPerHire === null ? '—' : formatUsd(result.costPerHire)}
+                                            {result.costPerHire === null ? EMPTY_VALUE : formatUsd(result.costPerHire)}
                                         </td>
                                         <td style={{ textAlign: 'right', padding: '11px 0 11px 10px', color: '#5A4A42', fontVariantNumeric: 'tabular-nums' }}>
                                             {vacancyOn && result.costPerHireWithVacancy !== null
                                                 ? formatUsd(result.costPerHireWithVacancy)
-                                                : '—'}
+                                                : EMPTY_VALUE}
                                         </td>
                                     </>
                                 ) : (

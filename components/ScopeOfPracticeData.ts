@@ -81,7 +81,7 @@ export { NLC_LIVE_ROSTER_URL, NLC_ROSTER_VERIFIED_AT, type NlcStatus };
 /** Human-readable badge labels for the tri-state compact status. */
 export const NLC_STATUS_LABELS: Record<NlcStatus, string> = {
     'member': 'Member',
-    'pending': 'Enacted — implementation pending',
+    'pending': 'Enacted, implementation pending',
     'non-member': 'Not a member',
 } as const;
 
@@ -185,7 +185,7 @@ export function buildSopFaqs(): SopFaq[] {
     return [
         {
             question: `What does "scope of practice" mean for ${NP}s?`,
-            answer: `Scope of practice is what a state's law and board rules let a ${descriptor} do — evaluate patients, diagnose, order and interpret tests, and initiate and manage treatment, including prescribing. The AANP classifies each state's regulatory environment into one of three tiers: Full Practice (independent practice under the board of nursing), Reduced Practice (a collaborative agreement with a physician is required for at least one element of practice), and Restricted Practice (supervision, delegation, or team management by a physician is required).`,
+            answer: `Scope of practice is what a state's law and board rules allow a ${descriptor} to do: evaluate patients, diagnose, order and interpret tests, and initiate and manage treatment, including prescribing. The AANP classifies each state's regulatory environment into one of three tiers: Full Practice (independent practice under the board of nursing), Reduced Practice (a collaborative agreement with a physician is required for at least one element of practice), and Restricted Practice (supervision, delegation, or team management by a physician is required).`,
         },
         {
             question: `How many states grant ${NP}s full practice authority?`,
@@ -193,15 +193,15 @@ export function buildSopFaqs(): SopFaq[] {
         },
         {
             question: 'What is the difference between reduced and restricted practice?',
-            answer: `In a Reduced Practice state, a ${descriptor} holds their own license but state law requires a documented collaborative agreement with a physician covering at least one element of practice — most commonly prescribing. In a Restricted Practice state, the law goes further: supervision, delegation, or team management by a physician is required for practice itself, and job postings typically name a supervising physician and reference protocols. Several states also apply transition-to-practice periods before full autonomy — the per-state details on this page note the ones in this dataset.`,
+            answer: `In a Reduced Practice state, a ${descriptor} holds their own license but state law requires a documented collaborative agreement with a physician covering at least one element of practice, most commonly prescribing. In a Restricted Practice state, the law goes further: supervision, delegation, or team management by a physician is required for practice itself, and job postings typically name a supervising physician and reference protocols. Several states also apply transition-to-practice periods before full autonomy. The per-state details on this page note the ones in this dataset.`,
         },
         {
             question: `Where do I find my state's prescribing rules and agreement paperwork?`,
-            answer: `From your state board of nursing — that is deliberate, not an omission. Controlled-substance schedules, collaboration-agreement contents, filing steps, fees, and renewal rules are set by each board and change often enough that restating them here would go stale. Every state section on this page links the board's NCSBN member-board directory entry, and the AANP State Practice Environment page tracks classification changes as legislatures act.`,
+            answer: `From your state board of nursing. That is deliberate, not an omission. Controlled-substance schedules, collaboration-agreement contents, filing steps, fees, and renewal rules are set by each board and change often enough that restating them here would go stale. Every state section on this page links the board's NCSBN member-board directory entry, and the AANP State Practice Environment page tracks classification changes as legislatures act.`,
         },
         {
             question: `Does the Nurse Licensure Compact change an ${NP}'s scope of practice?`,
-            answer: `No. The compact covers the RN license underpinning your APRN credential — a multistate RN license is recognized across member states — but APRN licensure, and with it your scope of practice, is issued state by state. The table on this page marks each jurisdiction's compact status — member, enacted with implementation pending, or not a member — verified against the live NCSBN roster on ${NLC_ROSTER_VERIFIED_AT}. In enacted-pending states the compact confers nothing yet: no implementation date is set, so verify the current status with the state board. Membership shifts as legislatures act, so re-check the live roster at ${NLC_LIVE_ROSTER_URL} for each state you plan to cover.`,
+            answer: `No. The compact covers the RN license underpinning your APRN credential (a multistate RN license is recognized across member states), but APRN licensure, and with it your scope of practice, is issued state by state. The table on this page marks each jurisdiction's compact status (member, enacted with implementation pending, or not a member), verified against the live NCSBN roster on ${NLC_ROSTER_VERIFIED_AT}. In enacted-pending states the compact confers nothing yet: no implementation date is set, so verify the current status with the state board. Membership shifts as legislatures act, so re-check the live roster at ${NLC_LIVE_ROSTER_URL} for each state you plan to cover.`,
         },
     ];
 }

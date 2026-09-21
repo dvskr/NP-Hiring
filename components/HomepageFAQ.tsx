@@ -88,31 +88,31 @@ export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[
     return [
         {
             question: `What is an ${brand.niche.short}?`,
-            answer: `An ${brand.niche.short} (${brand.niche.long}) is an advanced practice registered nurse (APRN) who assesses, diagnoses, and treats patients, prescribes medications including controlled substances, and manages care across the lifespan. They hold a Master's or Doctoral degree in nursing and are nationally board certified in a population focus such as family, adult-gerontology, pediatrics, or women's health.`,
+            answer: `An ${brand.niche.short} (${brand.niche.long}) is an advanced practice registered nurse (APRN) who assesses, diagnoses, and treats patients, prescribes medications including controlled substances, and manages care across the lifespan. They hold a master's or doctoral degree in nursing and are nationally board certified in a population focus such as family, adult-gerontology, pediatrics, or women's health.`,
         },
         {
             question: `How much do ${brand.niche.short}s make?`,
-            answer: `${brand.niche.short}s earn an average annual salary of ${STAT_SOURCES.averageSalary.range} based on the ${STAT_SOURCES.averageSalary.source} (${STAT_SOURCES.averageSalary.asOf}). Salaries range from ~$120,000 for new graduates to $200,000+ for experienced ${brand.niche.short}s in high-demand areas. Remote and telehealth positions typically pay $130,000–$200,000; private practice ${brand.niche.short}s can earn $200,000+ depending on caseload and overhead.`,
+            answer: `${brand.niche.short}s earn an average annual salary of ${STAT_SOURCES.averageSalary.range} based on the ${STAT_SOURCES.averageSalary.source} (${STAT_SOURCES.averageSalary.asOf}). Salaries range from approximately $120,000 for new graduates to $200,000+ for experienced ${brand.niche.short}s in high-demand areas. Remote and telehealth positions typically pay $130,000 to $200,000, and private practice ${brand.niche.short}s can earn $200,000+ depending on caseload and overhead.`,
         },
         {
             question: `What is the ${brand.niche.short} job outlook?`,
-            answer: `The ${brand.niche.short} job outlook is strong: ${STAT_SOURCES.blsGrowth2034.source} projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for nurse practitioners through 2034 — much faster than average. Roughly ${STAT_SOURCES.hrsaShortagePopulation.formatted} Americans live in federally designated Health Professional Shortage Areas (${STAT_SOURCES.hrsaShortagePopulation.source}, ${STAT_SOURCES.hrsaShortagePopulation.asOf}), so demand for ${brand.niche.short}s continues to expand alongside telehealth access.`,
+            answer: `The ${brand.niche.short} job outlook is strong: ${STAT_SOURCES.blsGrowth2034.source} projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for nurse practitioners through 2034, which is much faster than average. Roughly ${STAT_SOURCES.hrsaShortagePopulation.formatted} Americans live in federally designated Health Professional Shortage Areas (${STAT_SOURCES.hrsaShortagePopulation.source}, ${STAT_SOURCES.hrsaShortagePopulation.asOf}), so demand for ${brand.niche.short}s continues to expand alongside telehealth access.`,
         },
         {
             question: `How long does it take to become an ${brand.niche.short}?`,
-            answer: `Becoming an ${brand.niche.short} typically takes 6-8 years total: 4 years for a BSN, 1-2 years of RN experience (recommended), and 2-3 years for an MSN or DNP with ${brand.niche.short} specialization. Accelerated BSN-to-DNP programs can shorten this timeline. After graduation, you must pass a national ${brand.niche.short} certification exam (ANCC or AANP).`,
+            answer: `Becoming an ${brand.niche.short} typically takes 6 to 8 years in total: 4 years for a BSN, 1 to 2 years of RN experience (recommended), and 2 to 3 years for an MSN or DNP with ${brand.niche.short} specialization. Accelerated BSN-to-DNP programs can shorten this timeline. After graduation, you must pass a national ${brand.niche.short} certification exam (ANCC or AANP).`,
         },
         {
             question: `Can ${brand.niche.short}s prescribe medication?`,
-            answer: `Yes, ${brand.niche.short}s can prescribe medications including controlled substances in all 50 states. In states with full practice authority (${fpa.formatted} per the ${fpa.source}, ${fpa.asOf}), ${brand.niche.short}s prescribe independently. In reduced or restricted practice states, a collaborative agreement with a physician may be required. What ${brand.niche.short}s prescribe follows their specialty — from antibiotics and antihypertensives to insulin, ADHD medications, and controlled pain medications.`,
+            answer: `Yes, ${brand.niche.short}s can prescribe medications including controlled substances in all 50 states. In states with full practice authority (${fpa.formatted} per the ${fpa.source}, ${fpa.asOf}), ${brand.niche.short}s prescribe independently. In reduced or restricted practice states, a collaborative agreement with a physician may be required. The medications ${brand.niche.short}s prescribe follow their specialty, from antibiotics and antihypertensives to insulin, ADHD medications, and controlled pain medications.`,
         },
         {
             question: `What is the difference between an ${brand.niche.short} and a physician?`,
-            answer: `${brand.niche.short}s hold a Master's or Doctoral degree in nursing (2–4 years of graduate school), while physicians complete medical school plus a 3–7 year residency. Both can diagnose conditions and prescribe medications. In full practice authority states, ${brand.niche.short}s practice independently. ${brand.niche.short}s typically earn ${STAT_SOURCES.averageSalary.range} (${STAT_SOURCES.averageSalary.source}, ${STAT_SOURCES.averageSalary.asOf}) compared to physicians at $220,000+, but ${brand.niche.short}s reach full practice much faster with less educational debt.`,
+            answer: `${brand.niche.short}s hold a master's or doctoral degree in nursing (2 to 4 years of graduate school), while physicians complete medical school plus a residency of 3 to 7 years. Both can diagnose conditions and prescribe medications. In full practice authority states, ${brand.niche.short}s practice independently. ${brand.niche.short}s typically earn ${STAT_SOURCES.averageSalary.range} (${STAT_SOURCES.averageSalary.source}, ${STAT_SOURCES.averageSalary.asOf}) compared to physicians at $220,000+, but ${brand.niche.short}s reach full practice much faster with less educational debt.`,
         },
         {
             question: `What does a ${brand.niche.descriptor} do on a typical workday?`,
-            answer: `A typical ${brand.niche.short} workday includes seeing patients for scheduled evaluations and follow-ups, diagnosing and treating acute and chronic conditions, prescribing and adjusting medications, ordering and reviewing labs and imaging, collaborating with interdisciplinary teams, and documenting in EHR systems. Outpatient ${brand.niche.short}s typically see 15-25 patients per day, while inpatient roles involve rounding on hospitalized patients.`,
+            answer: `A typical ${brand.niche.short} workday includes seeing patients for scheduled evaluations and follow-ups, diagnosing and treating acute and chronic conditions, prescribing and adjusting medications, ordering and reviewing labs and imaging, collaborating with interdisciplinary teams, and documenting in EHR systems. Outpatient ${brand.niche.short}s typically see 15 to 25 patients per day, while inpatient roles involve rounding on hospitalized patients.`,
         },
         {
             question: `Are there remote ${brand.niche.short} jobs?`,
@@ -120,7 +120,7 @@ export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[
         },
         {
             question: `Can ${brand.niche.short}s own a private practice?`,
-            answer: `Yes, ${brand.niche.short}s can own a private practice in all 50 states, though the level of independence varies. In the ${fpa.formatted} granting Full Practice Authority (${fpa.source}, ${fpa.asOf}), ${brand.niche.short}s can practice and prescribe without physician oversight. In restricted states, a collaborative agreement with a physician may be required. Private practice ${brand.niche.short}s can earn $180,000-$300,000+ annually, though they must manage business operations, insurance credentialing, and overhead costs.`,
+            answer: `Yes, ${brand.niche.short}s can own a private practice in all 50 states, though the level of independence varies. In the ${fpa.formatted} granting Full Practice Authority (${fpa.source}, ${fpa.asOf}), ${brand.niche.short}s can practice and prescribe without physician oversight. In restricted states, a collaborative agreement with a physician may be required. Private practice ${brand.niche.short}s can earn $180,000 to $300,000+ annually, though they must manage business operations, insurance credentialing, and overhead costs.`,
         },
         ...demandFaq,
         {

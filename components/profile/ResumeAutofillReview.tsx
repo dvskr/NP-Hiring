@@ -154,7 +154,7 @@ export default function ResumeAutofillReview({
                                 margin: '2px 0 0',
                             }}
                         >
-                            Nothing is saved until you choose. <strong>Fill empty fields</strong> keeps what you already have. <strong>Replace everything</strong> overwrites existing values and rewrites your licenses, certs, education and work history.
+                            Nothing is saved until you choose. <strong>Fill empty fields</strong> keeps what you already have. <strong>Replace everything</strong> overwrites existing values and rewrites your licenses, certifications, education, and work history.
                         </p>
                     </div>
                     <button
@@ -219,9 +219,9 @@ export default function ResumeAutofillReview({
                                     lineHeight: 1.6,
                                 }}
                             >
-                                <li>Use a <strong>text-based</strong> PDF (exported from Word/Google Docs), not a scan or screenshot.</li>
-                                <li>If your PDF was scanned, run it through OCR or re-export from the original source.</li>
-                                <li>DOCX usually works best if the PDF route fails.</li>
+                                <li>Use a <strong>text-based</strong> PDF (exported from Word or Google Docs), not a scan or screenshot.</li>
+                                <li>If your PDF was scanned, run it through OCR or re-export it from the original source.</li>
+                                <li>A DOCX file usually works best if the PDF fails.</li>
                             </ul>
                         </div>
                     )}
@@ -267,7 +267,7 @@ export default function ResumeAutofillReview({
                             <button
                                 onClick={() => onApply(true)}
                                 disabled={loading || applying}
-                                title="Overwrite existing fields and replace all licenses, certifications, education and work experience with what's in the resume."
+                                title="Overwrite existing fields and replace all licenses, certifications, education, and work experience with the contents of the resume."
                                 style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
@@ -288,7 +288,7 @@ export default function ResumeAutofillReview({
                             <button
                                 onClick={() => onApply(false)}
                                 disabled={loading || applying}
-                                title="Only fill profile fields that are currently empty. Existing values and existing licenses/certs/education/work entries are kept."
+                                title="Only fill profile fields that are currently empty. Existing values and existing license, certification, education, and work entries are kept."
                                 style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
@@ -403,7 +403,7 @@ function ParsedSections({ parsed }: { parsed: ParsedResume }) {
                 <ListBlock items={parsed.workExperience.map((w) => ({
                     primary: `${w.jobTitle} · ${w.employerName}`,
                     secondary: [
-                        w.startDate || w.endDate ? `${w.startDate ?? '?'} – ${w.isCurrent ? 'Present' : (w.endDate ?? '?')}` : null,
+                        w.startDate || w.endDate ? `${w.startDate ?? '?'} to ${w.isCurrent ? 'Present' : (w.endDate ?? '?')}` : null,
                         w.practiceSetting,
                     ]
                         .filter(Boolean)

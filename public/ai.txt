@@ -1,4 +1,4 @@
-# ai.txt — AI Crawler and LLM Permissions
+# ai.txt: AI Crawler and LLM Permissions
 # https://nphiring.com/ai.txt
 # Last updated: 2026-07-02
 

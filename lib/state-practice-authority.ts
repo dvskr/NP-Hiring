@@ -61,7 +61,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Colorado': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Colorado ${NPS} can practice independently and prescribe all medications including controlled substances.`,
+        details: `Colorado ${NPS} can practice independently and prescribe all medications, including controlled substances.`,
     },
     'Connecticut': {
         authority: 'full',
@@ -76,7 +76,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'District of Columbia': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Washington D.C. grants full practice authority to ${NPS}.`,
+        details: `Washington, D.C. grants full practice authority to ${NPS}.`,
     },
     'Hawaii': {
         authority: 'full',
@@ -193,7 +193,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'New York': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `New York grants full practice authority to ${NPS} who have completed 3,600 hours of qualifying practice; below that threshold a written collaborative relationship with a physician still applies.`,
+        details: `New York grants full practice authority to ${NPS} who have completed 3,600 hours of qualifying practice; below that threshold, a written collaborative relationship with a physician still applies.`,
     },
     'Massachusetts': {
         authority: 'full',
@@ -284,7 +284,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Florida': {
         authority: 'restricted',
         description: 'Restricted Practice',
-        details: `Florida requires physician supervision for ${NP} practice under a supervisory protocol; a 2020 law lets ${NPS} with 3,000+ supervised hours in the past five years register for autonomous primary-care practice — family medicine, general pediatrics and general internal medicine only.`,
+        details: `Florida requires physician supervision for ${NP} practice under a supervisory protocol; a 2020 law lets ${NPS} with 3,000+ supervised hours in the past five years register for autonomous primary-care practice, limited to family medicine, general pediatrics, and general internal medicine.`,
     },
     'Georgia': {
         authority: 'restricted',

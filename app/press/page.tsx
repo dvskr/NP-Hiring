@@ -60,7 +60,7 @@ export const metadata: Metadata = {
     alternates: { canonical: `${brand.baseUrl}/press` },
     robots: { index: true, follow: true },
     openGraph: {
-        title: `${brand.name} — Press & Data Room`,
+        title: `${brand.name} | Press & Data Room`,
         description: `${brand.niche.long} workforce data, methodology, brand assets, and media contact.`,
         images: [
             {
@@ -409,8 +409,8 @@ export default async function PressPage() {
                     <Section icon={<BarChart3 size={20} />} title="What our own listings show" id="inventory">
                         <p>
                             The figures below are a live count of this board&apos;s own indexable inventory at the
-                            time this page was generated — not a market estimate, and not a national vacancy figure.
-                            They describe {brand.name} and nothing wider than {brand.name}.
+                            time this page was generated. They are not a market estimate and not a national vacancy
+                            figure. They describe {brand.name} and nothing beyond {brand.name}.
                         </p>
                         <div
                             style={{
@@ -422,7 +422,7 @@ export default async function PressPage() {
                         >
                             {[
                                 { n: inventory.totalJobs.toLocaleString(), label: 'Open listings' },
-                                { n: inventory.totalEmployers.toLocaleString(), label: 'Hiring organisations' },
+                                { n: inventory.totalEmployers.toLocaleString(), label: 'Hiring organizations' },
                                 { n: inventory.totalStates.toLocaleString(), label: 'States represented' },
                             ].map((s) => (
                                 <div key={s.label} style={{ ...clayCard, padding: '16px 18px' }}>
@@ -436,7 +436,7 @@ export default async function PressPage() {
                         <p style={{ marginTop: '12px', fontSize: '13px', color: MUTED_TEXT }}>
                             Counted with the same filter the /jobs browse pages use: published, unexpired, not
                             flagged as a repeatedly dead source link, and with out-of-scope (non-{brand.niche.short})
-                            roles excluded. If you need a cut of this by specialty, state, or setting, ask — we will
+                            roles excluded. If you need a breakdown by specialty, state, or setting, ask and we will
                             run it.
                         </p>
                     </Section>
@@ -445,7 +445,7 @@ export default async function PressPage() {
                 <Section icon={<BarChart3 size={20} />} title="Data reports" id="reports">
                     <p>
                         Longer-form analyses of the same data, with sample gates and methodology on
-                        each page — start at the{' '}
+                        each page. Start at the{' '}
                         <Link href={REPORTS_HUB_PATH} style={linkStyle}>
                             reports hub
                         </Link>
@@ -475,7 +475,7 @@ export default async function PressPage() {
                             this; check the &quot;as of&quot; date before quoting.
                         </li>
                         <li>
-                            <strong>Listing aggregates describe this board, not the labour market.</strong> Pay ranges
+                            <strong>Listing aggregates describe this board, not the labor market.</strong> Pay ranges
                             derived from our postings reflect what employers advertised on {brand.name}, which skews
                             toward roles employers chose to advertise with a salary at all. They are not a wage
                             survey, and we label them as posting-derived everywhere they appear.
@@ -485,14 +485,14 @@ export default async function PressPage() {
                             it is omitted rather than estimated, including on this page.
                         </li>
                         <li>
-                            <strong>Certification bodies are attributed per specialty</strong> — AANP or ANCC for{' '}
-                            {brand.niche.short} certification, NBCRNA for nurse anesthetists, AMCB for certified
+                            <strong>Certification bodies are attributed per specialty.</strong> AANP or ANCC for{' '}
+                            {brand.niche.short} certification, NBCRNA for nurse anesthetists, and AMCB for certified
                             nurse-midwives.
                         </li>
                     </ul>
                     <p style={{ marginTop: '12px' }}>
-                        The longer version — how our pages are produced, our correction policy, and our clinical
-                        review status — is on the{' '}
+                        The longer version, covering how our pages are produced, our correction policy, and our
+                        clinical review status, is on the{' '}
                         <Link href="/editorial-policy" style={linkStyle}>
                             editorial policy
                         </Link>{' '}
@@ -518,7 +518,7 @@ export default async function PressPage() {
 
                 <Section icon={<ImageDown size={20} />} title="Brand assets">
                     <p style={{ marginBottom: '12px' }}>
-                        Logo files for editorial use. Please do not recolour, stretch, add effects to, or lock up the
+                        Logo files for editorial use. Please do not recolor, stretch, add effects to, or lock up the
                         mark with other logos in a way that implies a partnership we do not have.
                     </p>
                     <div
@@ -563,7 +563,7 @@ export default async function PressPage() {
                             <strong>Founded:</strong> {brand.legal.foundingYear}.
                         </li>
                         <li>
-                            <strong>Built by:</strong> {brand.legal.creatorName}, {brand.legal.creatorTitle} — more on{' '}
+                            <strong>Built by:</strong> {brand.legal.creatorName}, {brand.legal.creatorTitle}. Read more on{' '}
                             <Link href="/about" style={linkStyle}>
                                 the about page
                             </Link>
@@ -578,16 +578,16 @@ export default async function PressPage() {
                         <a href={`mailto:${brand.email.press}`} style={linkStyle}>
                             {brand.email.press}
                         </a>
-                        . We answer fact-check requests on deadline where we can — say so in the subject line and
-                        include your deadline.
+                        . We answer fact-check requests on deadline where we can. Please say so in the subject line
+                        and include your deadline.
                     </p>
                     <p style={{ marginTop: '10px' }}>
-                        Corrections to something we have already published go to{' '}
+                        Corrections to anything we have already published go to{' '}
                         <a href={`mailto:${brand.email.contact}`} style={linkStyle}>
                             {brand.email.contact}
-                        </a>{' '}
-                        — we fix verified errors at the data source so the fix propagates to every page quoting it.
-                        Accessibility questions about our site are handled on the{' '}
+                        </a>
+                        . We fix verified errors at the data source so the correction propagates to every page that
+                        quotes it. Accessibility questions about our site are handled on the{' '}
                         <Link href="/accessibility" style={linkStyle}>
                             accessibility statement
                         </Link>

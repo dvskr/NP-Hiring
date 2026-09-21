@@ -68,7 +68,7 @@ export const TOOLS: readonly ToolEntry[] = [
     path: '/tools/licensure-checker',
     title: `${brand.niche.short} licensure checker & multi-state planner`,
     blurb:
-      'Practice authority, licensure steps, and live pay for any state — then line up every state you are considering side by side.',
+      'See practice authority, licensure steps, and live pay for any state, then line up every state you are considering side by side.',
     badge: '51 jurisdictions',
     audience: 'seeker',
     icon: 'clipboard',
@@ -77,7 +77,7 @@ export const TOOLS: readonly ToolEntry[] = [
     path: '/tools/salary-benchmark',
     title: `What should I pay a ${brand.niche.long}?`,
     blurb:
-      'Median and 25th–75th percentile posted pay by state, from live listings — check a planned offer against the market before you post it.',
+      'Median and 25th to 75th percentile posted pay by state, from live listings. Check a planned offer against the market before you post it.',
     badge: 'For employers',
     audience: 'employer',
     icon: 'chart',
@@ -86,7 +86,7 @@ export const TOOLS: readonly ToolEntry[] = [
     path: '/tools/specialty-finder',
     title: `${brand.niche.short} specialty finder`,
     blurb:
-      'Eight questions on population, acuity, setting, autonomy, procedures, and schedule — then the specialties that match what you said you want, with live roles and pay for each.',
+      'Eight questions on population, acuity, setting, autonomy, procedures, and schedule, followed by the specialties that match what you said you want, with live roles and pay for each.',
     badge: 'Preference sort',
     audience: 'seeker',
     icon: 'compass',
@@ -95,7 +95,7 @@ export const TOOLS: readonly ToolEntry[] = [
     path: '/tools/private-practice-revenue-calculator',
     title: 'Private practice revenue projector',
     blurb:
-      'Visits, collections per visit, and overhead worked through to net before tax — plus a sensitivity table showing what a wrong assumption costs you.',
+      'Visits, collections per visit, and overhead worked through to net before tax, plus a sensitivity table showing what a wrong assumption costs you.',
     badge: 'Illustration',
     audience: 'seeker',
     icon: 'building',

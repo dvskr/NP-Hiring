@@ -2,6 +2,8 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import MedianFigure from '@/components/MedianFigure';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -11,11 +13,9 @@ import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
-
-const STORAGE_BASE = brand.assets.storageBase;
 
 const clayCard: React.CSSProperties = {
   background: '#FFFFFF', borderRadius: '20px',
@@ -46,8 +46,8 @@ async function getStats() {
 
 const seniorFaqs = [
   { question: `What qualifies as a Senior ${brand.niche.short} role?`, answer: `Senior ${brand.niche.short} roles include positions like Clinical Director, Program Director, Medical Director, Lead ${brand.niche.short}, and Supervisor. These roles combine direct patient care with leadership responsibilities such as team oversight, program development, and quality improvement.` },
-  { question: `What salary range can Senior ${brand.niche.short}s expect?`, answer: `Senior ${brand.niche.short}s typically earn at the top of the standard ${brand.niche.short} pay band — often $140K-$160K+ — and director-level roles at larger organizations frequently exceed that with bonuses and comprehensive benefits packages.` },
-  { question: 'How many years of experience are needed for senior positions?', answer: `Most senior ${brand.niche.short} roles require 5-10+ years of ${brand.niche.adjective} clinical experience. Director-level positions often require demonstrated leadership experience, program development skills, and expertise in a specific clinical specialty.` },
+  { question: `What salary range can Senior ${brand.niche.short}s expect?`, answer: `Senior ${brand.niche.short}s typically earn at the top of the standard ${brand.niche.short} pay band, often $140K to $160K+, and director-level roles at larger organizations frequently exceed that with bonuses and comprehensive benefits packages.` },
+  { question: 'How many years of experience are needed for senior positions?', answer: `Most senior ${brand.niche.short} roles require 5 to 10+ years of ${brand.niche.adjective} clinical experience. Director-level positions often require demonstrated leadership experience, program development skills, and expertise in a specific clinical specialty.` },
   { question: 'What additional certifications help for leadership roles?', answer: `Beyond your national ${brand.niche.short} certification, training in healthcare administration, nursing leadership, and quality improvement strengthens candidacy. Many senior roles also value experience with evidence-based practice and program evaluation.` },
 ];
 
@@ -55,11 +55,11 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const [stats, params] = await Promise.all([getStats(), searchParams]);
   const page = Math.max(1, parseInt(params.page || '1'));
   return {
-    title: `${stats.totalJobs} Senior ${brand.niche.short} Jobs — Director & Leadership`,
+    title: `${stats.totalJobs} Senior ${brand.niche.short} Jobs: Director & Leadership`,
     description: `Browse ${stats.totalJobs} senior ${brand.niche.short} leadership positions. Clinical Director, Program Director, Medical Director, and Lead ${brand.niche.short} roles.`,
     alternates: { canonical: `${brand.baseUrl}/jobs/senior` },
     keywords: ['senior np jobs', 'nurse practitioner director', 'np leadership jobs', 'lead nurse practitioner', 'np supervisor'],
-    openGraph: { title: `Senior ${brand.niche.short} Jobs — ${stats.totalJobs} Leadership Positions`, description: `Find ${stats.totalJobs} senior ${brand.niche.descriptor} leadership roles.`, url: `${brand.baseUrl}/jobs/senior`, type: 'website' },
+    openGraph: { title: `Senior ${brand.niche.short} Jobs: ${stats.totalJobs} Leadership Positions`, description: `Find ${stats.totalJobs} senior ${brand.niche.descriptor} leadership roles.`, url: `${brand.baseUrl}/jobs/senior`, type: 'website' },
     ...(page > 1 && { robots: { index: false, follow: true } }),
   };
 }
@@ -95,15 +95,15 @@ export default async function SeniorPage({ searchParams }: PageProps) {
 
             {/* HERO */}
       <CategoryHero
-        bgColor="#6a85a0"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_wc_senior.webp`}
+        bgColor="#dac6a6"
+        heroImage="/images/categories/bento/senior-leadership.webp"
         heroAlt={`Senior ${brand.niche.short} clinical leadership roles`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'Senior']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Senior", url: `${brand.baseUrl}/jobs/senior` }])}
         indexLabel={`№ ${ALL_CATEGORY_SLUGS.indexOf('senior') + 1} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Senior"
         headlineLine2={brand.niche.short}
-        headlineSub="jobs, leadership roles."
+        headlineSub="jobs in leadership roles."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$140K+', label: 'median salary' },
@@ -126,7 +126,7 @@ export default async function SeniorPage({ searchParams }: PageProps) {
                 {jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}
               </div>
             ) : (
-              <div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions right now. Check back soon.</p></div>
+              <div className="text-center py-12"><p style={{ color: '#7A6A62' }}>No positions are available right now. Check back soon.</p></div>
             )}
             <div style={{ textAlign: 'center', marginTop: '32px' }}>
               <Link href="/jobs?category=senior" className="cat-cta-primary" style={{ padding: '14px 32px', borderRadius: '14px', fontWeight: 700, fontSize: '14px', background: '#BE185D', color: '#fff', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '4px 4px 12px rgba(190,24,93,0.2)' }}>Browse All Senior Jobs <ArrowRight size={16} /></Link>
@@ -156,7 +156,7 @@ export default async function SeniorPage({ searchParams }: PageProps) {
             {stats.medianSalaryK > 0 && (
               <div style={{ ...clayCard, padding: '24px' }}>
                 <TrendingUp size={20} style={{ color: '#34D399', marginBottom: '8px' }} />
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}>${`${stats.medianSalaryK}k`}</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35' }}><MedianFigure k={stats.medianSalaryK} /></div>
                 <div style={{ fontSize: '13px', color: '#7A6A62' }}>Median salary</div>
               </div>
             )}
@@ -171,55 +171,57 @@ export default async function SeniorPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '48px' }}>Built for Leaders</h2>
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1 */}
-            <div className="cat-bento-card cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '28px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'center' }}>
-              <div>
+            <div className="cat-bento-card cat-bento-hero-1" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>Lead Clinical Programs</h3>
                 <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>Direct {brand.niche.adjective} programs, mentor {brand.niche.short} teams, and drive quality improvement initiatives as a clinical leader.</p>
               </div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_senior_leadership.webp`} alt={`${brand.niche.short} leadership diorama`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+              <ImmersiveImage src="/images/categories/bento/mid-career-specialize.webp" alt={`${brand.niche.short} leadership diorama`} minHeight={240} />
             </div>
-            <div className="cat-bento-card cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_senior_strategy.webp`} alt="Strategic planning diorama" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '12px', marginBottom: '14px' }} />
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Strategic Impact</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Shape {brand.niche.category} policy and organizational strategy at the executive level.</p>
+            <div className="cat-bento-card cat-bento-hero-2" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', textAlign: 'center' }}>
+              <ImmersiveImage src="/images/categories/bento/senior-strategy.webp" alt="Strategic planning diorama" minHeight={200} />
+              <div style={{ padding: '22px 22px 26px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Strategic Impact</h3>
+                <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Shape {brand.niche.category} policy and organizational strategy at the executive level.</p>
+              </div>
             </div>
             {/* ROW 2: 4 icon cards */}
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_senior_crown.webp`} alt="Executive roles" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/senior-crown.webp" alt="Executive roles" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Executive Roles</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Chief {brand.niche.short}, clinical director, and VP positions.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_senior_chart.webp`} alt="Top compensation" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/senior-chart.webp" alt="Top compensation" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Top Compensation</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Senior roles pay at the top of the {brand.niche.short} range, plus bonuses.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_senior_blueprint.webp`} alt="Program design" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/senior-blueprint.webp" alt="Program design" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Program Design</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Build and lead {brand.niche.adjective} programs from scratch.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_senior_globe.webp`} alt="Industry influence" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/senior-globe.webp" alt="Industry influence" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Industry Influence</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Shape {brand.niche.category} policy and best practices.</p>
             </div>
             {/* ROW 3 */}
-            <div className="cat-bento-card cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '28px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'center' }}>
-              <div>
+            <div className="cat-bento-card cat-bento-hero-3" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                   <TrendingUp size={20} style={{ color: '#34D399' }} />
                   <span style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35' }}>Salary + Benefits</span>
                 </div>
-                <div style={{ fontSize: '36px', fontWeight: 800, color: '#1A2E35', marginBottom: '6px' }}>${`${stats.medianSalaryK}k`}</div>
+                <div style={{ fontSize: '36px', fontWeight: 800, color: '#1A2E35', marginBottom: '6px' }}><MedianFigure k={stats.medianSalaryK} /></div>
                 <p style={{ fontSize: '13px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Median senior {brand.niche.short} salary with executive bonuses, equity packages, and comprehensive benefits.</p>
               </div>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_senior_compensation.webp`} alt="Senior compensation diorama" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
+              <ImmersiveImage src="/images/categories/bento/senior-compensation.webp" alt="Senior compensation diorama" minHeight={240} />
             </div>
             <div className="cat-bento-card cat-bento-cta" style={{ gridColumn: 'span 4', padding: '28px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(145deg, #831843, #BE185D)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.15)' }}>
               <Bell size={28} style={{ color: '#fff', marginBottom: '12px' }} />
               <h3 className="font-lora" style={{ fontSize: '17px', fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Get Leadership Alerts</h3>
-              <p style={{ fontSize: '12px', color: '#FBCFE8', marginBottom: '16px', lineHeight: 1.5 }}>New director and supervisor roles daily.</p>
+              <p style={{ fontSize: '12px', color: '#FBCFE8', marginBottom: '16px', lineHeight: 1.5 }}>New director and supervisor roles delivered daily.</p>
               <Link href="/job-alerts" style={{ padding: '12px 28px', borderRadius: '12px', fontWeight: 700, fontSize: '13px', background: '#fff', color: '#831843', textDecoration: 'none', boxShadow: '4px 4px 12px rgba(0,0,0,0.15)' }}>Set Up Alerts</Link>
             </div>
           </div>
@@ -255,12 +257,12 @@ export default async function SeniorPage({ searchParams }: PageProps) {
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More Categories</h2>
           <div className="cat-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
             {[
-              { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` },
-              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_telehealth.webp` },
+              { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: '/images/categories/nav/remote.webp' },
+              { href: '/jobs/telehealth', label: 'Telehealth', sub: 'Virtual care', icon: '/images/categories/nav/telehealth.webp' },
               { href: '/jobs/private-practice', label: 'Private Practice', sub: 'Own your practice' },
-              { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic based' },
-              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` },
-              { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` },
+              { href: '/jobs/outpatient', label: 'Outpatient', sub: 'Clinic-based' },
+              { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: '/images/categories/nav/salary.webp' },
+              { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: '/images/categories/nav/location.webp' },
             ].map(c => (
               <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', textAlign: 'center' }}>
                 <span style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', display: 'block', marginBottom: '4px' }}>{c.label}</span>

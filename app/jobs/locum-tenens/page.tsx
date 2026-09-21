@@ -2,6 +2,8 @@ import { brand } from '@/config/brand';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import MedianFigure from '@/components/MedianFigure';
+import ImmersiveImage from '@/components/ImmersiveImage';
 import { TrendingUp, Building2, Bell, ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getGatedMedianKForWhere } from '@/lib/salary-analytics';
@@ -11,11 +13,10 @@ import JobCard from '@/components/JobCard';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
-import CategoryHero from '@/components/CategoryHero';
+import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryLocationsExplore from '@/components/seo/CategoryLocationsExplore';
 import { ALL_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 
-const STORAGE_BASE = brand.assets.storageBase;
 
 // Force dynamic rendering - don't try to statically generate during build
 /* Design Tokens */
@@ -84,11 +85,11 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const page = parseInt(params.page || '1');
 
   return {
-    title: `${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs — Agency Staffing`,
+    title: `${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs | Agency Staffing`,
     description: `Find ${stats.totalJobs} locum tenens ${brand.niche.short} jobs. Multi-state assignments with housing stipends, malpractice coverage, and premium pay. Updated daily.`,
     keywords: ['locum tenens np', 'locum tenens nurse practitioner', 'travel np jobs', 'np travel assignments', 'temporary nurse practitioner positions', 'locum np jobs'],
     openGraph: {
-      title: `${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs - Travel Assignments`,
+      title: `${stats.totalJobs} Locum Tenens ${brand.niche.short} Jobs | Travel Assignments`,
       description: `Browse locum tenens and travel ${brand.niche.descriptor} positions. Premium pay, housing, and malpractice coverage.`,
       type: 'website',
       images: [{
@@ -131,11 +132,11 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
   const locumFaqs = [
     {
       question: `What is a locum tenens ${brand.niche.short}?`,
-      answer: `A locum tenens ${brand.niche.short} is a ${brand.niche.descriptor} who fills temporary staffing needs at healthcare facilities. Assignments typically last 2-13 weeks and often include housing stipends, travel reimbursement, malpractice coverage, and premium hourly rates.`
+      answer: `A locum tenens ${brand.niche.short} is a ${brand.niche.descriptor} who fills temporary staffing needs at healthcare facilities. Assignments typically last 2 to 13 weeks and often include housing stipends, travel reimbursement, malpractice coverage, and premium hourly rates.`
     },
     {
       question: `How much do locum tenens ${brand.niche.short}s earn?`,
-      answer: `Locum ${brand.niche.short} assignments commonly pay $60-$150+ per hour depending on specialty, state, and setting — usually well above comparable permanent W-2 rates. Many assignments add tax-free housing stipends, travel reimbursement, and paid malpractice coverage on top of the hourly rate.`
+      answer: `Locum ${brand.niche.short} assignments commonly pay $60 to $150+ per hour depending on specialty, state, and setting, usually well above comparable permanent W-2 rates. Many assignments add tax-free housing stipends, travel reimbursement, and paid malpractice coverage on top of the hourly rate.`
     },
     {
       question: `Do locum tenens ${brand.niche.short}s get benefits?`,
@@ -147,7 +148,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
     },
     {
       question: `Is locum tenens work good for new grad ${brand.niche.short}s?`,
-      answer: "Locum tenens can work for new grads who are confident in their clinical skills, but most agencies prefer 1-2 years of experience. New grads may find short-term assignments challenging due to rapid onboarding. Consider starting with permanent positions that offer mentorship before transitioning to locum work."
+      answer: "Locum tenens can work for new graduates who are confident in their clinical skills, but most agencies prefer 1 to 2 years of experience. New graduates may find short-term assignments challenging because of rapid onboarding. Consider starting with permanent positions that offer mentorship before transitioning to locum work."
     },
   ];
 
@@ -201,14 +202,14 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
       {/* ═══ HERO ═══ */}
       <CategoryHero
         bgColor="#91c9e7"
-        heroImage={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/hero_v2_locumtenens.webp`}
+        heroImage="/images/categories/heroes/locum-tenens.webp"
         heroAlt={`Locum tenens travel ${brand.niche.short} assignment`}
         badgeText={`${stats.totalJobs} live roles · updated today`}
-        breadcrumbs={['Careers', 'Nurse Practitioner', 'Locum Tenens']}
+        breadcrumbs={crumbsFromSchema([{ name: "Home", url: brand.baseUrl }, { name: "Jobs", url: `${brand.baseUrl}/jobs` }, { name: "Locum Tenens", url: `${brand.baseUrl}/jobs/locum-tenens` }])}
         indexLabel={`№ ${String(ALL_CATEGORY_SLUGS.indexOf('locum-tenens') + 1).padStart(2, '0')} / ${ALL_CATEGORY_SLUGS.length}`}
         headlineLine1="Locum Tenens"
         headlineLine2={brand.niche.short}
-        headlineSub="jobs, travel & flexibility."
+        headlineSub="jobs with travel and flexibility."
         stats={[
           { value: `${stats.totalJobs}+`, label: 'positions' },
           { value: stats.medianSalaryK > 0 ? `$${stats.medianSalaryK}k` : '$120K+', label: 'median salary' },
@@ -280,7 +281,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
                   <TrendingUp size={20} style={{ color: '#34D399' }} />
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1A2E35', margin: 0 }}>Salary Insights</h3>
                 </div>
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}>${stats.medianSalaryK}k</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#1A2E35', lineHeight: 1 }}><MedianFigure k={stats.medianSalaryK} /></div>
                 <div style={{ fontSize: '13px', color: '#7A6A62', marginTop: '4px' }}>Median annual equivalent</div>
                 <p style={{ fontSize: '11px', color: '#A09080', marginTop: '12px' }}>Annualized from locum listings with posted pay data.</p>
               </div>
@@ -298,63 +299,57 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
 
           <div className="cat-bento-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '14px' }}>
             {/* ROW 1: Travel Assignments (8) + Premium Pay (4) */}
-            <div className="cat-bento-hero-1 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="cat-bento-hero-1 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Travel Assignments</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                   Housing, flights, rental cars, and per diem all provided. Work across the country on your terms.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_locum_travel.webp`} alt="Locum tenens travel assignment" width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/locum-travel.webp" alt="Locum tenens travel assignment" minHeight={240} />
             </div>
 
             <div className="cat-bento-hero-2 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 4', padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ flex: '0 0 auto', background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_locum_pay.webp`} alt="Premium hourly rates" width={200} height={140} style={{ width: '100%', maxWidth: '200px', height: 'auto', borderRadius: '10px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/locum-pay.webp" alt="Premium hourly rates" minHeight={200} />
               <div style={{ padding: '24px 22px', flex: 1 }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1A2E35', margin: '0 0 6px' }}>Premium Rates</h3>
                 <p style={{ fontSize: '12.5px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  Earn $60–$150+/hr with overtime premiums and completion bonuses.
+                  Earn $60 to $150+ per hour with overtime premiums and completion bonuses.
                 </p>
               </div>
             </div>
 
             {/* ROW 2: 4 clay icon cards */}
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_locum_travel.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/locum-travel.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Travel Included</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Housing, flights, and per diem all provided by the staffing agency.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_locum_rates.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/locum-rates.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Premium Rates</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Hourly rates typically well above permanent W-2 pay, plus completion bonuses.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_locum_calendar.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/locum-calendar.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Flexible Terms</h3>
-              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Choose 2-week to 12-month assignments based on your preference.</p>
+              <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Choose 2-week to 12-month assignments based on your preferences.</p>
             </div>
             <div className="cat-bento-card" style={{ ...clayCard, gridColumn: 'span 3', padding: '24px 18px', textAlign: 'center' }}>
-              <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/icon_locum_map.webp`} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
+              <Image src="/images/categories/icons/locum-map.webp" alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} />
               <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A2E35', margin: '0 0 6px' }}>Explore Locations</h3>
               <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.55 }}>Work across multiple states and experience different clinical settings.</p>
             </div>
 
             {/* ROW 3: Salary (8) + CTA (4) */}
-            <div className="cat-bento-hero-3 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center' }}>
-              <div style={{ padding: '32px 28px' }}>
+            <div className="cat-bento-hero-3 cat-bento-card" style={{ ...clayCard, gridColumn: 'span 8', padding: '0', overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+              <div style={{ padding: '32px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <TrendingUp size={28} style={{ color: '#BE185D', marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>Compensation</h3>
-                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Locum {brand.niche.short}s {stats.medianSalaryK > 0 ? `post a median of $${stats.medianSalaryK}k annualized on current listings` : 'often out-earn comparable permanent roles'} — plus tax-free housing stipends and paid malpractice coverage.
+                <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>Locum {brand.niche.short}s {stats.medianSalaryK > 0 ? `post a median of $${stats.medianSalaryK}k annualized on current listings` : 'often out-earn comparable permanent roles'}, plus tax-free housing stipends and paid malpractice coverage.
                 </p>
               </div>
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FFF7ED, #FFEDD5)', padding: '16px' }}>
-                <Image src={`${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/bento_locum_salary.webp`} alt={`Locum ${brand.niche.short} compensation`} width={280} height={200} style={{ width: '100%', maxWidth: '280px', height: 'auto', borderRadius: '12px' }} />
-              </div>
+              <ImmersiveImage src="/images/categories/bento/locum-salary.webp" alt={`Locum ${brand.niche.short} compensation`} minHeight={240} />
             </div>
 
             <div className="cat-bento-cta cat-bento-card" style={{
@@ -394,17 +389,17 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
               <div key="02" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>02</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Credentialing Docs</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Keep CV, references, certifications, and malpractice history ready for quick credentialing.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Keep your CV, references, certifications, and malpractice history ready for quick credentialing.</p>
               </div>
               <div key="03" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>03</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Tax Planning</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Set up tax-home strategy and track travel expenses for significant deductions.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Set up a tax-home strategy and track travel expenses for significant deductions.</p>
               </div>
               <div key="04" className="cat-bento-card" style={{ ...clayCard, padding: '28px 24px', borderTop: '3px solid #BE185D' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: '#FCE7F3', display: 'block', marginBottom: '12px' }}>04</span>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', marginBottom: '8px' }}>Housing Stipend</h3>
-                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Negotiate housing stipend vs agency-provided housing based on assignment location.</p>
+                <p style={{ fontSize: '13px', color: '#5A4A42', lineHeight: 1.6, margin: 0 }}>Negotiate a housing stipend versus agency-provided housing based on the assignment location.</p>
               </div>
           </div>
         </section>
@@ -416,7 +411,7 @@ export default async function LocumTenensJobsPage({ searchParams }: PageProps) {
           <p style={{ fontSize: '13px', fontWeight: 600, color: '#E86C2C', textTransform: 'uppercase', letterSpacing: '0.15em', textAlign: 'center', marginBottom: '8px' }}>Keep Exploring</p>
           <h2 className="font-lora" style={{ fontSize: 'clamp(24px, 3.2vw, 34px)', fontWeight: 700, color: '#1A2E35', textAlign: 'center', marginBottom: '40px' }}>More Ways to Find Your Next Role</h2>
           <div className="cat-explore-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-            {[{ href: '/jobs/travel', label: 'Travel', sub: 'Travel NP roles', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_travel.webp` }, { href: '/jobs/contract', label: 'Contract', sub: 'Fixed-term positions', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_contract.webp` }, { href: '/jobs/per-diem', label: 'Per Diem', sub: 'Daily assignments', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_perdiem.webp` }, { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_remote.webp` }, { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_salary.webp` }, { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: `${STORAGE_BASE}/storage/v1/object/public/site-assets/images/categories/clay_icon_location.webp` }].map(c => (
+            {[{ href: '/jobs/travel', label: 'Travel', sub: 'Travel NP roles', icon: '/images/categories/nav/travel.webp' }, { href: '/jobs/contract', label: 'Contract', sub: 'Fixed-term positions', icon: '/images/categories/nav/contract.webp' }, { href: '/jobs/per-diem', label: 'Per Diem', sub: 'Daily assignments', icon: '/images/categories/nav/per-diem.webp' }, { href: '/jobs/remote', label: 'Remote', sub: 'Work from home', icon: '/images/categories/nav/remote.webp' }, { href: '/salary-guide', label: 'Salary Guide', sub: '2026 data', icon: '/images/categories/nav/salary.webp' }, { href: '/jobs/locations', label: 'By Location', sub: '50 states', icon: '/images/categories/nav/location.webp' }].map(c => (
               <Link key={c.href} href={c.href} className="cat-bento-card" style={{ ...clayCard, padding: '24px 20px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
                 <Image src={c.icon} alt="" width={48} height={48} style={{ width: '48px', height: '48px', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />
                 <span style={{ fontSize: '15px', fontWeight: 700, color: '#1A2E35', display: 'block', marginBottom: '4px' }}>{c.label}</span>

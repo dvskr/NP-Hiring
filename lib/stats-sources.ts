@@ -119,7 +119,7 @@ export const STAT_SOURCES = {
         // `formatted` so surfaces that render `range` cite the same number
         // instead of an invented spread.
         range: '$129,210',
-        source: 'BLS OEWS, Nurse Practitioners (29-1171) — median annual wage, May 2024',
+        source: 'BLS OEWS, Nurse Practitioners (29-1171), median annual wage, May 2024',
         sourceUrl: 'https://www.bls.gov/oes/current/oes291171.htm',
         asOf: '2024-05',
         vintageNote:
@@ -158,7 +158,7 @@ export const STAT_SOURCES = {
     blsGrowth2034: {
         value: '40',
         formatted: '40%',
-        source: 'BLS Employment Projections — Nurse Practitioners (2024–2034)',
+        source: 'BLS Employment Projections, Nurse Practitioners (2024 to 2034)',
         sourceUrl: 'https://www.bls.gov/ooh/healthcare/nurse-anesthetists-nurse-midwives-and-nurse-practitioners.htm',
         asOf: '2025-09',
         vintageNote:
@@ -303,7 +303,7 @@ export const SALARY_BANDS = {
     typicalW2Annual: {
         min: TYPICAL.min,
         max: TYPICAL.max,
-        formatted: `${asK(TYPICAL.min)}–${asK(TYPICAL.max)}`,
+        formatted: `${asK(TYPICAL.min)} to ${asK(TYPICAL.max)}`,
         basis: `the typical W-2 comparison band this board's salary pipeline uses as a sanity check, not a wage survey`,
     },
 
@@ -311,7 +311,7 @@ export const SALARY_BANDS = {
     typicalW2Hourly: {
         min: TYPICAL.min / HOURS_PER_YEAR,
         max: TYPICAL.max / HOURS_PER_YEAR,
-        formatted: `${asDollars(TYPICAL.min / HOURS_PER_YEAR)}–${asDollars(TYPICAL.max / HOURS_PER_YEAR)}/hr`,
+        formatted: `${asDollars(TYPICAL.min / HOURS_PER_YEAR)} to ${asDollars(TYPICAL.max / HOURS_PER_YEAR)}/hr`,
         basis: `the hourly equivalent of the typical W-2 band at ${HOURS_PER_YEAR.toLocaleString('en-US')} hours a year`,
     },
 
@@ -323,7 +323,7 @@ export const SALARY_BANDS = {
     contractorHourly: {
         min: salaryConfig.normalizer.contractorHourlyMin,
         max: salaryConfig.normalizer.contractorHourlyMax,
-        formatted: `${asDollars(salaryConfig.normalizer.contractorHourlyMin)}–${asDollars(salaryConfig.normalizer.contractorHourlyMax)}/hr`,
+        formatted: `${asDollars(salaryConfig.normalizer.contractorHourlyMin)} to ${asDollars(salaryConfig.normalizer.contractorHourlyMax)}/hr`,
         basis: 'the contract/1099 hourly range this board validates postings against, across all NP and APRN specialties',
     },
 
@@ -336,7 +336,7 @@ export const SALARY_BANDS = {
     w2AnnualAccepted: {
         min: salaryConfig.normalizer.annualMin,
         max: salaryConfig.normalizer.annualMax,
-        formatted: `${asK(salaryConfig.normalizer.annualMin)}–${asK(salaryConfig.normalizer.annualMax)}`,
+        formatted: `${asK(salaryConfig.normalizer.annualMin)} to ${asK(salaryConfig.normalizer.annualMax)}`,
         basis: 'the full W-2 annual range this board validates postings against, from a part-time new-grad floor to the CRNA ceiling',
     },
 } as const satisfies Record<string, SalaryBand>;

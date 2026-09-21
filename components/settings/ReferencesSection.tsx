@@ -134,7 +134,7 @@ export default function ReferencesSection({ showMsg }: Props) {
             </h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                 <p style={{ fontSize: '13px', color: clayPalette.textMuted, margin: 0 }}>
-                    Most applications require 3 professional references — <strong style={{ color: refCount >= 3 ? clayPalette.accentLight : '#FB923C' }}>{refCount} of 3 added</strong>
+                    Most applications require 3 professional references: <strong style={{ color: refCount >= 3 ? clayPalette.accentLight : '#FB923C' }}>{refCount} of 3 added</strong>
                 </p>
                 <div style={{ flex: 1, maxWidth: '120px', height: '6px', borderRadius: '3px', background: clayPalette.border, overflow: 'hidden' }}>
                     <div style={{ width: `${progressPct}%`, height: '100%', borderRadius: '3px', background: refCount >= 3 ? clayPalette.accentLight : '#FB923C', transition: 'width 0.3s' }} />
@@ -154,7 +154,7 @@ export default function ReferencesSection({ showMsg }: Props) {
                                             <span style={{ fontWeight: 700, fontSize: '14px', color: clayPalette.textPrimary }}>{r.fullName}</span>
                                             <div style={{ fontSize: '13px', color: clayPalette.textSecondary, marginTop: '2px' }}>
                                                 {r.title && <>{r.title}</>}{r.organization && <> · {r.organization}</>}{r.relationship && <> · {r.relationship}</>}
-                                                {r.yearsKnown && <> · {r.yearsKnown} yrs</>}
+                                                {r.yearsKnown && <> · {r.yearsKnown} {r.yearsKnown === 1 ? 'year' : 'years'}</>}
                                             </div>
                                         </div>
                                         <div style={{ display: 'flex', gap: '6px', marginLeft: '12px', flexShrink: 0 }}>

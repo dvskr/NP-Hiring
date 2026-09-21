@@ -10,7 +10,12 @@ import {
 import { sendAndLog } from '@/lib/email-service'
 import { brand } from '@/config/brand'
 
+import { getConfirmationEligibility, isValidEmailAddress } from './confirmation-eligibility'
+
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl
+
+/** Identical body for "sent", "unknown address" and "already confirmed". */
+const GENERIC_SUCCESS = { success: true } as const
 
 /**
  * POST /api/auth/send-confirmation
@@ -27,14 +32,34 @@ export async function POST(request: NextRequest) {
   })
   if (rateLimitResult) return rateLimitResult
 
+  let body: { email?: unknown } | null
   try {
-    const { email } = await request.json()
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+  }
 
-    if (!email || typeof email !== 'string') {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+  const email = body?.email
+  if (!email || typeof email !== 'string') {
+    return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+  }
+  if (!isValidEmailAddress(email)) {
+    return NextResponse.json({ error: 'Please enter a valid email address' }, { status: 400 })
+  }
+
+  const normalizedEmail = email.toLowerCase().trim()
+
+  try {
+    // Only an existing, unconfirmed account gets a link. Unknown and
+    // already confirmed addresses receive the SAME generic success so the
+    // endpoint is neither an account-existence oracle nor a way to mint
+    // auth users / send mail to arbitrary addresses. A lookup failure
+    // throws into the catch below (fail closed: nothing created or sent).
+    const eligibility = await getConfirmationEligibility(normalizedEmail)
+    if (eligibility !== 'unconfirmed') {
+      logger.info('send-confirmation: no unconfirmed account, nothing sent', { eligibility })
+      return NextResponse.json(GENERIC_SUCCESS)
     }
-
-    const normalizedEmail = email.toLowerCase().trim()
 
     const supabaseAdmin = createAdminClient()
 
@@ -87,7 +112,7 @@ export async function POST(request: NextRequest) {
       `<p style="margin:0;font-family:${SANS};font-size:12px;color:${V2.textMuted};">
         If you didn\u2019t create this account, you can safely ignore this email.
       </p>`,
-      `Confirm your ${brand.name} account \u2014 one click to activate!`
+      `Confirm your ${brand.name} account with one click.`
     )
 
     // Account confirmation is transactional and required to use the platform —
@@ -102,7 +127,7 @@ export async function POST(request: NextRequest) {
 
     logger.info('Confirmation email sent via Resend', { email: normalizedEmail })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json(GENERIC_SUCCESS)
   } catch (error) {
     logger.error('Error in send-confirmation', error)
     return NextResponse.json({ error: 'Failed to send confirmation email' }, { status: 500 })

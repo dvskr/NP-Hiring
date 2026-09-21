@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { logger } from '@/lib/logger';
+import { buildEmployerJobUpdate, buildProfileUpdate, normalizeHttpUrl, parseEmployerSettings } from './validation';
 
 /**
  * GET /api/employer/settings
@@ -57,7 +59,10 @@ export async function GET(req: NextRequest) {
             name: latestJob.employerName,
             logoUrl: latestJob.companyLogoUrl,
             description: latestJob.companyDescription,
-            website: latestJob.companyWebsite,
+            // Never echo a stored unsafe scheme back into the settings form.
+            website: latestJob.companyWebsite && normalizeHttpUrl(latestJob.companyWebsite) !== undefined
+                ? latestJob.companyWebsite
+                : null,
             contactEmail: latestJob.contactEmail,
         } : null,
     });
@@ -87,37 +92,44 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await req.json();
-    const { firstName, lastName, phone, company, companyDescription, companyWebsite, companyLogoUrl } = body;
+    let body: unknown;
+    try {
+        body = await req.json();
+    } catch {
+        return NextResponse.json({ error: 'Request body must be valid JSON' }, { status: 400 });
+    }
 
-    // Update UserProfile
-    await prisma.userProfile.update({
-        where: { id: profile.id },
-        data: {
-            ...(firstName !== undefined && { firstName }),
-            ...(lastName !== undefined && { lastName }),
-            ...(phone !== undefined && { phone }),
-            ...(company !== undefined && { company }),
-        },
-    });
+    const parsed = parseEmployerSettings(body);
+    if (!parsed.ok) {
+        return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
 
-    // Update company info on all EmployerJob records
-    if (companyDescription !== undefined || companyWebsite !== undefined || companyLogoUrl !== undefined || company !== undefined) {
-        const companyUpdate: Record<string, string | null> = {};
-        if (companyDescription !== undefined) companyUpdate.companyDescription = companyDescription;
-        if (companyWebsite !== undefined) companyUpdate.companyWebsite = companyWebsite;
-        if (companyLogoUrl !== undefined) companyUpdate.companyLogoUrl = companyLogoUrl;
-        if (company !== undefined) companyUpdate.employerName = company;
+    const profileUpdate = buildProfileUpdate(parsed.data);
+    const companyUpdate = buildEmployerJobUpdate(parsed.data);
 
-        await prisma.employerJob.updateMany({
-            where: {
-                OR: [
-                    { userId: user.id },
-                    { userId: null, contactEmail: user.email! },
-                ],
-            },
-            data: companyUpdate,
-        });
+    try {
+        if (Object.keys(profileUpdate).length > 0) {
+            await prisma.userProfile.update({
+                where: { id: profile.id },
+                data: profileUpdate,
+            });
+        }
+
+        // Update company info on all EmployerJob records
+        if (Object.keys(companyUpdate).length > 0) {
+            await prisma.employerJob.updateMany({
+                where: {
+                    OR: [
+                        { userId: user.id },
+                        { userId: null, contactEmail: user.email! },
+                    ],
+                },
+                data: companyUpdate,
+            });
+        }
+    } catch (err) {
+        logger.error('Failed to update employer settings', err);
+        return NextResponse.json({ error: 'Failed to save settings. Please try again.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

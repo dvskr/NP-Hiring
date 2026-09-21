@@ -36,7 +36,7 @@ const PAGE_TITLE = `1099 vs W2 Take-Home Calculator for ${brand.niche.short}s`;
 const PAGE_DESCRIPTION = `Free take-home calculator comparing a 1099 contract rate to a W-2 ${brand.niche.short} salary: self-employment tax, federal bracket, business expenses, and the employer-paid benefits a contractor has to self-fund. Tax year ${TAX_MODEL_YEAR}, federal only.`;
 const OG_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`1099 vs W2 Take-Home Calculator`)}&type=page`;
 
-const TYPICAL_BAND = `$${Math.round(salaryConfig.normalizer.typical.min / 1000)}K–$${Math.round(salaryConfig.normalizer.typical.max / 1000)}K`;
+const TYPICAL_BAND = `$${Math.round(salaryConfig.normalizer.typical.min / 1000)}K to $${Math.round(salaryConfig.normalizer.typical.max / 1000)}K`;
 
 export const metadata: Metadata = {
   // P7 runtime fix D7: root layout template appends `| ${brand.name}`.
@@ -65,16 +65,16 @@ const ASSUMPTIONS: readonly string[] = [
   'Both columns work the same number of hours. Days off are paid on the W-2 side and unpaid on the 1099 side, where they reduce billable hours.',
   'Self-employment tax is computed on 92.35% of net profit, and one half of it (the Social Security and Medicare portions, not the Additional Medicare Tax) is deducted above the line.',
   'The health premium you buy as a contractor is deducted above the line, capped at your earned income from the business.',
-  'Both columns report "cash after tax" on one definition — what is left of gross after taxes, business expenses, and insurance premiums, and before any retirement money is set aside — so the two are read against each other on the same basis.',
+  'Both columns report "cash after tax" on one definition: what is left of gross pay after taxes, business expenses, and insurance premiums, and before any retirement money is set aside. This means the two are read against each other on the same basis.',
   'Net position adds to that cash only the retirement dollars an employer contributes: the match on the W-2 side. A contractor funding a SEP-IRA or solo 401(k) is moving cash already counted, not gaining extra, so it is shown as a call on that cash rather than added again.',
   'The standard deduction is applied to a single stream of earned income; the model assumes you do not itemize.',
-  'Every input starts on a placeholder, not a benchmark. The two pay placeholders derive from this board’s typical W-2 band of ' + TYPICAL_BAND + ' (config/niche/salary.ts) — replace them with your actual offers.',
+  'Every input starts on a placeholder, not a benchmark. The two pay placeholders derive from this board’s typical W-2 band of ' + TYPICAL_BAND + ' (config/niche/salary.ts). Replace them with your actual offers.',
 ];
 
 const FAQS = [
   {
     q: `How much more should a 1099 rate be than a W-2 ${brand.niche.short} salary?`,
-    a: `There is no single multiplier — it depends on what the W-2 offer actually includes. The calculator answers it directly with a break-even hourly rate: enter the W-2 salary, employer retirement match, premium share, and days off, and it solves for the contract rate at which the two net positions are equal. Anything above that rate leaves you ahead; anything below it does not, no matter how much larger the gross looks.`,
+    a: `There is no single multiplier; it depends on what the W-2 offer actually includes. The calculator answers it directly with a break-even hourly rate: enter the W-2 salary, employer retirement match, premium share, and days off, and it solves for the contract rate at which the two net positions are equal. Anything above that rate leaves you ahead; anything below it does not, no matter how much larger the gross looks.`,
   },
   {
     q: 'What is self-employment tax and why does it hit 1099 income?',
@@ -82,11 +82,11 @@ const FAQS = [
   },
   {
     q: 'Does this calculator include state income tax?',
-    a: `No. It is federal only. State and local income tax rates, brackets, and local add-ons vary by jurisdiction, and publishing a state rate table we cannot keep current would be worse than omitting it. Both columns are therefore overstated by whatever your state charges — and because state tax applies to both, it narrows the gap but rarely reverses it.`,
+    a: `No. It is federal only. State and local income tax rates, brackets, and local add-ons vary by jurisdiction, and publishing a state rate table we cannot keep current would be worse than omitting it. Both columns are therefore overstated by whatever your state charges. Because state tax applies to both, it narrows the gap but rarely reverses it.`,
   },
   {
     q: 'What benefits does a 1099 contractor have to replace?',
-    a: `The ones the calculator makes you price: health insurance (the employer share disappears entirely), retirement contributions including any employer match, and paid time off — a contractor who takes the same days off simply bills fewer hours. Malpractice coverage, licensure, CME, and equipment usually move to you as well, which is what the deductible business expenses field is for.`,
+    a: `The ones the calculator makes you price: health insurance (the employer share disappears entirely), retirement contributions including any employer match, and paid time off (a contractor who takes the same days off simply bills fewer hours). Malpractice coverage, licensure, CME, and equipment usually move to you as well, which is what the deductible business expenses field is for.`,
   },
   {
     q: `Should a new-grad ${brand.niche.short} take a 1099 role?`,
@@ -190,9 +190,9 @@ export default function TakeHomeCalculatorPage() {
               1099 vs W-2 take-home calculator
             </h1>
             <p style={{ fontSize: '17px', color: '#5A4A42', lineHeight: 1.65, margin: 0 }}>
-              A bigger hourly rate is not a bigger paycheck. Price a contract offer against a salaried one
+              A higher hourly rate is not a larger paycheck. Price a contract offer against a salaried one
               with self-employment tax, your federal bracket, deductible business expenses, and the
-              employer-paid benefits you would have to replace — then read the contract rate that actually
+              employer-paid benefits you would have to replace, then read the contract rate that actually
               breaks even.
             </p>
           </div>
@@ -213,7 +213,7 @@ export default function TakeHomeCalculatorPage() {
             How to compare the two offers
           </h2>
           <p style={{ fontSize: '15px', color: '#5A4A42', lineHeight: 1.65, margin: '0 0 24px' }}>
-            Five steps. The order matters: the break-even rate is only meaningful once both
+            There are five steps, and the order matters: the break-even rate is only meaningful once both
             columns describe the same working year.
           </p>
           <ol style={{ listStyle: 'none', counterReset: 'step', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -245,7 +245,7 @@ export default function TakeHomeCalculatorPage() {
         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
           <AssumptionsPanel
             title="How this estimate is built"
-            intro={`This is a planning estimate, not a tax return. Everything the model does — and everything it deliberately leaves out — is listed here, because a take-home number without its assumptions is not a useful number.`}
+            intro={`This is a planning estimate, not a tax return. Everything the model does, and everything it deliberately leaves out, is listed here, because a take-home number without its assumptions is not a useful number.`}
             assumptions={ASSUMPTIONS}
             exclusions={TAX_MODEL_EXCLUSIONS}
             sources={TAX_MODEL_SOURCES}

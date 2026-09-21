@@ -128,7 +128,7 @@ const FAQS = [
   },
   {
     q: `Who exactly gets the intro price?`,
-    a: `Your employer email domain does, not your login: ${INTRO_PRICE_SCOPE_NOTE}. It does not reset for each new recruiter who signs up. If a health system with five recruiters fills five roles on the per-post ladder, one of those posts is ${formatUsd(FLAT_FEE_PRICING.introPrice)} and the other four are ${formatUsd(FLAT_FEE_PRICING.postingPrice)} each. Posts made free during the launch promo do not use it up. That matters when you model a multi-role plan here, so untick the intro-price box in the calculator if anyone at your domain has already bought a post.`,
+    a: `Your employer email domain does, not your login: ${INTRO_PRICE_SCOPE_NOTE}. It does not reset for each new recruiter who signs up. If a health system with five recruiters fills five roles on the per-post ladder, one of those posts is ${formatUsd(FLAT_FEE_PRICING.introPrice)} and the other four are ${formatUsd(FLAT_FEE_PRICING.postingPrice)} each. Posts made free during the launch promo do not use it up. That matters when you model a multi-role plan here, so uncheck the intro-price box in the calculator if anyone at your domain has already bought a post.`,
   },
 ] as const;
 

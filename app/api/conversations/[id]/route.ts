@@ -7,6 +7,8 @@ import { sanitizeText } from '@/lib/sanitize';
 import { verifyCsrf } from '@/lib/csrf';
 import { rateLimit } from '@/lib/rate-limit';
 import { mintDocReadUrl, extractRequestContext, toBareDocPath } from '@/lib/document-storage';
+import { MESSAGE_BODY_MAX, readJsonObject, validateReplyPayload } from '@/app/api/conversations/_lib/message-payload';
+import { isDeletedForViewer, visibleToViewerWhere } from '@/app/api/conversations/_lib/message-visibility';
 
 /**
  * GET /api/conversations/[id]
@@ -52,31 +54,19 @@ export async function GET(
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        // Determine which side the current user is
-        const isParticipantA = conversation.participantA === profile.id;
-
-        // Fetch all messages in this conversation, excluding soft-deleted ones for current user
+        // Fetch all messages in this conversation, excluding the ones the
+        // current user deleted for themselves (see message-visibility.ts).
         const messages = await prisma.employerMessage.findMany({
             where: {
                 conversationId: id,
-                ...(isParticipantA
-                    ? {
-                        OR: [
-                            { senderId: profile.id, deletedBySender: false },
-                            { recipientId: profile.id, deletedByRecipient: false },
-                        ],
-                    }
-                    : {
-                        OR: [
-                            { senderId: profile.id, deletedBySender: false },
-                            { recipientId: profile.id, deletedByRecipient: false },
-                        ],
-                    }),
+                ...visibleToViewerWhere(profile.id),
             },
             orderBy: { sentAt: 'asc' },
             select: {
                 id: true,
                 senderId: true,
+                recipientId: true,
+                deletedByRecipient: true,
                 body: true,
                 sentAt: true,
                 readAt: true,
@@ -128,8 +118,10 @@ export async function GET(
                 },
             },
             messages: await Promise.all(messages.map(async (m) => {
-                // Check if sender deleted this message
-                const isSenderDeleted = m.senderId !== profile.id && m.deletedBySender;
+                // Tombstone only a message deleted for everyone. A sender-only
+                // deletion (the message was already read) leaves the
+                // recipient's copy intact.
+                const isSenderDeleted = isDeletedForViewer(m, profile.id);
 
                 // Mint a fresh 15-min signed URL via the centralized
                 // helper (audit-logged with audience='owner' when the
@@ -247,16 +239,13 @@ export async function POST(
             }
         }
 
-        const body = await req.json();
-        const { body: messageBody, attachmentUrl, attachmentName } = body;
-
-        if ((!messageBody || !messageBody.trim()) && !attachmentUrl) {
-            return NextResponse.json({ error: 'Message body or attachment is required' }, { status: 400 });
+        // Type-checked payload: a non-string body / attachment field or
+        // malformed JSON is a 400, never a TypeError 500.
+        const payload = validateReplyPayload(await readJsonObject(req));
+        if (!payload.ok) {
+            return NextResponse.json({ error: payload.error }, { status: 400 });
         }
-
-        if (messageBody && messageBody.length > 2000) {
-            return NextResponse.json({ error: 'Message must be under 2000 characters' }, { status: 400 });
-        }
+        const { body: messageBody, attachmentUrl, attachmentName } = payload.value;
 
         // A sender may only attach an object they uploaded themselves.
         // The upload route keys every object under the uploader's supabase
@@ -266,10 +255,6 @@ export async function POST(
         // view mint a signed URL for someone else's private attachment.
         let validatedAttachmentPath: string | null = null;
         if (attachmentUrl) {
-            if (typeof attachmentUrl !== 'string'
-                || (attachmentName != null && typeof attachmentName !== 'string')) {
-                return NextResponse.json({ error: 'Invalid attachment' }, { status: 400 });
-            }
             const barePath = toBareDocPath(attachmentUrl, 'message_attachment');
             if (!barePath || barePath.includes('..') || !barePath.startsWith(`${user.id}/`)) {
                 return NextResponse.json({ error: 'Invalid attachment' }, { status: 400 });
@@ -289,9 +274,9 @@ export async function POST(
                 recipientId: recipientProfile.id,
                 conversationId: id,
                 subject: conversation.subject,
-                body: sanitizeText((messageBody || '').trim(), 2000),
+                body: sanitizeText(messageBody, MESSAGE_BODY_MAX),
                 ...(validatedAttachmentPath && { attachmentUrl: validatedAttachmentPath }),
-                ...(validatedAttachmentPath && attachmentName && { attachmentName: attachmentName.slice(0, 255) }),
+                ...(validatedAttachmentPath && attachmentName && { attachmentName }),
                 ...(conversation.jobId && { jobId: conversation.jobId }),
             },
         });
@@ -321,7 +306,7 @@ export async function POST(
             });
 
             if (existingUnread === 0) {
-                const msgPreview = (messageBody || '').trim() || (attachmentName ? `📎 ${attachmentName}` : '');
+                const msgPreview = message.body || (attachmentName ? `📎 ${attachmentName}` : '');
 
                 // after() keeps the serverless invocation alive until the send
                 // completes — a bare fire-and-forget promise can be frozen with

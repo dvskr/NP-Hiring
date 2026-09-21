@@ -1,10 +1,10 @@
 # NP Hiring
 
-> A specialized job board for Nurse Practitioners — every NP specialty, all 50 US states, salary shown whenever the source provides it.
+> A specialized job board for Nurse Practitioners: every NP specialty, all 50 US states, and salary shown whenever the source provides it.
 
 ## What We Do
 
-NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job postings from employer applicant-tracking systems into one dedicated platform. We cover every NP specialty — FNP, AGNP, PNP, NNP, WHNP, ACNP, PMHNP — plus the wider APRN cohort (CRNA, CNM, CNS), with job alerts and career resources built for NPs.
+NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job postings from employer applicant-tracking systems into one dedicated platform. We cover every NP specialty (FNP, AGNP, PNP, NNP, WHNP, ACNP, PMHNP) plus the wider APRN cohort (CRNA, CNM, CNS), with job alerts and career resources built for NPs.
 
 ## Coverage
 
@@ -16,10 +16,10 @@ NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job 
 - 45 category hubs across seven taxonomy axes: setting, job type, specialty, APRN role, experience level, employer type, and population served
 - All 50 US states + DC, with per-state job hubs and per-state salary pages
 - City-level pages for every category across ~4,000 US cities
-- Salary shown whenever the employer's posting provides it — we do not estimate or fabricate pay for an individual listing
+- Salary is shown whenever the employer's posting provides it; we do not estimate or fabricate pay for an individual listing
 - Cited statistics on our pages carry a named source and an as-of date
 - 100% free for job seekers
-- Founded 2026
+- Founded in 2026
 
 ## Who We Serve
 
@@ -41,32 +41,32 @@ NP Hiring (https://nphiring.com) aggregates and verifies Nurse Practitioner job 
 ## Key Pages
 
 ### Core
-- /jobs — Main NP job board (supports ?q= keyword search)
-- /jobs/locations — Browse jobs by state
-- /salary-guide — NP salary guide, with a page per state
-- /salary-guide/specialty — NP salary by specialty
-- /blog — Career guides, licensure guides, and industry insights
-- /resources — Career resources & tools
-- /job-alerts — Set up email alerts for new NP jobs
-- /companies — Employers with active listings
-- /faq — Frequently asked questions
-- /about — About NP Hiring
-- /editorial-policy — How our content is researched, sourced, and reviewed
-- /security — Security posture and vulnerability disclosure
+- /jobs: Main NP job board (supports ?q= keyword search)
+- /jobs/locations: Browse jobs by state
+- /salary-guide: NP salary guide, with a page per state
+- /salary-guide/specialty: NP salary by specialty
+- /blog: Career guides, licensure guides, and industry insights
+- /resources: Career resources and tools
+- /job-alerts: Set up email alerts for new NP jobs
+- /companies: Employers with active listings
+- /faq: Frequently asked questions
+- /about: About NP Hiring
+- /editorial-policy: How our content is researched, sourced, and reviewed
+- /security: Security posture and vulnerability disclosure
 
 ### Guides
-- /resources/1099-vs-w2 — 1099 vs W-2 for nurse practitioners
-- /resources/fpa-guide — Full practice authority by state
-- /resources/private-practice-guide — Starting an NP private practice
+- /resources/1099-vs-w2: 1099 vs W-2 for nurse practitioners
+- /resources/fpa-guide: Full practice authority by state
+- /resources/private-practice-guide: Starting an NP private practice
 
 ### For employers
-- /post-job — Post an NP job listing
-- /for-employers — Employer hiring solutions
-- /for-employers/resources — Employer hiring guides
-- /for-employers/resources/how-to-hire — How to hire a nurse practitioner
-- /for-employers/resources/job-description-templates — NP job description templates
-- /pricing — Listing options
-- /for-programs — For NP program directors
+- /post-job: Post an NP job listing
+- /for-employers: Employer hiring solutions
+- /for-employers/resources: Employer hiring guides
+- /for-employers/resources/how-to-hire: How to hire a nurse practitioner
+- /for-employers/resources/job-description-templates: NP job description templates
+- /pricing: Listing options
+- /for-programs: For NP program directors
 
 ### Category hubs (all live at /jobs/<slug>)
 - Setting: /jobs/remote, /jobs/telehealth, /jobs/inpatient, /jobs/outpatient, /jobs/travel, /jobs/urgent-care, /jobs/home-health

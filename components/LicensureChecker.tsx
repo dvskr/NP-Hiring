@@ -42,7 +42,7 @@ interface Props {
 /* Dead-asset purge (2026-07): step art moved off the retired Supabase
    bucket onto lucide icons (local-asset pattern, b371b37). */
 const COMMON_REQUIREMENTS: { step: number; text: string; icon: LucideIcon }[] = [
-  { step: 1, text: 'MSN or DNP from accredited program', icon: GraduationCap },
+  { step: 1, text: 'MSN or DNP from an accredited program', icon: GraduationCap },
   { step: 2, text: `National ${brand.niche.short} board certification (ANCC or AANP)`, icon: Award },
   { step: 3, text: 'State APRN license application', icon: FileText },
   { step: 4, text: 'NPI number registration', icon: Hash },
@@ -209,7 +209,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
             <Map size={34} />
           </div>
           <p style={{ fontSize: '16px', fontWeight: 600, color: '#94A3B8', margin: '0 0 4px' }}>Select a state above</p>
-          <p style={{ fontSize: '13px', color: '#CBD5E1', margin: 0 }}>to see licensure requirements, practice authority, salary, and timeline</p>
+          <p style={{ fontSize: '13px', color: '#CBD5E1', margin: 0 }}>to see licensure requirements, practice authority, salary, and timeline.</p>
         </div>
       ) : (
         <div className="lic-results-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0' }}>
@@ -292,7 +292,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
                   {result.timeline}
                 </div>
                 <p style={{ fontSize: '11px', color: '#5A4A42', margin: '4px 0 0' }}>
-                  From application to active license
+                  From application to active license.
                 </p>
               </div>
             </div>
@@ -317,7 +317,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
                   </div>
                 </div>
                 <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 12px' }}>
-                  Middle half: ${fmt(result.salary.p25)} – ${fmt(result.salary.p75)}
+                  Middle half: ${fmt(result.salary.p25)} to ${fmt(result.salary.p75)}
                 </p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -398,7 +398,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
         <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A2E35', margin: '0 0 10px' }}>📋 Cite This Page</h3>
         <p style={{ fontSize: '13px', color: '#5A4A42', marginBottom: '14px' }}>Use the following citation when referencing data from this licensure tool:</p>
         <CopyCitation citation={`${brand.name}. "2026 ${brand.niche.short} State Licensure Checker: Practice Authority & Requirements by State." ${brand.name}, April 2026, ${brand.domain}/resources.`} />
-        <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '10px' }}>For media inquiries or custom data requests, contact {brand.email.press}</p>
+        <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '10px' }}>For media inquiries or custom data requests, contact {brand.email.press}.</p>
       </div>
 
       <style>{`

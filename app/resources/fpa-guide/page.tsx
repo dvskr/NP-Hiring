@@ -74,11 +74,11 @@ const NLC_MAP_URL = 'https://www.nursecompact.com/';
 const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.niche.short} Full Practice Authority Guide`)}&type=page`;
 
 export const metadata: Metadata = {
-  title: `${brand.niche.short} Full Practice Authority Guide 2026 — All 50 States`,
+  title: `${brand.niche.short} Full Practice Authority Guide 2026: All 50 States`,
   description: `Complete state-by-state Full Practice Authority (FPA) guide for ${brand.niche.descriptor}s. See which states allow independent ${brand.niche.short} practice, prescriptive authority rules, Nurse Licensure Compact membership, and what practice authority changes about how you can work and get paid.`,
   keywords: [`${brand.niche.short} full practice authority`, 'nurse practitioner independent practice states', 'FPA states 2026', `${brand.niche.short} prescriptive authority by state`, `${brand.niche.short} scope of practice`, 'NLC compact states for NP'],
   openGraph: {
-    title: `Full Practice Authority Guide for ${brand.niche.short}s — 2026`,
+    title: `Full Practice Authority Guide for ${brand.niche.short}s (2026)`,
     description: `State-by-state FPA classifications. See where ${brand.niche.descriptor}s can practice independently.`,
     type: 'article',
     images: [{ url: HERO_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} Full Practice Authority Guide 2026` }],
@@ -116,7 +116,7 @@ export default function FPAGuidePage() {
     },
     {
       question: `Does Full Practice Authority affect ${brand.niche.short} pay?`,
-      answer: `It changes what you are able to do, which in turn shapes what you can be paid for — but this board does not publish a national premium figure, because no verifiable one exists in our data. What practice authority concretely controls: whether you can open and bill under your own practice without a physician agreement, whether you can take independent contract or telehealth work in that state without arranging supervision, and whether a collaborating physician's fee comes out of your revenue. Pay itself varies far more by setting, specialty, experience, and local market than by classification alone. For real numbers, use the state pages in our salary guide, which compute averages from live postings in that state.`
+      answer: `It changes what you are able to do, which in turn shapes what you can be paid for. This board does not publish a national premium figure, because no verifiable one exists in our data. Practice authority concretely controls whether you can open and bill under your own practice without a physician agreement, whether you can take independent contract or telehealth work in that state without arranging supervision, and whether a collaborating physician's fee comes out of your revenue. Pay itself varies far more by setting, specialty, experience, and local market than by classification alone. For real numbers, use the state pages in our salary guide, which compute averages from live postings in that state.`
     },
     {
       question: `Can ${brand.niche.short}s prescribe controlled substances in all states?`,
@@ -124,7 +124,7 @@ export default function FPAGuidePage() {
     },
     {
       question: `What is the Nurse Licensure Compact (NLC) and how does it help ${brand.niche.short}s?`,
-      answer: `The NLC lets a registered nurse hold one multistate RN license that is recognized across member states. It covers the RN license underpinning your credential, not the APRN license itself — ${brand.niche.short}s still apply for APRN licensure state by state — but it removes the RN endorsement step, which is often the slowest part of adding a state. Most states have joined and Washington D.C. has not, but membership moves as legislatures act and several jurisdictions sit between enactment and implementation, so we do not publish a count here: check the current roster on the NCSBN compact map at ${NLC_MAP_URL} for each state you plan to cover, and plan extra lead time wherever the compact does not reach.`
+      answer: `The NLC lets a registered nurse hold one multistate RN license that is recognized across member states. It covers the RN license underpinning your credential, not the APRN license itself (${brand.niche.short}s still apply for APRN licensure state by state), but it removes the RN endorsement step, which is often the slowest part of adding a state. Most states have joined and Washington D.C. has not, but membership moves as legislatures act and several jurisdictions sit between enactment and implementation, so we do not publish a count here. Check the current roster on the NCSBN compact map at ${NLC_MAP_URL} for each state you plan to cover, and plan extra lead time wherever the compact does not reach.`
     },
   ];
 
@@ -155,7 +155,7 @@ export default function FPAGuidePage() {
           __html: ldJson({
             '@context': 'https://schema.org',
             '@type': 'Article',
-            headline: `${brand.niche.short} Full Practice Authority Guide 2026 — All 50 States`,
+            headline: `${brand.niche.short} Full Practice Authority Guide 2026: All 50 States`,
             description: `Complete state-by-state guide to Full Practice Authority for ${brand.niche.descriptor}s.`,
             datePublished: PUBLISHED_AT,
             dateModified: LAST_REVIEWED,
@@ -235,7 +235,7 @@ export default function FPAGuidePage() {
                     <CheckCircle className="h-5 w-5 text-green-600" />
                     <h3 className="font-semibold text-green-800">Full Practice Authority</h3>
                   </div>
-                  <p className="text-sm text-green-700">Independent practice. No physician oversight. Full prescriptive authority including Schedule II-V.</p>
+                  <p className="text-sm text-green-700">Independent practice. No physician oversight. Full prescriptive authority, including Schedule II-V.</p>
                   <p className="text-xs text-green-600 mt-2 font-semibold">{fullStateCount} states + DC</p>
                 </div>
                 <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
@@ -243,7 +243,7 @@ export default function FPAGuidePage() {
                     <AlertTriangle className="h-5 w-5 text-yellow-600" />
                     <h3 className="font-semibold text-yellow-800">Reduced Practice</h3>
                   </div>
-                  <p className="text-sm text-yellow-700">Requires a collaborative agreement with a physician. Physician does not need to be on-site.</p>
+                  <p className="text-sm text-yellow-700">Requires a collaborative agreement with a physician. The physician does not need to be on-site.</p>
                   <p className="text-xs text-yellow-600 mt-2 font-semibold">{reducedStates.length} states</p>
                 </div>
                 <div className="p-4 rounded-lg bg-orange-50 border border-orange-200">
@@ -251,7 +251,7 @@ export default function FPAGuidePage() {
                     <XCircle className="h-5 w-5 text-orange-600" />
                     <h3 className="font-semibold text-orange-800">Restricted Practice</h3>
                   </div>
-                  <p className="text-sm text-orange-700">Requires physician supervision. Must practice under a supervisory protocol or agreement.</p>
+                  <p className="text-sm text-orange-700">Requires physician supervision. You must practice under a supervisory protocol or agreement.</p>
                   <p className="text-xs text-orange-600 mt-2 font-semibold">{restrictedStates.length} states</p>
                 </div>
               </div>
@@ -314,11 +314,11 @@ export default function FPAGuidePage() {
                 What Practice Authority Changes About Your Earning Options
               </h2>
               <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                Practice authority is a legal classification, not a pay scale. It does not set your salary — it sets which ways of earning are open to you in that state. The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}); what changes state to state is the structure around that number:
+                Practice authority is a legal classification, not a pay scale. It does not set your salary; it sets which ways of earning are open to you in that state. The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}). What changes from state to state is the structure around that number:
               </p>
               <ul className="space-y-3 text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
-                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether you can own the practice.</strong> In a full-practice state you can open and bill under your own practice without a physician agreement. In reduced and restricted states you need a collaborating or supervising physician in place first, which is a real barrier to independent ownership.</span></li>
-                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether a collaboration fee comes out of your revenue.</strong> Where an agreement is required, the collaborating physician is typically compensated for it — an ongoing cost against your income that a full-practice colleague does not carry. Fees are negotiated privately and vary widely, so treat any quoted figure with suspicion.</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether you can own the practice.</strong> In a full-practice state, you can open and bill under your own practice without a physician agreement. In reduced and restricted states, you need a collaborating or supervising physician in place first, which is a real barrier to independent ownership.</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether a collaboration fee comes out of your revenue.</strong> Where an agreement is required, the collaborating physician is typically compensated for it, an ongoing cost against your income that a full-practice colleague does not carry. Fees are negotiated privately and vary widely, so treat any quoted figure with caution.</span></li>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>How easily you can take contract and telehealth work.</strong> Independent 1099 and telehealth arrangements are simplest where no supervisory relationship has to be arranged and maintained in each state you cover.</span></li>
                 <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Transition-to-practice periods still apply in several full-practice states.</strong> Check the Details column in the table above before assuming day-one autonomy.</span></li>
               </ul>
@@ -338,14 +338,14 @@ export default function FPAGuidePage() {
                 </h2>
               </div>
               <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                For remote and telehealth {brand.niche.short}s, practice authority in the <strong>patient&apos;s state</strong> determines your scope — not your home state. Key considerations:
+                For remote and telehealth {brand.niche.short}s, practice authority in the <strong>patient&apos;s state</strong> determines your scope, not your home state. Key considerations:
               </p>
               <ul className="space-y-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>You must hold an APRN license in each state where your patients are located</span></li>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>DEA registration is required in each state where you prescribe controlled substances</span></li>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>Some telehealth companies handle multi-state licensing and credentialing for you</span></li>
                 <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span>Restricted practice states may require a collaborative physician in that specific state</span></li>
-                <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span>Pandemic-era telehealth waivers have mostly expired — verify current requirements</span></li>
+                <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span>Pandemic-era telehealth waivers have mostly expired, so verify current requirements</span></li>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>The Nurse Licensure Compact can remove the RN endorsement step in member states, but not the APRN application. Membership and implementation dates change, so confirm each state against the <a href={NLC_MAP_URL} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>NCSBN compact map</a> rather than a count published on a jobs board</span></li>
               </ul>
               <p className="text-sm mt-4" style={{ color: 'var(--text-secondary)' }}>

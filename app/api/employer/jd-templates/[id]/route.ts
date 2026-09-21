@@ -9,24 +9,16 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { requireJdTemplateOwner } from '../auth';
 
 const renameSchema = z.object({
   label: z.string().min(2, 'Label must be at least 2 characters').max(120),
   summary: z.string().max(300).optional().or(z.literal('')),
 });
 
-async function getOwnerUserId(): Promise<string | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const profile = await prisma.userProfile.findUnique({ where: { supabaseId: user.id } });
-  if (!profile || profile.role !== 'employer') return null;
-  return user.id;
-}
 
 /**
  * PATCH /api/employer/jd-templates/[id]
@@ -43,8 +35,9 @@ export async function PATCH(
   const rateLimitResult = await rateLimit(req, 'jd-templates:rename', RATE_LIMITS.employer);
   if (rateLimitResult) return rateLimitResult;
 
-  const userId = await getOwnerUserId();
-  if (!userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const gate = await requireJdTemplateOwner();
+  if (!gate.ok) return gate.response;
+  const { userId } = gate;
 
   const { id } = await params;
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
@@ -90,8 +83,9 @@ export async function DELETE(
   const rateLimitResult = await rateLimit(req, 'jd-templates:delete', RATE_LIMITS.employer);
   if (rateLimitResult) return rateLimitResult;
 
-  const userId = await getOwnerUserId();
-  if (!userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const gate = await requireJdTemplateOwner();
+  if (!gate.ok) return gate.response;
+  const { userId } = gate;
 
   const { id } = await params;
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });

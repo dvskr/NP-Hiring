@@ -61,9 +61,19 @@ function toMY(iso: string | null): { month: string; year: string } {
 }
 
 function fmtDate(iso: string | null): string {
-    if (!iso) return '—'
+    if (!iso) return 'Not set'
     const d = new Date(iso)
     return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+}
+
+/** Readable date range for the row summary; never renders a bare placeholder as a range end. */
+function fmtRange(start: string | null, end: string | null, isCurrent: boolean): string {
+    const from = start ? fmtDate(start) : null
+    const to = isCurrent ? 'Present' : end ? fmtDate(end) : null
+    if (from && to) return `${from} to ${to}`
+    if (from) return from
+    if (to) return to
+    return 'Dates not set'
 }
 
 interface Props { showMsg: (type: 'success' | 'error', text: string) => void }
@@ -265,7 +275,7 @@ export default function WorkExperienceSection({ showMsg }: Props) {
                 )}
 
                 <div>
-                    <label style={labelStyle}>Job Duties & Responsibilities</label>
+                    <label style={labelStyle}>Job Duties and Responsibilities</label>
                     <textarea value={form.description} onChange={(e) => { if (e.target.value.length <= 2000) setForm({ ...form, description: e.target.value }) }}
                         rows={4} placeholder="Describe your duties and responsibilities..." style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
                     <div style={{ textAlign: 'right', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{form.description.length}/2000</div>
@@ -305,7 +315,7 @@ export default function WorkExperienceSection({ showMsg }: Props) {
                                                     {w.isCurrent && <span style={{ padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 600, background: 'rgba(244,114,182,0.12)', color: clayPalette.accentLight }}>Current</span>}
                                                 </div>
                                                 <div style={{ fontSize: '13px', color: clayPalette.textSecondary, marginTop: '2px' }}>
-                                                    {w.employerName}{w.practiceSetting && <> · {w.practiceSetting}</>} · {fmtDate(w.startDate)} — {w.isCurrent ? 'Present' : fmtDate(w.endDate)}
+                                                    {w.employerName}{w.practiceSetting && <> · {w.practiceSetting}</>} · {fmtRange(w.startDate, w.endDate, w.isCurrent)}
                                                 </div>
                                             </div>
                                             <div style={{ display: 'flex', gap: '6px', marginLeft: '12px', flexShrink: 0 }}>

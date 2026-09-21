@@ -30,6 +30,9 @@ import ReferencesSection from '@/components/settings/ReferencesSection'
 // Niche specialty vocabulary — see config/niche/credentials.ts for FORK NOTEs.
 import { SPECIALTY_PRESETS } from '@/config/niche/credentials'
 
+// Signed-out bounce keeps the return target: LoginContent honours ?next=
+// (validated by safeInternalPath), so the visitor lands back on /settings.
+const SETTINGS_LOGIN_PATH = '/login?next=/settings'
 
 // ── Preset data ──
 
@@ -97,6 +100,39 @@ interface Profile {
   deaExpirationDate: string | null
 }
 
+
+// ── Toast ──
+// Opaque tints so the text contrast is fixed regardless of what scrolls
+// beneath the fixed toast: #065F46 on #ECFDF5 and #B91C1C on #FEF2F2 both
+// clear WCAG AA 4.5:1 (the old #10B981 / #EF4444 on 15% tints did not).
+const TOAST_TONES = {
+  success: { background: '#ECFDF5', border: 'rgba(6,95,70,0.25)', color: '#065F46' },
+  error: { background: '#FEF2F2', border: 'rgba(185,28,28,0.25)', color: '#B91C1C' },
+} as const
+
+function SettingsToast({ type, text }: { type: 'success' | 'error'; text: string }) {
+  const tone = TOAST_TONES[type]
+  return (
+    <div
+      style={{
+        position: 'fixed', top: '80px', right: '20px', zIndex: 100,
+        padding: '14px 20px', borderRadius: '12px',
+        display: 'flex', alignItems: 'center', gap: '10px',
+        background: tone.background,
+        border: `1px solid ${tone.border}`,
+        color: tone.color,
+        fontSize: '14px', fontWeight: 500,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+        animation: 'fadeIn 0.3s',
+      }}
+    >
+      {type === 'success'
+        ? <CheckCircle size={18} aria-hidden="true" />
+        : <AlertTriangle size={18} aria-hidden="true" />}
+      {text}
+    </div>
+  )
+}
 
 // ── Shared card styles (Clay Design System) ──
 const cardStyle: React.CSSProperties = {
@@ -173,7 +209,7 @@ function SettingsPageInner() {
     const fetchProfile = async () => {
       try {
         const res = await fetch('/api/auth/profile')
-        if (res.status === 401) { router.push('/login'); return }
+        if (res.status === 401) { router.push(SETTINGS_LOGIN_PATH); return }
         if (!res.ok) throw new Error('Failed to fetch profile')
         const data = await res.json()
 
@@ -198,7 +234,7 @@ function SettingsPageInner() {
         }
       } catch (error) {
         console.error('Error fetching profile:', error)
-        router.push('/login')
+        router.push(SETTINGS_LOGIN_PATH)
       } finally {
         setLoading(false)
       }
@@ -244,7 +280,7 @@ function SettingsPageInner() {
             if (data.resumeParseStatus !== 'pending') {
               clearInterval(interval)
               if (data.resumeParseStatus === 'completed') {
-                setMessage({ type: 'success', text: '✨ Resume analyzed and profile auto-filled!' })
+                setMessage({ type: 'success', text: '✨ Your resume was analyzed and your profile has been auto-filled.' })
                 setTimeout(() => setMessage(null), 6000)
               }
             }
@@ -268,8 +304,8 @@ function SettingsPageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ avatarUrl: url }),
       })
-      showMsg('success', 'Avatar updated!')
-    } catch { showMsg('error', 'Failed to update avatar') }
+      showMsg('success', 'Avatar updated.')
+    } catch { showMsg('error', 'Failed to update avatar.') }
   }
 
   const handleAvatarRemove = async () => {
@@ -281,8 +317,8 @@ function SettingsPageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ avatarUrl: null }),
       })
-      showMsg('success', 'Avatar removed!')
-    } catch { showMsg('error', 'Failed to remove avatar') }
+      showMsg('success', 'Avatar removed.')
+    } catch { showMsg('error', 'Failed to remove avatar.') }
   }
 
   const handleResumeUpload = async (url: string) => {
@@ -294,8 +330,8 @@ function SettingsPageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resumeUrl: url }),
       })
-      showMsg('success', 'Resume uploaded!')
-    } catch { showMsg('error', 'Failed to upload resume') }
+      showMsg('success', 'Resume uploaded.')
+    } catch { showMsg('error', 'Failed to upload resume.') }
   }
 
   const handleResumeRemove = async () => {
@@ -307,8 +343,8 @@ function SettingsPageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resumeUrl: null }),
       })
-      showMsg('success', 'Resume removed!')
-    } catch { showMsg('error', 'Failed to remove resume') }
+      showMsg('success', 'Resume removed.')
+    } catch { showMsg('error', 'Failed to remove resume.') }
   }
 
   const handleDeleteAccount = async () => {
@@ -320,11 +356,11 @@ function SettingsPageInner() {
         await supabase.auth.signOut()
         router.push('/')
       } else {
-        showMsg('error', 'Failed to delete account')
+        showMsg('error', 'Failed to delete account.')
         setDeleting(false)
       }
     } catch {
-      showMsg('error', 'Failed to delete account')
+      showMsg('error', 'Failed to delete account.')
       setDeleting(false)
     }
     setShowDeleteModal(false)
@@ -348,7 +384,7 @@ function SettingsPageInner() {
       setAvailabilityMode('Immediately')
       showMsg('success', 'Profile cleared. Only your first name was kept.')
     } catch (err) {
-      showMsg('error', err instanceof Error ? err.message : 'Failed to clear profile')
+      showMsg('error', err instanceof Error ? err.message : 'Failed to clear profile.')
     } finally {
       setClearing(false)
       setShowClearModal(false)
@@ -405,7 +441,7 @@ function SettingsPageInner() {
       if (!res.ok) throw new Error('Failed to update profile')
       const updated = await res.json()
       setProfile(updated)
-      showMsg('success', 'Profile updated!')
+      showMsg('success', 'Profile updated.')
     } catch {
       showMsg('error', 'Failed to update profile. Please try again.')
     } finally {
@@ -430,7 +466,7 @@ function SettingsPageInner() {
         } else throw error
         return
       }
-      showMsg('success', 'Password reset email sent! Check your inbox.')
+      showMsg('success', 'Password reset email sent. Please check your inbox.')
     } catch (error: unknown) {
       showMsg('error', error instanceof Error ? error.message : 'Failed to send reset email.')
     } finally {
@@ -471,25 +507,17 @@ function SettingsPageInner() {
       ]} />
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '32px 16px' }}>
 
-        {/* ── Toast message ── */}
-        {message && (
-          <div
-            style={{
-              position: 'fixed', top: '80px', right: '20px', zIndex: 100,
-              padding: '14px 20px', borderRadius: '12px',
-              display: 'flex', alignItems: 'center', gap: '10px',
-              background: message.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-              border: `1px solid ${message.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
-              color: message.type === 'success' ? '#10B981' : '#EF4444',
-              fontSize: '14px', fontWeight: 500,
-              backdropFilter: 'blur(12px)',
-              animation: 'fadeIn 0.3s',
-            }}
-          >
-            {message.type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
-            {message.text}
-          </div>
-        )}
+        {/* ── Toast message ──
+            Screen readers: both live regions stay mounted for the life of
+            the page so insertions are announced reliably. Success goes
+            through role="status" (polite), errors through role="alert"
+            (assertive). */}
+        <div role="status" aria-live="polite" aria-atomic="true">
+          {message?.type === 'success' && <SettingsToast type="success" text={message.text} />}
+        </div>
+        <div role="alert" aria-live="assertive" aria-atomic="true">
+          {message?.type === 'error' && <SettingsToast type="error" text={message.text} />}
+        </div>
 
         {/* Header: title + actions row.
             Mobile (< sm): two-row stack so the buttons get full breathing
@@ -501,7 +529,7 @@ function SettingsPageInner() {
             <h1 style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 4px' }}>
               Settings
             </h1>
-            <p style={{ fontSize: '14px', color: '#6B7F8A', margin: 0 }}>Manage your profile and preferences</p>
+            <p style={{ fontSize: '14px', color: '#6B7F8A', margin: 0 }}>Manage your profile and preferences.</p>
           </div>
           <div className="settings-header-actions flex items-center gap-[10px] flex-wrap">
             <button
@@ -582,7 +610,7 @@ function SettingsPageInner() {
                   marginTop: '14px', fontSize: '14px', fontWeight: 600,
                   color: '#22C55E', display: 'flex', alignItems: 'center', gap: '8px',
                 }}>
-                  🎉 Profile complete! Employers can now find you.
+                  🎉 Your profile is complete. Employers can now find you.
                 </p>
               ) : (
                 <div style={{ marginTop: '14px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -668,7 +696,7 @@ function SettingsPageInner() {
                 Resume
               </h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
-                Upload your resume to quickly apply to jobs
+                Upload your resume to apply to jobs quickly.
               </p>
 
               {/* AI autofill explainer — surfaces the feature so users
@@ -703,11 +731,11 @@ function SettingsPageInner() {
                     AI extracts your profile from this resume
                   </p>
                   <p style={{ fontSize: '12px', color: '#4A5E6A', margin: 0, lineHeight: 1.5 }}>
-                    After upload we read your name, contact, NPI/DEA, every state license,
-                    certifications, education and work history — then show you a review screen.
+                    After you upload, we read your name, contact details, NPI/DEA, every state license,
+                    certifications, education, and work history, then show you a review screen.
                     Choose <strong>Fill empty fields</strong> to keep what you already have, or{' '}
                     <strong>Replace everything</strong> to use the resume as the source of truth.
-                    Nothing saves until you confirm.
+                    Nothing is saved until you confirm.
                   </p>
                 </div>
               </div>
@@ -781,7 +809,7 @@ function SettingsPageInner() {
                     }}
                   />
                 </div>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Email cannot be changed</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Email cannot be changed.</p>
               </div>
 
               {/* Company (only for employers) */}
@@ -917,7 +945,7 @@ function SettingsPageInner() {
                         if (!res.ok) throw new Error('Failed to save')
                         const updated = await res.json()
                         setProfile(updated)
-                        showMsg('success', 'Address saved!')
+                        showMsg('success', 'Address saved.')
                       } catch {
                         showMsg('error', 'Failed to save address.')
                       } finally {
@@ -987,7 +1015,7 @@ function SettingsPageInner() {
                     onChange={(e) => {
                       if (e.target.value.length <= 1000) updateProfile({ bio: e.target.value })
                     }}
-                    placeholder="Brief summary of your experience and goals..."
+                    placeholder="A brief summary of your experience and goals..."
                     rows={4}
                     style={{ ...inputStyle, resize: 'vertical', minHeight: '100px' }}
                   />
@@ -1113,7 +1141,7 @@ function SettingsPageInner() {
                   </div>
                   <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
                     <Shield size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
-                    Private — employers see a range, not exact numbers
+                    Private: employers see a range, not exact numbers.
                   </p>
                 </div>
 
@@ -1388,7 +1416,7 @@ function SettingsPageInner() {
                         if (!res.ok) throw new Error('Failed to save')
                         const updated = await res.json()
                         setProfile(updated)
-                        showMsg('success', 'EEO information saved!')
+                        showMsg('success', 'EEO information saved.')
                       } catch {
                         showMsg('error', 'Failed to save EEO information.')
                       } finally {
@@ -1473,7 +1501,7 @@ function SettingsPageInner() {
                   />
                   {profile.npiNumber && profile.npiNumber.length > 0 && profile.npiNumber.length !== 10 && (
                     <p style={{ fontSize: '11px', color: '#FB923C', marginTop: '4px' }}>
-                      NPI must be exactly 10 digits ({profile.npiNumber.length}/10)
+                      NPI must be exactly 10 digits ({profile.npiNumber.length}/10).
                     </p>
                   )}
                 </div>
@@ -1519,7 +1547,7 @@ function SettingsPageInner() {
                         if (!res.ok) throw new Error('Failed to save')
                         const updated = await res.json()
                         setProfile(updated)
-                        showMsg('success', 'Federal registrations saved!')
+                        showMsg('success', 'Federal registrations saved.')
                       } catch {
                         showMsg('error', 'Failed to save federal registrations.')
                       } finally {
@@ -1808,7 +1836,7 @@ function SettingsPageInner() {
                   Clear all profile info?
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1.5 }}>
-                  This wipes everything you&apos;ve filled in. Your account, login,
+                  This clears everything you&apos;ve filled in. Your account, login,
                   and application history are not affected.
                 </p>
               </div>

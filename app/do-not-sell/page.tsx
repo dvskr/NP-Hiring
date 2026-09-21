@@ -70,7 +70,7 @@ export default function DoNotSellPage() {
                     information for money. Loading third-party analytics (Google Analytics, Vercel Speed Insights)
                     may meet the broader CPRA definition of &quot;sharing&quot;. The button below opts your device
                     out of all analytics and marketing cookies. Essential cookies (login, security, fraud
-                    prevention) remain active because the site won&apos;t function without them.
+                    prevention) remain active because the site will not function without them.
                 </p>
 
                 <h2 style={h2Style}>How to opt out</h2>
@@ -89,11 +89,11 @@ export default function DoNotSellPage() {
                         <CheckCircle2 size={22} style={{ color: '#059669', flexShrink: 0, marginTop: '2px' }} />
                         <div>
                             <p style={{ ...pStyle, marginBottom: '6px', color: '#065F46', fontWeight: 700 }}>
-                                You&apos;re opted out on this device.
+                                You are opted out on this device.
                             </p>
                             <p style={{ ...pStyle, marginBottom: 0, color: '#065F46' }}>
                                 Analytics and marketing cookies are off. Clearing your browser data or switching
-                                devices will reset this preference — re-visit this page or use Global Privacy
+                                devices will reset this preference. Revisit this page or use Global Privacy
                                 Control for a more durable opt-out.
                             </p>
                         </div>
@@ -123,21 +123,21 @@ export default function DoNotSellPage() {
                 <h2 style={h2Style}>The most durable opt-out: Global Privacy Control</h2>
                 <p style={pStyle}>
                     Global Privacy Control (GPC) is a browser-level signal that travels with you across every
-                    site you visit. We honor it automatically — when GPC is on, the consent banner does not
+                    site you visit. We honor it automatically: when GPC is on, the consent banner does not
                     appear and analytics never load.
                 </p>
                 {gpcActive ? (
                     <p style={{ ...pStyle, color: '#065F46', fontWeight: 600 }}>
-                        ✓ Your browser is sending Global Privacy Control. We see it and we respect it on every page.
+                        ✓ Your browser is sending Global Privacy Control. We detect it and respect it on every page.
                     </p>
                 ) : (
                     <p style={pStyle}>
                         Your browser is not currently sending Global Privacy Control. Most major browsers (Firefox,
-                        Brave, DuckDuckGo) have it built in; for Chrome and Safari you can install the
+                        Brave, DuckDuckGo) have it built in. For Chrome and Safari, you can install the
                         <a href="https://privacybadger.org" target="_blank" rel="noopener noreferrer" style={{ color: '#BE185D', textDecoration: 'underline', marginLeft: '4px' }}>
                             Privacy Badger
                         </a>{' '}
-                        extension which sends GPC automatically.
+                        extension, which sends GPC automatically.
                     </p>
                 )}
 

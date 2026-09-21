@@ -1004,7 +1004,7 @@ export function normalizeJobWithReason(rawJob: Record<string, unknown>, source: 
 
     // Normalize salary to annual equivalent
     const normalizedSalaryData = normalizeSalary({
-      salaryRange: salaryMin && salaryMax ? `$${salaryMin.toLocaleString()} - $${salaryMax.toLocaleString()}` : null,
+      salaryRange: salaryMin && salaryMax ? `$${salaryMin.toLocaleString()} to $${salaryMax.toLocaleString()}` : null,
       minSalary: salaryMin,
       maxSalary: salaryMax,
       salaryPeriod,
@@ -1125,7 +1125,7 @@ export function normalizeJobWithReason(rawJob: Record<string, unknown>, source: 
         description: fullDescription,
         descriptionSummary: summary,
         categoryTags,
-        salaryRange: salaryMin && salaryMax ? `$${salaryMin.toLocaleString()} - $${salaryMax.toLocaleString()}` : null,
+        salaryRange: salaryMin && salaryMax ? `$${salaryMin.toLocaleString()} to $${salaryMax.toLocaleString()}` : null,
         minSalary: salaryMin,
         maxSalary: salaryMax,
         salaryPeriod,

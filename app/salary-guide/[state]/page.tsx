@@ -25,7 +25,7 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 import StateImage, { hasStateDiorama } from '@/components/StateImage';
 // P3 #9: /jobs/city/[slug] resolves by re-parsing the slug into a city NAME, so a
 // link built from a lossy slug can be a guaranteed 404 — guard before emitting.
-import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
+import { buildCitySlug, cityLinkResolves, MIN_CITY_JOBS_FOR_LINK } from '@/app/jobs/locations/[state]/directory';
 import {
     DollarSign,
     MapPin,
@@ -185,12 +185,17 @@ async function getTopCities(stateName: string) {
     const stateCode = STATE_CODES[stateName] || '';
     return cities
         .filter((c) => c.city)
-        // P3 #9: every row becomes a /jobs/city/<slug> link in the sidebar. That
-        // route rebuilds a city NAME from the slug and matches the DB `city`
-        // column, so "St. Louis" → st-louis-mo → "St Louis" finds nothing and
-        // hard-404s. Reject those with the same guard the state city directories
-        // use, and build the survivors with the shared builder rather than a
-        // fifth inline copy of the sanitizer.
+        // Every row becomes a /jobs/city/<slug> link, and that page calls
+        // notFound() below MIN_JOBS postings (MIN_CITY_JOBS_FOR_LINK is the
+        // constant drift-guarded against it). This count (published, exact city,
+        // state name) never exceeds the city page's own count (published,
+        // case-insensitive city, state name or code), so clearing it here means
+        // the page renders. Without this gate most of the sidebar linked 404s.
+        .filter((c) => c._count.id >= MIN_CITY_JOBS_FOR_LINK)
+        // P3 #9: that route rebuilds a city NAME from the slug and matches the DB
+        // `city` column, so "St. Louis" to st-louis-mo to "St Louis" finds nothing
+        // and hard-404s. Reject those with the same guard the state city
+        // directories use, and build the survivors with the shared builder.
         .filter((c) => cityLinkResolves(c.city!, stateCode))
         .map((c) => ({
             name: c.city!,
@@ -251,7 +256,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // needs to drop the URL).
     // Title trimmed to <60 chars (was 77-82 — reliably truncated mid-phrase).
     // The "Average Pay, Jobs & Cost of Living" suffix moved into the description.
-    const title = `${brand.niche.short} Salary in ${stateName} (${code}) 2026 — Pay & Jobs`;
+    const title = `${brand.niche.short} Salary in ${stateName} (${code}) 2026: Pay & Jobs`;
     const description = `${brand.niche.short} salary data for ${stateName}: median pay by practice setting, top employers, and open positions. Updated daily.`;
     const ogImage = salaryGuideOgImage(stateName, code);
 
@@ -260,7 +265,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         description,
         alternates: { canonical: `${brand.baseUrl}/salary-guide/${slug}` },
         openGraph: {
-            title: `${brand.niche.short} Salary in ${stateName} (${code}) — 2026 Data`,
+            title: `${brand.niche.short} Salary in ${stateName} (${code}): 2026 Data`,
             description: `Median ${brand.niche.short} salary in ${stateName} by practice setting, top employers, and open positions.`,
             type: 'website',
             url: `${brand.baseUrl}/salary-guide/${slug}`,
@@ -351,11 +356,11 @@ export default async function StateSalaryPage({ params }: PageProps) {
         salaryData.gatePassed
             ? {
                 q: `What is the median ${brand.niche.short} salary in ${stateName}?`,
-                a: `The median ${brand.niche.short} salary in ${stateName} is ${formatSalary(salaryData.median!)} per year — the median of ${salaryData.jobCount} active ${brand.niche.short}-eligible ${salaryData.jobCount === 1 ? 'posting' : 'postings'} with disclosed, non-estimated salary from ${salaryData.employers} employers on ${brand.name}. The middle half of those postings pay ${formatSalary(salaryData.p25!)} to ${formatSalary(salaryData.p75!)}. That is ${Math.abs(diffPct)}% ${aboveBelow} ${nationalLabel}.`,
+                a: `The median ${brand.niche.short} salary in ${stateName} is ${formatSalary(salaryData.median!)} per year, the median of ${salaryData.jobCount} active ${brand.niche.short}-eligible ${salaryData.jobCount === 1 ? 'posting' : 'postings'} with disclosed, non-estimated salary from ${salaryData.employers} employers on ${brand.name}. The middle half of those postings pay ${formatSalary(salaryData.p25!)} to ${formatSalary(salaryData.p75!)}. That is ${Math.abs(diffPct)}% ${aboveBelow} ${nationalLabel}.`,
             }
             : {
                 q: `What is the median ${brand.niche.short} salary in ${stateName}?`,
-                a: `${stateName} currently has ${salaryData.jobCount} active ${brand.niche.short}-eligible ${salaryData.jobCount === 1 ? 'posting' : 'postings'} with disclosed salary on ${brand.name} — below the ${BENCHMARK_MIN_POSTINGS}-posting, ${BENCHMARK_MIN_EMPLOYERS}-employer minimum we require before publishing a state figure, so we do not report one. For reference, the national median ${brand.niche.short} wage is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`,
+                a: `${stateName} currently has ${salaryData.jobCount} active ${brand.niche.short}-eligible ${salaryData.jobCount === 1 ? 'posting' : 'postings'} with disclosed salary on ${brand.name}, which is below the ${BENCHMARK_MIN_POSTINGS}-posting, ${BENCHMARK_MIN_EMPLOYERS}-employer minimum we require before publishing a state figure, so we do not report one. For reference, the national median ${brand.niche.short} wage is ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}).`,
             },
         {
             q: `How many ${brand.niche.short} jobs are open in ${stateName}?`,
@@ -440,13 +445,13 @@ export default async function StateSalaryPage({ params }: PageProps) {
                 dangerouslySetInnerHTML={{ __html: sanitizeJson({
                     '@context': 'https://schema.org',
                     '@type': 'Article',
-                    headline: `${brand.niche.short} Salary in ${stateName} (${stateCode}) — Pay by Practice Setting`,
+                    headline: `${brand.niche.short} Salary in ${stateName} (${stateCode}): Pay by Practice Setting`,
                     // Review P9 #2d: below the publishing gate the schema
                     // description carries NO figure — a structured-data
                     // salary claim over a tiny sample is fabricated data.
                     description: salaryData.gatePassed
-                        ? `Median ${brand.niche.short} salary in ${stateName}: ${formatSalary(salaryData.median!)} per year (middle half ${formatSalary(salaryData.p25!)}–${formatSalary(salaryData.p75!)}), the median of ${salaryData.jobCount} active ${salaryData.jobCount === 1 ? 'posting' : 'postings'} with disclosed salary from ${salaryData.employers} employers.`
-                        : `${brand.niche.short} jobs in ${stateName}: ${salaryData.jobCount} active ${salaryData.jobCount === 1 ? 'posting' : 'postings'} with disclosed salary — sample below the minimum we require to publish a state salary figure.`,
+                        ? `Median ${brand.niche.short} salary in ${stateName}: ${formatSalary(salaryData.median!)} per year (middle half ${formatSalary(salaryData.p25!)} to ${formatSalary(salaryData.p75!)}), the median of ${salaryData.jobCount} active ${salaryData.jobCount === 1 ? 'posting' : 'postings'} with disclosed salary from ${salaryData.employers} employers.`
+                        : `${brand.niche.short} jobs in ${stateName}: ${salaryData.jobCount} active ${salaryData.jobCount === 1 ? 'posting' : 'postings'} with disclosed salary, a sample below the minimum we require to publish a state salary figure.`,
                     author: { '@type': 'Organization', name: brand.name, url: brand.baseUrl },
                     publisher: { '@type': 'Organization', name: brand.name, logo: { '@type': 'ImageObject', url: `${brand.baseUrl}/logo.png` } },
                     mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl },
@@ -571,14 +576,14 @@ export default async function StateSalaryPage({ params }: PageProps) {
                             ? {
                                 icon: TrendingUp,
                                 label: 'Typical Range',
-                                value: `${formatSalary(salaryData.p25!)} – ${formatSalary(salaryData.p75!)}`,
-                                sub: '25th – 75th percentile',
+                                value: `${formatSalary(salaryData.p25!)} to ${formatSalary(salaryData.p75!)}`,
+                                sub: '25th to 75th percentile',
                                 color: '#E86C2C',
                             }
                             : {
                                 icon: TrendingUp,
                                 label: 'Typical Range',
-                                value: '—',
+                                value: 'Pending',
                                 sub: 'Published once the sample clears the gate',
                                 color: '#E86C2C',
                             },
@@ -938,7 +943,7 @@ export default async function StateSalaryPage({ params }: PageProps) {
                     JSON-LD above (B48: schema must match visible content). */}
                 <div style={{ marginTop: '32px' }}>
                     <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
-                        {brand.niche.short} Salary in {stateName} — FAQ
+                        {brand.niche.short} Salary in {stateName}: FAQ
                     </h2>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {stateFaqs.map((faq, i) => (

@@ -100,13 +100,13 @@ export default function AdminTestimonialsPage() {
             });
             const data = await res.json().catch(() => ({} as { error?: string; testimonial?: Testimonial }));
             if (!res.ok || !data.testimonial) {
-                showMsg(data.error || 'Update failed — please try again.', true);
+                showMsg(data.error || 'Update failed. Please try again.', true);
                 return;
             }
             setTestimonials(prev => prev.map(t => (t.id === id ? { ...t, ...data.testimonial } : t)));
             showMsg(okMsg, false);
         } catch {
-            showMsg('Network error — please try again.', true);
+            showMsg('Network error. Please try again.', true);
         } finally {
             setBusyId(null);
         }
@@ -135,7 +135,7 @@ export default function AdminTestimonialsPage() {
             {/* Header */}
             <div style={{ marginBottom: 24 }}>
                 <h1 style={{ ...heading, fontSize: 28, marginBottom: 4 }}>Employer Testimonials</h1>
-                <p style={sub}>Review submissions and approve them for the public For Employers page. Attribution can only be narrowed, never widened beyond what the employer consented to.</p>
+                <p style={sub}>Review submissions and approve them for the public For Employers page. Attribution can only be narrowed; it can never be widened beyond what the employer consented to.</p>
             </div>
 
             {/* Action message */}
@@ -223,7 +223,7 @@ export default function AdminTestimonialsPage() {
                                                             <Star size={13} fill="#F59E0B" style={{ color: '#F59E0B' }} />
                                                             <span style={{ fontWeight: 600, color: '#1A2E35' }}>{t.rating}/5</span>
                                                         </span>
-                                                    ) : '—'}
+                                                    ) : 'N/A'}
                                                 </td>
                                                 <td style={{ ...td, whiteSpace: 'nowrap' }}>
                                                     <select
@@ -265,7 +265,7 @@ export default function AdminTestimonialsPage() {
                                                             {busy ? 'Saving…' : isFeatured ? 'Unfeature' : 'Feature'}
                                                         </button>
                                                     ) : (
-                                                        <span style={muted}>—</span>
+                                                        <span style={muted}>None</span>
                                                     )}
                                                 </td>
                                             </tr>
@@ -274,7 +274,7 @@ export default function AdminTestimonialsPage() {
                                     {filtered.length === 0 && (
                                         <tr><td colSpan={8} style={{ ...td, textAlign: 'center', padding: 40, whiteSpace: 'normal' }}>
                                             {testimonials.length === 0
-                                                ? 'No testimonials submitted yet. Employers share stories from their dashboard.'
+                                                ? 'No testimonials have been submitted yet. Employers share stories from their dashboard.'
                                                 : 'No testimonials match this filter.'}
                                         </td></tr>
                                     )}

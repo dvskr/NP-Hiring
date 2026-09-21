@@ -195,47 +195,40 @@ export async function ensureProfileFromAuth<
 ): Promise<T | null> {
   if (!user.email) return null
 
-  // Fast path: profile already exists on this supabaseId.
-  const existing = await prisma.userProfile.findUnique({
-    where: { supabaseId: user.id },
-    ...(options.include ? { include: options.include } : {}),
-  })
-  if (existing) return existing as unknown as T
-
-  // Slow path 1: profile exists under this email but a different
-  // supabaseId. Happens when the auth user was deleted+recreated. Relink.
-  const byEmail = await prisma.userProfile.findFirst({
-    where: { email: user.email },
-    ...(options.include ? { include: options.include } : {}),
-  })
-  if (byEmail && byEmail.supabaseId !== user.id) {
-    const relinked = await prisma.userProfile.update({
-      where: { id: byEmail.id },
-      data: { supabaseId: user.id },
-      ...(options.include ? { include: options.include } : {}),
-    })
-    logger.info('[ensureProfileFromAuth] relinked existing profile to new auth user', {
-      email: user.email,
-      profileId: byEmail.id,
-      source: options.logSource ?? null,
-    })
-    return relinked as unknown as T
-  }
-  if (byEmail) return byEmail as unknown as T
+  const found = await findOrRelinkProfile<T>(prisma, user, user.email, options)
+  if (found) return found
 
   // Slow path 2: no profile anywhere. Create from auth metadata.
   const derived = readSignupMetadata(user)
-  const created = await prisma.userProfile.create({
-    data: {
-      supabaseId: user.id,
+  let created: T
+  try {
+    created = (await prisma.userProfile.create({
+      data: {
+        supabaseId: user.id,
+        email: user.email,
+        role: derived.role,
+        company: derived.company,
+        firstName: derived.firstName,
+        lastName: derived.lastName,
+      },
+      ...(options.include ? { include: options.include } : {}),
+    })) as unknown as T
+  } catch (createError) {
+    // First login fires several bootstrap calls at once (requireAuth in the
+    // page layout plus GET /api/auth/profile from the client). Each sees no
+    // row, each tries to create, and the losers hit the unique constraint
+    // on supabase_id or email (P2002), which surfaced as a 500. The winner's
+    // row is the profile we want: re-read it. The winner also owns the
+    // signup opt-in completion below, so the loser skips it (no duplicates).
+    if (!isUniqueViolation(createError)) throw createError
+    const winner = await findOrRelinkProfile<T>(prisma, user, user.email, options)
+    if (!winner) throw createError
+    logger.info('[ensureProfileFromAuth] concurrent create lost the race; returned existing profile', {
       email: user.email,
-      role: derived.role,
-      company: derived.company,
-      firstName: derived.firstName,
-      lastName: derived.lastName,
-    },
-    ...(options.include ? { include: options.include } : {}),
-  })
+      source: options.logSource ?? null,
+    })
+    return winner
+  }
   logger.info('[ensureProfileFromAuth] created profile from auth metadata', {
     email: user.email,
     role: derived.role,
@@ -263,5 +256,49 @@ export async function ensureProfileFromAuth<
     )
   }
 
-  return created as unknown as T
+  return created
+}
+
+/** True for a Prisma unique-constraint violation (P2002). */
+export function isUniqueViolation(error: unknown): boolean {
+  return (error as { code?: unknown } | null)?.code === 'P2002'
+}
+
+/**
+ * Lookup half of ensureProfileFromAuth: the profile linked to this auth
+ * user, or one under the same email relinked to it. Null when neither exists.
+ */
+async function findOrRelinkProfile<T>(
+  prisma: PrismaClient,
+  user: User,
+  email: string,
+  options: { include?: Record<string, unknown>; logSource?: string },
+): Promise<T | null> {
+  // Fast path: profile already exists on this supabaseId.
+  const existing = await prisma.userProfile.findUnique({
+    where: { supabaseId: user.id },
+    ...(options.include ? { include: options.include } : {}),
+  })
+  if (existing) return existing as unknown as T
+
+  // Slow path 1: profile exists under this email but a different
+  // supabaseId. Happens when the auth user was deleted+recreated. Relink.
+  const byEmail = await prisma.userProfile.findFirst({
+    where: { email },
+    ...(options.include ? { include: options.include } : {}),
+  })
+  if (byEmail && byEmail.supabaseId !== user.id) {
+    const relinked = await prisma.userProfile.update({
+      where: { id: byEmail.id },
+      data: { supabaseId: user.id },
+      ...(options.include ? { include: options.include } : {}),
+    })
+    logger.info('[ensureProfileFromAuth] relinked existing profile to new auth user', {
+      email,
+      profileId: byEmail.id,
+      source: options.logSource ?? null,
+    })
+    return relinked as unknown as T
+  }
+  return byEmail as unknown as T | null
 }

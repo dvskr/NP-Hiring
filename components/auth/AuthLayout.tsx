@@ -74,13 +74,13 @@ export default function AuthLayout({ children, illustration, testimonial }: Auth
 
         {/* Footer */}
         <p style={{
-          fontSize: '11px', color: '#9CA3AF',
+          fontSize: '11px', color: '#5A6B76',
           marginTop: '20px', lineHeight: 1.6, textAlign: 'center',
         }}>
           By continuing, you agree to our{' '}
           <Link href="/terms" style={{ color: '#BE185D', textDecoration: 'underline' }}>Terms</Link>
           {' '}and{' '}
-          <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'underline' }}>Privacy Policy</Link>
+          <Link href="/privacy" style={{ color: '#BE185D', textDecoration: 'underline' }}>Privacy Policy</Link>.
         </p>
       </div>
 

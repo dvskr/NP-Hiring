@@ -3,8 +3,8 @@ import { brand } from '@/config/brand';
 
 export const metadata: Metadata = {
     title: {
-        template: `%s — ${brand.name}`,
-        default: `Employer Portal — ${brand.name}`,
+        template: `%s | ${brand.name}`,
+        default: `Employer Portal | ${brand.name}`,
     },
     robots: { index: false, follow: false },
 };

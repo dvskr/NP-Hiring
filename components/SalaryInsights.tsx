@@ -76,7 +76,7 @@ export default function SalaryInsights({
                         <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
                             {jobMinSalary && jobMaxSalary && jobMinSalary !== jobMaxSalary ? (
                                 <>
-                                    ${Math.round(jobMinSalary / 1000)}k - ${Math.round(jobMaxSalary / 1000)}k
+                                    ${Math.round(jobMinSalary / 1000)}k to ${Math.round(jobMaxSalary / 1000)}k
                                 </>
                             ) : (
                                 <>${jobAvgSalary}k</>
@@ -93,17 +93,17 @@ export default function SalaryInsights({
                                 {comparisonToState > 5 ? (
                                     <>
                                         <TrendingUp className="w-4 h-4" />
-                                        {Math.round(comparisonToState)}% above state average
+                                        {Math.round(comparisonToState)}% above the state average
                                     </>
                                 ) : comparisonToState < -5 ? (
                                     <>
                                         <TrendingDown className="w-4 h-4" />
-                                        {Math.abs(Math.round(comparisonToState))}% below state average
+                                        {Math.abs(Math.round(comparisonToState))}% below the state average
                                     </>
                                 ) : (
                                     <>
                                         <Minus className="w-4 h-4" />
-                                        Near state average
+                                        Near the state average
                                     </>
                                 )}
                             </div>
@@ -122,7 +122,7 @@ export default function SalaryInsights({
                     className="text-sm font-medium hover:underline"
                     style={{ color: '#F472B6' }}
                 >
-                    View complete 2026 {brand.niche.short} Salary Guide →
+                    View the complete 2026 {brand.niche.short} Salary Guide →
                 </Link>
             </div>
         </section>

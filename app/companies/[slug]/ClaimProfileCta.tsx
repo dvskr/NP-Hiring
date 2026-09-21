@@ -113,7 +113,7 @@ export default function ClaimProfileCta({ companyId, companyName, profilePath }:
             setErrorMsg(data.error || 'Could not submit your claim. Please try again.');
         } catch {
             setPhase('error');
-            setErrorMsg('Network error — please try again.');
+            setErrorMsg('Network error. Please try again.');
         }
     };
 
@@ -128,7 +128,7 @@ export default function ClaimProfileCta({ companyId, companyName, profilePath }:
                         </h2>
                         <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
                             Our team reviews claims by hand. Nothing on this page changes until a
-                            reviewer approves it — if they do, a &ldquo;Claimed by employer&rdquo; badge
+                            reviewer approves it. If they do, a &ldquo;Claimed by employer&rdquo; badge
                             appears here.
                         </p>
                     </div>
@@ -147,7 +147,7 @@ export default function ClaimProfileCta({ companyId, companyName, profilePath }:
                     </h2>
                     <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
                         This profile was built from public job postings. If you hire here, you can ask
-                        us to recognise you as its owner. A reviewer checks every claim by hand, and
+                        us to recognize you as its owner. A reviewer checks every claim by hand, and
                         nothing on this page changes unless one is approved.
                     </p>
 
@@ -207,8 +207,8 @@ export default function ClaimProfileCta({ companyId, companyName, profilePath }:
                                 />
                                 <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
                                     We compare your account email&apos;s domain to this employer&apos;s website as one
-                                    signal among several. A mismatch is not a rejection — agencies, health
-                                    systems and small practices routinely mail from another domain.
+                                    signal among several. A mismatch is not a rejection; agencies, health
+                                    systems, and small practices routinely send mail from another domain.
                                 </p>
                             </div>
 
