@@ -82,10 +82,18 @@ const POPULATION_PHRASES: Record<PopulationTier, string> = {
     'small-city': 'smaller community',
 };
 
+/**
+ * AANP tier names for prose. Names only: the reduced and restricted phrases
+ * used to add "requiring a collaborative agreement" and "requiring physician
+ * supervision", which contradicted the verified details of Virginia, South
+ * Carolina, Michigan, Wisconsin and every reduced state with a route out of
+ * the agreement. The city page's practice card prints the state's own
+ * details; this narrative only names the tier and attributes it to AANP.
+ */
 const AUTHORITY_PHRASES: Record<PracticeAuthority, string> = {
-    full: 'full practice authority',
-    reduced: 'reduced practice authority requiring a collaborative agreement',
-    restricted: 'restricted practice authority requiring physician supervision',
+    full: 'full practice',
+    reduced: 'reduced practice',
+    restricted: 'restricted practice',
 };
 
 // ─── Shortage-claim gate (P3 donor follow-up, extends P2 #7) ────────────────
@@ -119,15 +127,23 @@ export function buildCityNarrative(
     const { city, populationTier: pt, practiceAuthority } = facts;
     const parts: string[] = [];
 
-    // Sentence 1: position (2020 Census population tier) plus the state's
-    // AANP classification.
-    const popPhrase = POPULATION_PHRASES[pt];
-    const authPhrase = practiceAuthority ? AUTHORITY_PHRASES[practiceAuthority] : 'state-specific practice rules';
+    // Sentence 1: position (2020 Census population tier).
     parts.push(
-        `${city.name}, ${city.stateCode} is a ${popPhrase} in ${city.state} by 2020 Census population, where ${brand.niche.short}s practice under ${authPhrase}.`,
+        `${city.name}, ${city.stateCode} is a ${POPULATION_PHRASES[pt]} in ${city.state} by 2020 Census population.`,
     );
 
-    // Sentence 2: the live count, stated as page inventory. The verb agrees
+    // Sentence 2: the state's AANP tier, attributed and named only. A tier
+    // never tells a reader what this state requires, so the sentence points
+    // to the state's own rules instead of stating one. The District of
+    // Columbia is not a state, so its peers are "jurisdictions".
+    const peers = city.stateCode === 'DC' ? 'jurisdictions' : 'states';
+    parts.push(
+        practiceAuthority
+            ? `AANP places ${city.state} in its ${AUTHORITY_PHRASES[practiceAuthority]} category; ${peers} in the same category still set different requirements, so check the ${city.state} rules before applying.`
+            : `${city.state} sets its own ${brand.niche.short} practice rules, so check them before applying.`,
+    );
+
+    // Sentence 3: the live count, stated as page inventory. The verb agrees
     // with the count.
     parts.push(
         `${totalJobs} active ${brand.niche.short} ${totalJobs === 1 ? 'position is' : 'positions are'} currently listed on this page.`,
@@ -176,7 +192,7 @@ const TAXONOMY_LEADS: Record<string, TaxonomyLeadFn> = {
     'veterans': (f) => `Veterans-focused ${NP} listings in ${f.city.name} span VA medical centers, community-based outpatient clinics, and Vet Centers. Postings emphasize service-connected conditions such as PTSD and traumatic brain injury alongside general care, so read the population and setting details closely.`,
     'urgent-care': (f) => `Urgent care ${NP} listings in ${f.city.name} staff walk-in clinics and retail health sites with extended evening and weekend hours. Positions center on episodic acute care on shift schedules, so confirm the rotation and the procedures ${NP}s own at that site.`,
     'home-health': (f) => `Home-health ${NP} listings serving ${f.city.name} center on house calls, transitional care, and annual wellness visits. Ask whether pay is per visit or salaried, how mileage is handled, and how large the territory is.`,
-    'family-practice': (f) => `Family practice ${NP} (FNP) listings in ${f.city.name} cover primary care across the lifespan, from group practices to health systems and community clinics. Check each listing for panel size, walk-in coverage, and the collaboration terms ${f.city.state} applies.`,
+    'family-practice': (f) => `Family practice ${NP} (FNP) listings in ${f.city.name} cover primary care across the lifespan, from group practices to health systems and community clinics. Check each listing for panel size, walk-in coverage, and any collaboration terms ${f.city.state} applies.`,
     'adult-gerontology': (f) => `Adult-gerontology ${NP} listings in ${f.city.name} split between the primary care (AGPCNP) and acute care (AGACNP) tracks, across internal medicine, long-term care, and hospital services. Match the listing's certification requirement to your own track before applying.`,
     'pediatric': (f) => `Pediatric ${NP} listings in ${f.city.name} span primary-care pediatrics, school-based health, and children's specialty services; PNP-PC and PNP-AC certifications map to clinic and hospital settings respectively. Confirm the acuity mix and any after-hours expectations.`,
     'neonatal': (f) => `Neonatal ${NP} listings in ${f.city.name} concentrate in NICUs, and employers expect prior NICU nursing experience alongside NNP certification. Night and weekend coverage is part of the role, so ask how call and post-call time are structured.`,

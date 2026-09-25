@@ -155,7 +155,7 @@ const AI_TASK = 'seo_content' as const;
  * would silently replay every response written under the OLD prompt. Keeping
  * the two wired to one constant makes that drift impossible.
  */
-export const PROMPT_VERSION = 'v2';
+export const PROMPT_VERSION = 'v3';
 
 /**
  * Background/cron identity. `tenant` is an AiTenant object, not a string —
@@ -273,8 +273,8 @@ export interface CityFactBlock {
     /**
      * Authority LEVEL only. The free-text `details` prose in
      * lib/state-practice-authority.ts still reads as donor-board copy, so
-     * prompts render the enum and let the model phrase it — exactly like
-     * Layer 1's AUTHORITY_PHRASES approach in lib/pseo/city-narrative.ts.
+     * prompts render the enum, and tierOnlyInstruction limits the model to
+     * naming it as AANP's classification (never a rule read off the tier).
      */
     practiceAuthority: 'full' | 'reduced' | 'restricted' | null;
 }
@@ -292,6 +292,19 @@ export function toCityFactBlock(facts: CityNarrativeFacts): CityFactBlock {
     };
 }
 
+/**
+ * The tier is AANP's classification, too coarse to carry a rule: states in one
+ * tier differ on transition periods, practice agreements and routes out of an
+ * agreement. The model gets the tier only, so it may name the tier and nothing
+ * it implies. Every prompt that carries the "practice authority:" fact line
+ * must carry this instruction under the same condition.
+ */
+function tierOnlyInstruction(facts: CityFactBlock): string | null {
+    if (!facts.practiceAuthority) return null;
+    const unit = facts.stateCode === 'DC' ? 'jurisdiction' : 'state';
+    return `If you mention practice authority, say only that AANP classifies ${facts.stateName} as a ${facts.practiceAuthority} practice ${unit}. Do not state what ${facts.stateName} requires (supervision, a collaborative agreement, a transition period or independent practice), because states in the same tier set different rules.`;
+}
+
 export function buildCityPrompt(facts: CityFactBlock, totalJobs: number): string {
     return [
         `Write a market-context paragraph for the page "${brand.niche.short} Jobs in ${facts.cityName}, ${facts.stateCode}".`,
@@ -304,7 +317,7 @@ export function buildCityPrompt(facts: CityFactBlock, totalJobs: number): string
         facts.healthcareSystems.length > 0 ? `- Major healthcare employers: ${facts.healthcareSystems.slice(0, 4).join(', ')}` : null,
         `- Active ${brand.niche.short} listings on this page: ${totalJobs}`,
         ``,
-        `Mention practice authority because it directly shapes ${brand.niche.short} scope and earning potential.`,
+        tierOnlyInstruction(facts),
     ].filter(Boolean).join('\n');
 }
 
@@ -319,6 +332,10 @@ export function buildTaxonomyPrompt(
     // these pages (lib/pseo/city-narrative.ts). Reusing it keeps Layer 2
     // grounded in the same reviewed claims instead of a stale local map.
     const lead = getTaxonomyLead(taxonomySlug, narrativeFacts);
+    // The board niche's practice-authority ladder does not govern the APRN
+    // cohort roles (CRNA / CNM / CNS licensure is regulated separately), so
+    // omit the fact on those pages rather than misapply it.
+    const carriesAuthority = facts.practiceAuthority !== null && !APRN_ROLE_SLUGS.has(taxonomySlug);
     return [
         `Write a market-context paragraph for the page "${taxonomyPageTitle(taxonomySlug, facts.cityName, facts.stateCode)}".`,
         ``,
@@ -327,16 +344,15 @@ export function buildTaxonomyPrompt(
         `Facts:`,
         `- City: ${facts.cityName}, ${facts.stateCode}`,
         `- Population: ${facts.population.toLocaleString('en-US')}`,
-        // The board niche's practice-authority ladder does not govern the APRN
-        // cohort roles (CRNA / CNM / CNS licensure is regulated separately) —
-        // omit the fact on those pages rather than misapply it.
-        facts.practiceAuthority && !APRN_ROLE_SLUGS.has(taxonomySlug)
+        carriesAuthority
             ? `- ${facts.stateName} ${brand.niche.short} practice authority: ${facts.practiceAuthority}`
             : null,
         `- Active listings on this page: ${totalJobs}`,
         ``,
         `Category context (from our editorial system — reword it, do not copy verbatim, and do not add claims beyond it):`,
         lead ?? `- Conventional W-2 ${brand.niche.descriptor} employment; no category-specific compensation structure.`,
+        ``,
+        carriesAuthority ? tierOnlyInstruction(facts) : null,
     ].filter(Boolean).join('\n');
 }
 

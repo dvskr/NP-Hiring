@@ -517,15 +517,15 @@ function buildHtml(live: LiveInventory | null): string {
           <ul>
             <li>Own and bill under your own practice</li>
             <li>Independent 1099 and telehealth work</li>
-            <li>Full clinical independence</li>
+            <li>Several states first require a transition period</li>
           </ul>
         </div>
         <div class="fpa-panel no">
           <h4>Restricted / Reduced</h4>
           <ul>
-            <li>Collaborating physician required first</li>
+            <li>Most require an agreement, supervision or delegation first</li>
             <li>That agreement is usually a paid one</li>
-            <li>Physician oversight where restricted</li>
+            <li>Several offer a route out after a set amount of experience</li>
           </ul>
         </div>
       </div>

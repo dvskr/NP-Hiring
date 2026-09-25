@@ -205,8 +205,13 @@ describe('P1 #4 — generator copy mirrors the published /salary-guide page (dri
         for (const bullet of [
             'Own and bill under your own practice',
             'Independent 1099 and telehealth work',
-            'Collaborating physician required first',
+            // The tier panels carry the within-tier caveats (2026-09
+            // practice-authority pass); "Collaborating physician required
+            // first" was false for several reduced and restricted states.
+            'Several states first require a transition period',
+            'Most require an agreement, supervision or delegation first',
             'That agreement is usually a paid one',
+            'Several offer a route out after a set amount of experience',
         ]) {
             expect(hubSrc, `hub missing FPA bullet: ${bullet}`).toContain(bullet);
             expect(generatorSrc, `generator missing FPA bullet: ${bullet}`).toContain(bullet);

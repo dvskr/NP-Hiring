@@ -44,7 +44,7 @@ import { STATE_ELIGIBLE_CATEGORY_SLUGS } from '@/lib/pseo/taxonomy-registry';
 import { buildPlainStateNarrative } from '@/lib/pseo/state-narrative';
 import { METRO_CITIES } from '@/lib/metro-data';
 import { Job } from '@/lib/types';
-import { getStatePracticeAuthority } from '@/lib/state-practice-authority';
+import { getAuthorityLabel, getStatePracticeAuthority } from '@/lib/state-practice-authority';
 import { canonicalBucketWhere } from '@/lib/canonical-counts';
 import { getListingFacts, type ListingFacts } from '@/lib/pseo/listing-facts';
 import {
@@ -322,7 +322,6 @@ export async function generateMetadata({ params, searchParams }: StatePageProps)
     const description = buildHubDescription({
       stateName,
       facts,
-      authorityDescription: getStatePracticeAuthority(stateName)?.description ?? null,
       topCategories: categoryRows.map((row) => row.label),
     });
     const indexable = shouldIndexStateHub({ activeJobs: facts.total, liveDataSections, page });
@@ -566,7 +565,6 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
   const heroDescription = buildHubDescription({
     stateName,
     facts,
-    authorityDescription: practiceAuthority?.description ?? null,
     topCategories: topCategoryLabels,
   });
 
@@ -823,7 +821,7 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
                     {practiceAuthority.details}
                   </p>
                   <span style={{ display: 'inline-block', width: 'fit-content', padding: '4px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: 700, background: practiceAuthority.authority === 'full' ? '#D1FAE5' : practiceAuthority.authority === 'reduced' ? '#FEF3C7' : '#FEE2E2', color: practiceAuthority.authority === 'full' ? '#065F46' : practiceAuthority.authority === 'reduced' ? '#92400E' : '#991B1B' }}>
-                    {practiceAuthority.description}
+                    AANP classification: {getAuthorityLabel(practiceAuthority.authority)}
                   </span>
                 </div>
                 <ImmersiveImage src={ART_PRACTICE} alt="" minHeight={240} />

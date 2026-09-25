@@ -291,7 +291,7 @@ describe('getListingFacts survives a non-array row result', () => {
 /* ─── 4. setting x state narrative ─────────────────────────────────────── */
 
 describe('buildSettingStateNarrative leaves practice authority to the practice card', () => {
-    const REMOVED_SENTENCE = /\bgrants (?:full|reduced|restricted) practice authority\b|applies state-specific practice rules|independent prescribing without physician oversight/;
+    const REMOVED_SENTENCE = /\bgrants (?:full|reduced|restricted) practice authority\b|in its (?:full|reduced|restricted) practice category|applies state-specific practice rules|independent prescribing without physician oversight/;
 
     it('no setting and no jurisdiction gets the authority sentence', () => {
         const offenders: string[] = [];
@@ -322,7 +322,7 @@ describe('buildSettingStateNarrative leaves practice authority to the practice c
             topCategoryLabels: [],
             topCityNames: [],
         });
-        expect(text).toMatch(/Texas grants restricted practice authority/);
+        expect(text).toMatch(/AANP places Texas in its restricted practice category/);
     });
 });
 

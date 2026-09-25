@@ -17,7 +17,7 @@ import {
     SOP_STATE_ROWS,
     buildSopFaqs,
 } from '@/components/ScopeOfPracticeData';
-import { getAuthorityColor } from '@/lib/state-practice-authority';
+import { getAanpTierDefinition, getAuthorityColor, getAuthorityLabel } from '@/lib/state-practice-authority';
 
 /**
  * /scope-of-practice — the interactive 51-jurisdiction scope-of-practice
@@ -72,13 +72,21 @@ export const metadata: Metadata = {
     alternates: { canonical: `${brand.baseUrl}/scope-of-practice` },
 };
 
-/** Legend copy for the three AANP tiers (semantics match the dataset). */
+/**
+ * Legend copy for the three AANP tiers: AANP's own meaning of each tier
+ * (getAanpTierDefinition, trimmed to what is true of every state in it) and
+ * how states inside it differ. Never a rule for one state: the old bodies
+ * ("no mandated physician relationship", "the collaborating physician
+ * typically does not need to be on-site", supervision "by a physician")
+ * contradicted the per-state details printed below them for the transition
+ * states, Alabama, Wisconsin, Virginia, South Carolina and Michigan.
+ */
 const TIER_LEGEND = [
     {
         authority: 'full' as const,
         icon: CheckCircle,
-        heading: 'Full Practice Authority',
-        body: 'Evaluate, diagnose, order and interpret tests, and prescribe under the licensure authority of the state board of nursing, with no mandated physician relationship. Some full-practice states phase this in through a transition-to-practice period.',
+        heading: getAuthorityLabel('full'),
+        body: getAanpTierDefinition('full'),
         iconClass: 'text-green-600',
         headingClass: 'text-green-800',
         bodyClass: 'text-green-700',
@@ -87,8 +95,8 @@ const TIER_LEGEND = [
     {
         authority: 'reduced' as const,
         icon: AlertTriangle,
-        heading: 'Reduced Practice',
-        body: 'A documented collaborative agreement with a physician is required for at least one element of practice, most commonly prescribing. The collaborating physician typically does not need to be on-site.',
+        heading: getAuthorityLabel('reduced'),
+        body: `${getAanpTierDefinition('reduced')} States in this category still differ, and several offer a route out of the agreement after a set amount of experience.`,
         iconClass: 'text-yellow-600',
         headingClass: 'text-yellow-800',
         bodyClass: 'text-yellow-700',
@@ -97,8 +105,8 @@ const TIER_LEGEND = [
     {
         authority: 'restricted' as const,
         icon: XCircle,
-        heading: 'Restricted Practice',
-        body: 'State law requires supervision, delegation, or team management by a physician. Postings in these states typically name a supervising physician and reference protocols or practice agreements.',
+        heading: getAuthorityLabel('restricted'),
+        body: `${getAanpTierDefinition('restricted')} States in this category still differ: some limit the arrangement to certain elements of practice, and some offer a route out of it after a set amount of experience.`,
         iconClass: 'text-orange-600',
         headingClass: 'text-orange-800',
         bodyClass: 'text-orange-700',
@@ -287,8 +295,9 @@ export default function ScopeOfPracticePage() {
                                 State-by-state details
                             </h2>
                             <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-                                What we track here: the AANP classification and what it
-                                means in that state. What we deliberately leave to the
+                                What we track here: the AANP classification and the
+                                state&apos;s own practice rule, which can differ from
+                                other states in the same tier. What we deliberately leave to the
                                 authorities: prescribing schedules, agreement contents,
                                 fees, and renewal rules. Those change too often to restate,
                                 so each state links its board of nursing, and the{' '}

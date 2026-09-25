@@ -41,7 +41,13 @@ interface NearbyStatesTableProps {
   className?: string;
 }
 
-const AUTHORITY: ClayTableColumn = { label: 'Practice authority' };
+/**
+ * AANP's tier name for each state ("Full Practice", from getAuthorityLabel),
+ * attributed in the header. Never the dataset's "Full Practice Authority",
+ * which read as a rule beside states whose details describe a transition
+ * period; what a state requires is its own details, on its own pages.
+ */
+const AUTHORITY: ClayTableColumn = { label: 'AANP classification' };
 const COMPACT: ClayTableColumn = { label: 'Compact status' };
 const GUIDE: ClayTableColumn = { label: 'License guide' };
 
@@ -75,7 +81,7 @@ function jobsCell(jobs: number): string {
 
 function cellsFor(row: NearbyStateRow, variant: NearbyStatesVariant): ReactNode[] {
   const state = stateCell(row, variant);
-  const authority = row.env.authorityDescription;
+  const authority = row.env.authorityLabel;
   const compact = nlcTitleShort(row.env.nlcStatus);
   if (variant === 'hub') return [state, authority, compact, jobsCell(row.jobs)];
   if (variant === 'salary') {
@@ -102,11 +108,7 @@ export default function NearbyStatesTable({ rows, variant, caption, className }:
   const live = liveRows(rows, variant);
   if (live.length === 0) return null;
   const sentence = variant === 'hub'
-    ? buildNearbyStatesSentence(live.map((row) => ({
-        name: row.env.stateName,
-        count: row.jobs,
-        authorityDescription: row.env.authorityDescription,
-      })))
+    ? buildNearbyStatesSentence(live.map((row) => ({ name: row.env.stateName, count: row.jobs })))
     : null;
   const tableCaption = caption ?? (variant === 'salary' ? buildSalaryNearbyCaption(NLC_VERIFIED_LABEL) : 'Nearby states');
   return (

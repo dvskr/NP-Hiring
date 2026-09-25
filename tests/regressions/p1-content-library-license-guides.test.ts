@@ -2,9 +2,9 @@
  * P1 #2 — 51-post state licensure series (content-library package).
  *
  * The series is generated deterministically by lib/blog-license-guides.ts
- * and served through lib/blog.ts (DB rows take precedence; the generator
- * is the fallback), gated by LICENSE_GUIDE_SERIES_PUBLISHED. These tests
- * enforce:
+ * and served through lib/blog.ts (DB rows take precedence unless they
+ * predate LICENSE_GUIDE_REVIEWED_AT; the generator is the fallback), gated
+ * by LICENSE_GUIDE_SERIES_PUBLISHED. These tests enforce:
  *
  *   1. ALL-OR-NOTHING: exactly one guide per STATE_PRACTICE_AUTHORITY
  *      jurisdiction (51), and the published flag may only be true while
@@ -55,6 +55,9 @@ import {
     buildLicenseGuideFaq,
     buildLicenseGuideHowTo,
     nlcTableLabel,
+    AANP_TIER_MEANING,
+    LICENSE_GUIDE_PHYSICIAN_VERDICTS,
+    type LicenseGuideState,
 } from '@/lib/blog-license-guides';
 import {
     HOMEPAGE_FEATURED_POSTS,
@@ -468,9 +471,13 @@ describe('practice-authority dataset ↔ published FPA count', () => {
         }
     });
 
-    it('no full-practice guide asserts a physician-agreement requirement', () => {
-        // The YMYL failure mode: an FPA state whose guide (and FAQPage
-        // JSON-LD) tells readers they must hold a collaborative agreement.
+    it('no full-practice guide carries reduced or restricted tier copy', () => {
+        // The original failure mode: an FPA state whose guide (and FAQPage
+        // JSON-LD) carried the lower tiers' template requirement. Since the
+        // September 2026 audit, several full practice states DO require a
+        // collaborative or supervised transition, and their guides say so
+        // from the state's own details string (pinned in the per-state block
+        // below). What stays forbidden here is lower-tier template copy.
         const FORBIDDEN = [
             /must maintain a collaborative agreement/i,
             /requires a documented collaborative agreement/i,
@@ -498,8 +505,182 @@ describe('practice-authority dataset ↔ published FPA count', () => {
             expect(post.content).toContain('full practice authority (FPA)');
             const authorityFaq = post.faq_json![0];
             expect(authorityFaq.name).toContain(state.name);
-            expect(authorityFaq.text).toMatch(/^Yes\./);
+            // Affirms full practice authority in AANP's terms, not as a bare
+            // "Yes.": this answer is also FAQPage JSON-LD, and a bare Yes was
+            // false for a newly licensed NP in every full-tier state whose own
+            // details require a transition period first. The state's rule
+            // follows in the same answer.
+            expect(authorityFaq.text).toMatch(/^By AANP's classification, yes\./);
             expect(authorityFaq.text).toContain(STAT_SOURCES.fullPracticeStates.formatted);
+        }
+    });
+});
+
+/**
+ * September 2026 practice-authority pass. A primary-source audit corrected
+ * the per-state details strings, and the reviewers found the guides still
+ * generating PER-STATE rules from the AANP TIER beside them: "no
+ * collaborating or supervising physician is required" on Connecticut and
+ * New York, "physician supervision is built in" on Virginia, "not on-site
+ * oversight" on Alabama, and a HowTo step telling every restricted state's
+ * readers to set up a supervision arrangement. The physician FAQ also
+ * ships as "Do NPs need a collaborating physician in {state}?" on about 663
+ * setting-by-state pages. The rule now: tier copy says only what AANP's
+ * classification means; every per-state answer is the state's own rule.
+ */
+describe('per-state practice answers come from the audited state rule, never the tier', () => {
+    const PHYSICIAN_Q = /collaborating or supervising physician/i;
+    const guide = (name: string) => allPosts.find(({ state }) => state.name === name)!;
+    const faqText = (state: LicenseGuideState, question: RegExp): string =>
+        buildLicenseGuideFaq(state).find((f) => question.test(f.name))!.text;
+    const physicianText = (name: string): string => faqText(guide(name).state, PHYSICIAN_Q);
+    const quickAnswer = (content: string): string => content.slice(0, content.indexOf('\n'));
+
+    it('both practice FAQs quote the state rule verbatim, and the setting-by-state lookup finds exactly one physician FAQ', () => {
+        for (const { state } of allPosts) {
+            const details = STATE_PRACTICE_AUTHORITY[state.name].details;
+            const faqs = buildLicenseGuideFaq(state);
+            // lib/pseo/setting-state-template.tsx picks the answer by this name.
+            expect(faqs.filter((f) => PHYSICIAN_Q.test(f.name)), state.name).toHaveLength(1);
+            expect(faqText(state, PHYSICIAN_Q), `${state.name}: physician FAQ`).toContain(details);
+            expect(faqText(state, /full practice authority/i), `${state.name}: FPA FAQ`).toContain(details);
+            expect(faqText(state, PHYSICIAN_Q)).toContain(state.boardName);
+        }
+    });
+
+    it('no guide, FAQ, HowTo step or meta description carries a retired tier-derived rule', () => {
+        const RETIRED = [
+            /no collaborating or supervising physician is required/i,
+            /no collaborative or supervising physician is required/i,
+            /without a required physician relationship/i,
+            /without a mandated physician relationship/i,
+            /physician supervision is built into/i,
+            /not day-to-day on-site oversight/i,
+            /job postings to name a supervising physician/i,
+            /no collaborative or supervisory agreement is required/i,
+            /part of practicing, not optional paperwork/i,
+            /Establish your supervision or delegation arrangement/i,
+            /Establish and document your collaborative agreement with a physician/i,
+            /physician-supervision rules|collaborative-agreement rules/i,
+            /requires physician supervision or delegation for/i,
+            /requires a documented collaborative agreement with a physician/i,
+            /requires current national certification for APRN licensure\./i,
+            /career.long/i,
+        ];
+        for (const { state, post } of allPosts) {
+            const surfaces = [
+                post.content,
+                post.meta_description!,
+                ...post.faq_json!.map((f) => `${f.name} ${f.text}`),
+                ...buildLicenseGuideSteps(state).map((step) => `${step.name} ${step.text}`),
+            ];
+            for (const text of surfaces) {
+                for (const pattern of RETIRED) {
+                    expect(text, `${state.name}: ${pattern}`).not.toMatch(pattern);
+                }
+            }
+        }
+    });
+
+    it('tier copy is AANP\'s own definition, attributed and linked, in every guide', () => {
+        const aanpUrl = STAT_SOURCES.fullPracticeStates.sourceUrl;
+        for (const { state, post } of allPosts) {
+            const start = post.content.indexOf(`## Practice authority in ${state.name}`);
+            const section = post.content.slice(start, post.content.indexOf('## The Nurse Licensure Compact'));
+            expect(section, state.name).toContain(AANP_TIER_MEANING[state.authority]);
+            expect(section, state.name).toContain(aanpUrl);
+            expect(section, `${state.name}: same-tier states differ`).toMatch(/states in the same tier set different conditions/i);
+            expect(quickAnswer(post.content), state.name).toContain(`AANP classifies ${state.name} as a `);
+        }
+        // Neither lower tier names a physician in AANP's definition.
+        expect(AANP_TIER_MEANING.reduced).toContain('another health provider');
+        expect(AANP_TIER_MEANING.restricted).toContain('another health provider');
+        expect(`${AANP_TIER_MEANING.reduced} ${AANP_TIER_MEANING.restricted}`).not.toMatch(/physician/i);
+    });
+
+    it('every verdict restates its own state rule (a details edit that drops a basis phrase fails here)', () => {
+        const names = new Set(Object.keys(STATE_PRACTICE_AUTHORITY));
+        for (const [name, { verdict, basis }] of Object.entries(LICENSE_GUIDE_PHYSICIAN_VERDICTS)) {
+            expect(names.has(name), `${name}: not a jurisdiction`).toBe(true);
+            expect(basis.length, `${name}: verdict without a basis`).toBeGreaterThan(0);
+            for (const phrase of basis) {
+                expect(STATE_PRACTICE_AUTHORITY[name].details, `${name}: verdict basis "${phrase}" no longer in details; re-review the verdict`).toContain(phrase);
+            }
+            expect(verdict, name).not.toMatch(DASH_RULE);
+            expect(physicianText(name).startsWith(`${verdict} `), `${name}: physician FAQ opens with its verdict`).toBe(true);
+            expect(quickAnswer(guide(name).post.content), name).toContain(`Do you need a collaborating or supervising physician? ${verdict}`);
+        }
+        // Without a verdict, the answer IS the state rule (no firmer claim).
+        for (const { state, post } of allPosts) {
+            if (LICENSE_GUIDE_PHYSICIAN_VERDICTS[state.name]) continue;
+            const details = STATE_PRACTICE_AUTHORITY[state.name].details;
+            expect(physicianText(state.name).startsWith(details), state.name).toBe(true);
+            expect(quickAnswer(post.content), state.name).toContain(details);
+        }
+    });
+
+    it('full practice states with a transition or condition never get a flat "no physician" answer', () => {
+        for (const name of ['Connecticut', 'Minnesota', 'South Dakota', 'Vermont', 'New York', 'Maine', 'Massachusetts', 'Nevada', 'Maryland', 'Colorado', 'Nebraska']) {
+            expect(guide(name).state.authority, name).toBe('full');
+            expect(physicianText(name), name).not.toMatch(/^No\b/);
+            expect(quickAnswer(guide(name).post.content), name).not.toMatch(/physician\? No\./);
+        }
+        // "No." only where the audited rule itself rules the physician out.
+        for (const name of ['Alaska', 'Arizona', 'Delaware']) {
+            expect(physicianText(name), name).toMatch(/^No\. /);
+        }
+        const flatNo = Object.entries(LICENSE_GUIDE_PHYSICIAN_VERDICTS)
+            .filter(([, v]) => v.verdict === 'No.')
+            .map(([name]) => name)
+            .sort();
+        expect(flatNo).toEqual(['Alaska', 'Arizona', 'Delaware']);
+        expect(physicianText('Connecticut')).toMatch(/^Yes, for at least the first three years and 2,000 hours/);
+        expect(physicianText('New York')).toMatch(/^Yes, for the first 3,600 hours/);
+    });
+
+    it('Virginia, South Carolina and Michigan are never told supervision is required', () => {
+        for (const name of ['Virginia', 'South Carolina', 'Michigan']) {
+            const { state } = guide(name);
+            expect(physicianText(name), name).not.toMatch(/supervis/i);
+            expect(faqText(state, /full practice authority/i), name).not.toMatch(/supervis/i);
+            for (const step of buildLicenseGuideSteps(state)) {
+                expect(`${step.name} ${step.text}`, name).not.toMatch(/supervis/i);
+            }
+        }
+        expect(physicianText('Michigan')).toMatch(/^For controlled substance prescribing, yes\./);
+        expect(physicianText('Virginia')).toContain('license designation to practice without a practice agreement');
+    });
+
+    it('reduced practice states keep their exits and partners: Wisconsin dentists, Alabama on-site time', () => {
+        for (const name of ['Arkansas', 'Illinois', 'Kentucky', 'West Virginia', 'Wisconsin', 'New Jersey']) {
+            expect(LICENSE_GUIDE_PHYSICIAN_VERDICTS[name]?.verdict, name).not.toBe('Yes.');
+        }
+        expect(physicianText('Wisconsin')).toContain('dentist');
+        expect(physicianText('Illinois')).toMatch(/^Not always\./);
+        const alabama = guide('Alabama').post.content;
+        expect(alabama).not.toMatch(/on.site oversight|need to be on.site/i);
+        expect(alabama).toContain('must be present for at least 10 percent of scheduled hours');
+    });
+
+    it('the HowTo practice step is tier free and true for every state it renders for', () => {
+        for (const { state } of allPosts) {
+            const step = buildLicenseGuideSteps(state)[4];
+            expect(step.name).toBe('Confirm the practice requirements that apply to you');
+            expect(step.text).toContain(`Read the ${state.name} practice rule`);
+            expect(step.text).toContain(state.boardName);
+            expect(step.text, state.name).not.toMatch(/physician|supervis|collaborative agreement|full.practice|reduced|restricted/i);
+            const cert = buildLicenseGuideSteps(state)[2].text;
+            expect(cert).toContain(`confirms whether ${state.name} does`);
+        }
+    });
+
+    it('the hours record tip renders only where the state rule names time or hours', () => {
+        expect(guide('Connecticut').post.content).toContain('Because the Connecticut rule ties part of the requirement to time or hours');
+        expect(guide('Virginia').post.content).toContain('Because the Virginia rule ties part of the requirement to time or hours');
+        expect(guide('Georgia').post.content).not.toContain('keep a dated record');
+        expect(guide('Idaho').post.content).not.toContain('keep a dated record');
+        for (const { state, post } of allPosts) {
+            expect(post.content, state.name).toContain(`read each posting against the ${state.name} rule rather than the AANP tier`);
         }
     });
 });
@@ -582,8 +763,12 @@ describe('LIC-L1: state rule text in the static markdown', () => {
         expect(new Set(details).size).toBe(LICENSE_GUIDE_STATES.length);
     });
 
-    it('adding the section did not bump the review date (bump only on a real editorial review)', () => {
-        expect(LICENSE_GUIDE_REVIEWED_AT).toBe('2026-07-29T00:00:00.000Z');
+    it('the review date moves only on a real editorial review', () => {
+        // Adding LIC-L1 did not bump it. The 2026-09-25 practice-authority
+        // pass did: it rebuilt every per-state answer from the audited
+        // dataset, and lib/blog.ts uses this date to retire mirrors synced
+        // before it (isSupersededLicenseGuideRow).
+        expect(LICENSE_GUIDE_REVIEWED_AT).toBe('2026-09-25T00:00:00.000Z');
     });
 });
 

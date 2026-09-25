@@ -35,9 +35,13 @@ export interface PracticeEnvironment {
   /** URL slug shared by /jobs/state, /salary-guide and the license guide. */
   stateSlug: string;
   authority: PracticeAuthority;
-  /** Long label, e.g. "Reduced Practice (Collaborative Agreement Required)". */
+  /** AANP's tier name from getAuthorityLabel, e.g. "Reduced Practice". The only tier text a page prints. */
   authorityLabel: string;
-  /** Dataset description, e.g. "Full Practice Authority" / "Reduced Practice". */
+  /**
+   * @deprecated Never render. The dataset description, e.g. "Full Practice
+   * Authority", which read as a rule beside the details of states with a
+   * transition period. Print `authorityLabel`, attributed to AANP, instead.
+   */
   authorityDescription: string;
   /** Lowercase adjective phrase for prose, e.g. "reduced practice". */
   authorityShort: string;

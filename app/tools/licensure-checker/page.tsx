@@ -205,7 +205,7 @@ const FAQS = [
   },
   {
     q: `How many states grant ${brand.niche.short}s full practice authority?`,
-    a: `${STAT_SOURCES.fullPracticeStates.formatted}, according to ${STAT_SOURCES.fullPracticeStates.source} (as of ${STAT_SOURCES.fullPracticeStates.asOf}). In full-practice states you can evaluate, diagnose, prescribe, and manage treatment without a physician agreement. Reduced-practice states require a collaborative agreement, and restricted-practice states require physician supervision. The checker labels each state, and the planner totals them across your selection.`,
+    a: `${STAT_SOURCES.fullPracticeStates.formatted}, according to ${STAT_SOURCES.fullPracticeStates.source} (as of ${STAT_SOURCES.fullPracticeStates.asOf}). Full, reduced and restricted are AANP's practice environment tiers, and states in the same tier still set different rules: some full practice states require a collaborative agreement, supervision or mentorship during a transition period, and some reduced and restricted states let experienced ${brand.niche.short}s qualify out of the arrangement. The checker and the planner show each state's own requirements beside its tier.`,
   },
   {
     q: 'How long does licensure take, and what does it cost?',
@@ -213,7 +213,7 @@ const FAQS = [
   },
   {
     q: 'Which states should I add first if I want telehealth or travel work?',
-    a: `If you live in a compact member state, the cheapest additions are other member states: the RN layer is already covered, so each one is an APRN application rather than two. Confirm both ends against NCSBN's current member list. After that, weigh practice authority. A full-practice state removes the collaborative-agreement dependency entirely, which matters more for telehealth caseloads than for on-site roles.`,
+    a: `If you live in a compact member state, the cheapest additions are other member states: the RN layer is already covered, so each one is an APRN application rather than two. Confirm both ends against NCSBN's current member list. After that, weigh practice authority, and read each state's own requirements in the planner rather than assuming them from the tier: some full practice states still require a collaborative agreement, supervision or mentorship during a transition period, and some reduced and restricted states let experienced ${brand.niche.short}s qualify out of the arrangement.`,
   },
 ] as const;
 

@@ -182,15 +182,16 @@ describe('P1 #11: buildPlainStateNarrative', () => {
       expect(entry, `no state with ${tier} authority in the dataset`).toBeDefined();
       return entry![0];
     };
+    // The tier is named and attributed to AANP; it carries no rule of its own.
     expect(
       buildPlainStateNarrative({ ...baseInput, stateName: firstStateOfTier('full') }),
-    ).toContain('full practice authority');
+    ).toContain('in its full practice category');
     expect(
       buildPlainStateNarrative({ ...baseInput, stateName: firstStateOfTier('reduced') }),
-    ).toContain('reduced practice authority');
+    ).toContain('in its reduced practice category');
     expect(
       buildPlainStateNarrative({ ...baseInput, stateName: firstStateOfTier('restricted') }),
-    ).toContain('restricted practice authority');
+    ).toContain('in its restricted practice category');
   });
 
   it('mentions the live category and city inventory it was given', () => {
@@ -594,8 +595,8 @@ describe('P1 #11: practice-authority tiers agree with the site-wide cited FPA st
     for (const stateName of ['New York', 'Massachusetts']) {
       expect(STATE_PRACTICE_AUTHORITY[stateName].authority).toBe('full');
       const narrative = buildPlainStateNarrative({ ...baseInput, stateName });
-      expect(narrative).toContain('full practice authority');
-      expect(narrative).not.toContain('reduced practice authority');
+      expect(narrative).toContain('in its full practice category');
+      expect(narrative).not.toContain('reduced practice');
     }
   });
 });

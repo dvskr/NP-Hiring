@@ -4,12 +4,13 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Award, CalendarClock, CalendarDays, ClipboardCheck, DollarSign, FileText,
-  GraduationCap, Handshake, Hash, Map, Pill, ShieldAlert, ShieldCheck,
+  GraduationCap, Hash, Landmark, Map, Pill, ShieldAlert, ShieldCheck,
   ShieldX, Wallet, type LucideIcon,
 } from 'lucide-react';
 import StateImage from './StateImage';
 import CopyCitation from '@/components/CopyCitation';
 import { brand } from '@/config/brand';
+import { getAuthorityLabel, type PracticeAuthority, type StatePracticeInfo } from '@/lib/state-practice-authority';
 
 interface StateGuide {
   name: string;
@@ -35,44 +36,109 @@ interface StateSalary {
 interface Props {
   stateGuides: StateGuide[];
   stateSalaries: StateSalary[];
-  practiceAuthority: Record<string, { authority: 'full' | 'reduced' | 'restricted'; description: string; details: string }>;
+  practiceAuthority: Record<string, StatePracticeInfo>;
+}
+
+export interface LicensureStep {
+  step: number;
+  text: string;
+  /** Supporting text under the step, when the step needs more than a title. */
+  detail?: string;
+  icon: LucideIcon;
 }
 
 /* ─── Requirements per state (common baseline + state-specific) ─── */
 /* Dead-asset purge (2026-07): step art moved off the retired Supabase
    bucket onto lucide icons (local-asset pattern, b371b37). */
-const COMMON_REQUIREMENTS: { step: number; text: string; icon: LucideIcon }[] = [
-  { step: 1, text: 'MSN or DNP from an accredited program', icon: GraduationCap },
-  { step: 2, text: `National ${brand.niche.short} board certification (ANCC or AANP)`, icon: Award },
-  { step: 3, text: 'State APRN license application', icon: FileText },
-  { step: 4, text: 'NPI number registration', icon: Hash },
-  { step: 5, text: 'DEA registration for prescribing', icon: Pill },
-  { step: 6, text: 'State-specific CE requirements', icon: CalendarDays },
+const COMMON_REQUIREMENTS: readonly Omit<LicensureStep, 'step'>[] = [
+  { text: 'MSN or DNP from an accredited program', icon: GraduationCap },
+  { text: `National ${brand.niche.short} board certification (ANCC or AANP)`, icon: Award },
+  { text: 'State APRN license application', icon: FileText },
+  { text: 'NPI number registration', icon: Hash },
+  { text: 'DEA registration for prescribing', icon: Pill },
+  { text: 'State-specific CE requirements', icon: CalendarDays },
 ];
 
-const TIMELINE_MAP: Record<string, string> = {
+/**
+ * The licensure steps for one state: the six that apply everywhere, then that
+ * state's own practice requirement, taken VERBATIM from its verified `details`
+ * in lib/state-practice-authority.ts.
+ *
+ * WHY THE LAST STEP NEVER COMES FROM THE TIER  ← do not "simplify" this back
+ * This step used to branch on the AANP tier: nothing for a full practice
+ * state, "Secure collaborative physician agreement" for a reduced one and
+ * "Secure supervising physician agreement" for a restricted one. The tier is
+ * too coarse to carry that answer. Several full practice states require a
+ * collaborative agreement, supervision or a prescribing protocol during a
+ * transition period; several restricted states use a practice agreement
+ * rather than supervision, or let experienced clinicians qualify out of the
+ * arrangement; and one reduced state accepts a dentist as the collaborator.
+ * Each of those contradicted the verified details shown in the same panel.
+ * Quoting the details means the step list says what the dataset says, a
+ * transition period included, and can never drift from it.
+ *
+ * The signature takes only `details` on purpose: the steps cannot depend on
+ * the tier if the tier is never passed in.
+ */
+export function buildLicensureSteps(
+  stateName: string,
+  info: Pick<StatePracticeInfo, 'details'>,
+): LicensureStep[] {
+  const common = COMMON_REQUIREMENTS.map((req, i) => ({ ...req, step: i + 1 }));
+  // Some details already tell the reader to confirm with the board; saying it
+  // twice in a row reads as a copy error.
+  const confirm = /\bconfirm\b/i.test(info.details)
+    ? ''
+    : ` Confirm the current rules with the ${stateName} board of nursing before you start practicing.`;
+  return [
+    ...common,
+    {
+      step: common.length + 1,
+      text: `Practice requirements in ${stateName}`,
+      detail: `${info.details}${confirm}`,
+      icon: Landmark,
+    },
+  ];
+}
+
+/**
+ * The only tier-level sentence the checker prints: who assigns the tier and
+ * that it does not settle the per-state question. It names no requirement,
+ * because no requirement is shared by every state in a tier.
+ */
+export function tierAttributionNote(requirementStep: number): string {
+  return `The tier is AANP's state practice environment classification. States in the same tier set different rules, so step ${requirementStep} below gives the requirements that apply here.`;
+}
+
+const TIMELINE_MAP: Record<PracticeAuthority, string> = {
   full: '4-8 weeks',
   reduced: '6-12 weeks',
   restricted: '8-16 weeks',
 };
 
-const AUTHORITY_CONFIG: Record<'full' | 'reduced' | 'restricted', { label: string; color: string; bg: string; border: string; icon: LucideIcon }> = {
+/**
+ * Badge per AANP tier. The label is AANP's tier name (getAuthorityLabel),
+ * never "Full Practice Authority": the badge sits above the state's own
+ * requirement step, which for several full practice states describes a
+ * transition period first.
+ */
+const AUTHORITY_CONFIG: Record<PracticeAuthority, { label: string; color: string; bg: string; border: string; icon: LucideIcon }> = {
   full: {
-    label: 'Full Practice Authority',
+    label: getAuthorityLabel('full'),
     color: '#10B981',
     bg: '#D1FAE5',
     border: '#6EE7B7',
     icon: ShieldCheck,
   },
   reduced: {
-    label: 'Reduced Practice',
+    label: getAuthorityLabel('reduced'),
     color: '#F59E0B',
     bg: '#FEF3C7',
     border: '#FCD34D',
     icon: ShieldAlert,
   },
   restricted: {
-    label: 'Restricted Practice',
+    label: getAuthorityLabel('restricted'),
     color: '#EF4444',
     bg: '#FEE2E2',
     border: '#FCA5A5',
@@ -126,13 +192,10 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
     const guide = stateGuides.find(g => g.name === selectedState);
     const config = AUTHORITY_CONFIG[auth.authority];
     const timeline = TIMELINE_MAP[auth.authority];
+    const steps = buildLicensureSteps(selectedState, auth);
+    const tierNote = tierAttributionNote(steps[steps.length - 1].step);
 
-    // Extra requirement for non-FPA states
-    const extraReqs: { step: number; text: string; icon: LucideIcon }[] = auth.authority === 'full' ? [] :
-      auth.authority === 'reduced' ? [{ step: 7, text: 'Secure collaborative physician agreement', icon: Handshake }] :
-      [{ step: 7, text: 'Secure supervising physician agreement', icon: Handshake }];
-
-    return { auth, salary, guide, config, timeline, extraReqs };
+    return { auth, salary, guide, config, timeline, steps, tierNote };
   }, [selectedState, practiceAuthority, stateSalaries, stateGuides]);
 
   const stateList = Object.keys(practiceAuthority).sort();
@@ -232,7 +295,8 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
                 style={{ width: '160px', height: '160px', objectFit: 'contain' }}
               />
             </div>
-            {/* Authority Badge */}
+            {/* Authority Badge: the AANP tier only. The state's own
+                requirement is the last step below (buildLicensureSteps). */}
             <div style={{
               padding: '16px 20px', borderRadius: '16px',
               background: result.config.bg, border: `1.5px solid ${result.config.border}`,
@@ -245,7 +309,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
                 <span style={{ fontSize: '15px', fontWeight: 800, color: result.config.color }}>{result.config.label}</span>
               </div>
               <p style={{ fontSize: '12.5px', color: '#5A4A42', margin: 0, lineHeight: 1.5 }}>
-                {result.auth.details}
+                {result.tierNote}
               </p>
             </div>
 
@@ -254,7 +318,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
               Licensure Steps for {selectedState}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {[...COMMON_REQUIREMENTS, ...result.extraReqs].map((req) => (
+              {result.steps.map((req) => (
                 <div key={req.step} style={{
                   display: 'flex', alignItems: 'flex-start', gap: '12px',
                   padding: '10px 14px', borderRadius: '12px',
@@ -266,6 +330,9 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
                   <div>
                     <span style={{ fontSize: '11px', fontWeight: 700, color: '#BE185D' }}>STEP {req.step}</span>
                     <p style={{ fontSize: '13px', color: '#1A2E35', margin: '2px 0 0', fontWeight: 500 }}>{req.text}</p>
+                    {req.detail && (
+                      <p style={{ fontSize: '12.5px', color: '#5A4A42', margin: '4px 0 0', lineHeight: 1.5 }}>{req.detail}</p>
+                    )}
                   </div>
                 </div>
               ))}

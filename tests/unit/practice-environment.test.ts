@@ -46,7 +46,9 @@ describe('getPracticeEnvironment', () => {
       stateCode: 'TX',
       stateSlug: 'texas',
       authority: 'restricted',
-      authorityLabel: 'Restricted Practice (Physician Supervision Required)',
+      // AANP's tier name only: a tier-level rule in the label contradicted
+      // the verified details of states inside the tier (e.g. Virginia).
+      authorityLabel: 'Restricted Practice',
       authorityDescription: 'Restricted Practice',
       authorityShort: 'restricted practice',
       details: STATE_PRACTICE_AUTHORITY.Texas.details,

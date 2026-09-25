@@ -82,6 +82,12 @@ interface PracticeCardProps {
  * (filled by authority), the dataset sentences, the board linked with
  * rel="nofollow noopener", and the license guide linked only while the
  * guide is published. Renders nothing off the dataset.
+ *
+ * The chip is AANP's tier name only ("Full Practice", "Reduced Practice",
+ * "Restricted Practice", from getAuthorityLabel), never a rule and never the
+ * dataset's "Full Practice Authority" above a state whose details describe a
+ * transition period. Every paragraph opens by attributing the tier to AANP,
+ * and what the state requires is its details.
  */
 export default function PracticeCard({
   env,
@@ -104,7 +110,7 @@ export default function PracticeCard({
   if (links.scopeOfPractice) rows.push({ href: `/scope-of-practice#${env.stateSlug}`, label: 'Scope of practice by state' });
   return (
     <ClayCard
-      chip={env.authorityDescription}
+      chip={env.authorityLabel}
       index={AUTHORITY_FILL_INDEX[env.authority]}
       title={title ?? `Practicing in ${env.stateName}`}
       icon={icon}

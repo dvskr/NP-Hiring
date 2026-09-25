@@ -418,7 +418,7 @@ export const EMPLOYER_TYPE_CONFIGS: Record<string, CategoryConfig> = {
       { title: 'Clinical Autonomy', description: 'Full control over treatment plans, visit cadence, and care model without corporate protocols.', iconName: 'Shield' },
     ],
     tips: [
-      'Full practice authority states are ideal for independent practice',
+      'Check your state\'s own practice rules first: several full practice states require a transition period before independent practice',
       'Start by joining an established group before going solo',
       'Build a sustainable patient panel sized to your specialty and visit model',
       'Invest in an EHR and billing platform suited to your specialty',
@@ -1254,14 +1254,12 @@ export async function buildCategoryCityMetadata(
 
   const noun = labelNoun(config.slug, config.label);
   const sentenceLabel = labelSentence(config.label);
-  const env = getPracticeEnvironment(city.state);
   const title = buildCategoryCityTitle({ labelNoun: noun, city: city.name, stateCode: city.stateCode, total: stats.totalJobs });
   const description = buildCategoryCityDescription({
     labelSentence: sentenceLabel,
     city: city.name,
     stateCode: city.stateCode,
     facts: { ...facts, total: stats.totalJobs },
-    authorityDescription: env?.authorityDescription ?? null,
   });
 
   // OG: the count and, only when the category pool clears the publishing

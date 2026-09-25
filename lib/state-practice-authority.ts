@@ -6,12 +6,12 @@
 /**
  * State Practice Authority Data
  *
- * Practice authority levels (AANP's classification of the three state
- * regulatory environments):
- * - FULL: clinicians may evaluate, diagnose and prescribe independently,
- *   without physician oversight
- * - REDUCED: requires a collaborative agreement with a physician
- * - RESTRICTED: requires physician supervision for practice
+ * Practice authority levels: AANP's classification of the three state
+ * practice environments (full, reduced, restricted). What AANP means by each
+ * tier is getAanpTierDefinition below. A tier never states a rule for one
+ * state: states in the same tier differ (transition periods, practice
+ * agreements, routes out of an agreement), so every per-state claim comes
+ * from that state's `details`.
  *
  * Source: American Association of Nurse Practitioners (AANP) State Practice Environment
  * Last updated: 2026
@@ -66,7 +66,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Connecticut': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Connecticut requires ${NPS} to practice in collaboration with a physician for at least three years and 2,000 hours before practicing independently. After meeting that requirement, a ${NP} must give written notice to the Department of Public Health before practicing without a collaborative agreement.`,
+        details: `Connecticut requires ${NPS} to practice in collaboration with a physician for at least three years and 2,000 hours before practicing independently. After meeting that requirement, an ${NP} must give written notice to the Department of Public Health before practicing without a collaborative agreement.`,
     },
     'Delaware': {
         authority: 'full',
@@ -210,7 +210,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Arkansas': {
         authority: 'reduced',
         description: 'Reduced Practice',
-        details: `Arkansas ${NPS} need a collaborative practice agreement, typically with a physician, to prescribe unless they hold a certificate of full independent practice authority. A ${NP} can apply for that certificate after 6,240 hours of practice under an agreement with a physician or with prescriptive authority in another jurisdiction.`,
+        details: `Arkansas ${NPS} need a collaborative practice agreement, typically with a physician, to prescribe unless they hold a certificate of full independent practice authority. An ${NP} can apply for that certificate after 6,240 hours of practice under an agreement with a physician or with prescriptive authority in another jurisdiction.`,
     },
     'Illinois': {
         authority: 'reduced',
@@ -255,7 +255,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'West Virginia': {
         authority: 'reduced',
         description: 'Reduced Practice',
-        details: `West Virginia ${NPS} must have a collaborative agreement with a physician to prescribe unless the Board of Registered Nurses has approved removal of that requirement. A ${NP} may apply for removal after at least three years of practice in a documented collaborative relationship with prescriptive authority.`,
+        details: `West Virginia ${NPS} must have a collaborative agreement with a physician to prescribe unless the Board of Registered Nurses has approved removal of that requirement. An ${NP} may apply for removal after at least three years of practice in a documented collaborative relationship with prescriptive authority.`,
     },
     'Wisconsin': {
         authority: 'reduced',
@@ -329,7 +329,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Virginia': {
         authority: 'restricted',
         description: 'Restricted Practice',
-        details: `Virginia ${NPS} must maintain a practice agreement documenting collaboration and consultation with a patient care team physician. A ${NP} with the equivalent of at least three years of full-time clinical experience can apply for a license designation to practice without a practice agreement.`,
+        details: `Virginia ${NPS} must maintain a practice agreement documenting collaboration and consultation with a patient care team physician. An ${NP} with the equivalent of at least three years of full-time clinical experience can apply for a license designation to practice without a practice agreement.`,
     },
 };
 
@@ -350,16 +350,85 @@ export function getStatesByAuthority(authority: PracticeAuthority): string[] {
 }
 
 /**
- * Get user-friendly label for practice authority
+ * AANP's own name for the tier: "Full Practice", "Reduced Practice" or
+ * "Restricted Practice", exactly as its State Practice Environment map
+ * labels them.
+ *
+ * WHY no rule rides along: this label used to read "Reduced Practice
+ * (Collaborative Agreement Required)" and "Restricted Practice (Physician
+ * Supervision Required)", and every consumer printed it directly in front of
+ * the state's `details`. A tier is too coarse to carry a rule. Virginia,
+ * South Carolina and Michigan are restricted but none requires physician
+ * supervision for all practice, and Arkansas, Illinois, Kentucky, New Jersey,
+ * West Virginia and Wisconsin are reduced but each has a route out of the
+ * agreement (and Wisconsin's may be with a dentist). So the label names the
+ * AANP tier and nothing else; what a state actually requires comes from its
+ * own `details` string. Callers attribute the tier to AANP in their own
+ * sentence (e.g. "AANP classifies Texas as a restricted practice state.").
  */
 export function getAuthorityLabel(authority: PracticeAuthority): string {
     switch (authority) {
         case 'full':
-            return 'Full Practice Authority';
+            return 'Full Practice';
         case 'reduced':
-            return 'Reduced Practice (Collaborative Agreement Required)';
+            return 'Reduced Practice';
         case 'restricted':
-            return 'Restricted Practice (Physician Supervision Required)';
+            return 'Restricted Practice';
+    }
+}
+
+/**
+ * What AANP means by each tier, as one sentence attributed to AANP, for copy
+ * that explains the tier itself (the plain state hub narrative).
+ *
+ * Closely paraphrased from AANP's own definitions at
+ * https://www.aanp.org/advocacy/state/state-practice-environment (page dated
+ * 05/2026, read 2026-09-25):
+ *   - Full: "State practice and licensure laws permit all NPs to evaluate
+ *     patients; diagnose, order and interpret diagnostic tests; and initiate
+ *     and manage treatments, including prescribing medications and
+ *     controlled substances, under the exclusive licensure authority of the
+ *     state board of nursing."
+ *   - Reduced: "State practice and licensure laws reduce the ability of NPs
+ *     to engage in at least one element of NP practice. State law requires a
+ *     career-long regulated collaborative agreement with another health
+ *     provider in order for the NP to provide patient care, or it limits the
+ *     setting of one or more elements of NP practice."
+ *   - Restricted: "State practice and licensure laws restrict the ability of
+ *     NPs to engage in at least one element of NP practice. State law
+ *     requires career-long supervision, delegation or team management by
+ *     another health provider in order for the NP to provide patient care."
+ *
+ * Deliberately NOT quoted whole. "All NPs" is untrue of the full-tier states
+ * with a transition to practice (Colorado, Connecticut, Maine, Maryland,
+ * Massachusetts, Minnesota, Nebraska, Nevada, New York, South Dakota,
+ * Vermont), and "career-long" is untrue of every reduced or restricted state
+ * with a route out (Arkansas, Illinois, Kentucky, New Jersey, West Virginia,
+ * Wisconsin; California, Florida, Oklahoma, Virginia). A verbatim quote would
+ * contradict the verified `details` printed on the same page, so each
+ * definition keeps AANP's own wording minus only what is not true of every
+ * state in the tier:
+ *   - Full keeps AANP's whole sentence, including "under the exclusive
+ *     licensure authority of the state board of nursing", and drops only
+ *     "all". It never defines the tier by the absence of a "career-long"
+ *     requirement, because read beside the other two definitions (the
+ *     planner legend prints all three) that would tell readers the reduced
+ *     and restricted states have one. The transition caveat is a separate
+ *     sentence, not attributed to AANP (AANP's page says nothing about
+ *     transitions); the verified `details` of the states listed above back it.
+ *   - Reduced and restricted keep AANP's opening clause and give its
+ *     mechanisms as examples ("for example"), without "career-long".
+ * None of these sentences may be used to answer a question about one state;
+ * that answer is the state's `details`.
+ */
+export function getAanpTierDefinition(authority: PracticeAuthority): string {
+    switch (authority) {
+        case 'full':
+            return `AANP uses this category where state law lets ${NPS} evaluate patients, diagnose, order and interpret diagnostic tests, and initiate and manage treatment, including prescribing medications and controlled substances, under the exclusive licensure authority of the state board of nursing. Some of these states first require a transition period.`;
+        case 'reduced':
+            return `AANP uses this category where state law reduces the ability of ${NPS} to engage in at least one element of ${NP} practice, for example through a regulated collaborative agreement with another health provider or a limit on the setting of one or more elements of ${NP} practice.`;
+        case 'restricted':
+            return `AANP uses this category where state law restricts the ability of ${NPS} to engage in at least one element of ${NP} practice, for example through supervision, delegation or team management by another health provider.`;
     }
 }
 

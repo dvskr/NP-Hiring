@@ -128,7 +128,7 @@ export default function FAQPage() {
     },
     {
       question: `What is the difference between an ${brand.niche.short} and a physician?`,
-      answer: `${brand.niche.short}s hold a Master's or Doctoral degree in nursing (2-4 years of graduate school), while physicians complete medical school plus a 3-7 year residency. Both can diagnose, treat, and prescribe. In full practice authority states, ${brand.niche.short}s practice independently. ${brand.niche.short}s reach full practice faster and with far less educational debt, while physicians train for a broader, more specialized scope.`
+      answer: `${brand.niche.short}s hold a Master's or Doctoral degree in nursing (2 to 4 years of graduate school), while physicians complete medical school plus a 3 to 7 year residency. Both can diagnose, treat, and prescribe. In full practice authority states, ${brand.niche.short}s can practice independently once any transition period their state requires is complete. ${brand.niche.short}s reach full practice faster and with far less educational debt, while physicians train for a broader, more specialized scope.`
     },
     {
       question: `What are the main ${brand.niche.short} specialties?`,
@@ -190,7 +190,7 @@ export default function FAQPage() {
     },
     {
       question: `Are there state licensure rules that affect demand for ${brand.niche.short}s?`,
-      answer: `Yes. States with Full Practice Authority (${STAT_SOURCES.fullPracticeStates.formatted} per the ${STAT_SOURCES.fullPracticeStates.source}, ${STAT_SOURCES.fullPracticeStates.asOf}) allow ${brand.niche.short}s to practice independently, driving higher demand and salaries. Reduced and restricted practice states require physician collaboration or supervision, which can limit the number of available positions and affect compensation.`
+      answer: `State practice rules shape which roles ${brand.niche.short}s can take, such as independent contract, telehealth and practice ownership work, though no figure in our data measures their effect on demand or pay. AANP classifies ${STAT_SOURCES.fullPracticeStates.formatted} as Full Practice (${STAT_SOURCES.fullPracticeStates.source}, ${STAT_SOURCES.fullPracticeStates.asOf}) and the rest as Reduced or Restricted Practice. The tier does not settle any one state's rules: several full practice states require a transition period of collaborative or supervised practice, and several reduced and restricted states let experienced ${brand.niche.short}s qualify out of the arrangement, so check each state's own rules before planning around them.`
     },
     {
       question: `What skills are employers seeking in ${brand.niche.short} graduates?`,

@@ -600,7 +600,7 @@ test.describe('/tools/cost-of-living-comparison', () => {
 test.describe('/tools/licensure-checker', () => {
     const PATH = '/tools/licensure-checker';
 
-    test('state checker: Texas renders restricted practice, the supervising-physician step, timeline, jobs link and a gated median', async ({ page }) => {
+    test('state checker: Texas renders restricted practice, its own practice requirement step, timeline, jobs link and a gated median', async ({ page }) => {
         await gotoOk(page, PATH);
         const select = page.locator('#lic-state');
         expect(await select.locator('option').count()).toBe(52); // placeholder + 51 jurisdictions
@@ -609,7 +609,9 @@ test.describe('/tools/licensure-checker', () => {
         await select.selectOption('Texas');
         await expect(page.getByRole('heading', { name: 'Texas Licensure' })).toBeVisible();
         await expect(page.getByText('Restricted Practice', { exact: true })).toBeVisible();
-        await expect(page.getByText('Secure supervising physician agreement')).toBeVisible();
+        // The last step is Texas's verified details, never a tier-derived step.
+        await expect(page.getByText('Practice requirements in Texas')).toBeVisible();
+        await expect(page.getByText(/prescriptive authority agreement with a supervising physician/)).toBeVisible();
         await expect(page.getByText('8-16 weeks')).toBeVisible();
         await expect(page.locator('a[href="/jobs/state/texas"]').first()).toBeVisible();
         // Texas clears the n ≥ 5 / 3-employer gate today: the salary card must be a true median with its sample.
@@ -625,11 +627,34 @@ test.describe('/tools/licensure-checker', () => {
         await gotoOk(page, PATH);
         await page.locator('#lic-state').selectOption('Arizona');
         await expect(page.getByRole('heading', { name: 'Arizona Licensure' })).toBeVisible();
-        await expect(page.getByText('Full Practice Authority', { exact: true })).toBeVisible();
-        // The two agreement steps the checker can inject (LicensureChecker.tsx) must both be absent.
+        // The badge is AANP's tier name, never "Full Practice Authority".
+        await expect(page.getByText('Full Practice', { exact: true })).toBeVisible();
+        // The checker no longer injects tier-derived steps (LicensureChecker.tsx
+        // buildLicensureSteps), so neither retired step renders for any state.
         await expect(page.getByText('Secure supervising physician agreement')).toHaveCount(0);
         await expect(page.getByText('Secure collaborative physician agreement')).toHaveCount(0);
+        await expect(page.getByText('Practice requirements in Arizona')).toBeVisible();
         await expect(page.getByText('4-8 weeks')).toBeVisible();
+    });
+
+    test('state checker: a full-practice state with a transition period shows it in its own step', async ({ page }) => {
+        await gotoOk(page, PATH);
+        await page.locator('#lic-state').selectOption('Connecticut');
+        await expect(page.getByRole('heading', { name: 'Connecticut Licensure' })).toBeVisible();
+        await expect(page.getByText('Practice requirements in Connecticut')).toBeVisible();
+        await expect(page.getByText(/at least three years and 2,000 hours/)).toBeVisible();
+    });
+
+    test('state checker: Virginia shows its practice agreement and no supervision step', async ({ page }) => {
+        await gotoOk(page, PATH);
+        await page.locator('#lic-state').selectOption('Virginia');
+        await expect(page.getByRole('heading', { name: 'Virginia Licensure' })).toBeVisible();
+        await expect(page.getByText('Practice requirements in Virginia')).toBeVisible();
+        // The step block: its title and Virginia's verified details. The page's
+        // FAQ mentions supervision at tier level, so scope to the step itself.
+        const step = page.getByText('Practice requirements in Virginia').locator('xpath=..');
+        await expect(step).toContainText('practice agreement documenting collaboration and consultation');
+        await expect(step).not.toContainText(/supervis/i);
     });
 
     test('state checker: a below-gate state renders no salary card rather than a padded number', async ({ page }) => {
@@ -673,7 +698,7 @@ test.describe('/tools/licensure-checker', () => {
         await expect(rows.nth(1).locator('h3')).toHaveText('Massachusetts');
         await expect(rows.nth(2).locator('h3')).toHaveText('Texas');
         await expect(rows.nth(2)).toContainText('Restricted practice');
-        await expect(rows.nth(0)).toContainText('Full practice authority');
+        await expect(rows.nth(0)).toContainText('Full practice');
 
         // Massachusetts has ENACTED the NLC but implementation is pending. The
         // planner must not collapse that into a member / non-member verdict.

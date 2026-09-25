@@ -21,13 +21,16 @@ import { STAT_SOURCES } from '@/lib/stats-sources';
 import { COUNT_DISPLAY_FLOOR } from '@/lib/canonical-counts';
 import { BENCHMARK_MIN_EMPLOYERS, BENCHMARK_MIN_POSTINGS, type BenchmarkRow } from '@/components/tools/benchmark-model';
 import { formatCount, indefiniteArticle, isAre, joinWithAnd, pluralize, wasWere } from '@/lib/display-text';
-import { getStatePracticeAuthority } from '@/lib/state-practice-authority';
+import {
+  getAuthorityLabel, getStatePracticeAuthority, STATE_PRACTICE_AUTHORITY, type PracticeAuthority,
+} from '@/lib/state-practice-authority';
 import { MIN_JOBS_FOR_CATEGORY_CITY } from './render-gate';
 import { CATEGORY_AXES } from './taxonomy-registry';
+import { CODE_TO_STATE } from './setting-state-config';
 import { getCategoryAxis } from './category-axis-guide';
 import { assembleDescription, TITLE_PAGE_PART_MAX } from './category-metadata';
 import {
-  AUTHORITY_SHORT, nlcMembershipPhrase, nlcSentence, nlcShort, type PracticeEnvironment,
+  nlcMembershipPhrase, nlcSentence, nlcShort, type PracticeEnvironment,
 } from './practice-environment';
 import {
   fieldMixQualifies, MIX_MIN_POSTINGS_HUB, MIX_MIN_POSTINGS_LISTING,
@@ -53,6 +56,58 @@ export function formatUtcDate(date: Date): string {
 /** "Sep 9" in UTC, for descriptions. */
 export function formatUtcDateShort(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
+/**
+ * The noun for a jurisdiction's kind: "state" for the 50 states,
+ * "jurisdiction" for the District of Columbia, which is not a state (AANP
+ * lists Washington, D.C. apart from the 50 states, and the repo rule is
+ * tests/regressions/dc-jurisdiction-wording.test.ts). Keyed by the STATE_CODES
+ * code, as isDistrictOfColumbia in app/jobs/locations/[state]/directory.ts
+ * is, so no second spelling of the name can drift; lib does not import app.
+ */
+function jurisdictionNoun(stateCode: string | undefined): 'state' | 'jurisdiction' {
+  return stateCode === 'DC' ? 'jurisdiction' : 'state';
+}
+
+/** Own-key test, so an inherited key such as "constructor" never reads as a jurisdiction. */
+function hasOwnKey(record: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(record, key);
+}
+
+/** The jurisdiction's AANP tier from its own dataset row, or null off the dataset. */
+function aanpTierOf(stateName: string): PracticeAuthority | null {
+  return hasOwnKey(STATE_PRACTICE_AUTHORITY, stateName) ? STATE_PRACTICE_AUTHORITY[stateName].authority : null;
+}
+
+/** aanpTierOf for a builder that has only the two-letter code. */
+function aanpTierOfCode(stateCode: string): PracticeAuthority | null {
+  return hasOwnKey(CODE_TO_STATE, stateCode) ? aanpTierOf(CODE_TO_STATE[stateCode]) : null;
+}
+
+/**
+ * "AANP classification: Full Practice." The one tier clause every meta
+ * description and hero deck prints; null (clause omitted) off the dataset.
+ *
+ * WHY it names AANP's tier and nothing else: these descriptions used to print
+ * the caller's tier text as a bare fact, and every caller passed the dataset's
+ * `description`, so the state hub hero and three meta descriptions read "Full
+ * Practice Authority state." for Connecticut, New York and every other
+ * full-tier jurisdiction whose verified details describe a transition period
+ * before independent practice. The tier is AANP's classification, so the
+ * clause attributes it and states no rule; what a state requires is its
+ * `details`, printed in the page's practice section. The same wording as the
+ * job page's location panel ("AANP classification: Restricted Practice"), and
+ * no noun, so the District of Columbia is never called a state.
+ */
+function aanpClassificationClause(tier: PracticeAuthority | null): string | null {
+  return tier ? `AANP classification: ${getAuthorityLabel(tier)}.` : null;
+}
+
+/** "Full", "full" or "FULL" (the metro records' Title Case tier) as the tier key; null for anything else. */
+function tierFromName(name: string): PracticeAuthority | null {
+  const key = name.toLowerCase();
+  return key === 'full' || key === 'reduced' || key === 'restricted' ? key : null;
 }
 
 /** "$120K" from 120_000. */
@@ -293,18 +348,36 @@ export function buildMetroGuideLine(input: { city: string; count: number }): str
   return `${input.city} metro guide (${formatCount(input.count, 'open role')} across the metro)`;
 }
 
-/** HUB-S9, rendered at 1 or more nearby states with jobs; wording says "nearby", never "borders". */
-export function buildNearbyStatesSentence(
-  rows: ReadonlyArray<{ name: string; count: number; authorityDescription: string }>,
-): string | null {
+/** One nearby state for HUB-S9. */
+export interface NearbyStateCount {
+  name: string;
+  count: number;
+  /**
+   * @deprecated Ignored. The tier comes from the state's own dataset row, so
+   * the dataset's "Full Practice Authority" never prints beside a state whose
+   * details describe a transition period. Kept optional only so existing
+   * callers compile; stop passing it.
+   */
+  authorityDescription?: string;
+}
+
+/**
+ * HUB-S9, rendered at 1 or more nearby states with jobs; wording says
+ * "nearby", never "borders". Each state's tier is AANP's name for it, and the
+ * sentence attributes it to AANP.
+ */
+export function buildNearbyStatesSentence(rows: ReadonlyArray<NearbyStateCount>): string | null {
   const live = rows.filter((r) => r.count >= 1).slice(0, 3);
   if (live.length === 0) return null;
-  const parts = live.map((r) => `${r.name} (${formatCount(r.count, 'role')}, ${r.authorityDescription})`);
-  return `Nearby states with open ${NP} roles on this site: ${joinWithAnd(parts)}.`;
+  const parts = live.map((r) => {
+    const tier = aanpTierOf(r.name);
+    return `${r.name} (${formatCount(r.count, 'role')}${tier ? `, ${getAuthorityLabel(tier)}` : ''})`;
+  });
+  return `Nearby states with open ${NP} roles on this site, with AANP's classification of each: ${joinWithAnd(parts)}.`;
 }
 
 export const NEARBY_STATES_NOTE =
-  'If you live near a state line, compare practice authority before applying, because it changes how a role is structured and what paperwork you file.';
+  "If you live near a state line, compare each state's own practice rules before applying, not only its AANP classification, because those rules change how a role is structured and what paperwork you file.";
 
 // ─── Mixes (HUB-S4, HUB-S5, CITY-C3, CS-S3, CC-K2, DIR-L4, METRO-M5) ─────────
 
@@ -554,10 +627,29 @@ export interface LicensureSentences {
   certification: string | null;
 }
 
+/**
+ * "AANP classifies Texas as a restricted practice state." followed by the
+ * state's verified details. The one lead-in every practice paragraph and
+ * practice FAQ answer uses. The District of Columbia reads "a full practice
+ * jurisdiction", never "state" (see jurisdictionNoun).
+ *
+ * The first sentence names the AANP tier and attributes it; it states no
+ * rule. Every claim about what THIS state requires (a physician, an
+ * agreement, a transition period, a way out of one) comes from `details`.
+ * These answers used to lead with getAuthorityLabel's old text ("Restricted
+ * Practice (Physician Supervision Required)"), which put a tier rule directly
+ * in front of details that contradict it, for example Virginia's practice
+ * agreement with its autonomous practice designation. The same strings feed
+ * FAQPage JSON-LD, so the schema says exactly what the page says.
+ */
+function classifiedDetails(env: PracticeEnvironment): string {
+  return `AANP classifies ${env.stateName} as a ${env.authorityShort} ${jurisdictionNoun(env.stateCode)}. ${env.details}`;
+}
+
 /** CS-S6: classification, compact status, board and (APRN only) certification. */
 export function buildLicensureSentences(env: PracticeEnvironment, slug?: string): LicensureSentences {
   return {
-    classification: `AANP classifies ${env.stateName} as a ${env.authorityShort} state. ${env.details}`,
+    classification: classifiedDetails(env),
     nlc: nlcSentence(env.stateName),
     board: `Applications, fees and renewal rules come from the ${env.boardName}.`,
     certification: slug ? APRN_CERTIFICATION[slug] ?? null : null,
@@ -568,7 +660,7 @@ export function buildLicensureSentences(env: PracticeEnvironment, slug?: string)
 export function buildPracticingInStateParagraph(env: PracticeEnvironment): string {
   const nlc = nlcSentence(env.stateName);
   return [
-    `${env.authorityLabel}. ${env.details}`,
+    classifiedDetails(env),
     nlc,
     `APRN licensure is issued by the ${env.boardName}. Check the board's current checklist before accepting a role, because requirements and fees change.`,
   ].filter(Boolean).join(' ');
@@ -586,12 +678,17 @@ export function buildBoardChecklistSentence(boardName: string): string {
 
 /** SAL-S1 paragraph (the guide link is rendered by the component). */
 export function buildSalaryPracticeEnvironmentParagraph(env: PracticeEnvironment, nlcVerifiedLabel: string): string {
-  return `${env.authorityLabel}. ${env.details} ${env.stateName} ${nlcMembershipPhrase(env.nlcStatus)} the Nurse Licensure Compact (verified against the NCSBN roster on ${nlcVerifiedLabel}). Licensure applications run through the ${env.boardName}.`;
+  return `${classifiedDetails(env)} ${env.stateName} ${nlcMembershipPhrase(env.nlcStatus)} the Nurse Licensure Compact (verified against the NCSBN roster on ${nlcVerifiedLabel}). Licensure applications run through the ${env.boardName}.`;
 }
 
-/** CO-C3 one line per hiring state. */
+/**
+ * CO-C3 one line per hiring state. The tier is AANP's own name for it (the
+ * company page's intro attributes the column to AANP), never the dataset's
+ * "Full Practice Authority" in front of details that describe a transition
+ * period; the state's rule is its details.
+ */
 export function buildCompanyStatePracticeLine(env: PracticeEnvironment): string {
-  return `${env.stateName}: ${env.authorityDescription}, ${nlcShort(env.nlcStatus)}. ${env.details}`;
+  return `${env.stateName}: ${env.authorityLabel}, ${nlcShort(env.nlcStatus)}. ${env.details}`;
 }
 
 interface AuthorityBuckets { full: number; reduced: number; restricted: number; known: number; fullNames: string[] }
@@ -641,8 +738,11 @@ export function buildSpecialtyAuthoritySentence(
   const b = bucketByAuthority(states);
   if (b.known < min) return null;
   const fullNames = b.fullNames.length ? ` (${joinWithAnd(b.fullNames.slice(0, 4))})` : '';
+  // AANP's tier name, "full practice", never "full practice authority": the
+  // named states can include Connecticut or New York, whose verified details
+  // describe a transition period before independent practice.
   const clauses = [
-    b.full > 0 ? `${b.full} ${isAre(b.full)} in full practice authority states${fullNames}` : null,
+    b.full > 0 ? `${b.full} ${isAre(b.full)} in full practice states${fullNames}` : null,
     b.reduced > 0 ? `${b.reduced} in reduced practice states` : null,
     b.restricted > 0 ? `${b.restricted} in restricted practice states` : null,
   ].filter((c): c is string => c !== null);
@@ -780,7 +880,9 @@ export function buildHubFaqs(input: HubFaqInput): FaqEntry[] {
       `There ${isAre(facts.total)} ${formatCount(facts.total, `open ${NP} role`)} in ${stateName} on ${brand.name}.`,
       categories, 'Counts refresh hourly.',
     ].filter(Boolean).join(' ')),
-    faq(`What is the practice authority in ${stateName}?`, env ? `${env.details} Source: ${STAT_SOURCES.fullPracticeStates.source}.` : null),
+    // AANP is the source of the tier, not of the details (those were verified
+    // against each state's own law), so the attribution sits on the tier.
+    faq(`What is the practice authority in ${stateName}?`, env ? classifiedDetails(env) : null),
     faq(`What is the median ${NP} salary in ${stateName}?`, buildHubPayParagraph({ scopeName: stateName, scopeNoun: 'state', facts })),
     faq(`Which cities in ${stateName} have the most ${NP} jobs?`, cities),
     faq(`Which employers are hiring ${NP}s in ${stateName}?`, employers),
@@ -841,7 +943,11 @@ export function buildSettingStateFaqs(input: SettingStateFaqInput): FaqEntry[] {
   return compact([
     faq(`How many ${label} ${NP} jobs are open in ${stateName}?`, howMany || null),
     faq(`What do ${label} ${NP} jobs in ${stateName} pay?`, facts.benchmark ? buildPostedPaySentence({ slug, facts }) : null),
-    faq(`Do ${NP}s need a collaborating physician in ${stateName}?`, physicianAnswer),
+    // The same question the license guide answers ("collaborating or
+    // supervising"): its verdict ("Yes." for Texas, Georgia or Tennessee,
+    // whose details name supervision) must never read as a yes to a
+    // collaborating-only question.
+    faq(`Do ${NP}s need a collaborating or supervising physician in ${stateName}?`, physicianAnswer),
     faq(`Is ${stateName} part of the Nurse Licensure Compact?`, nlcAnswer),
   ]);
 }
@@ -870,7 +976,7 @@ export function buildCategoryCityFaqs(input: CategoryCityFaqInput): FaqEntry[] {
   return compact([
     faq(`How many ${label} ${NP} jobs are in ${city}?`, howMany),
     faq(`What do ${labelSentence} listings in ${city} pay?`, buildCategoryCityPayParagraph({ slug, labelSentence, city, categoryBenchmark: facts.benchmark, cityBenchmark })),
-    faq(`Does ${stateName} allow ${NP}s full practice authority?`, env ? `${env.authorityLabel}. ${env.details} See the practice section on this page for the compact status and board.` : null),
+    faq(`Does ${stateName} allow ${NP}s full practice authority?`, env ? `${classifiedDetails(env)} See the practice section on this page for the compact status and board.` : null),
     faq(`Which employers are hiring ${labelSentence} roles in ${city}?`, employers ? `${employers} ${countList(facts.topEmployers, 6)}.` : null),
     faq(`What qualifications do I need for ${labelSentence} jobs in ${city}?`, qualifications),
   ]);
@@ -908,7 +1014,7 @@ export function buildSalaryStateFaqAdditions(
 ): FaqEntry[] {
   const { env, nlcVerifiedLabel, topEmployers } = input;
   return compact([
-    faq(`Does ${env.stateName} give ${NP_PROSE_PLURAL} full practice authority?`, `${env.authorityLabel}. ${env.details}`),
+    faq(`Does ${env.stateName} give ${NP_PROSE_PLURAL} full practice authority?`, classifiedDetails(env)),
     faq(`Is ${env.stateName} part of the Nurse Licensure Compact?`, `${env.stateName} ${nlcMembershipPhrase(env.nlcStatus)} the Nurse Licensure Compact, verified against the NCSBN roster on ${nlcVerifiedLabel}.`),
     faq(`Which employers have the most open ${NP} roles in ${env.stateName}?`, topEmployers.length >= 2 ? `${countList(topEmployers)}.` : null),
   ]);
@@ -973,15 +1079,35 @@ export function buildHubTitle(input: { stateName: string; stateCode: string; tot
     : `${base}: ${formatCount(distinctEmployers, 'Employer')} Hiring`;
 }
 
-/** HUB-meta description. */
+/**
+ * The retired tier-text input of the HUB, CS and CC description builders.
+ * Every caller passed the dataset's `description`, which is "Full Practice
+ * Authority" for each full-tier jurisdiction; the builders now take the tier
+ * from the jurisdiction's own dataset row instead.
+ */
+interface RetiredAuthorityText {
+  /**
+   * @deprecated Ignored. The tier clause comes from the jurisdiction's own
+   * dataset row (aanpClassificationClause), so no caller text, and never
+   * "Full Practice Authority", can print. Kept optional only so existing call
+   * sites compile; stop passing it.
+   */
+  authorityDescription?: string | null;
+}
+
+/**
+ * HUB-meta description, which is also the state hub's visible hero deck. The
+ * tier clause is AANP's classification of this state, attributed, never a
+ * rule (see aanpClassificationClause).
+ */
 export function buildHubDescription(
-  input: { stateName: string; facts: ListingFacts; authorityDescription: string | null; topCategories: readonly string[] },
+  input: { stateName: string; facts: ListingFacts; topCategories: readonly string[] } & RetiredAuthorityText,
 ): string {
-  const { stateName, facts, authorityDescription, topCategories } = input;
+  const { stateName, facts, topCategories } = input;
   const cities = facts.cities.slice(0, 2).map((c) => c.name);
   return assembleDescription([
     `${formatCount(facts.total, `open ${NP_PROSE} role`)} in ${stateName} from ${formatCount(facts.distinctEmployers, 'employer')}${cities.length ? `, led by ${joinWithAnd(cities)}` : ''}.`,
-    authorityDescription ? `${authorityDescription} state.` : null,
+    aanpClassificationClause(aanpTierOf(stateName)),
     facts.benchmark ? `Median posted pay ${formatK(facts.benchmark.median)}.` : null,
     topCategories.length ? `Top categories: ${joinWithAnd(topCategories.slice(0, 2))}.` : null,
   ]);
@@ -1027,17 +1153,17 @@ export function buildSettingStateTitle(input: { titleLabel: string; stateName: s
   return base;
 }
 
-/** CS-meta description assembly. */
+/** CS-meta description assembly; the tier clause as in buildHubDescription. */
 export function buildSettingStateDescription(input: {
-  label: string; slug: string; stateName: string; facts: ListingFacts; authorityDescription: string | null; statsAsOf: Date | null;
-}): string {
-  const { label, slug, stateName, facts, authorityDescription, statsAsOf } = input;
+  label: string; slug: string; stateName: string; facts: ListingFacts; statsAsOf: Date | null;
+} & RetiredAuthorityText): string {
+  const { label, slug, stateName, facts, statsAsOf } = input;
   const topCity = facts.cities[0] && slug !== 'remote' && slug !== 'telehealth' ? facts.cities[0].name : null;
   return assembleDescription([
     `${facts.total} ${label.toLowerCase()} ${NP} ${facts.total === 1 ? 'opening' : 'openings'} in ${stateName} from ${formatCount(facts.distinctEmployers, 'employer')}.`,
     facts.benchmark ? `Median posted pay ${formatK(facts.benchmark.median)}.` : null,
     topCity ? `Top city: ${topCity}.` : null,
-    authorityDescription ? `${authorityDescription} state.` : null,
+    aanpClassificationClause(aanpTierOf(stateName)),
     statsAsOf ? `Updated ${formatUtcDateShort(statsAsOf)}.` : null,
   ]);
 }
@@ -1049,11 +1175,11 @@ export function buildCategoryCityTitle(input: { labelNoun: string; city: string;
   return total >= COUNT_DISPLAY_FLOOR ? `${base} (${total} Open)` : base;
 }
 
-/** CC-K9 description. */
+/** CC-K9 description; the tier clause as in buildHubDescription, keyed by the state code. */
 export function buildCategoryCityDescription(input: {
-  labelSentence: string; city: string; stateCode: string; facts: ListingFacts; authorityDescription: string | null;
-}): string {
-  const { labelSentence, city, stateCode, facts, authorityDescription } = input;
+  labelSentence: string; city: string; stateCode: string; facts: ListingFacts;
+} & RetiredAuthorityText): string {
+  const { labelSentence, city, stateCode, facts } = input;
   const top1 = facts.topEmployers[0]?.name;
   const flexible = facts.workMode.remote + facts.workMode.hybrid;
   const settings = facts.settings.top.slice(0, 2).map((s) => s.label);
@@ -1063,7 +1189,7 @@ export function buildCategoryCityDescription(input: {
   return assembleDescription([
     `${formatCount(facts.total, `active ${labelSentence} listing`)} in ${city}, ${stateCode}${facts.distinctEmployers >= 2 && top1 ? ` from ${facts.distinctEmployers} employers, led by ${top1}` : ''}.`,
     mixClause,
-    authorityDescription ? `${authorityDescription} state.` : null,
+    aanpClassificationClause(aanpTierOfCode(stateCode)),
   ]);
 }
 
@@ -1086,14 +1212,22 @@ export function buildMetroTitle(input: { city: string; stateCode: string; total:
   return `${countPrefix(input.total)}${NP} Jobs in ${input.city}, ${input.stateCode} (${input.year})`;
 }
 
-/** METRO-meta description from reviewed geography, never the hero fragment. */
+/**
+ * METRO-meta description from reviewed geography, never the hero fragment;
+ * also the metro page's visible hero deck. The tier clause is AANP's
+ * classification, attributed, as in buildHubDescription. It used to read "New
+ * York is a full practice state.", a bare fact about practicing there,
+ * although New York's details describe a transition period. `practiceAuthority`
+ * is the metro record's tier, pinned to the dataset by
+ * p2-metro-editorial-depth.test.ts.
+ */
 export function buildMetroDescription(input: {
   city: string; stateCode: string; stateName: string; practiceAuthority: string; nearbyCities: readonly string[]; subMarkets: readonly string[]; benchmark: BenchmarkRow | null;
 }): string {
-  const { city, stateCode, stateName, practiceAuthority, nearbyCities, subMarkets, benchmark } = input;
+  const { city, stateCode, practiceAuthority, nearbyCities, subMarkets, benchmark } = input;
   return assembleDescription([
     `Open ${NP} roles in ${city}, ${stateCode}${nearbyCities.length ? ` and nearby ${joinWithAnd(nearbyCities.slice(0, 2))}` : ''}.`,
-    `${stateName} is a ${practiceAuthority.toLowerCase()} practice state.`,
+    aanpClassificationClause(tierFromName(practiceAuthority)),
     benchmark ? `Median posted pay ${formatK(benchmark.median)}.` : null,
     subMarkets.length ? `Hiring across ${joinWithAnd(subMarkets.slice(0, 2))}.` : null,
   ]);
@@ -1107,19 +1241,27 @@ export function buildSalaryStateTitle(input: { stateName: string; stateCode: str
     : `${NP} Jobs and Pay Data in ${stateName} (${stateCode}), ${year}`;
 }
 
-/** SAL-meta description per gate. */
+/**
+ * SAL-meta description per gate. Below the gate the tier clause is AANP's
+ * classification, attributed, as in buildHubDescription. Above it the pay
+ * sentence alone runs past 100 characters, so the attributed clause could
+ * never fit the budget beside the open-role count; the tier is left to the
+ * page's practice section rather than printed unattributed ("9 open roles,
+ * full practice." read as a fact about practicing in the state).
+ */
 export function buildSalaryStateDescription(input: { env: PracticeEnvironment; facts: ListingFacts }): string {
   const { env, facts } = input;
   const row = facts.benchmark;
   if (row) {
     return assembleDescription([
       `Median posted ${NP} pay in ${env.stateName} is ${formatDollars(row.median)} across ${row.postings} postings from ${row.employers} employers, middle half ${formatDollars(row.p25)} to ${formatDollars(row.p75)}.`,
-      `${formatCount(facts.total, 'open role')}, ${AUTHORITY_SHORT[env.authority]}.`,
+      `${formatCount(facts.total, 'open role')}.`,
     ]);
   }
   return assembleDescription([
     `${formatCount(facts.total, `open ${NP} role`)} in ${env.stateName} from ${formatCount(facts.distinctEmployers, 'employer')}.`,
-    `${env.stateName} is a ${AUTHORITY_SHORT[env.authority]} state and ${nlcShort(env.nlcStatus)}.`,
+    aanpClassificationClause(env.authority),
+    `${env.stateName} ${nlcMembershipPhrase(env.nlcStatus)} the Nurse Licensure Compact.`,
     `Pay median published at ${BENCHMARK_MIN_POSTINGS} or more disclosed postings.`,
   ]);
 }

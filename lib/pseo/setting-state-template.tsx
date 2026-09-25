@@ -330,14 +330,12 @@ export async function buildSettingStateMetadata(
     readStoredIndexVerdict(config, stateSlug),
   ]);
   const basePath = `/jobs/${config.slug}/${stateSlug}`;
-  const env = getPracticeEnvironment(stateName);
   const title = buildSettingStateTitle({ titleLabel: config.label, stateName, total: facts.total });
   const description = buildSettingStateDescription({
     label: config.label,
     slug: config.slug,
     stateName,
     facts,
-    authorityDescription: env?.authorityDescription ?? null,
     statsAsOf: facts.computedAt,
   });
   const indexable = resolveSettingStateIndexable({

@@ -308,13 +308,18 @@ export interface LicenseGuideNearbyStatesProps {
   nearby: readonly LicenseGuideNearbyRow[];
 }
 
-const NEARBY_COLUMNS = ['State', 'Practice authority', 'Nurse Licensure Compact'] as const;
+const NEARBY_COLUMNS = ['State', 'AANP classification', 'Nurse Licensure Compact'] as const;
 
 /**
  * The nearby-states table (thin-spec-4 3C L2): AANP classification and
  * compact status per nearby jurisdiction, from lib/pseo/neighboring-states.ts
  * (proximity, so the copy says "nearby", never "bordering"). Rows are the
  * dataset; the only live input is which sibling guides are published.
+ *
+ * The classification cell is AANP's tier name (getAuthorityLabel via
+ * env.authorityLabel), never the dataset's "Full Practice Authority": a tier
+ * is not a state's rule, and several full practice states require a
+ * transition period. Each state's own rule is in its license guide.
  */
 export function LicenseGuideNearbyStates({ env, nearby }: LicenseGuideNearbyStatesProps) {
   return (
@@ -324,7 +329,7 @@ export function LicenseGuideNearbyStates({ env, nearby }: LicenseGuideNearbyStat
           eyebrow="Nearby states"
           id={NEARBY_HEADING_ID}
           title={`Practice authority and compact status near ${env.stateName}`}
-          lede="If you are weighing a move or a telehealth caseload across state lines, these are the rules you would plan around in each nearby state."
+          lede="If you are weighing a move or a telehealth caseload across state lines, start with each nearby state's AANP classification and compact status. States in the same AANP tier still set different practice requirements, so read each state's own rule in its license guide."
         />
         <div className="lg-table-wrap" style={TABLE_WRAP_STYLE}>
           <table className="lg-table" style={TABLE_STYLE}>
@@ -346,7 +351,7 @@ export function LicenseGuideNearbyStates({ env, nearby }: LicenseGuideNearbyStat
                       ? <Link href={`/blog/${near.licenseGuideSlug}`} className="lg-link" style={TEXT_LINK_STYLE}>{near.stateName}</Link>
                       : near.stateName}
                   </th>
-                  <td style={TD_STYLE}>{near.authorityDescription}</td>
+                  <td style={TD_STYLE}>{near.authorityLabel}</td>
                   <td style={TD_STYLE}>{nlcTableLabel(near.nlcStatus)}</td>
                 </tr>
               ))}

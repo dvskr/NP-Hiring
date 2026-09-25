@@ -46,7 +46,7 @@ import { getNeighboringStates } from '@/lib/pseo/neighboring-states';
 import { shouldIndexStateCityDirectory } from '@/lib/pseo/render-gate';
 import { resolveStateSlug, stateToSlug, STATE_CODES } from '@/lib/pseo/setting-state-config';
 import { getGatedCitySalaries, type GatedSalary } from '@/lib/salary-analytics';
-import { getStatePracticeAuthority } from '@/lib/state-practice-authority';
+import { getAuthorityLabel, getStatePracticeAuthority } from '@/lib/state-practice-authority';
 import {
   activeJobsInStateWhere,
   buildCitySlug,
@@ -596,13 +596,18 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
                   {rankedCities[0].name} leads with {formatCount(rankedCities[0].count, 'opening')}.{' '}
                 </>
               )}
-              {/* Only the authority LABEL is reused here. The long `details`
-                  prose already renders verbatim on /jobs/state/<state>, so
-                  repeating it would make these two URLs near-duplicates. */}
+              {/* Only the AANP tier is reused here. The long `details` prose
+                  already renders verbatim on /jobs/state/<state>, so repeating
+                  it would make these two URLs near-duplicates. The tier is
+                  attributed and carries no rule: it used to read "is a Full
+                  Practice Authority state, which shapes how much supervision
+                  a role carries", a claim a tier cannot make for any one
+                  state (transition periods, practice agreements and routes
+                  out of an agreement all differ within a tier). */}
               {authority && (
                 <>
-                  {stateName} is a <strong>{authority.description}</strong> {isDistrict ? 'jurisdiction' : 'state'}, which shapes how much
-                  supervision a role in any of these cities carries.{' '}
+                  AANP classifies {stateName} as a <strong>{getAuthorityLabel(authority.authority)}</strong> {isDistrict ? 'jurisdiction' : 'state'};
+                  its hub page lists what {stateName} itself requires.{' '}
                 </>
               )}
               {howToUse}

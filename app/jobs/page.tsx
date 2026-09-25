@@ -43,7 +43,14 @@ function buildJobsHubFaqs(totalJobs: number): HubFaq[] {
     },
     {
       question: `Where can ${brand.niche.descriptor}s practice independently?`,
-      answer: `${STAT_SOURCES.fullPracticeStates.formatted} grant ${brand.niche.descriptor}s Full Practice Authority (${STAT_SOURCES.fullPracticeStates.source}), meaning they can evaluate, diagnose, and prescribe without physician oversight. The remaining states require a collaborative or supervisory agreement. Browse jobs by state to see local practice environments.`,
+      // Tier-level copy only: what AANP's Full Practice classification means
+      // and that states inside a tier differ. The old answer ("without
+      // physician oversight"; "The remaining states require a collaborative
+      // or supervisory agreement") read the tier as a per-state rule, which
+      // the verified rows in lib/state-practice-authority.ts contradict for
+      // the Full Practice transition states and for the routes out of an
+      // agreement in several Reduced and Restricted states.
+      answer: `It depends on each state's rules, not only on its classification. The ${STAT_SOURCES.fullPracticeStates.source} classifies ${STAT_SOURCES.fullPracticeStates.formatted} as Full Practice, where state law lets ${brand.niche.descriptor}s evaluate patients, diagnose, order and interpret diagnostic tests, and initiate and manage treatments, including prescribing medications and controlled substances, under the exclusive licensure authority of the state board of nursing. Several of those states first require a transition period of collaborative or supervised practice, and several Reduced and Restricted Practice states offer a route out of their agreement after a set amount of experience. The Full Practice Authority guide summarizes each state's requirement, and browsing jobs by state shows local practice environments.`,
     },
     {
       question: `Which specialties and job types can I browse?`,

@@ -105,9 +105,11 @@ describe('2. the city directory page words DC as a jurisdiction', () => {
         mockDirectory([cityRow('Washington', 5), cityRow('Georgetown', 3), cityRow('Anacostia', 3)]);
         const text = paragraphs(await renderDirectory('district-of-columbia'));
 
-        const authority = text.find((p) => p.includes('which shapes how much'));
-        expect(authority).toContain('District of Columbia is a Full Practice Authority jurisdiction, which shapes');
-        expect(authority).not.toMatch(/Authority state\b/);
+        const authority = text.find((p) => p.includes('AANP classifies'));
+        expect(authority).toContain('AANP classifies District of Columbia as a Full Practice jurisdiction; its hub page lists what District of Columbia itself requires.');
+        expect(authority).not.toMatch(/Practice state\b|Authority state\b/);
+        // The tier names the classification only; it states no supervision rule.
+        expect(authority).not.toMatch(/supervis/i);
         expect(text).toContain('Districtwide');
         expect(text).not.toContain('Statewide');
         expect(text).toContain('The districtwide feed, including remote roles open to District of Columbia licensees.');
@@ -117,7 +119,7 @@ describe('2. the city directory page words DC as a jurisdiction', () => {
         mockDirectory([cityRow('Rockville', 4), cityRow('Bethesda', 3), cityRow('Frederick', 3)]);
         const text = paragraphs(await renderDirectory('maryland'));
 
-        expect(text.find((p) => p.includes('which shapes how much'))).toMatch(/Maryland is a .+ state, which shapes/);
+        expect(text.find((p) => p.includes('AANP classifies'))).toMatch(/AANP classifies Maryland as a .+ state; its hub page lists what Maryland itself requires\./);
         expect(text).toContain('Statewide');
         expect(text).toContain('The statewide feed, including remote roles open to Maryland licensees.');
     });

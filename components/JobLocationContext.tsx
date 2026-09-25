@@ -36,8 +36,14 @@ import {
  *     posted (`salaryIsEstimated`) get NO adjusted figure — adjusting an
  *     invented number would publish an invented number.
  *   - Practice environment: lib/state-practice-authority.ts verbatim (the
- *     same strings the state hubs publish), attributed to AANP via
- *     STAT_SOURCES.fullPracticeStates.
+ *     same strings the state hubs publish). Only the TIER is AANP's, so only
+ *     the tier line and the source link carry the AANP attribution (via
+ *     STAT_SOURCES.fullPracticeStates); the per-state `details` were verified
+ *     against each state's own law and are what answers "what does this
+ *     state require". The tier line names the tier and states no rule: the
+ *     old label ("Restricted Practice (Physician Supervision Required)")
+ *     printed a supervision claim directly above Virginia's practice
+ *     agreement text.
  *
  * TRUTH RULES this module enforces:
  *   - No city match → the caller gets `null` and renders nothing. Never a
@@ -347,7 +353,7 @@ export default function JobLocationContext({ model }: JobLocationContextProps) {
                             </p>
                         )}
                         <p style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 2px', color: AUTHORITY_COLORS[model.authority.authority] }}>
-                            {getAuthorityLabel(model.authority.authority)}
+                            AANP classification: {getAuthorityLabel(model.authority.authority)}
                         </p>
                         <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.55 }}>
                             {model.authority.details}{' '}
@@ -357,7 +363,7 @@ export default function JobLocationContext({ model }: JobLocationContextProps) {
                                 rel="noopener noreferrer"
                                 style={{ color: '#BE185D', fontWeight: 600, textDecoration: 'underline' }}
                             >
-                                Source: {STAT_SOURCES.fullPracticeStates.source}
+                                Classification source: {STAT_SOURCES.fullPracticeStates.source}
                             </a>
                         </p>
                     </div>

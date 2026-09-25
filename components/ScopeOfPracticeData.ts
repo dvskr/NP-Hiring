@@ -37,6 +37,8 @@
 import { brand } from '@/config/brand';
 import {
     STATE_PRACTICE_AUTHORITY,
+    getAanpTierDefinition,
+    getAuthorityLabel,
     type PracticeAuthority,
 } from '@/lib/state-practice-authority';
 import {
@@ -101,7 +103,12 @@ export interface SopStateRow {
     anchorId: string;
     /** AANP practice-authority tier. */
     authority: PracticeAuthority;
-    /** Tier display label from the dataset ('Full Practice Authority', …). */
+    /**
+     * AANP's tier name from getAuthorityLabel ('Full Practice', 'Reduced
+     * Practice', 'Restricted Practice'). Never the dataset's "Full Practice
+     * Authority": the chip sits beside the state's details, and several
+     * full practice states require a transition period first.
+     */
     authorityLabel: string;
     /** The dataset's per-state details sentence, published verbatim. */
     details: string;
@@ -137,7 +144,7 @@ export const SOP_STATE_ROWS: ReadonlyArray<SopStateRow> = LICENSE_GUIDE_STATES.m
             stateSlug: s.stateSlug,
             anchorId: s.stateSlug,
             authority: info.authority,
-            authorityLabel: info.description,
+            authorityLabel: getAuthorityLabel(info.authority),
             details: info.details,
             nlcStatus: s.nlcStatus,
             boardName: s.boardName,
@@ -185,7 +192,7 @@ export function buildSopFaqs(): SopFaq[] {
     return [
         {
             question: `What does "scope of practice" mean for ${NP}s?`,
-            answer: `Scope of practice is what a state's law and board rules allow a ${descriptor} to do: evaluate patients, diagnose, order and interpret tests, and initiate and manage treatment, including prescribing. The AANP classifies each state's regulatory environment into one of three tiers: Full Practice (independent practice under the board of nursing), Reduced Practice (a collaborative agreement with a physician is required for at least one element of practice), and Restricted Practice (supervision, delegation, or team management by a physician is required).`,
+            answer: `Scope of practice is what a state's law and board rules allow a ${descriptor} to do: evaluate patients, diagnose, order and interpret tests, and initiate and manage treatment, including prescribing. The AANP classifies each state's practice environment into one of three tiers: Full Practice, Reduced Practice and Restricted Practice. States in the same tier still set different requirements, so each state's own details on this page, not its tier, say what that state requires.`,
         },
         {
             question: `How many states grant ${NP}s full practice authority?`,
@@ -193,7 +200,7 @@ export function buildSopFaqs(): SopFaq[] {
         },
         {
             question: 'What is the difference between reduced and restricted practice?',
-            answer: `In a Reduced Practice state, a ${descriptor} holds their own license but state law requires a documented collaborative agreement with a physician covering at least one element of practice, most commonly prescribing. In a Restricted Practice state, the law goes further: supervision, delegation, or team management by a physician is required for practice itself, and job postings typically name a supervising physician and reference protocols. Several states also apply transition-to-practice periods before full autonomy. The per-state details on this page note the ones in this dataset.`,
+            answer: `Both are AANP classifications of state law. Reduced Practice: ${getAanpTierDefinition('reduced')} Restricted Practice: ${getAanpTierDefinition('restricted')} States in the same tier still set different requirements: some let experienced ${NP}s qualify out of the arrangement, some apply it only to certain elements of practice such as prescribing controlled substances, and the other party is not always a physician. Several Full Practice states also apply a transition period before independent practice. The per-state details on this page give each state's own rule.`,
         },
         {
             question: `Where do I find my state's prescribing rules and agreement paperwork?`,

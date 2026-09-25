@@ -135,7 +135,7 @@ const CREDENTIAL_CHECKLIST = [
   },
   {
     title: 'Practice-authority fit for your state',
-    body: `States grant ${brand.niche.short}s full, reduced, or restricted practice authority; ${STAT_SOURCES.fullPracticeStates.formatted} currently grant Full Practice Authority. In reduced- and restricted-practice states you will need a collaborative or supervisory agreement with a physician in place before the start date. Check your state's current rules at the source below.`,
+    body: `AANP classifies each state as full, reduced or restricted practice; ${STAT_SOURCES.fullPracticeStates.formatted} are full practice. The tier does not settle what your hire needs: several full practice states require a newly licensed ${brand.niche.short} to practice under a collaborative agreement, supervision or mentorship for a transition period, and several reduced and restricted states let experienced ${brand.niche.short}s qualify out of the arrangement. Check your state's current rules, and your candidate's experience against them, before the start date.`,
   },
 ] as const;
 
@@ -163,7 +163,7 @@ const FAQS = [
   },
   {
     q: `Does my ${brand.niche.short} hire need a collaborating physician?`,
-    a: `It depends on your state. States grant full, reduced, or restricted practice authority; ${STAT_SOURCES.fullPracticeStates.formatted} currently grant Full Practice Authority, where ${brand.niche.short}s practice independently. In reduced- and restricted-practice states, a collaborative or supervisory agreement must be in place before the start date. Check your state's current rules with the state board of nursing or the AANP State Practice Environment resource.`,
+    a: `It depends on your state and on your hire's experience. AANP classifies ${STAT_SOURCES.fullPracticeStates.formatted} as full practice, but the tier does not settle the question: several full practice states require a newly licensed ${brand.niche.short} to practice under a collaborative agreement, supervision or mentorship for a transition period, and several reduced and restricted states let experienced ${brand.niche.short}s qualify out of an arrangement that otherwise applies. Where your state requires an agreement, have it in place before the start date. Check your state's current rules with the state board of nursing, and the AANP State Practice Environment resource for its classification.`,
   },
   {
     q: `How long does it take to hire a ${brand.niche.descriptor}?`,

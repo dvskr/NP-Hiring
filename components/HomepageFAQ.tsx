@@ -69,6 +69,15 @@ export async function getTopStatesByJobCount(): Promise<StateJobCount[]> {
  * The single source of truth for the homepage FAQ. Every cited figure comes
  * from STAT_SOURCES (lib/stats-sources.ts) or from the live `topStates`
  * counts — never hardcode a stat in this array.
+ *
+ * Practice-authority answers are tier-level only: they may say what AANP's
+ * classification means and that states inside a tier differ, never read a
+ * per-state rule off the tier. The old answers ("prescribe independently",
+ * "can practice and prescribe without physician oversight", "can practice
+ * independently there") contradicted the verified rows in
+ * lib/state-practice-authority.ts for the Full Practice transition states
+ * (CO, CT, MA, MD, ME, MN, NE, NV, NY, SD, VT) and for the routes out of an
+ * agreement in several Reduced and Restricted states.
  */
 export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[] {
     const fpa = STAT_SOURCES.fullPracticeStates;
@@ -80,7 +89,7 @@ export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[
                     question: `Which states have the most ${brand.niche.short} job openings?`,
                     answer: `Based on live listings on ${brand.name}, the states with the most open ${brand.niche.short} positions right now are ${topStates
                         .map((s) => `${s.state} (${s.count} ${s.count === 1 ? 'opening' : 'openings'})`)
-                        .join(', ')}. Counts change daily as new roles are posted. Full Practice Authority states (${fpa.formatted} per the ${fpa.source}, ${fpa.asOf}) are often strong markets because ${brand.niche.short}s can practice independently there.`,
+                        .join(', ')}. Counts change daily as new roles are posted.`,
                 },
             ]
             : [];
@@ -104,11 +113,11 @@ export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[
         },
         {
             question: `Can ${brand.niche.short}s prescribe medication?`,
-            answer: `Yes, ${brand.niche.short}s can prescribe medications including controlled substances in all 50 states. In states with full practice authority (${fpa.formatted} per the ${fpa.source}, ${fpa.asOf}), ${brand.niche.short}s prescribe independently. In reduced or restricted practice states, a collaborative agreement with a physician may be required. The medications ${brand.niche.short}s prescribe follow their specialty, from antibiotics and antihypertensives to insulin, ADHD medications, and controlled pain medications.`,
+            answer: `Yes, ${brand.niche.short}s can prescribe medications including controlled substances in all 50 states, but each state sets the conditions. The ${fpa.source} classifies ${fpa.formatted} as having full practice authority (${fpa.asOf}), where state law lets ${brand.niche.short}s prescribe medications and controlled substances under the exclusive licensure authority of the state board of nursing, although several of those states limit prescribing or require a transition period for newer ${brand.niche.short}s. In reduced and restricted practice states, prescribing often depends on a collaborative agreement, supervision or delegation, and some of those states offer a route out of it after a set amount of experience. The medications ${brand.niche.short}s prescribe follow their specialty, from antibiotics and antihypertensives to insulin, ADHD medications, and controlled pain medications.`,
         },
         {
             question: `What is the difference between an ${brand.niche.short} and a physician?`,
-            answer: `${brand.niche.short}s hold a master's or doctoral degree in nursing (2 to 4 years of graduate school), while physicians complete medical school plus a residency of 3 to 7 years. Both can diagnose conditions and prescribe medications. In full practice authority states, ${brand.niche.short}s practice independently. ${brand.niche.short}s typically earn ${STAT_SOURCES.averageSalary.range} (${STAT_SOURCES.averageSalary.source}, ${STAT_SOURCES.averageSalary.asOf}) compared to physicians at $220,000+, but ${brand.niche.short}s reach full practice much faster with less educational debt.`,
+            answer: `${brand.niche.short}s hold a master's or doctoral degree in nursing (2 to 4 years of graduate school), while physicians complete medical school plus a residency of 3 to 7 years. Both can diagnose conditions and prescribe medications. Whether an ${brand.niche.short} needs a collaborating or supervising clinician depends on the state, and some states require one for newly licensed ${brand.niche.short}s even where experienced ${brand.niche.short}s practice independently. ${brand.niche.short}s typically earn ${STAT_SOURCES.averageSalary.range} (${STAT_SOURCES.averageSalary.source}, ${STAT_SOURCES.averageSalary.asOf}) compared to physicians at $220,000+, but ${brand.niche.short}s begin practicing much sooner with less educational debt.`,
         },
         {
             question: `What does a ${brand.niche.descriptor} do on a typical workday?`,
@@ -120,7 +129,7 @@ export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[
         },
         {
             question: `Can ${brand.niche.short}s own a private practice?`,
-            answer: `Yes, ${brand.niche.short}s can own a private practice in all 50 states, though the level of independence varies. In the ${fpa.formatted} granting Full Practice Authority (${fpa.source}, ${fpa.asOf}), ${brand.niche.short}s can practice and prescribe without physician oversight. In restricted states, a collaborative agreement with a physician may be required. Private practice ${brand.niche.short}s can earn $180,000 to $300,000+ annually, though they must manage business operations, insurance credentialing, and overhead costs.`,
+            answer: `What a practice of your own requires depends on your state's rules, and the practice tier alone does not settle it. The ${fpa.source} classifies ${fpa.formatted} as having Full Practice Authority (${fpa.asOf}), where state law lets ${brand.niche.short}s evaluate patients, diagnose, order and interpret diagnostic tests, and initiate and manage treatments, including prescribing, under the exclusive licensure authority of the state board of nursing, but several of those states first require a transition period of collaborative or supervised practice. Most reduced and restricted practice states require a collaborative agreement, supervision or delegation involving a physician or another health provider, and several of them offer a route out of it after a set amount of experience. Check your state's entry in the Full Practice Authority guide before you plan a practice. Private practice ${brand.niche.short}s can earn $180,000 to $300,000+ annually, though they must manage business operations, insurance credentialing, and overhead costs.`,
         },
         ...demandFaq,
         {

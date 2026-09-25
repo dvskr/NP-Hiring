@@ -379,9 +379,13 @@ export default async function PressPage() {
                         }}
                     >
                         {[
-                            { n: fullPracticeCount, label: 'Full practice authority', hint: 'Practice without a physician agreement' },
-                            { n: reducedPracticeCount, label: 'Reduced practice', hint: 'Collaborative agreement required' },
-                            { n: restrictedPracticeCount, label: 'Restricted practice', hint: 'Physician supervision required' },
+                            // Hints paraphrase AANP's own tier definitions. They
+                            // used to state a rule per tier ("Physician supervision
+                            // required"), which is untrue of several states in each
+                            // tier; what one state requires is its own details.
+                            { n: fullPracticeCount, label: 'Full practice', hint: 'Exclusive licensure authority of the state board of nursing; some states first require a transition period' },
+                            { n: reducedPracticeCount, label: 'Reduced practice', hint: 'State law reduces at least one element of practice' },
+                            { n: restrictedPracticeCount, label: 'Restricted practice', hint: 'State law restricts at least one element of practice' },
                         ].map((s) => (
                             <div key={s.label} style={{ ...clayCard, padding: '16px 18px' }}>
                                 <p style={{ fontSize: '26px', fontWeight: 800, color: '#BE185D', margin: 0, lineHeight: 1.1 }}>

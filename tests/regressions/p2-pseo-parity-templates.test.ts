@@ -240,9 +240,9 @@ describe('P2 #8b — practice-authority FAQ no longer tells every state it is re
 
     it('each AANP tier gets its own sentence, so no state inherits another tier', () => {
         const tiers = [
-            ['full', 'Arizona', 'Full Practice Authority'],
-            ['reduced', 'New Jersey', 'Reduced Practice'],
-            ['restricted', 'Texas', 'Restricted Practice'],
+            ['full', 'Arizona', 'AANP classifies Arizona as a full practice state.'],
+            ['reduced', 'New Jersey', 'AANP classifies New Jersey as a reduced practice state.'],
+            ['restricted', 'Texas', 'AANP classifies Texas as a restricted practice state.'],
         ] as const;
         const paragraphs = tiers.map(([tier, stateName, label]) => {
             const env = envFor(stateName);
@@ -254,8 +254,9 @@ describe('P2 #8b — practice-authority FAQ no longer tells every state it is re
         // Three tiers, three distinct paragraphs. The defect's signature was
         // all three collapsing onto the restricted branch.
         expect(new Set(paragraphs).size).toBe(3);
-        // Keyed on the getAuthorityLabel('restricted') chip text: Arizona's
-        // details legitimately say "without physician supervision".
+        // Keyed on the restricted tier name and on the rule the old
+        // getAuthorityLabel('restricted') text carried: Arizona's details
+        // legitimately say "without physician supervision".
         expect(paragraphs[0]).not.toMatch(/Restricted Practice|Physician Supervision Required/i);
         expect(paragraphs[1]).not.toMatch(/Restricted Practice/i);
     });
@@ -276,7 +277,7 @@ describe('P2 #8b — practice-authority FAQ no longer tells every state it is re
         for (const rel of [CITY_TEMPLATE, STATE_TEMPLATE, PRACTICE_CARD]) {
             expect(readCode(rel), rel).not.toMatch(/\{[A-Za-z][\w.!]*\.authority\}/);
         }
-        expect(readCode(PRACTICE_CARD)).toContain('chip={env.authorityDescription}');
+        expect(readCode(PRACTICE_CARD)).toContain('chip={env.authorityLabel}');
         for (const stateName of ['Arizona', 'New Jersey', 'Texas']) {
             const env = envFor(stateName);
             const labels = {
