@@ -254,7 +254,9 @@ describe('P2 #8b — practice-authority FAQ no longer tells every state it is re
         // Three tiers, three distinct paragraphs. The defect's signature was
         // all three collapsing onto the restricted branch.
         expect(new Set(paragraphs).size).toBe(3);
-        expect(paragraphs[0]).not.toMatch(/Restricted Practice|Physician Supervision/i);
+        // Keyed on the getAuthorityLabel('restricted') chip text: Arizona's
+        // details legitimately say "without physician supervision".
+        expect(paragraphs[0]).not.toMatch(/Restricted Practice|Physician Supervision Required/i);
         expect(paragraphs[1]).not.toMatch(/Restricted Practice/i);
     });
 

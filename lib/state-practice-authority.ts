@@ -56,22 +56,22 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Arizona': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Arizona grants full practice authority to ${NPS} after completing a transition-to-practice period.`,
+        details: `Arizona grants full practice authority to ${NPS}. After certification by the Board of Nursing, they can diagnose and treat patients, and prescribe once the Board grants prescribing and dispensing authority, all without physician supervision, a collaborative agreement or a transition period.`,
     },
     'Colorado': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Colorado ${NPS} can practice independently and prescribe all medications, including controlled substances.`,
+        details: `Colorado ${NPS} can practice independently and prescribe medications, including controlled substances. ${NPS} new to prescribing first receive provisional prescriptive authority and must complete a 750 hour prescribing mentorship with a physician or an advanced practice registered nurse who has full prescriptive authority within three years to earn full prescriptive authority.`,
     },
     'Connecticut': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Connecticut allows independent ${NP} practice with full prescriptive authority.`,
+        details: `Connecticut requires ${NPS} to practice in collaboration with a physician for at least three years and 2,000 hours before practicing independently. After meeting that requirement, a ${NP} must give written notice to the Department of Public Health before practicing without a collaborative agreement.`,
     },
     'Delaware': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Delaware ${NPS} have independent practice authority after meeting experience requirements.`,
+        details: `Delaware grants full practice and prescriptive authority to ${NPS} when the Board of Nursing issues their advanced practice registered nurse license, and state law requires no collaborative agreement or supervised experience period after licensure.`,
     },
     'District of Columbia': {
         authority: 'full',
@@ -96,17 +96,17 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Maine': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Maine allows independent ${NP} practice with full prescriptive authority.`,
+        details: `Maine ${NPS} may prescribe from licensure, including controlled substances in schedules II through V, but must practice for at least 24 months under the supervision of a licensed physician or a supervising ${NP}, or be employed by a clinic or hospital whose medical director is a licensed physician, before practicing independently. A 2026 law replaces this requirement once the Board of Nursing adopts new practice standards by rule, so confirm the current requirement with the Board.`,
     },
     'Maryland': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Maryland grants full practice authority to ${NPS}.`,
+        details: `Maryland grants full practice authority to ${NPS}. Applicants who have never been certified as ${NPS} by any board of nursing must name a mentor on their application, a physician or ${NP} licensed in Maryland with at least three years of clinical practice experience, who is available for consultation and collaboration for 18 months starting on the date the Maryland Board of Nursing receives the application.`,
     },
     'Minnesota': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Minnesota ${NPS} can practice independently without physician oversight.`,
+        details: `Minnesota ${NPS} must first practice at least 2,080 hours under a collaborative agreement with a physician or with an advanced practice registered nurse who has at least three years of practice, and ${NPS} who provide services other than primary care or mental health services must complete those hours in a setting where advanced practice registered nurses and physicians work together. After that, they may practice independently.`,
     },
     'Montana': {
         authority: 'full',
@@ -121,7 +121,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Nevada': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Nevada grants full practice authority to ${NPS} after 2 years of supervised practice.`,
+        details: `Nevada grants full practice authority to ${NPS}, but until they have at least 2 years or 2,000 hours of clinical experience they may prescribe Schedule II controlled substances only under a protocol approved by a collaborating physician. ${NPS} who completed their program more than 2 years before applying and have never held an APRN license must complete 1,000 hours of supervised practice without prescribing.`,
     },
     'New Hampshire': {
         authority: 'full',
@@ -151,12 +151,12 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'South Dakota': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `South Dakota grants full practice authority to ${NPS}.`,
+        details: `South Dakota ${NPS} need a written collaborative agreement with a physician, certified nurse practitioner or certified nurse midwife licensed in South Dakota until they have completed 1,040 hours of licensed practice. After that, they can practice without a collaborative agreement.`,
     },
     'Vermont': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Vermont ${NPS} have independent practice authority.`,
+        details: `Vermont ${NPS} have independent practice authority once they complete the transition to practice. Until they have 24 months and 2,400 hours of licensed active advanced nursing practice in their role and population focus, they must have a collaborative provider agreement with a Vermont licensed physician or advanced practice registered nurse and may not engage in solo practice.`,
     },
     'Washington': {
         authority: 'full',
@@ -171,7 +171,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Utah': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Utah grants full practice authority to ${NPS} after completing a mentorship period.`,
+        details: `Utah grants full practice authority to ${NPS}.`,
     },
     'Kansas': {
         authority: 'full',
@@ -193,29 +193,29 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'New York': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `New York grants full practice authority to ${NPS} who have completed 3,600 hours of qualifying practice; below that threshold, a written collaborative relationship with a physician still applies.`,
+        details: `${NPS} in New York with 3,600 hours of practice or fewer must practice in collaboration with a physician under a written practice agreement and written practice protocols. ${NPS} with more than 3,600 hours of practice are currently exempt from those requirements.`,
     },
     'Massachusetts': {
         authority: 'full',
         description: 'Full Practice Authority',
-        details: `Massachusetts grants full practice authority to ${NPS} after at least two years of supervised practice; the supervision requirement applies only during that transition period.`,
+        details: `Massachusetts grants full practice authority to ${NPS} once they attest to the Board of Registration in Nursing that they have completed at least two years of supervised practice; until then, a qualified healthcare professional, who may be a physician or an experienced ${NP}, supervises their prescribing. ${NPS} applying by reciprocity who have at least two years of ${NP} practice outside Massachusetts, independent or supervised, may instead prescribe without supervision once they attest to that experience.`,
     },
 
     // Reduced Practice States (12 states)
     'Alabama': {
         authority: 'reduced',
         description: 'Reduced Practice',
-        details: `Alabama requires ${NPS} to have a collaborative agreement with a physician. The collaborating physician does not need to be on-site.`,
+        details: `Alabama requires ${NPS} to practice under a collaborative practice agreement with a physician. For ${NPS} with less than two years (4,000 hours) of collaborative practice experience since initial certification or in the collaborating physician's specialty, the collaborating physician or an approved covering physician must be present for at least 10 percent of scheduled hours, although certain settings and limited protocols are exempt.`,
     },
     'Arkansas': {
         authority: 'reduced',
         description: 'Reduced Practice',
-        details: `Arkansas ${NPS} must have a collaborative practice agreement with a physician.`,
+        details: `Arkansas ${NPS} need a collaborative practice agreement, typically with a physician, to prescribe unless they hold a certificate of full independent practice authority. A ${NP} can apply for that certificate after 6,240 hours of practice under an agreement with a physician or with prescriptive authority in another jurisdiction.`,
     },
     'Illinois': {
         authority: 'reduced',
         description: 'Reduced Practice',
-        details: `Illinois requires a written collaborative agreement for ${NPS}.`,
+        details: `Illinois requires ${NPS} to have a written collaborative agreement until they obtain full practice authority, except when they practice under clinical privileges in a hospital, hospital affiliate or ambulatory surgical treatment center. Full practice authority requires a notarized attestation of at least 4,000 hours of clinical experience after first attaining national certification and at least 250 hours of continuing education or training.`,
     },
     'Indiana': {
         authority: 'reduced',
@@ -225,7 +225,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Kentucky': {
         authority: 'reduced',
         description: 'Reduced Practice',
-        details: `Kentucky requires a collaborative agreement for ${NP} practice.`,
+        details: `Kentucky ${NPS} need a collaborative agreement with a physician to prescribe, with separate agreements for nonscheduled legend drugs and for controlled substances. Once ${NPS} have four years of prescribing experience, which can include prescribing in another state, they may prescribe without these agreements, though dropping the controlled substance agreement first requires a Board of Nursing good standing review.`,
     },
     'Louisiana': {
         authority: 'reduced',
@@ -240,7 +240,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'New Jersey': {
         authority: 'reduced',
         description: 'Reduced Practice',
-        details: `New Jersey ${NPS} need a collaborative agreement with a physician.`,
+        details: `New Jersey generally requires ${NPS} to have joint protocols with a collaborating physician in order to prescribe or order medications and devices. Under a 2026 law, ${NPS} in a qualifying population focus with more than 5,000 hours of advanced practice who provide primary or behavioral health care, and do not provide general obstetrics or elective aesthetic or cosmetic services, may practice and prescribe without a joint protocol.`,
     },
     'Ohio': {
         authority: 'reduced',
@@ -255,19 +255,19 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'West Virginia': {
         authority: 'reduced',
         description: 'Reduced Practice',
-        details: `West Virginia ${NPS} must have a collaborative agreement with a physician.`,
+        details: `West Virginia ${NPS} must have a collaborative agreement with a physician to prescribe unless the Board of Registered Nurses has approved removal of that requirement. A ${NP} may apply for removal after at least three years of practice in a documented collaborative relationship with prescriptive authority.`,
     },
     'Wisconsin': {
         authority: 'reduced',
         description: 'Reduced Practice',
-        details: `Wisconsin requires ${NPS} to have a collaborative relationship with a physician.`,
+        details: `Wisconsin ${NPS} must practice in collaboration with a physician or dentist until the Board of Nursing verifies that they qualify for independent practice. Qualifying requires, among other things, 3,840 clinical hours in their role while working with a physician or dentist and at least 24 months since they began that practice.`,
     },
 
     // Restricted Practice States (11 states)
     'California': {
         authority: 'restricted',
         description: 'Restricted Practice',
-        details: `California requires physician supervision for ${NPS}. Recent legislation (AB 890) is phasing in expanded practice authority through 2026.`,
+        details: `California ${NPS} generally practice under standardized procedures developed collaboratively with physicians and furnish drugs and devices under physician supervision. ${NPS} who complete a transition to practice in California of three full-time equivalent years or 4,600 hours can be certified to practice without standardized procedures in a group setting with a physician, and usually after at least three more years in good standing, in an independent setting.`,
     },
     // The absolute phrasing this entry carried ("requires physician
     // supervision for … practice. …s must work under a supervisory protocol.")
@@ -284,7 +284,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Florida': {
         authority: 'restricted',
         description: 'Restricted Practice',
-        details: `Florida requires physician supervision for ${NP} practice under a supervisory protocol; a 2020 law lets ${NPS} with 3,000+ supervised hours in the past five years register for autonomous primary-care practice, limited to family medicine, general pediatrics, and general internal medicine.`,
+        details: `Florida requires ${NPS} to practice under a supervisory protocol with a physician. Since 2020, ${NPS} who meet eligibility requirements may register for autonomous practice limited to primary care, including family medicine, general pediatrics, and general internal medicine; the requirements include, within the preceding five years, at least 3,000 supervised hours of clinical practice and graduate-level coursework, or the equivalent, in differential diagnosis and pharmacology.`,
     },
     'Georgia': {
         authority: 'restricted',
@@ -294,7 +294,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Michigan': {
         authority: 'restricted',
         description: 'Restricted Practice',
-        details: `Michigan requires a supervisory agreement between ${NPS} and physicians.`,
+        details: `Michigan ${NPS} may prescribe nonscheduled prescription drugs on their own authority, but may prescribe controlled substances in schedules 2 to 5 only as a delegated act of a physician under the physician's written authorization.`,
     },
     'Missouri': {
         authority: 'restricted',
@@ -309,12 +309,12 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Oklahoma': {
         authority: 'restricted',
         description: 'Restricted Practice',
-        details: `Oklahoma requires physician supervision for ${NPS}.`,
+        details: `Oklahoma ${NPS} who prescribe must have a written supervision agreement with a supervising physician until the Board of Nursing grants them independent prescriptive authority. ${NPS} who have completed 6,240 clinical practice hours with prescriptive authority supervised by a physician may apply for that independent authority.`,
     },
     'South Carolina': {
         authority: 'restricted',
         description: 'Restricted Practice',
-        details: `South Carolina requires ${NPS} to practice under physician supervision with written protocols.`,
+        details: `South Carolina ${NPS} must perform medical acts under a practice agreement with a physician, who must be readily available for consultation.`,
     },
     'Tennessee': {
         authority: 'restricted',
@@ -329,7 +329,7 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     'Virginia': {
         authority: 'restricted',
         description: 'Restricted Practice',
-        details: `Virginia requires a practice agreement with a supervising physician for ${NPS}.`,
+        details: `Virginia ${NPS} must maintain a practice agreement documenting collaboration and consultation with a patient care team physician. A ${NP} with the equivalent of at least three years of full-time clinical experience can apply for a license designation to practice without a practice agreement.`,
     },
 };
 

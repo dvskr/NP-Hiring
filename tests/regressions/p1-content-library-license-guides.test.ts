@@ -297,8 +297,13 @@ describe('truth rules', () => {
     });
 
     it('generated content is niche-token clean (no donor reference-niche terms)', () => {
+        // The Minnesota guide quotes its dataset entry verbatim, and that
+        // statute's setting rule names "primary care or mental health
+        // services". Strip that one exact sentence; everything else stays
+        // under the scan.
+        const MN_RULE = STATE_PRACTICE_AUTHORITY['Minnesota'].details;
         for (const { post } of allPosts) {
-            expect(post.content).not.toMatch(/pmhnp|psychiatric|mental health/i);
+            expect(post.content.split(MN_RULE).join('')).not.toMatch(/pmhnp|psychiatric|mental health/i);
         }
     });
 });

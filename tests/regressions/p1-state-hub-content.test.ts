@@ -564,17 +564,26 @@ describe('P1 #11: practice-authority tiers agree with the site-wide cited FPA st
     expect(count('restricted')).toBe(11);
   });
 
-  it('does not assert a collaborative-agreement requirement in full-practice states', () => {
+  it('a full-practice state may only assert a collaborative agreement as a transition bounded by an experience threshold', () => {
+    // "without physician supervision" (Arizona) negates the requirement, so
+    // the lookbehind keeps it from reading as one.
+    const OVERSIGHT =
+      /requires? a (collaborative|supervisory|practice) agreement|must have a collaborativ|(?<!without )physician supervision/i;
+    // A transition-to-practice requirement (Vermont's 24 months and 2,400
+    // hours) is true of a full-practice state only while it names the
+    // experience threshold that ends it.
+    const THRESHOLD =
+      /\b[\d,]+\s+hours?\b|\b(\d+|two|three|four)\s+(months|years)\b/i;
     for (const name of fullJurisdictions()) {
       const info = STATE_PRACTICE_AUTHORITY[name];
       // `details` is published verbatim as body prose and inside the
       // FAQPage JSON-LD on /jobs/state/<state>.
+      const asserts = OVERSIGHT.test(info.details);
+      const bounded = THRESHOLD.test(info.details);
       expect(
-        /requires? a (collaborative|supervisory|practice) agreement|must have a collaborativ|physician supervision/i.test(
-          info.details,
-        ),
-        `${name} is classified full practice but its details string asserts an oversight requirement: "${info.details}"`,
-      ).toBe(false);
+        !asserts || bounded,
+        `${name} is classified full practice but its details string asserts an unbounded oversight requirement: "${info.details}"`,
+      ).toBe(true);
       expect(
         buildPlainStateNarrative({ ...baseInput, stateName: name }),
       ).not.toContain('collaborative agreement with a physician');
