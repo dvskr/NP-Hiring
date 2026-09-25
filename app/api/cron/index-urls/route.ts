@@ -16,7 +16,10 @@ const BASE_URL = brand.baseUrl;
  * Google Indexing API, Bing Webmaster API, and IndexNow.
  *
  * - Fetches jobs created or updated in the last 25 hours (overlap buffer)
- * - Google: up to 200/day (handled by pingAllSearchEnginesBatch)
+ * - Google: job detail pages only, at most the new-content lane's per-run
+ *   grant (GOOGLE_INDEXING_LANES['new-content'].perInvocation in
+ *   lib/search-indexing.ts); pingAllSearchEnginesBatch enforces both, and
+ *   the rest of a large day waits for the sitemap and Google's own crawl
  * - Bing: batch up to 500 at once
  * - IndexNow: batch up to 10,000 at once
  */

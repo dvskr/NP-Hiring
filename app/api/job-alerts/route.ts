@@ -296,6 +296,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      // Whether this request stored a new alert (true) or matched an existing
+      // alert and updated it in place (false). The status is 200 either way,
+      // so the signup surfaces read this field to decide whether to count a
+      // GA4 subscribe; without it, a repeat submission of the same criteria
+      // (or a second exit-popup signup from one address) books a second
+      // conversion against one alert row. Decided inside the locked
+      // transaction above, so two concurrent submits cannot both say true.
+      isNew: existing === null,
       alert: {
         id: jobAlert.id,
         token: jobAlert.token,

@@ -60,11 +60,8 @@ export function getAllStateSlugs(): string[] {
   return Object.keys(URL_TO_STATE);
 }
 
-// ─── Neighboring States ────────────────────────────────────────────────────────
-// The adjacency table lives in lib/pseo/neighboring-states.ts (the single
-// copy, PLAN.md C.0); re-exported until the setting-state template imports it.
-
-export { NEIGHBORING_STATES } from './neighboring-states';
+// The state adjacency table is lib/pseo/neighboring-states.ts (the single
+// copy, PLAN.md C.0); import getNeighboringStates from there.
 
 // ─── Setting Configurations ────────────────────────────────────────────────────
 
@@ -81,12 +78,13 @@ export interface SettingConfig {
    * @deprecated Removed by the state template rewrite (thin-spec 1 T4). The
    * hand-typed bands that used to live here had no source; pay now comes from
    * the gated median (lib/salary-analytics.ts) or the cited BLS figure. No
-   * config populates this field; W4-INTEGRATE deletes it once the template
-   * stops reading it.
+   * config populates it and no page reads it. It stays declared only because
+   * two ratchet tests read `config.salaryRange` through this type to assert it
+   * is undefined (tests/regressions/pseo-copy-rule.test.ts and
+   * tests/regressions/p1-taxonomy-expansion-registry.test.ts); once they read
+   * it through a cast, as pseo-no-static-salary.test.ts does, delete it.
    */
   salaryRange?: string;
-  /** SEO keywords for metadata */
-  keywords: string[];
   /** FAQ category key passed to CategoryFAQ component */
   faqCategory: string;
   /**
@@ -143,7 +141,6 @@ interface NpSpecialtyConfigInput {
   label: string;
   fullLabel: string;
   heroSubtitle: string;
-  keywords: string[];
   /**
    * Bespoke per-specialty benefit cards (P1 #5, 2026-07-29). Required, so
    * no two specialty × state page sets read byte-identical.
@@ -176,7 +173,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Family Practice',
     fullLabel: 'Family Practice NP (FNP)',
     heroSubtitle: 'Family practice nurse practitioner positions',
-    keywords: ['family practice nurse practitioner', 'FNP jobs', 'family nurse practitioner'],
     benefits: [
       { title: 'Lifespan Panels', description: 'Care for children, adults, and older adults on one continuity panel.', iconName: 'Users' },
       { title: 'Setting Flexibility', description: 'Clinics, FQHCs, urgent care, retail health, and telehealth panels across the state post FNP roles.', iconName: 'Building2' },
@@ -195,7 +191,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Adult-Gerontology',
     fullLabel: 'Adult-Gerontology NP (AGNP)',
     heroSubtitle: 'Adult-gerontology nurse practitioner positions',
-    keywords: ['adult gerontology nurse practitioner', 'AGNP jobs', 'AGACNP', 'AGPCNP'],
     benefits: [
       { title: 'Two Career Tracks', description: 'Primary care (AGPCNP) clinic panels or acute care (AGACNP) hospital services; both post roles across the state.', iconName: 'Activity' },
       { title: 'Lifespan Breadth', description: 'Patients range from young adults through advanced age, across primary care, long-term care, and hospital services.', iconName: 'Users' },
@@ -214,7 +209,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Pediatric',
     fullLabel: 'Pediatric NP (PNP)',
     heroSubtitle: 'Pediatric nurse practitioner positions',
-    keywords: ['pediatric nurse practitioner', 'PNP jobs', 'peds NP'],
     benefits: [
       { title: 'Kid-First Practice', description: 'Well-child care, development, and family-centered visits define the day.', iconName: 'Heart' },
       { title: 'Community Reach', description: 'Pediatric clinics, school-based health centers, and children’s hospitals across the state post PNP roles.', iconName: 'Home' },
@@ -233,7 +227,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: "Women's Health",
     fullLabel: "Women's Health NP (WHNP)",
     heroSubtitle: "Women's health nurse practitioner positions",
-    keywords: ["women's health nurse practitioner", 'WHNP jobs', 'OB/GYN nurse practitioner'],
     benefits: [
       { title: 'Procedural Clinic Days', description: 'Colposcopy, LARC insertion, and biopsies keep office practice hands-on.', iconName: 'Activity' },
       { title: 'Lifespan Continuity', description: 'Patients often stay with the same WHNP from first exams through menopause.', iconName: 'Heart' },
@@ -252,7 +245,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Acute Care',
     fullLabel: 'Acute Care NP (ACNP)',
     heroSubtitle: 'Acute care nurse practitioner positions',
-    keywords: ['acute care nurse practitioner', 'ACNP jobs', 'ICU nurse practitioner'],
     benefits: [
       { title: 'High-Acuity Practice', description: 'ICUs, step-down units, and hospital specialty services, serving complex adult patients.', iconName: 'Activity' },
       { title: 'Procedural Scope', description: 'Lines, airway support, and bedside procedures within hospital privileges.', iconName: 'Shield' },
@@ -271,7 +263,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Emergency',
     fullLabel: 'Emergency NP (ENP)',
     heroSubtitle: 'Emergency nurse practitioner positions',
-    keywords: ['emergency nurse practitioner', 'ENP jobs', 'ER nurse practitioner'],
     benefits: [
       { title: 'Full-Spectrum Acuity', description: 'From fast-track through resuscitation support, no two shifts repeat.', iconName: 'Activity' },
       { title: 'Shift-Based Life', description: 'Block schedules with defined shifts and no patient panel to carry home.', iconName: 'Clock' },
@@ -290,7 +281,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Psychiatric Mental Health',
     fullLabel: 'Psychiatric Mental Health NP (PMHNP)',
     heroSubtitle: 'Psychiatric mental health nurse practitioner positions',
-    keywords: ['psychiatric nurse practitioner', 'PMHNP jobs', 'psych NP'],
     // Copy below is deliberately phrased without the reference-niche
     // literals: the ceiling in niche-copy-pseo-templates.test.ts caps
     // this file's count at the existing intentional mentions above.
@@ -312,7 +302,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Nurse Anesthetist',
     fullLabel: 'Nurse Anesthetist (CRNA)',
     heroSubtitle: 'Certified registered nurse anesthetist positions',
-    keywords: ['CRNA jobs', 'nurse anesthetist', 'certified registered nurse anesthetist'],
     benefits: [
       { title: 'Case Responsibility', description: 'Plan and deliver anesthesia care across surgical, obstetric, and procedural cases within the practice model the facility uses.', iconName: 'Shield' },
       { title: 'Setting Variety', description: 'Hospital ORs, surgery centers, obstetric units, and procedural suites across the state post CRNA roles.', iconName: 'Building2' },
@@ -331,7 +320,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Nurse Midwife',
     fullLabel: 'Nurse Midwife (CNM)',
     heroSubtitle: 'Certified nurse midwife positions',
-    keywords: ['CNM jobs', 'certified nurse midwife', 'nurse midwifery'],
     benefits: [
       { title: 'Birth-Centered Work', description: 'Attending births in hospitals, birth centers, or home practices.', iconName: 'Heart' },
       { title: 'Continuity of Care', description: 'Prenatal through postpartum, plus gynecologic care between pregnancies.', iconName: 'Users' },
@@ -351,7 +339,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Primary Care',
     fullLabel: 'Primary Care NP',
     heroSubtitle: 'Primary care nurse practitioner positions',
-    keywords: ['primary care nurse practitioner', 'primary care NP jobs', 'internal medicine NP'],
     benefits: [
       { title: 'Continuity Panels', description: 'A panel of your own patients, followed across years, is the core of primary care.', iconName: 'Heart' },
       { title: 'Urban to Rural Reach', description: 'Primary care roles post across urban FQHCs, suburban groups, and rural health clinics alike.', iconName: 'Building2' },
@@ -370,7 +357,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Oncology',
     fullLabel: 'Oncology NP',
     heroSubtitle: 'Oncology nurse practitioner positions',
-    keywords: ['oncology nurse practitioner', 'oncology NP jobs', 'hematology oncology NP'],
     benefits: [
       { title: 'Longitudinal Relationships', description: 'Patients are followed across treatment arcs measured in years, not visits.', iconName: 'Heart' },
       { title: 'Science-Driven Field', description: 'Immunotherapy and targeted-agent pipelines mean treatment protocols change continually.', iconName: 'Lightbulb' },
@@ -389,7 +375,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Cardiology',
     fullLabel: 'Cardiology NP',
     heroSubtitle: 'Cardiology nurse practitioner positions',
-    keywords: ['cardiology nurse practitioner', 'cardiology NP jobs', 'cardiovascular NP'],
     benefits: [
       { title: 'Procedure-Adjacent Practice', description: 'Cath lab, EP, and device clinics keep the work technical and hands-on.', iconName: 'Activity' },
       { title: 'Chronic + Acute Mix', description: 'Longitudinal heart-failure panels balance against acute inpatient consults.', iconName: 'Monitor' },
@@ -408,7 +393,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Hospitalist',
     fullLabel: 'Hospitalist NP',
     heroSubtitle: 'Inpatient medicine nurse practitioner positions',
-    keywords: ['hospitalist nurse practitioner', 'hospitalist NP jobs', 'inpatient medicine NP'],
     benefits: [
       { title: 'Block Scheduling', description: 'Seven-on/seven-off patterns concentrate work weeks and open real time off.', iconName: 'Calendar' },
       { title: 'Team Medicine', description: 'Co-managed services with physician hospitalists, pharmacists, and case management.', iconName: 'Users' },
@@ -427,7 +411,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Dermatology',
     fullLabel: 'Dermatology NP',
     heroSubtitle: 'Dermatology nurse practitioner positions',
-    keywords: ['dermatology nurse practitioner', 'dermatology NP jobs', 'derm NP'],
     benefits: [
       { title: 'Procedure-Heavy Clinic Days', description: 'Biopsies, cryotherapy, and injectables keep clinic days hands-on.', iconName: 'Activity' },
       { title: 'Predictable Schedule', description: 'Weekday clinic hours with no inpatient call in most practices.', iconName: 'Clock' },
@@ -446,7 +429,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Urgent Care',
     fullLabel: 'Urgent Care NP',
     heroSubtitle: 'Walk-in clinic & urgent care nurse practitioner positions',
-    keywords: ['urgent care nurse practitioner', 'urgent care NP jobs', 'walk-in clinic NP'],
     benefits: [
       { title: 'Shift-Based Schedules', description: 'Defined shifts with no after-hours panel work; when the clinic closes, the day is done.', iconName: 'Clock' },
       { title: 'Broad Case Mix', description: 'Procedures, radiograph reads, and undifferentiated complaints across the lifespan.', iconName: 'Activity' },
@@ -465,7 +447,6 @@ const NP_SPECIALTY_STATE_CONFIGS: Record<string, SettingConfig> = {
     label: 'Home Health',
     fullLabel: 'Home Health NP',
     heroSubtitle: 'In-home visit & house-call nurse practitioner positions',
-    keywords: ['home health nurse practitioner', 'home health NP jobs', 'house call NP'],
     benefits: [
       { title: 'Autonomy on the Road', description: 'Run your own visit schedule and practice at the top of your license in the field.', iconName: 'MapPin' },
       { title: 'Deep Patient Context', description: 'Seeing patients at home surfaces context a clinic visit never shows.', iconName: 'Home' },
@@ -489,7 +470,6 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Remote',
     fullLabel: 'Remote NP',
     heroSubtitle: 'Work from home nurse practitioner positions',
-    keywords: ['remote nurse practitioner', 'work from home np', 'remote np jobs', 'telehealth np'],
     faqCategory: 'remote',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -514,7 +494,6 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Telehealth',
     fullLabel: 'Telehealth NP',
     heroSubtitle: 'Virtual care nurse practitioner positions',
-    keywords: ['telehealth nurse practitioner', 'telemedicine np', 'virtual care np', 'telehealth np jobs'],
     faqCategory: 'telehealth',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -539,7 +518,6 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Inpatient',
     fullLabel: 'Inpatient NP',
     heroSubtitle: 'Hospital & acute care positions',
-    keywords: ['inpatient nurse practitioner', 'hospital np', 'acute care np', 'inpatient np jobs'],
     faqCategory: 'inpatient',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -564,7 +542,6 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Outpatient',
     fullLabel: 'Outpatient NP',
     heroSubtitle: 'Clinic & private practice positions',
-    keywords: ['outpatient nurse practitioner', 'clinic np', 'private practice np', 'outpatient np jobs'],
     faqCategory: 'outpatient',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -589,7 +566,6 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Travel',
     fullLabel: 'Travel NP',
     heroSubtitle: 'Locum tenens & travel assignment positions',
-    keywords: ['travel nurse practitioner', 'locum tenens np', 'travel np jobs', 'locum np'],
     faqCategory: 'travel',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -621,7 +597,6 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Full-Time',
     fullLabel: 'Full-Time NP',
     heroSubtitle: 'Permanent full-time NP positions',
-    keywords: ['full-time nurse practitioner', 'permanent np', 'full time np jobs', 'W-2 np'],
     faqCategory: 'full-time',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -646,7 +621,6 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Part-Time',
     fullLabel: 'Part-Time NP',
     heroSubtitle: 'Flexible part-time NP positions',
-    keywords: ['part-time nurse practitioner', 'part time np', 'flexible np jobs', 'PRN np'],
     faqCategory: 'part-time',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -671,7 +645,6 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Contract',
     fullLabel: 'Contract NP',
     heroSubtitle: 'Contract & temp-to-perm NP positions',
-    keywords: ['contract nurse practitioner', 'temp np', 'contract np jobs', 'temp to perm np'],
     faqCategory: 'contract',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -696,7 +669,6 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'New Grad',
     fullLabel: 'New Grad NP',
     heroSubtitle: 'Entry-level positions for new NP graduates',
-    keywords: ['new grad nurse practitioner', 'entry level np', 'new graduate np', 'np residency', 'np fellowship'],
     faqCategory: 'new-grad',
     buildWhere: (stateName: string) => buildKeywordWhere(
       ['new grad', 'new graduate', 'entry level', 'entry-level', 'residency', 'fellowship', 'recent graduate', 'no experience required'],
@@ -721,7 +693,6 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: '1099',
     fullLabel: '1099 NP',
     heroSubtitle: 'Independent contractor nurse practitioner positions',
-    keywords: ['1099 nurse practitioner', 'independent contractor np', 'self-employed np', 'IC nurse practitioner'],
     faqCategory: '1099',
     buildWhere: (stateName: string) => buildKeywordWhere(
       ['1099', 'independent contractor', 'contractor', 'self-employed', 'IC position'],
@@ -746,7 +717,6 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Per Diem',
     fullLabel: 'Per Diem NP',
     heroSubtitle: 'Flexible per-diem and PRN nurse practitioner shifts',
-    keywords: ['per diem nurse practitioner', 'PRN nurse practitioner', 'per diem NP', 'PRN NP jobs'],
     faqCategory: 'per-diem',
     buildWhere: (stateName: string) => ({
       isPublished: true,
@@ -771,7 +741,6 @@ export const SETTING_CONFIGS: Record<string, SettingConfig> = {
     label: 'Locum Tenens',
     fullLabel: 'Locum Tenens NP',
     heroSubtitle: 'Short-term locum tenens nurse practitioner assignments',
-    keywords: ['locum tenens nurse practitioner', 'locum NP', 'locum tenens NP jobs', 'temporary NP assignment'],
     faqCategory: 'locum-tenens',
     buildWhere: (stateName: string) => ({
       isPublished: true,

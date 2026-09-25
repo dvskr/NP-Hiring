@@ -567,6 +567,13 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
     const midSentenceLabel = labelSentence(label);
     const take = 10;
     const skip = (page - 1) * take;
+    // GA4 item_list_name for this landing's listings, read by the
+    // view_item_list impression and by every card's select_item: GA4 joins a
+    // click to its impression on this string alone, so one value feeds both.
+    // It is the name the impression has always sent, so earlier reports stay
+    // on the same row, and it varies only with the page's own constant slug
+    // (never with the query string).
+    const listName = `${label} Jobs`;
 
     const [facts, stateLinks, related] = await Promise.all([
         getLandingFacts(slug),
@@ -623,9 +630,12 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
         <div style={{ backgroundColor: '#FDFBF7' }}>
             <ClayStyles />
             <BreadcrumbSchema items={breadcrumbTrail} />
+            {/* indexOffset={skip} matches the cards' listIndex={skip + i}, so a
+                card's impression and click report the same position. */}
             <JobListViewTracker
                 jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))}
-                listName={`${label} Jobs`}
+                listName={listName}
+                indexOffset={skip}
             />
             {jobs.length > 0 && (
                 // Job titles are employer-supplied, so the serialized JSON-LD
@@ -700,7 +710,9 @@ export default async function CategoryLandingPage({ slug, page }: CategoryLandin
                         </h2>
                         {jobs.length > 0 && (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                                {jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}
+                                {/* Absolute position (skip + i): page 2 continues
+                                    the count from page 1 rather than restarting it. */}
+                                {jobs.map((job: Job, i: number) => (<JobCard key={job.id} job={job} listName={listName} listIndex={skip + i} />))}
                             </div>
                         )}
                         {isLowInventory && (

@@ -41,6 +41,17 @@ function isValidResumeUrl(url: string): boolean {
     }
 }
 
+/**
+ * Advisory-lock key that serializes submits for one candidate on one job, so
+ * the "does an application already exist?" read and the upsert below cannot
+ * interleave with a concurrent submit. Namespaced so it can never collide
+ * with the job-alert lock in app/api/job-alerts/route.ts or any other
+ * advisory lock taken on the same database.
+ */
+function applicationLockKey(userId: string, jobId: string): string {
+    return `job_application:submit:${userId}:${jobId}`;
+}
+
 // ── Handler ──────────────────────────────────────────────────────────────────
 
 /**
@@ -228,38 +239,53 @@ export async function POST(request: NextRequest) {
         // 5b. Upsert the application (don't duplicate if user already applied).
         // The existing row's state decides the status: a withdrawn application
         // that is re-submitted becomes active again (see status-fields.ts).
-        const existingApplication = await prisma.jobApplication.findUnique({
-            where: { userId_jobId: { userId: user.id, jobId } },
-            select: { status: true, withdrawnAt: true },
-        });
-        const statusFields = buildApplicationStatusFields(existingApplication, autoReject, autoRejectReason);
+        //
+        // The same read also decides `isNew`, this route's answer to "did this
+        // request create the application?". ApplyButton counts a GA4
+        // generate_lead only when it is true, because the route answers 200
+        // for a first submit and a re-submit alike. The read and the write run
+        // in one transaction behind a per-candidate, per-job advisory lock
+        // (the pattern app/api/job-alerts/route.ts uses): without it, two
+        // concurrent submits of one application (a second tab, a retried
+        // request) could both read "no row" and both report a new
+        // application for the single row the upsert leaves behind.
+        const { application, isNew } = await prisma.$transaction(async (tx) => {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${applicationLockKey(user.id, jobId)}))`;
 
-        const application = await prisma.jobApplication.upsert({
-            where: {
-                userId_jobId: { userId: user.id, jobId },
-            },
-            update: {
-                coverLetter: sanitizedCoverLetter,
-                coverLetterUrl: validCoverLetterUrl,
-                resumeUrl: applicationResumeUrl,
-                consentGiven: true,
-                consentGivenAt: new Date(),
-                withdrawnAt: null, // un-withdraw if re-applying
-                ...(validatedAnswers && { screeningAnswers: validatedAnswers }),
-                ...statusFields,
-            },
-            create: {
-                userId: user.id,
-                jobId,
-                coverLetter: sanitizedCoverLetter,
-                coverLetterUrl: validCoverLetterUrl,
-                resumeUrl: applicationResumeUrl,
-                sourceUrl: 'platform',
-                consentGiven: true,
-                consentGivenAt: new Date(),
-                ...(validatedAnswers && { screeningAnswers: validatedAnswers }),
-                ...statusFields,
-            },
+            const existingApplication = await tx.jobApplication.findUnique({
+                where: { userId_jobId: { userId: user.id, jobId } },
+                select: { status: true, withdrawnAt: true },
+            });
+            const statusFields = buildApplicationStatusFields(existingApplication, autoReject, autoRejectReason);
+
+            const saved = await tx.jobApplication.upsert({
+                where: {
+                    userId_jobId: { userId: user.id, jobId },
+                },
+                update: {
+                    coverLetter: sanitizedCoverLetter,
+                    coverLetterUrl: validCoverLetterUrl,
+                    resumeUrl: applicationResumeUrl,
+                    consentGiven: true,
+                    consentGivenAt: new Date(),
+                    withdrawnAt: null, // un-withdraw if re-applying
+                    ...(validatedAnswers && { screeningAnswers: validatedAnswers }),
+                    ...statusFields,
+                },
+                create: {
+                    userId: user.id,
+                    jobId,
+                    coverLetter: sanitizedCoverLetter,
+                    coverLetterUrl: validCoverLetterUrl,
+                    resumeUrl: applicationResumeUrl,
+                    sourceUrl: 'platform',
+                    consentGiven: true,
+                    consentGivenAt: new Date(),
+                    ...(validatedAnswers && { screeningAnswers: validatedAnswers }),
+                    ...statusFields,
+                },
+            });
+            return { application: saved, isNew: existingApplication === null };
         });
 
         // 6. Send notification email to the employer (fire-and-forget)
@@ -323,6 +349,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             applicationId: application.id,
+            // True only when this request created the row; a re-submit of an
+            // existing application (including one the candidate withdrew)
+            // answers false. See step 5b.
+            isNew,
             ...(autoReject && { autoRejected: true, autoRejectReason }),
         });
     } catch (error) {

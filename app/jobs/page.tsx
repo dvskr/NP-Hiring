@@ -322,7 +322,13 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
           one item-scoped dimension: sending the long name from this surface
           alone would split every Californian listing across two values that
           no report reconciles. A row with no recorded code omits the
-          dimension here exactly as it does on the detail page. */}
+          dimension here exactly as it does on the detail page.
+
+          indexOffset={skip}: the same row offset JobsPageClient adds to each
+          card's listIndex ((page - 1) * 50), so the impression and the click
+          for one card report the same absolute position. trackJobListView
+          reports only the first 20 of the page's 50 rows, a deliberate
+          payload cap, so clicks on rows 21 to 50 have no impression to join. */}
       <JobsBoardListViewTracker
         jobs={jobs.map((j: Job) => ({
           id: j.id,
@@ -332,6 +338,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
           stateCode: j.stateCode,
           normalizedMinSalary: j.normalizedMinSalary,
         }))}
+        indexOffset={skip}
       />
       <script
         type="application/ld+json"

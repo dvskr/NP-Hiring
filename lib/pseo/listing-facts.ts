@@ -423,12 +423,20 @@ export function companyProfilePath(normalizedName: string): string {
 
 async function fetchRows(scopeKey: string, where: Prisma.JobWhereInput): Promise<ListingFactRow[]> {
   try {
-    return await prisma.job.findMany({
+    const rows = await prisma.job.findMany({
       where,
       select: LISTING_FACT_SELECT,
       orderBy: { createdAt: 'desc' },
       take: LISTING_FACTS_ROW_CAP,
     });
+    // The types promise an array, but a driver fault or a partial test double
+    // (a bare vi.fn() resolves undefined) can hand back anything, and
+    // tallyListingFacts would then throw "rows is not iterable" out of every
+    // page that reads facts. Treat it like a failed query instead: the
+    // sections omit themselves and the separately counted total still stands.
+    if (Array.isArray(rows)) return rows;
+    console.warn(`[listing-facts] row query for scope "${scopeKey}" returned a non-array; treating it as empty`);
+    return [];
   } catch (error) {
     console.error(`[listing-facts] row query failed for scope "${scopeKey}":`, error);
     return [];

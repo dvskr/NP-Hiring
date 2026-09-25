@@ -19,7 +19,6 @@
  */
 import { brand } from '@/config/brand';
 import { PSYCH_SPECIALTY_SLUG } from './taxonomy-registry';
-import { getCategoryAxis } from './category-axis-guide';
 import { getPracticeEnvironment, nlcSentence } from './practice-environment';
 import {
     getStatePracticeAuthority,
@@ -114,15 +113,21 @@ const SETTING_LEADS: Record<string, SettingLeadFn> = {
 // ─── Composite narrative ────────────────────────────────────────────────────
 
 /**
- * Category-state paragraph: the setting lead, the AANP practice-authority
- * sentence (skipped on the APRN axis, whose roles are regulated separately),
- * and the live posting count.
+ * Category-state paragraph: the setting lead and the live posting count.
  *
- * The two `_` parameters are the retired cost-of-living index and the
- * retired behavioral-health shortage count. Neither renders any more (thin
- * spec 1 T6 and T11: the dataset behind each has no citation), but the
- * positional signature is kept for the template and the pinned tests until
- * W2-STATE and W4-INTEGRATE drop the arguments together.
+ * No practice-authority sentence: the setting x state page states the AANP
+ * classification once, in its practice card (thin-spec CS-S6 replaced the
+ * narrative's authority sentence), and a second copy in this paragraph read
+ * as the same regulatory fact twice on one page. The APRN axis leads (CRNA,
+ * CNM) still carry their own clause saying those roles are regulated apart
+ * from NP practice authority.
+ *
+ * Retired parameters, still accepted so the caller in
+ * lib/pseo/setting-state-template.tsx and the pinned tests compile
+ * unchanged: `_avgCOL` (the cost-of-living index) and `_shortageCityCount`
+ * (the behavioral-health shortage count). Neither is read; thin spec 1 T6
+ * and T11 retired both because the dataset behind each has no citation.
+ * Drop them together with their call sites.
  */
 export function buildSettingStateNarrative(
     settingKey: string,
@@ -137,20 +142,8 @@ export function buildSettingStateNarrative(
     const lead = SETTING_LEADS[settingKey]?.({ stateName, stateCode });
     if (lead) parts.push(lead);
 
-    // Sentence 2: practice authority (lib/state-practice-authority data). The
-    // NP framework does not govern CRNA or CNM practice, so the APRN axis
-    // carries its own regulatory clause inside the lead instead.
-    if (getCategoryAxis(settingKey) !== 'aprn') {
-        const auth = getStatePracticeAuthority(stateName);
-        parts.push(
-            auth
-                ? `${stateName} grants ${AUTHORITY_PHRASES[auth.authority]}.`
-                : `${stateName} applies state-specific practice rules; confirm current requirements with the ${stateCode} board of nursing before applying.`,
-        );
-    }
-
-    // Sentence 3: the live count, stated as inventory rather than as a market
-    // signal. The verb agrees with the count.
+    // The live count, stated as inventory rather than as a market signal.
+    // The verb agrees with the count.
     parts.push(
         `The ${totalJobs} active ${totalJobs === 1 ? 'posting reflects' : 'postings reflect'} what employers currently list on ${brand.name} for ${stateName} in this category, not an estimate of the wider market.`,
     );
@@ -248,11 +241,14 @@ export function buildPlainStateNarrative(input: PlainStateNarrativeInput): strin
     );
 
     // Sentence 2: top live-inventory categories (pseoStats setting-state rows).
+    // This sentence and the pay sentence name the jurisdiction rather than
+    // saying "the state" or "a state median": the District of Columbia hub
+    // reads this narrative too, and it is not a state.
     if (topCategoryLabels.length > 0) {
         const labels = topCategoryLabels.slice(0, 3);
         parts.push(
             labels.length === 1
-                ? `By posting volume, ${labels[0]} roles carry the deepest live inventory in the state.`
+                ? `By posting volume, ${labels[0]} roles carry the deepest live inventory in ${stateName}.`
                 : `By posting volume, the most active categories right now are ${joinWithAnd(labels)}.`,
         );
     }
@@ -272,7 +268,7 @@ export function buildPlainStateNarrative(input: PlainStateNarrativeInput): strin
         parts.push(
             medianK > 0
                 ? `Across ${stateName} postings that disclose annual pay, the median is $${medianK}K per year.`
-                : `Not enough ${stateName} postings disclose pay to publish a state median, so compare compensation posting by posting.`,
+                : `Not enough ${stateName} postings disclose pay to publish a median, so compare compensation posting by posting.`,
         );
     }
 

@@ -106,7 +106,7 @@ import { getPracticeEnvironment, isLicenseGuideLive } from './practice-environme
 // two are P2's builder/guard pair for that round-trip, and importing them here is
 // the same cross-import components/tools/city-picker-data.ts already makes.
 import { buildCitySlug, cityLinkResolves } from '@/app/jobs/locations/[state]/directory';
-import { PseoPageViewTracker } from '@/components/analytics/ViewTrackers';
+import { JobListViewTracker, PseoPageViewTracker } from '@/components/analytics/ViewTrackers';
 import { buildCityFacts, buildTaxonomyCityNarrative } from './city-narrative';
 import { CITY_EMPLOYER_LIMIT } from './city-employers';
 import { STATE_ELIGIBLE_CATEGORY_SLUGS } from './taxonomy-registry';
@@ -129,7 +129,13 @@ export interface CategoryConfig {
   label: string;
   fullLabel: string;
   heroSubtitle: string;
-  keywords: string[];
+  /**
+   * Optional because nothing reads it: keywords metadata was removed from the
+   * page (thin-spec section 6), and the setting configs that settingToCategory
+   * spreads in no longer carry the field. Delete it with the entries below
+   * rather than making it required again.
+   */
+  keywords?: string[];
   faqCategory: string;
   buildWhere: (stateName: string, cityName?: string) => Record<string, unknown>;
   benefits: Array<{
@@ -1333,6 +1339,17 @@ const ACROSS_STATE_LIMIT = 7;
 const EXPLORE_CARD_LIMIT = 12;
 const PAGE_SIZE = 10;
 
+/**
+ * GA4 item_list_name for the listings on every category x city page. The
+ * view_item_list impression and each card's select_item read this one
+ * constant, because GA4 joins a click to its impression on the name alone.
+ * One name for the whole template rather than one per page: thousands of
+ * category x city combinations would each become their own list row and
+ * push GA4's item-list reports into "(other)". The category and city are
+ * already on the pseo_page_view event this page sends.
+ */
+const CATEGORY_CITY_LIST_NAME = 'Category City Jobs';
+
 /** A picture in its own clay frame: padding 0, the art edge to edge inside the card. */
 function PictureFrame({ src, alt, minHeight }: { src: string; alt: string; minHeight: number }) {
   return (
@@ -1758,6 +1775,13 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
         state={city!.stateCode}
         jobCount={stats.totalJobs}
       />
+      {/* indexOffset={skip} matches the cards' listIndex={skip + i}, so a
+          card's impression and click report the same position. */}
+      <JobListViewTracker
+        jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))}
+        listName={CATEGORY_CITY_LIST_NAME}
+        indexOffset={skip}
+      />
 
       {/* ═══ P2 #19: visible, linked breadcrumb trail ═══
           Sits in the hero's cream band so it reads as part of the header.
@@ -1849,8 +1873,10 @@ export default async function CategoryCityPage({ categoryKey, citySlug, page }: 
               ) : (
                 <>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                    {jobs.map((job: Job) => (
-                      <JobCard key={job.id} job={job} />
+                    {/* Absolute position (skip + i): page 2 continues the
+                        count from page 1 rather than restarting it. */}
+                    {jobs.map((job: Job, i: number) => (
+                      <JobCard key={job.id} job={job} listName={CATEGORY_CITY_LIST_NAME} listIndex={skip + i} />
                     ))}
                   </div>
 

@@ -53,6 +53,7 @@ import {
   buildStateCityDirectory,
   cityLinkResolves,
   getStatesWithCityDirectory,
+  isDistrictOfColumbia,
   selectCityDetails,
   shouldRenderStateCityDirectory,
   stateBucketWhere,
@@ -433,6 +434,9 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
   ]);
 
   const authority = getStatePracticeAuthority(stateName);
+  // The District of Columbia has a directory like any state but is not one:
+  // every word below that names the jurisdiction's kind says so.
+  const isDistrict = isDistrictOfColumbia(stateName);
   const canonicalPath = `/jobs/locations/${canonicalSlug}`;
   const howToUse = buildDirectoryHowToUse(MIN_CITY_JOBS_FOR_LINK);
 
@@ -597,7 +601,7 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
                   repeating it would make these two URLs near-duplicates. */}
               {authority && (
                 <>
-                  {stateName} is a <strong>{authority.description}</strong> state, which shapes how much
+                  {stateName} is a <strong>{authority.description}</strong> {isDistrict ? 'jurisdiction' : 'state'}, which shapes how much
                   supervision a role in any of these cities carries.{' '}
                 </>
               )}
@@ -682,7 +686,7 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
             <section style={{ marginBottom: '40px' }} aria-labelledby="across-state-heading">
               <ClayStyles />
               <div style={{ marginBottom: '20px' }}>
-                <p style={sectionEyebrow}>Statewide</p>
+                <p style={sectionEyebrow}>{isDistrict ? 'Districtwide' : 'Statewide'}</p>
                 <h2 id="across-state-heading" style={sectionHeading}>
                   Across {stateName}
                 </h2>
@@ -719,8 +723,10 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
                   salaryGuide={{ href: `/salary-guide/${canonicalSlug}`, label: `${stateName} salary guide`, renders: true }}
                   index={2}
                 />
+                {/* "Nearby directories", not "state directories": Maryland
+                    and Virginia list the District of Columbia among theirs. */}
                 {nearbySentence && (
-                  <ClayCard chip="Nearby" title="Nearby state directories" icon={Compass} index={3} desc={nearbySentence}>
+                  <ClayCard chip="Nearby" title="Nearby directories" icon={Compass} index={3} desc={nearbySentence}>
                     {/* The sentence above already carries each neighbour's city
                         count, so the tiles are navigation only: printing the
                         same figure twice on one card is boilerplate. */}
@@ -772,7 +778,7 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
                   All {stateName} {brand.niche.short} jobs
                 </h3>
                 <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  The statewide feed, including remote roles open to {stateName} licensees.
+                  The {isDistrict ? 'districtwide' : 'statewide'} feed, including remote roles open to {stateName} licensees.
                 </p>
               </div>
             </Link>

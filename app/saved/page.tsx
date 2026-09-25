@@ -1,8 +1,9 @@
 'use client';
 
 import { brand } from '@/config/brand';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import JobCard from '@/components/JobCard';
+import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import JobsListSkeleton from '@/components/JobsListSkeleton';
 import { Job } from '@/lib/types';
 import { Bookmark, Trash2, FileCheck, Search, ArrowRight, SortAsc, Loader2, Archive } from 'lucide-react';
@@ -26,6 +27,47 @@ const APPLICATIONS_API_PAGE_SIZE = 50;
 
 /** Login page reads ?redirectTo= (app/login/page.tsx) and returns here after sign-in. */
 const SIGN_IN_HREF = '/login?redirectTo=/saved';
+
+/**
+ * GA4 item_list_name for each tab's grid. The view_item_list impression and
+ * each card's select_item read the same constant, because GA4 joins a click
+ * to its impression on the name alone. The tabs are two lists, not one: a
+ * saved job and an applied one mean different things to the reader, and
+ * their click-through rates answer different questions.
+ */
+const SAVED_LIST_NAME = 'Saved Jobs';
+const APPLIED_LIST_NAME = 'Applied Jobs';
+
+/**
+ * True when a refetch returned exactly the rows already on screen, in the
+ * same order. Each tab's view_item_list re-fires whenever its jobs array
+ * changes identity, and both tabs refetch when their id stores change even
+ * if the rows do not, so a setter keeps the current array when this holds.
+ * Both sides are parsed from the same /api/jobs?ids= response shape, so
+ * comparing the serialized rows is exact: an unchanged list keeps its array
+ * (and its single impression), while an edited listing still replaces the
+ * stale card instead of hiding behind a matching id.
+ */
+function isSameJobList(current: Job[], next: Job[]): boolean {
+  return (
+    current.length === next.length &&
+    current.every((job, i) => job.id === next[i].id && JSON.stringify(job) === JSON.stringify(next[i]))
+  );
+}
+
+/** The saved tab's display order. 'recent' keeps the order the jobs were saved in. */
+function sortSavedJobs(jobsToSort: Job[], sortBy: SortOption): Job[] {
+  const sorted = [...jobsToSort];
+  switch (sortBy) {
+    case 'salary':
+      return sorted.sort((a: Job, b: Job) => (b.maxSalary || b.minSalary || 0) - (a.maxSalary || a.minSalary || 0));
+    case 'title':
+      return sorted.sort((a: Job, b: Job) => a.title.localeCompare(b.title));
+    case 'recent':
+    default:
+      return sorted;
+  }
+}
 
 /* ── Clay design tokens (matches dashboard) ── */
 const cardBase: React.CSSProperties = {
@@ -78,7 +120,13 @@ export default function SavedJobsPage() {
         throw new Error('Failed to load jobs.');
       }
       const data: { jobs: Job[] } = await response.json();
-      setJobs(data.jobs);
+      // The saved-jobs store rebuilds its id array on every server sync (on
+      // first mount, and whenever the browser tab regains focus after its
+      // freshness window), so this refetch runs even when nothing changed.
+      // Keeping the current array for an unchanged list keeps sortedJobs'
+      // identity, and the grid's view_item_list does not count a second
+      // impression of a list the visitor was already counted for.
+      setJobs((prev) => (isSameJobList(prev, data.jobs) ? prev : data.jobs));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
@@ -102,7 +150,10 @@ export default function SavedJobsPage() {
         throw new Error('Failed to load jobs.');
       }
       const data: { jobs: Job[] } = await response.json();
-      setAppliedJobsData(data.jobs);
+      // Clearing history filters this list and then refetches it, so the
+      // refetch usually returns the rows already on screen; keeping the
+      // array stops that from counting as a second impression.
+      setAppliedJobsData((prev) => (isSameJobList(prev, data.jobs) ? prev : data.jobs));
     } catch (err) {
       setAppliedError(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
@@ -242,7 +293,10 @@ export default function SavedJobsPage() {
       );
       const clearableSet = new Set(clearable);
       for (const id of clearable) removeApplied(id);
-      setAppliedJobsData((prev) => prev.filter((job) => !clearableSet.has(job.id)));
+      // Nothing clearable (every row is a submitted application) leaves the
+      // list as the same array: a filtered copy with identical rows would
+      // re-fire the applied grid's impression.
+      setAppliedJobsData((prev) => (clearable.length === 0 ? prev : prev.filter((job) => !clearableSet.has(job.id))));
       const keptCount = appliedJobs.length - clearable.length;
       if (keptCount > 0) {
         toast(
@@ -277,22 +331,15 @@ export default function SavedJobsPage() {
     setJobs(jobs.filter((job: Job) => job.id !== jobId));
   };
 
-  // Sort jobs based on selected option
-  const getSortedJobs = (jobsToSort: Job[]): Job[] => {
-    const sorted = [...jobsToSort];
-    switch (sortBy) {
-      case 'salary':
-        return sorted.sort((a: Job, b: Job) => (b.maxSalary || b.minSalary || 0) - (a.maxSalary || a.minSalary || 0));
-      case 'title':
-        return sorted.sort((a: Job, b: Job) => a.title.localeCompare(b.title));
-      case 'recent':
-      default:
-        // Keep original order (order saved)
-        return sorted;
-    }
-  };
-
-  const sortedJobs = getSortedJobs(jobs);
+  // Memoized, not recomputed per render: the saved grid's view_item_list
+  // tracker re-fires whenever its jobs prop changes identity, so a fresh
+  // array on every render would report a new impression each time the
+  // confirm dialog opens or a toast appears. It changes only when the list
+  // or the order does: a new sort, or a removal, which re-reports the
+  // remaining cards at their new positions so later clicks still pair with
+  // an impression. An unchanged refetch keeps the array (see
+  // isSameJobList), so a sync never counts as a new impression.
+  const sortedJobs = useMemo(() => sortSavedJobs(jobs, sortBy), [jobs, sortBy]);
 
   const currentJobs = activeTab === 'saved' ? sortedJobs : appliedJobsData;
   // Until the saved-jobs store knows whether a session exists, the saved tab
@@ -659,9 +706,13 @@ export default function SavedJobsPage() {
                 gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
                 gap: '16px',
             }}>
-                {sortedJobs.map((job: Job) => (
+                {/* Mounted with the grid, so the impression fires when the
+                    list is actually on screen (and again on returning to
+                    the tab), never while the skeleton shows. */}
+                <JobListViewTracker jobs={sortedJobs} listName={SAVED_LIST_NAME} />
+                {sortedJobs.map((job: Job, i: number) => (
                     <div key={job.id} className="saved-job-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
-                        <JobCard job={job} />
+                        <JobCard job={job} listName={SAVED_LIST_NAME} listIndex={i} />
                         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px', paddingRight: '4px' }}>
                             <button
                                 onClick={(e) => handleRemoveJob(job.id, e)}
@@ -691,7 +742,11 @@ export default function SavedJobsPage() {
                             key={id}
                             onRemove={() => {
                                 removeJob(id);
-                                setJobs((prev) => prev.filter((j) => j.id !== id));
+                                // An unavailable id is not among the loaded
+                                // rows, so the list is kept as the same array:
+                                // a filtered copy with identical rows would
+                                // re-fire the saved grid's impression.
+                                setJobs((prev) => (prev.some((j) => j.id === id) ? prev.filter((j) => j.id !== id) : prev));
                             }}
                         />
                     ))}
@@ -704,17 +759,30 @@ export default function SavedJobsPage() {
             decay), we still show a placeholder so the card count matches
             the badge — and so the user's "I applied to this" record is
             preserved. They can prune dead entries via "Remove from history". */}
+        {/* The applied list's impression sits outside the grid's loading
+            gate on purpose. Every refetch (clearing history, removing a
+            placeholder) shows the skeleton, which unmounts the grid, and a
+            tracker inside it would report the same rows again on remount.
+            Here it fires when the rows change (appliedJobsData is state, and
+            an unchanged refetch keeps its array, see isSameJobList) and again
+            on returning to the tab. It never fires behind the skeleton: a
+            fetch sets the rows in the same render that clears
+            appliedLoading, and clearing history filters them while the grid
+            is still on screen. */}
+        {!appliedError && activeTab === 'applied' && appliedJobs.length > 0 && (
+            <JobListViewTracker jobs={appliedJobsData} listName={APPLIED_LIST_NAME} />
+        )}
         {!appliedLoading && !appliedError && activeTab === 'applied' && appliedJobs.length > 0 && (
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
                 gap: '16px',
             }}>
-                {appliedJobsData.map((job: Job) => {
+                {appliedJobsData.map((job: Job, i: number) => {
                     const appliedDate = getAppliedDate(job.id);
                     return (
                         <div key={job.id} style={{ display: 'flex', flexDirection: 'column' }}>
-                            <JobCard job={job} />
+                            <JobCard job={job} listName={APPLIED_LIST_NAME} listIndex={i} />
                             {appliedDate && (
                                 <div style={{
                                     fontSize: '12px', color: '#BE185D', fontWeight: 600,

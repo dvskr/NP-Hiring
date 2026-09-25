@@ -21,8 +21,14 @@
  *   crisis): the niche-copy ratchet scans string literals, and file paths in
  *   the registry are string literals.
  * - DENIED sources are refused. They carry PMHNP text inside the art, show a
- *   psych-only scene on a general NP page, print an unsourced figure, or show
- *   a stale date. See the lists below.
+ *   psych-only scene on a general NP page, print an unsourced figure, show
+ *   a stale date, or bake in other text a general page cannot carry (a
+ *   stated credential, a sign, a banner). See the lists below.
+ * - The twelve slugs still on the sage heroes (the commission list in
+ *   lib/pseo/category-asset-registry.ts) have no source here. A full-size
+ *   review on 2026-09-23 of every unported file found only lone benefit
+ *   icons, flat vector art outside the hero family, and the DENIED scenes,
+ *   so those heroes need new art rather than another pass over this folder.
  * - The script never deletes files and is safe to re-run.
  *
  * Output per file: path, dimensions, and the corner pixel color (the baked
@@ -64,6 +70,15 @@ export const DENIED = {
   'about/diorama_inpatient.webp': 'psych only',
   'step-match.webp': 'brain network (psych only)',
   'categories/bento_newgrad_mentorship.webp': 'CBT MODEL whiteboard and PSYCHOTHERAPY, DSM-5 book spines (psych only)',
+  // Found by the 2026-09-23 full-size review for the twelve sage-hero slugs.
+  'categories/bento_bh_growth.webp': 'stated credential ladder (Nurse Graduate, RN Licensure, Specialist Certification, Nurse Manager)',
+  'categories/bento_sa_counseling.webp': 'Sobriety Milestone Calendar text (psych only)',
+  'categories/bento_sa_grouptherapy.webp': 'group therapy circle (psych only)',
+  'categories/bento_sa_salary.webp': 'implies an unsourced figure (PAYCHECK $7,450.00)',
+  'categories/icon_addiction_dual.webp': 'capsule beside a brain (psych only)',
+  'categories/clay_icon_privatepractice.webp': 'PRIVATE PRACTICE and OPEN sign text',
+  'about/diorama_candidates.webp': 'SUCCESS, DEGREE and START text',
+  'about/diorama_new_grad.webp': 'CONGRATULATIONS banner and Anatomy, Pharm, Nursing book spines',
 };
 
 /** Art allowed only on the psychiatric-mental-health category. */

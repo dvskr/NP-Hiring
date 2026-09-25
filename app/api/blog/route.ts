@@ -124,7 +124,9 @@ export async function POST(request: NextRequest) {
             publish_date: publish_date || (postStatus === 'published' ? new Date().toISOString() : null),
         });
 
-        // If published, ping all search engines (Google, Bing, IndexNow)
+        // If published, ping Bing and IndexNow. Google is withheld: the
+        // Indexing API accepts job posting pages only, so pingAllSearchEngines
+        // refuses a blog post's Google leg before any request is made.
         if (postStatus === 'published') {
             const postUrl = `${brand.baseUrl}/blog/${slug}`;
             // Fire and forget — don't block the response

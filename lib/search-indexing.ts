@@ -1,14 +1,15 @@
 /**
  * Search Engine Indexing Utility
- * 
+ *
  * Supports:
- *  - Google Indexing API (for JobPosting / general pages)
+ *  - Google Indexing API, for job posting pages only (see the scope note below)
  *  - Bing URL Submission API
  *  - IndexNow (Bing, Yandex, Seznam, Naver, all at once)
  */
 
 import * as crypto from 'crypto';
 import { brand } from '@/config/brand';
+import { logger } from '@/lib/logger';
 // P2 #20: the single IndexNow client. Aliased because this module exports its
 // own `pingIndexNow` (a per-URL-result adapter over this call).
 import { pingIndexNow as submitToIndexNow } from '@/lib/indexnow';
@@ -27,6 +28,69 @@ interface IndexResult {
     error?: string;
 }
 
+export type GoogleNotificationType = 'URL_UPDATED' | 'URL_DELETED';
+
+// ─── Google Indexing API scope ───────────────────────────────────────────────
+
+/**
+ * WHAT GOOGLE WILL ACCEPT. Google restricts the Indexing API to pages that
+ * carry JobPosting structured data, or BroadcastEvent inside a VideoObject,
+ * which this site does not publish. Google reserves the right to cut the
+ * quota or revoke Indexing API access for misuse, and that sanction lands on
+ * the whole Cloud project. The same project carries every submission here
+ * that has no substitute: new job pages from app/api/cron/index-urls and
+ * removals of expired jobs from app/api/cron/deindex-expired. One off policy
+ * caller could therefore cost the site both. So the rule is enforced here, in
+ * the one function that talks to Google, rather than trusted to each caller.
+ *
+ * Exactly one route on this site emits JobPosting: app/jobs/[slug]/page.tsx,
+ * through components/JobStructuredData.tsx. That page resolves a job only from
+ * a trailing UUID in the slug and 404s any /jobs/ path without one, so the
+ * shape below is the page's own resolver. Everything else is refused: the
+ * category and setting landings, the state, metro and city pages, the category
+ * x city landings app/api/cron/index-pseo used to push, blog posts, company
+ * pages and account pages. A URL_DELETED for an expired job's URL passes,
+ * because it is the same page and telling Google a posting has closed is what
+ * the API exists for.
+ *
+ * The host is deliberately not checked. The Indexing API enforces Search
+ * Console ownership on its own, which is the real host rule, and callers build
+ * URLs from brand.baseUrl or NEXT_PUBLIC_BASE_URL interchangeably, so a host
+ * check here would refuse good URLs built from whichever one it did not pick.
+ *
+ * tests/regressions/indexing-safety.test.ts pins both facts this relies on:
+ * the page still resolves jobs with this UUID pattern, and no other page
+ * renders JobPosting. If either changes, widen this rule in the same commit.
+ */
+const JOB_POSTING_PATH =
+    /^\/jobs\/[^/]*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?$/i;
+
+/** True only for a URL whose page carries JobPosting markup. */
+export function isGoogleIndexingEligibleUrl(url: string): boolean {
+    try {
+        return JOB_POSTING_PATH.test(new URL(url).pathname);
+    } catch {
+        // Not an absolute URL, so not a page Google could be told about.
+        return false;
+    }
+}
+
+/** IndexResult.error of a publish refused because the page is out of scope. */
+export const GOOGLE_POLICY_REFUSED =
+    'not submitted: the Google Indexing API only accepts job posting pages';
+
+/**
+ * True when the URL was never offered to Google because of its page type.
+ *
+ * This is a permanent answer, unlike the two cases googleWasNotAsked() covers.
+ * Retrying the same URL can never succeed, so a caller that keeps a retry
+ * counter should let it run out (or retire the row at once) rather than hold
+ * the row for a later run that will refuse it again.
+ */
+export function isGooglePolicyRefusal(result: IndexResult): boolean {
+    return result.engine === 'Google' && !result.success && result.error === GOOGLE_POLICY_REFUSED;
+}
+
 // ─── Google Indexing API daily budget ───────────────────────────────────────
 
 /**
@@ -41,11 +105,14 @@ interface IndexResult {
  *   deindex-expired             2 firings x 100 =    200
  *   historical-deindex          3 firings x  50 =    150
  *   index-urls                  1 firing  x 100 =    100
- *   index-pseo                  1 firing  x 100 =    100
  *
- * The four dedicated indexing crons alone want 550 of a 200 allowance, and the
- * ingest path multiplies that by ten. Without a budget the spend is first come
- * first served, which inverts the priority we actually want: the earliest
+ * app/api/cron/index-pseo used to ask for 100 more. It no longer calls Google
+ * at all: its category x city landings carry no JobPosting (see the scope note
+ * above), and it now submits them to Bing and IndexNow only.
+ *
+ * The three dedicated indexing crons alone want 450 of a 200 allowance, and
+ * the ingest path multiplies that by ten. Without a budget the spend is first
+ * come first served, which inverts the priority we actually want: the earliest
  * firings of the UTC day are an ingest wave at 00:05 and historical-deindex at
  * 01:00, the two least valuable callers of the set, so they would drain the
  * day and everything that matters would collect 429s from 07:00 onward.
@@ -58,18 +125,28 @@ interface IndexResult {
  *     will not drop the URL on its own for weeks. The removal window is also
  *     bounded, because deindex-expired only looks at recently expired rows, so
  *     a skipped run is never retried by anybody.
- *  2. new-content. This is the product promise, but a new job URL has two
- *     other discovery channels (the sitemap and IndexNow) and Google crawls
- *     freshly linked pages by itself, so deferring costs latency, not
- *     correctness.
+ *  2. new-content. This is the product promise, but a new job URL has other
+ *     discovery channels (the sitemap, and IndexNow for the other engines)
+ *     and Google crawls freshly linked pages by itself, so deferring costs
+ *     latency, not correctness.
  *  3. backlog-removal. Same direction of value as 1, but the queue is roughly
  *     25,000 rows deep and drains over months either way; one day's deferral
  *     is invisible, and rows stay pending and are retried.
- *  4. programmatic. Google supports the Indexing API for JobPosting and
- *     BroadcastEvent pages only. pSEO category and city landings are neither,
- *     so those submissions are an off label use Google may ignore outright,
- *     and the pages are already sitemapped and internally linked.
- *  5. unreserved. Zero, by design. See below.
+ *  4. unreserved. Zero, by design. See below.
+ *
+ * WHERE THE OLD PROGRAMMATIC LANE WENT. A fourth lane, 'programmatic', used to
+ * hold 30 publishes a day for index-pseo's landings and the one off scripts.
+ * Once the scope rule refuses those landings, no in-policy caller is left to
+ * spend it, so its 30 went to backlog-removal, which rises from 15 to 25 per
+ * run. That is the lane with the most work waiting behind its cap: at 45 a day
+ * a 25,000 row queue needs about eighteen months of removals in the worst
+ * case, at 75 about eleven, and fewer in practice, because live rows and out
+ * of scope rows leave the queue without spending any quota.
+ *
+ * expired-job-removal gets none of it on purpose. app/api/cron/deindex-expired
+ * records nothing about what it already sent, so each run offers the most
+ * recently expired jobs first again, and a bigger cap there buys resubmissions
+ * of the same URLs before it buys new ones. That lane's fix is at the caller.
  *
  * WHY THE BUDGET IS A STATIC ALLOCATION RATHER THAN A LIVE COUNTER: every
  * cron firing is its own serverless invocation with its own memory, and the
@@ -80,34 +157,44 @@ interface IndexResult {
  * arithmetic is pinned by tests/regressions/indexing-safety.test.ts.
  *
  * The one part this cannot bound exactly is the per post fire and forget
- * publish from the employer and blog paths, which has no schedule. The
- * new-content reservation leaves 20 publishes a day for it, and the table as
- * a whole leaves 5 spare. A durable daily ledger is the real fix and needs a
- * table this package is not allowed to add.
+ * publish from the employer post and paid activation paths, which has no
+ * schedule. The new-content reservation leaves 20 publishes a day for it, and
+ * GOOGLE_DAILY_HEADROOM stays unreserved on top. A durable daily ledger is the
+ * real fix and needs a table this module does not own.
  *
- * WHY THE BATCH HELPERS TAKE THE LANE AS A REQUIRED ARGUMENT: no default is
- * both safe and useful, so there is no honest one to pick. Count the batch
- * invocations that would rely on a default in a day: app/api/cron/index-urls
- * fires once, app/api/cron/deindex-expired twice, and lib/ingestion-service.ts
- * sixty times. A default generous enough for the three cron firings hands the
- * same per invocation share to the sixty ingest batches and spends the whole
- * day's quota before noon. A default small enough to survive the ingest path
- * is zero, which silently kills expired-job-removal, the one lane at the top
- * of the list above precisely because nothing else can do its job.
+ * WHY EVERY LANE IS A REQUIRED ARGUMENT: no default is both safe and useful,
+ * so there is no honest one to pick. Count the batch invocations that would
+ * rely on a default in a day: app/api/cron/index-urls fires once,
+ * app/api/cron/deindex-expired twice, and lib/ingestion-service.ts sixty
+ * times. A default generous enough for the three cron firings hands the same
+ * per invocation share to the sixty ingest batches and spends the whole day's
+ * quota before noon. A default small enough to survive the ingest path is
+ * zero, which silently kills expired-job-removal, the one lane at the top of
+ * the list above precisely because nothing else can do its job.
  *
  * So the choice belongs at the call site, and the type is what makes sure it
  * is made. Adding a caller without a lane is a compile error rather than a
- * quiet no-op discovered months later in Search Console. pingGoogle keeps a
- * default because app/api/cron/index-pseo is off limits to this package and
- * could not be edited to declare one; see the note on that function.
+ * quiet no-op discovered months later in Search Console. pingGoogle follows
+ * the same rule. It used to default to 'programmatic' so index-pseo could
+ * spend without declaring a lane; with that caller and that lane gone, a
+ * caller that declares nothing throws by name, which also reaches the scripts
+ * tsconfig does not compile.
  */
 export const GOOGLE_DAILY_PUBLISH_QUOTA = 200;
+
+/**
+ * Publishes a day that no lane reserves. It absorbs what the static table
+ * cannot schedule: a burst of employer posts beyond new-content's ad hoc
+ * share, or a manual script run on a day the crons also fire. The lanes plus
+ * this headroom must fit inside GOOGLE_DAILY_PUBLISH_QUOTA, and the test suite
+ * fails the moment a reservation change breaks that.
+ */
+export const GOOGLE_DAILY_HEADROOM = 5;
 
 export type GoogleIndexingLane =
     | 'expired-job-removal'
     | 'new-content'
     | 'backlog-removal'
-    | 'programmatic'
     | 'unreserved';
 
 export interface GoogleIndexingLaneBudget {
@@ -138,21 +225,16 @@ export const GOOGLE_INDEXING_LANES: Readonly<
         dailyReservation: 60,
         perInvocation: 40,
         scheduledInvocationsPerDay: 1,
-        callers: 'app/api/cron/index-urls plus one publish per posted job or blog post',
+        callers:
+            'app/api/cron/index-urls, one publish per posted or activated job, and scripts/google-index.ts when run by hand',
     },
     'backlog-removal': {
         priority: 3,
-        dailyReservation: 45,
-        perInvocation: 15,
+        // 45 until the programmatic lane was retired; see the note above.
+        dailyReservation: 75,
+        perInvocation: 25,
         scheduledInvocationsPerDay: 3,
         callers: 'app/api/cron/historical-deindex',
-    },
-    programmatic: {
-        priority: 4,
-        dailyReservation: 30,
-        perInvocation: 25,
-        scheduledInvocationsPerDay: 1,
-        callers: 'app/api/cron/index-pseo plus the one off scripts (the pingGoogle default)',
     },
     unreserved: {
         // Zero, and a caller has to ask for it by name. This is the lane for a
@@ -168,7 +250,7 @@ export const GOOGLE_INDEXING_LANES: Readonly<
         // The cost of being wrong here is asymmetric: an over quota day gets
         // the whole project throttled, while a skipped publish costs latency
         // on a URL the sitemap and IndexNow already carry.
-        priority: 5,
+        priority: 4,
         dailyReservation: 0,
         perInvocation: 0,
         scheduledInvocationsPerDay: 0,
@@ -206,17 +288,26 @@ export const GOOGLE_NOT_CONFIGURED = 'No credentials configured';
 export const GOOGLE_TOKEN_EXCHANGE_FAILED = 'Google OAuth token exchange failed';
 
 /**
- * True when NO publish request reached Google for this result.
+ * True when NO publish request reached Google for this result YET, and a later
+ * run could still make one.
  *
- * Two things can stop a publish before it becomes a request: this budget held
- * it back, or no credential is configured to make it with. They read as
- * failures in an IndexResult, but nothing was tried, so nothing failed.
+ * Two things can stop a publish before it becomes a request and clear up on
+ * their own: this budget held it back, or no credential is configured to make
+ * it with. They read as failures in an IndexResult, but nothing was tried, so
+ * nothing failed.
  *
  * Any caller that retires a row, spends a retry attempt, or reports a URL as
  * submitted must consult this rather than `success`. Getting it wrong is not
  * recoverable in app/api/cron/historical-deindex: its queue is filtered on
  * status 'pending', so a row retired while Google was never asked is a URL
  * Google is never asked about again.
+ *
+ * A scope refusal (isGooglePolicyRefusal) is deliberately NOT included, even
+ * though it made no request either. It never clears up, so reporting it as
+ * "not asked yet" would make historical-deindex hold every out of scope row
+ * pending forever, and because that cron reads the oldest rows first, a
+ * handful of them would block the queue for good. Left on the failure path,
+ * the row spends its attempts and retires with the reason in lastError.
  */
 export function googleWasNotAsked(result: IndexResult): boolean {
     return (
@@ -239,28 +330,35 @@ function budgetDayKey(): string {
 }
 
 /**
+ * The budget for `lane`, or a throw that names the problem.
+ *
+ * The compiler holds app/ and lib/ to a declared lane, but tsconfig excludes
+ * scripts/, so a one off script can still arrive here with a lane that does
+ * not exist or with none at all. Throwing by name beats the TypeError three
+ * frames down, and it beats granting zero, which would print in the script's
+ * own summary as Google having taken nothing and read like a quota problem
+ * rather than a typo.
+ */
+function laneBudget(lane: GoogleIndexingLane): GoogleIndexingLaneBudget {
+    if (Object.prototype.hasOwnProperty.call(GOOGLE_INDEXING_LANES, lane)) {
+        return GOOGLE_INDEXING_LANES[lane];
+    }
+    const known = Object.keys(GOOGLE_INDEXING_LANES).join(', ');
+    throw new Error(
+        lane === undefined
+            ? `[Indexing] No Google indexing lane was declared. Pass one of: ${known}.`
+            : `[Indexing] Unknown Google indexing lane "${lane}". Declare one of: ${known}.`
+    );
+}
+
+/**
  * Reserve up to `want` publishes in `lane` and return how many were granted.
  * Grants are recorded per invocation, so a caller that loops (a script, or
  * ingestion calling both batch helpers in one process) cannot reset its cap by
  * calling again.
  */
 function takeGoogleBudget(lane: GoogleIndexingLane, want: number): number {
-    const budget = GOOGLE_INDEXING_LANES[lane];
-    if (!budget) {
-        // The compiler holds app/ and lib/ to a declared lane, but tsconfig
-        // excludes scripts/, so a one off script can still reach here with a
-        // lane name that does not exist. Throwing by name beats the TypeError
-        // three frames down, and it beats granting zero, which would print in
-        // the script's own summary as Google having taken nothing and read
-        // like a quota problem rather than a typo.
-        //
-        // An omitted argument does NOT land here: pingGoogle's parameter
-        // default turns it into 'programmatic' before this runs.
-        throw new Error(
-            `[Indexing] Unknown Google indexing lane "${lane}". Declare one of: ` +
-            `${Object.keys(GOOGLE_INDEXING_LANES).join(', ')}.`
-        );
-    }
+    const budget = laneBudget(lane);
 
     const day = budgetDayKey();
     if (!ledger || ledger.day !== day) {
@@ -356,29 +454,42 @@ async function getGoogleAccessToken(): Promise<string | null> {
 /**
  * Publish one URL to the Google Indexing API.
  *
- * The lane defaults to 'programmatic', the lowest lane that still holds a
- * reservation, because the direct callers of this function are exactly what
- * that lane is for: app/api/cron/index-pseo and the manual scripts. index-pseo
- * cannot be edited to declare a lane from here, so the default is the only way
- * it gets a share, and giving an undeclared direct caller the SMALLEST real
- * share is the version of that compromise that cannot starve anyone.
+ * Three checks run before any network, in this order, and each one reports
+ * itself distinctly in the result:
  *
- * The budget is taken first, ahead of the credential check and the OAuth
- * exchange, so a refused publish costs no network at all and the cap stays the
- * outermost invariant: no configuration state can produce a run that publishes
- * more than a lane allows, which is what makes the arithmetic testable without
- * a credential. A grant spent on a call that then finds no credential costs
- * nothing at Google, and the one caller that keeps durable per URL state,
- * app/api/cron/historical-deindex, refuses to start at all without the key.
+ *  1. Scope. A URL that is not a job posting page comes back as
+ *     GOOGLE_POLICY_REFUSED and spends nothing, whatever lane it names and
+ *     whether or not a credential exists. This is the check that keeps the
+ *     Cloud project inside Google's policy (see the scope note above), so it
+ *     sits outside everything else. It is a permanent answer; see
+ *     isGooglePolicyRefusal.
+ *  2. Budget. The lane's grant is taken ahead of the credential check and the
+ *     OAuth exchange, so a refused publish costs no network at all and the
+ *     cap stays the outermost numeric invariant: no configuration state can
+ *     produce a run that publishes more than a lane allows, which is what
+ *     makes the arithmetic testable without a credential. A grant spent on a
+ *     call that then finds no credential costs nothing at Google, and the one
+ *     caller that keeps durable per URL state, app/api/cron/historical-deindex,
+ *     refuses to start at all without the key.
+ *  3. Credential. An absent key and a key that will not exchange are reported
+ *     differently, because only the first is a state to wait out.
  *
- * Both early exits are reported through googleWasNotAsked(), because a caller
- * has to tell "Google said no" from "we never asked Google".
+ * Budget refusals and an absent key are both reported through
+ * googleWasNotAsked(), because a caller has to tell "Google said no" from "we
+ * have not asked Google yet".
+ *
+ * `type` and `lane` are both required. See the budget note at the top of this
+ * file for why no default lane is safe.
  */
 export async function pingGoogle(
     url: string,
-    type: 'URL_UPDATED' | 'URL_DELETED' = 'URL_UPDATED',
-    lane: GoogleIndexingLane = 'programmatic'
+    type: GoogleNotificationType,
+    lane: GoogleIndexingLane,
 ): Promise<IndexResult> {
+    if (!isGoogleIndexingEligibleUrl(url)) {
+        return { engine: 'Google', url, success: false, error: GOOGLE_POLICY_REFUSED };
+    }
+
     if (takeGoogleBudget(lane, 1) === 0) {
         return { engine: 'Google', url, success: false, error: budgetRefusalError(lane) };
     }
@@ -536,9 +647,11 @@ function indexNowFailureMessage(reason?: string): string {
  */
 export async function pingAllSearchEngines(url: string): Promise<IndexResult[]> {
     const results = await Promise.allSettled([
-        // Single URL callers are the employer post, the paid activation webhook
-        // and a blog publish: one freshly created page each, which is exactly
-        // what the new-content lane reserves its ad hoc share for.
+        // The job callers (the free post route, the paid activation and the
+        // Stripe webhook) each publish one freshly created job page, which is
+        // what the new-content lane reserves its ad hoc share for. The blog
+        // publish in app/api/blog calls here too: pingGoogle refuses a post on
+        // scope, so it still reaches Bing and IndexNow and never reaches Google.
         pingGoogle(url, 'URL_UPDATED', 'new-content'),
         pingBing(url),
         pingIndexNow(url),
@@ -555,13 +668,13 @@ export async function pingAllSearchEngines(url: string): Promise<IndexResult[]> 
         }
     }
 
-    // Log results
     for (const r of flat) {
-        if (r.success) {
-            console.log(`[Indexing] ✅ ${r.engine}: ${r.url}`);
-        } else {
-            console.log(`[Indexing] ❌ ${r.engine}: ${r.url}: ${r.error}`);
-        }
+        logger.info('[Indexing] search engine ping', {
+            engine: r.engine,
+            url: r.url,
+            success: r.success,
+            ...(r.error ? { error: r.error } : {}),
+        });
     }
 
     return flat;
@@ -572,11 +685,13 @@ export async function pingAllSearchEngines(url: string): Promise<IndexResult[]> 
  * return a result for EVERY url. URLs past the lane's per run cap come back as
  * explicit refusals rather than being dropped from the array, because a caller
  * that keeps per URL state needs to tell "Google said no" from "we never asked
- * Google" (see app/api/cron/historical-deindex/route.ts).
+ * Google" (see app/api/cron/historical-deindex/route.ts). Out of scope URLs
+ * come back as scope refusals and do not use up any of the lane's grant, so
+ * the job URLs later in the same list still get it.
  */
 async function publishToGoogleWithinBudget(
     urls: string[],
-    type: 'URL_UPDATED' | 'URL_DELETED',
+    type: GoogleNotificationType,
     lane: GoogleIndexingLane,
 ): Promise<IndexResult[]> {
     const results: IndexResult[] = [];
@@ -584,7 +699,7 @@ async function publishToGoogleWithinBudget(
         const result = await pingGoogle(url, type, lane);
         results.push(result);
         // A refusal made no request, so there is nothing to pace.
-        if (isGoogleBudgetRefusal(result)) continue;
+        if (isGoogleBudgetRefusal(result) || isGooglePolicyRefusal(result)) continue;
         // Small delay between Google requests.
         await new Promise(resolve => setTimeout(resolve, 100));
     }
@@ -594,7 +709,8 @@ async function publishToGoogleWithinBudget(
 /**
  * Ping all configured search engines for multiple URLs in batch, for new or
  * updated pages. Bing and IndexNow take the whole list: neither shares Google's
- * 200/day allowance, so throttling them would lose coverage for nothing.
+ * 200/day allowance or its page type restriction, so throttling them would
+ * lose coverage for nothing.
  *
  * `lane` has no default on purpose. See the budget note at the top of this
  * file: the callers differ by two orders of magnitude in how often they fire,
@@ -609,7 +725,7 @@ export async function pingAllSearchEnginesBatch(
     indexNow: IndexResult[];
 }> {
     // Google has no batch endpoint, so this is one request per URL, capped by
-    // the lane's share of the daily quota.
+    // the lane's share of the daily quota and limited to job posting pages.
     const googleResults = await publishToGoogleWithinBudget(urls, 'URL_UPDATED', lane);
 
     // Bing: batch submit

@@ -43,6 +43,7 @@ import {
   type MetroCity,
 } from '@/lib/metro-data';
 import JobCard from '@/components/JobCard';
+import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import { Job } from '@/lib/types';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
@@ -86,6 +87,14 @@ const BULLET_GLYPHS = [Building2, Users, Shield, Video];
 
 /** Listing cards shown before the "view all" link. */
 const LISTING_TAKE = 10;
+/**
+ * GA4 item_list_name for the listings on every metro guide. The
+ * view_item_list impression and each card's select_item read this one
+ * constant, because GA4 joins a click to its impression on the name alone.
+ * One name for every metro, so the item-list reports keep a single row for
+ * this surface; the page path already says which metro it was.
+ */
+const METRO_GUIDE_LIST_NAME = 'Metro Guide Jobs';
 /** Teaser length of the licensure note in the practice card. */
 const LICENSURE_TEASER_MAX = 165;
 
@@ -419,6 +428,10 @@ export default async function MetroLandingPage({ params }: PageProps) {
     <div className="min-h-screen" style={{ backgroundColor: '#FDFBF7' }}>
       {/* Breadcrumb Schema */}
       <BreadcrumbSchema items={crumbs} />
+      <JobListViewTracker
+        jobs={recentJobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))}
+        listName={METRO_GUIDE_LIST_NAME}
+      />
 
       {/*
         FAQPage schema is NOT emitted here. <CategoryFAQ customFaqs={faqs} />
@@ -515,8 +528,9 @@ export default async function MetroLandingPage({ params }: PageProps) {
             ) : (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                  {recentJobs.map((job: Job) => (
-                    <JobCard key={job.id} job={job} />
+                  {/* One unpaginated slice, so the map index is the position. */}
+                  {recentJobs.map((job: Job, i: number) => (
+                    <JobCard key={job.id} job={job} listName={METRO_GUIDE_LIST_NAME} listIndex={i} />
                   ))}
                 </div>
 

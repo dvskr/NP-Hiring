@@ -16,6 +16,7 @@ import { formatCount, indefiniteArticle, pluralize } from '@/lib/display-text';
 import { JOB_LISTING_OMIT } from '@/lib/pseo/job-listing-omit';
 import { BEST_SORT_ORDER_BY } from '@/lib/utils/job-sort';
 import JobCard from '@/components/JobCard';
+import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import {
   stateToSlug, SETTING_CONFIGS, STATE_CODES, CODE_TO_STATE, URL_TO_STATE,
@@ -108,6 +109,15 @@ const NP = brand.niche.short;
 export const revalidate = 3600;
 
 const PAGE_SIZE = 10;
+
+/**
+ * GA4 item_list_name for the listings on every state hub. The
+ * view_item_list impression and each card's select_item read this one
+ * constant, because GA4 joins a click to its impression on the name alone.
+ * One name for all 51 hubs, so the item-list reports keep a single row for
+ * this surface; the page path already says which state it was.
+ */
+const STATE_HUB_LIST_NAME = 'State Hub Jobs';
 
 interface StatePageProps {
   params: Promise<{ state: string }>;
@@ -608,6 +618,13 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
     <div className="min-h-screen" style={{ backgroundColor: '#FDFBF7' }}>
       <ClayStyles />
       <BreadcrumbSchema items={crumbs} />
+      {/* indexOffset={skip} matches the cards' listIndex={skip + i}, so a
+          card's impression and click report the same position. */}
+      <JobListViewTracker
+        jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))}
+        listName={STATE_HUB_LIST_NAME}
+        indexOffset={skip}
+      />
       {jobs.length > 0 && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           '@context': 'https://schema.org', '@type': 'ItemList',
@@ -689,7 +706,9 @@ export default async function StateJobsPage({ params, searchParams }: StatePageP
             ) : (
               <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                  {jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}
+                  {/* Absolute position (skip + i): page 2 continues the
+                      count from page 1 rather than restarting it. */}
+                  {jobs.map((job: Job, i: number) => (<JobCard key={job.id} job={job} listName={STATE_HUB_LIST_NAME} listIndex={skip + i} />))}
                 </div>
 
                 {totalPages > 1 && (
