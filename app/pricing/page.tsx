@@ -306,7 +306,7 @@ export default function PricingPage() {
                                 </div>
                                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>{config.durationDays}-Day Listing</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                                    Every post stays visible for two full months with no daily budget and no bidding. Promo posts included.
+                                    Every post stays visible for its full {config.durationDays} days with no daily budget and no bidding. Promo posts included.
                                 </p>
                             </div>
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>

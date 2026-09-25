@@ -20,6 +20,7 @@
  */
 
 import type Stripe from 'stripe';
+import { after } from 'next/server';
 import { brand } from '@/config/brand';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
@@ -28,7 +29,54 @@ import { logger } from '@/lib/logger';
 import { sendConfirmationEmail } from '@/lib/email-service';
 import { pingAllSearchEngines } from '@/lib/search-indexing';
 import { anonymizeEmail } from '@/lib/server-utils';
-import { trackServerPurchase } from '@/lib/analytics-server';
+import { trackServerPurchase, type PurchaseParams } from '@/lib/analytics-server';
+
+/** How sendPurchaseEvent made sure the purchase POST leaves. Returned for tests. */
+export type PurchaseEventDelivery = 'after_response' | 'awaited';
+
+/**
+ * Send the GA4 purchase event from a paid-checkout path without letting the
+ * serverless freeze cut it off, and without holding up the response.
+ *
+ * Shared by this file and ./apply-renewal.ts, so the three callers of each
+ * (webhook, verify-page self-heal, reconciliation sweep) behave alike.
+ *
+ * WHY `after()` FIRST, AND AN AWAIT ONLY AS THE FALLBACK. Inside a request
+ * scope (the webhook, the verify routes, the Inngest route handler that runs
+ * the sweep) `after()` from next/server hands the in-flight POST to the
+ * platform's waitUntil, so the function stays alive until the POST settles
+ * while the response goes out at once. Awaiting there instead would hold the
+ * Stripe acknowledgement, or the success-page poll, for the whole Google
+ * round trip, up to MP_TIMEOUT_MS in lib/analytics-server.ts, to protect
+ * data that after() already protects. Outside a request scope `after()`
+ * throws (so does a runtime without waitUntil); there is then no platform
+ * keepalive and no client waiting on a response, so awaiting is both
+ * necessary and free.
+ *
+ * trackServerPurchase also registers its own promise with `after()` as a
+ * safety net for any caller. Registering the derived promise again here
+ * changes nothing, because the two settle together, and it is the only way
+ * this caller can learn whether a request scope exists.
+ */
+export async function sendPurchaseEvent(params: PurchaseParams): Promise<PurchaseEventDelivery> {
+  // trackServerPurchase never rejects by contract. The async wrapper turns a
+  // synchronous throw into a rejection too, and the catch then makes sure no
+  // future break of that contract can fail a paid activation over analytics.
+  // It logs rather than swallowing, because a sender that throws is a bug.
+  const inFlight = (async () => trackServerPurchase(params))().catch((err: unknown) => {
+    logger.warn('GA4 purchase sender broke its never-reject contract, purchase event lost', {
+      sessionId: params.sessionId,
+      err: String(err),
+    });
+  });
+  try {
+    after(inFlight);
+    return 'after_response';
+  } catch {
+    await inFlight;
+    return 'awaited';
+  }
+}
 
 export interface StripeInvoiceData {
   stripeInvoiceId: string | null;
@@ -350,16 +398,22 @@ export async function activatePaidJobCheckout(
 
   logger.info('Job published', { jobId });
 
-  // P7: server-side purchase event (fire-and-forget)
-  trackServerPurchase({
+  // P7: server-side purchase event. The GA ids are the ones /api/create-checkout
+  // stored when the buyer had granted analytics consent; absent otherwise, and
+  // then the job UUID fallback applies. Passed through as stored:
+  // trackServerPurchase validates both, and a second check here could only
+  // drift from it. Delivery: see sendPurchaseEvent above.
+  await sendPurchaseEvent({
     clientId: jobId,
+    gaClientId: session.metadata?.gaClientId,
+    gaSessionId: session.metadata?.gaSessionId,
     sessionId: session.id,
     amountCents: session.amount_total ?? fallbackAmountCents,
     currency: session.currency ?? 'usd',
     type: 'new',
     tier: paidTier,
     jobId,
-  }).catch(() => { /* logged inside */ });
+  });
 
   // Ping search engines for new job (fire-and-forget)
   if (job.slug) {

@@ -25,6 +25,7 @@ import { expiresFromNow } from '@/lib/expires-at';
 import { domainOf, getNextPaidTier, asPaidTier, type PaidTier } from '@/lib/pricing';
 import { logger } from '@/lib/logger';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { gaCheckoutMetadata, idempotencyKeyWithGaIds } from '@/lib/analytics-server';
 import {
   sanitizeJobPosting,
   sanitizeUrl,
@@ -143,11 +144,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
     }
 
+    // GA attribution for the purchase event the webhook sends later. It has
+    // to be captured here: the webhook has no visitor request to read the GA
+    // cookies from. Empty unless the visitor granted analytics consent, in
+    // which case the session is created exactly as before.
+    const gaMetadata = gaCheckoutMetadata(request);
+
     // ── B78: resume an abandoned checkout ─────────────────────────────
     // The employer dashboard's "Complete payment" action posts
     // { resumeJobId } for a row stuck 'pending' (or swept to 'expired').
     if (typeof rawBody.resumeJobId === 'string' && rawBody.resumeJobId.trim()) {
-      return resumeAbandonedCheckout(stripe, rawBody.resumeJobId.trim(), userId, profileEmail);
+      return resumeAbandonedCheckout(stripe, rawBody.resumeJobId.trim(), userId, profileEmail, gaMetadata);
     }
 
     // Sanitize core fields
@@ -406,14 +413,18 @@ export async function POST(request: NextRequest) {
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/post-job`,
       // No bearer credentials in Stripe metadata — every reader loads the
-      // dashboardToken from EmployerJob by jobId.
+      // dashboardToken from EmployerJob by jobId. The GA ids are analytics
+      // identifiers, not credentials.
       metadata: {
         jobId: job.id,
         pricing,
+        ...gaMetadata,
       },
     }, {
       // The EmployerJob row is new per request, so this only collapses a
-      // retried create for THIS row into one session.
+      // retried create for THIS row into one session. A retry of this create
+      // replays the same parameters, GA ids included, so unlike the resume
+      // and renewal keys this one never needs the ids folded in.
       idempotencyKey: `new-post-${employerJob.id}`,
     });
 
@@ -511,6 +522,7 @@ async function resumeAbandonedCheckout(
   jobId: string,
   userId: string | null,
   userEmail: string | null,
+  gaMetadata: Record<string, string>,
 ): Promise<NextResponse> {
   const employerJob = await prisma.employerJob.findFirst({
     where: { jobId },
@@ -617,12 +629,23 @@ async function resumeAbandonedCheckout(
     metadata: {
       jobId: employerJob.job.id,
       pricing,
+      ...gaMetadata,
     },
   }, {
     // Keyed on the session being replaced: a double-click that read the same
     // previous session gets the same new session back, while a later resume
-    // (whose previous session is this one) mints a fresh one.
-    idempotencyKey: `resume-${employerJob.id}-${pricing}-${employerJob.stripeCheckoutSessionId ?? 'none'}`,
+    // (whose previous session is this one) mints a fresh one. The GA ids are
+    // folded in because, when recordCheckoutSession failed, a later resume
+    // replays this key with whatever GA ids the browser holds by then, and
+    // Stripe refuses a reused key whose metadata changed, leaving the
+    // employer unable to pay; see idempotencyKeyWithGaIds. The trade in that
+    // rare case is a second open session, and a second payment on it is
+    // caught by the webhook as duplicate_payment (activate-paid-job.ts).
+    // Without GA ids the key is unchanged.
+    idempotencyKey: idempotencyKeyWithGaIds(
+      `resume-${employerJob.id}-${pricing}-${employerJob.stripeCheckoutSessionId ?? 'none'}`,
+      gaMetadata,
+    ),
   });
 
   await recordCheckoutSession(employerJob.id, session.id);

@@ -21,6 +21,7 @@ import { config, PricingTier } from '@/lib/config';
 import { asPaidTier } from '@/lib/pricing';
 import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { getBaseUrl, isFeatureEnabled } from '@/lib/env';
+import { gaCheckoutMetadata, idempotencyKeyWithGaIds } from '@/lib/analytics-server';
 
 /**
  * Idempotency window for renewal session creation: a double-click or client
@@ -149,10 +150,24 @@ export async function POST(request: NextRequest) {
     // row as 'pro'. Never 'plan' — blocked above.
     const tier: PricingTier = asPaidTier(employerJob.pricingTier);
 
+    // GA attribution for the renewal purchase event the webhook sends later;
+    // only this request can read the GA cookies. Empty unless the visitor
+    // granted analytics consent (lib/analytics-server.ts#gaCheckoutMetadata).
+    const gaMetadata = gaCheckoutMetadata(request);
+
     // Payment methods follow the Dashboard settings (see create-checkout).
     const baseUrl = getBaseUrl();
     const expiryMarker = employerJob.job.expiresAt ? employerJob.job.expiresAt.getTime() : 'none';
-    const idempotencyKey = `renewal-${employerJob.id}-${expiryMarker}-${Math.floor(Date.now() / RENEWAL_IDEMPOTENCY_WINDOW_MS)}`;
+    // The GA ids are folded into the key because this key is reused for a
+    // whole window, and the ids can change inside it (the cookie banner is
+    // accepted between two clicks, or GA starts a new session). The second
+    // create would then send different metadata under the same key, which
+    // Stripe refuses outright; see idempotencyKeyWithGaIds. Without GA ids
+    // the key is unchanged.
+    const idempotencyKey = idempotencyKeyWithGaIds(
+      `renewal-${employerJob.id}-${expiryMarker}-${Math.floor(Date.now() / RENEWAL_IDEMPOTENCY_WINDOW_MS)}`,
+      gaMetadata,
+    );
     const session = await stripe.checkout.sessions.create({
       line_items: [
         {
@@ -194,6 +209,7 @@ export async function POST(request: NextRequest) {
         jobId,
         type: 'renewal',
         tier,
+        ...gaMetadata,
       },
     }, { idempotencyKey });
 

@@ -61,8 +61,16 @@ describe('Stripe client construction', () => {
   });
 });
 
-describe('Stripe bootstrap (webhook events + Payment Link)', () => {
-  const src = read('tmp/stripe-bootstrap.js');
+// tmp/ is gitignored, so the bootstrap script exists only on the machine that
+// created the Stripe sandbox. Reading it unconditionally threw at collection
+// time and failed this whole file on every clean checkout, including CI and a
+// fresh worktree. Skip the block where the script is absent and keep checking
+// it wherever it exists.
+const BOOTSTRAP = 'tmp/stripe-bootstrap.js';
+const hasBootstrap = fs.existsSync(path.join(ROOT, BOOTSTRAP));
+
+describe.skipIf(!hasBootstrap)('Stripe bootstrap (webhook events + Payment Link)', () => {
+  const src = hasBootstrap ? read(BOOTSTRAP) : '';
 
   it.each([
     'checkout.session.async_payment_succeeded',

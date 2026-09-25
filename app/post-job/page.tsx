@@ -1393,7 +1393,13 @@ function PostJobContent() {
 
                   {salaryCompetitive && (
                     <InfoBox emoji="💡" color="amber">
-                      <strong>Pro tip:</strong> Job posts with a visible salary range get <strong>3× more views</strong> and <strong>2× more applications</strong>.
+                      {/* The old "3x more views, 2x more applications" had no source
+                          (claim rule). What is true and checkable: salaryClause() in
+                          lib/filters.ts matches only posts that carry a salary, and
+                          ticking Competitive clears salaryMin and salaryMax. Worded
+                          as "pay information" rather than "never shown" because the
+                          enrich-jobs cron can still estimate pay from the description. */}
+                      <strong>Pro tip:</strong> Candidates who filter by minimum salary <strong>only see posts with pay information</strong>, so a visible range lets your post appear in those searches.
                     </InfoBox>
                   )}
                 </div>

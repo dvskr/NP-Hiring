@@ -43,13 +43,15 @@ interface CandidateCardProps {
     onToggleSelect?: (id: string) => void;
 }
 
+// Visible ranges read "to", never a hyphen (house copy rule); the same form
+// lib/experience-label.ts renders on job cards ("1 to 2 yrs").
 const EXPERIENCE_LABELS: Record<number, string> = {
     0: 'New Grad',
-    1: '1-2 yrs',
-    3: '3-5 yrs',
-    5: '5-10 yrs',
-    10: '10-15 yrs',
-    15: '15-20 yrs',
+    1: '1 to 2 yrs',
+    3: '3 to 5 yrs',
+    5: '5 to 10 yrs',
+    10: '10 to 15 yrs',
+    15: '15 to 20 yrs',
     20: '20+ yrs',
 };
 

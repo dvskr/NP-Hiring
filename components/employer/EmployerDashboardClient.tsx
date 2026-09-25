@@ -1161,7 +1161,7 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                                         <textarea
                                             value={unpublishNote}
                                             onChange={(e) => setUnpublishNote(e.target.value.slice(0, 1000))}
-                                            placeholder="What's the reason? (optional, ~1000 chars max)"
+                                            placeholder="What's the reason? (optional, up to 1,000 characters)"
                                             rows={3}
                                             style={{
                                                 width: '100%', padding: '10px 12px',
@@ -1321,9 +1321,16 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                         </h3>
                         <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {[
-                                <>Featured listings get <strong>3× more qualified applicants</strong> than non-featured posts.</>,
-                                <>Posts with a salary range get <strong>2× the apply clicks</strong> of posts without one.</>,
-                                <>Adding <strong>2 to 3 screening questions</strong> cuts unqualified applicants by ~40%.</>,
+                                // No multipliers or percentages here: the old "3x more qualified
+                                // applicants", "2x the apply clicks" and "~40%" figures had no source
+                                // (claim rule). Each tip now states something the product
+                                // does: every SKU carries the Featured package (config.isFeatured,
+                                // docs/pricing-system.md 1b), and salaryClause() in
+                                // lib/filters.ts matches only posts that carry a salary once a
+                                // candidate sets a minimum.
+                                <>Every post includes the <strong>Featured badge and top placement</strong> at no extra cost.</>,
+                                <>Candidates who filter by minimum salary only see posts with pay information, so <strong>include a salary range</strong>.</>,
+                                <>Add <strong>a few screening questions</strong> so applicants address your must-have requirements when they apply.</>,
                                 <>Use <strong>in-platform apply</strong> instead of an external link. Applications land directly in your dashboard, so nothing slips through.</>,
                                 <>Don&apos;t wait for inbound applications. <strong>Browse the Talent Pool</strong> and reach out to candidates who match your role.</>,
                             ].map((tip, i) => (
@@ -1387,7 +1394,9 @@ export default function EmployerDashboardClient({ employerEmail, employerName, j
                             Need Help?
                         </h3>
                         <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 12px', lineHeight: 1.4 }}>
-                            We typically respond within 24 hours.
+                            {/* Same response window /contact and /faq promise; a
+                                shorter one here contradicted them. */}
+                            We respond within 24 to 48 hours.
                         </p>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                             <Link href="/contact" className="emp-cta-card" style={{

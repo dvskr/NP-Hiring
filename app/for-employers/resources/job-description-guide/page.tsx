@@ -82,11 +82,13 @@ const JD_ANATOMY = [
   },
   {
     section: 'Schedule',
-    advice: `Days, hours, call expectations, weekend rotations, and admin time. Ambiguity here is the number-one source of first-call mismatches; a clinician deciding between offers compares schedules before almost anything else.`,
+    advice: `Days, hours, call expectations, weekend rotations, and admin time. Ambiguity here surfaces as a mismatch on the first call, and a clinician deciding between offers will compare schedules line by line.`,
   },
   {
     section: 'Compensation and benefits',
-    advice: `Post a real salary range. Some states require a posted pay range by law (verify your state's rules), and even where it is optional, an honest range pre-qualifies candidates and signals negotiating in good faith. List the benefits that matter to clinicians: CME stipend and days, malpractice coverage (with tail), retirement match, and PTO.`,
+    // Pay-transparency law is not in repo data (no state list, no dates), so
+    // the copy tells the employer to check rather than asserting who is covered.
+    advice: `Post a real salary range. Check whether pay-transparency rules where you hire require one; even where a range is optional, an honest range pre-qualifies candidates and signals negotiating in good faith. List the benefits that matter to clinicians: CME stipend and days, malpractice coverage (with tail), retirement match, and PTO.`,
   },
   {
     section: 'Why join us',
@@ -94,7 +96,7 @@ const JD_ANATOMY = [
   },
   {
     section: 'How to apply',
-    advice: `Say what happens next and how fast you respond. A short application with a stated response window outperforms a long portal form; working clinicians apply between patients, not at a desk.`,
+    advice: `Say what happens next and how fast you respond. Keep the application short and state a response window; working clinicians apply between patients, not at a desk.`,
   },
 ] as const;
 
@@ -143,7 +145,7 @@ const FAQS = [
   },
   {
     q: `Should I include a salary range in my ${brand.niche.short} job posting?`,
-    a: `Yes. Several states require a posted pay range by law (verify your state's current rules), and even where it is optional, a transparent range pre-qualifies candidates on the factor most likely to end a negotiation late. Use the ${brand.name} salary guide's live state-level data to set a range that is competitive in your market.`,
+    a: `Yes. Check whether pay-transparency rules where you hire require a posted range; even where it is optional, a transparent range settles pay expectations before either side invests in interviews. Use the ${brand.name} salary guide's live state-level data to set a range that is competitive in your market.`,
   },
   {
     q: `How long should a ${brand.niche.short} job description be?`,

@@ -35,8 +35,7 @@ import { renewalExpiresAt } from '@/lib/expires-at';
 import { logger } from '@/lib/logger';
 import { sendRenewalConfirmationEmail } from '@/lib/email-service';
 import { pingAllSearchEngines } from '@/lib/search-indexing';
-import { trackServerPurchase } from '@/lib/analytics-server';
-import { fetchInvoiceData, type StripeInvoiceData } from './activate-paid-job';
+import { fetchInvoiceData, sendPurchaseEvent, type StripeInvoiceData } from './activate-paid-job';
 import { claimEmailSend, prismaErrorCode, releaseEmailClaim } from './webhook-support';
 
 export type RenewalOutcome =
@@ -158,15 +157,21 @@ export async function applyRenewalCheckout(
 
   if (outcome === 'applied') {
     logger.info('Job renewed', { jobId, tier: renewalTier });
-    trackServerPurchase({
+    // GA ids as /api/create-renewal-checkout stored them (consent only),
+    // passed through unvalidated because trackServerPurchase is the trust
+    // boundary. sendPurchaseEvent keeps the function alive until the POST
+    // leaves without holding the webhook acknowledgement; see its comment.
+    await sendPurchaseEvent({
       clientId: jobId,
+      gaClientId: session.metadata?.gaClientId,
+      gaSessionId: session.metadata?.gaSessionId,
       sessionId: session.id,
       amountCents: session.amount_total ?? config.stripeRenewalPriceInCents,
       currency: session.currency ?? 'usd',
       type: 'renewal',
       tier: renewalTier,
       jobId,
-    }).catch(() => { /* logged inside */ });
+    });
     if (existingJob.slug) {
       pingAllSearchEngines(`${brand.baseUrl}/jobs/${existingJob.slug}`).catch((err) =>
         logger.error('[Stripe] Background indexing ping failed (renewal)', err),

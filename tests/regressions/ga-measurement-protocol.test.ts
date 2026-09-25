@@ -28,7 +28,10 @@ import { logger } from '@/lib/logger';
 const MEASUREMENT_ID = 'G-TESTSTREAM';
 const API_SECRET = 'test-api-secret';
 
-/** A job UUID, which is what both webhook call sites pass today. */
+/**
+ * A job UUID: the fallback both webhook call sites pass as `clientId`, and
+ * the only id a purchase carries when the checkout captured no browser ids.
+ */
 const JOB_UUID = 'b3f9ed7c-1c2b-4a1e-9d7a-0f5c4e2a1b88';
 
 const BASE_PARAMS: PurchaseParams = {
@@ -76,9 +79,10 @@ let warnSpy: ReturnType<typeof spyOnWarn>;
 beforeEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
-  // Nearly every case here runs with the degraded attribution the webhooks
-  // send today, which warns by design. Capturing it keeps the suite output
-  // readable and gives the attribution tests something to assert on.
+  // Nearly every case here runs without browser ids, which is what a buyer
+  // without analytics consent produces, and that warns by design. Capturing
+  // it keeps the suite output readable and gives the attribution tests
+  // something to assert on.
   warnSpy = spyOnWarn();
 });
 
@@ -255,6 +259,28 @@ describe('trackServerPurchase: the ids are validated, not trusted', () => {
     expect(sentEventParams(fetchMock).session_id).not.toBe('s1748000000');
     expect(result).toMatchObject({ status: 'sent', sessionIdSource: 'synthetic' });
   });
+
+  it('caps the length of both ids, and still accepts the longest value it allows', async () => {
+    // The checkout copies these ids into Stripe metadata and the idempotency
+    // key, and Stripe rejects the whole session create when either is too
+    // long. An oversized cookie must never be able to fail a payment, so the
+    // shared pattern refuses it here and at capture alike.
+    configure();
+    const fetchMock = mockFetchOk();
+    const longest = { gaClientId: `${'1'.repeat(20)}.${'2'.repeat(20)}`, gaSessionId: '3'.repeat(20) };
+
+    const oversized = await trackServerPurchase({
+      ...BASE_PARAMS,
+      gaClientId: `${'1'.repeat(21)}.1699999999`,
+      gaSessionId: '3'.repeat(21),
+    });
+    const accepted = await trackServerPurchase({ ...BASE_PARAMS, ...longest });
+
+    expect(oversized).toMatchObject({ clientIdSource: 'synthetic', sessionIdSource: 'synthetic' });
+    expect(sentPayload(fetchMock, 0).client_id).toBe(JOB_UUID);
+    expect(accepted).toMatchObject({ attributionSource: 'ga_cookie' });
+    expect(sentPayload(fetchMock, 1).client_id).toBe(longest.gaClientId);
+  });
 });
 
 describe('trackServerPurchase: attribution is only claimed when both ids are real', () => {
@@ -333,6 +359,29 @@ describe('trackServerPurchase: attribution is only claimed when both ids are rea
     expect(warnSpy).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ clientIdSource: 'ga_cookie', sessionIdSource: 'synthetic' }),
+    );
+  });
+
+  it('tells a buyer without consent apart from a capture this module refused', async () => {
+    // Since the checkout routes capture ids only with analytics consent, the
+    // degraded warning is expected for every buyer who declined. What the
+    // owner must be able to spot is the other case: ids that arrived and were
+    // refused, which is a broken capture, not a privacy choice.
+    configure();
+    mockFetchOk();
+
+    await trackServerPurchase(BASE_PARAMS);
+    await trackServerPurchase({ ...BASE_PARAMS, gaClientId: 'GA1.1.not-a-client-id', gaSessionId: 'GS2.1.s1748000000$o1' });
+
+    expect(warnSpy).toHaveBeenNthCalledWith(
+      1,
+      expect.any(String),
+      expect.objectContaining({ gaClientIdSupplied: false, gaSessionIdSupplied: false }),
+    );
+    expect(warnSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.any(String),
+      expect.objectContaining({ gaClientIdSupplied: true, gaSessionIdSupplied: true, clientIdSource: 'synthetic' }),
     );
   });
 
@@ -550,6 +599,11 @@ describe('parseGaCookieHeader', () => {
 
   it('ignores a malformed _ga value rather than sending garbage as a client id', () => {
     expect(parseGaCookieHeader('_ga=deleted; other=1')).toEqual({});
+  });
+
+  it('ignores oversized ids, which Stripe would refuse as checkout metadata', () => {
+    const header = `_ga=GA1.1.${'9'.repeat(21)}.1699999999; _ga_TESTSTREAM=GS2.1.s${'8'.repeat(21)}$o1$g1`;
+    expect(parseGaCookieHeader(header, MEASUREMENT_ID)).toEqual({});
   });
 
   it('produces ids that trackServerPurchase accepts as real', async () => {

@@ -362,10 +362,13 @@ export default function PreviewPage() {
     : willBePaid
       ? `$${paidPrice}`
       : null;
+  // No "$0" lead on the no-charge captions (house copy rule: never print $0).
+  // The price label beside them already reads "Free", so the caption only
+  // has to say why.
   const priceCaption = postingMode === 'promo'
-    ? `$0 today. Every post is free during our launch period through ${config.promoEndsLabel}. No credit card required.`
+    ? `Every post is free during our launch period through ${config.promoEndsLabel}. No credit card required.`
     : postingMode === 'plan'
-      ? '$0 today, included in your Employer plan'
+      ? 'Included in your Employer plan.'
       : willBePaid
         ? postingMode === 'intro'
           ? `One-time charge · secure Stripe checkout · every post after this one is $${config.postingPrice}`

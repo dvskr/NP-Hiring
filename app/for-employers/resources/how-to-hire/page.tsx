@@ -94,7 +94,10 @@ const HIRING_STEPS = [
   },
   {
     title: 'Post where the audience is specialized',
-    body: `Generalist boards reach everyone, which means screening everyone. A niche board reaches only ${brand.niche.descriptor}s, so every applicant already holds the baseline credential. Wherever you post, keep the application short; long forms lose working clinicians.`,
+    // No "every applicant already holds the credential" guarantee: audience
+    // composition is unverifiable (the same absolute the p9 claims review
+    // removed from /for-employers). The board's scope is what we can state.
+    body: `Generalist boards reach everyone, which means screening everyone. A niche board is built around ${brand.niche.descriptor} roles, so it reaches people looking for that kind of work; you still verify credentials at the first screen. Wherever you post, keep the application short; long forms lose working clinicians.`,
   },
   {
     title: 'Screen credentials early, not at offer stage',
@@ -106,7 +109,7 @@ const HIRING_STEPS = [
   },
   {
     title: 'Make the offer and start credentialing in parallel',
-    body: `The signed offer is the midpoint, not the finish line. Kick off state licensure verification, payer enrollment, and facility privileging the same week the offer is signed. These run in parallel with the candidate's notice period, and they are almost always the longest poles in the timeline.`,
+    body: `The signed offer is the midpoint, not the finish line. Kick off state licensure verification, payer enrollment, and facility privileging the same week the offer is signed. These run in parallel with the candidate's notice period, and they often decide the start date.`,
   },
 ] as const;
 
@@ -133,7 +136,7 @@ const CREDENTIAL_CHECKLIST = [
   },
   {
     title: 'NPI number',
-    body: `Needed for billing and payer enrollment. Nearly every practicing clinician already has one; confirm it early because payer credentialing cannot start without it.`,
+    body: `Needed for billing and payer enrollment. A clinician who has billed before will already have one; confirm it early because payer credentialing cannot start without it.`,
   },
   {
     title: 'Practice-authority fit for your state',
@@ -152,7 +155,7 @@ const TIMELINE_POINTS = [
   },
   {
     title: 'Build the start date around credentialing, not the offer',
-    body: `The realistic sequence is: offer signed, then notice period, licensure verification, payer enrollment, and privileging in parallel, then a fully credentialed start. Committing publicly to a start date before the credentialing dependencies are mapped is the most common avoidable delay.`,
+    body: `The realistic sequence is: offer signed, then notice period, licensure verification, payer enrollment, and privileging in parallel, then a fully credentialed start. Committing publicly to a start date before the credentialing dependencies are mapped is an avoidable source of delay.`,
   },
 ] as const;
 
@@ -176,8 +179,12 @@ const FAQS = [
     a: `Start from the national median annual wage of ${STAT_SOURCES.averageSalary.formatted} (${STAT_SOURCES.averageSalary.source}), then adjust for your state, setting, and specialty, since pay differs meaningfully across all three. The ${brand.name} salary guide breaks down live compensation data by state so you can anchor your posted range to what candidates in your market actually see.`,
   },
   {
+    // Only the cited projection is stated. "Among the fastest of any
+    // occupation", "demand keeps rising" and "consistently fill roles
+    // faster" had no repo source, so the answer ends on the two levers an
+    // employer controls instead of an outcome claim.
     q: `Why is ${brand.niche.short} hiring so competitive right now?`,
-    a: `The profession is growing fast: the BLS projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, among the fastest of any occupation, while demand from team-based and access-focused care models keeps rising. Employers that post transparent salary ranges and streamline credentialing consistently fill roles faster than those that do not.`,
+    a: `The BLS projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for ${brand.niche.descriptor}s from 2024 to 2034, which means employers will be filling newly created positions, not only replacing departures. The two levers you control are a transparent salary range in the posting and a credentialing plan that starts the week the offer is signed.`,
   },
 ] as const;
 
@@ -319,7 +326,7 @@ export default function HowToHireGuidePage() {
               The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}). {TYPICAL_BAND} is the typical W-2 comparison band this board&apos;s salary pipeline uses as a sanity check, but pay varies meaningfully by state, setting, and specialty. Anchoring to a national number alone will leave your range uncompetitive in some markets and overpriced in others.
             </p>
             <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
-              Use the live salary guide to see disclosed-pay data for your state before setting the range, and post the range in the job description. Transparent listings pre-qualify candidates on the single factor most likely to end a negotiation late.
+              Use the live salary guide to see disclosed-pay data for your state before setting the range, and post the range in the job description. A transparent range settles pay expectations before either side invests in interviews.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link

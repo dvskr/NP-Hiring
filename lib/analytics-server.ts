@@ -39,18 +39,34 @@
  *
  * ATTRIBUTION
  *   A purchase only joins the browser funnel when it carries both real
- *   browser ids: the `_ga` client id and the `_ga_<stream>` session id. Both
- *   Stripe webhook call sites still pass a Prisma job UUID as the client id
- *   and no session id at all, so every event today lands as a brand new
- *   direct user. That degraded case warns at warn level rather than debug,
- *   because lib/logger.ts raises the minimum level to info in production and
- *   this is the one fault here that is true for 100 percent of purchases: at
- *   debug level the owner would switch GA4 on and production would say
- *   nothing whatsoever about the misattribution.
+ *   browser ids: the `_ga` client id and the `_ga_<stream>` session id. The
+ *   webhook has no visitor request, so the ids travel in three steps:
+ *     1. CAPTURE   /api/create-checkout and /api/create-renewal-checkout call
+ *                  gaCheckoutMetadata(request) below and spread the result
+ *                  into the Stripe checkout session metadata. It is empty
+ *                  unless the visitor granted analytics consent.
+ *     2. HAND-OFF  app/api/webhooks/stripe/activate-paid-job.ts and
+ *                  apply-renewal.ts read `gaClientId` / `gaSessionId` back off
+ *                  the session and pass them to trackServerPurchase.
+ *     3. DELIVERY  sendPurchaseEvent in activate-paid-job.ts keeps the
+ *                  function alive until the POST leaves.
+ *   A buyer who did not grant analytics consent still produces a purchase,
+ *   on the job UUID fallback, credited to direct. That degraded case warns at
+ *   warn level rather than debug, because lib/logger.ts raises the minimum
+ *   level to info in production and a capture that silently broke would look
+ *   exactly like it: every purchase detached, and at debug level production
+ *   would say nothing whatsoever about it. The warning says whether ids were
+ *   supplied at all, which separates "buyer declined" from "ids arrived and
+ *   were unusable".
+ *
+ *   The Employer plan is sold through a Stripe Payment Link and fires no
+ *   purchase event at all, so GA4 records nothing for it; see the note on
+ *   gaCheckoutMetadata.
  */
 
-import { after } from 'next/server';
+import { after, type NextRequest } from 'next/server';
 
+import { CONSENT_COOKIE, parseConsentCookie } from '@/lib/consent';
 import { logger } from '@/lib/logger';
 
 const MP_ENDPOINT = 'https://www.google-analytics.com/mp/collect';
@@ -70,16 +86,29 @@ const ENGAGEMENT_TIME_MSEC = '1';
 /** GA4 discards Measurement Protocol events stamped older than this. */
 const MP_MAX_EVENT_AGE_MS = 72 * 60 * 60 * 1000;
 
-/** A browser client id from the `_ga` cookie always reads `<digits>.<digits>`. */
-const GA_CLIENT_ID_PATTERN = /^\d+\.\d+$/;
+/**
+ * A browser client id from the `_ga` cookie always reads `<digits>.<digits>`:
+ * a random number and a first visit timestamp, about ten digits each.
+ *
+ * The length cap matters as much as the shape. These ids are copied from a
+ * cookie the visitor controls into Stripe checkout metadata and into the
+ * checkout idempotency key (idempotencyKeyWithGaIds), and Stripe rejects the
+ * whole session create when a metadata value or an idempotency key is too
+ * long. Without a cap, one oversized `_ga` cookie from a broken extension or
+ * a stray tag would turn an analytics capture into a failed payment. Twenty
+ * digits a side is double any real value and keeps both well inside Stripe's
+ * limits. Capture and send share this one pattern, so a value accepted at
+ * checkout is always accepted by the webhook, and the reverse.
+ */
+const GA_CLIENT_ID_PATTERN = /^\d{1,20}\.\d{1,20}$/;
 
 /**
  * A GA4 session id is the session start time in unix seconds, so it is digits
  * only. The `_ga_<stream>` cookie wraps it (`GS2.1.s1748000000$o12$g1`), and
  * forwarding that wrapper verbatim is the mistake this pattern exists to
- * catch.
+ * catch. Capped for the same reason as the client id above.
  */
-const GA_SESSION_ID_PATTERN = /^\d+$/;
+const GA_SESSION_ID_PATTERN = /^\d{1,20}$/;
 
 /** GA4 stream ids read `G-` plus an alphanumeric suffix. */
 const GA_MEASUREMENT_ID_PATTERN = /^G-[A-Z0-9]+$/i;
@@ -120,19 +149,20 @@ export type TrackServerPurchaseResult =
 export interface PurchaseParams {
   /**
    * Fallback identifier, used only when `gaClientId` is absent or unusable.
-   * Today both webhook call sites pass a Prisma job UUID here, which GA4
-   * accepts but cannot join to anything: it becomes a brand new user in a
-   * brand new direct session, detached from the begin_checkout the same
-   * person fired in the browser minutes earlier. See `gaClientId`.
+   * Both webhook call sites pass the Prisma job UUID here, which GA4 accepts
+   * but cannot join to anything: it becomes a brand new user in a brand new
+   * direct session, detached from the begin_checkout the same person fired
+   * in the browser minutes earlier. It is what a buyer without analytics
+   * consent gets, by design. See `gaClientId`.
    */
   clientId: string;
   /**
    * The real GA4 client id from the buyer `_ga` cookie, shaped
    * `<digits>.<digits>`. Supplying it is what makes the purchase attach to
    * the session and the traffic source that produced it. The webhook has no
-   * visitor request to read cookies from, so the value has to be captured
-   * when the checkout session is created and carried through Stripe
-   * metadata. `parseGaCookieHeader` below does the capture half.
+   * visitor request to read cookies from, so the value is captured when the
+   * checkout session is created (`gaCheckoutMetadata` below) and read back
+   * from the Stripe session metadata by the webhook.
    */
   gaClientId?: string;
   /**
@@ -245,6 +275,106 @@ function parseGaSessionCookie(value: string): string | undefined {
 }
 
 /**
+ * What the capture reads from a checkout request. A NextRequest satisfies it.
+ * Taking the request rather than calling `cookies()` from next/headers keeps
+ * the capture callable, and testable, outside a Next request scope; both
+ * expose the same request cookies, so the consent read below still matches
+ * the one app/api/jobs/[id]/track-apply/route.ts performs.
+ */
+export type CheckoutRequest = Pick<NextRequest, 'headers' | 'cookies'>;
+
+/**
+ * True only when this request may hand GA identifiers to a server side
+ * event.
+ *
+ * Read the way app/api/jobs/[id]/track-apply/route.ts reads it: the HttpOnly
+ * consent cookie, parsed by lib/consent.ts, analytics category true. The GA
+ * cookie itself proves nothing. It is written once analytics_storage is
+ * granted and then lives for two years, so it outlives a withdrawn consent,
+ * a later Decline in the banner, and a browser privacy signal.
+ *
+ * A browser privacy signal is checked first and wins, in the same order as
+ * components/CookieConsent.tsx#initialBannerDecision and on the same headers
+ * middleware.ts reads. The banner rewrites the consent cookie to denied only
+ * after its chunk runs on a page view, so for a request or two the cookie
+ * can still say accepted while the browser already sends Sec-GPC. The server
+ * must never be more permissive than the browser.
+ */
+function requestAllowsAnalytics(request: CheckoutRequest): boolean {
+  if (request.headers.get('sec-gpc') === '1' || request.headers.get('dnt') === '1') return false;
+  return parseConsentCookie(request.cookies.get(CONSENT_COOKIE)?.value)?.analytics === true;
+}
+
+/**
+ * CAPTURE: the GA ids to spread into a Stripe checkout session's metadata.
+ *
+ * Empty unless the visitor granted analytics consent, and it carries only
+ * the keys that hold a value, so a visitor without consent adds nothing to
+ * the session at all. The keys match the PurchaseParams fields on purpose:
+ * the webhook reads `session.metadata.gaClientId` straight into `gaClientId`
+ * with no mapping in between to drift. The values are not re-validated here:
+ * parseGaCookieHeader only emits well formed ids, and trackServerPurchase
+ * stays the single trust boundary on the way out, because Stripe metadata is
+ * an external string store whatever wrote it.
+ *
+ * Not used for the Employer plan, which today reaches GA4 as nothing at all:
+ *   - No purchase event fires for it, server side or in the browser.
+ *     app/api/webhooks/stripe/plan-checkout.ts calls no tracker, and
+ *     lib/analytics.ts has no purchase event.
+ *   - The return from Stripe is no substitute. This repository never sets
+ *     the link's after completion page (the link is created in Stripe and
+ *     only read here from STRIPE_PLAN_PAYMENT_LINK). If that page is a
+ *     dashboard URL with a flag such as `?plan=activated`, the flag is
+ *     dropped by lib/analytics.ts#ANALYTICS_QUERY_ALLOWLIST, so the hit reads
+ *     as an ordinary dashboard page view.
+ * The ids cannot ride inside the link. A Payment Link session takes its
+ * metadata from the link object, which is the same for every buyer. The one
+ * per visitor field, client_reference_id, already carries the account id,
+ * and plan-checkout.ts#resolveReferencedEmployer matches it exactly against
+ * an employer profile, so appending anything to it would stop the plan
+ * attaching to the account: a change to the purchase flow, not to analytics.
+ * Attribution is still possible without touching how the plan is bought.
+ * /api/employer/plan/subscribe and /api/employer/plan both run on a same
+ * origin request that carries the GA cookies just before the buyer leaves
+ * for Stripe, so either could call this function and store the result
+ * against the account id, and the plan webhook could read it back and send
+ * a purchase. That needs new storage (a migration), a plan purchase type and
+ * a decision on whether monthly renewals count as purchases, so it is an
+ * owner decision rather than a default.
+ */
+export function gaCheckoutMetadata(request: CheckoutRequest): Record<string, string> {
+  if (!requestAllowsAnalytics(request)) return {};
+  const { gaClientId, gaSessionId } = parseGaCookieHeader(request.headers.get('cookie'));
+  return {
+    ...(gaClientId ? { gaClientId } : {}),
+    ...(gaSessionId ? { gaSessionId } : {}),
+  };
+}
+
+/**
+ * The idempotency key for a checkout session create that may carry GA ids.
+ *
+ * Stripe refuses a reused idempotency key whose parameters differ from the
+ * first request, instead of returning the original session. The renewal key
+ * is reused for a ten minute window on purpose (a double click gets one
+ * session), and the resume key is reused whenever recordCheckoutSession
+ * failed to store the session it minted. The GA ids can change under either
+ * key: the visitor accepts the cookie banner between two clicks, or GA starts
+ * a new session after half an hour idle. Without this, the second create
+ * would carry different metadata under the same key and fail outright, and
+ * the employer could not pay. Folding the ids into the key keeps "same key,
+ * same parameters" true: a double click from one browser state still
+ * collapses to one session, and a changed state gets a session of its own.
+ * With no GA ids the base key comes back unchanged, so nothing moves for a
+ * visitor without consent.
+ */
+export function idempotencyKeyWithGaIds(baseKey: string, gaMetadata: Record<string, string>): string {
+  const { gaClientId, gaSessionId } = gaMetadata;
+  if (!gaClientId && !gaSessionId) return baseKey;
+  return `${baseKey}-ga-${gaClientId ?? 'none'}-${gaSessionId ?? 'none'}`;
+}
+
+/**
  * FNV-1a, 32 bit. Not security relevant: the only requirement is that one
  * Stripe checkout session always maps to the same GA session id. A timestamp
  * would scatter a single purchase across several GA sessions whenever the
@@ -301,7 +431,11 @@ function toCurrencyAmount(amountCents: number): number {
  * Next.js `after()` primitive so the platform keeps the function alive until
  * the request leaves. Without that, a fire and forget POST on Vercel races
  * the freeze that follows the response: an unknowable share of purchases
- * never reach Google and nothing anywhere records the loss.
+ * never reach Google and nothing anywhere records the loss. The registration
+ * here is a safety net for any caller; the webhook paths go through
+ * sendPurchaseEvent in app/api/webhooks/stripe/activate-paid-job.ts, which
+ * also covers the case where no request scope exists and `after()` cannot
+ * help.
  *
  * The returned promise never rejects. Failures come back as a `failed`
  * result, because an analytics problem must never fail a Stripe webhook.
@@ -357,17 +491,22 @@ async function sendPurchase(params: PurchaseParams): Promise<TrackServerPurchase
     clientIdSource === 'ga_cookie' && sessionIdSource === 'ga_cookie' ? 'ga_cookie' : 'synthetic';
 
   if (attributionSource === 'synthetic') {
-    // warn, not debug. lib/logger.ts floors production at info, and this is
-    // the one condition here that is true for every purchase today, so debug
-    // would mean the owner sets the credentials and production says nothing
-    // at all while the revenue report fills with direct traffic. A handful of
-    // purchases a day is not log spam, and the line stops on its own once the
-    // checkout route starts forwarding the real cookie ids.
+    // warn, not debug. lib/logger.ts floors production at info, and a capture
+    // that quietly stopped working would make this true for every purchase:
+    // at debug level production would say nothing at all while the revenue
+    // report fills with direct traffic. It also fires, correctly, for every
+    // buyer who did not grant analytics consent. A handful of purchases a day
+    // is not log spam, and the two `supplied` flags tell the cases apart: no
+    // ids supplied is a buyer without consent (or a capture that broke, if it
+    // is every purchase); ids supplied but synthetic means the checkout
+    // captured something this module refused.
     logger.warn('GA4 purchase is not joined to a browser session, it will be credited to direct', {
       sessionId: params.sessionId,
       jobId: params.jobId,
       clientIdSource,
       sessionIdSource,
+      gaClientIdSupplied: Boolean(params.gaClientId),
+      gaSessionIdSupplied: Boolean(params.gaSessionId),
     });
   }
 
@@ -403,9 +542,10 @@ async function sendPurchase(params: PurchaseParams): Promise<TrackServerPurchase
     // more permissive than the browser, which is the one direction this
     // codebase must not drift in, so advertising use is pinned off. The cost
     // is that a purchase never feeds ad audiences even for a buyer who did
-    // accept marketing. Widening that needs the real consent state carried
-    // from the browser through Stripe metadata, the same route the client id
-    // has to travel, and it is an owner decision rather than a default.
+    // accept marketing. Widening that needs the marketing consent state
+    // carried through Stripe metadata the way gaCheckoutMetadata carries the
+    // client id (which only proves analytics consent), and it is an owner
+    // decision rather than a default.
     non_personalized_ads: true,
     consent: {
       ad_user_data: 'DENIED',

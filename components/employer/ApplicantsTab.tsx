@@ -371,7 +371,7 @@ export default function ApplicantsTab() {
                         <option value="newest">Newest First</option>
                         <option value="oldest">Oldest First</option>
                         <option value="aiScore">AI Score (Highest)</option>
-                        <option value="name">Name A-Z</option>
+                        <option value="name">Name (A to Z)</option>
                         <option value="status">By Status</option>
                     </select>
 

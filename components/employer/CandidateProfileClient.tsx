@@ -33,13 +33,15 @@ interface CandidateProfile {
     resumeUrl: string | null;
 }
 
+// Visible ranges read "to", never a hyphen (house copy rule), matching the
+// talent pool card in CandidateCard.tsx.
 const EXPERIENCE_LABELS: Record<number, string> = {
     0: 'New Graduate',
-    1: '1-2 years',
-    3: '3-5 years',
-    5: '5-10 years',
-    10: '10-15 years',
-    15: '15-20 years',
+    1: '1 to 2 years',
+    3: '3 to 5 years',
+    5: '5 to 10 years',
+    10: '10 to 15 years',
+    15: '15 to 20 years',
     20: '20+ years',
 };
 

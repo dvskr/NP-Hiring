@@ -20,7 +20,10 @@ export const metadata: Metadata = {
   // with "FAQ | PMHNP Jobs | PMHNP Hiring" (the brand-confusing form
   // audit 09 M-18 flagged — "PMHNP Jobs" is not the brand name).
   title: { absolute: `${brand.name} FAQ | Job Search, Posting & Alerts` },
-  description: `Frequently asked questions about ${brand.name}. Learn how to search jobs, post positions, set up alerts, and make the most of the #1 ${brand.niche.short} job board.`,
+  // No ranking claim ("#1 job board"): nothing in the repo measures one, and
+  // this string ships to search results. Same debt the p9 claims review
+  // logged against the About page metadata.
+  description: `Frequently asked questions about ${brand.name}. Learn how to search jobs, post positions, set up alerts, and make the most of a job board built for ${brand.niche.short} roles.`,
   openGraph: {
     title: `${brand.name} FAQ`,
     description: `Common questions about searching, posting, and managing ${brand.niche.short} jobs.`,
@@ -51,7 +54,7 @@ export default function FAQPage() {
     },
     {
       question: "Where do the jobs come from?",
-      answer: `We aggregate jobs from multiple sources including job boards, company career pages, and direct employer postings. This gives you access to the most comprehensive collection of ${brand.niche.short} opportunities in one place.`
+      answer: `We aggregate jobs from multiple sources, including job boards, company career pages, and direct employer postings, so you can search ${brand.niche.short} openings from all of them in one place.`
     },
     {
       question: "How do I apply to a job?",
@@ -94,7 +97,9 @@ export default function FAQPage() {
     },
     {
       question: "What happens to candidates I've unlocked when my posting expires?",
-      answer: "You keep them. Once you've unlocked a candidate (paid 1 of your 25 unlocks to view their full profile), their contact info, resume, and details remain accessible in your dashboard forever, even after the posting expires. To unlock new candidates or send new InMails, you will need an active posting."
+      // The unlock count reads the config token, like every other entitlement
+      // on this page, so a limit change cannot strand a stale "25" here.
+      answer: `You keep them. Once you've unlocked a candidate (used 1 of your ${config.limits.candidateUnlocksPerPosting} unlocks to view their full profile), their contact info, resume, and details remain accessible in your dashboard forever, even after the posting expires. To unlock new candidates or send new InMails, you will need an active posting.`
     },
     {
       question: "Can I edit my job posting?",
@@ -113,7 +118,9 @@ export default function FAQPage() {
   const generalFaqs = [
     {
       question: "How do I contact support?",
-      answer: `Email us at ${brand.email.support} and we will respond within 24 hours (usually much faster). You can also use our contact form for general inquiries.`
+      // Response window matches the promise on /contact (24 to 48 hours); the
+      // old "24 hours (usually much faster)" contradicted it and measured nothing.
+      answer: `Email us at ${brand.email.support} and we will respond within 24 to 48 hours. You can also use our contact form for general inquiries.`
     },
     {
       question: "Is my information secure?",
@@ -121,7 +128,9 @@ export default function FAQPage() {
     },
     {
       question: "How often are jobs updated?",
-      answer: "Jobs are added and updated daily. New postings go live immediately, and we regularly refresh aggregated listings to ensure accuracy."
+      // No "added daily" freshness claim (the pSEO truth sweep retired it):
+      // how many jobs arrive on a given day is not something we control.
+      answer: "New postings go live immediately, and we refresh aggregated listings from their sources on a regular schedule to keep them accurate."
     },
     {
       question: "Can I post jobs in multiple locations?",
@@ -129,10 +138,16 @@ export default function FAQPage() {
     },
   ];
 
+  // CLAIM RULE for the career, salary and scope answers below: a number,
+  // ranking or regulatory fact appears only when it comes from
+  // lib/stats-sources.ts (STAT_SOURCES) or lib/config. Program lengths,
+  // clinical-hour minimums, renewal cycles, pay bands and "largest" or "top"
+  // rankings have no repo source, so these answers name the steps and point
+  // at the authority (program, certifying body, salary guide) instead.
   const careerFaqs = [
     {
       question: `How long does it take to become a ${brand.niche.descriptor}?`,
-      answer: `Becoming an ${brand.niche.short} typically takes 6 to 8 years: 4 years for a BSN, 1 to 2 years of RN experience, and 2 to 3 years for an MSN or DNP with ${brand.niche.short} specialization. Accelerated BSN-to-DNP programs can shorten this timeline.`
+      answer: `Becoming an ${brand.niche.short} involves three stages: a BSN, experience as a registered nurse, and an MSN or DNP program with ${brand.niche.short} specialization. The total time depends on the programs you choose, whether you study full or part time, and how much RN experience your graduate program expects, so check each program's published length and admission requirements. Accelerated BSN-to-DNP programs can shorten the path.`
     },
     {
       question: `What educational background is required for an ${brand.niche.short} role?`,
@@ -140,38 +155,42 @@ export default function FAQPage() {
     },
     {
       question: `What is the difference between an ${brand.niche.short} and a physician?`,
-      answer: `${brand.niche.short}s hold a Master's or Doctoral degree in nursing (2 to 4 years of graduate school), while physicians complete medical school plus a residency of 3 to 7 years. Both can diagnose, treat, and prescribe. In full practice authority states, ${brand.niche.short}s practice independently. ${brand.niche.short}s reach full practice faster and with far less educational debt, while physicians train for a broader, more specialized scope.`
+      answer: `${brand.niche.short}s hold a Master's or Doctoral degree in nursing, while physicians complete medical school followed by a residency. Both can diagnose, treat, and prescribe. In full practice authority states, ${brand.niche.short}s practice independently. Physician training adds residency and covers a broader, more specialized scope, which is the main tradeoff between the two paths.`
     },
     {
       question: `What are the main ${brand.niche.short} specialties?`,
-      answer: `The largest ${brand.niche.short} specialty is family practice (FNP), followed by adult-gerontology (AGNP, in primary-care and acute-care tracks), psychiatric-mental health (PMHNP), pediatrics (PNP), women's health (WHNP), and neonatal (NNP). Each has its own national board certification and population focus, and most job postings list the certification they require.`
+      // "Include", not a ranked list: the old "largest specialty is family
+      // practice, followed by" ordering had no repo source.
+      answer: `Common ${brand.niche.short} specialties include family practice (FNP), adult-gerontology (AGNP, in primary-care and acute-care tracks), psychiatric-mental health (PMHNP), pediatrics (PNP), women's health (WHNP), and neonatal (NNP). Each has its own national board certification, so check which certification a posting requires before you apply.`
     },
     {
       question: `Can I complete an ${brand.niche.short} program online?`,
-      answer: `Yes, many accredited universities offer online ${brand.niche.short} programs. Didactic coursework is completed online, but you will still need to complete 500+ clinical hours in person at approved sites. Top online programs include Vanderbilt, Rush, and University of Cincinnati.`
+      answer: `Yes, many accredited universities offer online ${brand.niche.short} programs. Didactic coursework is completed online, but clinical hours are completed in person at approved sites, and the number required depends on your program and certification track. When comparing programs, look at accreditation, help with clinical placements, and published certification exam pass rates.`
     },
     {
       question: `What is the ROI of an ${brand.niche.short} degree?`,
-      answer: `The ROI is excellent. Graduate school costs vary by program, and ${brand.niche.short}s earn a median of ${STAT_SOURCES.averageSalary.formatted} per year (${STAT_SOURCES.averageSalary.source}, ${STAT_SOURCES.averageSalary.asOf}), which is well above the median RN salary, so most ${brand.niche.short}s recoup their graduate-degree investment within a few years of full-time practice.`
+      answer: `It depends on what your program costs and what you earn afterward. Graduate school costs vary by program, and ${brand.niche.short}s earn a median of ${STAT_SOURCES.averageSalary.formatted} per year (${STAT_SOURCES.averageSalary.source}, ${STAT_SOURCES.averageSalary.asOf}). Compare that figure with your program's total cost, including any income you give up while studying, to estimate your own payback period.`
     },
     {
-      question: `What are the top 3 ${brand.niche.short} jobs for new grads?`,
-      answer: `1) Federally Qualified Health Centers (FQHCs): structured settings with mentorship that often qualify for HRSA loan repayment. 2) Outpatient group practices: collaborative environments with a gradual caseload ramp-up. 3) VA ${brand.niche.short} positions: federal benefits, a pension, and residency programs for new graduates.`
+      question: `What are good first ${brand.niche.short} jobs for new grads?`,
+      answer: `Three settings are worth a close look. 1) Federally Qualified Health Centers (FQHCs): structured settings with mentorship; ask whether the site participates in a federal loan repayment program. 2) Outpatient group practices: collaborative environments where you can ask for a gradual caseload ramp-up. 3) VA ${brand.niche.short} positions: federal benefits, and some facilities run residency programs for new graduates.`
     },
   ];
 
   const salaryFaqs = [
     {
-      question: `What is the average salary of a ${brand.niche.descriptor} in the United States?`,
-      answer: `${brand.niche.short}s earn a median annual salary of ${STAT_SOURCES.averageSalary.formatted} based on the ${STAT_SOURCES.averageSalary.source} (${STAT_SOURCES.averageSalary.asOf}). Salaries range from roughly $120,000 for new graduates to $200,000+ for experienced ${brand.niche.short}s in high-demand specialties and settings. Private practice owners and locum tenens providers can earn more depending on volume and overhead.`
+      // "Median", never "average": the cited BLS figure is a median, and the
+      // question feeds FAQPage JSON-LD, so the two must say the same thing.
+      question: `What is the median salary of a ${brand.niche.descriptor} in the United States?`,
+      answer: `${brand.niche.short}s earn a median annual salary of ${STAT_SOURCES.averageSalary.formatted} based on the ${STAT_SOURCES.averageSalary.source} (${STAT_SOURCES.averageSalary.asOf}). Individual pay depends on experience, specialty, setting, and state, so compare the national figure with the state-by-state data in our salary guide. Private practice and locum tenens earnings depend heavily on patient volume and overhead.`
     },
     {
       question: `Which states pay the highest salaries for ${brand.niche.short}s?`,
-      answer: `${brand.niche.short} pay is consistently highest in West Coast and Northeast markets: California, Washington, Oregon, Nevada, and New Jersey rank near the top in federal wage data. When adjusted for cost of living, several Midwest and Southern states offer stronger real purchasing power. See our salary guide for state-by-state figures.`
+      answer: `Pay differs widely by state, and the state with the highest posted pay is not always the best value once housing and other living costs are counted. See our salary guide for state-by-state figures before you compare offers across state lines.`
     },
     {
       question: `How do ${brand.niche.descriptor} salaries vary by specialty?`,
-      answer: `Compensation varies meaningfully by specialty. Acute care, psychiatric-mental health, and emergency ${brand.niche.short}s typically sit at the higher end of the range, while family practice and primary-care roles cluster near the national median. Setting matters as much as specialty: hospital, VA, and correctional roles usually out-pay clinic positions, and Full Practice Authority states tend to carry a premium.`
+      answer: `Compensation varies by specialty, and setting and state matter too: the same credential can pay differently in a hospital, a clinic, a VA facility, or a correctional setting. Compare postings for your specialty and setting in our salary guide rather than relying on a single national figure.`
     },
     {
       question: `Does having a DNP vs MSN affect an ${brand.niche.short}'s salary?`,
@@ -179,11 +198,14 @@ export default function FAQPage() {
     },
     {
       question: `How can you make the most money as an ${brand.niche.short}?`,
-      answer: "Top strategies include: owning a private practice, specializing in high-demand areas like acute, emergency, or correctional care, practicing in Full Practice Authority states, working locum tenens, and always negotiating total compensation rather than base salary alone."
+      answer: "Strategies to consider include owning a private practice, building expertise in a specialty or setting that pays a premium in your market, practicing in a Full Practice Authority state, working locum tenens, and always negotiating total compensation rather than base salary alone."
     },
     {
-      question: `What is the salary range for locum tenens ${brand.niche.short} jobs?`,
-      answer: `Locum tenens ${brand.niche.short}s are typically paid hourly, commonly in the $60 to $150+ per hour range depending on specialty and setting, with CRNA locum rates at the top of the market. Packages usually include housing stipends, travel allowances, and malpractice coverage, and locum rates typically run higher than comparable permanent positions, which makes it one of the higher-earning ${brand.niche.short} career paths.`
+      // The old "$60 to $150+ per hour" band traced only to a code comment,
+      // not to a cited source, so the answer explains how locum pay works
+      // instead of quoting a range.
+      question: `How are locum tenens ${brand.niche.short} jobs paid?`,
+      answer: `Locum tenens ${brand.niche.short}s are usually paid hourly, and the rate depends on specialty, setting, location, and assignment length. Packages often include housing stipends, travel allowances, and malpractice coverage. Compare a locum rate against a permanent role's full package, including benefits and paid time off, rather than against its base salary alone.`
     },
   ];
 
@@ -194,15 +216,15 @@ export default function FAQPage() {
     },
     {
       question: `What are the certification requirements for ${brand.niche.short} graduates?`,
-      answer: `After graduating from an accredited ${brand.niche.short} program, you must pass a national board certification exam for your population focus (ANCC or AANP), apply for state APRN licensure, obtain an NPI number, register with the DEA for prescriptive authority, and create a CAQH ProView profile for insurance credentialing. Board certification typically renews every 5 years with continuing-education requirements.`
+      answer: `After graduating from an accredited ${brand.niche.short} program, you must pass a national board certification exam for your population focus (ANCC or AANP), apply for state APRN licensure, obtain an NPI number, register with the DEA for prescriptive authority, and create a CAQH ProView profile for insurance credentialing. Board certification must be renewed on your certifying body's cycle, with continuing-education requirements, so check ANCC or AANP for the current terms.`
     },
     {
       question: `What extra certifications can an ${brand.niche.short} get?`,
-      answer: `${brand.niche.short}s can pursue additional credentials in areas like emergency care (ENP-C), diabetes education (CDCES), dermatology (DCNP), oncology (AOCNP), and pain management or aesthetics training. These added specializations often command salary premiums and open doors to niche roles.`
+      answer: `${brand.niche.short}s can pursue additional credentials in areas like emergency care (ENP-C), diabetes education (CDCES), dermatology (DCNP), oncology (AOCNP), and pain management or aesthetics training. These added credentials can open doors to niche roles and give you more to bring to a pay negotiation.`
     },
     {
       question: `Are there state licensure rules that affect demand for ${brand.niche.short}s?`,
-      answer: `Yes. States with Full Practice Authority (${STAT_SOURCES.fullPracticeStates.formatted} per the ${STAT_SOURCES.fullPracticeStates.source}, ${STAT_SOURCES.fullPracticeStates.asOf}) allow ${brand.niche.short}s to practice independently, driving higher demand and salaries. Reduced and restricted practice states require physician collaboration or supervision, which can limit the number of available positions and affect compensation.`
+      answer: `Yes. States with Full Practice Authority (${STAT_SOURCES.fullPracticeStates.formatted} per the ${STAT_SOURCES.fullPracticeStates.source}, ${STAT_SOURCES.fullPracticeStates.asOf}) allow ${brand.niche.short}s to practice independently, which widens the settings where an ${brand.niche.short} can lead care. Reduced and restricted practice states require physician collaboration or supervision, which adds a step for employers and can shape which roles are offered.`
     },
     {
       question: `What skills are employers seeking in ${brand.niche.short} graduates?`,
@@ -210,7 +232,7 @@ export default function FAQPage() {
     },
     {
       question: `What negotiation strategies can enhance salary offers for ${brand.niche.short}s?`,
-      answer: `Key strategies include researching market rates by state and setting, negotiating total compensation (not just base salary), asking for a sign-on bonus, requesting a CME allowance, student loan repayment assistance, additional PTO, and flexible scheduling. ${brand.niche.short}s who negotiate typically secure meaningfully higher starting offers than those who accept the first number.`
+      answer: `Key strategies include researching market rates by state and setting, negotiating total compensation (not just base salary), asking for a sign-on bonus, requesting a CME allowance, student loan repayment assistance, additional PTO, and flexible scheduling. Treat the first offer as a starting point: some parts of a package, such as a sign-on bonus or CME allowance, can have room even when base salary does not.`
     },
   ];
 
@@ -346,7 +368,7 @@ export default function FAQPage() {
               Still Have Questions?
             </h2>
             <p className="mb-6 max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
-              Did not find your answer? We are here to help. Reach out and we will get back to you within 24 hours.
+              Did not find your answer? We are here to help. Reach out and we will get back to you within 24 to 48 hours.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-lg mx-auto">
               <a href={`mailto:${brand.email.support}`} className="w-full sm:w-auto">

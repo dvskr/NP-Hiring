@@ -29,7 +29,10 @@ describe('B78 — create-checkout resume mode', () => {
   it('branches into resumeAbandonedCheckout when resumeJobId is supplied', () => {
     expect(src).toMatch(/resumeJobId\?: string/);
     expect(src).toMatch(/typeof rawBody\.resumeJobId === 'string'/);
-    expect(src).toMatch(/return resumeAbandonedCheckout\(stripe, rawBody\.resumeJobId\.trim\(\), userId, profileEmail\)/);
+    // gaMetadata carries the consented GA client and session ids so a resumed
+    // checkout keeps its attribution (tests/regressions/checkout-ga-attribution.test.ts
+    // owns that contract); everything else about the call is unchanged.
+    expect(src).toMatch(/return resumeAbandonedCheckout\(stripe, rawBody\.resumeJobId\.trim\(\), userId, profileEmail, gaMetadata\)/);
     // The branch sits AFTER the auth block — anonymous callers never reach it.
     const authGate = src.indexOf("return NextResponse.json({ error: 'Authentication required' }, { status: 401 })");
     const resumeBranch = src.indexOf('return resumeAbandonedCheckout(');
@@ -52,7 +55,10 @@ describe('B78 — create-checkout resume mode', () => {
   it('reuses the original metadata contract and browser-binding cookie', () => {
     // Metadata must match what the webhook / verify / sweep activation reads.
     const resumeSection = src.slice(src.indexOf('async function resumeAbandonedCheckout'));
-    expect(resumeSection).toMatch(/metadata:\s*\{\s*jobId:\s*employerJob\.job\.id,\s*pricing,?\s*\}/);
+    // The contract is still jobId then pricing, which is what the webhook,
+    // verify and sweep activation read. The only permitted addition is the
+    // consented GA ids, spread last so they can never shadow either key.
+    expect(resumeSection).toMatch(/metadata:\s*\{\s*jobId:\s*employerJob\.job\.id,\s*pricing,\s*(?:\.\.\.gaMetadata,?\s*)?\}/);
     // The bearer dashboardToken is never copied into Stripe metadata.
     expect(src).not.toMatch(/dashboardToken:\s*employerJob\.dashboardToken/);
     expect(resumeSection).toContain("response.cookies.set('checkout_session_bind', session.id");

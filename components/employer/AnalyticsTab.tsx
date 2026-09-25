@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Eye, MousePointerClick, TrendingUp, BarChart3, Award, ArrowUp, ArrowDown, Minus, DollarSign, Lightbulb, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { normalizeDisplaySalary } from '@/lib/salary-display';
 
 interface JobStat {
     id: string;
@@ -406,7 +407,10 @@ export default function AnalyticsTab() {
                                             {job.title}
                                         </div>
                                         <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                                            {job.displaySalary || 'No salary listed'}
+                                            {/* displaySalary is the stored string (or the raw salaryRange
+                                                fallback from the benchmarks API), which older ingests wrote
+                                                with a hyphen between the two ends; normalise to "to". */}
+                                            {normalizeDisplaySalary(job.displaySalary) ?? 'No salary listed'}
                                             {job.midSalary ? ` · ~$${job.midSalary.toLocaleString()}/yr` : ''}
                                         </div>
                                     </div>
