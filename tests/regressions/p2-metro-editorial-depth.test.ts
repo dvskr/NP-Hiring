@@ -19,11 +19,15 @@
  *   4. PAGE WIRING: the template reads its inventory through the shared metro
  *      scope, gates robots on the same function the sitemap uses, publishes
  *      pay only through the gated median, emits exactly one FAQPage node from
- *      one array, serves only local artwork, and publishes none of the
- *      unsourced index readings or ranking claims the data file still carries.
- *      The last one is asserted against the DATA, by running the page's own
- *      publish filter over all twenty records (thin plan METRO-M1 to M6; M7 is
- *      the owner's review of lib/metro-data.ts).
+ *      one array, serves only local artwork, and publishes no unsourced index
+ *      reading or ranking claim. The last one is asserted against the DATA, by
+ *      running the page's own publish filter over all twenty records (thin
+ *      plan METRO-M1 to M6).
+ *   5. M7, THE RECORDS THEMSELVES: the 2026-09-26 sweep rewrote every record
+ *      so that no string states an unsourced figure, ranking or regulatory
+ *      fact. Its pins guard the specific false facts an earlier, unshipped
+ *      rewrite introduced (see the header of lib/metro-data.ts), so none of
+ *      them can come back.
  *
  * WHY THE NLC TEST INVERTED
  * This file used to assert that every "X is not a Nurse Licensure Compact
@@ -573,9 +577,9 @@ describe('P2 #13: thin plan METRO-M1 to M6 (one predicate, gated pay, live facts
     });
 
     it('reads none of the unsourced record fields or setting lists (T0-4)', () => {
-        // lib/metro-data.ts still carries avgCostOfLiving and costOfLivingNote
-        // for the owner's M7 review; the page reads neither, nor the
-        // hand-typed topSettings list.
+        // lib/metro-data.ts keeps avgCostOfLiving (now empty) and
+        // costOfLivingNote (housing guidance only) for importers; the page
+        // reads neither, nor the hand-typed topSettings list.
         for (const banned of ['avgCostOfLiving', 'costOfLivingNote', 'costOfLivingSplice', 'topSettings', 'HPSA']) {
             expect(METRO_PAGE_CODE.includes(banned), `page still renders "${banned}"`).toBe(false);
         }
@@ -709,5 +713,196 @@ describe('P2 #13: the page publishes no unsourced claim from lib/metro-data.ts',
         expect(METRO_PAGE_CODE).toContain('{metroBullets.map(');
         expect(METRO_PAGE_CODE).toContain('{subMarkets.map(');
         expect(METRO_PAGE_CODE).toContain('{careDemand}');
+    });
+});
+
+/*
+ * METRO-M7: the records themselves.
+ *
+ * The page filter above is a backstop. The 2026-09-26 sweep made the records
+ * clean at the source, and these pins keep them that way. Most of them name a
+ * specific false fact that an earlier, never shipped rewrite of this file
+ * introduced while removing unsourced claims (the independent audit of that
+ * rewrite listed each one), so a future edit cannot quietly restore it.
+ */
+describe('METRO-M7: the records state only sourced, verified facts', () => {
+    type Metro = (typeof METRO_CITIES)[number];
+    const everyString = (m: Metro): string[] => [
+        m.heroDescription, m.costOfLivingNote, m.licensureNote, m.careDemandContext,
+        m.avgCostOfLiving, m.population, ...m.whyThisMetro, ...m.topSettings,
+        ...m.subMarkets.flatMap((s) => [s.name, s.note]),
+        ...m.faqs.flatMap((f) => [f.question, f.answer]),
+    ];
+    const sentencesOf = (text: string): string[] => text.split(/(?<=[.?!])\s+(?=[A-Z])/);
+    const allSentences = METRO_CITIES.flatMap((m) =>
+        everyString(m).flatMap((text) => sentencesOf(text).map((sentence) => [m.slug, sentence] as const)));
+    const metro = (slug: string): Metro => {
+        const found = getMetroCity(slug);
+        expect(found, slug).toBeDefined();
+        return found!;
+    };
+    const subMarket = (slug: string, pattern: RegExp) => {
+        const found = metro(slug).subMarkets.find((s) => pattern.test(s.name));
+        expect(found, `${slug} has no sub-market matching ${pattern}`).toBeDefined();
+        return found!;
+    };
+
+    const claimPattern = (name: string): RegExp => {
+        const declared = new RegExp(`const ${name} = /(.+)/([a-z]*);`).exec(METRO_PAGE_SRC);
+        expect(declared, `${name} is not declared in the metro page`).not.toBeNull();
+        return new RegExp(declared![1], declared![2]);
+    };
+
+    it('the page filter drops nothing: every rendered record string already passes it', () => {
+        const patterns = ['CLAIM_QUANTITY', 'CLAIM_EXPENSE', 'CLAIM_PAY', 'CLAIM_RANK'].map(claimPattern);
+        const blocked = (text: string) => patterns.some((pattern) => pattern.test(text));
+        for (const m of METRO_CITIES) {
+            const rendered = [
+                ...m.whyThisMetro, m.careDemandContext, m.licensureNote,
+                ...m.subMarkets.map((s) => s.note),
+                ...m.faqs.flatMap((f) => [f.question, f.answer]),
+            ];
+            for (const text of rendered) {
+                for (const sentence of text.split(/(?<=\.)\s+/)) {
+                    expect(blocked(sentence), `${m.slug}: ${sentence}`).toBe(false);
+                }
+            }
+        }
+    });
+
+    it('names the credential through brand tokens', () => {
+        expect(METRO_DATA_SRC).toContain("import { brand } from '@/config/brand';");
+        expect(METRO_DATA_CODE).toContain('const NP = brand.niche.short;');
+        // A bare "NP" or "NPs" typed into prose instead of the token.
+        expect(METRO_DATA_CODE).not.toMatch(/(?<![{A-Za-z$])NPs?\b(?! =)/);
+    });
+
+    it('every licensure note restates its state\'s verified details', () => {
+        // Shares at least one five-word run with the state's details string,
+        // so the note is anchored to the verified rule rather than paraphrased
+        // from memory.
+        const words = (text: string) => text.toLowerCase().replace(/[^a-z0-9,' ]+/g, ' ').replace(/,/g, '').split(/\s+/).filter(Boolean);
+        const runs = (text: string) => {
+            const w = words(text);
+            return new Set(w.slice(0, Math.max(w.length - 4, 0)).map((_, i) => w.slice(i, i + 5).join(' ')));
+        };
+        for (const m of METRO_CITIES) {
+            const detailRuns = runs(STATE_PRACTICE_AUTHORITY[m.state].details);
+            const shared = [...runs(m.licensureNote)].filter((run) => detailRuns.has(run));
+            expect(shared.length, `${m.slug} licensure note shares no wording with the ${m.state} details`).toBeGreaterThan(0);
+        }
+    });
+
+    it('Arizona has no transition period, and prescribing waits for the Board', () => {
+        // The unshipped rewrite gave Arizona a "transition-to-practice period"
+        // in seven places. The verified entry says there is none.
+        expect(STATE_PRACTICE_AUTHORITY['Arizona'].details).toMatch(/without physician supervision, a collaborative agreement or a transition period/);
+        for (const text of everyString(metro('phoenix-az'))) {
+            expect(text).not.toMatch(/transition[- ]to[- ]practice|once the transition|after (?:a|the) transition|transition period is complete/i);
+        }
+        expect(metro('phoenix-az').licensureNote).toContain('no physician supervision, collaborative agreement, or transition period');
+        expect(metro('phoenix-az').licensureNote).toContain('prescribe once the Board grants prescribing and dispensing authority');
+    });
+
+    it('Virginia is a patient care team physician, never a supervising physician', () => {
+        const virginia = allSentences.filter(([, s]) => /Virginia/.test(s) && /practice agreement/.test(s));
+        expect(virginia.length).toBeGreaterThanOrEqual(3);
+        for (const [slug, sentence] of virginia) {
+            expect(sentence, `${slug}: ${sentence}`).toContain('patient care team physician');
+        }
+        for (const [slug, sentence] of allSentences) {
+            expect(sentence, `${slug}: ${sentence}`).not.toMatch(/Virginia[^.]*supervising physician/);
+        }
+    });
+
+    it('Delaware grants full practice authority at licensure, with no experience requirement', () => {
+        for (const [slug, sentence] of allSentences.filter(([, s]) => /Delaware grants/.test(s))) {
+            expect(sentence, `${slug}: ${sentence}`).not.toMatch(/experience requirement|once experience|after (?:a|the) transition/i);
+        }
+    });
+
+    it('New Jersey is never a plain collaborative agreement requirement, and always carries the 2026 law', () => {
+        // Clause level: a Philadelphia sentence names Pennsylvania's
+        // collaborative agreement and New Jersey's joint protocols side by side.
+        for (const [slug, sentence] of allSentences.filter(([, s]) => /New Jersey/.test(s))) {
+            expect(sentence, `${slug}: ${sentence}`).not.toMatch(/New Jersey[^,;]*collaborative (?:agreement|relationship)/);
+            if (/joint protocol/.test(sentence)) expect(sentence, `${slug}: ${sentence}`).toMatch(/2026/);
+        }
+    });
+
+    it('New York practice agreements are made per NP, never a slot inside an existing agreement', () => {
+        // NYSED: an NP who needs a written agreement must enter into one with
+        // a physician in the NP's specialty, and a physician may hold such
+        // agreements with at most four off-premises NPs. There is no existing
+        // agreement a newer NP can be placed inside.
+        for (const [slug, sentence] of allSentences) {
+            expect(sentence, `${slug}: ${sentence}`).not.toMatch(/(?:inside|into|under|within) an existing (?:written )?(?:practice )?agreement|place a newer/i);
+        }
+        const answer = metro('new-york-ny').faqs.find((f) => /3,600-hour threshold/.test(f.question))?.answer;
+        expect(answer).toBeDefined();
+        expect(answer).toContain('enter into a written practice agreement with a newer');
+    });
+
+    it('Tampa geography: Tampa General on Davis Islands, Moffitt and the Haley VA by USF in north Tampa', () => {
+        const davis = subMarket('tampa-fl', /Davis Islands/);
+        expect(davis.note).not.toMatch(/Moffitt|Haley|nearby/);
+        const usf = subMarket('tampa-fl', /USF/);
+        expect(usf.note).toContain('Moffitt');
+        expect(usf.note).toContain('Haley');
+        expect(usf.note).toContain('north Tampa');
+        for (const sub of metro('tampa-fl').subMarkets.filter((s) => /South Tampa/.test(s.name))) {
+            expect(sub.note).not.toMatch(/Haley/);
+        }
+    });
+
+    it('Phoenix geography: the West Valley holds Sun City, so no retirees-versus-families split', () => {
+        expect(subMarket('phoenix-az', /West Valley/).note).toContain('Sun City');
+        for (const text of everyString(metro('phoenix-az'))) {
+            expect(text).not.toMatch(/East Valley retirees|West Valley young families|young families in the West Valley/);
+        }
+    });
+
+    it('Jacksonville geography: Mayo is in the southeast, and the VA sites are clinics', () => {
+        expect(subMarket('jacksonville-fl', /Mayo/).note).toContain('southeast');
+        for (const text of everyString(metro('jacksonville-fl'))) {
+            expect(text).not.toMatch(/north side|VA medical center/i);
+        }
+    });
+
+    it('other places the audit found misdescribed stay corrected', () => {
+        // Wilson County is east of Nashville, not north.
+        expect(subMarket('nashville-tn', /Wilson|eastern/).name).toMatch(/eastern/);
+        // Nationwide Children's is just south of downtown Columbus.
+        expect(metro('columbus-oh').subMarkets.map((s) => s.name)).not.toContain('Near East Side and Downtown');
+        const allText = METRO_CITIES.flatMap(everyString).join('\n');
+        for (const stale of [
+            'upper Northwest', // the Irving Street complex is east of Rock Creek Park
+            'border-adjacent', // the counties around Bexar do not touch the border
+            'Joint Base San Antonio installations', // Lackland is on the southwest side
+            'The bay separates two hospital networks', // BayCare runs hospitals on both sides
+            'most commonly prescribing', // unsourced, and wrong for Ohio
+            'Schedule II', // an Illinois consultation rule not in the verified entry
+            'national standards of practice', // a different VA initiative from 38 CFR 17.415
+            'across the street', // Keck Hospital of USC is about half a mile from LA General
+        ]) {
+            expect(allText, stale).not.toContain(stale);
+        }
+    });
+
+    it('every VA full practice authority sentence keeps all three limits of 38 CFR 17.415', () => {
+        const vaStrings = METRO_CITIES.flatMap(everyString).filter((t) => /VA grant full practice authority/.test(t));
+        expect(vaStrings.length).toBeGreaterThanOrEqual(3);
+        for (const text of vaStrings) {
+            expect(text, text).toMatch(/\bqualifying\b|meet its requirements/);
+            expect(text, text).toMatch(/VA employment/);
+            expect(text, text).toContain('Controlled Substances Act');
+        }
+    });
+
+    it('states no tax rule, coverage rate, or income or insurance claim about an area', () => {
+        const banned = /no state income tax|flat (?:state |individual )?income tax|does not tax wage|taxes no wage|levies no|income tax rate|Medicaid expansion|uninsured rate|well-insured|heavily insured|commercially insured|affluent/i;
+        for (const [slug, sentence] of allSentences) {
+            expect(sentence, `${slug}: ${sentence}`).not.toMatch(banned);
+        }
     });
 });

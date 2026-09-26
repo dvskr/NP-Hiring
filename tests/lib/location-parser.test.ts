@@ -1,199 +1,223 @@
 import { describe, it, expect } from 'vitest';
-import { parseLocation } from '../../lib/location-parser';
+import { parseLocation, type ParsedLocation } from '../../lib/location-parser';
 
-describe('parseLocation — Standard patterns', () => {
-    it('parses "City, ST"', () => {
-        const r = parseLocation('Austin, TX');
-        expect(r.city).toBe('Austin');
-        expect(r.stateCode).toBe('TX');
-        expect(r.state).toBe('Texas');
-        expect(r.confidence).toBe(1.0);
+// Table-driven cover for parseLocation. Each row lists only the fields it
+// pins; rows that must parse EXACTLY as before list every derived field.
+
+type Expected = Partial<Omit<ParsedLocation, 'originalLocation' | 'country'>>;
+
+interface Case {
+    input: string;
+    expected: Expected;
+}
+
+function runTable(cases: readonly Case[]) {
+    it.each(cases)('parses $input', ({ input, expected }) => {
+        expect(parseLocation(input)).toMatchObject(expected);
+    });
+}
+
+const ONSITE = { isRemote: false, isHybrid: false } as const;
+const DISTRICT = { state: 'District of Columbia', stateCode: 'DC' } as const;
+const WASHINGTON_DC = { ...ONSITE, ...DISTRICT, city: 'Washington', confidence: 1 } as const;
+const WASHINGTON_STATE = { state: 'Washington', stateCode: 'WA' } as const;
+
+// ── District of Columbia ─────────────────────────────────────────────────
+// Dotted "D.C." used to match none of the parser's patterns: "Washington,
+// D.C." fell into the state-name scan and was filed under Washington state
+// with no city, and "Washington D.C." was skipped as a compound city name
+// and lost. Every form below must resolve to the District.
+describe('parseLocation: District of Columbia forms', () => {
+    runTable([
+        { input: 'Washington, D.C.', expected: WASHINGTON_DC },
+        { input: 'Washington D.C.', expected: WASHINGTON_DC },
+        { input: 'Washington, DC', expected: WASHINGTON_DC },
+        { input: 'Washington DC', expected: WASHINGTON_DC },
+        { input: 'Washington, District of Columbia', expected: WASHINGTON_DC },
+        { input: 'Washington, district of columbia', expected: WASHINGTON_DC },
+        { input: 'Washington, D.C', expected: WASHINGTON_DC },
+        { input: 'Washington D.C', expected: WASHINGTON_DC },
+        { input: 'Washington, D. C.', expected: WASHINGTON_DC },
+        { input: 'Washington, D.C., United States', expected: WASHINGTON_DC },
+        { input: 'Washington, DC, USA', expected: WASHINGTON_DC },
+        { input: 'Washington DC, USA', expected: WASHINGTON_DC },
+        { input: 'Washington D.C., USA', expected: WASHINGTON_DC },
+        { input: 'Washington, D.C. 20001', expected: WASHINGTON_DC },
+        { input: 'Washington, DC 20001', expected: WASHINGTON_DC },
+        { input: 'Washington D.C. Metro Area', expected: WASHINGTON_DC },
+        { input: 'Washington, DC Metro Area', expected: WASHINGTON_DC },
+        { input: 'US-DC-Washington', expected: WASHINGTON_DC },
+    ]);
+
+    describe('keeps the city as written (the parser never re-cases a city)', () => {
+        runTable([
+            { input: 'WASHINGTON, DC', expected: { ...WASHINGTON_DC, city: 'WASHINGTON' } },
+            { input: 'washington, d.c.', expected: { ...WASHINGTON_DC, city: 'washington' } },
+            { input: 'washington dc', expected: { ...WASHINGTON_DC, city: 'washington' } },
+        ]);
     });
 
-    it('parses "City, State"', () => {
-        const r = parseLocation('Portland, Oregon');
-        expect(r.city).toBe('Portland');
-        expect(r.stateCode).toBe('OR');
-        expect(r.state).toBe('Oregon');
+    describe('with a work-mode marker', () => {
+        runTable([
+            { input: 'Remote - Washington, D.C.', expected: { ...WASHINGTON_DC, isRemote: true } },
+            { input: 'Washington, D.C. (Remote)', expected: { ...WASHINGTON_DC, isRemote: true } },
+            { input: 'Washington, D.C. - Remote', expected: { ...WASHINGTON_DC, isRemote: true } },
+            { input: 'Hybrid - Washington, D.C.', expected: { ...WASHINGTON_DC, isHybrid: true } },
+        ]);
     });
 
-    it('parses "City, state" (lowercase)', () => {
-        const r = parseLocation('Denver, colorado');
-        expect(r.city).toBe('Denver');
-        expect(r.stateCode).toBe('CO');
-    });
-});
-
-describe('parseLocation — Remote patterns', () => {
-    it('parses "Remote" as remote-only', () => {
-        const r = parseLocation('Remote');
-        expect(r.isRemote).toBe(true);
-        expect(r.city).toBeNull();
-    });
-
-    it('parses "Remote - Austin, TX" with city', () => {
-        const r = parseLocation('Remote - Austin, TX');
-        expect(r.isRemote).toBe(true);
-        expect(r.city).toBe('Austin');
-        expect(r.stateCode).toBe('TX');
-    });
-
-    it('parses "Austin, TX (Remote)"', () => {
-        const r = parseLocation('Austin, TX (Remote)');
-        expect(r.isRemote).toBe(true);
-        expect(r.city).toBe('Austin');
-        expect(r.stateCode).toBe('TX');
-    });
-
-    // Live-review item 1e: 'telehealth' / 'virtual' are service-line words,
-    // not work-mode proof — telehealth clinics hire onsite staff, and these
-    // substrings marked verifiably onsite rows as remote. The city/state
-    // still parses; the remote flag now requires a standalone remote token.
-    it('parses "Telehealth - Denver, CO" WITHOUT inferring remote', () => {
-        const r = parseLocation('Telehealth - Denver, CO');
-        expect(r.isRemote).toBe(false);
-        expect(r.city).toBe('Denver');
-        expect(r.stateCode).toBe('CO');
-    });
-
-    it('does NOT treat "Virtual, United States" as remote (item 1e)', () => {
-        const r = parseLocation('Virtual, United States');
-        expect(r.isRemote).toBe(false);
-    });
-
-    it('parses "Work From Home" as remote', () => {
-        const r = parseLocation('Work From Home');
-        expect(r.isRemote).toBe(true);
-    });
-});
-
-describe('parseLocation — Hybrid patterns', () => {
-    it('parses "Hybrid - Seattle, WA"', () => {
-        const r = parseLocation('Hybrid - Seattle, WA');
-        expect(r.isHybrid).toBe(true);
-        expect(r.city).toBe('Seattle');
-        expect(r.stateCode).toBe('WA');
-    });
-});
-
-describe('parseLocation — HQ and Workday patterns', () => {
-    it('parses "HQ: Chicago, IL"', () => {
-        const r = parseLocation('HQ: Chicago, IL');
-        expect(r.city).toBe('Chicago');
-        expect(r.stateCode).toBe('IL');
-    });
-
-    it('parses Workday "US-TX-Austin" format', () => {
-        const r = parseLocation('US-TX-Austin');
-        expect(r.city).toBe('Austin');
-        expect(r.stateCode).toBe('TX');
-    });
-
-    it('parses Workday "US-CA-San Francisco" format', () => {
-        const r = parseLocation('US-CA-San Francisco');
-        expect(r.city).toBe('San Francisco');
-        expect(r.stateCode).toBe('CA');
+    describe('the District alone resolves the jurisdiction with no city', () => {
+        const districtOnly = { ...ONSITE, ...DISTRICT, city: null, confidence: 0.8 };
+        runTable([
+            { input: 'D.C.', expected: districtOnly },
+            { input: 'DC', expected: districtOnly },
+            { input: 'District of Columbia', expected: districtOnly },
+        ]);
     });
 });
 
-describe('parseLocation — Country suffix patterns', () => {
-    it('parses "Austin, TX, United States"', () => {
-        const r = parseLocation('Austin, TX, United States');
-        expect(r.city).toBe('Austin');
-        expect(r.stateCode).toBe('TX');
-    });
+// ── Washington state ─────────────────────────────────────────────────────
+// Pinned to the exact output from before the District fix: none of these
+// may move.
+describe('parseLocation: Washington state forms (unchanged by the District fix)', () => {
+    const seattle = { ...ONSITE, ...WASHINGTON_STATE, city: 'Seattle', confidence: 1 };
+    runTable([
+        { input: 'Seattle, Washington', expected: seattle },
+        { input: 'Seattle, WA', expected: seattle },
+        { input: 'Seattle Washington', expected: seattle },
+        { input: 'Seattle, WA, USA', expected: seattle },
+        { input: 'Seattle, WA 98101', expected: seattle },
+        { input: 'Hybrid - Seattle, WA', expected: { ...seattle, isHybrid: true } },
+        { input: 'Spokane, Washington', expected: { ...seattle, city: 'Spokane' } },
+        { input: 'Spokane, WA', expected: { ...seattle, city: 'Spokane' } },
+        { input: 'Vancouver, WA', expected: { ...seattle, city: 'Vancouver' } },
+        { input: 'Tacoma, Washington, United States', expected: { ...seattle, city: 'Tacoma' } },
+        { input: 'Washington, WA', expected: { ...seattle, city: 'Washington' } },
+    ]);
 
-    it('parses "Denver, CO, USA"', () => {
-        const r = parseLocation('Denver, CO, USA');
-        expect(r.city).toBe('Denver');
-        expect(r.stateCode).toBe('CO');
+    // "Washington" with nothing else is ambiguous between the state and the
+    // District. Today it is read as Washington state with no city, at the
+    // parser's 0.8 state-only confidence; the District needs an explicit
+    // "DC", "D.C." or "District of Columbia".
+    describe('bare "Washington" stays Washington state with no city', () => {
+        const stateOnly = { ...ONSITE, ...WASHINGTON_STATE, city: null, confidence: 0.8 };
+        const remoteStateOnly = { ...stateOnly, isRemote: true };
+        runTable([
+            { input: 'Washington', expected: stateOnly },
+            { input: 'washington', expected: stateOnly },
+            { input: 'Washington, USA', expected: stateOnly },
+            { input: 'WA', expected: stateOnly },
+            { input: 'Remote - Washington', expected: remoteStateOnly },
+            { input: 'Remote, Washington', expected: remoteStateOnly },
+            { input: 'Washington (Remote)', expected: remoteStateOnly },
+            { input: 'Remote - WA', expected: remoteStateOnly },
+        ]);
     });
 });
 
-describe('parseLocation — Edge cases', () => {
-    it('handles empty string', () => {
-        const r = parseLocation('');
-        expect(r.confidence).toBe(0.3);
-        expect(r.city).toBeNull();
-    });
+describe('parseLocation: places named Washington in other states', () => {
+    const place = (city: string, state: string, stateCode: string): Expected =>
+        ({ ...ONSITE, city, state, stateCode, confidence: 1 });
+    runTable([
+        { input: 'Washington, PA', expected: place('Washington', 'Pennsylvania', 'PA') },
+        { input: 'Washington, Pennsylvania', expected: place('Washington', 'Pennsylvania', 'PA') },
+        { input: 'Washington, NC', expected: place('Washington', 'North Carolina', 'NC') },
+        { input: 'Washington, MO', expected: place('Washington', 'Missouri', 'MO') },
+        { input: 'Washington Court House, OH', expected: place('Washington Court House', 'Ohio', 'OH') },
+        { input: 'Washington Crossing, PA', expected: place('Washington Crossing', 'Pennsylvania', 'PA') },
+        { input: 'Washington Township, NJ', expected: place('Washington Township', 'New Jersey', 'NJ') },
+        { input: 'Port Washington, NY', expected: place('Port Washington', 'New York', 'NY') },
+        { input: 'Port Washington, New York', expected: place('Port Washington', 'New York', 'NY') },
+        { input: 'Fort Washington, MD', expected: place('Fort Washington', 'Maryland', 'MD') },
+        { input: 'Mount Washington, KY', expected: place('Mount Washington', 'Kentucky', 'KY') },
+        { input: 'Bethesda, MD', expected: place('Bethesda', 'Maryland', 'MD') },
+        { input: 'Arlington, Virginia', expected: place('Arlington', 'Virginia', 'VA') },
+    ]);
+});
 
-    it('handles null-like input', () => {
-        const r = parseLocation(null as unknown as string);
-        expect(r.city).toBeNull();
-    });
+// ── Pre-existing cases ───────────────────────────────────────────────────
 
-    it('parses state name only', () => {
-        const r = parseLocation('California');
-        expect(r.state).toBe('California');
-        expect(r.stateCode).toBe('CA');
-        expect(r.city).toBeNull();
-    });
+describe('parseLocation: standard patterns', () => {
+    runTable([
+        { input: 'Austin, TX', expected: { city: 'Austin', stateCode: 'TX', state: 'Texas', confidence: 1.0 } },
+        { input: 'Portland, Oregon', expected: { city: 'Portland', stateCode: 'OR', state: 'Oregon' } },
+        // "City, state" in lower case
+        { input: 'Denver, colorado', expected: { city: 'Denver', stateCode: 'CO' } },
+        { input: 'New York, NY', expected: { city: 'New York', stateCode: 'NY' } },
+        { input: 'Kansas City, MO', expected: { city: 'Kansas City', stateCode: 'MO' } },
+        { input: 'Virginia Beach, VA', expected: { city: 'Virginia Beach', stateCode: 'VA' } },
+        { input: 'Charleston, West Virginia', expected: { city: 'Charleston', stateCode: 'WV' } },
+    ]);
+});
 
-    it('parses state code only', () => {
-        const r = parseLocation('TX');
-        expect(r.stateCode).toBe('TX');
-        expect(r.state).toBe('Texas');
-    });
+describe('parseLocation: remote patterns', () => {
+    runTable([
+        { input: 'Remote', expected: { isRemote: true, city: null } },
+        { input: 'Remote - Austin, TX', expected: { isRemote: true, city: 'Austin', stateCode: 'TX' } },
+        { input: 'Austin, TX (Remote)', expected: { isRemote: true, city: 'Austin', stateCode: 'TX' } },
+        { input: 'Work From Home', expected: { isRemote: true } },
+        { input: 'Anywhere', expected: { isRemote: true, city: null } },
+        // Live-review item 1e: 'telehealth' / 'virtual' are service-line
+        // words, not work-mode proof. Telehealth clinics hire onsite staff,
+        // and these substrings marked verifiably onsite rows as remote. The
+        // city and state still parse; the remote flag now requires a
+        // standalone remote token.
+        { input: 'Telehealth - Denver, CO', expected: { isRemote: false, city: 'Denver', stateCode: 'CO' } },
+        { input: 'Virtual, United States', expected: { isRemote: false } },
+    ]);
+});
 
-    // Live-review item 1e: country/coverage markers are not remote markers.
-    // 'Los Angeles, CA, United States' was being flagged remote through the
-    // 'united states' substring — the Tia '- Onsite' rows shipped TELECOMMUTE
-    // structured data this way. A bare country string is simply unknown.
-    it('does NOT treat "Nationwide" as remote (item 1e)', () => {
-        const r = parseLocation('Nationwide');
-        expect(r.isRemote).toBe(false);
-        expect(r.city).toBeNull();
-    });
+describe('parseLocation: hybrid patterns', () => {
+    runTable([
+        { input: 'Hybrid - Seattle, WA', expected: { isHybrid: true, city: 'Seattle', stateCode: 'WA' } },
+        { input: 'Hybrid', expected: { isHybrid: true, isRemote: false, city: null } },
+    ]);
+});
 
-    it('does NOT treat "United States" as remote (item 1e)', () => {
-        const r = parseLocation('United States');
-        expect(r.isRemote).toBe(false);
-        expect(r.city).toBeNull();
-    });
+describe('parseLocation: HQ and Workday patterns', () => {
+    runTable([
+        { input: 'HQ: Chicago, IL', expected: { city: 'Chicago', stateCode: 'IL' } },
+        { input: 'US-TX-Austin', expected: { city: 'Austin', stateCode: 'TX' } },
+        { input: 'US-CA-San Francisco', expected: { city: 'San Francisco', stateCode: 'CA' } },
+    ]);
+});
 
-    it('a city inside the United States is not remote either', () => {
-        const r = parseLocation('Los Angeles, CA, United States');
-        expect(r.isRemote).toBe(false);
-        expect(r.city).toBe('Los Angeles');
-        expect(r.stateCode).toBe('CA');
-    });
+describe('parseLocation: country suffix patterns', () => {
+    runTable([
+        { input: 'Austin, TX, United States', expected: { city: 'Austin', stateCode: 'TX' } },
+        { input: 'Denver, CO, USA', expected: { city: 'Denver', stateCode: 'CO' } },
+    ]);
+});
 
-    it('handles multi-word city', () => {
-        const r = parseLocation('New York, NY');
-        expect(r.city).toBe('New York');
-        expect(r.stateCode).toBe('NY');
-    });
+describe('parseLocation: edge cases', () => {
+    runTable([
+        { input: '', expected: { confidence: 0.3, city: null } },
+        { input: null as unknown as string, expected: { city: null } },
+        { input: 'California', expected: { state: 'California', stateCode: 'CA', city: null } },
+        { input: 'TX', expected: { stateCode: 'TX', state: 'Texas' } },
+        // Live-review item 1e: country and coverage markers are not remote
+        // markers. 'Los Angeles, CA, United States' was flagged remote through
+        // the 'united states' substring, and the Tia '- Onsite' rows shipped
+        // TELECOMMUTE structured data this way. A bare country string is
+        // simply unknown.
+        { input: 'Nationwide', expected: { isRemote: false, city: null } },
+        { input: 'United States', expected: { isRemote: false, city: null } },
+        { input: 'Los Angeles, CA, United States', expected: { isRemote: false, city: 'Los Angeles', stateCode: 'CA' } },
+        // Puerto Rico is not in STATE_CODES, so no state is inferred.
+        { input: 'San Juan, Puerto Rico', expected: { state: null } },
+    ]);
 
-    it('handles "San Juan, Puerto Rico" gracefully', () => {
-        // Puerto Rico is not in STATE_CODES, so should return low confidence
-        const r = parseLocation('San Juan, Puerto Rico');
-        expect(r.state).toBeNull();
+    it('records the trimmed input as originalLocation', () => {
+        expect(parseLocation('  Washington, D.C.  ').originalLocation).toBe('Washington, D.C.');
     });
 });
 
-describe('parseLocation — Adzuna county format', () => {
-    it('parses "Colorado Springs, El Paso County"', () => {
-        const r = parseLocation('Colorado Springs, El Paso County');
-        expect(r.city).toBe('Colorado Springs');
-    });
-
-    it('parses "Raleigh, Wake County"', () => {
-        const r = parseLocation('Raleigh, Wake County');
-        expect(r.city).toBe('Raleigh');
-    });
-
-    it('parses "San Diego, San Diego County"', () => {
-        const r = parseLocation('San Diego, San Diego County');
-        expect(r.city).toBe('San Diego');
-    });
-
-    it('parses "Orlando, Orange County"', () => {
-        const r = parseLocation('Orlando, Orange County');
-        expect(r.city).toBe('Orlando');
-    });
-
-    it('parses "Springfield, Greene County"', () => {
-        const r = parseLocation('Springfield, Greene County');
-        expect(r.city).toBe('Springfield');
-    });
+describe('parseLocation: Adzuna county format', () => {
+    runTable([
+        { input: 'Colorado Springs, El Paso County', expected: { city: 'Colorado Springs' } },
+        { input: 'Raleigh, Wake County', expected: { city: 'Raleigh' } },
+        { input: 'San Diego, San Diego County', expected: { city: 'San Diego' } },
+        { input: 'Orlando, Orange County', expected: { city: 'Orlando' } },
+        { input: 'Springfield, Greene County', expected: { city: 'Springfield' } },
+    ]);
 });

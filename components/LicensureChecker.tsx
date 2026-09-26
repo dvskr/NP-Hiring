@@ -110,11 +110,52 @@ export function tierAttributionNote(requirementStep: number): string {
   return `The tier is AANP's state practice environment classification. States in the same tier set different rules, so step ${requirementStep} below gives the requirements that apply here.`;
 }
 
-const TIMELINE_MAP: Record<PracticeAuthority, string> = {
-  full: '4-8 weeks',
-  reduced: '6-12 weeks',
-  restricted: '8-16 weeks',
-};
+/**
+ * What the checker says about processing time, for any state.
+ *
+ * WHY THERE IS NO NUMBER HERE  ← do not add a weeks estimate back
+ * This card used to print a tier-keyed "Estimated Timeline" (a band of weeks
+ * per AANP tier, "from application to active license") for every state. Each
+ * board of nursing sets its own processing time; the AANP tier has nothing to
+ * do with it, and nothing in the repo sourced the bands. The card now names
+ * who decides and sends the reader there, and the note under it is one
+ * sentence for every state, so it cannot vary by tier.
+ */
+export function processingTimeHeadline(stateName: string): string {
+  return `Set by the ${stateName} board of nursing`;
+}
+
+export const PROCESSING_TIME_NOTE =
+  "The practice authority tier does not predict it, and it changes over time, so check the board's current guidance before you plan a start date.";
+
+export interface CostOwner {
+  label: string;
+  /** Who sets and publishes the figure. Never the figure itself. */
+  setBy: string;
+}
+
+/**
+ * Licensure costs and renewal terms, as who sets each one.
+ *
+ * The block used to print national figures for every state: an exam fee
+ * range, a DEA fee, a renewal cycle and a CE hour range. None carried a
+ * source or a date, and the renewal and CE ranges are per-state rules that
+ * a single national range cannot state for all 51 boards. Each row now names
+ * the body that sets the figure, which stays true when the figure changes.
+ */
+export function licensureCostOwners(stateName: string): CostOwner[] {
+  const board = `${stateName} board of nursing`;
+  return [
+    { label: 'Certification exam fee', setBy: 'Your certifying body' },
+    { label: 'DEA registration fee', setBy: 'The DEA' },
+    { label: 'License fee and renewal cycle', setBy: board },
+    { label: 'State CE hours', setBy: board },
+  ];
+}
+
+/** The line under the fees block: why it names bodies instead of amounts. */
+export const COST_OWNERS_NOTE =
+  'Each figure is set by the body named beside it and changes over time, so check the current amount there before you budget.';
 
 /**
  * Badge per AANP tier. The label is AANP's tier name (getAuthorityLabel),
@@ -191,11 +232,12 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
     const salary = stateSalaries.find(s => s.state === selectedState);
     const guide = stateGuides.find(g => g.name === selectedState);
     const config = AUTHORITY_CONFIG[auth.authority];
-    const timeline = TIMELINE_MAP[auth.authority];
+    const processingHeadline = processingTimeHeadline(selectedState);
+    const costOwners = licensureCostOwners(selectedState);
     const steps = buildLicensureSteps(selectedState, auth);
     const tierNote = tierAttributionNote(steps[steps.length - 1].step);
 
-    return { auth, salary, guide, config, timeline, steps, tierNote };
+    return { auth, salary, guide, config, processingHeadline, costOwners, steps, tierNote };
   }, [selectedState, practiceAuthority, stateSalaries, stateGuides]);
 
   const stateList = Object.keys(practiceAuthority).sort();
@@ -231,7 +273,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
             {selectedState ? `${selectedState} Licensure` : `${brand.niche.short} Licensure Checker`}
           </h2>
           <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: '4px 0 0' }}>
-            {selectedState ? 'Requirements, timeline, and salary data' : 'Select your state to see requirements, timeline, and salary data'}
+            {selectedState ? 'Requirements, practice authority, and salary data' : 'Select your state to see requirements, practice authority, and salary data'}
           </p>
         </div>
       </div>
@@ -272,7 +314,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
             <Map size={34} />
           </div>
           <p style={{ fontSize: '16px', fontWeight: 600, color: '#94A3B8', margin: '0 0 4px' }}>Select a state above</p>
-          <p style={{ fontSize: '13px', color: '#CBD5E1', margin: 0 }}>to see licensure requirements, practice authority, salary, and timeline.</p>
+          <p style={{ fontSize: '13px', color: '#CBD5E1', margin: 0 }}>to see licensure requirements, practice authority, and salary data.</p>
         </div>
       ) : (
         <div className="lic-results-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0' }}>
@@ -339,27 +381,36 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
             </div>
           </div>
 
-          {/* RIGHT: Salary + Timeline + CTA */}
+          {/* RIGHT: Processing time + Salary + Fees + CTA */}
           <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Estimated Timeline */}
+            {/* Processing time: who sets it, never a tier-keyed estimate
+                (see processingTimeHeadline). */}
             <div style={{
               padding: '20px', borderRadius: '16px',
               background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)',
               border: '1.5px solid rgba(190,24,93,0.12)',
-              display: 'flex', alignItems: 'center', gap: '16px',
+              display: 'flex', alignItems: 'flex-start', gap: '16px',
             }}>
               <div style={{ ...iconTile, width: '44px', height: '44px', borderRadius: '14px', background: 'rgba(190,24,93,0.10)', color: '#BE185D' }} aria-hidden="true">
                 <CalendarClock size={22} />
               </div>
               <div>
-                <p style={{ fontSize: '11px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 2px' }}>
-                  Estimated Timeline
+                <p style={{ fontSize: '11px', fontWeight: 600, color: '#BE185D', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 4px' }}>
+                  Processing Time
                 </p>
-                <div style={{ fontSize: '28px', fontWeight: 800, color: '#831843', lineHeight: 1 }}>
-                  {result.timeline}
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#831843', lineHeight: 1.25 }}>
+                  {result.processingHeadline}
                 </div>
-                <p style={{ fontSize: '11px', color: '#5A4A42', margin: '4px 0 0' }}>
-                  From application to active license.
+                <p style={{ fontSize: '12px', color: '#5A4A42', margin: '6px 0 0', lineHeight: 1.5 }}>
+                  {PROCESSING_TIME_NOTE}
+                  {result.guide && (
+                    <>
+                      {' '}
+                      <Link href={`/blog/${result.guide.slug}`} style={{ color: '#BE185D', fontWeight: 700 }}>
+                        The {selectedState} licensure guide links the board.
+                      </Link>
+                    </>
+                  )}
                 </p>
               </div>
             </div>
@@ -402,7 +453,7 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
               </div>
             )}
 
-            {/* Key Info */}
+            {/* Fees and renewal: who sets each figure (licensureCostOwners) */}
             <div style={{
               padding: '16px 18px', borderRadius: '14px',
               background: 'rgba(0,0,0,0.015)', border: '1px solid rgba(0,0,0,0.04)',
@@ -411,21 +462,19 @@ export default function LicensureChecker({ stateGuides, stateSalaries, practiceA
                 <span style={{ ...iconTile, width: '24px', height: '24px', borderRadius: '6px', background: '#EEF2FF', color: '#6366F1' }} aria-hidden="true">
                   <Wallet size={14} />
                 </span>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#1A2E35', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Key Costs</span>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#1A2E35', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fees and Renewal</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {[
-                  { label: 'Certification Exam', value: 'ANCC or AANP ($315-$395)' },
-                  { label: 'DEA Registration', value: '$888 / 3 years' },
-                  { label: 'License Renewal', value: 'Every 2-3 years' },
-                  { label: 'CE Hours', value: '25-50 hours / cycle' },
-                ].map(kv => (
-                  <div key={kv.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px' }}>
-                    <span style={{ color: '#64748B' }}>{kv.label}</span>
-                    <span style={{ fontWeight: 700, color: '#1A2E35' }}>{kv.value}</span>
+                {result.costOwners.map(row => (
+                  <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px', fontSize: '12.5px' }}>
+                    <span style={{ color: '#64748B' }}>{row.label}</span>
+                    <span style={{ fontWeight: 700, color: '#1A2E35', textAlign: 'right' }}>{row.setBy}</span>
                   </div>
                 ))}
               </div>
+              <p style={{ fontSize: '11.5px', color: '#64748B', margin: '10px 0 0', lineHeight: 1.5 }}>
+                {COST_OWNERS_NOTE}
+              </p>
             </div>
 
             {/* CTAs */}

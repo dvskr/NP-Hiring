@@ -78,9 +78,18 @@ export async function getTopStatesByJobCount(): Promise<StateJobCount[]> {
  * lib/state-practice-authority.ts for the Full Practice transition states
  * (CO, CT, MA, MD, ME, MN, NE, NV, NY, SD, VT) and for the routes out of an
  * agreement in several Reduced and Restricted states.
+ *
+ * Pay answers quote one figure, STAT_SOURCES.averageSalary, and call it the
+ * median it is. The array used to carry hand-typed pay bands (new graduate,
+ * experienced, remote, private practice owner, and a physician comparison),
+ * a patients-per-day range and an NHSC award amount, none with a source.
+ * They were cut rather than restated: each answer now says what moves the
+ * number and where the current figure is published. Do not add a pay band
+ * here unless it comes from lib/stats-sources.ts with its citation.
  */
 export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[] {
     const fpa = STAT_SOURCES.fullPracticeStates;
+    const salary = STAT_SOURCES.averageSalary;
 
     const demandFaq: FAQItem[] =
         topStates.length >= MIN_STATES_FOR_DEMAND_FAQ
@@ -101,15 +110,15 @@ export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[
         },
         {
             question: `How much do ${brand.niche.short}s make?`,
-            answer: `${brand.niche.short}s earn an average annual salary of ${STAT_SOURCES.averageSalary.range} based on the ${STAT_SOURCES.averageSalary.source} (${STAT_SOURCES.averageSalary.asOf}). Salaries range from approximately $120,000 for new graduates to $200,000+ for experienced ${brand.niche.short}s in high-demand areas. Remote and telehealth positions typically pay $130,000 to $200,000, and private practice ${brand.niche.short}s can earn $200,000+ depending on caseload and overhead.`,
+            answer: `The median annual wage for ${brand.niche.short}s is ${salary.formatted} (${salary.source}). Pay moves with state, practice setting, specialty and employment structure, so treat the national median as a starting point rather than a benchmark for one offer. For a specific role, the salary on the posting is the best evidence, and the ${brand.name} salary guide publishes a state median from live postings once enough employers disclose pay.`,
         },
         {
             question: `What is the ${brand.niche.short} job outlook?`,
-            answer: `The ${brand.niche.short} job outlook is strong: ${STAT_SOURCES.blsGrowth2034.source} projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for nurse practitioners through 2034, which is much faster than average. Roughly ${STAT_SOURCES.hrsaShortagePopulation.formatted} Americans live in federally designated Health Professional Shortage Areas (${STAT_SOURCES.hrsaShortagePopulation.source}, ${STAT_SOURCES.hrsaShortagePopulation.asOf}), so demand for ${brand.niche.short}s continues to expand alongside telehealth access.`,
+            answer: `The ${brand.niche.short} job outlook is strong: ${STAT_SOURCES.blsGrowth2034.source} projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for nurse practitioners through 2034, which is much faster than average. ${STAT_SOURCES.hrsaShortagePopulation.formatted} Americans live in federally designated primary care Health Professional Shortage Areas (${STAT_SOURCES.hrsaShortagePopulation.source}, ${STAT_SOURCES.hrsaShortagePopulation.asOf}), so demand for ${brand.niche.short}s continues to expand alongside telehealth access.`,
         },
         {
             question: `How long does it take to become an ${brand.niche.short}?`,
-            answer: `Becoming an ${brand.niche.short} typically takes 6 to 8 years in total: 4 years for a BSN, 1 to 2 years of RN experience (recommended), and 2 to 3 years for an MSN or DNP with ${brand.niche.short} specialization. Accelerated BSN-to-DNP programs can shorten this timeline. After graduation, you must pass a national ${brand.niche.short} certification exam (ANCC or AANP).`,
+            answer: `Becoming an ${brand.niche.short} takes a BSN and an active RN license, then an accredited MSN or DNP program with ${brand.niche.short} specialization, then a national ${brand.niche.short} certification exam (ANCC or AANP). Many programs ask for RN experience before admission, and BSN-to-DNP programs combine the graduate steps into one program. Total time depends on the degree you choose and on full-time or part-time study, so compare each program's published length.`,
         },
         {
             question: `Can ${brand.niche.short}s prescribe medication?`,
@@ -117,19 +126,19 @@ export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[
         },
         {
             question: `What is the difference between an ${brand.niche.short} and a physician?`,
-            answer: `${brand.niche.short}s hold a master's or doctoral degree in nursing (2 to 4 years of graduate school), while physicians complete medical school plus a residency of 3 to 7 years. Both can diagnose conditions and prescribe medications. Whether an ${brand.niche.short} needs a collaborating or supervising clinician depends on the state, and some states require one for newly licensed ${brand.niche.short}s even where experienced ${brand.niche.short}s practice independently. ${brand.niche.short}s typically earn ${STAT_SOURCES.averageSalary.range} (${STAT_SOURCES.averageSalary.source}, ${STAT_SOURCES.averageSalary.asOf}) compared to physicians at $220,000+, but ${brand.niche.short}s begin practicing much sooner with less educational debt.`,
+            answer: `${brand.niche.short}s hold a master's or doctoral degree in nursing, while physicians complete medical school plus a residency. Both can diagnose conditions and prescribe medications. Whether an ${brand.niche.short} needs a collaborating or supervising clinician depends on the state, and some states require one for newly licensed ${brand.niche.short}s even where experienced ${brand.niche.short}s practice independently. The median annual wage for ${brand.niche.short}s is ${salary.formatted} (${salary.source}), and because graduate ${brand.niche.short} programs are shorter than medical school plus residency, ${brand.niche.short}s usually begin practicing years sooner.`,
         },
         {
             question: `What does a ${brand.niche.descriptor} do on a typical workday?`,
-            answer: `A typical ${brand.niche.short} workday includes seeing patients for scheduled evaluations and follow-ups, diagnosing and treating acute and chronic conditions, prescribing and adjusting medications, ordering and reviewing labs and imaging, collaborating with interdisciplinary teams, and documenting in EHR systems. Outpatient ${brand.niche.short}s typically see 15 to 25 patients per day, while inpatient roles involve rounding on hospitalized patients.`,
+            answer: `A typical ${brand.niche.short} workday includes seeing patients for scheduled evaluations and follow-ups, diagnosing and treating acute and chronic conditions, prescribing and adjusting medications, ordering and reviewing labs and imaging, collaborating with interdisciplinary teams, and documenting in EHR systems. Inpatient roles add rounding on hospitalized patients. Patient volume depends on the setting and the employer's scheduling template, so ask how many patients a day a role expects before you accept it.`,
         },
         {
             question: `Are there remote ${brand.niche.short} jobs?`,
-            answer: `Yes, remote ${brand.niche.short} jobs are growing rapidly. Remote roles include telehealth patient care, medication management via video, utilization review, and clinical documentation. Salaries for remote ${brand.niche.short}s range from $130,000 to $200,000+, and national telehealth platforms and health systems hire in all 50 states.`,
+            answer: `Yes. Remote ${brand.niche.short} roles include telehealth patient care, medication management via video, utilization review, and clinical documentation. For patient care, you need an APRN license in each state where your patients are located, so the states you are licensed in decide which remote clinical roles you can take.`,
         },
         {
             question: `Can ${brand.niche.short}s own a private practice?`,
-            answer: `What a practice of your own requires depends on your state's rules, and the practice tier alone does not settle it. The ${fpa.source} classifies ${fpa.formatted} as having Full Practice Authority (${fpa.asOf}), where state law lets ${brand.niche.short}s evaluate patients, diagnose, order and interpret diagnostic tests, and initiate and manage treatments, including prescribing, under the exclusive licensure authority of the state board of nursing, but several of those states first require a transition period of collaborative or supervised practice. Most reduced and restricted practice states require a collaborative agreement, supervision or delegation involving a physician or another health provider, and several of them offer a route out of it after a set amount of experience. Check your state's entry in the Full Practice Authority guide before you plan a practice. Private practice ${brand.niche.short}s can earn $180,000 to $300,000+ annually, though they must manage business operations, insurance credentialing, and overhead costs.`,
+            answer: `What a practice of your own requires depends on your state's rules, and the practice tier alone does not settle it. The ${fpa.source} classifies ${fpa.formatted} as having Full Practice Authority (${fpa.asOf}), where state law lets ${brand.niche.short}s evaluate patients, diagnose, order and interpret diagnostic tests, and initiate and manage treatments, including prescribing, under the exclusive licensure authority of the state board of nursing, but several of those states first require a transition period of collaborative or supervised practice. Most reduced and restricted practice states require a collaborative agreement, supervision or delegation involving a physician or another health provider, and several of them offer a route out of it after a set amount of experience. Check your state's entry in the Full Practice Authority guide before you plan a practice. An owner's income depends on patient volume, payer mix and overhead rather than a set salary, and the owner also carries business operations and insurance credentialing.`,
         },
         ...demandFaq,
         {
@@ -138,7 +147,7 @@ export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[
         },
         {
             question: `Are ${brand.niche.short}s eligible for loan forgiveness or incentive programs?`,
-            answer: `Yes, ${brand.niche.short}s working in designated Health Professional Shortage Areas (HPSAs) may qualify for HRSA's National Health Service Corps (NHSC) loan repayment, which offers up to $50,000 for a 2-year commitment. VA ${brand.niche.short}s may qualify for the Education Debt Reduction Program (EDRP). ${brand.niche.short}s in community health centers and rural areas often have additional state-level loan forgiveness programs available.`,
+            answer: `Yes, ${brand.niche.short}s working in designated Health Professional Shortage Areas (HPSAs) may qualify for HRSA's National Health Service Corps (NHSC) loan repayment, which publishes its current award amounts and service terms at nhsc.hrsa.gov. VA ${brand.niche.short}s may qualify for the Education Debt Reduction Program (EDRP). ${brand.niche.short}s in community health centers and rural areas often have additional state-level loan forgiveness programs available.`,
         },
     ];
 }

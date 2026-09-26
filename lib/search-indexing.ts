@@ -102,7 +102,7 @@ export function isGooglePolicyRefusal(result: IndexResult): boolean {
  *
  *   ingest wave creations      30 firings x 100 =  3,000   lib/ingestion-service.ts
  *   ingest expiry sweep        30 firings x 100 =  3,000   lib/ingestion-service.ts
- *   deindex-expired             2 firings x 100 =    200
+ *   deindex-expired             2 firings x  30 =     60
  *   historical-deindex          3 firings x  50 =    150
  *   index-urls                  1 firing  x 100 =    100
  *
@@ -110,7 +110,7 @@ export function isGooglePolicyRefusal(result: IndexResult): boolean {
  * at all: its category x city landings carry no JobPosting (see the scope note
  * above), and it now submits them to Bing and IndexNow only.
  *
- * The three dedicated indexing crons alone want 450 of a 200 allowance, and
+ * The three dedicated indexing crons alone want 310 of a 200 allowance, and
  * the ingest path multiplies that by ten. Without a budget the spend is first
  * come first served, which inverts the priority we actually want: the earliest
  * firings of the UTC day are an ingest wave at 00:05 and historical-deindex at
@@ -122,9 +122,9 @@ export function isGooglePolicyRefusal(result: IndexResult): boolean {
  *  1. expired-job-removal. A job URL that now 404s but is still in the index
  *     is the one failure with no second channel: IndexNow reaches Bing,
  *     Yandex and Seznam but cannot remove anything from Google, and Google
- *     will not drop the URL on its own for weeks. The removal window is also
- *     bounded, because deindex-expired only looks at recently expired rows, so
- *     a skipped run is never retried by anybody.
+ *     will not drop the URL on its own for weeks. deindex-expired resumes from
+ *     where its last successful run stopped, but only up to seven days back, so
+ *     a removal that waits longer than that is never sent by anybody.
  *  2. new-content. This is the product promise, but a new job URL has other
  *     discovery channels (the sitemap, and IndexNow for the other engines)
  *     and Google crawls freshly linked pages by itself, so deferring costs
@@ -143,10 +143,11 @@ export function isGooglePolicyRefusal(result: IndexResult): boolean {
  * case, at 75 about eleven, and fewer in practice, because live rows and out
  * of scope rows leave the queue without spending any quota.
  *
- * expired-job-removal gets none of it on purpose. app/api/cron/deindex-expired
- * records nothing about what it already sent, so each run offers the most
- * recently expired jobs first again, and a bigger cap there buys resubmissions
- * of the same URLs before it buys new ones. That lane's fix is at the caller.
+ * expired-job-removal did not get any of it. When the reallocation was made,
+ * app/api/cron/deindex-expired recorded nothing about what it had sent, so a
+ * bigger cap there bought resubmissions of the same URLs. It now keeps a
+ * cursor and sends each expiry once, oldest first, so a larger reservation
+ * would clear a backlog faster; revisit the split if daily expiries outrun 60.
  *
  * WHY THE BUDGET IS A STATIC ALLOCATION RATHER THAN A LIVE COUNTER: every
  * cron firing is its own serverless invocation with its own memory, and the

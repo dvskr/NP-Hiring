@@ -187,8 +187,9 @@ export const STATE_PRACTICE_AUTHORITY: Record<string, StatePracticeInfo> = {
     // DC', AANP State Practice Environment) as rendered on /jobs, /faq,
     // /salary-guide and /for-employers/resources/how-to-hire.
     // AANP classifies both as Full Practice: NY under the Nurse Practitioner
-    // Modernization Act (permanent since 2022), MA under Chapter 227 of the
-    // Acts of 2020 (effective 2021). Both carry an experience threshold, so
+    // Modernization Act, a sunset provision last extended on 2026-05-28 to
+    // expire on 2030-07-01 (hence "currently exempt" below), and MA under
+    // Chapter 260 of the Acts of 2020 (signed 2021-01-01). Both carry an experience threshold, so
     // the details strings state it rather than promising day-one autonomy.
     'New York': {
         authority: 'full',

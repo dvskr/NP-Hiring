@@ -1,92 +1,175 @@
 /**
  * Metro Landing Page Data
  *
- * Editorial content for 20 major metro areas with strong nurse practitioner
- * job demand. Each metro has unique, hand-curated content covering the local
- * healthcare landscape, sub-market structure, cost of living, licensure, and
- * practice environment. This data powers the content-rich landing pages at
- * /jobs/metro/[slug].
+ * Hand-written editorial content for 20 metro guides at /jobs/metro/[slug]:
+ * the local employer landscape, sub-market structure, practice environment,
+ * and the questions a clinician relocating into the metro actually asks.
  *
- * City selection criteria (inherited from the donor board — re-validate as
+ * FORK NOTE: this is per-board editorial data. The niche is named through
+ * brand.niche tokens, but the licensing sentences restate the nurse
+ * practitioner rules in lib/state-practice-authority.ts, and the federal VA
+ * sentences name the three APRN roles that regulation covers, so a fork on
+ * another niche rewrites the records rather than reusing them.
+ *
+ * City selection criteria (inherited from the donor board; re-validate as
  * this board accrues its own GSC data):
- * - Search demand for "np jobs [city]"-style queries
+ * - Search demand for "np jobs [city]" style queries
  * - Active job count on platform
  * - Geographic diversity
  * - State practice authority status
  *
  * ── Editorial policy (NP board) ───────────────────────────────────────────
- * NO INVENTED STATISTICS.
+ * CLAIM RULE. No string in this file states an unsourced number, ranking,
+ * share, income or coverage claim, or regulatory fact, and no string may be
+ * false. When a claim cannot be sourced, the sentence is rewritten so it
+ * stays useful without it, usually by naming who holds the current answer
+ * (the state board, HRSA, the employer). This applies to every field, not
+ * only the ones the page renders today: FAQ answers are also published as
+ * FAQPage structured data, and a future surface may read any field.
  *
- * 1. SALARY. Salary language here is deliberately qualitative. The only
- *    cited salary figures on this board live in lib/stats-sources.ts; the
- *    dollar numbers a reader sees on a metro page come from live Prisma
- *    aggregation over that metro's own listings.
+ * The 2026-09-26 sweep rewrote all twenty records after an earlier rewrite,
+ * never shipped, removed unsourced claims but introduced false ones: it
+ * copied licensing wording from a practice-authority dataset that was itself
+ * wrong at the time, invented geography (a VA hospital in the wrong part of
+ * Tampa, a West Valley of "young families" that holds Sun City), and
+ * overreached statutes (New Jersey, Virginia, Florida). The rules below
+ * exist to stop each of those failure modes.
  *
- * 2. PRACTICE AUTHORITY. `practiceAuthority` MUST agree with
- *    lib/state-practice-authority.ts for the same state — that module is the
- *    board's single regulatory source of truth and follows the AANP State
- *    Practice Environment map (aanp.org/advocacy/state/state-practice-
- *    environment). tests/regressions/p2-metro-editorial-depth.test.ts pins
- *    the two together so they cannot drift again. Re-verify when state law
- *    changes.
+ * 1. LICENSING. Every licensing statement about a state must be supported by
+ *    that state's `details` string in lib/state-practice-authority.ts, which
+ *    a primary-source audit verified for all 51 jurisdictions. If the details
+ *    do not say it, this file does not say it: no statute names, board
+ *    procedures, filing steps, prescribing registrations, processing times
+ *    or pending legislation beyond what the details carry. That covers the
+ *    neighboring states named in prose too (New Jersey, Delaware, Maryland,
+ *    Virginia, South Carolina, Wisconsin). `practiceAuthority` is the AANP
+ *    tier from the same file and is pinned there by
+ *    tests/regressions/p2-metro-editorial-depth.test.ts; a tier never
+ *    answers a question about one state, so tier sentences are attributed to
+ *    AANP and the state's rule comes from its details.
+ *    Two sourced additions outside the details:
+ *    - Massachusetts: Chapter 260 of the Acts of 2020, verified against the
+ *      session law (see the comment on the Boston record).
+ *    - The VA: 38 CFR 17.415, read 2026-09-26 at
+ *      law.cornell.edu/cfr/text/38/17.415. "VA may grant full practice
+ *      authority" to an APRN in one of "the three APRN roles of Certified
+ *      Nurse Practitioner (CNP), Clinical Nurse Specialist (CNS), or
+ *      Certified Nurse-Midwife (CNM)" who meets its requirements, meaning
+ *      practice "without the clinical oversight of a physician", "when that
+ *      APRN is working within the scope of their VA employment"; the section
+ *      "preempts conflicting State and local laws" in that scope; and the
+ *      authority "is subject to the limitations imposed by the Controlled
+ *      Substances Act ... and that APRN's State licensure on the authority to
+ *      prescribe, or administer controlled substances". Every VA sentence here
+ *      keeps all three limits (may grant, VA employment, controlled
+ *      substances). Do not describe it as "national standards of practice",
+ *      which is a different VA initiative.
  *
- * 3. COST OF LIVING. Two forms appear in `avgCostOfLiving`:
- *    - A percentage ("37% above US average") on the ten original metros.
- *      These are niche-neutral index values retained from the donor board
- *      and render unsourced — /editorial-policy is accurate about that.
- *    - A directional band ("below the US average") on metros added in the
- *      2026-07 expansion. Rather than invent an index reading per city, new
- *      entries state only the direction, which is unambiguous public fact
- *      and does not decay. TODO: if a licensed COL index is ever sourced,
- *      backfill both forms with the value plus its as-of date.
+ * 2. PAY. No pay figures and no pay comparisons. Pay questions are answered
+ *    with how to compare offers, plus one pointer sentence about the pay
+ *    card the metro page renders through PostedPay. That card has three
+ *    branches (postedPaySentence, then buildHubPayParagraph): the gated local
+ *    median when enough postings from enough employers state pay; below the
+ *    gate, when at least one posting states pay, a count of those postings
+ *    plus the cited BLS national median from lib/stats-sources.ts; and
+ *    nothing when no posting states pay. An FAQ answer is fixed text and
+ *    cannot know which branch a given day renders, so the pointer must be
+ *    true on all three: it conditions the local median on enough posted pay
+ *    and says that a national median shown instead is the BLS reference
+ *    figure. Pinned by tests/regressions/p1-eeat-editorial-trust.test.ts.
  *
- * 4. EMPLOYERS. Named health systems must be present in this board's own
- *    job data or an unambiguous public fact about the metro (e.g. a hospital
- *    that demonstrably operates there). Never invent an employer, a ranking,
- *    a "best places to work" claim, or a market-share figure.
+ * 3. LICENSURE LOGISTICS. Board processing times, fees, CE hours and renewal
+ *    cycles are not in repo data, so no record quotes one. Records name the
+ *    board instead, using the board names in LICENSE_GUIDE_STATES
+ *    (lib/blog-license-guides.ts).
  *
- * 5. TAX / REGULATORY FIGURES. Either current-year-correct or omitted. Rates
- *    that change on a legislative schedule are described structurally ("a
- *    flat state income tax") rather than quoted, so the page cannot go
- *    stale between reviews.
+ * 4. SHORTAGE AREAS AND LOAN REPAYMENT. Records never say that a named place
+ *    carries a federal shortage designation. They say that loan repayment
+ *    eligibility attaches to the exact practice site and point to the
+ *    employer plus two HRSA tools on data.hrsa.gov, each for what it
+ *    searches. Both pages were read on 2026-09-26: "Find Shortage Areas by
+ *    Address" takes a street address with a city and state or a ZIP code
+ *    and returns geographic, geographic high needs and population group
+ *    HPSAs plus medically underserved areas; "HPSA Find" searches by
+ *    location or HPSA ID and covers geographic, population and facility
+ *    HPSAs. So the street address goes to the first tool, and the county or
+ *    facility lookup goes to HPSA Find. Any sentence that names a shortage
+ *    designation frames it as a condition ("whether", "depends").
  *
- * 6. POPULATION. Rounded Census-style city and metro-area (MSA) estimates,
- *    hedged with "+" where the underlying figure moves year to year. They
- *    are orientation figures, not cited statistics.
+ * 5. COST OF LIVING, TAX, POPULATION, COVERAGE. No index readings, no
+ *    comparison with a national figure, no population magnitudes, no tax
+ *    rules or rates, no Medicaid expansion or uninsured-rate claims, and no
+ *    claim about how insured or affluent an area's patients are.
+ *    `avgCostOfLiving` and `population` keep their keys and types for the
+ *    consumers that import MetroCity but stay empty until a cited source
+ *    exists. `costOfLivingNote` is housing and commute guidance only.
  *
- * 7. NURSE LICENSURE COMPACT. Never assert per-state MEMBERSHIP ("X is not a
- *    Nurse Licensure Compact state"). State the observable EFFECT instead —
- *    "X does not issue or recognize multistate nursing licenses" — plus the
- *    compact RULES, which are stable and correct (the NLC covers RN and LPN
- *    licenses only, never APRN licenses).
+ * 6. RANKINGS, SHARES AND TRENDS. No superlatives (largest, fastest, only,
+ *    first, best, densest, deepest), no shares (majority, most, much of), and
+ *    no trend words (booming, growing, rapid). A definite article ranks as
+ *    surely as an -est word: "the center of", "the heart of", "the metro's
+ *    academic core" and "anchors the region's safety net" each name one
+ *    place or employer first in its market. Write "a center of", "a dense
+ *    cluster of" or "part of" instead. The p1 test's ranking pattern pins
+ *    these forms.
  *
- *    WHY, and do not "restore" the membership phrasing: membership is not a
- *    single bit. A jurisdiction can have ENACTED the compact and still not
- *    have implemented it, during which it issues no multistate licenses and
- *    honours none. Massachusetts is exactly that case — it signed the NLC on
- *    2024-11-20 as the 43rd party state and was still in implementation when
- *    this file was last reviewed — and an earlier revision of this file
- *    called it "not a Nurse Licensure Compact state" on a YMYL page.
+ * 7. EMPLOYERS AND GEOGRAPHY. A named institution must demonstrably operate
+ *    where the record puts it. Every location in the 2026-09-26 records was
+ *    checked (for example: Mayo Clinic's Florida campus is on San Pablo Road
+ *    in southeast Jacksonville; Moffitt and the James A. Haley Veterans'
+ *    Hospital sit on and beside the USF campus in north Tampa, not on Davis
+ *    Islands or in South Tampa; the West Valley holds Sun City and Sun City
+ *    West; the Irving Street hospital complex in DC is east of Rock Creek
+ *    Park, not in upper Northwest; Jacksonville's VA sites are clinics;
+ *    Keck Hospital of USC is on the USC Health Sciences Campus, which is
+ *    adjacent to Los Angeles General Medical Center in Boyle Heights, but the
+ *    two hospitals are about half a mile apart, not across the street).
+ *    When a location cannot be verified, leave it out.
  *
- *    That claim survived review because it agreed with
- *    LICENSE_GUIDE_NLC_NON_MEMBERS (lib/blog-license-guides.ts), which the
- *    board's own code documents as wrong in both directions — see the long
- *    notes in components/tools/MultiStatePlanner.tsx and
- *    app/tools/licensure-checker/page.tsx, both of which forbid deriving a
- *    per-state membership claim from that set until its owner re-verifies it
- *    against NCSBN. This file and its regression test are bound by the same
- *    rule; the test now asserts the ABSENCE of membership phrasing rather
- *    than agreement with that dataset.
+ * 8. NURSE LICENSURE COMPACT. Never assert per-state MEMBERSHIP ("X is not a
+ *    Nurse Licensure Compact state"). State the observable EFFECT instead,
+ *    "X does not issue or recognize multistate nursing licenses", plus the
+ *    compact RULES (the NLC covers RN and LPN licenses only, never APRN
+ *    licenses). Membership is not a single bit: a jurisdiction can have
+ *    enacted the compact and still not have implemented it, during which it
+ *    issues no multistate licenses and honours none, and Massachusetts is
+ *    that case. The effect sentences here (New York, California, Illinois,
+ *    Minnesota and the District of Columbia issue no multistate licenses;
+ *    Massachusetts does not yet) agree with the roster verified on
+ *    NLC_ROSTER_VERIFIED_AT in lib/blog-license-guides.ts. This file may not
+ *    import that roster (tests/regressions/p2-metro-editorial-depth.test.ts
+ *    forbids it), so a roster change means editing these sentences by hand.
+ *
+ * 9. THE PAGE FILTER IS A BACKSTOP. app/jobs/metro/[slug]/page.tsx publishes
+ *    a record string only when it passes the page's own claim patterns
+ *    (isPublishable). Those patterns drop any sentence that mentions pay by
+ *    name, costs or affordability, rankings, or large magnitudes, so copy
+ *    meant to publish avoids those words even when the sentence is true.
+ *    Long notes are filtered sentence by sentence (split after a period), so
+ *    rendered notes avoid abbreviations such as "St." or "D.C.".
+ *
+ * 10. HOUSE STYLE. No en or em dash and no spaced hyphen in any string, no
+ *     "average", ranges read "to", and niche wording comes from brand.niche.
  */
+import { brand } from '@/config/brand';
 
-/** Date this editorial dataset was last reviewed end-to-end. */
-export const METRO_DATA_LAST_REVIEWED = '2026-07-29';
+/**
+ * Date this editorial dataset was last reviewed end to end. One date covers
+ * every record: the metro page prints it on each guide. Bump it whenever a
+ * record changes. Last bump: 2026-09-26, the claim and fact sweep described
+ * in the header.
+ */
+export const METRO_DATA_LAST_REVIEWED = '2026-09-26';
+
+// Niche wording comes from brand tokens, never a hardcoded credential.
+const NP = brand.niche.short;
+const NPS = `${NP}s`;
 
 /** A named sub-area of a metro and what hiring looks like there. */
 export interface MetroSubMarket {
   /** Neighborhood, district, county, or commuter-ring name. */
   name: string;
-  /** What an NP job search actually looks like in that sub-area. */
+  /** What a job search actually looks like in that sub-area. */
   note: string;
 }
 
@@ -98,43 +181,53 @@ export interface MetroCity {
   stateSlug: string; // for linking to /jobs/state/[state]
   citySlug: string;  // for linking to /jobs/city/[slug]
   metroArea: string; // broader metro name for display
+  /**
+   * Empty on purpose: no page renders it, and the rounded estimates it used
+   * to carry had no source (policy note 5). Kept so the key and type stay
+   * stable for importers.
+   */
   population: string;
   /**
    * AANP State Practice Environment classification for the state. MUST match
-   * lib/state-practice-authority.ts for `state` — see policy note (2) above.
+   * lib/state-practice-authority.ts for `state` (policy note 1).
    */
   practiceAuthority: 'Full' | 'Reduced' | 'Restricted';
   /**
-   * Cost of living relative to the US average. Either an index percentage
-   * (original metros) or a directional band (2026-07 expansion) — see policy
-   * note (3) above. Rendered mid-sentence, so keep it lowercase and free of
-   * sentence-ending periods.
+   * Empty on purpose. It used to hold unsourced index percentages and
+   * directional bands; no page renders it (the metro page test pins that),
+   * and it stays empty until a licensed index is cited with an as-of date.
    */
   avgCostOfLiving: string;
+  /**
+   * The record's editorial summary. The metro page does not render it (its
+   * hero deck is buildMetroDescription over sourced inputs), but it is held
+   * to the same claim rule so any future surface can use it safely.
+   */
   heroDescription: string;
-  /** At least 4 bullets; the first 4 render in the bento grid. */
+  /** At least 4 bullets; up to 4 that pass the page filter render as tiles. */
   whyThisMetro: string[];
   /**
-   * First sentence is reused standalone (journey step) and spliced after an
-   * em dash in two bento cards. Keep it period-free until the end and avoid
+   * Housing and commute guidance, with no figures or comparisons. No page
+   * renders it today. `costOfLivingSplice` still reads its first sentence,
+   * so keep that sentence free of periods until its end and avoid
    * abbreviations like "St." or "U.S." that would split it early.
-   *
-   * The splice lowercases the leading character ONLY when the sentence does
-   * not open with a proper noun — see `costOfLivingSplice`. Notes may
-   * therefore open either way ("Cost of living…" or "San Antonio is…").
    */
   costOfLivingNote: string;
-  /** First ~150 characters render truncated in the bento card. */
+  /**
+   * The first surviving sentence is reused standalone in the Getting Started
+   * step, and the filtered note renders truncated in the practice-authority
+   * bento card. Keep the first sentence free of mid-sentence periods.
+   */
   licensureNote: string;
   /** Local care-demand context: who lives here and what care they need. */
   careDemandContext: string;
-  /** Commute / sub-market structure — where inside the metro the jobs are. */
+  /** Commute / sub-market structure: where inside the metro the jobs are. */
   subMarkets: MetroSubMarket[];
   topSettings: string[];
   /**
    * SAME-STATE neighboring cities folded into this metro's job query. The
    * query ANDs on stateCode, so cross-state suburbs (Arlington VA for DC,
-   * Camden NJ for Philadelphia) can never match and are deliberately absent —
+   * Camden NJ for Philadelphia) can never match and are deliberately absent;
    * they are covered in `subMarkets` prose instead.
    *
    * This is the DISPLAY list: it is printed verbatim under the job-count
@@ -146,11 +239,14 @@ export interface MetroCity {
   /**
    * Alternate spellings of a city already named in `nearbyCities`, added only
    * so the `contains` job query matches employer-entered variants. Never
-   * rendered — "Saint Paul" and "St. Paul" are one city to a reader, and
+   * rendered: "Saint Paul" and "St. Paul" are one city to a reader, and
    * printing both made the caption name it twice.
    */
   nearbyCityAliases?: string[];
-  /** 4-5 questions. Rendered as visible copy AND as FAQPage schema. */
+  /**
+   * 4 to 5 questions. The ones that pass the page filter render as visible
+   * copy AND as FAQPage schema, so every answer is held to the claim rule.
+   */
   faqs: { question: string; answer: string }[];
 }
 
@@ -163,34 +259,34 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'new-york',
     citySlug: 'new-york-ny',
     metroArea: 'New York City Metro',
-    population: '8.3M (city) / 20M+ (metro)',
+    population: '',
     practiceAuthority: 'Full',
-    avgCostOfLiving: '37% above US average',
-    heroDescription: 'The NYC metro is one of the largest nurse practitioner job markets in the country, with major health systems, private practices, and telehealth companies hiring across every specialty. High cost of living is offset by NP salaries that rank among the highest nationally.',
+    avgCostOfLiving: '',
+    heroDescription: `The New York metro packs academic medical centers, the public hospitals of NYC Health + Hospitals, federally qualified health centers, and a dense private-practice market into one commute shed that reaches from the five boroughs into Westchester, Long Island, and New Jersey. New York ${NPS} with 3,600 hours of practice or fewer work in collaboration with a physician under a written practice agreement, so where you stand on that count shapes which roles fit.`,
     whyThisMetro: [
-      'NP salaries in New York rank among the highest in the country, helping offset metro living costs',
-      'Dense network of academic medical centers (NYU Langone, Columbia, Mount Sinai, Montefiore) hiring across specialties',
-      'Large, diverse patient population creating steady demand across all 5 boroughs and every practice setting',
-      'Full practice authority after a 3,600-hour transition, plus a deep telehealth and private-practice market',
+      `Academic medical centers including NYU Langone, Columbia and NewYork-Presbyterian, Mount Sinai, and Montefiore hire ${NPS} across specialties`,
+      `${NPS} with more than 3,600 hours of practice are currently exempt from New York's written practice agreement and protocol requirements`,
+      `NYC Health + Hospitals and community health centers across the five boroughs serve patients in many languages`,
+      `Hospital, private-practice, telehealth, and home-based care employers all hire here, so you can match a first role to where you are on the 3,600-hour count`,
     ],
-    costOfLivingNote: 'Living costs in the NYC metro run 37% above the national average, driven mostly by housing. Manhattan is the most expensive; Brooklyn, Queens, and the NJ suburbs offer better value. NP salaries here rank among the highest in the country, and many employers add housing stipends or loan repayment to help offset the premium.',
-    licensureNote: 'New York grants NPs full practice authority under the NP Modernization Act: NPs work with a collaborative agreement for their first 3,600 practice hours, then can practice independently. License applications are typically processed in 4 to 8 weeks.',
-    careDemandContext: 'New York City\'s population of over 8 million sustains NP demand across primary care, acute care, pediatrics, geriatrics, women\'s health, and behavioral health. Large hospital systems, community health centers, and a growing telehealth sector all compete for NP talent, and the city\'s diverse communities put a premium on culturally competent, multilingual care.',
+    costOfLivingNote: `Housing sets the budget in the New York metro, and it changes block by block across Manhattan, the outer boroughs, and the New Jersey and Westchester suburbs. Compare any offer against the rent you would actually pay near the job, plus the commute from wherever else you might live. Ask employers about commuter benefits and loan repayment before you negotiate on base pay alone.`,
+    licensureNote: `New York ${NPS} with 3,600 hours of practice or fewer must practice in collaboration with a physician under a written practice agreement and written practice protocols. ${NPS} with more than 3,600 hours of practice are currently exempt from those requirements. Check the New York State Board of Nursing for current application steps before you commit to a start date, and keep a running record of your practice hours from your first role so you can document them when you change employers.`,
+    careDemandContext: `New York City sustains ${NP} demand across primary care, acute care, pediatrics, geriatrics, women's health, and behavioral health. Hospital systems, community health centers, home-based care programs, and telehealth companies all hire here, and the city's many immigrant communities make culturally competent, multilingual care a daily part of the job rather than a specialty.`,
     subMarkets: [
-      { name: 'Manhattan: East Side and Washington Heights', note: 'The academic spine: NYU Langone, Mount Sinai, and Weill Cornell on the East Side, Columbia and NewYork-Presbyterian uptown. Highest concentration of hospital, specialty, and research-adjacent roles, and the most competitive applicant pools.' },
-      { name: 'The Bronx', note: 'Montefiore\'s home borough and the strongest safety-net demand in the city. Community health center roles here are the most likely in the metro to carry federal shortage-area loan repayment.' },
-      { name: 'Brooklyn', note: 'A patchwork of hospital campuses, FQHCs, and fast-growing private group practices. Wide pay and pace variation between the downtown medical corridor and neighborhood clinics.' },
-      { name: 'Queens', note: 'The most linguistically diverse county in the country, so multilingual NPs are actively recruited. Heavy primary care, urgent care, and home-based care volume.' },
-      { name: 'Westchester, Long Island, and the Jersey side', note: 'Suburban systems and private practices where many city-priced NPs actually live. Working across the Hudson means a New Jersey license and New Jersey\'s reduced-practice rules, which means a separate application rather than a formality.' },
+      { name: 'Manhattan: East Side and Washington Heights', note: `An academic corridor: NYU Langone, Mount Sinai, and Weill Cornell on the East Side, and Columbia and NewYork-Presbyterian uptown in Washington Heights. Hospital, specialty, and research-adjacent roles cluster here.` },
+      { name: 'The Bronx', note: `Montefiore's home borough, with public hospitals and community health centers across its neighborhoods. Loan repayment, where offered, depends on the specific clinic site, so confirm it for the address you would work at.` },
+      { name: 'Brooklyn', note: `A patchwork of hospital campuses, federally qualified health centers, and private group practices. Pace and patient mix vary widely between the hospital campuses and neighborhood clinics.` },
+      { name: 'Queens', note: `A borough of many languages, so a second language is an asset in its clinics, alongside primary care, urgent care, and home-based care roles across its neighborhoods.` },
+      { name: 'Westchester, Long Island, and the Jersey side', note: `Suburban hospital systems and private practices within reach of the city. Working across the Hudson means a separate New Jersey license and New Jersey's own rules: it generally requires joint protocols with a collaborating physician to prescribe, and a 2026 law lets ${NPS} in a qualifying population focus with more than 5,000 hours of advanced practice who provide primary or behavioral health care and meet its other conditions practice and prescribe without one.` },
     ],
     topSettings: ['Academic medical centers', 'Hospital systems', 'Outpatient clinics', 'Private practice', 'Telehealth', 'Community health centers'],
     nearbyCities: ['Brooklyn', 'Queens', 'Bronx'],
     faqs: [
-      { question: 'What is the average NP salary in New York City?', answer: 'New York is consistently among the higher-paying states for nurse practitioners, and NYC salaries typically run above the statewide average to offset the metro\'s 37% above-average cost of living. Pay varies significantly by specialty, setting, and experience. Hospital and academic roles often trade slightly lower base pay for stronger benefits. Check live NYC listings with posted salary on this board for current, real-world ranges.' },
-      { question: 'Does New York have full practice authority for NPs?', answer: 'Yes. Under New York\'s NP Modernization Act (2022), NPs with more than 3,600 hours of qualifying practice experience can practice without a written collaborative agreement. NPs still building toward that threshold practice under a collaborative relationship with a physician.' },
-      { question: 'Where are the most NP jobs in NYC?', answer: 'Positions are available across all boroughs. Manhattan has the highest concentration of hospital and academic medical center roles. The Bronx, Brooklyn, and Queens have strong community health center demand, and many of those roles qualify for federal loan repayment. Many NPs live in the NJ or CT suburbs and commute, or work remotely via telehealth.' },
-      { question: 'Can I work in New York and New Jersey on one license?', answer: 'No. Each state licenses NPs separately, and New York does not issue or recognize multistate nursing licenses, though that would not matter if it did, because the compact covers RN and LPN licenses only, never APRN licenses. A cross-Hudson practice means two applications, two renewal cycles, and two sets of rules: New York grants full practice authority after the 3,600-hour transition, while New Jersey generally requires joint protocols with a collaborating physician to prescribe, and a 2026 law exempts qualifying NPs with more than 5,000 hours of advanced practice who provide primary or behavioral health care.' },
-      { question: 'How do NYC employers handle the 3,600-hour transition period?', answer: 'Most large systems hire NPs at any stage and arrange the collaborative relationship internally, because they employ the physicians anyway. The practical difference shows up later: independent practice, locum work, and running your own panel all get much simpler once you clear the threshold, so it is worth tracking your qualifying hours from your first job rather than reconstructing them years later.' },
+      { question: `How should I compare ${NP} pay offers in New York City?`, answer: `Put every offer on the same footing before you compare it: base pay, differentials, retirement match, tuition or loan support, and what the commute and rent look like from where you would live. Academic systems and private practices weight these pieces differently, so the base figure alone misleads. A posted-pay median appears on this page only when enough New York area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does New York have full practice authority for ${NPS}?`, answer: `By AANP's classification, yes, with a threshold. New York ${NPS} with 3,600 hours of practice or fewer must practice in collaboration with a physician under a written practice agreement and written practice protocols, and ${NPS} with more than 3,600 hours of practice are currently exempt from those requirements. Ask any employer how it handles the collaboration requirement for newer ${NPS} before you accept.` },
+      { question: `Where in New York City do ${NP} jobs cluster?`, answer: `Hospital and academic roles cluster in Manhattan, especially on the East Side and in Washington Heights. Community health center roles spread across the Bronx, Brooklyn, and Queens, and loan repayment there depends on the specific clinic site. A search can also reach suburban employers in New Jersey, Westchester, and Long Island, and telehealth roles remove the commute entirely.` },
+      { question: 'Can I work in New York and New Jersey on one license?', answer: `No. Each state licenses ${NPS} separately, and New York does not issue or recognize multistate nursing licenses. That would not matter for an ${NP} role in any case, because the Nurse Licensure Compact covers RN and LPN licenses only, never APRN licenses. A cross-Hudson practice means two applications, two renewal cycles, and two sets of rules: New York's 3,600-hour threshold on one side, and on the other, New Jersey's general requirement of joint protocols with a collaborating physician to prescribe, which a 2026 law lifts for qualifying experienced ${NPS} who provide primary or behavioral health care.` },
+      { question: 'How do NYC employers handle the 3,600-hour threshold?', answer: `Ask directly, because arrangements differ. Large systems employ physicians who can enter into a written practice agreement with a newer ${NP}, while at a small practice you may need to find a collaborating physician yourself. Locum work, a move between employers, and running your own panel all get simpler once you pass the threshold, so track your practice hours from your first job rather than reconstructing them years later.` },
     ],
   },
   {
@@ -201,33 +297,33 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'california',
     citySlug: 'los-angeles-ca',
     metroArea: 'Greater Los Angeles',
-    population: '3.9M (city) / 13M+ (metro)',
+    population: '',
     practiceAuthority: 'Restricted',
-    avgCostOfLiving: '43% above US average',
-    heroDescription: 'Los Angeles is one of the largest and highest-paying NP markets in the country. Despite California\'s restricted practice laws, the massive population and persistent provider shortages create abundant opportunities across every specialty and setting.',
+    avgCostOfLiving: '',
+    heroDescription: `Greater Los Angeles spans county safety-net hospitals, academic campuses, Kaiser Permanente's integrated network, community clinics, and a long list of private groups, spread across a region where the commute can decide the job. California ${NPS} generally practice under standardized procedures developed collaboratively with physicians, with a route to practicing without them after a California transition to practice.`,
     whyThisMetro: [
-      'California is consistently the top-paying state for nurse practitioners in BLS wage data',
-      'Kaiser Permanente, Cedars-Sinai, UCLA Health, and other major systems actively recruiting NPs',
-      'A county of 10M+ residents with persistent provider shortages, especially in underserved areas',
-      'Year-round pleasant climate, diverse communities, and a growing telehealth sector',
+      `Kaiser Permanente, Cedars-Sinai, UCLA Health, Keck Medicine of USC, and the county's own health system all hire ${NPS}`,
+      `After a California transition to practice of three full-time equivalent years or 4,600 hours, ${NPS} can be certified to practice without standardized procedures in a group setting with a physician`,
+      `County clinics, federally qualified health centers, and correctional health programs hire ${NPS} for primary care`,
+      `Spanish and other languages are working clinical skills in county clinics, community health centers, and practices across East LA and the San Gabriel Valley`,
     ],
-    costOfLivingNote: 'Cost of living in LA runs 43% above the national average, driven primarily by housing. Many NPs offset costs by living in suburbs like Pasadena, Long Beach, or the Inland Empire while working in central LA or via telehealth. California\'s high NP salaries help balance the premium.',
-    licensureNote: 'California NPs generally practice under standardized procedures with physician involvement, though AB 890 (2020) created the 103NP/104NP pathways that let experienced NPs practice with greater independence in certain settings. The California BRN typically processes applications in 8 to 12 weeks, and DEA registration is required for prescribing controlled substances.',
-    careDemandContext: 'LA County\'s 10 million residents generate NP demand across primary care, urgent care, pediatrics, geriatrics, women\'s health, and behavioral health. County safety-net systems, community clinics, and correctional health programs rely heavily on NPs, and many roles in underserved areas qualify for loan repayment programs.',
+    costOfLivingNote: `Housing drives the Los Angeles budget, and it varies sharply between the Westside, the San Fernando Valley, and the Inland Empire. Weigh a longer commute or a telehealth schedule against rent closer to the central hospitals. Price the drive at shift-change hours, not at noon, before you sign a lease.`,
+    licensureNote: `California ${NPS} generally practice under standardized procedures developed collaboratively with physicians and furnish drugs and devices under physician supervision. ${NPS} who complete a transition to practice in California of three full-time equivalent years or 4,600 hours can be certified to practice without standardized procedures in a group setting with a physician, and, usually after at least three more years in good standing, in an independent setting. Read the California Board of Registered Nursing's current guidance on who qualifies before you plan around either step. California does not issue or recognize multistate nursing licenses, so a multistate RN license issued elsewhere does not cover practice here.`,
+    careDemandContext: `Los Angeles County's size and range sustain ${NP} demand across primary care, urgent care, pediatrics, geriatrics, women's health, and behavioral health. County safety-net hospitals, community clinics, and correctional health programs hire ${NPS} alongside the private systems, and loan repayment for roles in underserved neighborhoods depends on the specific clinic site.`,
     subMarkets: [
-      { name: 'Westside: Westwood, Santa Monica, Beverly Hills', note: 'UCLA Health and Cedars-Sinai anchor the highest-profile hospital and specialty roles in the county. Commute cost is the trade: this is the most expensive housing in the metro.' },
-      { name: 'Downtown and East LA', note: 'County safety-net facilities and the USC medical campus. High acuity, high volume, and the strongest case for loan-repayment-eligible placements in the metro.' },
-      { name: 'San Fernando Valley', note: 'Dense outpatient, urgent care, and group-practice market with markedly cheaper housing than the Westside. A common first landing spot for NPs relocating into the county.' },
-      { name: 'South Bay and Long Beach', note: 'Hospital systems, VA facilities, and port-adjacent occupational health. Long Beach functions as its own labor market rather than an LA suburb.' },
-      { name: 'San Gabriel Valley and the Inland Empire', note: 'Riverside and San Bernardino counties have real provider shortages and much lower housing costs; many NPs trade a longer commute or a telehealth schedule for the difference.' },
+      { name: 'Westside: Westwood, Santa Monica, Beverly Hills', note: `UCLA Health's Westwood and Santa Monica hospitals and Cedars-Sinai, near Beverly Hills, hold high-profile hospital and specialty roles. Plan the commute carefully, because Westside traffic shapes every shift.` },
+      { name: 'Downtown and East LA', note: `Los Angeles General Medical Center sits in Boyle Heights, east of downtown, beside the USC Health Sciences Campus, home of Keck Hospital of USC, with high-acuity hospital work and community clinics nearby where loan repayment is worth asking about for each specific site.` },
+      { name: 'San Fernando Valley', note: `A dense outpatient, urgent care, and group-practice market with its own hospitals, and a shorter drive for Valley residents than the Westside offers.` },
+      { name: 'South Bay and Long Beach', note: `Hospital systems, the VA Long Beach Healthcare System, and port-adjacent occupational health. Long Beach runs as its own labor market rather than an LA suburb.` },
+      { name: 'San Gabriel Valley and the Inland Empire', note: `The San Gabriel Valley has its own hospitals and community clinics, and Riverside and San Bernardino counties sit farther east within commuting reach. Loan repayment, where offered, depends on the specific site.` },
     ],
     topSettings: ['Community health centers', 'Outpatient clinics', 'Telehealth', 'Correctional health', 'VA medical centers', 'Private group practices'],
     faqs: [
-      { question: 'What is the average NP salary in Los Angeles?', answer: 'California is the top-paying state for nurse practitioners in BLS wage data, and LA salaries generally reflect that, along with the metro\'s 43% above-average cost of living. Kaiser Permanente and academic medical centers offer competitive salary-plus-benefits packages. Check live LA listings with posted salary on this board for current ranges by specialty and setting.' },
-      { question: 'Can NPs practice independently in California?', answer: 'California is a restricted-practice state: most NPs work under standardized procedures with physician involvement. AB 890 created the 103NP and 104NP designations, which allow qualifying experienced NPs to practice with greater independence in specified settings. Most employers handle the collaboration arrangement, so it rarely limits day-to-day job opportunities.' },
-      { question: 'What areas of LA have the most NP jobs?', answer: 'Jobs are spread across LA County. Downtown LA, Hollywood, and the Westside concentrate hospital-based roles. South LA, East LA, and the San Fernando Valley have significant community health center opportunities, many with federal loan repayment. The Inland Empire (Riverside, San Bernardino) has growing demand with a lower cost of living.' },
-      { question: 'How long does California NP licensure actually take?', answer: 'Plan for a longer runway than most states. The California Board of Registered Nursing issues the RN license and the NP furnishing number separately, and applicants routinely report multi-month timelines. The board publishes current processing estimates, and they move. California does not issue or recognize multistate nursing licenses, so a multistate RN license from elsewhere does not shorten the process. Start the application before you accept a start date, not after.' },
-      { question: 'Is Spanish fluency expected for LA NP roles?', answer: 'It is not a formal requirement, but in county clinics, FQHCs, and much of the San Gabriel Valley and East LA it is a working advantage that employers actively screen for, and some roles carry a bilingual differential. Postings that mention a bilingual preference tend to move faster for candidates who have it.' },
+      { question: `What should I weigh in a Los Angeles ${NP} offer?`, answer: `Start with the whole package and the commute. Kaiser Permanente and the academic centers bundle base pay with benefits and structured advancement, private groups vary widely, and a job across the county can erase a better offer in drive time. A posted-pay median appears on this page only when enough Los Angeles area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Can ${NPS} practice independently in California?`, answer: `Not at first. California ${NPS} generally practice under standardized procedures developed collaboratively with physicians and furnish drugs and devices under physician supervision. After a California transition to practice of three full-time equivalent years or 4,600 hours, an ${NP} can be certified to practice without standardized procedures in a group setting with a physician, and, usually after at least three more years in good standing, in an independent setting. AANP classifies California as a restricted practice state.` },
+      { question: `Where do ${NP} jobs cluster in Los Angeles?`, answer: `Hospital roles cluster on the Westside, in Hollywood, and around the Boyle Heights hospitals east of downtown. South LA, East LA, and the San Fernando Valley carry many community health center roles, and loan repayment depends on each clinic's site. The Inland Empire, in Riverside and San Bernardino counties, is its own market within commuting reach.` },
+      { question: `How long does California ${NP} licensure take?`, answer: `Give yourself a generous runway, and check the board rather than a forum. The California Board of Registered Nursing is the place to confirm current processing information for each license and certificate you will need, and it changes. California does not issue or recognize multistate nursing licenses, so a multistate RN license from elsewhere does not shorten the process. Start the application before you accept a start date, not after.` },
+      { question: `Is Spanish fluency expected for LA ${NP} roles?`, answer: `It is rarely a formal requirement, but in county clinics, community health centers, and practices across East LA it is a working advantage that employers screen for, and some roles pay a bilingual differential. If a posting mentions a bilingual preference, lead with your language skills in the application.` },
     ],
   },
   {
@@ -238,32 +334,32 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'florida',
     citySlug: 'jacksonville-fl',
     metroArea: 'Jacksonville Metro',
-    population: '950K (city) / 1.6M+ (metro)',
+    population: '',
     practiceAuthority: 'Restricted',
-    avgCostOfLiving: '3% below US average',
-    heroDescription: 'Jacksonville is a fast-growing NP market with below-average cost of living and strong healthcare infrastructure. Multiple major hospital systems, a large military and veteran population, and a growing telehealth sector make it one of the best emerging markets for nurse practitioners.',
+    avgCostOfLiving: '',
+    heroDescription: `Jacksonville combines Baptist Health, Mayo Clinic's Florida campus, UF Health Jacksonville, and Ascension St. Vincent's with a military and veteran community around Naval Station Mayport and NAS Jacksonville. Florida requires ${NPS} to practice under a supervisory protocol with a physician, with an autonomous practice route in primary care for ${NPS} who meet its eligibility requirements.`,
     whyThisMetro: [
-      'No state income tax and living costs 3% below the national average, so your salary goes further',
-      'Major employers: Baptist Health, Mayo Clinic Jacksonville, UF Health, Ascension St. Vincent\'s',
-      'Rapidly growing population, including retirees and military families, sustaining demand across specialties',
-      'A pathway to autonomous primary-care practice for NPs who meet Florida\'s eligibility requirements, including 3,000 supervised hours and graduate coursework in differential diagnosis and pharmacology',
+      `Employers include Baptist Health, Mayo Clinic, UF Health Jacksonville, and Ascension St. Vincent's`,
+      `Florida's autonomous practice route in primary care, for ${NPS} who meet requirements that include, within the preceding five years, at least 3,000 supervised hours of clinical practice and graduate-level coursework, or the equivalent, in differential diagnosis and pharmacology`,
+      `Naval Station Mayport and NAS Jacksonville bring active-duty families and veterans into local patient panels`,
+      `Retirees and military families together sustain demand for primary care, geriatrics, and chronic disease management`,
     ],
-    costOfLivingNote: 'Cost of living here sits 3% below the national average, making Jacksonville one of the most affordable major metros for NPs. Housing is particularly attractive: median home prices are well below coastal California or the Northeast. Combined with Florida\'s zero state income tax, take-home pay stretches further than the nominal salary suggests.',
-    licensureNote: 'Florida NPs practice under a supervisory protocol with a physician, and a 2020 state law lets NPs who meet its eligibility requirements, which include at least 3,000 supervised clinical hours within the past five years and graduate-level coursework in differential diagnosis and pharmacology, register for autonomous practice in primary care. The Florida Board of Nursing typically processes licenses in 4 to 6 weeks.',
-    careDemandContext: 'Jacksonville\'s rapid population growth, including retirees and military families around Naval Station Mayport, is increasing demand for primary care, geriatrics, and specialty services across all age groups. Health systems and the VA compete for NP talent, and the metro\'s growth keeps new clinics opening.',
+    costOfLivingNote: `Jacksonville spreads across a wide footprint on both sides of the river, so housing and commute trade off against each other. Southside, Clay County, and the beach communities each price differently, and a job on the other side of the river can add real drive time. Compare an offer against the rent and commute from where you would actually live.`,
+    licensureNote: `Florida requires ${NPS} to practice under a supervisory protocol with a physician. Since 2020, ${NPS} who meet eligibility requirements can register for autonomous practice limited to primary care, including family medicine, general pediatrics, and general internal medicine; the requirements include, within the preceding five years, at least 3,000 supervised hours of clinical practice and graduate-level coursework, or the equivalent, in differential diagnosis and pharmacology. Check the Florida Board of Nursing for current application steps before you commit to a start date.`,
+    careDemandContext: `Jacksonville's patient base mixes retirees, military families around Naval Station Mayport and NAS Jacksonville, and veterans with the urban and suburban populations of Duval County and its neighbors. That mix keeps primary care, geriatrics, and specialty services in demand across age groups, and both the health systems and the VA hire ${NPS} here.`,
     subMarkets: [
-      { name: 'Downtown, Southbank, and Riverside', note: 'The urban hospital core, where the metro\'s inpatient and specialty roles concentrate. Shortest commutes in the metro and the densest cluster of employers within a few miles.' },
-      { name: 'Southside and St. Johns County', note: 'The metro\'s fastest-growing residential belt, and where new outpatient offices, urgent care, and pediatric practices keep opening. Family-heavy patient panels.' },
-      { name: 'Northside and the Mayo campus', note: 'Mayo Clinic\'s Florida campus sits on the north side of the metro and pulls a distinct, referral-heavy applicant pool. Longer commutes from the southern suburbs.' },
-      { name: 'The Beaches and Mayport', note: 'Naval Station Mayport shapes a patient mix heavy on active-duty families and veterans, alongside beach-community primary care.' },
-      { name: 'Westside and Clay County', note: 'NAS Jacksonville, community clinics, and lower-cost housing. Several surrounding rural counties carry federal shortage designations that make loan repayment realistic.' },
+      { name: 'Downtown, Southbank, and Riverside', note: `An urban hospital cluster: Baptist Medical Center on the Southbank, Ascension's Riverside hospital, and UF Health Jacksonville just north of downtown. Short commutes for anyone living in the older neighborhoods around them.` },
+      { name: 'Southside and St. Johns County', note: `The suburban belt south of the river, where outpatient offices, urgent care, and pediatric practices serve suburban families.` },
+      { name: 'San Pablo and the Mayo campus', note: `Mayo Clinic's Florida campus sits in the southeast of the city near the Intracoastal Waterway, with specialty and referral care and its own hiring process.` },
+      { name: 'The Beaches and Mayport', note: `Naval Station Mayport shapes a patient mix of active-duty families and veterans, alongside beach-community primary care.` },
+      { name: 'Westside and Clay County', note: `NAS Jacksonville, community clinics, and suburban housing west and southwest of the river. Loan repayment, where offered, depends on the specific site, so confirm it for the exact address you would work at.` },
     ],
-    topSettings: ['Hospital systems', 'Outpatient clinics', 'Telehealth', 'VA medical center', 'Private practice', 'Urgent care'],
+    topSettings: ['Hospital systems', 'Outpatient clinics', 'Telehealth', 'VA clinics', 'Private practice', 'Urgent care'],
     faqs: [
-      { question: 'What is the average NP salary in Jacksonville, FL?', answer: 'Florida NP salaries generally track close to national levels, but Jacksonville\'s zero state income tax and below-average cost of living mean take-home pay stretches further than in most coastal metros. Check live Jacksonville listings with posted salary on this board for current ranges by specialty and setting.' },
-      { question: 'Does Florida have full practice authority for NPs?', answer: 'Florida is a restricted-practice state, but a 2020 law created a path to autonomy: NPs who meet its eligibility requirements, which include at least 3,000 supervised clinical hours within the past five years and graduate-level coursework in differential diagnosis and pharmacology, can register for autonomous practice in primary care (family medicine, general pediatrics, and general internal medicine). NPs in other specialties continue to practice under physician supervision protocols.' },
-      { question: 'Is Jacksonville a good city for new-grad NPs?', answer: 'Yes. Jacksonville has multiple health systems with structured new-grad support, including Baptist Health and UF Health, and the VA medical center also hires new graduates. Below-average living costs make the city manageable on a first NP salary, and the growing population supports long-term career stability.' },
-      { question: 'How does Jacksonville compare with Tampa or Miami for NPs?', answer: 'Jacksonville is the most affordable of the three and the least saturated, which usually means less competition per opening but a smaller absolute number of postings. Tampa sits in the middle on both counts. Miami has the largest volume and the highest housing costs relative to local pay. All three sit under the same Florida supervisory-protocol rules, so the differences are economic and geographic rather than regulatory.' },
+      { question: `How should I compare ${NP} pay offers in Jacksonville?`, answer: `Compare the full package against where you would live. Baptist Health, UF Health, Mayo Clinic, and the VA structure benefits, schedules, and advancement differently, and the metro is spread out enough that the commute belongs in the comparison. A posted-pay median appears on this page only when enough Jacksonville area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does Florida have full practice authority for ${NPS}?`, answer: `Not by AANP's classification, which places Florida among the restricted practice states. Florida requires ${NPS} to practice under a supervisory protocol with a physician, but since 2020 ${NPS} who meet eligibility requirements can register for autonomous practice limited to primary care, including family medicine, general pediatrics, and general internal medicine. Those requirements include, within the preceding five years, at least 3,000 supervised hours of clinical practice and graduate-level coursework, or the equivalent, in differential diagnosis and pharmacology.` },
+      { question: `Is Jacksonville a good city for new-grad ${NPS}?`, answer: `It can be. Baptist Health and UF Health both run hospital systems with their own onboarding, and the VA has clinics in the area, so ask each employer about structured support for new graduates before you apply. Ask as well how the employer arranges a new graduate's supervisory protocol with a physician, and give a first job close to home real weight, because the metro is spread out.` },
+      { question: `How does Jacksonville compare with Tampa or Miami for ${NPS}?`, answer: `All three sit under the same Florida supervisory protocol rules and the same primary care autonomy route, so the differences are geographic rather than regulatory. Jacksonville is spread out and shaped by its military bases, Tampa splits into two markets across the bay, and Miami asks for bilingual capability in many patient-facing roles. Compare the live listings on each metro page rather than relying on reputation.` },
     ],
   },
   {
@@ -274,33 +370,33 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'ohio',
     citySlug: 'columbus-oh',
     metroArea: 'Columbus Metro',
-    population: '905K (city) / 2.1M+ (metro)',
+    population: '',
     practiceAuthority: 'Reduced',
-    avgCostOfLiving: '7% below US average',
-    heroDescription: 'Columbus combines below-average cost of living, a robust healthcare ecosystem anchored by Ohio State University Wexner Medical Center, and steady population growth. One of the best value markets for nurse practitioners in the Midwest.',
+    avgCostOfLiving: '',
+    heroDescription: `Columbus is organized around large employers: Ohio State University Wexner Medical Center, OhioHealth, Mount Carmel, and Nationwide Children's Hospital, plus community health centers and suburban ambulatory networks. Ohio ${NPS} must have a standard care arrangement with a collaborating physician, so ask how each employer handles it before you accept.`,
     whyThisMetro: [
-      'Living costs 7% below the national average give NP salaries strong purchasing power',
-      'Ohio State Wexner Medical Center, OhioHealth, and Nationwide Children\'s Hospital anchor the market',
-      'Growing tech sector (including Intel\'s new fab investment) driving population growth and healthcare demand',
-      'Streamlined licensure: the Ohio Board of Nursing typically processes applications in 2 to 4 weeks',
+      `Ohio State Wexner Medical Center, OhioHealth, Mount Carmel, and Nationwide Children's Hospital hire ${NPS} across specialties`,
+      `Nationwide Children's Hospital makes central Ohio a natural base for pediatric ${NP} careers`,
+      `Suburban ambulatory and specialty practices in Dublin, Hilliard, and Westerville add roles outside the hospitals`,
+      `A standard care arrangement with a collaborating physician is the paperwork to ask about at the offer stage`,
     ],
-    costOfLivingNote: 'Cost of living runs 7% below the national average, with housing costs roughly 15% below the national median. The city\'s growing tech sector is driving economic growth without the cost spikes seen in coastal metros, so NPs enjoy strong purchasing power here.',
-    licensureNote: 'Ohio is a reduced-practice state: NPs practice under a Standard Care Arrangement with a collaborating physician, which most employers set up during onboarding. Prescriptive authority, including controlled substances with appropriate registration, is exercised under that arrangement, and the Ohio Board of Nursing typically processes applications in 2 to 4 weeks.',
-    careDemandContext: 'Columbus is the fastest-growing major city in Ohio, and its increasingly diverse population adds demand across primary care, pediatrics, geriatrics, and behavioral health. State investment in community-based care, including the response to the opioid crisis, has expanded team-based roles that rely on NPs.',
+    costOfLivingNote: `Columbus housing varies between the university neighborhoods, the northwest suburbs, and the northeast corridor toward New Albany. Compare an offer against the rent or mortgage where you would actually live, since the suburban ring and the urban core price differently. Factor in the drive to the campus you would work at, too.`,
+    licensureNote: `Ohio ${NPS} must have a standard care arrangement with a collaborating physician, and AANP classifies Ohio as a reduced practice state. Ask each employer who the collaborating physician will be and how the arrangement is maintained if that physician leaves. Check the Ohio Board of Nursing for current application steps and rules before you commit to a start date.`,
+    careDemandContext: `Columbus draws patients from the city, its suburbs, and the rural counties of central and southeastern Ohio, and its population spans students, young families, and older adults in the suburban ring. Demand runs across primary care, pediatrics, geriatrics, and behavioral health, and addiction medicine programs built in response to the opioid crisis employ team-based clinicians, ${NPS} among them.`,
     subMarkets: [
-      { name: 'University District and the Wexner campus', note: 'Ohio State\'s medical campus is the single largest employer cluster in the metro, spanning inpatient, ambulatory, and research-adjacent NP roles.' },
-      { name: 'Near East Side and Downtown', note: 'Nationwide Children\'s Hospital and its neighborhood network. The strongest pediatric NP market in central Ohio, plus federally qualified health centers serving the surrounding neighborhoods.' },
-      { name: 'Northwest: Dublin, Hilliard, Upper Arlington', note: 'Suburban ambulatory and specialty offices with the shortest patient-panel turnover in the metro. Corporate campuses here also generate employer-sponsored clinic roles.' },
-      { name: 'Northeast: Westerville and New Albany', note: 'The Intel construction corridor is pulling population, and new primary care and urgent care capacity is following it.' },
-      { name: 'Southern and rural Appalachian counties', note: 'Within a manageable drive of the metro and carrying persistent shortage designations, this is where loan-repayment-eligible roles and rural health clinic positions concentrate.' },
+      { name: 'University District and the Wexner campus', note: `Ohio State's medical campus is a major employer cluster, spanning inpatient, ambulatory, and research-adjacent ${NP} roles.` },
+      { name: 'Downtown and the Near South Side', note: `Nationwide Children's Hospital sits just south of downtown, making this a center of pediatric ${NP} hiring in central Ohio, alongside OhioHealth Grant Medical Center downtown and community health centers in the surrounding neighborhoods.` },
+      { name: 'Northwest: Dublin, Hilliard, Upper Arlington', note: `Suburban ambulatory and specialty offices, with OhioHealth's Riverside Methodist and Dublin Methodist hospitals along the corridor.` },
+      { name: 'Northeast: Westerville and New Albany', note: `Suburban primary care, urgent care, and specialty offices serving Westerville and the residential corridor toward New Albany and its business parks.` },
+      { name: 'Southern and rural Appalachian counties', note: `A manageable drive from the metro, with rural health clinics and community health centers that recruit ${NPS} for broad-scope primary care. Check each site's address for loan repayment eligibility.` },
     ],
     topSettings: ['Academic medical centers', 'Outpatient clinics', 'Community health centers', 'Pediatrics', 'Telehealth', 'Urgent care'],
     nearbyCities: ['Dublin', 'Westerville', 'Hilliard', 'Grove City'],
     faqs: [
-      { question: 'What is the average NP salary in Columbus, OH?', answer: 'Ohio NP salaries generally track near national levels, and Columbus\'s cost of living, 7% below the national average, gives that pay unusually strong purchasing power. Check live Columbus listings with posted salary on this board for current ranges by specialty and setting.' },
-      { question: 'Does Ohio have full practice authority for NPs?', answer: 'No. Ohio is a reduced-practice state. NPs work under a Standard Care Arrangement with a collaborating physician, and most employers arrange the collaboration for you. Legislation to remove the arrangement has been introduced in recent sessions, so watch the Ohio Board of Nursing for updates.' },
-      { question: 'What makes Columbus a good market for NPs?', answer: 'Columbus pairs below-average living costs with a deep healthcare ecosystem: Ohio State Wexner Medical Center is one of the largest academic medical centers in the country, and OhioHealth and Nationwide Children\'s add system-level demand. Steady population growth keeps new clinics, urgent care sites, and telehealth roles opening across the metro.' },
-      { question: 'What is a Standard Care Arrangement, in practice?', answer: 'It is a written document between you and a collaborating physician that describes the conditions you manage, how you consult, and how records are reviewed. For employed NPs it is usually paperwork handled during onboarding; it matters most if you want to open an independent practice, which the arrangement requirement effectively constrains.' },
+      { question: `How should I compare ${NP} pay offers in Columbus?`, answer: `Line the offers up on the whole package: base pay, call or weekend differentials, retirement match, and tuition or loan support. Ohio State, OhioHealth, and Nationwide Children's each structure benefits their own way, and suburban practices often differ again. A posted-pay median appears on this page only when enough Columbus area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does Ohio have full practice authority for ${NPS}?`, answer: `No. AANP classifies Ohio as a reduced practice state, and Ohio ${NPS} must have a standard care arrangement with a collaborating physician. For an employed role, ask who the collaborating physician will be; for an independent practice, arranging the collaboration becomes your job. Check the Ohio Board of Nursing for the rules in force.` },
+      { question: `What makes Columbus a good market for ${NPS}?`, answer: `Breadth within one metro: an academic medical center, a freestanding children's hospital, community systems like OhioHealth and Mount Carmel, and federally qualified health centers all hire here, so you can move between acuity levels and patient populations without relocating. Rural health clinics within driving distance add broad-scope primary care options.` },
+      { question: 'What is a standard care arrangement, in practice?', answer: `It is the arrangement with a collaborating physician that Ohio requires for ${NP} practice. Read the Ohio Board of Nursing's current guidance on what it must cover rather than a colleague's old template. For an employed ${NP} it is paperwork handled with the employer; it matters most if you want to open an independent practice, where the arrangement becomes your responsibility.` },
     ],
   },
   {
@@ -311,34 +407,34 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'florida',
     citySlug: 'tampa-fl',
     metroArea: 'Tampa Bay Area',
-    population: '390K (city) / 3.2M+ (metro)',
+    population: '',
     practiceAuthority: 'Restricted',
-    avgCostOfLiving: '2% above US average',
-    heroDescription: 'The Tampa Bay metro is one of Florida\'s fastest-growing healthcare markets, with major systems like BayCare, AdventHealth, and Tampa General Hospital actively recruiting NPs. Zero state income tax and year-round warm weather make it a top relocation destination.',
+    avgCostOfLiving: '',
+    heroDescription: `The Tampa Bay metro splits across the bay into Tampa and Saint Petersburg, each with its own hospitals and commute, and its employers include BayCare, AdventHealth, Tampa General Hospital, Moffitt Cancer Center, and the James A. Haley Veterans' Hospital. Florida requires a supervisory protocol with a physician, with an autonomous practice route in primary care for ${NPS} who meet its eligibility requirements.`,
     whyThisMetro: [
-      'No state income tax and living costs only 2% above the national average',
-      'BayCare, AdventHealth, Tampa General, and Moffitt Cancer Center anchor a deep employer market',
-      'Fast-growing 3.2M+ metro population, including retirees and military families, sustaining demand',
-      'A booming telehealth sector plus a pathway to autonomous primary-care practice under Florida law',
+      `BayCare, AdventHealth, Tampa General, and Moffitt Cancer Center hire across Tampa Bay`,
+      `Retirees support senior living, home-based primary care, and chronic disease management roles`,
+      `MacDill Air Force Base and the James A. Haley Veterans' Hospital bring active-duty families and veterans into local panels`,
+      `Florida lets eligible ${NPS} register for autonomous practice limited to primary care, including family medicine, general pediatrics, and general internal medicine`,
     ],
-    costOfLivingNote: 'Cost of living in Tampa Bay is only 2% above the national average, which is dramatically more affordable than Miami or South Florida. Housing in suburbs like Brandon, Wesley Chapel, and Riverview is particularly affordable, and zero state income tax stretches take-home pay further.',
-    licensureNote: 'Florida NPs practice under a supervisory protocol with a physician, with a pathway to autonomous primary-care practice for NPs who meet the 2020 law\'s eligibility requirements, including 3,000+ supervised hours and graduate-level coursework in differential diagnosis and pharmacology. The Tampa Bay area has a deep bench of physician collaborators, making the supervision requirement straightforward, and the Florida Board of Nursing typically processes licenses in 4 to 6 weeks.',
-    careDemandContext: 'Tampa Bay\'s growth skews toward retirees and military families (MacDill Air Force Base), creating strong demand for geriatric care, chronic disease management, and veteran-focused services alongside general primary care. Hospital systems and senior living operators compete for NP talent across the metro.',
+    costOfLivingNote: `Housing in Tampa Bay depends on which side of the bay you choose and how far out you live. Brandon, Riverview, and Wesley Chapel price differently from South Tampa and downtown Saint Petersburg, and bridge traffic adds real time to a cross-bay commute. Compare offers against the rent where you would live and the drive at shift change.`,
+    licensureNote: `Outside federal facilities, Florida requires ${NPS} in Tampa Bay to practice under a supervisory protocol with a physician unless they register for autonomous practice in primary care. That registration, available since 2020, has eligibility requirements that include, within the preceding five years, at least 3,000 supervised hours of clinical practice and graduate-level coursework, or the equivalent, in differential diagnosis and pharmacology. Check the Florida Board of Nursing for current license and endorsement steps before you set a start date.`,
+    careDemandContext: `Tampa Bay's patients include retirees and, around MacDill Air Force Base, active-duty families and veterans, which sustains demand for geriatric care, chronic disease management, and veteran-focused services alongside general primary care. Hospital systems, senior living operators, and home-based care programs all hire ${NPS} across the metro.`,
     subMarkets: [
-      { name: 'Davis Islands and the USF Health corridor', note: 'Tampa General and the university medical campus form the metro\'s academic and high-acuity center, plus Moffitt for oncology-track NPs.' },
-      { name: 'St. Petersburg and Pinellas County', note: 'A genuinely separate labor market across the bay, with its own hospitals, its own commute, and bridge traffic that makes cross-bay jobs a real lifestyle decision.' },
-      { name: 'Brandon and Riverview', note: 'The affordable eastern suburbs, where outpatient and urgent care capacity has expanded fastest alongside residential growth.' },
-      { name: 'Wesley Chapel and Pasco County', note: 'New hospital and ambulatory construction chasing one of the fastest-growing populations in the state. Newer facilities, newer teams, more new-grad friendly.' },
-      { name: 'South Tampa and MacDill', note: 'Active-duty families and a large veteran population shape the panel; the James A. Haley VA and TRICARE-network practices hire steadily.' },
+      { name: 'Davis Islands, South Tampa, and MacDill', note: `Tampa General Hospital on Davis Islands is an academic and high-acuity hospital near downtown. Farther down the South Tampa peninsula, MacDill Air Force Base brings active-duty families, and TRICARE-network practices hire in the area.` },
+      { name: 'USF and north Tampa', note: `Moffitt Cancer Center, the James A. Haley Veterans' Hospital, and USF Health sit on and beside the University of South Florida campus in north Tampa, a separate commute for oncology-track and VA-track ${NPS}.` },
+      { name: 'Saint Petersburg and Pinellas County', note: `A separate labor market across the bay, with its own hospitals, including Johns Hopkins All Children's and the Bay Pines VA, its own commute, and bridge traffic that makes cross-bay jobs a real lifestyle decision.` },
+      { name: 'Brandon and Riverview', note: `The eastern suburbs, where outpatient and urgent care clinics serve suburban neighborhoods east of the city.` },
+      { name: 'Wesley Chapel and Pasco County', note: `Newer hospital and ambulatory campuses in the northern suburbs, with newer teams that can suit new-grad ${NPS}.` },
     ],
     topSettings: ['Hospital systems', 'Outpatient clinics', 'Telehealth', 'VA medical center', 'Senior living facilities', 'Private practice'],
     nearbyCities: ['St. Petersburg', 'Clearwater', 'Brandon', 'Riverview', 'Wesley Chapel'],
     faqs: [
-      { question: 'What is the average NP salary in Tampa, FL?', answer: 'Florida NP salaries generally track close to national levels, and zero state income tax plus a near-average cost of living means Tampa NPs keep more of what they earn than colleagues in most high-tax states. Check live Tampa Bay listings with posted salary on this board for current ranges by specialty and setting.' },
-      { question: 'What is the job market like for NPs in Tampa?', answer: 'Strong and growing. Major employers include BayCare Health System, AdventHealth, Tampa General Hospital, and the James A. Haley VA Medical Center, and telehealth companies operate heavily in the area. The metro\'s rapid population growth keeps demand ahead of supply in many specialties.' },
-      { question: 'Is Tampa a good city for NPs relocating from out of state?', answer: 'Tampa is one of the top relocation destinations for NPs: zero state income tax, near-average cost of living, year-round warm weather, and abundant openings. The Florida Board of Nursing typically processes out-of-state license endorsements in 4 to 6 weeks.' },
-      { question: 'Should I search Tampa and St. Petersburg as one market?', answer: 'Search both, but treat the commute as real. The bay separates two hospital networks and two sets of employers, and rush-hour bridge traffic can turn a 20-mile drive into an hour each way. Many NPs pick a side and stay there; the pay difference is rarely large enough to justify a daily cross-bay commute.' },
-      { question: 'Does geriatric experience help in the Tampa market?', answer: 'It is one of the most transferable credentials in the metro. Tampa Bay\'s retiree population supports an unusually deep bench of senior-living, skilled-nursing, home-based primary care, and chronic-disease-management employers, and those roles frequently list adult-gerontology certification or equivalent experience as a preference rather than a hard requirement.' },
+      { question: `How should I compare ${NP} pay offers in Tampa Bay?`, answer: `Decide which side of the bay you will live on first, then compare offers on the full package and the commute. BayCare, AdventHealth, Tampa General, Moffitt, and the VA structure benefits and schedules differently, and a cross-bay drive can outweigh a better base offer. A posted-pay median appears on this page only when enough Tampa Bay listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `What is the job market like for ${NPS} in Tampa?`, answer: `Broad. Employers include BayCare Health System, AdventHealth, Tampa General Hospital, Moffitt Cancer Center, and the James A. Haley Veterans' Hospital, and telehealth companies hire Florida-licensed ${NPS} too. Check the listings on this page for the roles currently posted in the Tampa area.` },
+      { question: `Is Tampa a good city for ${NPS} relocating from out of state?`, answer: `It can be, with two checks first. Florida requires a supervisory protocol with a physician unless an eligible ${NP} registers for autonomous practice in primary care, so confirm how each employer arranges the protocol, and check the Florida Board of Nursing for current endorsement steps for out-of-state licenses. Then pick a side of the bay before you pick a job, because the commute shapes daily life here.` },
+      { question: 'Should I search Tampa and St. Petersburg as one market?', answer: `Search both, but treat the commute as real. The bay separates two sets of hospital campuses and employers, and rush-hour bridge traffic can stretch a short drive into a long one. Picking a side and staying there is a reasonable default, because a cross-bay commute has to be worth it every day.` },
+      { question: 'Does geriatric experience help in the Tampa market?', answer: `It transfers well here. Tampa Bay's retirees support senior-living, skilled-nursing, home-based primary care, and chronic disease management employers, and those roles often list adult-gerontology certification or equivalent experience as a preference rather than a hard requirement.` },
     ],
   },
   {
@@ -349,33 +445,33 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'arizona',
     citySlug: 'phoenix-az',
     metroArea: 'Phoenix Metro (Valley of the Sun)',
-    population: '1.6M (city) / 4.9M+ (metro)',
+    population: '',
     practiceAuthority: 'Full',
-    avgCostOfLiving: '3% above US average',
-    heroDescription: 'Phoenix is one of the fastest-growing NP markets in the country, with Full Practice Authority and rapidly expanding healthcare infrastructure. Population growth keeps outpacing provider supply, creating opportunities across every specialty and setting.',
+    avgCostOfLiving: '',
+    heroDescription: `The Phoenix metro spreads across the Valley of the Sun, from the central medical corridor to the East Valley and West Valley suburbs, with Banner Health, HonorHealth, Dignity Health, Valleywise Health, and the Phoenix VA hiring across it. Arizona grants ${NPS} full practice authority, with no physician supervision, collaborative agreement, or transition period.`,
     whyThisMetro: [
-      'Living costs only 3% above the national average, remarkably affordable for a major metro',
-      'Banner Health, Dignity Health, HonorHealth, and Valleywise Health hiring across the Valley',
-      'Rapid population growth (5th-largest US city) outpacing provider supply, with shortage-area loan-repayment sites nearby',
-      'Full Practice Authority with no transition period, and prescribing once the Board of Nursing grants prescribing authority',
+      `Banner Health, Dignity Health, HonorHealth, Valleywise Health, and the Phoenix VA hire across the Valley`,
+      `Arizona grants full practice authority with no physician supervision, collaborative agreement, or transition period`,
+      `Retirement communities such as Sun City and Sun City West sit alongside young-family suburbs like Gilbert and Chandler`,
+      `Rural Maricopa and Pinal communities within commuting range offer broad-scope primary care roles`,
     ],
-    costOfLivingNote: 'Cost of living in Phoenix is only 3% above the national average, making it remarkably affordable for a metro of its size. Housing is significantly cheaper than coastal California, where many Phoenix transplants originate, and Arizona\'s flat state income tax is among the lowest in the country.',
-    licensureNote: 'Arizona grants Full Practice Authority: no physician supervision or collaborative agreement is required, and NPs can prescribe controlled substances (with appropriate registration) and open independent practices. The Arizona Board of Nursing is one of the faster processors in the country, typically 2 to 3 weeks.',
-    careDemandContext: 'Maricopa County\'s rapid growth, much of it from California and the Midwest, keeps healthcare demand ahead of provider supply across primary care, geriatrics, pediatrics, and specialty care. Rural communities surrounding the Phoenix metro carry federal shortage designations, and many roles there qualify for loan repayment.',
+    costOfLivingNote: `Phoenix housing varies widely across the Valley, and the choice between the central city, the East Valley, and the West Valley shapes both rent and drive time. Compare offers on what is left after housing and the commute, and remember that summer heat changes how long a car commute feels.`,
+    licensureNote: `Arizona grants ${NPS} full practice authority, with no physician supervision, collaborative agreement, or transition period. After certification by the Arizona State Board of Nursing, an ${NP} can diagnose and treat patients, and can prescribe once the Board grants prescribing and dispensing authority. Check the Board for current application steps before you commit to a start date.`,
+    careDemandContext: `Maricopa County's patients range from retirees and seasonal winter residents in communities across the Valley, including Sun City and Sun City West, to young families in suburbs like Gilbert and Chandler, which keeps demand broad across primary care, geriatrics, pediatrics, and specialty care. Rural communities on the edge of the metro hire ${NPS} for primary care, and loan repayment there depends on the specific clinic site.`,
     subMarkets: [
-      { name: 'Central Phoenix medical corridor', note: 'The Valley\'s inpatient and specialty core, including the county safety-net system. Highest acuity mix and the shortest commutes for NPs living in the central city.' },
-      { name: 'East Valley: Scottsdale, Mesa, Gilbert, Chandler', note: 'The deepest outpatient and specialty market in the metro, with a large retiree population in the eastern suburbs and a young-family panel in Gilbert and Chandler.' },
-      { name: 'West Valley: Glendale, Peoria, Surprise', note: 'Population has outrun clinic capacity here more than anywhere else in the Valley, so new outpatient sites keep opening. Cheaper housing, longer drives to the central hospitals.' },
-      { name: 'North Valley and Anthem', note: 'Fast-growing residential edge with a thin provider base: good ground for independent practice, which Full Practice Authority actually makes viable in Arizona.' },
-      { name: 'Rural Maricopa and Pinal fringe', note: 'Within commuting distance and carrying federal shortage designations. This is where loan-repayment-eligible and rural health clinic roles concentrate.' },
+      { name: 'Central Phoenix medical corridor', note: `Banner University Medical Center Phoenix, Valleywise Health Medical Center, and the Phoenix VA sit in or near central Phoenix, with high-acuity roles and short commutes for ${NPS} living in the central city.` },
+      { name: 'East Valley: Scottsdale, Mesa, Gilbert, Chandler', note: `An outpatient and specialty market with HonorHealth and Banner hospitals, retirement communities in Mesa, and young-family suburbs in Gilbert and Chandler.` },
+      { name: 'West Valley: Glendale, Peoria, Surprise', note: `Residential suburbs that mix young-family neighborhoods with retirement communities around Sun City and Surprise, with longer drives to the central hospitals.` },
+      { name: 'North Valley and Anthem', note: `The northern residential edge of the metro, where Arizona's full practice authority makes an independent practice worth considering alongside employed roles.` },
+      { name: 'Rural Maricopa and Pinal fringe', note: `Within commuting distance, with rural health clinic and community clinic roles. Loan repayment eligibility depends on the specific site, so check each address.` },
     ],
-    topSettings: ['Outpatient clinics', 'Telehealth', 'Community health centers', 'VA medical centers', 'Private practice', 'Urgent care'],
+    topSettings: ['Outpatient clinics', 'Telehealth', 'Community health centers', 'VA medical center', 'Private practice', 'Urgent care'],
     nearbyCities: ['Scottsdale', 'Mesa', 'Tempe', 'Chandler', 'Gilbert', 'Glendale'],
     faqs: [
-      { question: 'What is the average NP salary in Phoenix, AZ?', answer: 'Phoenix NP pay is competitive with other large Sun Belt metros, and the combination of near-average living costs, a low flat state income tax, and Full Practice Authority makes the net value proposition one of the strongest in the country. Check live Phoenix listings with posted salary on this board for current ranges by specialty and setting.' },
-      { question: 'Does Arizona have full practice authority for NPs?', answer: 'Yes. Arizona grants Full Practice Authority to nurse practitioners. NPs can evaluate, diagnose, treat, and prescribe (including controlled substances with appropriate registration) independently, and can open their own practices without physician oversight. Arizona is one of the most NP-friendly states in the country.' },
-      { question: 'What are the best employers for NPs in Phoenix?', answer: 'Top employers include Banner Health (Arizona\'s largest health system), Dignity Health/CommonSpirit, HonorHealth, Valleywise Health (the county safety-net system), and the Phoenix VA Health Care System. National telehealth companies also hire Arizona-licensed NPs, and Full Practice Authority makes private practice a realistic path.' },
-      { question: 'Is opening my own practice realistic in Phoenix?', answer: 'Arizona is one of the states where it is genuinely on the table: there is no collaborative agreement to negotiate and no supervising physician to pay. The binding constraints are the ordinary ones: credentialing with payers, malpractice coverage, and the months of runway before reimbursement arrives. Full Practice Authority removes the regulatory barrier, not the business one.' },
+      { question: `How should I compare ${NP} pay offers in Phoenix?`, answer: `Compare the full package and the drive. Banner, HonorHealth, Dignity Health, Valleywise, and the VA structure benefits differently, and the Valley is wide enough that a job across town adds real time to every shift. If independent practice is a long-term goal, weigh roles that build the experience you would need to run your own panel. A posted-pay median appears on this page only when enough Phoenix area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does Arizona have full practice authority for ${NPS}?`, answer: `Yes. Arizona grants full practice authority to ${NPS}, with no physician supervision, collaborative agreement, or transition period. After certification by the Arizona State Board of Nursing, ${NPS} can diagnose and treat patients, and they can prescribe once the Board grants prescribing and dispensing authority. Confirm current requirements with the Board before you open a practice.` },
+      { question: `Which employers hire ${NPS} in Phoenix?`, answer: `Banner Health, Dignity Health, HonorHealth, Valleywise Health (the county safety-net system), and the Phoenix VA Health Care System all hire in the Valley. National telehealth companies also hire Arizona-licensed ${NPS}, and full practice authority makes private practice a realistic path.` },
+      { question: 'Is opening my own practice realistic in Phoenix?', answer: `Arizona law puts it within reach: there is no collaborative agreement to negotiate and no supervising physician to pay. The binding constraints are the ordinary ones, meaning payer credentialing, malpractice coverage, prescribing authority from the Board, and the months of runway before reimbursement arrives. Full practice authority removes the regulatory barrier, not the business one.` },
     ],
   },
   {
@@ -386,33 +482,33 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'texas',
     citySlug: 'dallas-tx',
     metroArea: 'Dallas-Fort Worth Metroplex',
-    population: '1.3M (city) / 7.6M+ (metro)',
+    population: '',
     practiceAuthority: 'Restricted',
-    avgCostOfLiving: '2% below US average',
-    heroDescription: 'The Dallas-Fort Worth metroplex is one of the largest and fastest-growing NP markets in the South. No state income tax, below-average cost of living, and a massive healthcare footprint make DFW an excellent market for both new and experienced nurse practitioners.',
+    avgCostOfLiving: '',
+    heroDescription: `The Dallas-Fort Worth Metroplex is two urban cores and a ring of suburbs, and Fort Worth runs as its own hospital market rather than a Dallas suburb. UT Southwestern, Parkland, Children's Health, and Baylor Scott & White hire across Dallas, and Texas requires ${NPS} to have a prescriptive authority agreement with a supervising physician.`,
     whyThisMetro: [
-      'No state income tax plus living costs 2% below the national average, giving exceptional purchasing power',
-      'UT Southwestern, Baylor Scott & White, and Parkland anchor top academic and community systems',
-      '7.6M+ metro population, the 4th largest in the US, growing faster than provider supply',
-      'Strong private practice and telehealth markets across the metroplex',
+      `UT Southwestern, Baylor Scott & White, Parkland, and Children's Health hire across academic and community care`,
+      `Two distinct urban cores, Dallas and Fort Worth, each with its own hospitals and referral patterns`,
+      `Corporate campuses in Plano, Frisco, and McKinney, including Toyota's North American headquarters, support suburban outpatient practices`,
+      `Private practice and telehealth roles across the Metroplex`,
     ],
-    costOfLivingNote: 'Cost of living in DFW sits 2% below the national average, with housing particularly affordable in suburbs like Frisco, McKinney, Plano, and Arlington. Combined with zero state income tax, NP pay here stretches noticeably further than in coastal metros.',
-    licensureNote: 'Texas is a restricted-practice state: NPs practice under physician delegation through a Prescriptive Authority Agreement that outlines scope and protocols. Most employers facilitate the agreement, and it rarely limits day-to-day practice in employed settings. The Texas Board of Nursing typically processes licenses in 4 to 6 weeks.',
-    careDemandContext: 'DFW\'s corporate boom (Toyota, Goldman Sachs, and Charles Schwab have all located major operations here) keeps bringing new residents who need care, while rural counties surrounding the metroplex face persistent provider shortages. The result is sustained NP demand across primary care, urgent care, pediatrics, and specialty settings.',
+    costOfLivingNote: `Dallas-Fort Worth housing varies widely between the urban cores and suburbs like Frisco, McKinney, Plano, and Arlington, and the commute between them can decide a job. Compare an offer against the rent and drive time from where you would live, and check how property taxes would affect you if you plan to buy.`,
+    licensureNote: `Texas requires ${NPS} to have a prescriptive authority agreement with a supervising physician, and AANP classifies Texas as a restricted practice state. Ask each Metroplex employer who the supervising physician will be and how the agreement is handled if you change roles, since it matters most if you want to open your own practice. Check the Texas Board of Nursing for current licensure steps.`,
+    careDemandContext: `Corporate campuses across Dallas-Fort Worth, including Toyota's North American headquarters in Plano, draw workers and their families to the northern suburbs, while Parkland Health, Dallas County's public hospital system, serves patients across the county. The result is ${NP} demand across primary care, urgent care, pediatrics, and specialty settings, from employer clinics to safety-net care.`,
     subMarkets: [
-      { name: 'Southwestern Medical District', note: 'UT Southwestern, Parkland, and Children\'s Health sit within a few blocks of each other, forming the metroplex\'s academic and high-acuity center and the densest single cluster of NP roles.' },
-      { name: 'North Dallas and Collin County', note: 'Plano, Frisco, and McKinney: the corporate-relocation belt, where commercially insured suburban outpatient and specialty practices have expanded fastest.' },
-      { name: 'Fort Worth and Tarrant County', note: 'A separate hospital ecosystem roughly 30 miles west, with its own academic presence. Treating DFW as one commute is the most common relocation mistake NPs make here.' },
-      { name: 'Arlington and the mid-cities', note: 'Between the two urban cores, with the metroplex\'s most balanced commute and a heavy urgent care and retail-clinic presence.' },
-      { name: 'Southern Dallas County and the rural ring', note: 'Persistent shortage designations both inside southern Dallas County and in the surrounding rural counties, where federal loan repayment is most often available.' },
+      { name: 'Southwestern Medical District', note: `UT Southwestern, Parkland, and Children's Health sit close together, forming an academic and high-acuity cluster with many ${NP} roles.` },
+      { name: 'North Dallas and Collin County', note: `Plano, Frisco, and McKinney: a corporate-relocation belt with suburban outpatient and specialty practices and newer hospital campuses.` },
+      { name: 'Fort Worth and Tarrant County', note: `A separate hospital ecosystem to the west, with its own academic presence and JPS Health Network as Tarrant County's public system. Search it as its own commute.` },
+      { name: 'Arlington and the mid-cities', note: `Between the two urban cores, with a commute that can work toward either and many urgent care and retail-clinic sites.` },
+      { name: 'Southern Dallas County and the rural ring', note: `Community clinics in southern Dallas County and rural health sites in the surrounding counties. Loan repayment eligibility attaches to the specific site, so check each address.` },
     ],
     topSettings: ['Hospital systems', 'Outpatient clinics', 'Private practice', 'Telehealth', 'Urgent care', 'Community health centers'],
     nearbyCities: ['Fort Worth', 'Plano', 'Arlington', 'Irving', 'Frisco', 'McKinney'],
     faqs: [
-      { question: 'What is the average NP salary in Dallas, TX?', answer: 'Texas NP salaries generally track close to national levels, and zero state income tax means DFW NPs keep more of each paycheck than colleagues in high-tax states like California or New York. Check live DFW listings with posted salary on this board for current ranges by specialty and setting.' },
-      { question: 'Does Texas have full practice authority for NPs?', answer: 'No. Texas is a restricted-practice state. NPs work under physician delegation via a Prescriptive Authority Agreement (PAA) that outlines scope and prescribing protocols. Most employers arrange the PAA as part of onboarding, and it rarely limits day-to-day practice in employed settings.' },
-      { question: 'Why is Dallas a top market for NP jobs?', answer: 'DFW combines the 4th-largest US metro population with rapid growth, zero state income tax, and below-average living costs. Major academic and community systems, including UT Southwestern, Baylor Scott & White, and Parkland, hire NPs at scale, and surrounding rural shortage areas add further demand.' },
-      { question: 'Is Dallas or Fort Worth the better base for an NP job search?', answer: 'They are one metro statistically and two markets practically. Fort Worth has its own hospital systems, its own referral patterns, and roughly a 30-mile separation from downtown Dallas that becomes an hour in traffic. Decide which core you want to work near before you sign a lease, and filter listings by the specific city rather than the metroplex.' },
+      { question: `How should I compare ${NP} pay offers in Dallas-Fort Worth?`, answer: `Decide which core you want to work near, then compare the full package. UT Southwestern, Baylor Scott & White, Parkland, and suburban practices structure benefits differently, and a Dallas job from a Fort Worth address can add a long daily drive. A posted-pay median appears on this page only when enough DFW listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does Texas have full practice authority for ${NPS}?`, answer: `No. AANP classifies Texas as a restricted practice state, and Texas requires ${NPS} to have a prescriptive authority agreement with a supervising physician. In an employed role, ask who the supervising physician will be and how the agreement is handled if you change positions; it becomes your own responsibility mainly if you want to open your own practice.` },
+      { question: `What shapes the Dallas job market for ${NPS}?`, answer: `Two things: breadth and geography. Academic, safety-net, and community systems, including UT Southwestern, Parkland, and Baylor Scott & White, hire alongside suburban private practices and employer clinics, and the Metroplex splits into distinct commute zones. Filter by the specific city you would work in rather than the whole Metroplex.` },
+      { question: 'Is Dallas or Fort Worth the better base for a job search?', answer: `They are one metro on a map and two markets in practice. Fort Worth has its own hospital systems and referral patterns, and the drive from downtown Dallas becomes a long one in traffic. Decide which core you want to work near before you sign a lease, and filter listings by the specific city rather than the Metroplex.` },
     ],
   },
   {
@@ -423,40 +519,40 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'illinois',
     citySlug: 'chicago-il',
     metroArea: 'Chicagoland',
-    population: '2.7M (city) / 9.5M+ (metro)',
-    // AANP classifies Illinois as REDUCED practice — matching
-    // lib/state-practice-authority.ts. Illinois does grant "full practice
-    // authority" by statute after a transition, but retains a physician
-    // consultation requirement for certain Schedule II prescribing, which is
-    // why the state is not counted among AANP's full-practice jurisdictions
-    // (and why STAT_SOURCES.fullPracticeStates stays at 27 states + DC).
+    population: '',
+    // AANP classifies Illinois as REDUCED practice, matching
+    // lib/state-practice-authority.ts. Illinois law still uses the words
+    // "full practice authority" for NPs who complete its hours and education
+    // requirement, so the copy below says what the state's details string
+    // says and attributes the tier to AANP, rather than explaining why AANP
+    // placed Illinois where it did (that reason is not in repo data).
     practiceAuthority: 'Reduced',
-    avgCostOfLiving: '7% above US average',
-    heroDescription: 'Chicago offers a clear path to independent practice for experienced NPs, a massive healthcare infrastructure, and deep opportunities across academic medical centers, community health centers, and private practices. The Midwest\'s largest metro provides competitive salaries with more affordable living than coastal cities.',
+    avgCostOfLiving: '',
+    heroDescription: `Chicagoland pairs academic medical centers, including Northwestern Medicine, Rush, UChicago Medicine, UI Health, and Loyola Medicine, with a safety net that serves neighborhoods on the South and West sides and a suburban ring with its own ambulatory market. Illinois requires ${NPS} to have a written collaborative agreement until they obtain full practice authority, with an exception for practice under clinical privileges in a hospital, hospital affiliate, or ambulatory surgical treatment center.`,
     whyThisMetro: [
-      'More affordable than NYC, Boston, or LA while maintaining competitive NP salaries',
-      'World-class academic medical centers: Northwestern, Rush, UChicago Medicine, UIC, Loyola',
-      'Large underserved communities on the South and West sides with federal loan-repayment eligibility',
-      'A defined route out of the collaborative agreement: 4,000 clinical hours plus 250 hours of continuing education',
+      `Academic medical centers: Northwestern Medicine, Rush, UChicago Medicine, UI Health, and Loyola Medicine`,
+      `Community health centers on the South and West sides, where loan repayment depends on the specific clinic site`,
+      `A suburban ring from Evanston to Naperville with its own hospitals and outpatient practices`,
+      `A defined route out of the collaborative agreement: full practice authority after at least 4,000 hours of clinical experience and 250 hours of continuing education or training`,
     ],
-    costOfLivingNote: 'Cost of living in Chicago is 7% above the national average, driven by housing in popular neighborhoods. Suburbs like Naperville, Schaumburg, and Oak Park offer significantly more affordable options, and compared with NYC (37% above) or LA (43% above), Chicago delivers much better value for the salary range.',
-    licensureNote: 'Illinois is classified as a reduced-practice state. NPs begin under a written collaborative agreement with a physician; after 4,000 hours of clinical experience plus 250 hours of continuing education or training, they can be granted full practice authority and drop the agreement. Illinois still requires a physician consultation relationship for certain Schedule II controlled-substance prescribing, which is why the state is not counted among the full-practice jurisdictions. Licenses are typically processed in 4 to 6 weeks.',
-    careDemandContext: 'Chicago\'s healthcare access varies sharply by neighborhood. South and West side communities have far fewer providers per resident than affluent areas, creating strong demand for NPs in community health centers and safety-net systems. The city\'s large immigrant population also puts a premium on multilingual, culturally competent care.',
+    costOfLivingNote: `Chicago housing varies block by block, from the lakefront neighborhoods to suburbs like Naperville, Schaumburg, and Oak Park. Transit makes a car-free city life realistic in many neighborhoods, while suburban jobs usually mean driving. Compare offers against the rent and commute from where you would live.`,
+    licensureNote: `Illinois requires ${NPS} to have a written collaborative agreement until they obtain full practice authority, except when they practice under clinical privileges in a hospital, hospital affiliate, or ambulatory surgical treatment center. Full practice authority requires a notarized attestation of at least 4,000 hours of clinical experience after first attaining national certification and at least 250 hours of continuing education or training. AANP classifies Illinois as a reduced practice state. Keep contemporaneous records of your hours and continuing education from your first Illinois role.`,
+    careDemandContext: `Access to care in Chicago varies sharply by neighborhood, and community health centers and safety-net systems on the South and West sides hire ${NPS} to close that gap. The city's immigrant communities also put a premium on multilingual, culturally competent care, and the suburban ring adds hospital and outpatient roles of its own.`,
     subMarkets: [
-      { name: 'Illinois Medical District', note: 'One of the largest urban medical districts in the country, packing Rush, UIC, Stroger, and the Jesse Brown VA into a few square blocks on the Near West Side.' },
-      { name: 'Streeterville and the Loop', note: 'Northwestern\'s downtown campus and the highest-profile specialty roles in the metro, with the corresponding competition for them.' },
-      { name: 'South Side', note: 'UChicago Medicine plus the deepest provider shortages in the city. Community health center roles in Englewood, Roseland, and Chatham are the most likely in Chicagoland to carry federal loan repayment.' },
-      { name: 'West Side: Austin and Lawndale', note: 'Federally qualified health centers and hospital outreach clinics serving neighborhoods with severe access gaps; heavy chronic-disease and care-coordination workloads.' },
-      { name: 'Suburban ring: Evanston, Park Ridge, Naperville, Oak Brook', note: 'Where much of the metro\'s ambulatory volume and a large share of NP jobs actually sit. Cheaper housing, car commutes, and commercially insured panels.' },
+      { name: 'Illinois Medical District', note: `A medical district on the Near West Side where Rush, UI Health, Cook County's Stroger Hospital, and the Jesse Brown VA sit close together.` },
+      { name: 'Streeterville and the Loop', note: `Northwestern Memorial Hospital's campus in Streeterville, with specialty and academic roles close to downtown transit.` },
+      { name: 'South Side', note: `UChicago Medicine in Hyde Park and community health centers in Englewood, Roseland, and Chatham. Loan repayment, where offered, depends on the specific clinic site.` },
+      { name: 'West Side: Austin and Lawndale', note: `Federally qualified health centers and hospital outreach clinics serving neighborhoods with real access gaps, with chronic disease and care-coordination workloads.` },
+      { name: 'Suburban ring: Evanston, Park Ridge, Naperville, Oak Brook', note: `Suburban hospitals and ambulatory practices, including Loyola Medicine in Maywood, with car commutes and their own patient panels.` },
     ],
     topSettings: ['Academic medical centers', 'Community health centers', 'Outpatient clinics', 'Private practice', 'VA medical center', 'Telehealth'],
     nearbyCities: ['Evanston', 'Oak Park', 'Naperville', 'Schaumburg', 'Skokie'],
     faqs: [
-      { question: 'What is the average NP salary in Chicago?', answer: 'Illinois NP pay is competitive among large Midwest metros, and Chicago\'s cost of living, well below NYC or LA, makes salaries stretch further. Academic medical centers often trade slightly lower base pay for strong benefits and loan-repayment programs. Check live Chicago listings with posted salary on this board for current ranges by specialty and setting.' },
-      { question: 'Does Illinois have full practice authority for NPs?', answer: 'Not in the sense the AANP map uses. Illinois is classified as a reduced-practice state: NPs start under a written collaborative agreement, and after 4,000 clinical hours plus 250 hours of continuing education or training they can be granted full practice authority and drop the agreement. Because Illinois still requires a physician consultation relationship for certain Schedule II controlled-substance prescribing, the state is not counted among the full-practice jurisdictions.' },
-      { question: 'What neighborhoods have the most NP opportunities in Chicago?', answer: 'Hospital and academic roles concentrate in the Illinois Medical District, the Loop, and Streeterville. The strongest demand, though, is on the South Side (Roseland, Englewood, Chatham) and West Side (Austin, Lawndale), where provider shortages are most severe. Those roles often qualify for federal loan repayment.' },
-      { question: 'Does a multistate RN license cover Illinois?', answer: 'No. Illinois does not issue or recognize multistate nursing licenses, so a multistate RN license issued elsewhere does not authorize practice here; you need an Illinois RN license. And in every state, compact or not, the APRN license is separate from the RN license and is issued state by state, so relocating always means a new APRN application.' },
-      { question: 'How do NPs in Chicagoland track hours toward full practice authority?', answer: 'The 4,000 clinical hours and 250 hours of continuing education are your responsibility to document, not your employer\'s. Keep contemporaneous records (dates, setting, supervising relationship, and CE certificates) from your first Illinois role. NPs who reconstruct the paperwork years later routinely lose eligible hours they actually worked.' },
+      { question: `How should I compare ${NP} pay offers in Chicago?`, answer: `Compare the whole package against where you would live. Academic medical centers often pair base pay with benefits and loan support, suburban groups may structure things differently, and a city job reached by transit changes the math against a suburban one reached by car. A posted-pay median appears on this page only when enough Chicago area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does Illinois have full practice authority for ${NPS}?`, answer: `Not by AANP's classification, which lists Illinois as a reduced practice state. Illinois requires ${NPS} to have a written collaborative agreement until they obtain full practice authority, except when they practice under clinical privileges in a hospital, hospital affiliate, or ambulatory surgical treatment center. Full practice authority requires a notarized attestation of at least 4,000 hours of clinical experience after first attaining national certification and at least 250 hours of continuing education or training.` },
+      { question: `Where in Chicago do ${NP} jobs cluster?`, answer: `Hospital and academic roles cluster in the Illinois Medical District, the Loop, and Streeterville. Community health centers on the South Side, in Roseland, Englewood, and Chatham, and on the West Side, in Austin and Lawndale, hire ${NPS} as well. Whether one of those roles qualifies for loan repayment depends on its exact practice site: enter the clinic's street address in HRSA's Find Shortage Areas by Address tool, look up its county in HRSA's HPSA Find, which also covers facility shortage areas, and confirm with the employer.` },
+      { question: 'Does a multistate RN license cover Illinois?', answer: `No. Illinois does not issue or recognize multistate nursing licenses, so a multistate RN license issued elsewhere does not authorize practice here; you need an Illinois RN license. And in every state, compact or not, the APRN license is separate from the RN license and is issued state by state, so relocating always means a new APRN application.` },
+      { question: `How do Chicagoland ${NPS} track hours toward full practice authority?`, answer: `The 4,000 hours of clinical experience, counted after your first national certification, and the 250 hours of continuing education or training are yours to document, and full practice authority rests on a notarized attestation of them. Keep contemporaneous records, with dates, settings, collaborating physicians, and continuing education certificates, from your first Illinois role; ${NPS} who reconstruct the paperwork years later can lose hours they actually worked.` },
     ],
   },
   {
@@ -467,33 +563,33 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'washington',
     citySlug: 'seattle-wa',
     metroArea: 'Greater Seattle',
-    population: '750K (city) / 4M+ (metro)',
+    population: '',
     practiceAuthority: 'Full',
-    avgCostOfLiving: '49% above US average',
-    heroDescription: 'Seattle offers some of the highest NP salaries in the country, backed by Full Practice Authority and no state income tax on wages. A deep hospital market, a tech-driven economy, and a mature telehealth sector create demand across specialties.',
+    avgCostOfLiving: '',
+    heroDescription: `Seattle's market runs from the hospital campuses of First Hill and UW Medicine's academic enterprise to Eastside ambulatory care, telehealth companies, and South Sound systems in Tacoma. Washington grants full practice authority to ${NPS}, and the metro supports hospital, private-practice, telehealth, and community health careers.`,
     whyThisMetro: [
-      'Washington is consistently among the top-paying states for NPs, with no state income tax on wages',
-      'UW Medicine, Providence Swedish, Virginia Mason Franciscan, and MultiCare anchor the hospital market',
-      'State-funded community and public health programs add roles beyond the big hospital systems',
-      'Full Practice Authority under Washington law',
+      `Washington grants full practice authority to ${NPS}, with licensing through the Washington State Board of Nursing`,
+      `UW Medicine, Providence Swedish, Virginia Mason Franciscan Health, and MultiCare hire across the region`,
+      `Community health centers and public health programs add roles beyond the large hospital systems`,
+      `Telehealth and digital-health employers in the region hire clinically trained ${NPS}`,
     ],
-    costOfLivingNote: 'Cost of living in Seattle runs 49% above the national average, primarily due to housing. Washington has no state income tax on wages, which offsets part of the premium, and many NPs live in Tacoma, Everett, or Olympia, or take telehealth roles, to balance costs.',
-    licensureNote: 'Washington grants Full Practice Authority: NPs (licensed as ARNPs) practice and prescribe independently, including controlled substances with appropriate registration, with no physician supervision or collaborative agreement required. Licensure runs through the Washington State Department of Health.',
-    careDemandContext: 'Seattle\'s tech-driven economy supports a well-insured patient population with high engagement in care, while the region also faces housing and public-health challenges that drive demand in safety-net settings. The result is a two-sided market: well-funded private and employer-sponsored care on one side, mission-driven community health roles on the other.',
+    costOfLivingNote: `Seattle housing is the budget line to price first, and it differs sharply between the city core, the Eastside, the South Sound, and Snohomish County. Some ${NPS} live in Tacoma, Everett, or Olympia, or take telehealth roles, to balance housing against the commute. Compare the after-housing numbers before you weigh offers.`,
+    licensureNote: `Washington grants full practice authority to ${NPS}, and AANP classifies Washington as a full practice state. Licensure runs through the Washington State Board of Nursing, so check its current application and prescribing requirements before you set a start date, and confirm any detail a recruiter or colleague summarizes for you against the board's own pages.`,
+    careDemandContext: `Seattle's patient base spans a large technology workforce and its families, older residents across the region, and people affected by the city's housing and public-health challenges, who drive demand in safety-net settings. The result is a two-sided market: private and employer-connected care on one side, mission-driven community health roles on the other.`,
     subMarkets: [
-      { name: 'First Hill and Capitol Hill', note: 'The city\'s historic hospital ridge, with several major hospital campuses within walking distance of each other, and the densest concentration of inpatient NP roles in the state.' },
-      { name: 'South Lake Union and Montlake', note: 'UW Medicine\'s academic and research corridor, adjacent to the tech campuses that generate employer-sponsored clinic and digital-health roles.' },
-      { name: 'Eastside: Bellevue, Redmond, Kirkland', note: 'Affluent, heavily insured suburban ambulatory market. Bridge tolls and I-90/520 traffic make this a genuine commute decision rather than a short hop.' },
-      { name: 'South Sound: Tacoma, Federal Way, Puyallup', note: 'A separate hospital system footprint with meaningfully cheaper housing. Many Seattle-priced NPs end up working here rather than commuting north.' },
-      { name: 'North: Everett and Snohomish County', note: 'Growing residential population with hospital and outpatient capacity following it, plus the rural counties beyond where shortage designations begin.' },
+      { name: 'First Hill and Capitol Hill', note: `A historic hospital ridge, with Harborview, Swedish First Hill, and Virginia Mason within walking distance of each other and many inpatient ${NP} roles.` },
+      { name: 'South Lake Union and Montlake', note: `UW Medicine's research campus in South Lake Union and UW Medical Center in Montlake, near the tech campuses where digital-health roles appear.` },
+      { name: 'Eastside: Bellevue, Redmond, Kirkland', note: `A suburban ambulatory market with Overlake in Bellevue and EvergreenHealth in Kirkland. The tolled SR 520 bridge and I-90 traffic make this a genuine commute decision rather than a short hop.` },
+      { name: 'South Sound: Tacoma, Federal Way, Puyallup', note: `A separate hospital footprint, with MultiCare and Virginia Mason Franciscan Health based in Tacoma, and its own housing market. ${NPS} who live in the South Sound can find hospital roles close to home rather than commuting north.` },
+      { name: 'North: Everett and Snohomish County', note: `Providence Regional Medical Center Everett and outpatient practices serve the northern suburbs, with rural counties beyond where broad-scope primary care roles appear.` },
     ],
     topSettings: ['Hospital systems', 'Private practice', 'Telehealth', 'Community health centers', 'Outpatient clinics', 'Urgent care'],
     nearbyCities: ['Bellevue', 'Tacoma', 'Everett', 'Redmond', 'Kirkland', 'Renton'],
     faqs: [
-      { question: 'What is the average NP salary in Seattle, WA?', answer: 'Washington is consistently among the top-paying states for nurse practitioners in BLS wage data, and Seattle salaries typically lead the state. With no state income tax on wages, take-home pay compares favorably even against other high-paying metros. Check live Seattle listings with posted salary on this board for current ranges by specialty and setting.' },
-      { question: 'Does Washington have full practice authority for NPs?', answer: 'Yes. Washington is a full-practice-authority state. NPs evaluate, diagnose, treat, and prescribe independently (including Schedule II-V controlled substances with appropriate registration) and can establish their own practices without physician oversight.' },
-      { question: 'What makes Seattle unique for NP careers?', answer: 'Seattle combines top-tier pay, Full Practice Authority, and an unusually broad mix of settings: major hospital systems like UW Medicine and Providence Swedish, employer-sponsored clinics in the tech sector, a mature telehealth market, and mission-driven community health roles. Generous tech-sector health benefits also support strong private-practice and specialty demand.' },
-      { question: 'Does Seattle pay actually cover the cost of living?', answer: 'It depends almost entirely on housing. Washington taxes no wage income, which is worth several thousand dollars a year relative to a comparable California offer, but Seattle housing is roughly half the reason the metro sits so far above the national cost-of-living average. NPs who buy in the South Sound or Snohomish County and commute, or who take remote and telehealth roles, see very different math from those living in the city core.' },
+      { question: `How should I compare ${NP} pay offers in Seattle?`, answer: `Compare offers after housing and the commute, not on base pay alone. UW Medicine, Providence Swedish, Virginia Mason Franciscan Health, MultiCare, and digital-health employers structure benefits and schedules very differently, and a lake crossing can add real time to every shift. A posted-pay median appears on this page only when enough Seattle area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does Washington have full practice authority for ${NPS}?`, answer: `By AANP's classification, yes: Washington grants full practice authority to ${NPS}. The Washington State Board of Nursing publishes the current rules, including prescribing requirements, so confirm the details there before you open a practice or plan around independence.` },
+      { question: `What range of ${NP} careers does Seattle offer?`, answer: `A mix of settings within one metro: hospital systems like UW Medicine and Providence Swedish, telehealth and digital-health companies, private practices, and mission-driven community health roles. That breadth lets ${NPS} move between clinical, digital-health, and community work without relocating.` },
+      { question: `How do Seattle ${NPS} manage housing?`, answer: `By choosing where to live before choosing where to work. ${NPS} who live in the South Sound or Snohomish County and commute, or who take remote and telehealth roles, face very different monthly budgets from those living in the city core. Price the rent and the drive for each candidate neighborhood before you compare offers.` },
     ],
   },
   {
@@ -504,42 +600,42 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'georgia',
     citySlug: 'atlanta-ga',
     metroArea: 'Metro Atlanta',
-    population: '500K (city) / 6.1M+ (metro)',
+    population: '',
     practiceAuthority: 'Restricted',
-    avgCostOfLiving: '3% above US average',
-    heroDescription: 'Atlanta is the Southeast\'s largest healthcare hub, home to the CDC, Emory Healthcare, and a deep network of health systems. A 6.1M+ metro population and significant access gaps in surrounding areas create strong, sustained NP demand.',
+    avgCostOfLiving: '',
+    heroDescription: `Metro Atlanta brings Emory Healthcare, Grady Health System, Wellstar, Piedmont, and Children's Healthcare of Atlanta together with the CDC, across a wide perimeter where commute time shapes every job search. Georgia requires ${NPS} to practice under physician supervision with a protocol agreement, so the arrangement is part of every offer.`,
     whyThisMetro: [
-      'Living costs only 3% above the national average, excellent value for a metro this size',
-      'Emory Healthcare, Grady Health, Wellstar, and Piedmont hire NPs at scale across the metro',
-      'Surrounding rural counties carry provider-shortage designations, adding loan-repayment-eligible roles',
-      'A growing 6.1M+ metro with deep telehealth and outpatient markets',
+      `Emory Healthcare, Grady Health System, Wellstar, and Piedmont hire ${NPS} across the metro`,
+      `Emory's campus and the CDC share the Clifton Corridor, a mix of public-health and clinical employers`,
+      `Grady's safety-net system hires ${NPS} across high-acuity and community care`,
+      `Refugee and immigrant communities, from Clarkston to Buford Highway, put a premium on multilingual, culturally competent care`,
     ],
-    // Tax note: the previous copy quoted Georgia's 2024 flat rate. Georgia's
-    // flat rate steps down on a legislative schedule, so the number is
-    // omitted rather than allowed to go stale (editorial policy note 5).
-    costOfLivingNote: 'Cost of living in Atlanta is only 3% above the national average, which is dramatically more affordable than most metros of comparable size. Suburbs like Marietta, Decatur, Alpharetta, and Kennesaw offer excellent value, and Georgia\'s flat state income tax, which steps down on a schedule set by the legislature, keeps take-home pay predictable.',
-    licensureNote: 'Georgia is a restricted-practice state: NPs practice under a physician protocol agreement that defines scope of practice and prescriptive guidelines, and most employers arrange the agreement as part of hiring. The Georgia Board of Nursing typically processes licenses in 4 to 8 weeks.',
-    careDemandContext: 'Metro Atlanta\'s growth is uneven: affluent northern suburbs are well served while South Atlanta and surrounding rural counties face persistent provider shortages. The city\'s large refugee and immigrant communities add demand for multilingual, culturally competent care, and safety-net systems like Grady rely heavily on NPs.',
+    // Tax note: this record used to quote Georgia's flat income tax rate and
+    // then its step-down schedule. Both are tax law this repo holds no source
+    // for (policy note 5), so the note now carries housing guidance only.
+    costOfLivingNote: `Atlanta housing and commute trade off hard across a wide perimeter, and suburbs like Marietta, Decatur, Alpharetta, and Kennesaw each price differently. Choose the side of the perimeter you want to live on before you choose the job, and compare offers against the rent and drive from there.`,
+    licensureNote: `Georgia requires ${NPS} to practice under physician supervision with a protocol agreement, and AANP classifies Georgia as a restricted practice state. Ask each Atlanta employer how it sets up the protocol agreement, and plan for it to be updated when you change employers. The requirement matters most if you want to own a practice, so check the Georgia Board of Nursing for the rules in force before you plan one.`,
+    careDemandContext: `Access to care across metro Atlanta is uneven, and Grady's safety-net system, community health centers in south Atlanta, and rural clinics beyond the perimeter all hire ${NPS} to close the gap. The region's refugee and immigrant communities, including those around Clarkston and along Buford Highway, add demand for multilingual, culturally competent care.`,
     subMarkets: [
-      { name: 'Clifton Corridor and Druid Hills', note: 'Emory\'s campus plus the CDC sit on the same corridor, making it the metro\'s academic and public-health center, and the only place in the Southeast with that particular mix of clinical and federal employers.' },
-      { name: 'Downtown and Midtown', note: 'Grady Health System anchors the region\'s safety net, with the highest acuity and the clearest case for loan-repayment-eligible placements inside the perimeter.' },
-      { name: 'Northside: Sandy Springs, Dunwoody, Alpharetta', note: 'The metro\'s deepest commercially insured ambulatory market, spread along GA-400. Long north-south commutes are the trade-off.' },
-      { name: 'West metro: Cobb, Marietta, Kennesaw', note: 'Large suburban hospital and outpatient footprint with more affordable housing than the northside corridor.' },
-      { name: 'South metro and the rural ring', note: 'South Fulton, Clayton, and the surrounding rural counties carry shortage designations; several counties in the region have no hospital at all, which pushes both demand and drive time onto metro providers.' },
+      { name: 'Clifton Corridor and Druid Hills', note: `Emory University Hospital and the CDC sit on the same corridor, making it an academic and public-health center for the metro, with a mix of clinical and federal employers.` },
+      { name: 'Downtown and Midtown', note: `Grady Memorial Hospital, a public safety-net hospital, sits downtown and Emory University Hospital Midtown sits nearby, with high-acuity roles and community clinics where loan repayment depends on the specific site.` },
+      { name: 'Northside: Sandy Springs, Dunwoody, Alpharetta', note: `Northside Hospital's Sandy Springs campus and an ambulatory market spread along the GA-400 corridor. Long north-south commutes are the trade-off.` },
+      { name: 'West metro: Cobb, Marietta, Kennesaw', note: `Wellstar Kennestone Hospital in Marietta and a suburban hospital and outpatient footprint west of the city, with its own commute patterns.` },
+      { name: 'South metro and the rural ring', note: `South Fulton, Clayton, and the rural counties beyond, where drive times to care can be long. Loan repayment eligibility attaches to each specific clinic site.` },
     ],
     topSettings: ['Hospital systems', 'Community health centers', 'Outpatient clinics', 'Telehealth', 'VA medical center', 'Private practice'],
     nearbyCities: ['Marietta', 'Decatur', 'Alpharetta', 'Sandy Springs', 'Roswell'],
     faqs: [
-      { question: 'What is the average NP salary in Atlanta, GA?', answer: 'Georgia NP salaries generally track close to national levels, and Atlanta\'s cost of living, only 3% above the national average, gives that pay solid purchasing power for a metro this size. Community health roles often add federal loan-repayment eligibility. Check live Atlanta listings with posted salary on this board for current ranges.' },
-      { question: 'Does Georgia have full practice authority for NPs?', answer: 'No. Georgia is a restricted-practice state. NPs work under a protocol agreement with a supervising physician that defines scope of practice and prescriptive authority. Most employers facilitate the agreement as part of hiring, so it rarely blocks employed practice, though it does constrain independent practice ownership.' },
-      { question: 'Is Atlanta a good city for NPs starting their career?', answer: 'Yes. Atlanta\'s healthcare ecosystem, anchored by Emory Healthcare and Grady Health System, offers strong mentorship and training pathways, and the Atlanta VA also hires new graduates. Near-average living costs are manageable on a new-grad salary, and metro growth supports long-term stability.' },
-      { question: 'How much does the commute affect an Atlanta job search?', answer: 'More than in most metros its size. Atlanta is spread across a wide perimeter with limited rail coverage, so a job 20 miles north of your apartment can mean well over an hour each way at shift-change times. Filter by the specific suburb rather than "Atlanta," and weigh a slightly lower offer close to home against a higher one across the perimeter.' },
+      { question: `How should I compare ${NP} pay offers in Atlanta?`, answer: `Map the commute first. A higher offer across the perimeter can lose to a lower one close to home once you price the drive at shift change. Then compare the whole package: Emory, Grady, Wellstar, and Piedmont each structure benefits differently, and community health roles may add loan repayment tied to the site. A posted-pay median appears on this page only when enough Atlanta area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does Georgia have full practice authority for ${NPS}?`, answer: `No. AANP classifies Georgia as a restricted practice state, and Georgia requires ${NPS} to practice under physician supervision with a protocol agreement. Ask how each employer sets up the protocol agreement, and plan for it to be updated when you change employers. It matters most if you want to own an independent practice.` },
+      { question: `Is Atlanta a good city for ${NPS} starting their career?`, answer: `It can be. Emory Healthcare and Grady Health System run large teaching and safety-net operations, and the Atlanta VA Medical Center in Decatur hires in the area as well, so ask each about structured support for new graduates. Weight the commute heavily in a first job, because the perimeter makes long drives easy to fall into.` },
+      { question: 'How much does the commute affect an Atlanta job search?', answer: `A great deal. Atlanta spreads across a wide perimeter with limited rail coverage, so a job on the far side of the metro can mean a long drive at shift-change times. Filter by the specific suburb rather than "Atlanta," and weigh a slightly lower offer close to home against a higher one across the perimeter.` },
     ],
   },
 
   // ─── 2026-07 expansion (P2 #13) ────────────────────────────────────────
-  // Ten added metros. Cost-of-living values here are directional bands, not
-  // index percentages — see editorial policy note (3) at the top of the file.
+  // Ten added metros, held to the same claim rule as the original ten (see
+  // the editorial policy at the top of the file).
 
   {
     slug: 'houston-tx',
@@ -549,34 +645,34 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'texas',
     citySlug: 'houston-tx',
     metroArea: 'Greater Houston',
-    population: '2.3M (city) / 7.5M+ (metro)',
+    population: '',
     practiceAuthority: 'Restricted',
-    avgCostOfLiving: 'below the US average',
-    heroDescription: 'Houston\'s NP market is shaped by a single piece of geography: the Texas Medical Center, where dozens of member institutions sit inside one district a few miles from downtown. Add a metro of 7.5 million with no state income tax and housing costs below the national average, and Houston becomes one of the highest-volume NP markets in the country.',
+    avgCostOfLiving: '',
+    heroDescription: `Houston's ${NP} market is shaped by the Texas Medical Center, where Houston Methodist, Memorial Hermann, MD Anderson, Texas Children's, and Baylor College of Medicine sit in one district a few miles south of downtown. Around it, Harris Health's safety net and suburban systems from Katy to The Woodlands hire across a wide metro.`,
     whyThisMetro: [
-      'The Texas Medical Center concentrates Houston Methodist, Memorial Hermann, MD Anderson, Texas Children\'s, and Baylor College of Medicine into one district',
-      'No state income tax and housing costs below the national average, thanks to a metro that keeps building outward',
-      'Harris Health runs the county safety net at Ben Taub and LBJ, and the surrounding Gulf Coast counties carry federal shortage designations',
-      'A large uninsured population keeps community health centers, charity clinics, and county programs hiring year-round',
+      `The Texas Medical Center brings Houston Methodist, Memorial Hermann, MD Anderson, Texas Children's, and Baylor College of Medicine into one district`,
+      `Harris Health runs the county safety net at Ben Taub and LBJ hospitals, with community clinics across Harris County`,
+      `Community health centers, charity clinics, and county programs hire ${NPS} to care for patients without insurance`,
+      `Energy-sector and industrial employers add occupational health roles along the I-10 corridor and the Ship Channel`,
     ],
-    costOfLivingNote: 'Houston is one of the cheapest large metros in the country to live in, mostly because it keeps building housing outward instead of upward. The trade-off is worth understanding before you sign: Texas has no state income tax but leans on property taxes instead, so buying a house here costs more in annual carry than the sticker price suggests. Renters see the affordability without that offset, which is why the metro is a common first stop for NPs relocating from the coasts.',
-    licensureNote: 'Texas is a restricted-practice state: NPs practice under physician delegation through a Prescriptive Authority Agreement (PAA), which must be reviewed at least annually and names the delegating physician, the scope, and the prescribing protocols. The Texas Medical Center concentration means Houston has an unusually deep bench of delegating physicians, so employers rarely struggle to put a PAA in place. Licensure and PAA registration both run through the Texas Board of Nursing.',
-    careDemandContext: 'Texas has the highest uninsured rate of any state, and Houston carries a large share of it, which is why the county safety net, federally qualified health centers, and charity clinics are such significant NP employers here rather than a footnote to the hospital market. Layer on a petrochemical and industrial employment base that generates occupational health demand, one of the most ethnically diverse populations in the country, and hurricane-season surge planning, and the metro asks for a broader clinical range than its size alone would suggest.',
+    costOfLivingNote: `Houston housing spreads outward across a wide metro, so where you live and the drive to the Medical Center or a suburban campus matter as much as the rent. Weigh property taxes as well as the purchase price if you plan to buy, since buying and renting play out differently here. Price the commute at shift change before you sign anything.`,
+    licensureNote: `Outside federal facilities, Texas requires ${NPS} in Houston to have a prescriptive authority agreement with a supervising physician. The Texas Medical Center's hospitals employ many physicians, so ask each employer who your supervising physician would be and how it arranges the agreement. Check the Texas Board of Nursing for current licensure steps and any filing the agreement needs.`,
+    careDemandContext: `Harris Health, federally qualified health centers, and charity clinics hire ${NPS} across Houston alongside the hospital systems. Layer on a petrochemical and industrial employment base that generates occupational health demand, a diverse population, and hurricane-season surge planning, and the metro asks for a broad clinical range.`,
     subMarkets: [
-      { name: 'Texas Medical Center and the Inner Loop', note: 'The densest employer cluster in American medicine. Inpatient, specialty, oncology, and pediatric NP roles concentrate here, and so does the competition, but the sheer number of member institutions means openings turn over constantly.' },
-      { name: 'West Houston and the Energy Corridor', note: 'The I-10 corridor out toward Katy: employer-sponsored clinics, occupational health tied to the energy sector, and a deep suburban outpatient and urgent care market.' },
-      { name: 'The Woodlands and north Harris / Montgomery County', note: 'Master-planned suburban growth with newer hospital and ambulatory campuses following it. Commercially insured panels and a long drive to the Medical Center.' },
-      { name: 'Clear Lake, Pearland, and the southeast', note: 'The NASA and Bay Area corridor, plus fast-growing Pearland. A distinct hospital footprint that many Medical Center applicants overlook entirely.' },
-      { name: 'Sugar Land and Fort Bend County', note: 'One of the most demographically diverse counties in the United States, which shows up directly in hiring: multilingual capability and cross-cultural primary care experience are genuine differentiators here.' },
+      { name: 'Texas Medical Center and the Inner Loop', note: `A dense employer cluster with inpatient, specialty, oncology, and pediatric ${NP} roles. With many member institutions, openings come up across the district.` },
+      { name: 'West Houston and the Energy Corridor', note: `The I-10 corridor out toward Katy: employer-sponsored clinics, occupational health tied to the energy sector, and a broad suburban outpatient and urgent care market.` },
+      { name: 'The Woodlands and north Harris / Montgomery County', note: `Master-planned suburbs with newer hospital and ambulatory campuses, and a long drive to the Medical Center.` },
+      { name: 'Clear Lake, Pearland, and the southeast', note: `The NASA and Bay Area corridor plus Pearland, with a distinct hospital footprint worth searching on its own.` },
+      { name: 'Sugar Land and Fort Bend County', note: `A demographically diverse county, where multilingual capability and cross-cultural primary care experience set candidates apart.` },
     ],
     topSettings: ['Academic medical centers', 'Hospital systems', 'Community health centers', 'Outpatient clinics', 'Occupational health', 'Urgent care'],
     nearbyCities: ['Sugar Land', 'Katy', 'Pearland', 'The Woodlands', 'Spring', 'Cypress'],
     faqs: [
-      { question: 'What is the average NP salary in Houston?', answer: 'Texas NP pay generally tracks close to national levels, and Houston\'s below-average living costs plus zero state income tax mean take-home pay goes further than the headline number suggests. Pay varies more by employer type here than in most metros: Medical Center academic roles, county safety-net positions, and suburban private practices price quite differently. The salary figures shown on this page come from live Houston listings on this board, not from a national average.' },
-      { question: 'What is a Prescriptive Authority Agreement and who arranges it?', answer: 'A PAA is the written agreement that lets you prescribe under a delegating physician in Texas. It names the physician, defines the scope and prescribing protocols, and must be reviewed at least annually. In employed settings the employer almost always arranges it, because they employ the delegating physician too. It becomes your problem mainly if you want to practice independently or take locum work, since Texas does not offer an autonomous-practice pathway the way Florida does for primary care.' },
-      { question: 'Do I have to work in the Texas Medical Center to have a career here?', answer: 'No, and treating it as the whole market is the most common search mistake in Houston. The Medical Center has the highest density and the best-known names, but Fort Bend, Montgomery, Brazoria, and Galveston counties all have their own hospital and outpatient employers, frequently with shorter commutes, lower housing costs, and less applicant competition for the same specialty.' },
-      { question: 'Does Houston have loan-repayment-eligible NP jobs?', answer: 'Yes. Parts of Harris County and several surrounding Gulf Coast counties carry federal Health Professional Shortage Area designations, which is what makes a site eligible for programs like the NHSC. Community health centers and county-run clinics are the most likely employers to be at a designated site. Confirm the specific site\'s designation with the employer before you count on it, because eligibility attaches to the location, not the job title.' },
-      { question: 'Is bilingual capability expected in Houston NP roles?', answer: 'Frequently preferred, sometimes required, and rarely irrelevant. Spanish is the most requested, but the metro\'s diversity means Vietnamese, Mandarin, Arabic, and Urdu all appear in real postings, particularly in Fort Bend County and the southwest side. Employers usually list it as a preference rather than a filter, but it materially shortens the hiring process where the panel needs it.' },
+      { question: `How should I compare ${NP} pay offers in Houston?`, answer: `Compare by employer type as much as by number. Medical Center academic roles, county safety-net positions, and suburban private practices structure pay, benefits, and schedules quite differently, and the commute across a metro this wide belongs in the comparison. A posted-pay median appears on this page only when enough Houston area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: 'What is a prescriptive authority agreement and who arranges it?', answer: `It is the agreement with a supervising physician that Texas requires for ${NP} practice. In an employed role, ask whether the employer arranges it with one of its own physicians. It becomes your responsibility mainly if you want to open your own practice or take locum work, and the Texas Board of Nursing publishes the current requirements.` },
+      { question: 'Do I have to work in the Texas Medical Center to have a career here?', answer: `No. The Medical Center has the density and the familiar names, but Fort Bend, Montgomery, Brazoria, and Galveston counties all have their own hospital and outpatient employers, often with shorter commutes for suburban residents. Search the county where you would live as well as the Medical Center.` },
+      { question: `Does Houston have loan-repayment-eligible ${NP} jobs?`, answer: `Some roles can qualify, but eligibility depends on the exact practice site, not on the city or the job title. Federal programs such as NHSC loan repayment look at whether the site sits in a designated Health Professional Shortage Area, which can change over time. Enter the clinic's street address in HRSA's Find Shortage Areas by Address tool on data.hrsa.gov, look up its county in HRSA's HPSA Find, which also covers facility shortage areas, and confirm the site's eligibility with the employer in writing before you count on it.` },
+      { question: `Is bilingual capability expected in Houston ${NP} roles?`, answer: `Frequently preferred and sometimes required. Spanish is requested often, and the metro's diversity makes Vietnamese, Mandarin, Arabic, and Urdu valuable too, particularly in Fort Bend County and the southwest side. Employers usually list it as a preference rather than a filter, but it can shorten the hiring process where the panel needs it.` },
     ],
   },
   {
@@ -587,34 +683,34 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'pennsylvania',
     citySlug: 'philadelphia-pa',
     metroArea: 'Greater Philadelphia',
-    population: '1.6M (city) / 6.2M+ (metro)',
+    population: '',
     practiceAuthority: 'Reduced',
-    avgCostOfLiving: 'modestly above the US average',
-    heroDescription: 'Philadelphia has more academic medicine per square mile than almost anywhere on the East Coast (Penn, Jefferson, Temple, Drexel, and Children\'s Hospital of Philadelphia all train and hire here) while costing meaningfully less to live in than New York, Boston, or Washington. For NPs who want teaching-hospital work without a coastal housing budget, it is the strongest value in the Northeast corridor.',
+    avgCostOfLiving: '',
+    heroDescription: `Philadelphia packs academic medicine into a compact city: Penn Medicine, Jefferson, Temple, Children's Hospital of Philadelphia, and Drexel all train and hire here, with suburban systems, South Jersey, and northern Delaware inside the same commute. Pennsylvania requires a collaborative agreement for ${NP} practice, and the neighboring states set their own rules.`,
     whyThisMetro: [
-      'Five medical schools and their affiliated systems inside one city, giving academic and specialty NP roles unusual depth',
-      'The most affordable large Northeast metro, with a real housing discount against New York, Boston, and Washington',
-      'A tri-state labor shed: Pennsylvania, New Jersey, and Delaware all inside a normal commute, with three different practice-authority regimes',
-      'Deep safety-net demand: Philadelphia carries one of the highest poverty rates among the largest US cities',
+      `Penn Medicine, Jefferson, Temple, Drexel, and CHOP give academic and specialty ${NP} roles real depth`,
+      `A tri-state commute shed: Pennsylvania, New Jersey, and Delaware inside a normal commute, each with its own practice rules and its own license`,
+      `Community health centers and hospital outreach clinics in North and West Philadelphia hire for breadth and chronic disease management`,
+      `Home-based care and suburban ambulatory networks add roles outside the teaching hospitals`,
     ],
-    costOfLivingNote: 'Philadelphia costs modestly more than the national average and dramatically less than the Northeast metros it competes with for talent, largely because of a rowhouse housing stock that never priced like Manhattan or Boston. Two local tax details are worth checking before you compare offers: Pennsylvania levies a flat personal income tax, and Philadelphia adds a city wage tax that applies to residents and to non-residents who work inside city limits. The wage-tax rates are reset periodically, so confirm the current figures with the city\'s Department of Revenue rather than trusting an old article.',
-    licensureNote: 'Pennsylvania licenses nurse practitioners as Certified Registered Nurse Practitioners (CRNPs) and is a reduced-practice state: a CRNP practices under a written collaborative agreement with a physician, and prescriptive authority is granted through a separate collaborative agreement filed with the State Board of Nursing. Employers in the academic systems handle both as a matter of routine. Crossing into New Jersey or Delaware means a separate license in that state; the APRN license never travels, even between neighboring states.',
-    careDemandContext: 'Philadelphia pairs world-class academic medicine with some of the sharpest health-access gaps in the Northeast: neighborhoods in North and West Philadelphia sit within a few miles of internationally known hospitals and still carry shortage designations. That contrast defines the NP market. Teaching hospitals hire for subspecialty depth; federally qualified health centers, city health centers, and hospital outreach clinics hire for breadth, chronic disease management, and care coordination, and the second group is where the loan-repayment-eligible positions are.',
+    costOfLivingNote: `Philadelphia's rowhouse neighborhoods and suburban counties price very differently, and the choice between city and suburb shapes both rent and commute. Before you compare offers, check how Pennsylvania and the City of Philadelphia treat income for residents and for people who work inside city limits, and confirm current rules with the city's Department of Revenue rather than an old article.`,
+    licensureNote: `Pennsylvania requires a collaborative agreement for ${NP} practice, and AANP classifies Pennsylvania as a reduced practice state. Ask each employer who your collaborating physician will be and how the agreement is arranged, and check the Pennsylvania State Board of Nursing for current requirements. Crossing into New Jersey or Delaware means a separate license in that state, because each state issues its own APRN license.`,
+    careDemandContext: `Philadelphia pairs academic medicine with sharp health-access gaps: neighborhoods in North and West Philadelphia sit a few miles from its teaching hospitals and still struggle for primary care access. That contrast shapes the ${NP} market. Teaching hospitals hire for subspecialty depth, while federally qualified health centers, city health centers, and hospital outreach clinics hire for breadth, chronic disease management, and care coordination, and loan repayment in that second group depends on each clinic's site.`,
     subMarkets: [
-      { name: 'University City', note: 'Penn Medicine, CHOP, and Drexel share a few blocks in West Philadelphia. The metro\'s highest concentration of academic, subspecialty, and pediatric NP roles, and its most competitive applicant pool.' },
-      { name: 'Center City', note: 'Jefferson\'s downtown campus and a dense outpatient and specialty market. The one part of the metro where a car-free commute is genuinely practical.' },
-      { name: 'North Philadelphia', note: 'Temple Health and the surrounding safety-net network: high acuity, heavy trauma and chronic disease volume, and the clearest shortage-area case in the city.' },
-      { name: 'The suburban ring: Montgomery, Delaware, Bucks, and Chester counties', note: 'Main Line and suburban systems carry a large share of the region\'s ambulatory volume, with commercially insured panels and easier parking. Many Philadelphia-trained NPs end their careers out here.' },
-      { name: 'South Jersey and northern Delaware', note: 'Camden, Cherry Hill, and Wilmington are inside a normal commute but on the other side of a state line. New Jersey is a reduced-practice state and Delaware grants full practice authority, so the drive can change your scope as well as your license.' },
+      { name: 'University City', note: `Penn Medicine's hospital campus and CHOP sit side by side in West Philadelphia, next to the Penn and Drexel campuses, with academic, subspecialty, and pediatric ${NP} roles.` },
+      { name: 'Center City', note: `Jefferson's downtown campus and a dense outpatient and specialty market, in a part of the city where a car-free commute is genuinely practical.` },
+      { name: 'North Philadelphia', note: `Temple University Hospital and the surrounding safety-net network, with high acuity, heavy trauma and chronic disease volume, and community clinics where loan repayment depends on the specific site.` },
+      { name: 'The suburban ring: Montgomery, Delaware, Bucks, and Chester counties', note: `Main Line Health and other suburban systems run hospitals and ambulatory networks with easier parking and car commutes.` },
+      { name: 'South Jersey and northern Delaware', note: `Camden, Cherry Hill, and Wilmington are inside a normal commute but across a state line. New Jersey generally requires joint protocols with a collaborating physician to prescribe, with a 2026 exemption for qualifying experienced ${NPS} in primary or behavioral health care, while Delaware grants full practice and prescriptive authority when its Board of Nursing issues the APRN license, so the drive can change your scope as well as your license.` },
     ],
     topSettings: ['Academic medical centers', 'Hospital systems', 'Community health centers', 'Pediatrics', 'Outpatient clinics', 'Home-based care'],
     nearbyCities: ['Bryn Mawr', 'King of Prussia', 'Norristown', 'Abington', 'Chester'],
     faqs: [
-      { question: 'What is the average NP salary in Philadelphia?', answer: 'Pennsylvania NP pay generally sits near national levels, below New York and Boston but against a much lower housing cost, which is the core of Philadelphia\'s value proposition. When you compare an offer here with one from New York or Washington, run the numbers after housing and after the Philadelphia city wage tax, not on base salary alone. The figures shown on this page are aggregated from live Philadelphia listings on this board.' },
-      { question: 'Does Pennsylvania have full practice authority for NPs?', answer: 'No. Pennsylvania is a reduced-practice state. CRNPs practice under a written collaborative agreement with a physician, and prescriptive authority requires a second, separate collaborative agreement filed with the State Board of Nursing. In the large academic systems this is onboarding paperwork; it matters most if you want to open an independent practice, which the agreement requirement effectively prevents.' },
-      { question: 'Can I work in Philadelphia and South Jersey on one license?', answer: 'No. Each state issues its own APRN license, and the Nurse Licensure Compact covers RN and LPN licenses only, never APRN licenses. NPs who work across the Delaware River hold licenses in both states. It is also worth knowing that the three states in this labor shed are regulated differently: Pennsylvania and New Jersey are reduced-practice states, while Delaware grants full practice authority.' },
-      { question: 'Which Philadelphia employers hire new-grad NPs?', answer: 'The teaching systems are the most structured entry point, because they run formal onboarding and have physician collaborators on staff already. Federally qualified health centers and city health centers also hire new graduates and offer far broader early exposure, though usually with less formal preceptorship. Both are legitimate first jobs; the trade is depth versus breadth in your first two years.' },
-      { question: 'How much does the Philadelphia city wage tax actually matter?', answer: 'Enough to change an offer comparison. It applies to residents wherever they work and to non-residents on income earned inside city limits, at different rates, and the rates are adjusted periodically. If you are weighing a Center City job against a suburban one, or a city apartment against a Montgomery County house, price the wage tax explicitly, and check the current rates with the Philadelphia Department of Revenue, since published figures go stale quickly.' },
+      { question: `How should I compare ${NP} pay offers in Philadelphia?`, answer: `Compare after housing and local taxes, not on base pay alone. Penn, Jefferson, Temple, and CHOP structure benefits and tuition support differently, and a Center City job, a suburban job, and a South Jersey job can land very differently once you account for where you live and any city-level income tax. A posted-pay median appears on this page only when enough Philadelphia area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does Pennsylvania have full practice authority for ${NPS}?`, answer: `No. AANP classifies Pennsylvania as a reduced practice state, and Pennsylvania requires a collaborative agreement for ${NP} practice. In an employed role, ask who your collaborating physician will be; the agreement matters most if you want to open an independent practice, where arranging the collaboration becomes your responsibility. Check the Pennsylvania State Board of Nursing for the current requirements.` },
+      { question: 'Can I work in Philadelphia and South Jersey on one license?', answer: `No. Each state issues its own APRN license, and the Nurse Licensure Compact covers RN and LPN licenses only, never APRN licenses. ${NPS} who work across the Delaware River hold licenses in both states. The three states in this commute shed also set different rules: Pennsylvania requires a collaborative agreement, New Jersey generally requires joint protocols with a collaborating physician to prescribe unless an ${NP} qualifies under its 2026 law, and Delaware grants full practice and prescriptive authority at licensure.` },
+      { question: `Which Philadelphia employers hire new-grad ${NPS}?`, answer: `The teaching systems are a natural place to start, because they already employ physician collaborators; ask each about formal onboarding. Federally qualified health centers and city health centers also hire new graduates and offer broader early exposure, often with less formal preceptorship. Both are legitimate first jobs; the trade is depth versus breadth in your first years.` },
+      { question: 'How should I think about local taxes on a Philadelphia offer?', answer: `Price them explicitly before you decide. State and city income tax treatment can differ depending on whether you live in Philadelphia, work inside city limits, or both, and rates are adjusted from time to time. If you are weighing a Center City job against a suburban one, or a city apartment against a Montgomery County house, confirm the current rules with the Philadelphia Department of Revenue and a tax adviser.` },
     ],
   },
   {
@@ -625,44 +721,46 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'massachusetts',
     citySlug: 'boston-ma',
     metroArea: 'Greater Boston',
-    population: '650K (city) / 4.9M+ (metro)',
+    population: '',
     practiceAuthority: 'Full',
-    avgCostOfLiving: 'well above the US average',
-    heroDescription: 'Greater Boston is the densest academic medicine market in the United States relative to its size, and Massachusetts grants nurse practitioners full practice authority once a supervised transition period is complete. The combination of teaching hospitals, near-universal insurance coverage, and independent practice is unusual. So is the housing cost.',
+    avgCostOfLiving: '',
+    heroDescription: `Greater Boston concentrates teaching hospitals in the Longwood Medical Area and around the Mass General campuses, alongside community health centers and a biotech corridor that hires clinically trained ${NPS}. Massachusetts grants full practice authority to ${NPS} once they attest to at least two years of supervised practice, and that pairing of academic depth and a defined transition shapes careers here.`,
     whyThisMetro: [
-      'Teaching hospitals at extraordinary density, with the Longwood Medical Area alone hosting several major institutions on adjacent blocks',
-      'Full practice authority after a supervised transition period under Chapter 260 of the Acts of 2020',
-      'Massachusetts has the lowest uninsured rate in the country, so patients arrive covered and connected to care',
-      'A Route 128 corridor of biotech, digital health, and device employers that hire clinically trained NPs into non-bedside roles',
+      `Teaching hospitals at close range, with the Longwood Medical Area hosting several major institutions on adjacent blocks`,
+      `Full practice authority under Chapter 260 of the Acts of 2020, once an ${NP} attests to at least two years of supervised practice`,
+      `Community health centers across the city's neighborhoods, alongside Boston Medical Center's safety-net hospital`,
+      `A Cambridge and Route 128 corridor of biotech, digital health, and device employers that hire clinically trained ${NPS} into non-bedside roles`,
     ],
-    costOfLivingNote: 'Boston is expensive in one specific way and ordinary in most others: housing drives nearly the entire gap against the national average, while groceries, utilities, and transportation are far less unusual. Massachusetts levies a flat state income tax. Two common workarounds shape where NPs actually live: the commuter rail lines out toward Worcester and Providence, and southern New Hampshire, which does not tax wage income at all and is a realistic commute from the northern suburbs.',
+    costOfLivingNote: `Housing is the budget line that decides a Boston offer, and it varies sharply between the city, the inner suburbs, and the commuter rail towns. Some ${NPS} live along the rail lines toward Worcester and Providence, or in southern New Hampshire, and trade commute time for housing. Check how Massachusetts and New Hampshire would tax your income, depending on where you live and work, before you compare offers.`,
     // STATUTE, VERIFIED 2026-07-29 against malegislature.gov. The NP scope law
     // is Chapter 260 of the Acts of 2020, "An Act promoting a resilient health
     // care system that puts patients first" (signed 2021-01-01), which grants
     // independent practice authority after "not less than 2 years of supervised
     // practice". An earlier revision of this record cited Chapter 227 of the
-    // Acts of 2020 in three rendered places — that act is the FY2021 general
+    // Acts of 2020 in three rendered places; that act is the FY2021 general
     // appropriations bill and contains no scope-of-practice language at all.
-    // Do not renumber without re-fetching the session law.
-    licensureNote: 'Massachusetts grants nurse practitioners full practice authority under Chapter 260 of the Acts of 2020, after at least two years of supervised practice; the supervision requirement applies during that transition period, not for the length of a career. Licensure runs through the Board of Registration in Nursing. Massachusetts does not yet issue or recognize multistate nursing licenses, so a multistate RN license issued elsewhere does not cover practice here, and the APRN license is always issued state by state regardless.',
-    careDemandContext: 'Massachusetts expanded coverage a decade before the rest of the country and has held the lowest uninsured rate in the nation since, which changes the texture of NP work here: fewer patients presenting late because they avoided care, more managed-care and quality-metric structure around each visit, and community health centers that function as primary care homes rather than as last resorts. Demand skews toward complex chronic disease, an aging population in the outer suburbs, and the primary care access gap that persists even in a well-insured state. Long waits for a new-patient appointment are a Massachusetts problem, not a coverage problem.',
+    // Do not renumber without re-fetching the session law. Everything else
+    // about the transition (the attestation, who supervises prescribing, the
+    // reciprocity route) restates the Massachusetts details string.
+    licensureNote: `Massachusetts grants full practice authority to ${NPS} under Chapter 260 of the Acts of 2020 once they attest to the Massachusetts Board of Registration in Nursing that they have completed at least two years of supervised practice. Until then, a qualified healthcare professional, who may be a physician or an experienced ${NP}, supervises their prescribing. ${NPS} applying by reciprocity with at least two years of ${NP} practice outside Massachusetts, independent or supervised, may instead prescribe without supervision once they attest to that experience. Massachusetts does not yet issue or recognize multistate nursing licenses, and the APRN license is always issued state by state regardless.`,
+    careDemandContext: `Boston's ${NP} work spans complex specialty care in the teaching hospitals, primary care in community health centers across the city's neighborhoods, and care for older adults in the outer suburbs. Community health centers serve as primary care homes for many neighborhoods, and the teaching hospitals add subspecialty and procedural roles within the same commute.`,
     subMarkets: [
-      { name: 'Longwood Medical Area', note: 'Several major teaching hospitals, a children\'s hospital, and a cancer center within a few blocks, plus the medical school campuses that feed them. Highest concentration of subspecialty NP roles in New England.' },
-      { name: 'Downtown, Beacon Hill, and Charlestown', note: 'The other academic pole of the city, anchored by the Mass General campuses. Heavy inpatient and procedural NP demand, and the most direct transit access in the metro.' },
-      { name: 'South End and Boston Medical Center', note: 'The city\'s safety-net anchor and the neighborhood health centers around it. The broadest patient mix in the metro and the strongest community-health hiring.' },
-      { name: 'Cambridge and Somerville', note: 'Hospital and ambulatory sites alongside the biotech corridor, where digital health and device employers hire NPs into clinical-affairs and medical-science roles.' },
-      { name: 'Route 128 belt and beyond: Burlington, Waltham, Newton, Worcester', note: 'Suburban hospital campuses and ambulatory networks with parking, shorter shifts of commuting, and materially cheaper housing. Worcester functions as its own academic market an hour west.' },
+      { name: 'Longwood Medical Area', note: `Brigham and Women's, Beth Israel Deaconess, Boston Children's, and Dana-Farber sit within a few blocks of each other and of Harvard Medical School, with many subspecialty ${NP} roles.` },
+      { name: 'Downtown, Beacon Hill, and Charlestown', note: `Another academic cluster, built around the Mass General campuses, with inpatient and procedural ${NP} roles and direct transit access.` },
+      { name: 'South End and Boston Medical Center', note: `Boston Medical Center, a safety-net hospital for the city, and the neighborhood health centers around it, with a broad patient mix and community-health hiring.` },
+      { name: 'Cambridge and Somerville', note: `Cambridge Health Alliance and other hospital and ambulatory sites alongside the biotech corridor, where device and digital-health employers hire ${NPS} into clinical-affairs and medical-science roles.` },
+      { name: 'Route 128 belt and beyond: Burlington, Waltham, Newton, Worcester', note: `Suburban hospital campuses and ambulatory networks with parking and their own housing markets, from Burlington and Waltham to Newton. Worcester runs as its own academic market to the west, around UMass Chan Medical School and UMass Memorial.` },
     ],
     topSettings: ['Academic medical centers', 'Hospital systems', 'Community health centers', 'Outpatient clinics', 'Industry and digital health', 'Home-based care'],
-    // Worcester is deliberately absent: it is a real second market an hour
+    // Worcester is deliberately absent: it is a real second market to the
     // west, not a Boston suburb, and folding it in would overstate the count.
     nearbyCities: ['Cambridge', 'Somerville', 'Brookline', 'Newton', 'Quincy'],
     faqs: [
-      { question: 'What is the average NP salary in Boston?', answer: 'Massachusetts is among the better-paying states for nurse practitioners, and Boston leads the state, but housing absorbs much of the premium, so the comparison that matters is pay minus rent or mortgage, not pay alone. Academic medical centers frequently trade base salary for benefits, tuition support, and structured advancement. The dollar figures on this page are aggregated from live Boston listings on this board rather than from a national survey.' },
-      { question: 'Does Massachusetts have full practice authority for NPs?', answer: 'Yes, with a transition. Under Chapter 260 of the Acts of 2020, Massachusetts nurse practitioners practice independently after completing at least two years of supervised practice. Before that threshold, supervision applies. It is a time-limited on-ramp rather than a career-long constraint, which is why the AANP counts Massachusetts among the full-practice jurisdictions.' },
-      { question: 'How does the two-year supervision period work in practice?', answer: 'Most Boston employers hire NPs at any stage, since the teaching hospitals have supervising physicians on staff regardless. The practical advice is to document your supervised practice from your first day (dates, supervisor, and setting), because the paperwork is yours to produce when you want to move to independent practice, locum work, or your own panel. Reconstructing it later is where NPs lose otherwise eligible time.' },
-      { question: 'Do NPs really commute from New Hampshire or Worcester?', answer: 'Routinely. Southern New Hampshire has no wage income tax and much cheaper housing, and the commuter rail corridors toward Worcester and Providence put a very different housing market inside a train ride. The trade-off is time rather than money. If your role has variable start times or on-call obligations, price the commute honestly before you commit to it.' },
-      { question: 'Are there non-bedside NP roles in the Boston market?', answer: 'More than in almost any other metro. The Cambridge and Route 128 biotech, device, and digital health cluster hires clinically trained NPs into medical affairs, clinical operations, safety, and product roles, and Boston\'s payer and quality-measurement organizations do too. These roles usually want several years of clinical experience first, so they are a mid-career pivot rather than a first job.' },
+      { question: `How should I compare ${NP} pay offers in Boston?`, answer: `Compare offers after housing, because in Boston the rent or mortgage can outweigh a difference in base pay. Academic medical centers frequently pair base pay with benefits, tuition support, and structured advancement, so compare the full package rather than the headline number. A posted-pay median appears on this page only when enough Boston area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does Massachusetts have full practice authority for ${NPS}?`, answer: `By AANP's classification, yes, with a transition. Under Chapter 260 of the Acts of 2020, Massachusetts grants full practice authority to ${NPS} once they attest to the Board of Registration in Nursing that they have completed at least two years of supervised practice; until then, a qualified healthcare professional, such as a physician or an experienced ${NP}, supervises their prescribing. ${NPS} applying by reciprocity with at least two years of ${NP} practice outside Massachusetts, independent or supervised, may prescribe without supervision once they attest to that experience.` },
+      { question: 'How does the two-year supervision period work in practice?', answer: `Teaching hospitals employ physicians and experienced ${NPS} who can supervise prescribing, so ask each employer how it handles supervision for newer hires. Document your supervised practice from your first day, with dates, supervisor, and setting, because the attestation that ends the supervision period is yours to make. Reconstructing the record later is where ${NPS} lose otherwise eligible time.` },
+      { question: `Do ${NPS} really commute from New Hampshire or Worcester?`, answer: `Some do. Southern New Hampshire and the commuter rail corridors toward Worcester and Providence put different housing markets within reach, and state tax treatment can differ across the line, so compare the after-tax numbers carefully. The trade-off is time. If your role has variable start times or on-call obligations, price the commute honestly before you commit.` },
+      { question: `Are there non-bedside ${NP} roles in the Boston market?`, answer: `Yes. The Cambridge and Route 128 biotech, device, and digital health cluster hires clinically trained ${NPS} into medical affairs, clinical operations, safety, and product roles, and Boston's payer and quality-measurement organizations do too. These roles usually want several years of clinical experience first, so they are a mid-career pivot rather than a first job.` },
     ],
   },
   {
@@ -673,34 +771,34 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'colorado',
     citySlug: 'denver-co',
     metroArea: 'Denver Metro (Front Range)',
-    population: '715K (city) / 3M+ (metro)',
+    population: '',
     practiceAuthority: 'Full',
-    avgCostOfLiving: 'above the US average',
-    heroDescription: 'Denver combines full practice authority with a role most metros its size do not have: it is the tertiary referral hub for an enormous, thinly populated stretch of the Mountain West. Patients travel here from across Colorado, Wyoming, and western Nebraska, and that referral gravity keeps specialty and acute-care NP demand well above what a 3-million metro would otherwise generate.',
+    avgCostOfLiving: '',
+    heroDescription: `Denver combines full practice authority with a role as a referral destination for rural Colorado and neighboring states, whose patients travel to the Front Range for specialty care. That referral flow keeps specialty and acute-care ${NP} work in the metro alongside primary care, and Colorado ${NPS} new to prescribing complete a mentorship before earning full prescriptive authority.`,
     whyThisMetro: [
-      'Full practice authority in Colorado, with no collaborative agreement once prescriptive authority is fully granted',
-      'The Anschutz Medical Campus in Aurora puts a university hospital, a children\'s hospital, a VA medical center, and a medical school on one site',
-      'Denver Health is one of the country\'s longest-running integrated safety-net systems, and a serious NP employer',
-      'Referral gravity from a huge rural Mountain West catchment keeps specialty and acute-care volume high',
+      `Colorado ${NPS} practice independently, and those new to prescribing complete a 750-hour prescribing mentorship to earn full prescriptive authority`,
+      `The Anschutz Medical Campus in Aurora puts a university hospital, a children's hospital, a VA medical center, and a medical school on one site`,
+      `Denver Health, the city's integrated safety-net system, hires ${NPS} across hospital and community clinic roles`,
+      `Referral patients from rural Colorado and neighboring states bring specialty and acute-care volume to the Front Range`,
     ],
-    costOfLivingNote: 'Denver costs more than the national average and the gap is almost entirely housing, which repriced sharply as the Front Range absorbed a decade of in-migration. Colorado levies a flat state income tax. The metro is unusually spread out, so where you live changes the math more than in most cities. Aurora, Lakewood, Arvada, and Thornton are meaningfully cheaper than central Denver, and mountain-town roles an hour or two west often carry differentials that partly offset resort-area housing.',
-    licensureNote: 'Colorado grants nurse practitioners full practice authority, with one procedural step worth planning for: prescriptive authority (the RXN) is granted separately by the Colorado Board of Nursing and requires a period of mentored prescribing before it becomes unrestricted. Employers commonly build that mentorship into onboarding. The Nurse Licensure Compact covers RN and LPN licenses only, so whatever it does for your RN license, the APRN license itself is issued state by state and never travels on a multistate RN license.',
-    careDemandContext: 'Two patient populations define the Denver market and they barely overlap. The first is the metro itself: young, active, largely insured, and heavy on orthopedics, sports medicine, and preventive primary care. The second arrives by referral: rural Colorado, Wyoming, and the western plains have few specialists and long drive times, so complex cases route to the Front Range for care that cannot be delivered locally. NPs staffing rural clinics, critical access hospitals, and telehealth links along that corridor are the connective tissue between the two, and many of those sites carry federal shortage designations.',
+    costOfLivingNote: `Denver housing varies widely across a spread-out metro, so where you live changes the math more than the rent alone suggests. Aurora, Lakewood, Arvada, and Thornton price differently from central Denver, and a mountain-town role that carries a differential should be weighed against resort-area housing.`,
+    licensureNote: `Colorado ${NPS} can practice independently and prescribe medications, including controlled substances. ${NPS} new to prescribing first receive provisional prescriptive authority and must complete a 750-hour prescribing mentorship, with a physician or an advanced practice registered nurse who has full prescriptive authority, within three years to earn full prescriptive authority. Ask employers whether they can support that mentorship, and check the Colorado Board of Nursing for current steps. The Nurse Licensure Compact covers RN and LPN licenses only, so the APRN license itself is issued state by state and never travels on a multistate RN license.`,
+    careDemandContext: `Two patient populations shape the Denver market. The first is the metro itself, with steady demand for preventive primary care, orthopedics, and sports medicine. The second arrives by referral: rural Colorado and neighboring states have few specialists and long drive times, so complex cases route to the Front Range. ${NPS} staffing rural clinics, critical access hospitals, and telehealth links along that corridor connect the two, and loan repayment for those roles depends on the exact site.`,
     subMarkets: [
-      { name: 'Anschutz Medical Campus, Aurora', note: 'An unusual concentration: the university hospital, Children\'s Hospital Colorado, the Rocky Mountain Regional VA, and the medical school share one campus. Academic and subspecialty NP roles cluster here more tightly than anywhere else in the state.' },
-      { name: 'Central Denver and Cherry Creek', note: 'Denver Health\'s safety-net campus plus a dense private and specialty outpatient market. Shortest commutes and the most walkable part of the metro.' },
-      { name: 'South metro: Denver Tech Center, Lone Tree, Highlands Ranch', note: 'Commercially insured suburban ambulatory volume along the I-25 corridor, with newer facilities and a family-heavy panel.' },
-      { name: 'Northwest: Boulder, Broomfield, Westminster', note: 'A separate hospital footprint with a strong research and biotech presence in Boulder. Its own housing market and its own commute; not a Denver suburb in practice.' },
-      { name: 'The mountain corridor and rural Front Range', note: 'Summit, Eagle, and the I-70 resort counties plus the eastern plains. Critical access hospitals, rural health clinics, and shortage-area designations. This is where full practice authority genuinely changes what a job looks like.' },
+      { name: 'Anschutz Medical Campus, Aurora', note: `The university hospital, Children's Hospital Colorado, the Rocky Mountain Regional VA, and the medical school share one campus. Academic and subspecialty ${NP} roles cluster tightly here.` },
+      { name: 'Central Denver and Cherry Creek', note: `Denver Health's safety-net campus plus private and specialty outpatient practices around Cherry Creek. Short commutes and a walkable core.` },
+      { name: 'South metro: Denver Tech Center, Lone Tree, Highlands Ranch', note: `Suburban ambulatory practices along the I-25 corridor, with newer facilities and family-heavy panels.` },
+      { name: 'Northwest: Boulder, Broomfield, Westminster', note: `A separate hospital footprint with a research and biotech presence in Boulder. Its own housing market and its own commute; not a Denver suburb in practice.` },
+      { name: 'The mountain corridor and rural Front Range', note: `Summit, Eagle, and the I-70 resort counties plus the eastern plains: critical access hospitals and rural health clinics where full practice authority genuinely changes what a job looks like. Loan repayment depends on each exact site.` },
     ],
     topSettings: ['Academic medical centers', 'Hospital systems', 'Rural and critical access clinics', 'Outpatient clinics', 'Telehealth', 'Community health centers'],
     nearbyCities: ['Aurora', 'Lakewood', 'Arvada', 'Thornton', 'Westminster', 'Centennial'],
     faqs: [
-      { question: 'What is the average NP salary in Denver?', answer: 'Colorado NP pay generally lands above the national midpoint, though below the top-paying coastal states, and Denver housing has climbed faster than pay over the past decade, so the affordability picture is better than Seattle or Boston but worse than it was five years ago. Mountain and rural roles sometimes carry differentials that beat metro base pay. The salary figures on this page come from live Denver-area listings on this board.' },
-      { question: 'Does Colorado have full practice authority for NPs?', answer: 'Yes. Colorado nurse practitioners practice independently without a collaborative agreement. The one thing to plan for is prescriptive authority: the Colorado Board of Nursing grants the RXN separately, and it requires a period of mentored prescribing before it becomes unrestricted. That mentorship is normally arranged through your employer during onboarding.' },
-      { question: 'What is the Anschutz campus and why does it matter for a job search?', answer: 'It is a single medical campus in Aurora that hosts the university hospital, Children\'s Hospital Colorado, the Rocky Mountain Regional VA Medical Center, and the University of Colorado School of Medicine. For an NP that means several large, distinct employers within one commute, so you can change organizations, patient populations, or acuity levels without changing where you drive.' },
-      { question: 'Is rural or mountain practice a realistic option from Denver?', answer: 'Yes, and full practice authority is what makes it work. Critical access hospitals and rural health clinics across the Front Range and the western slope hire NPs to carry primary and urgent care where no physician is on site, and many sites carry federal shortage designations that make loan repayment available. Confirm designation status for the specific site, since eligibility attaches to the location rather than the role.' },
-      { question: 'How does altitude affect clinical practice here?', answer: 'It is a real clinical variable rather than local color. Denver sits around a mile above sea level and the mountain communities considerably higher, which shows up in baseline hematocrit values, oxygen saturation expectations, altitude illness presentations in visitors, and management of cardiopulmonary disease. NPs relocating from sea level generally recalibrate within a few months, and mountain-corridor employers expect to teach it.' },
+      { question: `How should I compare ${NP} pay offers in Denver?`, answer: `Compare after housing and the drive, since the metro is spread out and housing varies sharply by suburb. Mountain and rural roles sometimes carry differentials, so weigh them against resort-area housing rather than against a metro base offer. A posted-pay median appears on this page only when enough Denver area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does Colorado have full practice authority for ${NPS}?`, answer: `By AANP's classification, yes. Colorado ${NPS} can practice independently and prescribe medications, including controlled substances, but those new to prescribing first receive provisional prescriptive authority and must complete a 750-hour prescribing mentorship, with a physician or an advanced practice registered nurse who has full prescriptive authority, within three years to earn full prescriptive authority. Ask employers how they support that mentorship.` },
+      { question: 'What is the Anschutz campus and why does it matter for a job search?', answer: `It is a single medical campus in Aurora that hosts the university hospital, Children's Hospital Colorado, the Rocky Mountain Regional VA Medical Center, and the University of Colorado School of Medicine. That means several large, distinct employers within one commute, so you can change organizations, patient populations, or acuity levels without changing where you drive.` },
+      { question: 'Is rural or mountain practice a realistic option from Denver?', answer: `Yes, and full practice authority is what makes it work. Critical access hospitals and rural health clinics across the Front Range and the Western Slope hire ${NPS} for primary and urgent care, sometimes where no physician is on site. For loan repayment, enter the site's street address in HRSA's Find Shortage Areas by Address tool, look up its county in HRSA's HPSA Find, and confirm with the employer, since eligibility attaches to the location rather than the role.` },
+      { question: 'How does altitude affect clinical practice here?', answer: `It is a real clinical variable rather than local color. Denver's elevation, and the far higher mountain communities, show up in baseline hematocrit values, oxygen saturation expectations, altitude illness in visitors, and the management of cardiopulmonary disease. ${NPS} relocating from sea level should expect to recalibrate, and mountain-corridor employers expect to teach it.` },
     ],
   },
   {
@@ -711,34 +809,34 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'florida',
     citySlug: 'miami-fl',
     metroArea: 'Miami-Dade / South Florida',
-    population: '450K (city) / 6.1M+ (metro)',
+    population: '',
     practiceAuthority: 'Restricted',
-    avgCostOfLiving: 'above the US average',
-    heroDescription: 'Miami is the largest healthcare market in Florida and the least like the rest of it. A majority-Hispanic population where Spanish is the language of the exam room rather than an accommodation, a public hospital system among the largest in the country, and a metro that draws patients from across the Caribbean and Latin America all mean that Miami asks different things of an NP than Tampa or Jacksonville do.',
+    avgCostOfLiving: '',
+    heroDescription: `Miami's ${NP} market works differently from the rest of Florida's. Spanish is often the language of the exam room rather than an accommodation, Jackson Health System runs a public hospital network alongside Baptist Health South Florida and UHealth, and the metro's hospitals see patients from across the Caribbean and Latin America. Florida's supervisory protocol rules apply here too.`,
     whyThisMetro: [
-      'Jackson Health System runs one of the largest public hospital networks in the country, alongside Baptist Health South Florida and the University of Miami Health System',
-      'Bilingual Spanish capability is a working clinical skill here, not a resume bonus, and it is priced accordingly',
-      'No state income tax, which matters more in Miami than elsewhere in Florida because housing costs run high against local wages',
-      'International referral volume from the Caribbean and Latin America adds specialty and transplant demand a metro this size would not otherwise carry',
+      `Jackson Health System, Baptist Health South Florida, and University of Miami Health System hire across the county`,
+      `Bilingual Spanish capability is a working clinical skill here, not a resume bonus`,
+      `Haitian Creole is spoken in parts of the metro, and clinicians who speak it are valued`,
+      `International patients from the Caribbean and Latin America add specialty and transplant work`,
     ],
-    costOfLivingNote: 'Miami is the outlier among Florida metros: living costs run above the national average and housing is expensive relative to what the local economy pays, which is why the affordability gap here is discussed as a structural problem rather than a lifestyle choice. Florida\'s lack of a state income tax helps, and it helps more the higher your salary. Kendall, Doral, Hialeah, and the Broward suburbs to the north are where most healthcare workers actually find something they can carry.',
-    licensureNote: 'Florida is a restricted-practice state: NPs practice under a supervisory protocol with a physician. The 2020 autonomous-practice law lets NPs who meet its eligibility requirements, including at least 3,000 supervised hours in the past five years and graduate-level coursework in differential diagnosis and pharmacology, register for autonomous practice, but only in primary care: family medicine, general pediatrics, and general internal medicine. That limit bites harder in Miami than in most Florida metros, because so much of the local market is transplant, oncology, cardiology, and other specialty work that stays on protocol regardless of experience. Licensure runs through the Florida Board of Nursing.',
-    careDemandContext: 'Miami-Dade is a majority-Hispanic county where a majority of residents speak Spanish at home, and Haitian Creole is widely spoken in parts of the metro, so language is not an accessibility add-on here; it is how care is delivered. Florida has not adopted Medicaid expansion, which leaves safety-net clinics and the public hospital system carrying a heavier uninsured load than counterparts in expansion states. Add a large elderly population, a steady flow of international patients seeking specialty care, and hurricane-season continuity planning, and the metro produces a demand pattern that combines big-city acuity with community-clinic breadth.',
+    costOfLivingNote: `Miami housing is the first thing to price, because it varies sharply by neighborhood and decides what an offer is worth. Kendall, Doral, Hialeah, and the Broward suburbs to the north are common places for healthcare workers to look. Compare offers against the rent where you would actually live.`,
+    licensureNote: `Outside federal facilities, Florida requires ${NPS} in Miami to practice under a supervisory protocol with a physician. The route out, registration for autonomous practice since 2020, is limited to primary care, which includes family medicine, general pediatrics, and general internal medicine, and its requirements include, within the preceding five years, at least 3,000 supervised hours of clinical practice and graduate-level coursework, or the equivalent, in differential diagnosis and pharmacology. Outside federal facilities, specialty roles such as transplant, oncology, and cardiology fall outside that primary care route, so they stay under a supervisory protocol however experienced the ${NP}. Check the Florida Board of Nursing for current licensure steps.`,
+    careDemandContext: `Many Miami-Dade households speak Spanish at home, and Haitian Creole is spoken in parts of the metro, so language is not an accessibility add-on here; it is how care is delivered. Jackson Health System, the county's public hospital system, and federally qualified health centers carry safety-net care, and older adults, international patients seeking specialty care, and hurricane-season continuity planning produce a demand pattern that combines big-city acuity with community-clinic breadth.`,
     subMarkets: [
-      { name: 'Civic Center health district', note: 'Jackson Memorial, the University of Miami\'s clinical campus, the VA medical center, and a children\'s hospital sit within a few blocks northwest of downtown. The highest-acuity NP roles in South Florida are here.' },
-      { name: 'Coral Gables and South Miami', note: 'Baptist Health\'s southern footprint and a dense private specialty market. Older, commercially insured panels and the easiest commutes in the county.' },
-      { name: 'Kendall and West Miami-Dade', note: 'The county\'s large suburban residential belt, with the deepest outpatient, urgent care, and pediatric primary care demand, and the most family-heavy panels.' },
-      { name: 'Hialeah, Doral, and the northwest', note: 'Predominantly Spanish-speaking communities with heavy community-clinic and geriatric primary care volume. Bilingual capability is effectively a requirement rather than a preference in this sub-market.' },
-      { name: 'Broward: Fort Lauderdale, Weston, Hollywood', note: 'A separate county with its own hospital systems and more affordable housing, inside a normal commute north on I-95. Many Miami-Dade NPs live here and work there, or the reverse.' },
+      { name: 'Civic Center health district', note: `Jackson Memorial, the University of Miami's clinical campus, the Miami VA medical center, and Holtz Children's Hospital sit within a few blocks of each other in the Health District, northwest of downtown, with high-acuity ${NP} roles.` },
+      { name: 'Coral Gables and South Miami', note: `Baptist Health's South Miami and Doctors hospitals and a dense private specialty market, with manageable commutes within the county.` },
+      { name: 'Kendall and West Miami-Dade', note: `A suburban residential belt around Baptist Hospital in Kendall, with outpatient, urgent care, and pediatric primary care roles.` },
+      { name: 'Hialeah, Doral, and the northwest', note: `Communities where Spanish is the everyday language of many patients, with community-clinic and geriatric primary care roles. Bilingual capability is a practical necessity in many of these clinics.` },
+      { name: 'Broward: Fort Lauderdale, Weston, Hollywood', note: `A separate county with its own hospital systems, inside a commute north on I-95. Some Miami-Dade ${NPS} live here and work there, or the reverse.` },
     ],
     topSettings: ['Hospital systems', 'Community health centers', 'Outpatient clinics', 'Geriatrics and senior care', 'Private practice', 'Telehealth'],
     nearbyCities: ['Hialeah', 'Coral Gables', 'Doral', 'Aventura', 'Kendall', 'Homestead'],
     faqs: [
-      { question: 'What is the average NP salary in Miami?', answer: 'Florida NP pay tracks near national levels, and Miami does not consistently pay a premium over Tampa or Orlando despite costing more to live in, which is the central financial trade-off of the market. Zero state income tax offsets part of it. Run any offer against actual rent in the sub-market you would live in; the salary figures shown on this page come from live Miami-area listings on this board.' },
-      { question: 'Do I need to speak Spanish to work as an NP in Miami?', answer: 'For most patient-facing roles in Miami-Dade, functionally yes. A majority of county residents speak Spanish at home, and in Hialeah, Doral, and much of west Miami-Dade an English-only visit is the exception. Some hospital and specialty roles operate fine with interpreter support, and Haitian Creole is a significant asset in parts of the metro. Postings often list bilingual capability as preferred, but the day-to-day reality of the panel is what actually decides it.' },
-      { question: 'Can Miami NPs use Florida\'s autonomous practice registration?', answer: 'Only if you practice in primary care. The 2020 law lets NPs who meet its eligibility requirements, including at least 3,000 supervised hours within the past five years and graduate-level coursework in differential diagnosis and pharmacology, register for autonomous practice limited to family medicine, general pediatrics, and general internal medicine. Miami\'s market is unusually specialty-heavy (transplant, oncology, cardiology, critical care), and those roles remain under a supervisory protocol no matter how experienced you are.' },
-      { question: 'Should I search Miami-Dade and Broward together?', answer: 'Search both, decide on one. They are separate counties with separate hospital systems, and I-95 traffic between them is unforgiving at shift-change times. Broward housing is generally more attainable, which is why a large number of Miami-Dade clinicians live there, but a daily reverse commute is a lifestyle decision worth making deliberately rather than discovering after you sign.' },
-      { question: 'What does the uninsured population mean for NP work here?', answer: 'Florida has not adopted Medicaid expansion, so a larger share of patients arrive uninsured than in expansion states, and the public hospital system and federally qualified health centers absorb much of that load. Practically, it means later presentations, more advanced disease at first contact, and more time spent on medication access, charity-care pathways, and social work coordination. NPs who want that kind of work will find plenty of it; NPs who do not should weight the private and specialty sub-markets in their search.' },
+      { question: `How should I compare ${NP} pay offers in Miami?`, answer: `Run every offer against actual rent in the sub-market you would live in, because rent varies sharply across Miami-Dade and decides what an offer is worth. Jackson Health, Baptist Health, and UHealth structure benefits and schedules differently, and a daily I-95 commute changes the comparison. A posted-pay median appears on this page only when enough Miami area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Do ${NPS} need to speak Spanish to work in Miami?`, answer: `For many patient-facing roles in Miami-Dade, functionally yes. In Hialeah, Doral, and other west Miami-Dade communities, many patients prefer to be seen in Spanish. Some hospital and specialty roles operate well with interpreter support, and Haitian Creole is a real asset in parts of the metro. Postings often list bilingual capability as preferred, but the day-to-day reality of the panel is what actually decides it.` },
+      { question: `Can Miami ${NPS} use Florida's autonomous practice registration?`, answer: `Only in primary care. Since 2020, ${NPS} who meet Florida's eligibility requirements can register for autonomous practice limited to primary care, including family medicine, general pediatrics, and general internal medicine; the requirements include, within the preceding five years, at least 3,000 supervised hours of clinical practice and graduate-level coursework, or the equivalent, in differential diagnosis and pharmacology. Outside federal facilities, Miami's transplant, oncology, cardiology, and critical care roles remain under a supervisory protocol no matter how experienced you are.` },
+      { question: 'Should I search Miami-Dade and Broward together?', answer: `Search both, decide on one. They are separate counties with separate hospital systems, and I-95 traffic between them is unforgiving at shift-change times. Living in one county and working in the other is a lifestyle decision worth making deliberately rather than discovering after you sign.` },
+      { question: `What is safety-net work like for ${NPS} in Miami?`, answer: `In the public hospital system and at federally qualified health centers, it can mean patients who arrive without insurance, later presentations, more advanced disease at first contact, and more time spent on medication access, charity-care pathways, and social work coordination. ${NPS} who want that kind of work will find it here; those who do not should weight the private and specialty sub-markets in their search.` },
     ],
   },
   {
@@ -749,34 +847,34 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'tennessee',
     citySlug: 'nashville-tn',
     metroArea: 'Nashville Metro (Middle Tennessee)',
-    population: '690K (city) / 2M+ (metro)',
+    population: '',
     practiceAuthority: 'Restricted',
-    avgCostOfLiving: 'near the US average',
-    heroDescription: 'Nashville is where a large share of American healthcare is run from rather than just delivered. HCA Healthcare is headquartered here, and a dense cluster of hospital companies, physician groups, and health services firms sits in the metro alongside Vanderbilt\'s academic medical center. For NPs, that produces something rare: a full clinical market plus a real corporate market that hires clinical experience directly.',
+    avgCostOfLiving: '',
+    heroDescription: `Nashville is home to HCA Healthcare's headquarters and a cluster of hospital companies, physician groups, and health services firms, alongside Vanderbilt University Medical Center's academic enterprise. For ${NPS}, that produces a full clinical market plus a corporate market that hires clinical experience directly, and Tennessee requires physician supervision for ${NPS}.`,
     whyThisMetro: [
-      'The corporate center of American healthcare: HCA Healthcare is headquartered here, with a large cluster of health services companies around it',
-      'Vanderbilt University Medical Center anchors academic and subspecialty practice for the whole of Middle Tennessee',
-      'No state income tax on wages, paired with living costs near the national average',
-      'Rural hospital closures across Tennessee push referral volume toward Nashville, sustaining demand well beyond the metro\'s own population',
+      `HCA Healthcare is headquartered here, with a cluster of health services companies around it`,
+      `Vanderbilt University Medical Center hires for academic and subspecialty practice in Midtown`,
+      `Clinical operations, quality, and informatics roles for experienced ${NPS} in the health services cluster`,
+      `Rural hospital closures across Tennessee push some patients toward Nashville for care that used to be local`,
     ],
-    costOfLivingNote: 'Nashville sits near the national average overall, with housing the piece that has moved most as the metro absorbed a decade of in-migration; the city is no longer the bargain it was, though it remains far cheaper than the coastal metros people move here from. Tennessee levies no state income tax on wages, which is a straightforward advantage over neighboring states. Williamson County to the south is the expensive end of the metro; Rutherford and Sumner counties are where most of the affordable inventory sits.',
-    licensureNote: 'Tennessee is a restricted-practice state. Nurse practitioners are licensed as advanced practice registered nurses and prescribe under a certificate of fitness issued by the Tennessee Board of Nursing, working under a written protocol with a collaborating physician who is available for consultation and periodically reviews charts. Employers routinely arrange the protocol. The Nurse Licensure Compact covers RN and LPN licenses only and never carries an APRN license, so Tennessee issues yours separately, as every state does.',
-    careDemandContext: 'Middle Tennessee\'s NP demand comes from two directions at once. Inside the metro, sustained in-migration keeps primary care, urgent care, and outpatient specialty panels growing faster than provider supply. Outside it, Tennessee has seen among the highest numbers of rural hospital closures in the country, which means patients from across the region drive to Nashville for care that used to be available locally, raising acuity at the metro\'s doors while leaving rural clinics and critical access sites competing hard for NPs to hold the line closer to home.',
+    costOfLivingNote: `Nashville housing varies sharply between Williamson County to the south and Rutherford, Sumner, and Wilson counties, so where you live changes an offer's real value. Compare offers against the rent or mortgage where you would actually live, plus the drive at shift change.`,
+    licensureNote: `Tennessee requires physician supervision for ${NPS}, and AANP classifies Tennessee as a restricted practice state. Ask each employer who your supervising physician will be and how the arrangement is updated if you change jobs, and check the Tennessee Board of Nursing for current requirements, including those for prescribing. The Nurse Licensure Compact covers RN and LPN licenses only and never carries an APRN license, so Tennessee issues yours separately, as every state does.`,
+    careDemandContext: `Middle Tennessee's ${NP} demand comes from two directions at once. Inside the metro, primary care, urgent care, and outpatient specialty panels serve long-time residents and newcomers alike. Outside it, rural hospital closures in the region mean some patients drive to Nashville for care that used to be local, while rural clinics and critical access sites recruit ${NPS} to keep care closer to home.`,
     subMarkets: [
-      { name: 'Midtown and the Vanderbilt medical district', note: 'The academic center of the region: adult, children\'s, and subspecialty hospitals plus the research enterprise around them. Deepest specialty NP demand in Middle Tennessee.' },
-      { name: 'Downtown and North Nashville', note: 'Nashville General and Meharry Medical College anchor the city\'s safety-net and health-equity work, with the neighborhood clinics around them serving the metro\'s highest-need populations.' },
-      { name: 'Cool Springs and Williamson County', note: 'Affluent suburban outpatient medicine sitting alongside a corridor of healthcare-company offices. The single best place in the metro to find hybrid clinical and corporate roles.' },
-      { name: 'Murfreesboro and Rutherford County', note: 'One of the fastest-growing counties in the state, with a university population and expanding hospital and ambulatory capacity. More affordable housing, a real commute to Nashville.' },
-      { name: 'The northern ring and rural Middle Tennessee', note: 'Sumner, Wilson, and the rural counties beyond, where clinic and critical access roles carry broad scope and, frequently, shortage-area designations.' },
+      { name: 'Midtown and the Vanderbilt medical district', note: `Vanderbilt's academic campus, with adult, children's, and subspecialty hospitals plus the research enterprise around them, and a dense cluster of specialty ${NP} roles.` },
+      { name: 'Downtown and North Nashville', note: `Nashville General Hospital, on the Meharry Medical College campus, is part of the city's safety-net and health-equity work, and the neighborhood clinics around it serve high-need populations.` },
+      { name: 'Cool Springs and Williamson County', note: `Suburban outpatient medicine alongside healthcare-company offices in Franklin and Brentwood. A good place to look for hybrid clinical and corporate roles.` },
+      { name: 'Murfreesboro and Rutherford County', note: `A university town and suburban county with its own hospital and ambulatory capacity, and a real commute to Nashville.` },
+      { name: 'The northern and eastern ring and rural Middle Tennessee', note: `Sumner County to the north, Wilson County to the east, and the rural counties beyond, where clinic and critical access roles carry broad scope and loan repayment depends on each site.` },
     ],
     topSettings: ['Academic medical centers', 'Hospital systems', 'Outpatient clinics', 'Corporate and clinical operations', 'Rural and critical access clinics', 'Urgent care'],
     nearbyCities: ['Franklin', 'Murfreesboro', 'Brentwood', 'Hendersonville', 'Smyrna'],
     faqs: [
-      { question: 'What is the average NP salary in Nashville?', answer: 'Tennessee NP pay generally tracks near national levels, and with no state income tax on wages and living costs close to the national average, take-home pay compares well against most Southeastern metros. Corporate and hybrid roles in the health services cluster sometimes price differently from bedside positions. The dollar figures shown on this page are aggregated from live Nashville-area listings on this board.' },
-      { question: 'Does Tennessee have full practice authority for NPs?', answer: 'No. Tennessee is a restricted-practice state. APRNs prescribe under a certificate of fitness from the Board of Nursing and practice under a written protocol with a collaborating physician who must be available for consultation and who periodically reviews charts. Most employers arrange the protocol during onboarding, and legislation to loosen the requirement has been introduced in recent sessions without passing.' },
-      { question: 'What are the non-clinical NP roles Nashville is known for?', answer: 'Because so many hospital companies, physician-group management firms, and health services businesses are headquartered in the metro, there is a steady market for NPs in clinical operations, utilization and quality review, informatics, and clinical program design. These roles almost always want several years of direct patient care first (they are a mid-career option, not an entry point), but they are far more available here than in a comparable metro without the corporate base.' },
-      { question: 'Is Nashville still affordable for a new-grad NP?', answer: 'Near the national average overall, yes, but noticeably less so than it was, and where you live decides it. Williamson County to the south is the expensive end of the metro. Rutherford, Sumner, and Wilson counties still have attainable housing within a commute. With no state income tax on wages, a Nashville offer usually beats an equivalent number in a neighboring state on take-home pay.' },
-      { question: 'How do rural hospital closures affect the Nashville job market?', answer: 'Two ways. They raise volume and acuity at metro facilities, because patients who once had a local hospital now arrive later and sicker after a long drive. And they make rural clinics, critical access hospitals, and telehealth programs across Middle Tennessee aggressive recruiters of NPs, often with broad scope, shortage-area designations, and loan-repayment eligibility attached to the site.' },
+      { question: `How should I compare ${NP} pay offers in Nashville?`, answer: `Separate the clinical and corporate tracks first, because hybrid and operations roles in the health services cluster are structured differently from bedside positions. Then compare the full package against housing where you would live, since Williamson County and the counties north and east of the city price very differently. A posted-pay median appears on this page only when enough Nashville area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does Tennessee have full practice authority for ${NPS}?`, answer: `No. AANP classifies Tennessee as a restricted practice state, and Tennessee requires physician supervision for ${NPS}. Expect Nashville employers to describe a supervising physician arrangement, and plan for it to be updated when you change employers. The Tennessee Board of Nursing publishes the current requirements, so check there rather than relying on news of pending legislation.` },
+      { question: `What are the non-clinical ${NP} roles Nashville is known for?`, answer: `Because many hospital companies, physician-group management firms, and health services businesses are headquartered in the metro, there is a steady market for ${NPS} in clinical operations, utilization and quality review, informatics, and clinical program design. These roles usually want several years of direct patient care first, so they are a mid-career option rather than an entry point.` },
+      { question: `How should a new-grad ${NP} choose where to live in Nashville?`, answer: `Pick a place where both the commute and the rent work for a first job. Rutherford, Sumner, and Wilson counties and Williamson County to the south put different housing markets within a drive of the city's hospitals. Test the drive to the campus you would work at during shift change before you sign a lease.` },
+      { question: 'How do rural hospital closures affect the Nashville job market?', answer: `Two ways. They send some patients who once had a local hospital to metro facilities after a long drive. And they make rural clinics, critical access hospitals, and telehealth programs across Middle Tennessee active recruiters of ${NPS}, often with broad scope. Whether one of those roles qualifies for loan repayment depends on the designation of its exact practice site, so enter the clinic's street address in HRSA's Find Shortage Areas by Address tool, look up its county in HRSA's HPSA Find, and confirm with the employer before you count on it.` },
     ],
   },
   {
@@ -787,33 +885,33 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'district-of-columbia',
     citySlug: 'washington-dc',
     metroArea: 'Washington-Arlington-Alexandria (the DMV)',
-    population: '680K (district) / 6.3M+ (metro)',
+    population: '',
     practiceAuthority: 'Full',
-    avgCostOfLiving: 'well above the US average',
-    heroDescription: 'Washington is the only major NP market in the country split across three separate licensing jurisdictions with three different sets of practice rules, and layered on top of that is a federal health system where none of those state rules apply at all. The District itself grants full practice authority. Understanding the seams is most of what makes a DMV job search work.',
+    avgCostOfLiving: '',
+    heroDescription: `The Washington metro splits ${NP} practice across three licensing jurisdictions with different practice rules, and a federal health sector adds a layer of its own. The District of Columbia and Maryland grant full practice authority, while Virginia requires a practice agreement with a patient care team physician unless an ${NP} holds the license designation to practice without one, so understanding the seams between them is part of any DMV job search.`,
     whyThisMetro: [
-      'The District grants full practice authority: independent practice and prescribing without a collaborative agreement',
-      'A federal health sector unlike anywhere else: VA facilities, the NIH Clinical Center, and military treatment facilities all hire clinically and follow federal rather than state scope rules',
-      'Three jurisdictions in one commute (DC, Maryland, and Virginia) with three different practice-authority regimes and three separate licenses',
-      'Severe intra-city access gaps east of the Anacostia sit a few miles from some of the best-resourced hospitals in the country',
+      `The District of Columbia grants full practice authority to ${NPS}, and Maryland does too`,
+      `A federal health sector of VA facilities, the NIH Clinical Center, and military treatment facilities, each with its own federal credentialing`,
+      `Three jurisdictions in one commute (DC, Maryland, and Virginia) with different practice rules and three separate licenses`,
+      `Community health centers east of the Anacostia River serve neighborhoods with real access gaps, a few miles from the city's major hospitals`,
     ],
-    costOfLivingNote: 'The DMV is expensive and housing is the reason, though the metro offers something most costly regions do not: genuine transit, so a car-free household is realistic and the savings are real. One local tax structure is worth knowing before you choose a neighborhood: the District cannot tax the income of non-residents, so an NP who works in DC but lives in Virginia or Maryland pays income tax only to their home state. That single rule shapes where a large share of the region\'s workforce lives.',
-    licensureNote: 'The District of Columbia grants nurse practitioners full practice authority through the DC Board of Nursing: no collaborative agreement or physician supervision is required. The complication is regional rather than local: Maryland also grants full practice authority, while Virginia requires a practice agreement with a patient care team physician unless an NP holds the license designation to practice without one, so crossing the Potomac can change your scope as well as your license. DC does not issue or recognize multistate nursing licenses, and in any case the compact never covers APRN licenses, so each of the three jurisdictions licenses APRNs separately.',
-    careDemandContext: 'Washington contains two health realities within a few miles of each other. Northwest DC and the suburbs hold internationally known hospitals, a children\'s hospital that draws national referrals, and a well-insured, highly educated patient population. Wards 7 and 8 east of the Anacostia River carry federally designated shortage areas, longer travel times to care, and markedly worse outcomes on nearly every measure; that is where the District\'s community health centers, mobile programs, and hospital outreach clinics concentrate their NP hiring. The federal layer sits across both: veterans, active-duty families, and research participants are all significant patient populations here in a way they are in almost no other metro.',
+    costOfLivingNote: `Housing is the budget line that decides a DMV offer, and the region's rail network makes a car-free household realistic in many neighborhoods, which changes the math. Income tax works differently across the District, Maryland, and Virginia, and where you live can matter as much as where you work, so compare residency options with a tax adviser before you sign a lease.`,
+    licensureNote: `The District of Columbia grants full practice authority to ${NPS}, with licensure through the District of Columbia Board of Nursing. The complication is regional: Maryland also grants full practice authority, though an applicant who has never been certified as an ${NP} by any board of nursing must name a Maryland mentor available for consultation and collaboration for 18 months, while Virginia ${NPS} must maintain a practice agreement with a patient care team physician unless they hold a license designation to practice without one. The District does not issue or recognize multistate nursing licenses, and the compact never covers APRN licenses in any case, so each of the three jurisdictions licenses APRNs separately.`,
+    careDemandContext: `Washington contains two health realities within a few miles of each other. Northwest DC and the suburbs hold nationally known hospitals, including a children's hospital that receives referrals from well beyond the region. Wards 7 and 8 east of the Anacostia River have long-standing gaps in access to care, and the District's community health centers, mobile programs, and hospital outreach clinics hire ${NPS} there. The federal layer sits across both: VA facilities, military treatment facilities, and the NIH Clinical Center serve veterans, active-duty families, and research participants.`,
     subMarkets: [
-      { name: 'Northwest hospital corridor', note: 'The Irving Street complex, Children\'s National, MedStar Georgetown, and Sibley are clustered in upper Northwest. The highest concentration of hospital and specialty NP roles in the District.' },
-      { name: 'Foggy Bottom and downtown', note: 'The George Washington University campus plus a dense downtown outpatient and occupational health market serving the region\'s office workforce. The most transit-accessible sub-market in the metro.' },
-      { name: 'Wards 7 and 8, east of the Anacostia', note: 'Federally designated shortage areas within the city limits. Community health centers, school-based programs, and hospital outreach clinics hire NPs here, and this is where loan-repayment eligibility most often applies.' },
-      { name: 'Suburban Maryland: Bethesda, Silver Spring, Prince George\'s County', note: 'The federal research and military medicine cluster sits in Bethesda, alongside large suburban hospital systems. Maryland grants full practice authority, but it is a separate license from the District\'s.' },
-      { name: 'Northern Virginia: Arlington, Alexandria, Fairfax', note: 'A large, growing, commercially insured hospital and ambulatory market, and a different regulatory world. Virginia NPs must maintain a practice agreement with a patient care team physician until they obtain a license designation to practice without one, which requires the equivalent of at least three years of full-time clinical experience, so the same clinician can have different autonomy on each side of the river.' },
+      { name: 'Northwest DC hospitals', note: `The Irving Street complex (MedStar Washington Hospital Center, Children's National, and the DC VA Medical Center), MedStar Georgetown in Georgetown, and Sibley Memorial in far Northwest, with many hospital and specialty ${NP} roles.` },
+      { name: 'Foggy Bottom and downtown', note: `George Washington University Hospital plus downtown outpatient and occupational health practices serving the region's office workforce, with strong transit access.` },
+      { name: 'Wards 7 and 8, east of the Anacostia', note: `Community health centers, school-based programs, and hospital outreach clinics hire ${NPS} here. Loan repayment eligibility attaches to each specific site, so check the address before you count on it.` },
+      { name: 'Suburban Maryland: Bethesda, Silver Spring, Prince George\'s County', note: `A federal research and military medicine cluster sits in Bethesda, with the NIH Clinical Center and Walter Reed National Military Medical Center, alongside suburban hospital systems. Maryland grants full practice authority, but it is a separate license from the District's.` },
+      { name: 'Northern Virginia: Arlington, Alexandria, Fairfax', note: `A large hospital and ambulatory market around Inova and VHC Health, and a different regulatory world. Virginia ${NPS} must maintain a practice agreement with a patient care team physician until they obtain a license designation to practice without one, which is open to ${NPS} with the equivalent of at least three years of full-time clinical experience, so the same clinician can have different autonomy on each side of the river.` },
     ],
     topSettings: ['Hospital systems', 'Federal and VA facilities', 'Community health centers', 'Outpatient clinics', 'Pediatrics', 'Research and clinical trials'],
     faqs: [
-      { question: 'What is the average NP salary in Washington, DC?', answer: 'The District is among the better-paying jurisdictions for nurse practitioners, and federal positions add locality pay on top of a published national pay structure, which makes them unusually transparent to compare against private offers. Housing absorbs much of the premium. The figures shown on this page come from live DC-area listings on this board rather than a national survey, and it is worth comparing them against the specific sub-market you would live in.' },
-      { question: 'Do I need more than one license to work in the DC area?', answer: 'You need one license per jurisdiction you practice in. DC, Maryland, and Virginia each issue their own APRN license, and the Nurse Licensure Compact, which covers RN and LPN licenses only and never APRN licenses, does not change that. NPs working across the region commonly hold two or three. Budget for the applications, the fees, and the separate renewal cycles.' },
-      { question: 'Does practice authority change when I cross into Virginia or Maryland?', answer: 'It can, and this is the single most consequential fact about the DMV market. The District and Maryland both grant nurse practitioners full practice authority. Virginia requires a practice agreement with a patient care team physician, and a nurse practitioner with the equivalent of at least three years of full-time clinical experience can apply for a license designation to practice without one. A role in Arlington and a role in the District can carry the same title and the same pay while giving you materially different autonomy.' },
-      { question: 'How do federal NP jobs differ from hospital jobs here?', answer: 'Substantially. Nurse practitioners employed by the Department of Veterans Affairs practice under VA\'s own national standards of practice, which grant full practice authority to nurse practitioners, clinical nurse specialists, and certified nurse-midwives at VA facilities regardless of the state law where the facility sits. Federal positions also come with published pay scales, federal benefits, and a longer, more paperwork-heavy hiring process than a private system. Note that certified registered nurse anesthetists were not included in that VA full-practice provision.' },
-      { question: 'Where are the underserved-area NP jobs in DC?', answer: 'Primarily east of the Anacostia River, in Wards 7 and 8, plus parts of Ward 5. Those areas carry federal Health Professional Shortage Area designations, and the community health centers, school-based health programs, and hospital outreach clinics operating there are the most likely employers to be at a designated site. Confirm designation with the employer for the specific location, because eligibility attaches to the site, not to the organization as a whole.' },
+      { question: `How should I compare ${NP} pay offers in Washington, DC?`, answer: `Compare after housing and residency. Federal positions come with published pay scales, which makes them easy to compare against private offers, and the District, Maryland, and Virginia each treat income and practice differently. A posted-pay median appears on this page only when enough DC area listings from enough employers post annual pay, and it is worth comparing against the sub-market you would live in; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: 'Do I need more than one license to work in the DC area?', answer: `Outside federal employment, you need one license per jurisdiction you practice in; VA and military facilities accept a current license from any state. DC, Maryland, and Virginia each issue their own APRN license, and the Nurse Licensure Compact, which covers RN and LPN licenses only and never APRN licenses, does not change that. An ${NP} working across the region may need two or all three. Budget for the applications, the fees, and the separate renewal cycles.` },
+      { question: 'Does practice authority change when I cross into Virginia or Maryland?', answer: `It can, and this is a central fact about the DMV market. The District and Maryland both grant full practice authority to ${NPS}, though Maryland requires applicants who have never been certified as ${NPS} by any board of nursing to name a mentor for 18 months. Virginia requires a practice agreement with a patient care team physician, and an ${NP} with the equivalent of at least three years of full-time clinical experience can apply for a license designation to practice without one. A role in Arlington and a role in the District can carry the same title and pay while giving you different autonomy.` },
+      { question: `How do federal ${NP} jobs differ from hospital jobs here?`, answer: `Substantially. A federal regulation lets VA grant full practice authority to certified nurse practitioners, clinical nurse specialists, and certified nurse-midwives who meet its requirements while they work within the scope of their VA employment, and it overrides conflicting state law there, though controlled substance prescribing still follows the Controlled Substances Act and the practitioner's state license. Military treatment facilities and the NIH Clinical Center credential and privilege clinicians through their own federal processes. Federal positions also come with published pay scales, federal benefits, and a longer, more paperwork-heavy hiring process than a private system.` },
+      { question: `Where are the underserved-area ${NP} jobs in DC?`, answer: `Community health centers, school-based health programs, and hospital outreach clinics east of the Anacostia River, in Wards 7 and 8, are places to start. Whether a particular role qualifies for federal loan repayment depends on the designation of its exact practice site, not on the neighborhood or the organization, and designations change over time. Enter the clinic's street address in HRSA's Find Shortage Areas by Address tool on data.hrsa.gov, look up the District in HRSA's HPSA Find, which also covers facility shortage areas, then confirm the site's eligibility with the employer in writing before you count on it.` },
     ],
   },
   {
@@ -824,34 +922,34 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'north-carolina',
     citySlug: 'charlotte-nc',
     metroArea: 'Charlotte Metro (Carolinas)',
-    population: '900K (city) / 2.7M+ (metro)',
+    population: '',
     practiceAuthority: 'Restricted',
-    avgCostOfLiving: 'near the US average',
-    heroDescription: 'Charlotte is a two-system market inside a two-state metro. Atrium Health and Novant Health between them define where most NP jobs are, while the metro\'s southern edge crosses into South Carolina, so a fifteen-minute drive can mean a different license, a different board, and a different set of practice rules. North Carolina\'s recent Medicaid expansion has added a further layer of primary care demand on top.',
+    avgCostOfLiving: '',
+    heroDescription: `Charlotte is a two-state metro. Atrium Health and Novant Health run large hospital networks across it, while the metro's southern edge crosses into South Carolina, so a short drive can mean a different license, a different board, and a different set of rules. North Carolina requires ${NPS} to practice under physician supervision, and South Carolina requires a practice agreement with a physician.`,
     whyThisMetro: [
-      'Two large systems, Atrium Health and Novant Health, dominate hiring, which makes the employer landscape unusually legible',
-      'North Carolina adopted Medicaid expansion in December 2023, adding newly covered adults to an already growing primary care demand',
-      'Living costs near the national average with a metro that has grown on the back of the banking sector rather than a single hospital anchor',
-      'Nurse practitioner approval to practice runs through both the Board of Nursing and the Medical Board, an unusual dual-board structure worth understanding early',
+      `Atrium Health and Novant Health run large hospital networks across the metro, which keeps the employer landscape easy to read`,
+      `A two-state commute: York and Lancaster counties in South Carolina sit inside the Charlotte commute`,
+      `Federally qualified health centers and safety-net clinics hire for primary care, chronic disease, and behavioral care`,
+      `Banking and corporate employers bring workers and their families to suburban outpatient practices`,
     ],
-    costOfLivingNote: 'Charlotte sits close to the national average, which for a metro growing this fast is the headline: pay has stayed roughly competitive with costs rather than falling behind, as happened in Denver or Nashville. Housing has climbed in the inner ring and in south Charlotte, while Gastonia, Concord, and the South Carolina border towns remain attainable. North Carolina levies a flat individual income tax that has been stepping down under a multi-year schedule set by the legislature, so confirm the current rate rather than relying on an older figure.',
-    licensureNote: 'North Carolina is a restricted-practice state with an unusual approval structure: nurse practitioners are approved to practice jointly by the North Carolina Board of Nursing and the North Carolina Medical Board, and practice under a collaborative practice agreement with a supervising physician. The agreement includes scheduled quality-assurance meetings, more frequent during the first months of a new collaboration. Employers arrange the agreement as part of credentialing. Legislation to remove the supervision requirement has been introduced in recent sessions without passing.',
-    careDemandContext: 'Charlotte grew as a banking city rather than a medical one, which shaped its patient mix: a large, comparatively young, commercially insured workforce concentrated in the metro core and the southern suburbs. North Carolina\'s adoption of Medicaid expansion changed the other half of the picture, moving a substantial number of previously uninsured adults into coverage and pushing primary care, chronic disease, and behavioral care volume up in exactly the clinics that were already stretched. Outside the metro, the foothills and western counties refer inward for anything the local hospital cannot handle, and several of those counties carry shortage designations.',
+    costOfLivingNote: `Charlotte housing varies between the inner neighborhoods, south Charlotte, and outer towns like Gastonia, Concord, and the South Carolina border communities, so where you live changes an offer's real value. Compare offers against the rent where you would live and the drive at shift change, and check how North Carolina and South Carolina would each tax your income before choosing a side of the line.`,
+    licensureNote: `North Carolina requires ${NPS} to practice under physician supervision, and AANP classifies North Carolina as a restricted practice state. Ask each employer who your supervising physician will be and what happens to the arrangement if you change jobs, and check the North Carolina Board of Nursing for current approval and filing steps before you accept a start date. Across the state line, South Carolina ${NPS} must perform medical acts under a practice agreement with a physician who must be readily available for consultation.`,
+    careDemandContext: `Banking is a major Charlotte employer, and bank and corporate campuses bring workers and their families into the metro core and the southern suburbs. Safety-net clinics and federally qualified health centers carry the other side of the picture, with primary care, chronic disease, and behavioral care volume. Outside the metro, the foothills and western counties refer inward for care their local hospitals cannot provide.`,
     subMarkets: [
-      { name: 'Center City and Midtown', note: 'Atrium\'s flagship campus and the children\'s hospital next to it hold the metro\'s highest-acuity inpatient and specialty NP roles, within reach of the downtown core.' },
-      { name: 'University City and Cabarrus County', note: 'The northeast corridor toward Concord, with a hospital campus, a university population, and a steady flow of new ambulatory capacity following residential growth.' },
-      { name: 'South Charlotte and Ballantyne', note: 'The metro\'s most commercially insured suburban ambulatory market. Specialty offices, pediatrics, and primary care with the shortest patient-access waits in the region.' },
-      { name: 'Gaston and Lincoln counties, west', note: 'Gastonia and the western ring: more affordable housing, community hospital and clinic roles, and the transition point toward the rural foothills.' },
-      { name: 'York and Lancaster counties, South Carolina', note: 'Rock Hill and Fort Mill are inside the Charlotte commute but across a state line. South Carolina is also a restricted-practice state and issues its own APRN license. The drive is short; the paperwork is not.' },
+      { name: 'Center City and Midtown', note: `Atrium Health Carolinas Medical Center and Levine Children's Hospital sit just south of uptown, with high-acuity inpatient and specialty ${NP} roles, and Novant Health Presbyterian Medical Center is nearby.` },
+      { name: 'University City and Cabarrus County', note: `The northeast corridor toward Concord, with a hospital campus, a university population, and ambulatory clinics serving the residential areas around them.` },
+      { name: 'South Charlotte and Ballantyne', note: `A suburban ambulatory market of specialty offices, pediatrics, and primary care, with Atrium Health Pineville and Novant Health Ballantyne Medical Center nearby.` },
+      { name: 'Gaston and Lincoln counties, west', note: `Gastonia and the western ring, with CaroMont Regional Medical Center, community clinic roles, and the transition toward the rural foothills.` },
+      { name: 'York and Lancaster counties, South Carolina', note: `Rock Hill and Fort Mill are inside the Charlotte commute but across a state line. South Carolina issues its own APRN license, and its ${NPS} must perform medical acts under a practice agreement with a physician. The drive is short; the paperwork is not.` },
     ],
     topSettings: ['Hospital systems', 'Outpatient clinics', 'Pediatrics', 'Community health centers', 'Urgent care', 'Private practice'],
     nearbyCities: ['Concord', 'Huntersville', 'Matthews', 'Gastonia', 'Mooresville', 'Monroe'],
     faqs: [
-      { question: 'What is the average NP salary in Charlotte?', answer: 'North Carolina NP pay generally tracks near national levels, and Charlotte\'s roughly average cost of living means the purchasing power holds up better than in faster-appreciating Sun Belt metros. Because two systems account for so much of the market, pay bands are comparatively consistent across employers. The dollar figures on this page are aggregated from live Charlotte-area listings on this board.' },
-      { question: 'Does North Carolina have full practice authority for NPs?', answer: 'No. North Carolina is a restricted-practice state. Nurse practitioners work under a collaborative practice agreement with a supervising physician and are approved to practice jointly by the Board of Nursing and the Medical Board, a dual-board structure that most states do not use. Legislation to remove the supervision requirement has been introduced repeatedly in recent sessions without becoming law.' },
-      { question: 'Why does North Carolina involve the Medical Board in NP approval?', answer: 'It is a legacy of how the state structured advanced practice regulation: approval to practice as a nurse practitioner is issued jointly by the Board of Nursing and the Medical Board, rather than by the nursing board alone. Practically, it means your approval and your collaborative practice agreement are tied together, and a change in supervising physician is a filing rather than an internal HR matter. Employers handle it, but do not assume it is instant when you switch jobs.' },
-      { question: 'Should I look at South Carolina jobs from Charlotte?', answer: 'They are inside the commute (Rock Hill and Fort Mill are closer to uptown Charlotte than some North Carolina suburbs), but they require a South Carolina APRN license, and South Carolina is also a restricted-practice state with its own rules. Worth doing if the role or the housing is right; not worth doing casually, because you will carry two licenses and two renewal cycles.' },
-      { question: 'How has Medicaid expansion changed NP hiring in the Charlotte area?', answer: 'North Carolina adopted expansion in December 2023, moving a significant number of previously uninsured adults into coverage. The visible effect for clinicians has been increased demand in primary care, behavioral care, and chronic disease management, with patients who had deferred care arriving with a payer source. Federally qualified health centers and safety-net clinics felt it first, and hiring in those settings has been correspondingly active.' },
+      { question: `How should I compare ${NP} pay offers in Charlotte?`, answer: `Compare the full package and the side of the state line you would live on. Atrium Health and Novant Health each structure benefits, schedules, and advancement their own way, and suburban practices differ again. A posted-pay median appears on this page only when enough Charlotte area listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does North Carolina have full practice authority for ${NPS}?`, answer: `No. AANP classifies North Carolina as a restricted practice state, and North Carolina requires ${NPS} to practice under physician supervision. Expect Charlotte employers to describe the supervising arrangement, and plan for it to be updated when you change employers. Check the North Carolina Board of Nursing for the rules in force rather than relying on news of pending legislation.` },
+      { question: 'What should I ask a Charlotte employer about supervision?', answer: `Ask who your supervising physician will be, how often you will meet, how chart review works, and what happens to the arrangement if that physician leaves. In a restricted practice state those answers shape your day-to-day autonomy as much as the job title does, and a change in supervising physician can mean new paperwork rather than an internal HR matter, so do not assume it is instant when you switch jobs.` },
+      { question: 'Should I look at South Carolina jobs from Charlotte?', answer: `They are inside the commute, but they require a South Carolina APRN license, and South Carolina ${NPS} must perform medical acts under a practice agreement with a physician who is readily available for consultation. Worth doing if the role or the housing is right; not worth doing casually, because you will carry two licenses and two renewal cycles.` },
+      { question: 'What should I know about safety-net hiring in the Charlotte area?', answer: `Federally qualified health centers and safety-net clinics hire for primary care, behavioral care, and chronic disease management, and changes in public coverage can shift their patient and payer mix. Ask any safety-net employer how its patient mix and payer mix have shifted recently, how panel sizes are set, and what support staff you would have, because those answers decide the pace of the job more than the posting does.` },
     ],
   },
   {
@@ -862,25 +960,25 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'minnesota',
     citySlug: 'minneapolis-mn',
     metroArea: 'Twin Cities (Minneapolis-Saint Paul)',
-    population: '430K (city) / 3.7M+ (metro)',
+    population: '',
     practiceAuthority: 'Full',
-    avgCostOfLiving: 'slightly above the US average',
-    heroDescription: 'The Twin Cities run on large nonprofit health systems, several of which are integrated with their own insurance arms, a structure that shapes how care is organized and how NPs are deployed. Minnesota grants full practice authority after a postgraduate transition, has one of the lowest uninsured rates in the country, and pairs it all with housing costs that stay within reach of a clinician salary.',
+    avgCostOfLiving: '',
+    heroDescription: `Large nonprofit health systems hire across the Twin Cities, including one that operates as both an insurer and a care provider, a structure that shapes how care is organized and how ${NPS} are deployed. Minnesota ${NPS} practice independently after completing at least 2,080 hours under a collaborative agreement, and the metro pairs that with the University of Minnesota's academic enterprise and a broad community clinic network.`,
     whyThisMetro: [
-      'Full practice authority in Minnesota once a postgraduate collaborative period is complete, with no career-long agreement',
-      'Large integrated nonprofit systems, including one that operates as both an insurer and a care provider, plus the University of Minnesota\'s academic enterprise',
-      'One of the lowest uninsured rates in the country, so patients arrive covered and attached to a primary care home',
-      'Housing costs that have stayed reasonable relative to clinician pay, which is unusual among metros with this much medical infrastructure',
+      `Independent practice in Minnesota after at least 2,080 hours under a collaborative agreement with a physician or an experienced advanced practice registered nurse`,
+      `Large integrated nonprofit systems, including one that operates as both an insurer and a care provider, plus the University of Minnesota's academic enterprise`,
+      `Care organized around teams, defined panels, and population health measures`,
+      `Community clinics serving East African and Southeast Asian immigrant communities recruit for language and cultural fluency`,
     ],
-    costOfLivingNote: 'The Twin Cities sit slightly above the national average overall while housing remains notably attainable for a metro of this size and medical density, which is the core of the region\'s value proposition for clinicians. The offset is tax: Minnesota runs a progressive income tax among the higher-rate systems in the Midwest, so compare take-home rather than gross when weighing an offer against a neighboring state. Western Wisconsin, a short drive across the St. Croix, is where some households go looking for a different tax and housing mix.',
-    licensureNote: 'Minnesota grants nurse practitioners full practice authority after completing a postgraduate collaborative practice period of 2,080 hours (roughly one year of full-time work) with a physician or an experienced APRN. After that, no collaborative agreement is required. Licensure runs through the Minnesota Board of Nursing. Minnesota does not issue or recognize multistate nursing licenses, so a multistate RN license issued elsewhere does not cover practice here, and the APRN license is separate and state-specific regardless.',
-    careDemandContext: 'Minnesota consistently reports one of the lowest uninsured rates in the country, and much of the metro\'s care is delivered through large integrated nonprofit systems, one of which operates as both a health plan and a care provider. For an NP, that means practice tends to be more structured around population health metrics, care teams, and defined patient panels than in fee-for-service markets. Demand concentrates in primary care, geriatrics for an aging outstate population that refers inward, and community clinics serving the region\'s large East African and Southeast Asian immigrant communities, where language and cultural fluency are actively recruited for.',
+    costOfLivingNote: `Twin Cities housing varies between the two downtowns, the inner-ring suburbs, and the outer suburbs, so where you live changes the value of an offer. Minnesota and Wisconsin may tax income differently, so compare after-tax figures rather than gross when weighing an offer against a job across the Saint Croix. Winter commutes deserve a real test drive before you commit.`,
+    licensureNote: `Minnesota ${NPS} must first practice at least 2,080 hours, about one year of full-time work, under a collaborative agreement with a physician or with an advanced practice registered nurse who has at least three years of practice. Depending on the services they provide, some must complete those hours in a setting where advanced practice registered nurses and physicians work together. After that, they may practice independently. Minnesota does not issue or recognize multistate nursing licenses, so a multistate RN license issued elsewhere does not cover practice here, and the APRN license is separate and state-specific regardless.`,
+    careDemandContext: `Large integrated nonprofit systems deliver care across the Twin Cities, and one of them operates as both a health plan and a care provider. For ${NPS}, that means practice is often structured around population health measures, care teams, and defined patient panels. Demand spans primary care, geriatrics for older patients who travel in from greater Minnesota, and community clinics serving the region's East African and Southeast Asian immigrant communities, where language and cultural fluency are actively recruited for.`,
     subMarkets: [
-      { name: 'Downtown Minneapolis and the University corridor', note: 'The University of Minnesota\'s medical campus and the downtown hospitals form the metro\'s academic and high-acuity center, including the county safety-net hospital.' },
-      { name: 'Saint Paul and the east metro', note: 'A genuinely separate city with its own hospitals, its own clinics, and its own commute. Treating the Twin Cities as one job market is the most common relocation mistake here.' },
-      { name: 'Southwest suburbs: Edina, Bloomington, Eden Prairie', note: 'The deepest suburban ambulatory and specialty market, with commercially insured panels and the region\'s largest concentration of clinic-based NP roles.' },
-      { name: 'North metro: Coon Rapids, Maple Grove, Blaine', note: 'Growing residential ring with newer hospital and outpatient capacity following it. More affordable housing, more family-heavy panels.' },
-      { name: 'Saint Croix valley and western Wisconsin', note: 'Hudson and River Falls are a short drive east but across a state line. Wisconsin issues its own APRN license, and its NPs practice in collaboration with a physician or dentist until the Board of Nursing verifies that they qualify for independent practice.' },
+      { name: 'Downtown Minneapolis and the University corridor', note: `The University of Minnesota's medical campus and Hennepin Healthcare's downtown hospital, the county safety-net system, form an academic and high-acuity cluster.` },
+      { name: 'Saint Paul and the east metro', note: `A separate city with its own hospitals, including Regions Hospital, its own clinics, and its own commute, so search it as its own market.` },
+      { name: 'Southwest suburbs: Edina, Bloomington, Eden Prairie', note: `A suburban ambulatory and specialty market with many clinic-based ${NP} roles across Edina, Bloomington, and Eden Prairie.` },
+      { name: 'North metro: Coon Rapids, Maple Grove, Blaine', note: `A residential ring with hospital and outpatient capacity of its own, including Allina Health's Mercy Hospital, and family-heavy panels.` },
+      { name: 'Saint Croix valley and western Wisconsin', note: `Hudson and River Falls are a short drive east but across a state line. Wisconsin issues its own APRN license, and its ${NPS} practice in collaboration with a physician or dentist until the Board of Nursing verifies that they qualify for independent practice.` },
     ],
     topSettings: ['Hospital systems', 'Integrated care and health plans', 'Outpatient clinics', 'Community health centers', 'Geriatrics and senior care', 'Academic medical centers'],
     nearbyCities: ['Saint Paul', 'Bloomington', 'Edina', 'Minnetonka', 'Maple Grove'],
@@ -888,11 +986,11 @@ export const METRO_CITIES: MetroCity[] = [
     // the caption needs one.
     nearbyCityAliases: ['St. Paul'],
     faqs: [
-      { question: 'What is the average NP salary in Minneapolis?', answer: 'Minnesota NP pay generally lands above the national midpoint, and because housing has stayed comparatively attainable, the purchasing power is among the better ones in any large metro with this much medical infrastructure. The offset is a progressive state income tax on the higher end for the region, so compare take-home. The figures shown on this page are aggregated from live Twin Cities listings on this board.' },
-      { question: 'Does Minnesota have full practice authority for NPs?', answer: 'Yes, after a transition. Minnesota nurse practitioners complete a postgraduate collaborative practice period of 2,080 hours (about one year of full-time practice) with a physician or an experienced APRN, after which no collaborative agreement is required. It is an on-ramp rather than a permanent constraint, which is why Minnesota counts among the full-practice states.' },
-      { question: 'Does a multistate RN license cover Minnesota?', answer: 'No. Minnesota does not issue or recognize multistate nursing licenses, so a multistate RN license from a compact state does not authorize practice here; you need a Minnesota RN license. Separately, and this is true everywhere, the APRN license is issued state by state and never travels on a compact RN license.' },
-      { question: 'Are Minneapolis and Saint Paul one job market?', answer: 'Statistically yes, practically no. The two cities have distinct hospital systems, distinct clinic networks, and a cross-metro commute that is manageable but not trivial in winter. Search both, then pick a side based on where you will live, because most Twin Cities clinicians end up working within a reasonable radius of home rather than crossing the metro daily.' },
-      { question: 'Does the Mayo Clinic in Rochester compete for Twin Cities NPs?', answer: 'It draws from an overlapping labor pool but is a separate market roughly 85 miles southeast, too far for a daily commute from most of the metro. Some NPs relocate there for the specialty depth; others take Twin Cities roles precisely because they want metro housing and schools. It is worth searching as its own market rather than as a Minneapolis suburb.' },
+      { question: `How should I compare ${NP} pay offers in Minneapolis?`, answer: `Compare after taxes and housing, and check which city you would actually commute to. Integrated systems structure benefits, schedules, and panel expectations differently from independent clinics, and a Saint Paul job from a Minneapolis address is a different daily life from one close to home. A posted-pay median appears on this page only when enough Twin Cities listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: `Does Minnesota have full practice authority for ${NPS}?`, answer: `By AANP's classification, yes, after a transition. Minnesota ${NPS} must first practice at least 2,080 hours under a collaborative agreement with a physician or with an advanced practice registered nurse who has at least three years of practice, and some must complete those hours in a setting where advanced practice registered nurses and physicians work together. After that, they may practice independently.` },
+      { question: 'Does a multistate RN license cover Minnesota?', answer: `No. Minnesota does not issue or recognize multistate nursing licenses, so a multistate RN license from a compact state does not authorize practice here; you need a Minnesota RN license. Separately, and this is true everywhere, the APRN license is issued state by state and never travels on a compact RN license.` },
+      { question: 'Are Minneapolis and Saint Paul one job market?', answer: `On a map yes, and in practice the difference is the commute. Each city has its own hospital campuses and clinics, though several health systems run sites in both, and the cross-metro drive is manageable but not trivial in winter. Search both, then pick a side based on where you will live, because a daily cross-metro commute in winter wears thin.` },
+      { question: `Does the Mayo Clinic in Rochester compete for Twin Cities ${NPS}?`, answer: `It draws from an overlapping labor pool but is a separate market to the southeast, too far for a comfortable daily commute from the Twin Cities. Some ${NPS} relocate there for the specialty depth; others take Twin Cities roles precisely because they want metro housing and schools. It is worth searching as its own market rather than as a Minneapolis suburb.` },
     ],
   },
   {
@@ -903,34 +1001,37 @@ export const METRO_CITIES: MetroCity[] = [
     stateSlug: 'texas',
     citySlug: 'san-antonio-tx',
     metroArea: 'San Antonio Metro (South Texas)',
-    population: '1.5M (city) / 2.6M+ (metro)',
+    population: '',
     practiceAuthority: 'Restricted',
-    avgCostOfLiving: 'below the US average',
-    heroDescription: 'San Antonio is the most military healthcare market in the country. Joint Base San Antonio, Brooke Army Medical Center, and the South Texas Veterans Health Care System sit alongside a county public system and the UT Health academic campus, and federal employment brings a scope-of-practice rule that overrides Texas law entirely. For NPs, that makes San Antonio the one Texas metro where restricted practice is not the whole story.',
+    avgCostOfLiving: '',
+    // The VA sentences below restate 38 CFR 17.415 with all three of its
+    // limits (policy note 1). The role names are the regulation's own terms,
+    // so they are literal rather than brand tokens.
+    heroDescription: `San Antonio's ${NP} market carries a heavy federal presence: Joint Base San Antonio, Brooke Army Medical Center, and the South Texas Veterans Health Care System sit alongside University Health, the county public system, and UT Health San Antonio, the clinical enterprise of UT San Antonio. A federal regulation lets VA grant full practice authority to qualifying certified nurse practitioners within their VA employment, with controlled substance prescribing still tied to the Controlled Substances Act and state licensure, so Texas rules alone are not the whole story.`,
     whyThisMetro: [
-      'Federal employers at scale: the VA and the military health system, where NP scope follows federal rules rather than Texas delegation requirements',
-      'The most affordable large metro in Texas, with no state income tax on top of below-average living costs',
-      'The South Texas Medical Center concentrates hospital, academic, and specialty employers into one northwest district',
-      'University Health runs the Bexar County public system, and the surrounding South Texas counties carry persistent shortage designations',
+      `Federal employers, including the VA and the military health system, credential ${NPS} through their own federal processes`,
+      `The South Texas Medical Center brings hospital, academic, and specialty employers together in one northwest district`,
+      `University Health runs the Bexar County public system, with community clinics across the county`,
+      `Bilingual Spanish capability is broadly valued across safety-net, community, and South Bexar roles`,
     ],
-    costOfLivingNote: 'San Antonio is the most affordable of the big Texas metros and one of the more affordable large metros anywhere, with housing the main driver of the gap. Pay tends to run below Dallas, Houston, and Austin, so the honest framing is that the cost gap is what closes the pay gap rather than a bonus on top of it. Run the comparison on take-home minus housing rather than on base salary. Texas levies no state income tax, though it leans on property taxes, which matters if you buy rather than rent.',
-    licensureNote: 'Texas is a restricted-practice state: civilian NPs practice under physician delegation through a Prescriptive Authority Agreement registered with the Texas Board of Nursing. San Antonio is the significant exception in the state, because a large share of local NP employment is federal. Nurse practitioners employed by the Department of Veterans Affairs practice under VA\'s national standards of practice, which grant full practice authority to nurse practitioners, clinical nurse specialists, and certified nurse-midwives at VA facilities regardless of state law; certified registered nurse anesthetists were not included in that provision. Military treatment facilities likewise operate under federal rather than state scope rules.',
-    careDemandContext: 'San Antonio\'s patient population is defined by two things civilian metros rarely combine. The first is the military: active-duty service members, their families, and a large retired veteran population, served by a military health system and a VA network that both hire NPs directly. The second is South Texas, a predominantly Hispanic region with a heavy chronic disease burden, a substantial uninsured share in a state that has not expanded Medicaid, and rural counties south and west of the city that refer inward for anything specialized. Bilingual Spanish capability is broadly valued across both.',
+    costOfLivingNote: `San Antonio housing varies between Stone Oak and the far north side, the central neighborhoods, and the suburbs toward New Braunfels and Schertz, so where you live changes an offer's real value. Compare offers on what is left after housing, and weigh property taxes as well as the price if you plan to buy.`,
+    licensureNote: `Outside federal facilities, Texas requires ${NPS} in San Antonio to have a prescriptive authority agreement with a supervising physician, and employers with an established physician bench can make that agreement routine. Federal employers are a real part of the local market: a federal regulation lets VA grant full practice authority to certified nurse practitioners who meet its requirements while they work within the scope of their VA employment, overriding conflicting state law there, though controlled substance prescribing still follows the Controlled Substances Act and the practitioner's state license. Military treatment facilities credential clinicians through their own federal processes, and the Texas Board of Nursing handles Texas licensure.`,
+    careDemandContext: `Two patient populations define San Antonio. The first is the military: active-duty service members, their families, and retired veterans, served by a military health system and a VA network that both hire ${NPS} directly. The second is South Texas, a region with deep Hispanic roots, steady demand for chronic disease care, and rural counties south and west of the city that refer inward for anything specialized. Bilingual Spanish capability is broadly valued across both.`,
     subMarkets: [
-      { name: 'South Texas Medical Center, northwest', note: 'The city\'s hospital district: academic, specialty, children\'s, and private hospital campuses concentrated in one northwest quadrant. The densest employer cluster in the metro.' },
-      { name: 'Downtown and the near East Side', note: 'The county public system\'s downtown footprint and the community clinics around it form the metro\'s safety-net core and its broadest patient mix.' },
-      { name: 'Fort Sam Houston and the northeast', note: 'Brooke Army Medical Center and the Joint Base San Antonio installations. Federal and contractor NP roles with federal scope rules, federal pay scales, and a longer hiring process.' },
-      { name: 'Stone Oak and far north Bexar County', note: 'The affluent northern growth belt, where commercially insured suburban outpatient, specialty, and urgent care capacity keeps expanding.' },
-      { name: 'South Bexar and the surrounding South Texas counties', note: 'Rural and border-adjacent communities with persistent shortage designations, where community clinics and rural health sites recruit NPs for broad-scope primary care.' },
+      { name: 'South Texas Medical Center, northwest', note: `A medical district in the northwest of the city where University Hospital, the Audie Murphy VA hospital, UT Health San Antonio, and private hospital campuses sit close together.` },
+      { name: 'Downtown and the near East Side', note: `University Health's downtown campus and the community clinics around it serve a broad safety-net patient mix.` },
+      { name: 'Fort Sam Houston and the northeast', note: `Brooke Army Medical Center at Joint Base San Antonio-Fort Sam Houston, with JBSA-Randolph farther northeast. Federal ${NP} roles with federal credentialing, federal pay scales, and a longer hiring process, alongside contractor roles.` },
+      { name: 'Stone Oak and far north Bexar County', note: `The northern suburbs, where outpatient, specialty, and urgent care clinics serve residential neighborhoods.` },
+      { name: 'South Bexar and rural South Texas', note: `Rural communities south and west of the city, where community clinics and rural health sites recruit ${NPS} for broad-scope primary care. Loan repayment depends on each exact site.` },
     ],
     topSettings: ['Federal and VA facilities', 'Hospital systems', 'Community health centers', 'Academic medical centers', 'Outpatient clinics', 'Rural and critical access clinics'],
     nearbyCities: ['New Braunfels', 'Schertz', 'Converse', 'Boerne', 'Universal City', 'Seguin'],
     faqs: [
-      { question: 'What is the average NP salary in San Antonio?', answer: 'San Antonio NP pay generally runs below Dallas, Houston, and Austin, and the metro\'s below-average living costs are what close that gap rather than adding to it. Federal positions are the exception worth checking directly: VA and military-system roles use published federal pay structures with locality adjustments, which makes them unusually easy to compare against a private offer. The figures on this page come from live San Antonio listings on this board.' },
-      { question: 'Do Texas practice restrictions apply to VA jobs in San Antonio?', answer: 'No. Nurse practitioners employed by the Department of Veterans Affairs practice under VA\'s own national standards of practice, which grant full practice authority to nurse practitioners, clinical nurse specialists, and certified nurse-midwives at VA facilities regardless of the state law where the facility sits. That is a genuine difference in day-to-day autonomy from a civilian Texas role. Certified registered nurse anesthetists were not included in that provision, and military treatment facilities operate under their own federal rules.' },
-      { question: 'How do I get hired into a federal NP role here?', answer: 'Federal hiring runs on its own timeline and its own paperwork, so expect a longer process than a private system, with a formal application, credentialing, and background investigation. Positions are posted publicly, and veterans\' preference applies. The trade for the wait is federal benefits, a transparent pay structure, and, at VA facilities, full practice authority that Texas law would not otherwise give you.' },
-      { question: 'Is San Antonio a good market for new-grad NPs?', answer: 'Reasonably. The academic and hospital campuses in the South Texas Medical Center run structured onboarding, and the county public system hires broadly. Below-average living costs make a first NP salary go further here than in most large metros. The constraint is the same as elsewhere in Texas: you will need a Prescriptive Authority Agreement, and employers with an established delegating-physician bench are the smoother entry point.' },
-      { question: 'How much does Spanish matter in San Antonio NP roles?', answer: 'A great deal in the safety-net, community clinic, and South Bexar sub-markets, where a large share of the panel is more comfortable in Spanish. It is generally listed as preferred rather than required, and interpreter services exist, but the practical difference in visit quality and patient trust is significant enough that employers weight it in hiring.' },
+      { question: `How should I compare ${NP} pay offers in San Antonio?`, answer: `Check federal roles directly: VA and military-system positions use published federal pay structures, which makes them straightforward to compare against a private offer. Then compare other offers on the full package and on what is left after housing. A posted-pay median appears on this page only when enough San Antonio listings from enough employers post annual pay; any national median shown instead is the cited BLS reference figure, not a local one.` },
+      { question: 'Do Texas practice rules apply to VA jobs in San Antonio?', answer: `Not in the same way. A federal regulation lets VA grant full practice authority to certified nurse practitioners, clinical nurse specialists, and certified nurse-midwives who meet its requirements while they work within the scope of their VA employment, and it overrides conflicting state law there. Controlled substance prescribing still follows the Controlled Substances Act and the practitioner's state license, and military treatment facilities credential clinicians under their own federal processes, so ask any federal employer how it privileges ${NPS} before you compare offers.` },
+      { question: `How do I get hired into a federal ${NP} role here?`, answer: `Federal hiring runs on its own timeline and its own paperwork, so expect a longer process than a private system, with a formal application, credentialing, and a background investigation. Positions are posted publicly, and veterans should check how preference applies to each posting. The trade for the wait is federal benefits, a transparent pay structure, and scope defined by the facility's own credentialing.` },
+      { question: `Is San Antonio a good market for new-grad ${NPS}?`, answer: `Reasonably. The academic and hospital campuses in the South Texas Medical Center are natural places to ask about structured onboarding, and the county public system hires across many settings. The constraint is the same as elsewhere in Texas: roles outside federal facilities need a prescriptive authority agreement with a supervising physician, so employers with an established physician bench are the smoother entry point.` },
+      { question: `How much does Spanish matter in San Antonio ${NP} roles?`, answer: `A great deal in the safety-net, community clinic, and South Bexar sub-markets, where many patients are more comfortable in Spanish. It is generally listed as preferred rather than required, and interpreter services exist, but the practical difference in visit quality and patient trust is significant enough that employers weight it in hiring.` },
     ],
   },
 ];
@@ -953,7 +1054,7 @@ export function getMetrosInState(stateName: string): MetroCity[] {
 /* ── Adjacent-city lists ───────────────────────────────────────────────────
  * Two lists, deliberately: what the DB is asked to match is wider than what
  * a reader should be shown. Keeping them the same array is what printed
- * "Saint Paul, St. Paul" — the same city, twice, in visible copy.
+ * "Saint Paul, St. Paul" (the same city, twice) in visible copy.
  */
 
 /** Every spelling to OR into this metro's job query. De-duplicated. */
@@ -982,7 +1083,7 @@ export function firstSentence(note: string): string {
 
 /**
  * Place names from the metro's own record. These are the words that must
- * keep their capital when the sentence is spliced mid-clause — derived from
+ * keep their capital when the sentence is spliced mid-clause, derived from
  * data rather than guessed at, so a new metro is covered by adding it.
  */
 function properNounOpeners(metro: MetroCity): string[] {
@@ -997,7 +1098,7 @@ function properNounOpeners(metro: MetroCity): string[] {
 
 /**
  * Lowercase the leading character so a sentence reads as a continuation of
- * the clause before the em dash — but only when doing so is correct.
+ * the clause before the em dash, but only when doing so is correct.
  *
  * Two openings are left alone:
  *   - an acronym ("DMV housing…"), where lowercasing one character mangles

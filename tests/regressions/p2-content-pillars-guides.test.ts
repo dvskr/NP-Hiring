@@ -399,8 +399,8 @@ describe('truth rules', () => {
      *
      * Every other FPA surface in this repo pairs the count with its AANP
      * vintage (`STAT_SOURCES.fullPracticeStates.asOf`): the P1 posts say
-     * "(AANP, 2025)", app/tools/licensure-checker renders "as of
-     * ${asOf}", and lib/blog-ceu-guide.ts says "(as of 2025)". The
+     * "(AANP, <asOf>)", app/tools/licensure-checker renders "as of
+     * ${asOf}", and lib/blog-ceu-guide.ts says "(as of <asOf>)". The
      * licensure series goes further wherever it says an NP can practice
      * independently — lib/blog-license-guides.ts:235,318,327 all attach
      * "some full-practice states phase authority in through a

@@ -600,7 +600,7 @@ test.describe('/tools/cost-of-living-comparison', () => {
 test.describe('/tools/licensure-checker', () => {
     const PATH = '/tools/licensure-checker';
 
-    test('state checker: Texas renders restricted practice, its own practice requirement step, timeline, jobs link and a gated median', async ({ page }) => {
+    test('state checker: Texas renders restricted practice, its own practice requirement step, board processing guidance, jobs link and a gated median', async ({ page }) => {
         await gotoOk(page, PATH);
         const select = page.locator('#lic-state');
         expect(await select.locator('option').count()).toBe(52); // placeholder + 51 jurisdictions
@@ -612,7 +612,10 @@ test.describe('/tools/licensure-checker', () => {
         // The last step is Texas's verified details, never a tier-derived step.
         await expect(page.getByText('Practice requirements in Texas')).toBeVisible();
         await expect(page.getByText(/prescriptive authority agreement with a supervising physician/)).toBeVisible();
-        await expect(page.getByText('8-16 weeks')).toBeVisible();
+        // Processing time is the board's, never a tier-keyed weeks estimate
+        // (LicensureChecker.tsx processingTimeHeadline, PROCESSING_TIME_NOTE).
+        await expect(page.getByText('Set by the Texas board of nursing')).toBeVisible();
+        await expect(page.getByText(/\d+\s*(?:-|to)\s*\d+ weeks/)).toHaveCount(0);
         await expect(page.locator('a[href="/jobs/state/texas"]').first()).toBeVisible();
         // Texas clears the n ≥ 5 / 3-employer gate today: the salary card must be a true median with its sample.
         await expect(page.getByText('Median Salary in Texas')).toBeVisible();
@@ -634,7 +637,8 @@ test.describe('/tools/licensure-checker', () => {
         await expect(page.getByText('Secure supervising physician agreement')).toHaveCount(0);
         await expect(page.getByText('Secure collaborative physician agreement')).toHaveCount(0);
         await expect(page.getByText('Practice requirements in Arizona')).toBeVisible();
-        await expect(page.getByText('4-8 weeks')).toBeVisible();
+        await expect(page.getByText('Set by the Arizona board of nursing')).toBeVisible();
+        await expect(page.getByText(/\d+\s*(?:-|to)\s*\d+ weeks/)).toHaveCount(0);
     });
 
     test('state checker: a full-practice state with a transition period shows it in its own step', async ({ page }) => {
