@@ -276,10 +276,12 @@ function mockNetwork(opts: NetworkOptions = {}) {
 
 let fetchMock: ReturnType<typeof mockNetwork>;
 
-// Load the route graph once, outside any single test's time budget.
+// Load the route graph once, outside any single test's time budget. Its import
+// pulls in prisma, the indexing client and the cron tracker; on a loaded full
+// suite run that took longer than vitest's 10 second hook default.
 beforeAll(async () => {
     await import('@/app/api/cron/deindex-expired/route');
-});
+}, 60_000);
 
 beforeEach(() => {
     jobs = [];
