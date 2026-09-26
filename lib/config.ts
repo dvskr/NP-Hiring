@@ -11,8 +11,15 @@
  * ── From January 1, 2027 ─────────────────────────────────────────────
  *   Intro post   $199 / 60 days — the FIRST PAID post per company domain
  *   Featured post $299 / 60 days — every later post
- *   Employer plan $399 / month  — 5 active job slots, live while subscribed
- *   Renewal      $179 / +60 days on any promo/intro/pro post
+ *   Employer plan $399 / month  — 5 active job slots while entitled. Each
+ *                 plan post runs 60 days like any other; it is never
+ *                 renewed or extended (create-renewal-checkout 409s it).
+ *                 When one expires or is closed its slot frees and the
+ *                 employer posts again into it at no extra charge; the
+ *                 plan-lapse job unpublishes plan posts when the plan ends.
+ *   Renewal      $179 / +60 days on any promo/intro/pro post, capped at
+ *                 `renewalCapDays` after the post was created. It does NOT
+ *                 reset the post's unlock or InMail counters.
  *
  * Every post, whatever it cost, gets the SAME features. The ladder is
  * purely price + billing shape; there is no stripped-down tier.
@@ -35,15 +42,31 @@ export type PricingTier = 'intro' | 'pro' | 'plan';
 /** What the employer's NEXT post will be, as reported by /api/employer/free-quota-status. */
 export type PostingMode = 'promo' | 'plan' | 'intro' | 'paid';
 
-const PROMO_ENDS_AT_ISO = '2027-01-01T05:00:00.000Z'; // 2027-01-01 00:00 America/New_York (EST)
+/**
+ * The promo ends at midnight in Hawaii (HST, UTC-10, no daylight saving in
+ * December), the last of the 50 states to leave December 31. Every surface
+ * says "free through December 31, 2026" with no time zone, so the boundary
+ * has to be the LAST US midnight: an employer in Eastern, Central, Mountain,
+ * Pacific, Alaska or Hawaii time who posts at 11:59 pm on December 31 local
+ * time is still inside the promo. (It was 05:00Z, midnight Eastern, which
+ * charged a Pacific employer posting at 9 pm on December 31.) An Eastern
+ * employer therefore keeps free posting until 5 am ET on January 1, which is
+ * more generous than the copy, never less. tests/lib/config-pricing.test.ts
+ * pins the instant, every US zone's 11:59 pm, and both labels below.
+ */
+const PROMO_ENDS_AT_ISO = '2027-01-01T10:00:00.000Z'; // 2027-01-01 00:00 Pacific/Honolulu (HST)
 
 export const config = {
   // ─── Launch promo ───
   /** Instant the promo ends (exclusive). Compare with `isPromoActive`. */
   promoEndsAt: PROMO_ENDS_AT_ISO,
-  /** Human label used in copy: "Free through December 31, 2026". */
+  /**
+   * Human label used in copy: "Free through December 31, 2026". It is the
+   * calendar date of the instant just before promoEndsAt in Pacific/Honolulu
+   * (and in every other US zone), so it never names a day the promo misses.
+   */
   promoEndsLabel: 'December 31, 2026',
-  /** First day of the paid ladder, for copy. */
+  /** First day of the paid ladder, for copy: the date of promoEndsAt in Pacific/Honolulu. */
   ladderStartsLabel: 'January 1, 2027',
   /** Abuse guard: max concurrently-live promo posts per signup domain. Not marketed. */
   promoMaxActivePostsPerDomain: 10,
@@ -57,10 +80,18 @@ export const config = {
   stripeRenewalPriceInCents: 17900,
   /** Listing duration for EVERY post (promo, intro, pro, plan) and every renewal. */
   durationDays: 60,
+  /**
+   * A renewal never pushes a post's expiry past this many days after the post
+   * was created: lib/expires-at.ts#renewalExpiresAt caps at its default
+   * `maxFromOriginalDays`, which the renewal webhook does not override. Copy
+   * that says "renewing adds 60 days" states this limit with this token, and
+   * tests/lib/config-pricing.test.ts fails if the two ever disagree.
+   */
+  renewalCapDays: 365,
 
   // ─── Employer plan (effective January 1, 2027) ───
   planPrice: 399,             // dollars per month
-  planSlots: 5,               // concurrent active postings included
+  planSlots: 5,               // concurrent active postings included (each runs durationDays, never renewed)
   /** Days after currentPeriodEnd before plan posts are paused (covers Stripe Smart Retries). */
   planGraceDays: 3,
 

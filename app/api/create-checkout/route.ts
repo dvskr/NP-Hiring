@@ -10,9 +10,12 @@
  * so the webhook / verify / sweep activation and the ledger agree on what
  * was sold. The resume path re-prices from the persisted pricingTier.
  *
- * During the launch promo (config.isPromoActive) the wizard never routes
- * here — /api/jobs/post-free publishes for free — but this route stays
- * callable so the paid funnel can be exercised end to end.
+ * During the launch promo (config.isPromoActive) every post is free and
+ * /api/jobs/post-free publishes it, so this route answers 409 PROMO_ACTIVE
+ * for the new-post AND the resume path: a stale /post-job/checkout draft or
+ * a dashboard "Complete payment" must never charge for a post that should
+ * be free. The unit tests exercise the paid funnel by stubbing
+ * config.isPromoActive; nothing a request carries can bypass the check.
  */
 import type Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe';
@@ -107,6 +110,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Paid checkout is currently unavailable', code: 'STRIPE_NOT_CONFIGURED' },
         { status: 503 }
+      );
+    }
+
+    // Launch promo: nothing is sold per post, whatever the request asks for.
+    // Checked before the body is read, so it covers the resume path too.
+    if (config.isPromoActive()) {
+      logger.warn('Paid checkout attempted during the launch promo; refused');
+      return NextResponse.json(
+        {
+          error: `Every post is free through ${config.promoEndsLabel}. Go back to the preview to publish.`,
+          code: 'PROMO_ACTIVE',
+        },
+        { status: 409 }
       );
     }
 
@@ -481,19 +497,39 @@ async function recordCheckoutSession(employerJobId: string, sessionId: string): 
   }
 }
 
+type PreviousSessionState = 'paid' | 'processing' | 'awaiting_verification' | 'retired';
+
 /**
  * Before minting a replacement session, make sure the previous one can no
- * longer be paid: a posting must never have two payable sessions.
- *   - previous session already complete → the employer has paid and the
- *     activation is in flight; refuse instead of selling the post twice;
- *   - previous session open → expire it (errors such as "already expired"
- *     are ignored — the goal state is "not payable").
+ * longer be paid: a posting must never have two payable sessions. The money
+ * decides, not the session status: a delayed payment (ACH and similar)
+ * completes the session while it is still 'unpaid', and a failed one leaves
+ * it 'complete' and 'unpaid' for good.
+ *   - payment_status 'paid' / 'no_payment_required' → the employer has paid
+ *     and the activation is in flight; refuse instead of selling it twice;
+ *   - complete, unpaid, PaymentIntent 'processing' → a delayed payment is
+ *     still settling; refuse so the employer does not pay a second time;
+ *   - complete, unpaid, PaymentIntent 'requires_action' → the employer has
+ *     yet to verify ACH microdeposits (Stripe keeps this open for up to 10
+ *     days); the payment can still succeed, so refuse the same way;
+ *   - complete and unpaid otherwise (the delayed payment failed: the intent
+ *     is back to 'requires_payment_method', or 'canceled') → nothing can be
+ *     paid on it any more; a new session is safe;
+ *   - open → expire it (errors such as "already expired" are ignored; the
+ *     goal state is "not payable").
  */
-async function retirePreviousSession(stripe: Stripe, previousSessionId: string | null): Promise<'paid' | 'retired'> {
+async function retirePreviousSession(stripe: Stripe, previousSessionId: string | null): Promise<PreviousSessionState> {
   if (!previousSessionId) return 'retired';
   try {
-    const previous = await stripe.checkout.sessions.retrieve(previousSessionId);
-    if (previous.status === 'complete') return 'paid';
+    const previous = await stripe.checkout.sessions.retrieve(previousSessionId, { expand: ['payment_intent'] });
+    if (previous.payment_status === 'paid' || previous.payment_status === 'no_payment_required') return 'paid';
+    if (previous.status === 'complete') {
+      const intent = previous.payment_intent;
+      const intentStatus = intent && typeof intent === 'object' ? intent.status : null;
+      if (intentStatus === 'processing') return 'processing';
+      if (intentStatus === 'requires_action') return 'awaiting_verification';
+      return 'retired';
+    }
     if (previous.status === 'open') {
       await stripe.checkout.sessions.expire(previousSessionId);
     }
@@ -560,9 +596,22 @@ async function resumeAbandonedCheckout(
   }
 
   // One payable session per posting: retire the previous one first.
-  if ((await retirePreviousSession(stripe, employerJob.stripeCheckoutSessionId)) === 'paid') {
+  const previousSession = await retirePreviousSession(stripe, employerJob.stripeCheckoutSessionId);
+  if (previousSession === 'paid') {
     return NextResponse.json(
       { error: 'Payment for this job was already received and is being processed. Refresh your dashboard in a minute.', code: 'PAYMENT_PROCESSING' },
+      { status: 409 }
+    );
+  }
+  if (previousSession === 'processing') {
+    return NextResponse.json(
+      { error: 'Your payment for this job is still processing. The job goes live automatically once it clears, so there is nothing more to pay now.', code: 'PAYMENT_PROCESSING' },
+      { status: 409 }
+    );
+  }
+  if (previousSession === 'awaiting_verification') {
+    return NextResponse.json(
+      { error: 'Your bank payment for this job is waiting for you to verify your bank account. Once you complete the verification Stripe asked for and the payment clears, the job goes live automatically, so there is nothing more to pay now.', code: 'PAYMENT_PROCESSING' },
       { status: 409 }
     );
   }

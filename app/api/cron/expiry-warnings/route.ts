@@ -11,6 +11,10 @@ import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { withCronTracking } from '@/lib/cron/track';
 import { config } from '@/lib/config'
 import { brand } from '@/config/brand'
+import { getPaidPostingStatus } from '@/lib/env'
+import { logger } from '@/lib/logger'
+import { getPlanSlotStatus } from '@/lib/employer-plan'
+import { nextNewPostPrice, renewalSavingsLabel, resolveRenewalOffer, type RenewalOffer } from '@/lib/pricing'
 
 export const maxDuration = 120 // 2 minutes — expiry warning emails
 
@@ -21,17 +25,118 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl
 // email timely; the EmailSend dedup below makes re-scans idempotent.
 const POST_EXPIRY_LOOKBACK_DAYS = 3
 
-// Rows that can buy the per-post renewal (config.renewalPrice). 'plan' rows
-// are deliberately excluded: plan posts stay live while the plan is active
-// and the employer re-posts from a slot, so their emails get a dashboard
-// CTA instead of a renewal CTA. Legacy free-quota rows re-enter via the
-// dashboard's own upgrade path (unchanged).
+// Rows that can buy the per-post renewal (config.renewalPrice), and only
+// while paid posting is on (see RenewalContext). 'plan' rows are
+// deliberately excluded: each plan post runs config.durationDays and its
+// slot frees when it ends, so the employer posts again into that slot
+// instead of renewing (the renewal checkout 409s them). Legacy free-quota
+// rows re-enter via the dashboard's own path (unchanged).
 const RENEWABLE_STATUSES = new Set(['promo', 'paid'])
 
 // Statuses whose expiry is worth an email at all — everything that was
 // actually published. Never-published checkouts ('pending'/'expired') have
 // nothing to mourn; refunded rows were pulled deliberately.
 const NOTIFIABLE_STATUSES = ['free', 'free_renewed', 'free_upgraded', 'promo', 'plan', 'paid']
+
+/**
+ * What one cron run knows about selling renewals. `purchasable` is read once
+ * per run from the same check behind /api/create-checkout/availability: while
+ * paid posting is off the renewal checkout answers 503, so no email may offer
+ * a renewal. Next-post prices are cached per (quota domain, employer) because
+ * one employer often has several posts expiring together.
+ */
+interface RenewalContext {
+  purchasable: boolean
+  now: Date
+  nextPostPrices: Map<string, number | null>
+}
+
+function readRenewalPurchasable(): boolean {
+  try {
+    return getPaidPostingStatus().available
+  } catch (error) {
+    // Fail closed: an unreadable flag must never put a renewal the checkout
+    // may refuse into an employer's inbox.
+    logger.error('expiry-warnings: paid posting status unreadable, renewal offers withheld', error)
+    return false
+  }
+}
+
+/**
+ * The employer's own next new-post price (0 with a free plan slot), so the
+ * savings claim is measured against what this reader would actually pay.
+ * Null (the email then compares with the standard post price and says so)
+ * when the row has no quota domain or the lookup fails.
+ */
+async function nextPostPriceFor(employerJob: EmployerJob, ctx: RenewalContext): Promise<number | null> {
+  const key = `${employerJob.quotaDomain ?? ''}|${employerJob.userId ?? ''}`
+  if (ctx.nextPostPrices.has(key)) return ctx.nextPostPrices.get(key) ?? null
+  let price: number | null = null
+  try {
+    const hasPlanSlot = employerJob.userId
+      ? (await getPlanSlotStatus(employerJob.userId, ctx.now)).canPost
+      : false
+    price = await nextNewPostPrice({ quotaDomain: employerJob.quotaDomain, hasPlanSlot, now: ctx.now })
+  } catch (error) {
+    logger.warn('expiry-warnings: next post price lookup failed, comparing with the standard post price', {
+      employerJobId: employerJob.id,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+  ctx.nextPostPrices.set(key, price)
+  return price
+}
+
+/** Renewal inputs for one row: purchasable only for renewable rows while paid posting is on. */
+async function renewalInputsFor(
+  employerJob: EmployerJob,
+  ctx: RenewalContext,
+): Promise<{ purchasable: boolean; nextPostPrice: number | null }> {
+  const purchasable = ctx.purchasable && RENEWABLE_STATUSES.has(employerJob.paymentStatus)
+  // No saving is claimed during the promo, so the price lookup is skipped.
+  if (!purchasable || config.isPromoActive(ctx.now)) return { purchasable, nextPostPrice: null }
+  return { purchasable, nextPostPrice: await nextPostPriceFor(employerJob, ctx) }
+}
+
+/** The post-expiry email's offer paragraph and button, true to what the employer can do now. */
+function postExpiryOffer(
+  employerJob: EmployerJob,
+  offer: RenewalOffer,
+  dashboardUrl: string,
+): { line: string; ctaLabel: string; ctaUrl: string } {
+  if (offer.purchasable) {
+    const saving = offer.savings ? ` (${renewalSavingsLabel(offer.savings)})` : ''
+    const promoAlternative = offer.promoActive
+      ? ` Or post this role again as a fresh listing, free through ${config.promoEndsLabel}.`
+      : ''
+    // apply-renewal.ts only moves the end date (from the renewal date for an
+    // expired post, capped at config.renewalCapDays after creation).
+    return {
+      line: `Renew for $${offer.price}${saving} to relist it for another ${config.durationDays} days. Your stats, applicants and unlocked candidates carry over; a renewal does not add unlocks or InMails. Renewals can extend a post to at most ${config.renewalCapDays} days after it was first posted.${promoAlternative}`,
+      ctaLabel: 'Renew Your Listing',
+      ctaUrl: dashboardUrl,
+    }
+  }
+  if (employerJob.paymentStatus === 'plan') {
+    return {
+      line: `Each plan post runs ${config.durationDays} days, so this one has ended and its slot is free again. Post a job into it at no extra charge while you're subscribed. Your stats and applicants stay attached to this posting.`,
+      ctaLabel: 'Go to Your Dashboard',
+      ctaUrl: dashboardUrl,
+    }
+  }
+  if (offer.promoActive) {
+    return {
+      line: `Every job post is free through ${config.promoEndsLabel}, so you can post this role again as a fresh listing at no charge. Your stats and applicants stay attached to the expired posting.`,
+      ctaLabel: 'Post a New Job for Free',
+      ctaUrl: `${BASE_URL}/post-job`,
+    }
+  }
+  return {
+    line: 'Your stats and applicants stay attached to the expired posting in your dashboard.',
+    ctaLabel: 'Go to Your Dashboard',
+    ctaUrl: dashboardUrl,
+  }
+}
 
 /**
  * B87 — "your listing has expired" notification. The funnel previously went
@@ -43,18 +148,14 @@ const NOTIFIABLE_STATUSES = ['free', 'free_renewed', 'free_upgraded', 'promo', '
 async function sendPostExpiryEmail(
   job: Job,
   employerJob: EmployerJob,
+  ctx: RenewalContext,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const dashboardUrl = `${BASE_URL}/employer/dashboard/${employerJob.dashboardToken || employerJob.editToken}`
     const unsubToken = await getOrCreateUnsubToken(employerJob.contactEmail)
-    const canRenew = RENEWABLE_STATUSES.has(employerJob.paymentStatus)
-    const isPlanPost = employerJob.paymentStatus === 'plan'
-    const discountPct = Math.round((1 - config.renewalPrice / config.postingPrice) * 100)
-    const relistLine = canRenew
-      ? `Renew for $${config.renewalPrice} (save ${discountPct}%) to relist it for another ${config.durationDays} days — your stats, applicants, and unlocked candidates carry over.`
-      : isPlanPost
-        ? `Post it again from one of your Employer plan slots — your stats and applicants stay attached to the posting.`
-        : `You can relist this role from your dashboard — your stats and applicants stay attached to the posting.`
+    const inputs = await renewalInputsFor(employerJob, ctx)
+    const offer = resolveRenewalOffer({ ...inputs, now: ctx.now })
+    const { line: relistLine, ctaLabel, ctaUrl } = postExpiryOffer(employerJob, offer, dashboardUrl)
 
     const html = emailShellV2(`
       ${headerBlockV2('Your Listing Has Expired', '')}
@@ -68,19 +169,19 @@ async function sendPostExpiryEmail(
       </td></tr>
       ${spacerV2(24)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
-        ${primaryButtonV2(canRenew ? 'Renew Your Listing' : 'Go to Your Dashboard', dashboardUrl)}
+        ${primaryButtonV2(ctaLabel, ctaUrl)}
       </td></tr>
       ${spacerV2(48)}
       ${closeContentV2()}`,
       unsubscribeFooterV2(unsubToken),
-      `Your posting for ${job.title} has expired — reactivate it from your dashboard.`
+      `Your posting for ${job.title} has expired. See what you can do next.`
     )
 
     await sendAndLog(
       {
         from: '', // overridden by sendAndLog (transactional sender)
         to: employerJob.contactEmail,
-        subject: `Your job posting has expired — ${job.title}`,
+        subject: `Your job posting has expired: ${job.title}`,
         html,
       },
       'expiry_warning',
@@ -137,11 +238,17 @@ export async function GET(request: NextRequest) {
 
       let sentCount = 0
       const errors: string[] = []
+      const renewalCtx: RenewalContext = {
+        purchasable: readRenewalPurchasable(),
+        now,
+        nextPostPrices: new Map(),
+      }
 
       for (const job of expiringJobs) {
         const employerJob = job.employerJobs
         if (employerJob?.contactEmail) {
           try {
+            const renewal = await renewalInputsFor(employerJob, renewalCtx)
             const result = await sendExpiryWarningEmail(
               employerJob.contactEmail,
               job.title,
@@ -150,9 +257,16 @@ export async function GET(request: NextRequest) {
               job.applyClickCount || 0,
               employerJob.dashboardToken || employerJob.editToken,
               null, // unsubscribeToken — sendExpiryWarningEmail will mint one if null
-              // paymentStatus lets the template hide the renewal CTA for
-              // 'plan' rows (they re-post from a slot instead of renewing).
-              { paymentStatus: employerJob.paymentStatus },
+              // paymentStatus drops the renewal for 'plan' rows (each runs
+              // config.durationDays, then its slot is free); the renewal is
+              // offered only while it can be bought, with a saving named only
+              // when it is true against this employer's next new post.
+              {
+                paymentStatus: employerJob.paymentStatus,
+                renewalPurchasable: renewal.purchasable,
+                nextPostPrice: renewal.nextPostPrice,
+                now,
+              },
             )
 
             // sendExpiryWarningEmail swallows send failures and returns
@@ -223,7 +337,7 @@ export async function GET(request: NextRequest) {
           })
           if (alreadySent) continue
 
-          const result = await sendPostExpiryEmail(job, employerJob)
+          const result = await sendPostExpiryEmail(job, employerJob, renewalCtx)
           if (!result.success) {
             errors.push(`Post-expiry ${job.id}: ${result.error ?? 'send failed'}`)
             continue

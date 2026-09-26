@@ -21,7 +21,9 @@ const ENTITY_SHORT = ENTITY.replace(/,? (LLC|L\.L\.C\.|Inc\.?|Ltd\.?|Corp\.?)$/i
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
-  description: `Read the Terms of Service for ${brand.name}, operated by ${ENTITY}. Understand your rights, responsibilities, pricing, refunds, and platform policies for the #1 ${brand.niche.short} job board.`,
+  // No ranking claim ("the #1 job board"): nothing in the repo measures one,
+  // and this string ships to search results (same rule as /faq and /about).
+  description: `Read the Terms of Service for ${brand.name}, operated by ${ENTITY}. Understand your rights, responsibilities, pricing, refunds, and platform policies for the ${brand.niche.short} job board.`,
   openGraph: {
     images: [{ url: TERMS_OG_IMAGE, width: 1200, height: 630, alt: `${brand.name} terms of service page with user rights, employer responsibilities, and platform policies` }],
   },
@@ -93,7 +95,7 @@ export default function TermsPage() {
               <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.75rem)', fontWeight: 800, fontFamily: 'var(--font-lora), Georgia, serif', color: '#1A2E35', margin: '0 0 12px 0', lineHeight: 1.15 }}>
                 Terms of <span style={{ color: '#0284C7' }}>Service</span>
               </h1>
-              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: September 12, 2026</p>
+              <p style={{ fontSize: '15px', color: '#6B7F8A', margin: 0, lineHeight: 1.6 }}>Last updated: September 27, 2026</p>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <Image src="/images/terms/hero.webp" alt="Terms of Service" width={140} height={140} style={{ objectFit: 'contain', filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.12))' }} priority />
@@ -177,7 +179,15 @@ export default function TermsPage() {
             <li style={liStyle}>We may suspend or terminate employer accounts that repeatedly violate these Terms</li>
           </ul>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Listing duration & renewals:</p>
-          <p style={pStyle}>All job postings, whether promotional, paid, or posted from an Employer plan slot, are active for {config.durationDays} days from the date of publication. After {config.durationDays} days, postings expire automatically. Employers may renew promotional and paid postings through the employer dashboard. Renewals add {config.durationDays} days to the current expiration date; renewing early does not forfeit any remaining time on the existing posting. Postings made from an Employer plan slot remain live while the plan is active and are not renewed individually.</p>
+          {/* Plan postings run config.durationDays like every other posting
+              (post-free writes the same expiresAt), are never renewed
+              (create-renewal-checkout 409s them) and are unpublished when the
+              plan ends (lib/employer-plan.ts#pausePlanPosts). A renewal is
+              capped at config.renewalCapDays after creation
+              (lib/expires-at.ts#renewalExpiresAt) and does not reset the
+              posting's unlock or InMail counts. */}
+          <p style={pStyle}>All job postings, whether promotional, paid, or posted from an Employer plan slot, are active for {config.durationDays} days from the date of publication unless the employer closes them sooner or we remove them under these Terms. After {config.durationDays} days, postings expire automatically. Employers may renew promotional and paid postings through the employer dashboard. Each renewal adds {config.durationDays} days to the current expiration date, or to the renewal date if the posting has already expired; renewing early does not forfeit any remaining time on the existing posting. Renewals cannot extend a posting beyond {config.renewalCapDays} days after it was first published. A renewal extends a posting&apos;s term only; it does not add candidate unlocks or InMails.</p>
+          <p style={pStyle}>Postings made from an Employer plan slot are not renewed. Each runs for {config.durationDays} days; when it expires or the employer closes it, its slot becomes available and the employer may publish a new posting in that slot at no additional charge while the plan is active. Postings made from plan slots are unpublished when the plan ends (see §7).</p>
 
           <h2 id="pricing-and-payments" style={h2Style}>7. Pricing, Launch Promotion, Employer Plan & Payments</h2>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Launch promotion (through {config.promoEndsLabel}):</p>
@@ -190,14 +200,15 @@ export default function TermsPage() {
           <ul style={ulStyle}>
             <li style={liStyle}>The first paid posting per verified employer email domain is ${config.introPrice} USD, one-time (the &quot;intro&quot; price). Promotional postings do not consume the intro price</li>
             <li style={liStyle}>Each additional paid posting is ${config.postingPrice} USD, one-time</li>
-            <li style={liStyle}>Renewals of promotional and paid postings are ${config.renewalPrice} USD, one-time, and add {config.durationDays} days to the existing expiration</li>
-            <li style={liStyle}>All postings, whether promotional, paid, renewed, or posted from a plan slot, receive the same features: {config.durationDays}-day duration, Featured badge, top placement in search results, {config.limits.candidateUnlocksPerPosting} candidate profile unlocks, {config.limits.inmailsPerPosting} InMails, and full analytics</li>
+            <li style={liStyle}>Renewals of promotional and paid postings are ${config.renewalPrice} USD, one-time, and add {config.durationDays} days as described in §6. Postings made from plan slots are not renewable</li>
+            <li style={liStyle}>All postings, whether promotional, paid, or posted from a plan slot, receive the same features: {config.durationDays}-day duration, Featured badge, top placement in search results, {config.limits.candidateUnlocksPerPosting} candidate profile unlocks and {config.limits.inmailsPerPosting} InMails per posting, and full analytics. Renewing a posting does not add unlocks or InMails</li>
           </ul>
           <p style={{ ...pStyle, fontWeight: 600, color: '#1A2E35' }}>Employer plan (from {config.ladderStartsLabel}):</p>
           <ul style={ulStyle}>
             <li style={liStyle}>The Employer plan is ${config.planPrice} USD per month and includes {config.planSlots} concurrently active job slots. Every slot is a full Featured posting with the same features and limits as a paid posting</li>
             <li style={liStyle}>The plan is billed month-to-month through Stripe and renews automatically until cancelled. You may cancel at any time; cancellation stops future charges</li>
-            <li style={liStyle}>If you cancel, postings made from plan slots stay live through the end of the paid period, after which they are unpublished. You may swap the jobs in your slots at any time while the plan is active</li>
+            <li style={liStyle}>Each posting made from a plan slot runs for {config.durationDays} days and is not renewable. When it expires or you close it, its slot becomes available and you may publish another posting in that slot at no additional charge, so you may swap the jobs in your slots at any time while the plan is active</li>
+            <li style={liStyle}>If you cancel, postings made from plan slots stay live through the end of the paid period, or until their own {config.durationDays}-day term ends if that is sooner, after which they are unpublished</li>
             <li style={liStyle}>If a plan payment fails, we may pause your plan postings after a short grace period until the balance is settled</li>
             <li style={liStyle}>Plan months are not refunded once billed (see §8)</li>
           </ul>
@@ -220,12 +231,12 @@ export default function TermsPage() {
             <li style={liStyle}>We reserve the right to grant or deny refund requests at our sole discretion</li>
             <li style={liStyle}>If we remove a posting for violation of these Terms, no refund will be issued</li>
             <li style={liStyle}>Promotional postings and postings made from plan slots have no associated per-posting payment and are therefore not refundable</li>
-            <li style={liStyle}>Employer plan fees are not refunded for a billing month that has already been charged. Cancelling stops future charges, and your plan postings stay live through the end of the paid period</li>
+            <li style={liStyle}>Employer plan fees are not refunded for a billing month that has already been charged. Cancelling stops future charges, and your plan postings stay live through the end of the paid period, or until their own {config.durationDays}-day term ends if that is sooner</li>
             <li style={liStyle}>Refunds, if granted, will be issued to the original payment method through Stripe and may take 5 to 10 business days to appear on your statement</li>
           </ul>
 
           <h2 id="candidate-data" style={h2Style}>9. Candidate Data, Unlocks & Privacy</h2>
-          <p style={pStyle}>When an employer with an active posting uses an unlock to view a candidate&apos;s full profile, that candidate&apos;s information (including name, email, resume, and other contact details) becomes accessible to the employer&apos;s account. This access is retained indefinitely, even after the underlying posting expires.</p>
+          <p style={pStyle}>When an employer with an active posting uses an unlock to view a candidate&apos;s full profile, that candidate&apos;s information (including name, email, resume, and other contact details) becomes accessible to the employer&apos;s account. This access continues after the underlying posting expires, for as long as the candidate keeps their profile visible and open to opportunities.</p>
           <p style={pStyle}>Employers receiving candidate data agree to:</p>
           <ul style={ulStyle}>
             <li style={liStyle}>Use candidate information only to evaluate the candidate for the role they applied to or are being recruited for</li>

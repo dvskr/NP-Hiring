@@ -29,6 +29,7 @@ import type Stripe from 'stripe';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { config } from '@/lib/config';
 import { ALL_DENIED, ANALYTICS_ONLY, CONSENT_COOKIE, serializeConsent } from '@/lib/consent';
 import { gaCheckoutMetadata, idempotencyKeyWithGaIds } from '@/lib/analytics-server';
 
@@ -218,13 +219,16 @@ beforeEach(() => {
   loggerSpies = [
     vi.spyOn(logger, 'warn').mockImplementation(() => undefined),
     vi.spyOn(logger, 'info').mockImplementation(() => undefined),
+    // /api/create-checkout refuses every paid post during the launch promo
+    // (tests/api/create-checkout-tier.test.ts); the capture runs past it.
+    vi.spyOn(config, 'isPromoActive').mockReturnValue(false),
   ];
 });
 
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
-  // Only the logger spies are restored. vi.restoreAllMocks in Vitest 2 would
+  // Only the spies above (logger, promo clock) are restored. vi.restoreAllMocks in Vitest 2 would
   // also strip the implementations the vi.mock factories above rely on.
   for (const spy of loggerSpies) spy.mockRestore();
 });

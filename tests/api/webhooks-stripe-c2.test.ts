@@ -14,6 +14,8 @@
  * These tests assert the dedupe row is deleted before any 500 response.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import { prisma } from '@/lib/prisma';
 import { sendDiscordMessage } from '@/lib/discord-notifier';
 
@@ -144,13 +146,18 @@ describe('Stripe webhook C2 — idempotency rollback', () => {
             data: { object: { id: 'cs_5', payment_status: 'paid', metadata: { jobId: 'job5' } } },
         }) as never);
 
-        // The reclaim is conditional on a 'processing' row older than the window.
+        // The reclaim is conditional on a 'processing' row older than the
+        // window: maxDuration (no live delivery holds a claim longer) plus a
+        // 30 second clock-skew margin.
         const reclaimArgs = vi.mocked(prisma.processedStripeEvent.updateMany).mock.calls[0][0] as unknown as {
             where: { eventId: string; status: string; claimedAt: { lt: Date } };
         };
         expect(reclaimArgs.where.eventId).toBe('evt_5');
         expect(reclaimArgs.where.status).toBe('processing');
-        expect(Date.now() - reclaimArgs.where.claimedAt.lt.getTime()).toBeGreaterThanOrEqual(5 * 60 * 1000 - 1000);
+        const { maxDuration } = await import('@/app/api/webhooks/stripe/route');
+        const windowMs = Date.now() - reclaimArgs.where.claimedAt.lt.getTime();
+        expect(windowMs).toBeGreaterThanOrEqual(maxDuration * 1000 + 30_000);
+        expect(windowMs).toBeLessThan(maxDuration * 1000 + 30_000 + 5_000);
         // Processing ran (EmployerJob missing → 500 + rollback) instead of a silent 200.
         expect(res.status).toBe(500);
         expect(prisma.processedStripeEvent.delete).toHaveBeenCalledWith({ where: { eventId: 'evt_5' } });
@@ -159,6 +166,15 @@ describe('Stripe webhook C2 — idempotency rollback', () => {
     it('declares a maxDuration so a slow handler is not killed mid-processing', async () => {
         const mod = await import('@/app/api/webhooks/stripe/route');
         expect(mod.maxDuration).toBe(60);
+    });
+
+    it('derives the reclaim window from maxDuration, so a retry after a killed delivery is processed, not dropped', () => {
+        const src = fs.readFileSync(path.join(process.cwd(), 'app/api/webhooks/stripe/route.ts'), 'utf8');
+        // One source of truth: raising maxDuration moves the window with it.
+        expect(src).toMatch(/const DEDUPE_RECLAIM_AFTER_MS = maxDuration \* 1000 \+ DEDUPE_RECLAIM_MARGIN_MS;/);
+        expect(src).toMatch(/const DEDUPE_RECLAIM_MARGIN_MS = 30 \* 1000;/);
+        // The old fixed five minute window acknowledged retries in the gap as duplicates.
+        expect(src).not.toMatch(/DEDUPE_RECLAIM_AFTER_MS = 5 \* 60 \* 1000/);
     });
 });
 

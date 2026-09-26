@@ -1,6 +1,6 @@
 # NP Hiring Pricing System — Architecture & Operations
 
-**Last verified:** 2026-09-12
+**Last verified:** 2026-09-27 (plan post lifecycle, renewal effects and the promo end instant re-checked against the code)
 **Source of truth:** [lib/config.ts](../lib/config.ts) + [lib/pricing.ts](../lib/pricing.ts) + [lib/employer-plan.ts](../lib/employer-plan.ts) + [prisma/schema.prisma](../prisma/schema.prisma)
 **Companion doc:** [pricing-audit.md](./pricing-audit.md) (historical change log + open items)
 
@@ -16,11 +16,11 @@ This document describes the live state of the pricing system after the 2026-09-1
 
 | Item | Value | Source |
 |---|---|---|
-| Promo end instant (exclusive) | `2027-01-01T05:00:00.000Z` (midnight America/New_York) | `config.promoEndsAt` / `config.isPromoActive(now?)` |
+| Promo end instant (exclusive) | `2027-01-01T10:00:00.000Z` (midnight Pacific/Honolulu, the last of the 50 states to leave December 31; 5 am ET). Copy prints "through December 31, 2026" with no zone, so the boundary is the LAST US midnight: 11:59 pm on December 31 is free in every US zone. It was 05:00Z (midnight ET) until 2026-09-27, which charged a Pacific employer posting at 9 pm on December 31 | `config.promoEndsAt` / `config.isPromoActive(now?)` |
 | Price of every post | $0, no card | `config.isPromoActive()` → `quoteForMode('promo')` |
 | Listing duration | 60 days | `config.durationDays` |
 | Abuse guard (never marketed) | max 10 concurrently live promo posts per signup domain | `config.promoMaxActivePostsPerDomain` |
-| Renewable? | Yes, at the normal renewal price | renewal rules in §2d |
+| Renewable? | Yes, at the normal renewal price, once `ENABLE_PAID_POSTING` is on (the renewal checkout 503s until then) | renewal rules in §2d |
 | Consumes the intro allowance? | **No** — even after a $179 renewal | `countPaidPostsForDomain` counts `paymentStatus='paid'` rows bought as a post (`'new'` JobCharge or pre-ledger); a renewed promo post carries only a `'renewal'` charge and is excluded |
 
 Promo rows are written with `paymentStatus='promo'`, `pricingTier='pro'`.
@@ -31,10 +31,12 @@ Promo rows are written with `paymentStatus='promo'`, `pricingTier='pro'`.
 |---|---|---|---|---|
 | Intro post | $199 (`config.introPrice` / `stripeIntroPriceInCents` 19900) | 60 days; the FIRST **PAID** post per company domain | `'intro'` | `'paid'` |
 | Featured post | $299 (`config.postingPrice` / `stripePriceInCents` 29900) | 60 days; every later paid post | `'pro'` | `'paid'` |
-| Employer plan | $399 / month (`config.planPrice`) | `config.planSlots` = 5 active job slots, live while subscribed, swap freely; `config.planGraceDays` = 3 | `'plan'` | `'plan'` |
-| Renewal | $179 (`config.renewalPrice` / `stripeRenewalPriceInCents` 17900) | +60 days on any promo / intro / featured post | unchanged | `'paid'` |
+| Employer plan | $399 / month (`config.planPrice`) | `config.planSlots` = 5 active job slots while entitled; each plan post runs 60 days and is never renewed; a slot frees when its post expires or is closed, and the employer posts into it again at no extra charge; `config.planGraceDays` = 3 | `'plan'` | `'plan'` |
+| Renewal | $179 (`config.renewalPrice` / `stripeRenewalPriceInCents` 17900) | +60 days on a promo / intro / featured post (never a plan post), capped at `config.renewalCapDays` = 365 days after the post was created; does NOT reset unlocks or InMails | unchanged | `'paid'` |
 
-Every SKU includes exactly the same package: Featured badge, pinned above aggregated jobs, direct apply, screening questions, analytics, `config.limits.candidateUnlocksPerPosting` = 25 unlocks and `config.limits.inmailsPerPosting` = 25 InMails. `config.isFeatured` is always `true`; `config.getTierLimits()` returns the same limits for every tier.
+Every SKU includes exactly the same package: Featured badge, pinned above aggregated jobs, direct apply, screening questions, analytics, `config.limits.candidateUnlocksPerPosting` = 25 unlocks and `config.limits.inmailsPerPosting` = 25 InMails. `config.isFeatured` is always `true`; `config.getTierLimits()` returns the same limits for every tier. The 25 / 25 are per posting for its whole life: unlocks are counted by `ProfileView.employerJobId`, InMails by conversations on the job since `EmployerJob.createdAt` (lib/tier-limits.ts), and a renewal changes neither, so no surface may say a renewal "refreshes" them.
+
+**Plan post lifecycle (what the copy may promise).** A plan post is NOT live "for as long as the plan is active". `POST /api/jobs/post-free` writes the same `expiresAt = now + config.durationDays` for plan posts as for promo posts; nothing extends a plan post; `/api/create-renewal-checkout` answers 409 for `paymentStatus='plan'`; and `pausePlanPosts` unpublishes live plan posts when the plan lapses. So the true statement is: while subscribed you have `planSlots` active job slots; each plan post runs `durationDays`; when one ends, is closed or is swapped out, its slot is free and the employer can post again into it at no extra charge; plan posts come down if the plan ends; a cancel keeps them up through the paid period (never past their own 60 days). Cancel is self-serve through the Stripe Customer Portal (`POST /api/employer/billing-portal`, "Manage billing"). "Swap jobs any time" means close (pause or archive) one plan post and post another into the freed slot.
 
 ### 1c. Helpers (the ONLY mapping code should use)
 
@@ -55,8 +57,15 @@ Every SKU includes exactly the same package: Featured badge, pinned above aggreg
 - `Free through ${config.promoEndsLabel}`
 - `Every job post is free during our launch period: ${durationDays}-day listing, Featured badge, top placement, ${unlocks} candidate unlocks and ${inmails} InMails. No credit card required.`
 - `From ${config.ladderStartsLabel}: your first post is $${introPrice}, every post after that is $${postingPrice}, or $${planPrice}/month for ${planSlots} active jobs.`
-- `${planSlots} active job slots, live while you're subscribed. Swap jobs any time. Cancel any time.`
-- `Renew any post for $${renewalPrice} (+${durationDays} days).`
+- `${planSlots} active job slots while you're subscribed. Swap jobs any time. Cancel any time.`
+- `Each plan post runs ${durationDays} days. When one ends, or you close it to swap in another role, its slot opens up and you can post into it again at no extra charge. Plan posts come down if the plan ends.`
+- `If you cancel, your plan posts stay up through the end of the period you paid for, or until their ${durationDays} days run out if that comes first.`
+- `Renew a promo, intro or featured post for $${renewalPrice} (+${durationDays} days).`
+- `A renewal adds ${durationDays} days to the post: to its current end date while it is still live, or from the day you renew once it has ended. It does not add unlocks or InMails: a post has ${unlocks} unlocks and ${inmails} InMails in total, however many times it is renewed.`
+- `Renewals can extend a post to at most ${renewalCapDays} days after it was first posted.`
+- `${durationDays}-Day Listing` cards on /pricing and /for-employers: `Every post runs ${durationDays} days with no daily budget and no bidding ... Plan posts run the same ${durationDays} days and come down sooner only if the plan ends.`
+
+Retired 2026-09-27 because the code never did them: "live while you're subscribed", "plan posts stay live while your plan is active, so they don't need renewing", the listing cards' "plan posts stay up while your plan is active" and "Every post runs its full 60 days" (a plan post comes down early when its plan lapses), "Renew any post", and "renewing ... refreshes its 25 unlocks and 25 InMails". The renewal "boosts the listing back to the top of search results" claim was also dropped: the renewal webhook sets `Job.isFeatured=true`, which sorts the post above un-renewed employer posts on the default `best` order only, once, and not on `newest` / `salary` or semantic search, so "back to the top" overstated it.
 
 Never claim audience numbers (subscribers, visitors, applicants) on any surface.
 
@@ -137,13 +146,19 @@ The intro allowance = zero rows with `quotaDomain = domain AND paymentStatus = '
 Employer dashboard / jobs/edit/[token] → renewal modal
   ├─ paymentStatus 'promo' | 'paid'   → "Renew $179" CTA → POST /api/create-renewal-checkout
   ├─ paymentStatus 'plan'             → "Plan slot" badge, no Renew (409 server-side:
-  │                                      plan posts stay live while the plan is active; post again from a plan slot)
-  ├─ paymentStatus 'pending'/'refunded' → 409
+  │                                      a plan post runs 60 days and is never renewed; post again from a plan slot)
+  ├─ paymentStatus 'pending'/'expired'/'refunded'/'disputed' → 409 (apply-renewal also refuses
+  │                                      'pending' and 'expired', so an abandoned checkout is never renewed live)
   └─ legacy 'free'                    → today's "can't be renewed" modal (unchanged message)
 
-Webhook (type='renewal'): expiresAt = MAX(existingExpiresAt, now) + config.durationDays,
-  EmployerJob.paymentStatus='paid', JobCharge(type='renewal', 17900), sendRenewalConfirmationEmail.
+Webhook (type='renewal', app/api/webhooks/stripe/apply-renewal.ts):
+  expiresAt = min(MAX(existingExpiresAt, now) + config.durationDays, Job.createdAt + config.renewalCapDays)
+  (lib/expires-at.ts#renewalExpiresAt), Job.isPublished=true, Job.isFeatured=true,
+  EmployerJob.paymentStatus='paid' + expiryWarningSentAt=null, JobCharge(type='renewal', 17900),
+  sendRenewalConfirmationEmail. Nothing resets the post's unlock or InMail counts.
 ```
+
+While `ENABLE_PAID_POSTING` is not `'true'` (production today), `/api/create-renewal-checkout` answers 503 `PAID_POSTING_DISABLED` like every paid route, so no post, promo included, can be renewed until paid posting is switched on.
 
 ### 2e. Employer plan lifecycle (Stripe Billing subscription)
 
@@ -168,11 +183,13 @@ Stripe → webhook checkout.session.completed with session.mode === 'subscriptio
 Stripe → customer.subscription.updated / .deleted
   ├─ status map: active|trialing → 'active'; past_due|unpaid → 'past_due'; canceled|incomplete_expired → 'cancelled'
   ├─ upsertPlan keyed on stripeSubscriptionId, currentPeriodEnd updated
-  ├─ → 'active'    : resumePlanPosts (newest first, within remaining slots, only posts whose 60 days have not elapsed)
-  └─ → 'cancelled' : pausePlanPosts + sendPlanPausedEmail(email, { reason, pausedCount })
+  ├─ → 'active'    : resumePlanPosts (newest first, within remaining slots, only posts whose 60 days have not elapsed, not archived, and not paused, archived or soft deleted by the employer or an admin: isManuallyUnpublished = false)
+  └─ → 'cancelled' : still inside the paid period → sendPlanPausedEmail(email, { liveUntil }) and posts stay up
+                     (the lapse job pauses them at currentPeriodEnd); nothing left to honour → pausePlanPosts + email
 
-Entitlement: isPlanEntitled(plan, now) = status in ('active','past_due') AND currentPeriodEnd + config.planGraceDays > now.
-Posts stay live through the end of the paid period (+ grace, which covers Stripe Smart Retries).
+Entitlement: isPlanEntitled(plan, now) = status in ('active','past_due') AND currentPeriodEnd + config.planGraceDays > now,
+  or status 'cancelled' AND currentPeriodEnd > now (a cancel keeps the paid-through period, no grace).
+Plan posts stay live while entitled AND inside their own 60 days, whichever ends first; nothing extends them.
 
 Admin: GET/POST /api/admin/employer-plans (list; create/attach { email, userId?, slots?, currentPeriodEnd, status? } → upsertPlan(source:'admin')),
        PATCH /api/admin/employer-plans/[id] ({ status?, slots?, currentPeriodEnd?, userId? }); page /admin/employer-plans.
@@ -189,9 +206,24 @@ lib/inngest/functions/plan-lapse.ts (registered in app/api/inngest/route.ts — 
 ### 2g. Expiry (no money flow, but visible UX)
 
 ```
-Cron → sendExpiryWarningEmail (~7 days before expiresAt)
-  └─ Email shows: $179 renewal CTA + "renewing early doesn't lose days" + "candidates you've unlocked stay accessible"
-     (plan posts: no renewal CTA — they stay live while the plan is active)
+Cron /api/cron/expiry-warnings → sendExpiryWarningEmail (from 5 days before expiresAt)
+  └─ The offer is decided per row by lib/email-service.ts#expiryWarningCopy and
+     lib/pricing.ts#resolveRenewalOffer:
+       renew        : a promo or paid row AND getPaidPostingStatus().available. A saving is
+                      named only after the promo, against the employer's own next new-post
+                      price ($199 intro, $299, or $0 with a free plan slot), or "vs. the $299
+                      post price" when that is unknown, and never when renewal is not cheaper.
+       promo_repost : no renewal on sale during the promo, so the email says every post is
+                      free through config.promoEndsLabel.
+       none         : no renewal on sale after the promo, so there is no offer.
+       plan         : no renewal CTA; each plan post runs 60 days, then is posted again into
+                      the freed slot at no extra charge.
+
+Employer republish (toggle-publish): 'paid', 'free' and 'promo' come back directly;
+'plan' only through republishPlanPost (plan entitled and a free slot, checked in one
+Serializable transaction with the write: 403 planInactive, 409 planSlotsFull, 409 retry
+on a serialization conflict). Archive and edit-token soft delete set
+isManuallyUnpublished, as a pause does, so resumePlanPosts never revives them.
 
 Posting reaches expiresAt: excluded from getEmployerActivePostings; no NEW unlocks / InMails;
 previously-unlocked candidates stay accessible (hasFullAccess via existingView); replies stay free.
@@ -336,7 +368,7 @@ One row per per-post Stripe checkout. Invoices are generated from this ledger so
 ### 4e. Other relevant fields
 
 - `Job.expiresAt DateTime?` — drives "active posting" definition; plan posts are additionally paused (`isPublished=false`) by the lapse job
-- `Job.isFeatured Boolean @default(false)` — every post writes `false`; placement + badge come from the EmployerJob relation
+- `Job.isFeatured Boolean @default(false)` — every post writes `false`; placement + badge come from the EmployerJob relation. Exception: the renewal webhook writes `true` (`config.isFeaturedTier` is always true), which sorts a renewed post above un-renewed employer posts on the `best` order; lib/utils/job-sort.ts still documents the flag as unused
 - `Job.isPublished Boolean @default(false)` — true immediately for promo/plan; flipped by the webhook for paid
 
 ---
@@ -355,8 +387,8 @@ One row per per-post Stripe checkout. Invoices are generated from this ledger so
 | Featured badge + top placement | Every post |
 | 25 candidate unlocks / 25 InMails | Per active posting, every tier |
 | Reply to existing conversations | Always free |
-| View previously-unlocked candidates' contact info | Lifetime (audit #21) |
-| Renew posting at $179 | promo + paid posts; plan posts stay live while the plan is active; legacy free posts must repost |
+| View previously-unlocked candidates' contact info | After the posting expires, while the candidate's profile stays visible and open to offers (audit #21; the candidate route only returns such profiles) |
+| Renew posting at $179 | promo + paid posts, +60 days capped at `config.renewalCapDays` after creation, no new unlocks / InMails; plan posts are never renewed (nothing reposts them; the employer posts again into a freed slot); legacy free posts must repost |
 | Edit posting | Anytime |
 | Analytics (per-job + time-series) | Active posting required (audit #M2 gate) |
 | Invoice PDF | Per JobCharge; plan receipts come from Stripe |
@@ -463,7 +495,7 @@ Lifetime once unlocked (audit #21).
 | Edit job content (title/description/salary) | Doesn't touch `quotaDomain`, `paymentStatus`, or `userId`. |
 | Edit `contactEmail` after posting | Count anchored on `quotaDomain` not `contactEmail`. |
 | Attempt to mutate `paymentStatus` directly | No customer-facing path writes this field. Webhook, `post-free` and the lapse job are the only writers. |
-| Cancel the plan right after posting 5 jobs | Posts stay live only through `currentPeriodEnd + planGraceDays`; the lapse job pauses them. |
+| Cancel the plan right after posting 5 jobs | A cancelled plan is entitled only through `currentPeriodEnd` (no grace), and each post only through its own 60 days; the lapse job pauses them. |
 
 ---
 
@@ -510,10 +542,10 @@ The promo needs NOTHING from Stripe. Everything below must be live **before Janu
 
 ### 9d. Operational rules cheat-sheet
 
-- Promo: every post free through 2026-12-31 (America/New_York); `config.isPromoActive()` is the only switch — no flag to flip.
+- Promo: every post free through 2026-12-31 in every US zone (ends 2027-01-01T10:00Z, midnight Pacific/Honolulu); `config.isPromoActive()` is the only switch — no flag to flip.
 - Ladder: intro $199 = first `'paid'` row per `quotaDomain`; featured $299 after; renewal $179 on promo/paid rows; plan $399/month for 5 slots.
-- Renewal extends from `MAX(existingExpiresAt, now)` — early renewers don't lose days.
-- Plan posts are never renewed individually; they stay live while entitled and are paused by the lapse job (grace = `config.planGraceDays`).
+- Renewal extends from `MAX(existingExpiresAt, now)` — early renewers don't lose days — up to `config.renewalCapDays` after creation; it never resets unlocks or InMails.
+- Plan posts are never renewed; each runs 60 days, frees its slot when it ends or is closed, and is paused by the lapse job when the plan lapses (grace = `config.planGraceDays` for past_due, none for cancelled).
 - Legacy `'free'` posts cannot be renewed (unchanged message). Pending / refunded posts cannot be renewed.
 - Webhook idempotency keyed on `event.id`. Stripe retries are safe, for subscriptions too.
 - Server-side `purchase` event fires from the webhook (the only authoritative payment-completion signal).
@@ -578,7 +610,7 @@ employer dashboard "Renew" button
   ↓
 promo / paid post?  → modal: "Renew $179" → /api/create-renewal-checkout → Stripe → webhook (type='renewal')
                                               expiresAt = MAX(existing, now) + 60d · JobCharge 17900 · email
-plan post?          → "Plan slot" badge, no Renew (stays live while the plan is active)
+plan post?          → "Plan slot" badge, no Renew (runs 60 days; post again into the freed slot)
 legacy free post?   → popup: "can't renew, post new" → /post-job
 ```
 

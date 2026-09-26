@@ -1110,7 +1110,9 @@ test.describe('/tools/private-practice-revenue-calculator', () => {
  *   promo    — every post $0; renewals are still $179
  *   per-post — the FIRST PAID post per employer email domain is $199, every
  *              post after it $299, renewals $179, 60-day window, 25 unlocks
- *   plan     — $399/month for 5 concurrently active slots, no renewals
+ *   plan     — $399/month for 5 concurrently active slots, no renewals (a plan
+ *              post runs 60 days and is never renewed; the employer posts the
+ *              role again into its freed slot)
  *
  * Per-post, roles 3, renewals 1/role, intro price on, 1 hire/role, 25 applicants/role:
  *   intro 199 + featured 2 × 299 = 797; renewals 3 × 179 = 537; total 1,334
@@ -1240,9 +1242,10 @@ test.describe('/tools/cost-per-hire-calculator', () => {
         await expect(introPrice).toBeChecked();
         await expect(headline(page)).toHaveText('$199');
 
-        // Employer plan: 3 roles fit one plan's 5 slots; 2 months × $399 = $798,
-        // and plan posts stay live while the plan is active, so there is nothing
-        // to renew and the renewals field is replaced by the months field.
+        // Employer plan: 3 roles fit one plan's 5 slots; 2 months × $399 = $798.
+        // A plan post is never renewed (it runs 60 days and the role is posted
+        // again into its freed slot), so the renewals field is replaced by the
+        // months field.
         await fillNumber(page, '#cph-roles', '3');
         await page.locator('#cph-flat-mode').selectOption('plan');
         await expect(page.locator('#cph-renewals')).toHaveCount(0);

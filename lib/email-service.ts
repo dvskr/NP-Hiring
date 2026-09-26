@@ -13,6 +13,7 @@ import {
   V2, SANS as SANS_V2, SERIF as SERIF_V2,
 } from '@/lib/email-templates-v2';
 import { renderJobCardHtml } from '@/lib/utils/render-job-card';
+import { resolveRenewalOffer, renewalSavingsLabel, type RenewalOffer } from '@/lib/pricing';
 import { buildListUnsubscribeHeaders } from '@/lib/email/list-unsubscribe';
 import { SALARY_GUIDE_EDITION_YEAR } from '@/app/api/salary-guide/pdf-availability';
 
@@ -56,9 +57,9 @@ function sectionHeadV2(text: string): string {
   return `<tr><td class="content-pad" style="padding:0 40px;"><p style="margin:0;font-family:${SERIF_V2};font-size:26px;font-weight:700;color:${V2.textHeading};text-align:center;">${text}</p></td></tr>`;
 }
 
-/** Stat card — matches v2 stat */
-function statBlockV2(value: string, label: string): string {
-  return `<td width="33%" style="padding:16px 12px;background:#ffffff;text-align:center;border-radius:12px;border:1px solid #E8ECE9;box-shadow:0 2px 6px rgba(0,0,0,0.04);"><div style="font-family:${SANS_V2};font-size:30px;font-weight:800;color:${V2.teal};letter-spacing:-0.5px;">${value}</div><div style="font-family:${SANS_V2};font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:1.5px;margin-top:6px;">${label}</div></td>`;
+/** Stat card — matches v2 stat. `width` is the cell's share of the row (three cards by default). */
+function statBlockV2(value: string, label: string, width: string = '33%'): string {
+  return `<td width="${width}" style="padding:16px 12px;background:#ffffff;text-align:center;border-radius:12px;border:1px solid #E8ECE9;box-shadow:0 2px 6px rgba(0,0,0,0.04);"><div style="font-family:${SANS_V2};font-size:30px;font-weight:800;color:${V2.teal};letter-spacing:-0.5px;">${value}</div><div style="font-family:${SANS_V2};font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:1.5px;margin-top:6px;">${label}</div></td>`;
 }
 const SALARY_GUIDE_URL = process.env.SALARY_GUIDE_URL || brand.assets.salaryGuidePdf;
 
@@ -90,14 +91,26 @@ const PROMO_HEADLINE = `Free through ${config.promoEndsLabel}`;
 const PROMO_SUB = `Every job post is free during our launch period: ${config.durationDays}-day listing, Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails. No credit card required.`;
 const LADDER_LINE = `From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs.`;
 const FEATURES_LINE = `Featured badge · Top placement · ${config.limits.candidateUnlocksPerPosting} candidate unlocks · ${config.limits.inmailsPerPosting} InMails · Applicant analytics`;
+/** The renewal limit lib/expires-at.ts#renewalExpiresAt applies, in the /pricing wording. */
+const RENEWAL_CAP_LINE = `Renewals can extend a post to at most ${config.renewalCapDays} days after it was first posted.`;
+/**
+ * How long an unlocked profile stays reachable: the employer candidate
+ * routes (app/api/employer/candidates) only serve profiles that are visible
+ * and open to offers, so "forever" was never true.
+ */
+const UNLOCKED_ACCESS_CLAUSE = 'for as long as they keep their profile visible and open to opportunities';
 
 /**
- * PLAN_TERMS, parameterised on the slot count because an admin grant can
- * carry a non-default `slots`. With the default it is the canonical string
- * verbatim.
+ * The Employer plan terms, parameterised on the slot count because an admin
+ * grant can carry a non-default `slots`. Worded to match what the code does
+ * (and the /pricing plan copy): the slots last while the plan is entitled,
+ * every plan post runs config.durationDays like any other post (post-free
+ * writes the same expiry), plan posts are never renewed, and a post that
+ * ends stops counting against the slots (countActivePlanPosts), so the
+ * employer posts again into that slot without a new charge.
  */
 function planTerms(slots: number = config.planSlots): string {
-  return `${slots} active job slots, live while you're subscribed. Swap jobs any time. Cancel any time.`;
+  return `${slots} active job slot${slots === 1 ? '' : 's'} while you're subscribed. Each plan post runs ${config.durationDays} days; when one ends, post again into the free slot at no extra charge. Cancel any time.`;
 }
 
 /**
@@ -400,7 +413,7 @@ export async function sendSignupWelcomeEmail(
       ${spacerV2(16)}
       ${stepBlock('icon-emp-analytics.png', 'Track engagement', 'Monitor views, apply clicks, and applicant quality in real time.')}
       ${spacerV2(16)}
-      ${stepBlock('icon-emp-handshake.png', 'Connect with candidates', `Message qualified ${brand.niche.short}s directly through the platform. Candidates you unlock stay accessible forever.`)}
+      ${stepBlock('icon-emp-handshake.png', 'Connect with candidates', `Message qualified ${brand.niche.short}s directly through the platform. Candidates you unlock stay in your dashboard ${UNLOCKED_ACCESS_CLAUSE}.`)}
       ${spacerV2(32)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
         ${primaryButtonV2('Post Your First Job', `${SITE_URL}/post-job`)}
@@ -472,7 +485,8 @@ export interface InvoiceLinks {
  *
  * `mode` (2026-09-12 pricing change) selects the one sentence that differs:
  *   'promo' → free during our launch period through config.promoEndsLabel
- *   'plan'  → posted under your Employer plan (live while the plan is)
+ *   'plan'  → posted under your Employer plan: runs `durationDays`, then its
+ *             slot is free for another post at no extra charge
  *   'paid' / undefined → today's wording, with `durationDays`
  *
  * Positional compatibility: slot 7 has always been `invoice` (the paid
@@ -515,7 +529,7 @@ export async function sendConfirmationEmail(
       mode === 'promo'
         ? `It is free during our launch period through ${config.promoEndsLabel} and will remain active for ${durationDays} days.`
         : mode === 'plan'
-          ? `It was posted under your Employer plan and stays live while your plan is active, for up to ${durationDays} days.`
+          ? `It was posted under your Employer plan and runs ${durationDays} days. When it ends, post again into the free slot at no extra charge while you're subscribed.`
           : `The listing will remain active for ${durationDays} days.`;
     const modeNote =
       mode === 'promo'
@@ -546,7 +560,7 @@ export async function sendConfirmationEmail(
         <div style="background:#FDF2F8;border:1px solid rgba(190,24,93,0.15);border-radius:12px;padding:16px 20px;">
           <p style="margin:0 0 6px;font-family:${SANS_V2};font-size:13px;font-weight:700;color:${V2.teal};text-transform:uppercase;letter-spacing:0.05em;">What's Included</p>
           <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${featuresLine}</p>
-          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Candidates you unlock stay in your dashboard forever — even after this posting expires.</p>${modeNote}
+          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Candidates you unlock stay in your dashboard after this posting expires, ${UNLOCKED_ACCESS_CLAUSE}.</p>${modeNote}
         </div>
       </td></tr>${invoiceBlock}
       ${spacerV2(28)}
@@ -623,8 +637,8 @@ export async function sendRenewalConfirmationEmail(
       <tr><td class="content-pad" style="padding:0 40px;">
         <div style="background:#FDF2F8;border:1px solid rgba(190,24,93,0.15);border-radius:12px;padding:16px 20px;">
           <p style="margin:0 0 6px;font-family:${SANS_V2};font-size:13px;font-weight:700;color:${V2.teal};text-transform:uppercase;letter-spacing:0.05em;">Receipt</p>
-          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">Renewal — $${config.renewalPrice}.00 · ${invoiceLine}</p>
-          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">You also got a fresh ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails for this renewal cycle.</p>
+          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">Renewal: $${config.renewalPrice}.00 · ${invoiceLine}</p>
+          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">A renewal adds days only: this posting keeps its applicants, stats and remaining unlocks and InMails, and does not get new ones.</p>
         </div>
       </td></tr>
       ${spacerV2(28)}
@@ -640,7 +654,7 @@ export async function sendRenewalConfirmationEmail(
     await sendAndLog({
       from: EMAIL_FROM,
       to: email,
-      subject: `✅ Job Renewed — "${jobTitle}" is live again`,
+      subject: `✅ Job renewed: "${jobTitle}" is live again`,
       html,
     }, 'renewal_confirmation', { jobTitle }, `${BASE_URL}/unsubscribe?token=${unsubscribeToken}`);
 
@@ -661,14 +675,147 @@ export async function sendRenewalConfirmationEmail(
 
 export interface ExpiryWarningOptions {
   /**
-   * EmployerJob.paymentStatus of the expiring row. 'plan' rows cannot be
-   * renewed (the $179 renewal is blocked with 409 for them) — they reach
-   * their config.durationDays limit and are re-posted from a plan slot —
-   * so the email drops the renewal CTA for that one status. Every other
-   * value ('promo', 'paid', legacy 'free', undefined) keeps today's
-   * renewal pitch exactly.
+   * EmployerJob.paymentStatus of the expiring row. The renewal checkout
+   * refuses 'plan' rows (each plan post runs config.durationDays and frees
+   * its slot when it ends) and legacy 'free' rows, so neither is ever offered
+   * a renewal here.
    */
   paymentStatus?: string;
+  /**
+   * True only when a renewal can be bought right now: paid posting enabled
+   * and Stripe configured (lib/env#getPaidPostingStatus, the check behind
+   * /api/create-checkout/availability). Omitted means false, so the email
+   * never offers a renewal nobody confirmed can be bought: the checkout
+   * answers 503 while paid posting is off.
+   */
+  renewalPurchasable?: boolean;
+  /**
+   * The employer's own next new-post price in dollars
+   * (lib/pricing#nextNewPostPrice), when the caller resolved it. Unknown
+   * compares the renewal with config.postingPrice and says so.
+   */
+  nextPostPrice?: number | null;
+  /** Send time; decides whether the launch promo is running. */
+  now?: Date;
+}
+
+/** Statuses the renewal checkout refuses (app/api/create-renewal-checkout). */
+const NOT_RENEWABLE_STATUSES = new Set(['plan', 'free', 'pending', 'refunded', 'disputed']);
+
+/** Which offer an expiry warning carries: see expiryWarningCopy. */
+export type ExpiryWarningOffer = 'plan' | 'renew' | 'promo_repost' | 'none';
+
+interface ExpiryWarningCopy {
+  offer: ExpiryWarningOffer;
+  subject: string;
+  preheader: string;
+  lead: string;
+  cardLabel: string;
+  cardBody: string;
+  ctaLabel: string;
+  ctaUrl: string;
+}
+
+const dayCount = (n: number): string => `${n} day${n === 1 ? '' : 's'}`;
+
+/** What every expiry-warning variant is written from. */
+interface ExpiryCopyContext {
+  /** Escaped job title, already bold. */
+  title: string;
+  expiryDateStr: string;
+  days: number;
+  dashboardUrl: string;
+  /** "a fresh 25 unlocks and 25 InMails", from config.limits. */
+  fresh: string;
+}
+
+/** Every job post is free through the promo end: the sentence all promo offers share. */
+const PROMO_REPOST_LINE = `Every job post is free through ${config.promoEndsLabel}, so you can post this role again as a fresh listing at no charge.`;
+
+function planExpiryCopy(c: ExpiryCopyContext): ExpiryWarningCopy {
+  return {
+    offer: 'plan',
+    subject: `⏰ Your plan post reaches its ${config.durationDays}-day limit in ${dayCount(c.days)}`,
+    preheader: `Your plan post reaches the end of its ${config.durationDays}-day run in ${dayCount(c.days)}. When it ends, post again into the free slot at no extra charge.`,
+    lead: `Your plan post for ${c.title} reaches the end of its ${config.durationDays}-day run on ${c.expiryDateStr}.`,
+    cardLabel: 'Employer plan post',
+    cardBody: `Each plan post runs ${config.durationDays} days. When this one ends, its slot is free again: post a job into it at no extra charge while you're subscribed, with ${c.fresh}.`,
+    ctaLabel: 'Go to Your Dashboard',
+    ctaUrl: c.dashboardUrl,
+  };
+}
+
+function renewExpiryCopy(c: ExpiryCopyContext, offer: RenewalOffer): ExpiryWarningCopy {
+  const saving = offer.savings ? renewalSavingsLabel(offer.savings) : null;
+  const savingClause = saving ? ` and ${saving.charAt(0).toLowerCase()}${saving.slice(1)}` : '';
+  const promoAlternative = offer.promoActive
+    ? ` Or post this role again as a fresh listing, free through ${config.promoEndsLabel}.`
+    : '';
+  return {
+    offer: 'renew',
+    subject: `⏰ Your job posting expires in ${dayCount(c.days)}: renew now`,
+    preheader: `Your listing expires in ${dayCount(c.days)}. Renew for $${offer.price}${savingClause}.`,
+    lead: `Your posting for ${c.title} will expire on ${c.expiryDateStr}. Renew now to keep it visible and continue receiving applications.`,
+    cardLabel: `Renew for $${offer.price}${saving ? ` (${saving})` : ''}`,
+    // What apply-renewal.ts does: it moves the end date (renewalExpiresAt,
+    // capped at config.renewalCapDays after creation) and nothing else.
+    cardBody: `Adds ${config.durationDays} days to your current expiration, so renewing early doesn't lose any remaining days. It does not add unlocks or InMails. ${RENEWAL_CAP_LINE}${promoAlternative}`,
+    ctaLabel: 'Renew Your Listing',
+    ctaUrl: c.dashboardUrl,
+  };
+}
+
+function promoRepostExpiryCopy(c: ExpiryCopyContext): ExpiryWarningCopy {
+  return {
+    offer: 'promo_repost',
+    subject: `⏰ Your job posting expires in ${dayCount(c.days)}`,
+    preheader: `Your listing expires in ${dayCount(c.days)}. ${PROMO_REPOST_LINE}`,
+    lead: `Your posting for ${c.title} will expire on ${c.expiryDateStr}.`,
+    cardLabel: 'Post it again for free',
+    cardBody: `${PROMO_REPOST_LINE} It runs ${config.durationDays} days with ${c.fresh}.`,
+    ctaLabel: 'Post a New Job for Free',
+    ctaUrl: `${BASE_URL}/post-job`,
+  };
+}
+
+function noOfferExpiryCopy(c: ExpiryCopyContext): ExpiryWarningCopy {
+  return {
+    offer: 'none',
+    subject: `⏰ Your job posting expires in ${dayCount(c.days)}`,
+    preheader: `Your listing expires in ${dayCount(c.days)}.`,
+    lead: `Your posting for ${c.title} will expire on ${c.expiryDateStr}.`,
+    cardLabel: 'After it expires',
+    cardBody: 'The posting leaves the job board. Its applicants and stats stay in your dashboard.',
+    ctaLabel: 'Go to Your Dashboard',
+    ctaUrl: c.dashboardUrl,
+  };
+}
+
+/**
+ * The words of an expiry warning, decided from what the employer can
+ * actually do next:
+ *   plan         — plan post: runs config.durationDays, then its slot is free
+ *   renew        — a renewal can be bought; a saving is named only when it is
+ *                  true for this reader (lib/pricing#resolveRenewalOffer)
+ *   promo_repost — no renewal on sale, launch promo running: post it again free
+ *   none         — no renewal on sale and no free alternative: no offer at all
+ */
+function expiryWarningCopy(jobTitle: string, expiryDateStr: string, days: number, options: ExpiryWarningOptions): ExpiryWarningCopy {
+  const context: ExpiryCopyContext = {
+    title: `<strong>${escapeHtml(jobTitle)}</strong>`,
+    expiryDateStr,
+    days,
+    dashboardUrl: `${BASE_URL}/employer/dashboard`,
+    fresh: `a fresh ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails`,
+  };
+  if (options.paymentStatus === 'plan') return planExpiryCopy(context);
+  const offer = resolveRenewalOffer({
+    purchasable: !NOT_RENEWABLE_STATUSES.has(options.paymentStatus ?? '') && options.renewalPurchasable === true,
+    nextPostPrice: options.nextPostPrice,
+    now: options.now,
+  });
+  if (offer.purchasable) return renewExpiryCopy(context, offer);
+  return offer.promoActive ? promoRepostExpiryCopy(context) : noOfferExpiryCopy(context);
 }
 
 export async function sendExpiryWarningEmail(
@@ -679,10 +826,10 @@ export async function sendExpiryWarningEmail(
   applyClickCount: number,
   dashboardToken: string,
   unsubscribeToken: string | null,
-  options?: ExpiryWarningOptions,
+  options: ExpiryWarningOptions = {},
 ): Promise<EmailResult> {
   try {
-    const now = new Date();
+    const now = options.now ?? new Date();
     const timeDiff = expiresAt.getTime() - now.getTime();
     const daysUntilExpiry = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
     const expiryDateStr = expiresAt.toLocaleDateString('en-US', {
@@ -691,63 +838,45 @@ export async function sendExpiryWarningEmail(
       month: 'long',
       day: 'numeric'
     });
-    const isPlanPost = options?.paymentStatus === 'plan';
-
-    // Deprecated token dashboard just redirects to login — link the real
-    // dashboard (dashboardToken param retained for caller compatibility).
-    const dashboardUrl = `${BASE_URL}/employer/dashboard`;
-    const discountPct = Math.round((1 - config.renewalPrice / config.postingPrice) * 100);
-
-    const leadSentence = isPlanPost
-      ? `Your posting for <strong>${escapeHtml(jobTitle)}</strong> reaches its ${config.durationDays}-day limit on ${expiryDateStr}. Post it again from a plan slot to keep it in front of candidates.`
-      : `Your posting for <strong>${escapeHtml(jobTitle)}</strong> will expire on ${expiryDateStr}. Renew now to maintain visibility and continue receiving applications.`;
-
-    const actionCard = isPlanPost
-      ? `<p style="margin:0 0 6px;font-family:${SANS_V2};font-size:13px;font-weight:700;color:${V2.teal};text-transform:uppercase;letter-spacing:0.05em;">Employer plan post</p>
-          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">Plan posts run ${config.durationDays} days each: this post reaches its ${config.durationDays}-day limit; post it again from a plan slot and it goes live immediately with a fresh ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails.</p>`
-      : `<p style="margin:0 0 6px;font-family:${SANS_V2};font-size:13px;font-weight:700;color:${V2.teal};text-transform:uppercase;letter-spacing:0.05em;">Renew for $${config.renewalPrice} (Save ${discountPct}%)</p>
-          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">Adds ${config.durationDays} days to your current expiration plus a fresh ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails. Renewing early doesn't lose any remaining days.</p>`;
-
-    const ctaLabel = isPlanPost ? 'Post It Again' : 'Renew Your Listing';
-    const preheader = isPlanPost
-      ? `Your plan post reaches its ${config.durationDays}-day limit in ${daysUntilExpiry} days — post it again from a plan slot.`
-      : `Your listing expires in ${daysUntilExpiry} days — renew for $${config.renewalPrice} (save ${discountPct}%).`;
+    // Links go to the real dashboard: the deprecated token dashboard only
+    // redirects to login (dashboardToken is kept for caller compatibility).
+    const copy = expiryWarningCopy(jobTitle, expiryDateStr, daysUntilExpiry, { ...options, now });
+    // Mint the token first so the footer link and the List-Unsubscribe
+    // header carry the same real token.
+    const unsubToken = unsubscribeToken ?? await getOrCreateUnsubToken(email);
 
     const html = emailShellV2(`
-      ${headerBlockV2(`Your Listing Expires in ${daysUntilExpiry} Days`, '')}
+      ${headerBlockV2(`Your Listing Expires in ${daysUntilExpiry} Day${daysUntilExpiry === 1 ? '' : 's'}`, '')}
       ${spacerV2(12)}
-      ${bodyTextV2(leadSentence)}
+      ${bodyTextV2(copy.lead)}
       ${spacerV2(24)}
-      <tr><td class="content-pad" style="padding:0 40px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>${statBlockV2(viewCount.toLocaleString(), 'Views')}<td width="8"></td>${statBlockV2(applyClickCount.toLocaleString(), 'Applies')}<td width="8"></td>${statBlockV2('—', 'Saved')}</tr></table></td></tr>
+      <tr><td class="content-pad" style="padding:0 40px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>${statBlockV2(viewCount.toLocaleString(), 'Views', '50%')}<td width="8"></td>${statBlockV2(applyClickCount.toLocaleString(), 'Applies', '50%')}</tr></table></td></tr>
       ${spacerV2(20)}
       <tr><td class="content-pad" style="padding:0 40px;">
         <div style="background:#FDF2F8;border:1px solid rgba(190,24,93,0.15);border-radius:12px;padding:16px 20px;">
-          ${actionCard}
-          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Heads up: even after expiry, candidates you've already unlocked stay accessible in your dashboard.</p>
+          <p style="margin:0 0 6px;font-family:${SANS_V2};font-size:13px;font-weight:700;color:${V2.teal};text-transform:uppercase;letter-spacing:0.05em;">${copy.cardLabel}</p>
+          <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${copy.cardBody}</p>
+          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Heads up: candidates you've already unlocked stay in your dashboard after expiry, ${UNLOCKED_ACCESS_CLAUSE}.</p>
         </div>
       </td></tr>
       ${spacerV2(24)}
       <tr><td class="content-pad" style="padding:0 40px;text-align:center;">
-        ${primaryButtonV2(ctaLabel, dashboardUrl)}
+        ${primaryButtonV2(copy.ctaLabel, copy.ctaUrl)}
       </td></tr>
       ${spacerV2(48)}
       ${closeContentV2()}`,
-      unsubscribeFooterV2(unsubscribeToken || 'sample'),
-      preheader
+      unsubscribeFooterV2(unsubToken),
+      copy.preheader
     );
 
-    // Always pass a real unsubscribe token; mint one if the caller didn't.
-    const unsubToken = unsubscribeToken ?? await getOrCreateUnsubToken(email);
     await sendAndLog({
       from: EMAIL_FROM,
       to: email,
-      subject: isPlanPost
-        ? `⏰ Your plan post reaches its ${config.durationDays}-day limit in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}`
-        : `⏰ Your job posting expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''} — Renew Now`,
+      subject: copy.subject,
       html,
-    }, 'expiry_warning', { jobTitle, daysUntilExpiry, paymentStatus: options?.paymentStatus ?? null }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
+    }, 'expiry_warning', { jobTitle, daysUntilExpiry, paymentStatus: options.paymentStatus ?? null, offer: copy.offer }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
 
-    logger.info('Expiry warning email sent', { email });
+    logger.info('Expiry warning email sent', { email, offer: copy.offer });
     return { success: true };
   } catch (error) {
     logger.error('Error sending expiry warning email', error, { email });
@@ -856,7 +985,7 @@ export async function sendPlanActivatedEmail(
       ${infoCardV2(`
           ${sectionLabelV2('Plan terms', V2.teal)}
           <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${planTerms(slots)}</p>
-          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Each post stays live for up to ${config.durationDays} days while your plan is active. Your current period runs through ${periodEndStr}.</p>`)}
+          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Your current period runs through ${periodEndStr}.</p>`)}
       ${spacerV2(12)}
       ${infoCardV2(`
           ${sectionLabelV2('Every slot includes', V2.teal)}
@@ -870,13 +999,13 @@ export async function sendPlanActivatedEmail(
       ${spacerV2(48)}
       ${closeContentV2()}`,
       unsubscribeFooterV2(unsubToken),
-      `Your Employer plan is active — ${slots} active job slot${slots === 1 ? '' : 's'}, live while you're subscribed.`
+      `Your Employer plan is active: ${slots} active job slot${slots === 1 ? '' : 's'} while you're subscribed.`
     );
 
     await sendAndLog({
       from: EMAIL_FROM,
       to,
-      subject: `✅ Your ${brand.name} Employer plan is active — ${slots} job slot${slots === 1 ? '' : 's'}`,
+      subject: `✅ Your ${brand.name} Employer plan is active: ${slots} job slot${slots === 1 ? '' : 's'}`,
       html,
     }, 'plan_activated', { slots, currentPeriodEnd: currentPeriodEnd.toISOString() }, `${BASE_URL}/unsubscribe?token=${unsubToken}`);
 
@@ -942,7 +1071,7 @@ export async function sendPlanPausedEmail(
       ${infoCardV2(`
           ${sectionLabelV2(isCancelled ? 'Bring your posts back' : 'Resume your plan', V2.teal)}
           <p style="margin:0;font-family:${SANS_V2};font-size:14px;color:${V2.textPrimary};line-height:1.6;">${nextStep}</p>
-          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Candidates you have already unlocked stay accessible in your dashboard, and your applicants and stats stay attached to each posting.</p>`)}
+          <p style="margin:8px 0 0;font-family:${SANS_V2};font-size:12px;color:${V2.textMuted};line-height:1.5;">Candidates you have already unlocked stay in your dashboard ${UNLOCKED_ACCESS_CLAUSE}, and your applicants and stats stay attached to each posting.</p>`)}
       ${spacerV2(12)}
       ${infoCardV2(`
           ${sectionLabelV2(pricing.label, V2.teal)}
@@ -1035,13 +1164,13 @@ async function sendPlanNotice(
 async function sendPlanCancelledNoticeEmail(to: string, liveUntil: Date): Promise<EmailResult> {
   const dateStr = formatBillingDate(liveUntil);
   return sendPlanNotice(to, 'plan_paused', {
-    subject: `Your ${brand.name} Employer plan is cancelled — posts stay live through ${dateStr}`,
+    subject: `Your ${brand.name} Employer plan is cancelled: your paid period runs through ${dateStr}`,
     headline: 'Your Employer Plan Is Cancelled',
-    lead: `Your Employer plan has been cancelled and you will not be charged again. Your plan posts stay live through <strong>${dateStr}</strong>, the end of the period you already paid for; after that they are paused and hidden from candidates.`,
+    lead: `Your Employer plan has been cancelled and you will not be charged again. Plan posts still inside their ${config.durationDays}-day run stay live through <strong>${dateStr}</strong>, the end of the period you already paid for; after that they are paused and hidden from candidates.`,
     cardLabel: 'Changed your mind?',
     cardBody: `Resubscribe any time: paused posts that have not reached their ${config.durationDays}-day limit come back automatically, newest first, up to your plan's slots.`,
     buttonLabel: 'Manage Your Plan',
-    preview: `Your Employer plan is cancelled — posts stay live through ${dateStr}.`,
+    preview: `Your Employer plan is cancelled. Your paid period runs through ${dateStr}.`,
   }, { reason: 'cancelled', liveUntil: liveUntil.toISOString() });
 }
 

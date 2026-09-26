@@ -87,15 +87,18 @@ const comparisonRows = EMPLOYER_COMPARISON_ROWS;
 const employerFaqs = [
   {
     q: `How much does it cost to hire on ${brand.name}?`,
-    a: `Free through ${config.promoEndsLabel}. Every job post is free during our launch period: ${config.durationDays}-day listing, Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails. No credit card required. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs. Renew any post for $${config.renewalPrice} (+${config.durationDays} days). No pay-per-click bidding, no contracts.`,
+    a: `Free through ${config.promoEndsLabel}. Every job post is free during our launch period: ${config.durationDays}-day listing, Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails. No credit card required. From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs. Renew a promo, intro or featured post for $${config.renewalPrice} (+${config.durationDays} days). No pay-per-click bidding, no contracts.`,
   },
   {
     q: 'What does every job post include?',
     a: `Every post (free during the promo, intro, featured, or posted from an Employer plan slot) includes the full package: a ${config.durationDays}-day listing, Featured badge, top search placement, ${config.limits.candidateUnlocksPerPosting} candidate profile unlocks, ${config.limits.inmailsPerPosting} InMails, up to 5 screening questions, and a live analytics dashboard. There is no stripped-down tier.`,
   },
   {
+    // Every post, plan included, runs config.durationDays and a plan post is
+    // never renewed; the plan buys the slot, which frees when a post ends or
+    // is closed. Same wording as the /pricing plan sentences.
     q: 'How does the Employer plan work?',
-    a: `From ${config.ladderStartsLabel}, the Employer plan is $${config.planPrice}/month. ${config.planSlots} active job slots, live while you're subscribed. Swap jobs any time. Cancel any time. It's billed month to month; if you cancel, your posts stay live through the end of the paid period.`,
+    a: `From ${config.ladderStartsLabel}, the Employer plan is $${config.planPrice}/month. ${config.planSlots} active job slots while you're subscribed. Swap jobs any time. Cancel any time. Each plan post runs ${config.durationDays} days. When one ends, or you close it to swap in another role, its slot opens up and you can post into it again at no extra charge. Plan posts come down if the plan ends. It's billed month to month. If you cancel, your plan posts stay up through the end of the period you paid for, or until their ${config.durationDays} days run out if that comes first.`,
   },
   {
     // P2 #16: this answer asserted "a 100% NP audience" — the same
@@ -327,8 +330,8 @@ export default async function ForEmployersPage() {
                 </div>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>{config.durationDays}-Day Listing</h3>
                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                  Every job stays visible for its full {config.durationDays} days with no daily budget and no bidding.
-                  Promo posts get the same run and the same features.
+                  Every job runs {config.durationDays} days with no daily budget and no bidding.
+                  Promo posts get the same run and the same features; plan posts run the same {config.durationDays} days and come down sooner only if the plan ends.
                 </p>
               </div>
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>
@@ -419,7 +422,7 @@ export default async function ForEmployersPage() {
               <p style={{ fontSize: '13px', color: '#BE185D', margin: '0 0 16px', lineHeight: 1.6, fontWeight: 500 }}>
                 From {config.ladderStartsLabel}: your first post is ${config.introPrice}, every post after that is{' '}
                 ${config.postingPrice}, or ${config.planPrice}/month for {config.planSlots} active jobs.<br />
-                Renew any post for ${config.renewalPrice} (+{config.durationDays} days). No hidden fees.
+                Renew a promo, intro or featured post for ${config.renewalPrice} (+{config.durationDays} days). No hidden fees.
               </p>
               <Link href="/post-job" className="emp-cta-primary" style={{
                 padding: '10px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',

@@ -102,6 +102,22 @@ interface EmployerJobData {
   paymentStatus: string;
 }
 
+/**
+ * The renewal savings line for this page, or null when no saving is true.
+ * The edit page does not know the employer's quota domain, so it compares
+ * with the standard post price and says so: the 'list-price' basis of
+ * lib/pricing.ts#resolveRenewalOffer (this client page cannot import that
+ * module: it loads the Prisma client). No claim while the launch promo
+ * runs, because a new post is free.
+ */
+function listPriceSavingsLine(now: Date = new Date()): string | null {
+  if (config.isPromoActive(now)) return null;
+  const comparedWith = config.postingPrice;
+  if (comparedWith <= config.renewalPrice) return null;
+  const percent = Math.floor(((comparedWith - config.renewalPrice) / comparedWith) * 100);
+  return percent < 1 ? null : `Save ${percent}% vs. the $${comparedWith} post price`;
+}
+
 const workModes = ['Remote', 'Hybrid', 'In-Person'] as const;
 const jobTypes = ['Full-Time', 'Part-Time', 'Contract', 'Per Diem'] as const;
 
@@ -268,6 +284,11 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
   const [unpublishing, setUnpublishing] = useState(false);
   const [showRenewModal, setShowRenewModal] = useState(false);
   const [renewingTier, setRenewingTier] = useState<'pro' | null>(null);
+  // Whether a renewal can be bought right now: the server check behind
+  // /api/create-checkout/availability (paid posting on and Stripe
+  // configured), which the renewal checkout also enforces with a 503. Null
+  // until known; any failure counts as unavailable.
+  const [paidPostingAvailable, setPaidPostingAvailable] = useState<boolean | null>(null);
   const [isApplyOnPlatform, setIsApplyOnPlatform] = useState(false);
   const [currentStep, setCurrentStep] = useState<StepId>(1);
   const [completedSteps, setCompletedSteps] = useState<Set<StepId>>(new Set());
@@ -389,6 +410,15 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
     fetchJob();
   }, [params, reset]);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/create-checkout/availability')
+      .then(async (res) => (res.ok ? ((await res.json()) as { available?: boolean }) : null))
+      .then((data) => { if (!cancelled) setPaidPostingAvailable(data?.available === true); })
+      .catch(() => { if (!cancelled) setPaidPostingAvailable(false); });
+    return () => { cancelled = true; };
+  }, []);
+
   const onSubmit = async (data: EditJobFormData) => {
     try {
       setUpdateSuccess(false);
@@ -498,17 +528,24 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
   };
 
   // Which rows can buy a $renewalPrice extension (mirrors the dashboard and
-  // /api/create-renewal-checkout): 'plan' posts run their term under the
-  // subscription and are re-posted from a slot instead; 'pending' (unpaid)
+  // /api/create-renewal-checkout): 'plan' posts run config.durationDays and
+  // are never renewed (their slot frees when they end); 'pending' (unpaid)
   // and 'refunded' rows are never renewable. Legacy 'free' rows still open
   // the "can't be renewed" modal below, so they stay "renewable" here.
+  // Nothing is renewable while no renewal can be bought (paid posting off);
+  // during the launch promo the page offers a free repost instead.
   const isPlanPost = employerJob?.paymentStatus === 'plan';
   const canRenew = !isPlanPost
     && employerJob?.paymentStatus !== 'pending'
     && employerJob?.paymentStatus !== 'refunded';
+  const renewalPurchasable = paidPostingAvailable === true;
+  const promoActive = config.isPromoActive();
+  const offerRenewal = canRenew && renewalPurchasable;
+  const offerPromoRepost = !isPlanPost && !offerRenewal && paidPostingAvailable !== null && promoActive;
+  const savingsLine = listPriceSavingsLine();
 
   const handleRenewCheckout = async (tier: 'pro') => {
-    if (!job) return;
+    if (!job || !renewalPurchasable) return;
 
     setRenewingTier(tier);
     setShowRenewModal(false);
@@ -636,15 +673,20 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                   {expired ? 'This job has expired' : 'This job expires soon'}
                 </h3>
                 <p style={{ fontSize: '13px', color: accentColor, margin: '0 0 14px', lineHeight: 1.5, opacity: 0.85 }}>
+                  {expired
+                    ? `Expired on ${expiryDate}. It is no longer visible to candidates.`
+                    : `Expires on ${expiryDate}.`}
                   {isPlanPost
                     ? (expired
-                      ? `Expired on ${expiryDate}. It is no longer visible to candidates. Plan posts run ${config.durationDays} days and aren't renewed per post: post the role again from a plan slot.`
-                      : `Expires on ${expiryDate}. Plan posts run ${config.durationDays} days and aren't renewed per post. When it ends, post the role again from a plan slot.`)
-                    : expired
-                      ? `Expired on ${expiryDate}. It is no longer visible to candidates. Renew to relist it.`
-                      : `Expires on ${expiryDate}. Renew now to keep it visible.`}
+                      ? ` Each plan post runs ${config.durationDays} days and isn't renewed: post again into the free slot at no extra charge while you're subscribed.`
+                      : ` Each plan post runs ${config.durationDays} days and isn't renewed. When it ends, post again into the free slot at no extra charge while you're subscribed.`)
+                    : offerRenewal
+                      ? (expired ? ' Renew to relist it.' : ' Renew now to keep it visible.')
+                      : offerPromoRepost
+                        ? ` Every job post is free through ${config.promoEndsLabel}, so you can post this role again as a fresh listing at no charge.`
+                        : ''}
                 </p>
-                {canRenew ? (
+                {offerRenewal ? (
                   <button
                     onClick={() => setShowRenewModal(true)}
                     disabled={renewingTier !== null}
@@ -659,14 +701,14 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                     <RefreshCw size={16} className={renewingTier ? 'animate-spin' : ''} />
                     {renewingTier ? 'Processing...' : 'Renew This Job'}
                   </button>
-                ) : isPlanPost ? (
+                ) : (isPlanPost || offerPromoRepost) ? (
                   <Link href="/post-job" style={{
                     ...clayBtn,
                     background: 'linear-gradient(145deg, #BE185D, #9D174D)', color: '#fff',
                     border: 'none', textDecoration: 'none',
                     boxShadow: '4px 4px 12px rgba(190,24,93,0.25), inset 0 1px 0 rgba(255,255,255,0.15)',
                   }}>
-                    Post from a plan slot
+                    {isPlanPost ? 'Post a New Job' : 'Post a New Job for Free'}
                   </Link>
                 ) : null}
               </div>
@@ -1178,8 +1220,8 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
         </div>
       )}
 
-      {/* Renewal Modal — legacy free-trial posts can't be renewed */}
-      {showRenewModal && job && employerJob?.paymentStatus === 'free' && (
+      {/* Renewal Modal — legacy free-trial posts can't be renewed (reachable only while renewals are on sale) */}
+      {showRenewModal && job && renewalPurchasable && employerJob?.paymentStatus === 'free' && (
         <div style={{
           position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '16px', zIndex: 50, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
@@ -1200,8 +1242,8 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
             </p>
             <p style={{ fontSize: '13px', color: '#6B7F8A', lineHeight: 1.6, margin: '0 0 20px' }}>
               {config.isPromoActive()
-                ? `You can post this role again as a fresh listing, free through ${config.promoEndsLabel}. It keeps the same ${config.durationDays}-day duration and gets a new bucket of ${config.limits.candidateUnlocksPerPosting} unlocks & ${config.limits.inmailsPerPosting} InMails.`
-                : `You can post this role again as a fresh listing: $${config.introPrice} for your company's first paid post, $${config.postingPrice} after that. It keeps the same ${config.durationDays}-day duration and gets a new bucket of ${config.limits.candidateUnlocksPerPosting} unlocks & ${config.limits.inmailsPerPosting} InMails.`}
+                ? `You can post this role again as a fresh listing, free through ${config.promoEndsLabel}. It runs ${config.durationDays} days with its own ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails.`
+                : `You can post this role again as a fresh listing: $${config.introPrice} for your company's first paid post, $${config.postingPrice} after that. It runs ${config.durationDays} days with its own ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails.`}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1228,7 +1270,7 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
       )}
 
       {/* Renewal Modal — promo / paid (and legacy renewed) posts get the $renewalPrice extension */}
-      {showRenewModal && job && employerJob?.paymentStatus !== 'free' && canRenew && (
+      {showRenewModal && job && employerJob?.paymentStatus !== 'free' && offerRenewal && (
         <div style={{
           position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '16px', zIndex: 50, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
@@ -1257,15 +1299,28 @@ export default function EditJobPage({ params }: { params: Promise<{ token: strin
                 <span style={{ fontSize: '14px', fontWeight: 700, color: '#BE185D' }}>Renew Listing</span>
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ fontSize: '22px', fontWeight: 800, color: '#BE185D', fontFamily: 'var(--font-lora), Georgia, serif' }}>${config.renewalPrice}</span>
-                  <p style={{ fontSize: '11px', color: '#6B7F8A', margin: '0', fontWeight: 600 }}>Save {Math.round((1 - config.renewalPrice / config.postingPrice) * 100)}%</p>
+                  {/* Only a saving that is true for any reader of this page; none during the promo. */}
+                  {savingsLine && (
+                    <p style={{ fontSize: '11px', color: '#6B7F8A', margin: '0', fontWeight: 600 }}>{savingsLine}</p>
+                  )}
                 </div>
               </div>
               <ul style={{ margin: 0, padding: '0 0 0 16px', fontSize: '12px', color: '#6B7F8A', lineHeight: 1.6 }}>
+                {/* What apply-renewal.ts does: it moves the end date and keeps the
+                    post Featured; unlock and InMail counters are not reset. */}
                 <li>Adds {config.durationDays} days to your current expiration</li>
-                <li>Featured placement (top of list)</li>
-                <li>{config.limits.candidateUnlocksPerPosting} candidate unlocks · {config.limits.inmailsPerPosting} InMails</li>
+                <li>Stays Featured</li>
+                <li>Does not add unlocks or InMails</li>
+                <li>Renewals can extend a post to at most {config.renewalCapDays} days after it was first posted</li>
               </ul>
             </button>
+
+            {promoActive && (
+              <p style={{ fontSize: '12px', color: '#6B7F8A', lineHeight: 1.5, margin: '0 0 14px' }}>
+                Or post this role again as a fresh listing, free through {config.promoEndsLabel}.{' '}
+                <Link href="/post-job" style={{ color: '#BE185D', fontWeight: 600 }}>Post a new job</Link>
+              </p>
+            )}
 
             <button
               onClick={() => setShowRenewModal(false)}

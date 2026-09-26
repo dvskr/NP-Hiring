@@ -10,6 +10,9 @@
  *  - A renewal paid on a refunded/disputed posting never re-publishes it
  *    (pre-check AND the conditional write inside the transaction), is
  *    ledgered for the refund, alerted, and acknowledged without a retry.
+ *  - The same holds for a posting that was never paid for ('pending', or
+ *    'expired' after the reconciliation sweep retired the abandoned
+ *    checkout): a $179 renewal must not publish a post nobody paid for.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
@@ -204,6 +207,28 @@ describe('Stripe webhook — renewal can never re-publish a refunded or disputed
         expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
     });
 
+    it.each(['pending', 'expired'])("a renewal paid on a never-paid '%s' posting is refused the same way — ledgered, alerted, nothing published", async (status) => {
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ej1', jobId: 'job1', paymentStatus: status, contactEmail: 'e@x.com', dashboardToken: 'tok' } as never);
+
+        const { POST } = await import('@/app/api/webhooks/stripe/route');
+        const res = await POST(makeRequest(renewalEvent(`evt_ren_${status}`)) as never);
+        const json = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(json.note).toMatch(/revoked posting/);
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+        // Never flipped to 'paid', never published, never extended.
+        expect(prisma.employerJob.update).not.toHaveBeenCalled();
+        expect(prisma.employerJob.updateMany).not.toHaveBeenCalled();
+        expect(prisma.job.update).not.toHaveBeenCalled();
+        expect(sendRenewalConfirmationEmail).not.toHaveBeenCalled();
+        expect(prisma.jobCharge.create).toHaveBeenCalledWith({ data: expect.objectContaining({ stripeSessionId: 'cs_ren', type: 'renewal', employerJobId: 'ej1' }) });
+        const alerts = JSON.stringify(vi.mocked(sendDiscordMessage).mock.calls);
+        expect(alerts).toContain('Renewal paid on revoked posting');
+        expect(alerts).toContain(`status=${status}`);
+        expect(prisma.processedStripeEvent.delete).not.toHaveBeenCalled();
+    });
+
     it('closes the race: a refund that lands mid-checkout makes the conditional write match nothing and the transaction roll back', async () => {
         vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({ id: 'ej1', jobId: 'job1', paymentStatus: 'paid', contactEmail: 'e@x.com', dashboardToken: 'tok' } as never);
         vi.mocked(prisma.employerJob.updateMany).mockResolvedValue({ count: 0 } as never); // refunded in between
@@ -213,8 +238,9 @@ describe('Stripe webhook — renewal can never re-publish a refunded or disputed
         const res = await POST(makeRequest(renewalEvent('evt_ren_race')) as never);
 
         expect(res.status).toBe(200);
+        // The in-transaction guard refuses exactly the pre-check's states.
         expect(prisma.employerJob.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-            where: { id: 'ej1', paymentStatus: { notIn: ['refunded', 'disputed'] } },
+            where: { id: 'ej1', paymentStatus: { notIn: ['refunded', 'disputed', 'pending', 'expired'] } },
         }));
         // The job write comes AFTER the guard inside the transaction — never reached.
         expect(prisma.job.update).not.toHaveBeenCalled();

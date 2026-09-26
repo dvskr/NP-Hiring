@@ -7,15 +7,21 @@
  * entitled (see isPlanEntitled) and for at most config.durationDays each; the
  * Inngest job in lib/inngest/functions/plan-lapse.ts pauses them when the
  * plan lapses and `resumePlanPosts` re-publishes them when it is paid again.
+ * An employer who paused a plan post republishes it through
+ * /api/employer/jobs/[jobId]/toggle-publish, which calls `republishPlanPost`.
  *
  * Rows are written by the Stripe subscription webhook (Payment Link in
  * subscription mode), the plan reconciliation sweep and the admin grant API.
  * A plan the webhook could not tie to an employer account is stored with
  * userId = null and `email` set so an admin can attach it.
  */
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { config } from '@/lib/config';
 import { logger } from '@/lib/logger';
+
+/** The global client or an interactive transaction client (slot re-checks run inside one). */
+type Db = Prisma.TransactionClient | typeof prisma;
 
 /**
  *   active    — paid and current
@@ -94,8 +100,8 @@ export function isPlanEntitled(plan: { status: string; currentPeriodEnd: Date } 
   return planEntitlementEndsAt(plan.currentPeriodEnd).getTime() > now.getTime();
 }
 
-export async function getPlanForUser(userId: string) {
-  return prisma.employerPlan.findUnique({ where: { userId } });
+export async function getPlanForUser(userId: string, db: Db = prisma) {
+  return db.employerPlan.findUnique({ where: { userId } });
 }
 
 /** The plan row for a Stripe subscription, or null (subscription id is unique). */
@@ -135,8 +141,8 @@ export async function getActivePlan(userId: string, now: Date = new Date()) {
 }
 
 /** Live 'plan' posts for this employer (published, not expired). */
-export async function countActivePlanPosts(userId: string, now: Date = new Date()): Promise<number> {
-  return prisma.employerJob.count({
+export async function countActivePlanPosts(userId: string, now: Date = new Date(), db: Db = prisma): Promise<number> {
+  return db.employerJob.count({
     where: {
       userId,
       paymentStatus: 'plan',
@@ -155,13 +161,59 @@ export interface PlanSlotStatus {
   canPost: boolean;
 }
 
-export async function getPlanSlotStatus(userId: string, now: Date = new Date()): Promise<PlanSlotStatus> {
-  const plan = await getPlanForUser(userId);
+/**
+ * Plan entitlement plus slot usage. Pass a transaction client as `db` to
+ * read both through a Serializable transaction (see republishPlanPost).
+ */
+export async function getPlanSlotStatus(userId: string, now: Date = new Date(), db: Db = prisma): Promise<PlanSlotStatus> {
+  const plan = await getPlanForUser(userId, db);
   const entitled = isPlanEntitled(plan, now);
   const slots = plan?.slots ?? 0;
-  const used = entitled ? await countActivePlanPosts(userId, now) : 0;
+  const used = entitled ? await countActivePlanPosts(userId, now, db) : 0;
   const remaining = entitled ? Math.max(0, slots - used) : 0;
   return { plan, entitled, slots, used, remaining, canPost: entitled && remaining > 0 };
+}
+
+/**
+ * Why republishPlanPost did or did not put the post back live.
+ *   plan_inactive — no plan, or the plan does not entitle posting now
+ *                   (isPlanEntitled): pending, lapsed past its grace window,
+ *                   or cancelled past its paid period
+ *   slots_full    — the plan is entitled but every slot holds a live post
+ */
+export type PlanRepublishOutcome =
+  | { ok: true }
+  | { ok: false; reason: 'plan_inactive' }
+  | { ok: false; reason: 'slots_full'; used: number; slots: number };
+
+/**
+ * Republish one paused 'plan' post for its owner, only while the owner's
+ * plan is entitled AND a slot is free. The plan row, the live-post count and
+ * the write all run in ONE Serializable transaction, the same guard
+ * /api/jobs/post-free uses for a new plan post, so two concurrent
+ * republishes (or a republish racing a new plan post) cannot fill more than
+ * plan.slots: Postgres aborts the loser with a serialization failure
+ * (Prisma P2034), which the caller reports as "try again".
+ *
+ * `data` is the caller's Job update (isPublished: true plus whatever flags
+ * the republish clears). Nothing is written when the outcome is not ok.
+ */
+export async function republishPlanPost(
+  ownerUserId: string | null,
+  jobId: string,
+  data: Prisma.JobUpdateInput,
+  now: Date = new Date(),
+): Promise<PlanRepublishOutcome> {
+  // A 'plan' row always records the employer who posted it; without one
+  // there is no plan to check, so the post cannot go live under it.
+  if (!ownerUserId) return { ok: false, reason: 'plan_inactive' };
+  return prisma.$transaction(async (tx): Promise<PlanRepublishOutcome> => {
+    const status = await getPlanSlotStatus(ownerUserId, now, tx);
+    if (!status.entitled) return { ok: false, reason: 'plan_inactive' };
+    if (!status.canPost) return { ok: false, reason: 'slots_full', used: status.used, slots: status.slots };
+    await tx.job.update({ where: { id: jobId }, data });
+    return { ok: true };
+  }, { isolationLevel: 'Serializable' });
 }
 
 type PlanRow = NonNullable<Awaited<ReturnType<typeof getPlanForUser>>>;
@@ -319,8 +371,16 @@ export async function pausePlanPosts(userId: string, now: Date = new Date()): Pr
 }
 
 /**
- * Re-publish paused 'plan' posts whose 60-day window has not elapsed, up to
- * the plan's slot count (newest first). Used when a lapsed plan is paid again.
+ * Re-publish 'plan' posts that pausePlanPosts took down, whose 60-day window
+ * has not elapsed, up to the plan's free slots (newest first). Runs on plan
+ * checkout, on every 'active' customer.subscription.updated (so on each
+ * monthly renewal too) and on admin plan edits.
+ *
+ * Only posts the PLAN paused qualify. pausePlanPosts flips isPublished alone,
+ * while an employer pause (toggle-publish) and an admin unpublish or soft
+ * delete (publishStateFields) also set isManuallyUnpublished = true; those
+ * posts stay down until the employer (or an admin) republishes them. Archived
+ * posts are skipped too.
  */
 export async function resumePlanPosts(userId: string, now: Date = new Date()): Promise<string[]> {
   const status = await getPlanSlotStatus(userId, now);
@@ -329,7 +389,7 @@ export async function resumePlanPosts(userId: string, now: Date = new Date()): P
     where: {
       userId,
       paymentStatus: 'plan',
-      job: { isPublished: false, archivedAt: null, expiresAt: { gt: now } },
+      job: { isPublished: false, isManuallyUnpublished: false, archivedAt: null, expiresAt: { gt: now } },
     },
     select: { jobId: true },
     orderBy: { createdAt: 'desc' },

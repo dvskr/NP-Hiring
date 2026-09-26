@@ -84,7 +84,10 @@ export async function PATCH(
                 archivedAt: newArchivedAt,
                 // Archiving hides the listing — force-unpublish in the same write.
                 // Unarchiving leaves isPublished alone; employer republishes manually.
-                ...(newArchivedAt !== null && { isPublished: false }),
+                // isManuallyUnpublished marks it as the employer's choice, as a
+                // pause does, so lib/employer-plan.ts resumePlanPosts (run on
+                // every plan renewal) and fp-recovery never bring it back.
+                ...(newArchivedAt !== null && { isPublished: false, isManuallyUnpublished: true }),
             },
         });
 

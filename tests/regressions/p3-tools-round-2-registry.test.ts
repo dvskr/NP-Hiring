@@ -63,6 +63,8 @@ import {
   FLAT_FEE_PRICING,
   FREE_POST_SCOPE_NOTE,
   INTRO_PRICE_SCOPE_NOTE,
+  PLAN_NO_RENEWALS_NOTE,
+  RENEWAL_SCOPE_NOTE,
   compareChannels,
   flatFeeSpend,
   rankByCostPerHire,
@@ -642,6 +644,7 @@ describe('cost per hire — prices come from the pricing config', () => {
     expect(FLAT_FEE_PRICING.introPrice).toBe(config.introPrice);
     expect(FLAT_FEE_PRICING.postingPrice).toBe(config.postingPrice);
     expect(FLAT_FEE_PRICING.renewalPrice).toBe(config.renewalPrice);
+    expect(FLAT_FEE_PRICING.renewalCapDays).toBe(config.renewalCapDays);
     expect(FLAT_FEE_PRICING.planPrice).toBe(config.planPrice);
     expect(FLAT_FEE_PRICING.planSlots).toBe(config.planSlots);
     expect(FLAT_FEE_PRICING.durationDays).toBe(config.durationDays);
@@ -783,6 +786,65 @@ describe('cost per hire — the promo and the intro price are stated from one st
   });
 });
 /**
+ * Renewal and the plan are the other two pricing RULES this tool states. The
+ * old copy said plan posts "stay live while the plan is active" and that you
+ * could "renew any post": neither is what the code does. Every post, plan
+ * included, runs config.durationDays (post-free writes the same expiresAt), a
+ * plan post is never renewed (create-renewal-checkout answers 409), and the
+ * monthly fee buys the SLOT, which frees when a post ends or is closed.
+ */
+describe('cost per hire — the renewal and plan rules are stated from one string each', () => {
+  const CPH_SURFACES = [
+    'components/tools/cost-per-hire-model.ts',
+    NEW_COMPONENTS[2],
+    routeFile('/tools/cost-per-hire-calculator'),
+  ] as const;
+
+  it('scopes renewal to the posts the renewal checkout accepts, at the config price', () => {
+    expect(RENEWAL_SCOPE_NOTE).toBe(
+      `a promo, intro or featured post renews for $${config.renewalPrice} (+${config.durationDays} days)`,
+    );
+    const renewalRoute = read('app/api/create-renewal-checkout/route.ts');
+    expect(renewalRoute).toMatch(/paymentStatus === 'plan'\)\s*\{\s*return NextResponse\.json\([\s\S]*?status: 409/);
+  });
+
+  it('says plan posts run the posting window and the employer posts again, never that they stay live with the plan', () => {
+    expect(PLAN_NO_RENEWALS_NOTE).toBe(
+      `plan posts are not renewed: each runs ${config.durationDays} days, and when it ends you can post the role again into its slot at no extra charge`,
+    );
+    // Nothing reposts a plan post: the note must not read as an automatic return to the slot.
+    expect(PLAN_NO_RENEWALS_NOTE).not.toMatch(/goes back|back into|put back/i);
+    // The fact the note rests on: a plan post gets the same fixed expiry as every post.
+    expect(read('app/api/jobs/post-free/route.ts')).toContain('const expiresAt = expiresFromNow(config.durationDays, now);');
+  });
+
+  it('has every surface render both notes instead of paraphrasing them', () => {
+    for (const file of [NEW_COMPONENTS[2], routeFile('/tools/cost-per-hire-calculator')]) {
+      for (const note of ['RENEWAL_SCOPE_NOTE', 'PLAN_NO_RENEWALS_NOTE']) {
+        const uses = readCode(file).match(new RegExp(note, 'g')) ?? [];
+        expect(uses.length, `${file} interpolates ${note}`).toBeGreaterThan(1);
+      }
+    }
+  });
+
+  it('never restates the claims the code does not back', () => {
+    for (const file of CPH_SURFACES) {
+      const code = readCode(file);
+      expect(code, file).not.toMatch(/stay live while/i);
+      expect(code, file).not.toMatch(/live while you('| a)re subscribed/i);
+      expect(code, file).not.toMatch(/renew(ing)? any post/i);
+      expect(code, file).not.toMatch(/fresh \$\{[^}]*\} unlocks|refresh(es)? its/i);
+    }
+  });
+
+  it('states the renewal cap the renewal code applies', () => {
+    const widget = readCode(NEW_COMPONENTS[2]);
+    expect(widget).toContain('FLAT_FEE_PRICING.renewalCapDays');
+    expect(widget).toContain('It does not add unlocks or messages.');
+  });
+});
+
+/**
  * The cost-per-hire surfaces sell one of the three channels they compare, and
  * their stated premise is that the only figures asserted are ours and checkable.
  * An adverb of frequency or degree attached to "cheaper" breaks that premise: it
@@ -862,7 +924,8 @@ describe('cost per hire — comparison', () => {
     expect(spend.planCount).toBe(Math.ceil(roles / config.planSlots));
     expect(spend.planMonths).toBe(2);
     expect(spend.planSpend).toBe(spend.planCount * 2 * config.planPrice);
-    // Plan posts stay live while the plan is active — renewalsPerRole is ignored.
+    // A plan post is never renewed (it runs config.durationDays and the role
+    // is posted again into the freed slot), so renewalsPerRole is ignored.
     expect(spend.renewals).toBe(0);
     expect(spend.renewalSpend).toBe(0);
     expect(spend.total).toBe(spend.planSpend);

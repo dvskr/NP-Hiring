@@ -75,9 +75,17 @@ describe('B78 — dashboard Complete-payment action', () => {
     expect(src).toContain('window.location.href = result.url');
   });
 
-  it('renders the action only for unarchived unpaid-pending rows', () => {
-    expect(src).toMatch(/!job\.isPublished && job\.paymentStatus === 'pending' && !job\.archivedAt && \(/);
+  it('renders the action only for unarchived unpaid-pending rows, and only when checkout can open', () => {
+    // /api/create-checkout refuses every sale during the launch promo (409
+    // PROMO_ACTIVE) and while paid posting is off (503), so the button shows
+    // only outside the promo with paid posting on.
+    expect(src).toMatch(/!job\.isPublished && job\.paymentStatus === 'pending' && !job\.archivedAt && !promoActive && renewalPurchasable && \(/);
     expect(src).toContain('Complete payment');
+  });
+
+  it('points an unpaid row at a free new post during the promo instead of a checkout that cannot open', () => {
+    expect(src).toMatch(/!job\.isPublished && job\.paymentStatus === 'pending' && !job\.archivedAt && promoActive && \(\s*<Link\s+href="\/post-job"/);
+    expect(src).toContain('Post it free');
   });
 });
 

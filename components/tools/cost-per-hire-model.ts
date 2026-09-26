@@ -30,12 +30,14 @@
  *                  rows against EmployerJob.quotaDomain). "Per account" would
  *                  overstate the discount for a multi-recruiter employer.
  *   - 'plan'     — from config.ladderStartsLabel: config.planPrice per month
- *                  for config.planSlots concurrently active posts. Plan posts
- *                  stay live while the plan is active, so they have no
- *                  renewals to price; a plan for more roles than one plan's
- *                  slots is modelled as enough plans to hold every role at
- *                  once (swapping roles through fewer slots costs less, and
- *                  the widget says so).
+ *                  for config.planSlots concurrently active posts. A plan
+ *                  post runs config.durationDays like any other and is never
+ *                  renewed (create-renewal-checkout refuses it); when it ends
+ *                  the employer can post the role again into the freed slot
+ *                  at no extra charge, so the plan has no renewals to price. A plan for
+ *                  more roles than one plan's slots is modelled as enough
+ *                  plans to hold every role at once (swapping roles through
+ *                  fewer slots costs less, and the widget says so).
  *
  * The two defaults that are not zero are traceable and labelled as such in the
  * UI:
@@ -72,6 +74,8 @@ export const FLAT_FEE_PRICING = {
     /** Every paid post after the intro post. */
     postingPrice: config.postingPrice,
     renewalPrice: config.renewalPrice,
+    /** A renewal never extends a post past this many days after it was created. */
+    renewalCapDays: config.renewalCapDays,
     /** Employer plan: monthly price and concurrently active slots. */
     planPrice: config.planPrice,
     planSlots: config.planSlots,
@@ -103,6 +107,26 @@ export const FREE_POST_SCOPE_NOTE =
 export const INTRO_PRICE_SCOPE_NOTE =
     `one intro-priced post at $${FLAT_FEE_PRICING.introPrice} per employer email domain, lifetime, ` +
     `shared across everyone at your organization; every post after it is $${FLAT_FEE_PRICING.postingPrice}`;
+
+/**
+ * The renewal rule as one string. Renewal is sold for promo, intro and
+ * featured posts only: create-renewal-checkout answers 409 for a plan post,
+ * so "renew any post" would over-promise.
+ */
+export const RENEWAL_SCOPE_NOTE =
+    `a promo, intro or featured post renews for $${FLAT_FEE_PRICING.renewalPrice} (+${FLAT_FEE_PRICING.durationDays} days)`;
+
+/**
+ * Why the plan column prices no renewals, as one string. A plan post is NOT
+ * live for as long as the plan is: it runs config.durationDays like every
+ * other post (post-free writes the same expiresAt) and is never renewed. What
+ * the monthly fee buys is the slot, which frees when the post ends or is
+ * closed. Nothing reposts the role automatically: the employer posts it again
+ * (post-free then resolves the 'plan' mode) into the freed slot at no extra
+ * charge, so the note must not read as if the role returns on its own.
+ */
+export const PLAN_NO_RENEWALS_NOTE =
+    `plan posts are not renewed: each runs ${FLAT_FEE_PRICING.durationDays} days, and when it ends you can post the role again into its slot at no extra charge`;
 
 /** Which rung the flat-fee channel is priced on, for the widget's labels. */
 export const FLAT_FEE_MODE_LABELS: Record<FlatFeeMode, string> = {
@@ -145,7 +169,7 @@ export const FIRST_YEAR_BASE_SOURCE = STAT_SOURCES.averageSalary.source;
 export interface CostPerHireInputs {
     /** Roles you plan to fill. */
     roles: number;
-    /** Renewals per role on the flat-fee channel (ignored on the plan — plan posts stay live). */
+    /** Renewals per role on the flat-fee channel (ignored on the plan: plan posts are never renewed; the employer posts the role again into a freed slot). */
     renewalsPerRole: number;
     /** Which of our three ways to buy the flat-fee column is priced on. */
     flatFeeMode: FlatFeeMode;
@@ -240,8 +264,9 @@ export function flatFeeSpend(inputs: CostPerHireInputs): FlatFeeBreakdown {
     }
 
     if (inputs.flatFeeMode === 'plan') {
-        // Plan posts stay live while the plan is active — there is nothing to
-        // renew, so renewalsPerRole is deliberately ignored here.
+        // A plan post is never renewed: it runs config.durationDays and the
+        // role is posted again into the freed slot inside the monthly fee, so
+        // renewalsPerRole is deliberately ignored here.
         const planMonths = Math.max(1, Math.ceil(atLeastZero(inputs.planMonths)));
         const planCount = roles > 0 ? Math.ceil(roles / FLAT_FEE_PRICING.planSlots) : 0;
         const planSpend = planCount * planMonths * FLAT_FEE_PRICING.planPrice;

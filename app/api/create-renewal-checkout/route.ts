@@ -5,14 +5,18 @@
  * Eligible rows: 'promo' (launch-free post, renewable at the normal price)
  * and 'paid' (intro / pro). Blocked with 409:
  *   'pending'  — checkout never completed; resume the original instead
+ *   'expired'  — an abandoned checkout the reconciliation sweep retired: the
+ *                post was never paid for, and a renewal would publish it at
+ *                the renewal price instead of the post price (the renewal
+ *                webhook refuses these too)
  *   'free'     — legacy free-quota rows (unchanged message)
  *   'refunded' — pulled by refund/moderation; must not relist at a discount
  *   'disputed' — charged back; a renewal must not re-publish it or erase the
  *                dispute marker (the renewal webhook re-checks this too)
- *   'plan'     — plan posts stay live while the plan is active; the employer
- *                posts again from a plan slot rather than buying a renewal
- * Everything else (legacy 'free_renewed' / 'free_upgraded', 'expired')
- * keeps today's behaviour and falls through to Checkout.
+ *   'plan'     — each plan post runs config.durationDays; the employer posts
+ *                again into the freed plan slot rather than buying a renewal
+ * Everything else (legacy 'free_renewed' / 'free_upgraded') keeps today's
+ * behaviour and falls through to Checkout.
  */
 import { getStripe } from '@/lib/stripe';
 import { NextRequest, NextResponse } from 'next/server';
@@ -97,12 +101,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Audit #11: don't allow renewing a posting that was never paid in the first
-    // place. 'pending' = checkout abandoned. Legacy 'free' = the old free-quota
+    // place. 'pending' = checkout abandoned; 'expired' = an abandoned checkout
+    // the reconciliation sweep retired. Renewing either would publish a post
+    // nobody paid for at the renewal price. Legacy 'free' = the old free-quota
     // path; renewing one via the renewal flow would let it sneak past that quota.
-    // Both should re-enter the appropriate flow rather than buying a renewal.
+    // All of them re-enter the appropriate flow rather than buying a renewal.
     // ('promo' rows are deliberately NOT blocked — launch-promo posts renew at
     // the normal renewal price, see file header.)
-    if (employerJob.paymentStatus === 'pending') {
+    if (employerJob.paymentStatus === 'pending' || employerJob.paymentStatus === 'expired') {
       return NextResponse.json(
         { error: 'This job posting was never completed. Please complete the original checkout instead of renewing.' },
         { status: 409 }
@@ -132,13 +138,13 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
-    // Plan posts are not renewed per-post: they stay live while the plan is
-    // active (and for their config.durationDays window), and the employer
-    // re-posts from a plan slot afterwards. Buying a renewal here would
+    // Plan posts are not renewed per-post: each runs config.durationDays
+    // while the plan is active, and the employer re-posts into the freed
+    // plan slot afterwards. Buying a renewal here would
     // convert the row to 'paid' and confuse both the slot count and billing.
     if (employerJob.paymentStatus === 'plan') {
       return NextResponse.json(
-        { error: 'Plan posts stay live while your Employer plan is active and do not need a renewal. To relist this role, post it again from a plan slot.' },
+        { error: `Employer plan posts are not renewed. Each runs ${config.durationDays} days; when this one ends, post again into your free plan slot at no extra charge.` },
         { status: 409 }
       );
     }

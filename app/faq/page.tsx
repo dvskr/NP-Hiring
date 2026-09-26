@@ -77,29 +77,41 @@ export default function FAQPage() {
     },
     {
       question: "What features are included?",
-      answer: `Every job post, whether free during the promo, intro, featured, or posted from an Employer plan slot, gets the same features: a ${config.durationDays}-day listing, Featured badge, top placement in search results, company logo, full analytics with salary benchmarks, ${config.limits.candidateUnlocksPerPosting} candidate profile views, ${config.limits.inmailsPerPosting} InMails, up to 5 screening questions, and apply-on-platform. There is no stripped-down tier.`
+      answer: `Every job post, whether free during the promo, intro, featured, or posted from an Employer plan slot, gets the same features: a ${config.durationDays}-day listing, Featured badge, top placement in search results, company logo, full analytics with salary benchmarks, ${config.limits.candidateUnlocksPerPosting} candidate profile unlocks, ${config.limits.inmailsPerPosting} InMails, up to 5 screening questions, and apply-on-platform. There is no stripped-down tier.`
     },
     {
       question: `What is the intro price, and who gets it?`,
       answer: `From ${config.ladderStartsLabel}, the first paid post per company email domain is $${config.introPrice} instead of $${config.postingPrice}. It is scoped to your organization's domain, not to a login, and posts made free during the launch promo do not use it up.`
     },
     {
+      // Plan posts are NOT live "for as long as the plan is active": every
+      // post, plan included, runs config.durationDays (post-free writes the
+      // same expiresAt), a plan post is never renewed (create-renewal-checkout
+      // 409s it), and the lapse job takes plan posts down when the plan ends.
+      // What the plan buys is the slot: when a post ends or is closed, the
+      // employer posts into that slot again at no extra charge. Same wording
+      // as PLAN_TERMS / PLAN_POSTS_LINE / PLAN_CANCEL_LINE on /pricing.
       question: "How does the Employer plan work?",
-      answer: `$${config.planPrice}/month. ${config.planSlots} active job slots, live while you're subscribed. Swap jobs any time. Cancel any time. The plan is billed month to month from ${config.ladderStartsLabel}; if you cancel, your posts stay live through the end of the paid period. Every slot is a full Featured post with the same ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails.`
+      answer: `From ${config.ladderStartsLabel}, the Employer plan is $${config.planPrice}/month. ${config.planSlots} active job slots while you're subscribed. Swap jobs any time. Cancel any time. Each plan post runs ${config.durationDays} days. When one ends, or you close it to swap in another role, its slot opens up and you can post into it again at no extra charge. Plan posts come down if the plan ends. The plan is billed month to month. If you cancel, your plan posts stay up through the end of the period you paid for, or until their ${config.durationDays} days run out if that comes first. Every slot is a full Featured post with the same ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails.`
     },
     {
+      // A renewal moves the end date and nothing else: it does not reset the
+      // post's unlock or InMail counts (lib/tier-limits.ts counts both per
+      // posting since it was created).
       question: "How long do job postings last, and what does renewal cost?",
-      answer: `Every posting is active for ${config.durationDays} days. Renew any post for $${config.renewalPrice} (+${config.durationDays} days) from the employer dashboard, promo posts included. Plan posts stay live while your plan is active, so they don't need renewing.`
+      answer: `Every posting is active for ${config.durationDays} days. Renew a promo, intro or featured post for $${config.renewalPrice} (+${config.durationDays} days) from the employer dashboard. A renewal gives the post ${config.durationDays} more days; it does not add unlocks or InMails. Plan posts are not renewed: when one ends, post the role again into its slot at no extra charge.`
     },
     {
       question: "If I renew before my post expires, do I lose the remaining days?",
-      answer: `No. Renewing early adds ${config.durationDays} days to your current expiration date, so you keep every day you already have. Renew on your schedule.`
+      answer: `No. Renewing early adds ${config.durationDays} days to your current expiration date, so you keep every day you already have. Renewals can extend a post to at most ${config.renewalCapDays} days after it was first posted.`
     },
     {
       question: "What happens to candidates I've unlocked when my posting expires?",
       // The unlock count reads the config token, like every other entitlement
       // on this page, so a limit change cannot strand a stale "25" here.
-      answer: `You keep them. Once you've unlocked a candidate (used 1 of your ${config.limits.candidateUnlocksPerPosting} unlocks to view their full profile), their contact info, resume, and details remain accessible in your dashboard forever, even after the posting expires. To unlock new candidates or send new InMails, you will need an active posting.`
+      // Access lasts while the candidate stays discoverable: the candidate
+      // route only returns profiles that are visible and open to offers.
+      answer: `You keep them. Once you've unlocked a candidate (used 1 of your ${config.limits.candidateUnlocksPerPosting} unlocks to view their full profile), their contact info, resume, and details stay accessible in your dashboard after the posting expires, for as long as the candidate keeps their profile visible and open to offers. To unlock new candidates or send new InMails, you will need an active posting.`
     },
     {
       question: "Can I edit my job posting?",
@@ -111,7 +123,7 @@ export default function FAQPage() {
     },
     {
       question: "Do you offer refunds?",
-      answer: `Posting fees are generally non-refundable, but if you're unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we'll review the request case by case. Promo posts involve no payment to refund, and Employer plan months already billed are not refunded. Cancelling stops future renewals, and your posts stay live through the end of the paid period.`
+      answer: `Posting fees are generally non-refundable, but if you're unsatisfied, email ${brand.email.support} within 7 days of purchase with your order details and we'll review the request case by case. Promo posts involve no payment to refund, and Employer plan months already billed are not refunded. Cancelling the plan stops future monthly charges, and your plan posts stay up through the end of the period you paid for, or until their ${config.durationDays} days run out if that comes first.`
     },
   ];
 

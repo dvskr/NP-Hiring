@@ -18,6 +18,11 @@
  *
  * Any finding means webhook delivery is broken, so it always alerts Discord.
  * Runs on Inngest (NOT vercel.json) and is registered in app/api/inngest/route.ts.
+ *
+ * Without STRIPE_SECRET_KEY (paid posting not launched) there is nothing to
+ * compare against, so the sweep logs a skip and returns instead of failing
+ * every day with retries. The skip is a warning when plan rows that track a
+ * Stripe subscription exist, because those can no longer be reconciled.
  */
 import type Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe';
@@ -63,6 +68,18 @@ export const planReconciliationSweep = inngest.createFunction(
         concurrency: 1,
     },
     async ({ step }) => {
+        if (!getStripe()) {
+            const trackedRows = await step.run('count-stripe-plan-rows', () =>
+                prisma.employerPlan.count({ where: { stripeSubscriptionId: { not: null } } }),
+            );
+            if (trackedRows > 0) {
+                logger.warn('[PlanReconciliation] Stripe is not configured; plan rows tracking a subscription left unreconciled', { trackedRows });
+            } else {
+                logger.info('[PlanReconciliation] Stripe is not configured; nothing to reconcile, skipping');
+            }
+            return { missingRows: 0, checkedRows: 0, findings: 0, skipped: 'stripe_not_configured' as const };
+        }
+
         const missing = await step.run('find-subscriptions-without-plan-row', async (): Promise<string[]> => {
             const stripe = requireStripe();
             const nowSec = Math.floor(Date.now() / 1000);

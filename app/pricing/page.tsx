@@ -27,15 +27,36 @@ import { Check, ArrowRight, X, HelpCircle, RefreshCw, Calendar, Star, TrendingUp
  *   LADDER_LINE                — what happens from config.ladderStartsLabel:
  *                                intro → featured → Employer plan.
  *   PLAN_TERMS                 — the plan's billing shape.
+ *   PLAN_POSTS_LINE            — how a plan post actually lives: it runs
+ *                                config.durationDays like every post, is never
+ *                                renewed (create-renewal-checkout 409s it), and
+ *                                frees its slot when it ends or is closed, so
+ *                                the employer posts again into it at no extra
+ *                                charge. Plan posts come down when the plan
+ *                                ends (lib/employer-plan.ts#pausePlanPosts).
+ *   PLAN_CANCEL_LINE           — a cancel keeps plan posts up through the paid
+ *                                period (isPlanEntitled), never past a post's
+ *                                own config.durationDays.
  *   FEATURES_LINE              — what EVERY post gets (no stripped tier).
- *   RENEWAL_LINE               — +60 days on any promo/intro/featured post.
+ *   RENEWAL_LINE               — +60 days on a promo/intro/featured post; plan
+ *                                posts are not renewable.
+ *   RENEWAL_EFFECT_LINE        — what a renewal does and nothing more: it
+ *                                moves the end date (apply-renewal.ts via
+ *                                lib/expires-at.ts#renewalExpiresAt). It does
+ *                                not reset the post's unlock or InMail counts
+ *                                (lib/tier-limits.ts counts them per posting
+ *                                since it was created), so no copy may say so.
  */
 const PROMO_HEADLINE = `Free through ${config.promoEndsLabel}`;
 const PROMO_SUB = `Every job post is free during our launch period: ${config.durationDays}-day listing, Featured badge, top placement, ${config.limits.candidateUnlocksPerPosting} candidate unlocks and ${config.limits.inmailsPerPosting} InMails. No credit card required.`;
 const LADDER_LINE = `From ${config.ladderStartsLabel}: your first post is $${config.introPrice}, every post after that is $${config.postingPrice}, or $${config.planPrice}/month for ${config.planSlots} active jobs.`;
-const PLAN_TERMS = `${config.planSlots} active job slots, live while you're subscribed. Swap jobs any time. Cancel any time.`;
+const PLAN_TERMS = `${config.planSlots} active job slots while you're subscribed. Swap jobs any time. Cancel any time.`;
+const PLAN_POSTS_LINE = `Each plan post runs ${config.durationDays} days. When one ends, or you close it to swap in another role, its slot opens up and you can post into it again at no extra charge. Plan posts come down if the plan ends.`;
+const PLAN_CANCEL_LINE = `If you cancel, your plan posts stay up through the end of the period you paid for, or until their ${config.durationDays} days run out if that comes first.`;
 const FEATURES_LINE = `Featured badge · Top placement · ${config.limits.candidateUnlocksPerPosting} candidate unlocks · ${config.limits.inmailsPerPosting} InMails · Applicant analytics`;
-const RENEWAL_LINE = `Renew any post for $${config.renewalPrice} (+${config.durationDays} days).`;
+const RENEWAL_LINE = `Renew a promo, intro or featured post for $${config.renewalPrice} (+${config.durationDays} days).`;
+const RENEWAL_EFFECT_LINE = `A renewal adds ${config.durationDays} days to the post: to its current end date while it is still live, or from the day you renew once it has ended. It does not add unlocks or InMails: a post has ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails in total, however many times it is renewed.`;
+const RENEWAL_CAP_LINE = `Renewals can extend a post to at most ${config.renewalCapDays} days after it was first posted.`;
 
 // Edge-generated OG card — no dependency on storage assets that don't
 // exist on this board (the old pmhnp-*.webp URL 400s). Same pattern as
@@ -113,13 +134,13 @@ const ctaSecondary: React.CSSProperties = {
 const comparisonRows = EMPLOYER_COMPARISON_ROWS;
 
 const faqs = [
-    { q: 'How long is posting free?', a: `${PROMO_HEADLINE}. ${PROMO_SUB} Promo posts run the full ${config.durationDays} days even if that runs past the promo, and they can be renewed like any other post.` },
+    { q: 'How long is posting free?', a: `${PROMO_HEADLINE}. ${PROMO_SUB} Promo posts run the full ${config.durationDays} days even if that runs past the promo, and they can be renewed like an intro or featured post.` },
     { q: `What happens on ${config.ladderStartsLabel}?`, a: `${LADDER_LINE} ${RENEWAL_LINE} Every post, whether promo, intro, featured, or plan, gets exactly the same features. There is no stripped-down tier.` },
-    { q: 'What is the intro price, and who gets it?', a: `The intro price ($${config.introPrice}) applies to the first paid post per company email domain. It is scoped to your organization, not to a login. Posts made free during the launch promo don't use it up, so every employer gets one intro-priced post once paid posting starts.` },
-    { q: 'How does the Employer plan work?', a: `$${config.planPrice}/month. ${PLAN_TERMS} Every slot is a full Featured post with the same ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails. The plan is billed month to month; if you cancel, your posts stay live through the end of the paid period.` },
-    { q: 'What does renewal cost?', a: `${RENEWAL_LINE} Renewing boosts the listing back to the top of search results and refreshes its ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails. Plan posts stay live while your plan is active, so they don't need renewing.` },
-    { q: 'If I renew before my posting expires, do I lose the remaining days?', a: `No. Renewing early adds ${config.durationDays} days to your current expiration date, so you don't lose any time you already have. Renew whenever it's convenient.` },
-    { q: 'Do I lose access to candidates I\'ve unlocked when my posting expires?', a: 'No. Once you\'ve unlocked a candidate (viewed their full profile), their contact info, resume, and details remain in your dashboard forever, even after the posting expires. To unlock new candidates or send new InMails, you will need an active posting.' },
+    { q: 'What is the intro price, and who gets it?', a: `The intro price ($${config.introPrice}) applies to the first paid post per company email domain. It is scoped to your organization, not to a login, and posts made free during the launch promo don't use it up.` },
+    { q: 'How does the Employer plan work?', a: `From ${config.ladderStartsLabel}, the Employer plan is $${config.planPrice}/month. ${PLAN_TERMS} ${PLAN_POSTS_LINE} Every slot is a full Featured post with the same ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails. The plan is billed month to month. ${PLAN_CANCEL_LINE}` },
+    { q: 'What does renewal cost?', a: `${RENEWAL_LINE} ${RENEWAL_EFFECT_LINE} Plan posts are not renewed: when one ends, post the role again into its slot at no extra charge.` },
+    { q: 'If I renew before my posting expires, do I lose the remaining days?', a: `No. Renewing early adds ${config.durationDays} days to your current expiration date, so you don't lose any time you already have. ${RENEWAL_CAP_LINE}` },
+    { q: 'Do I lose access to candidates I\'ve unlocked when my posting expires?', a: 'No. Once you\'ve unlocked a candidate (viewed their full profile), their contact info, resume, and details stay in your dashboard after the posting expires, for as long as the candidate keeps their profile visible and open to offers. To unlock new candidates or send new InMails, you will need an active posting.' },
     { q: 'Can I edit my job posting after publishing?', a: 'Yes. You can edit your posting at any time from your dashboard to update the salary, requirements, or any other details. Changes go live immediately.' },
     { q: `Need more than ${config.planSlots} active jobs at once?`, a: `Contact us at ${brand.email.support} and tell us how many roles you're hiring for. We'll work out the right arrangement for larger organizations.` },
 ];
@@ -166,7 +187,7 @@ export default function PricingPage() {
             price: `$${config.planPrice}`,
             unit: '/month',
             blurb: PLAN_TERMS,
-            note: `Every slot is a Featured post with the same ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails. Posts stay live through the end of the paid period if you cancel.`,
+            note: `Every slot is a Featured post with the same ${config.limits.candidateUnlocksPerPosting} unlocks and ${config.limits.inmailsPerPosting} InMails. ${PLAN_POSTS_LINE} ${PLAN_CANCEL_LINE}`,
             cta: <a href={planHref} className="emp-cta-primary" style={ctaPrimary}>{planCtaLabel} <ArrowRight size={15} /></a>,
             featured: true,
         },
@@ -306,7 +327,7 @@ export default function PricingPage() {
                                 </div>
                                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px' }}>{config.durationDays}-Day Listing</h3>
                                 <p style={{ fontSize: '14px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
-                                    Every post stays visible for its full {config.durationDays} days with no daily budget and no bidding. Promo posts included.
+                                    Every post runs {config.durationDays} days with no daily budget and no bidding, promo posts included. Plan posts run the same {config.durationDays} days and come down sooner only if the plan ends.
                                 </p>
                             </div>
                             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg, #FDF2F8, #FCE7F3)', padding: '16px' }}>

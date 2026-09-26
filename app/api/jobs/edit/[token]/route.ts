@@ -84,7 +84,7 @@ export async function GET(
           jobId: employerJob.job.id,
         });
         return NextResponse.json(
-          { error: 'Edit window has closed for this posting. Renew or re-post via your dashboard.' },
+          { error: 'Edit window has closed for this posting. See your options in your dashboard.' },
           { status: 401 }
         );
       }

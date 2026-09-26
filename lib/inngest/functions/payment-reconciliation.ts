@@ -15,7 +15,16 @@
  *      Discord: a paid-but-pending row means webhook delivery is broken.
  *   4. Session unpaid/expired/missing and the row is >24h old (Stripe
  *      checkout sessions hard-expire after 24h) → marks the row 'expired'
- *      so abandoned checkouts stop accumulating as 'pending'.
+ *      so abandoned checkouts stop accumulating as 'pending'. EXCEPT a
+ *      session that is 'complete' with a delayed payment (ACH and similar)
+ *      still outstanding: its PaymentIntent is 'processing' (the debit is
+ *      settling) or 'requires_action' (ACH microdeposit verification, which
+ *      Stripe keeps open for up to 10 days before the payment fails), and
+ *      checkout.session.async_payment_succeeded can land days later. That
+ *      row stays 'pending' so the activation can claim it; expiring it would
+ *      turn the paid post into a 'duplicate_payment' refund alert. A delayed
+ *      payment that failed (intent back to 'requires_payment_method', or
+ *      'canceled') expires as before.
  *   5. RENEWALS: a renewal is bought against an already-live row, so it is
  *      invisible to steps 1–4. Every paid `metadata.type === 'renewal'`
  *      session older than 2h with no JobCharge for its session id is
@@ -24,6 +33,12 @@
  *      in the same alert as "renewal recovered".
  *
  * ('upgrade' sessions are skipped: nothing in the app creates them any more.)
+ *
+ * Without STRIPE_SECRET_KEY (paid posting not launched) nothing can be
+ * reconciled, so the sweep logs a skip and returns instead of failing every
+ * day with retries; pending rows are left untouched. With a key it always
+ * scans Stripe, even when no row is pending, because the renewal arm (5)
+ * has no database trace to look for first.
  *
  * Runs on Inngest (NOT vercel.json cron — per audit constraints) and is
  * registered in app/api/inngest/route.ts.
@@ -76,6 +91,39 @@ function requireStripe() {
     return stripe;
 }
 
+/**
+ * PaymentIntent states of a completed, unpaid session whose delayed payment
+ * can still succeed: 'processing' while the debit settles, 'requires_action'
+ * while the employer has yet to verify ACH microdeposits (up to 10 days,
+ * after which Stripe fails the payment and the intent reverts to
+ * 'requires_payment_method').
+ */
+const OUTSTANDING_INTENT_STATUSES: ReadonlySet<string> = new Set(['processing', 'requires_action']);
+
+/**
+ * True when an unpaid row must NOT be expired yet: its newest session is
+ * 'complete' and Stripe still owes an answer on the money (the PaymentIntent
+ * of a delayed payment method is 'processing', or 'requires_action' while
+ * microdeposit verification is pending), or the session was paid since the
+ * scan (the next run activates it). When Stripe cannot be asked, the row is
+ * held for the next run: holding a row a day costs nothing, expiring a paid
+ * one loses the post.
+ */
+async function isPaymentStillSettling(sessionId: string): Promise<boolean> {
+    try {
+        const stripe = requireStripe();
+        const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['payment_intent'] });
+        if (session.payment_status === 'paid') return true;
+        if (session.status !== 'complete' || session.payment_status !== 'unpaid') return false;
+        const intent = session.payment_intent;
+        return !!intent && typeof intent === 'object' && OUTSTANDING_INTENT_STATUSES.has(intent.status);
+    } catch (err) {
+        if ((err as { code?: string } | null)?.code === 'resource_missing') return false;
+        logger.error('[PaymentReconciliation] Could not check a completed session before expiry; holding the row', err, { sessionId });
+        return true;
+    }
+}
+
 export const paymentReconciliationSweep = inngest.createFunction(
     {
         id: 'payment-reconciliation-sweep',
@@ -96,6 +144,19 @@ export const paymentReconciliationSweep = inngest.createFunction(
             });
             return rows.map((r) => ({ id: r.id, jobId: r.jobId, createdAtMs: r.createdAt.getTime() }));
         });
+
+        // No Stripe key: nothing can be checked, activated or recovered, and
+        // expiring rows unchecked could retire one that was paid. Skip the run
+        // (a thrown error would fail it, and its retries, every day).
+        if (!getStripe()) {
+            const skip = { checked: 0, activated: 0, expired: 0, settling: 0, failures: 0, skipped: 'stripe_not_configured' as const };
+            if (stalePending.length > 0) {
+                logger.warn('[PaymentReconciliation] Stripe is not configured; pending checkouts left unreconciled', { pendingRows: stalePending.length });
+            } else {
+                logger.info('[PaymentReconciliation] Stripe is not configured; nothing to reconcile, skipping');
+            }
+            return skip;
+        }
 
         const scan = await step.run('map-stripe-sessions', async (): Promise<SessionScan> => {
             const stripe = requireStripe();
@@ -154,6 +215,7 @@ export const paymentReconciliationSweep = inngest.createFunction(
         const recovered: Array<{ jobId: string; sessionId: string; activation: string }> = [];
         const failures: Array<{ jobId: string; sessionId?: string; error: string }> = [];
         let expired = 0;
+        let settling = 0;
 
         for (const row of stalePending) {
             const match = sessionsByJobId[row.jobId];
@@ -199,6 +261,16 @@ export const paymentReconciliationSweep = inngest.createFunction(
                 // session at all falls back to row age (original behavior).
                 const abandonedSinceMs = match ? match.createdMs : row.createdAtMs;
                 if (Date.now() - abandonedSinceMs > ABANDON_AFTER_MS) {
+                    // A completed session is not abandoned while its delayed
+                    // payment is still settling: keep the row 'pending' so
+                    // async_payment_succeeded can still activate it.
+                    if (match?.status === 'complete') {
+                        const holdRow = await step.run(`check-settling-${row.id}`, () => isPaymentStillSettling(match.sessionId));
+                        if (holdRow) {
+                            settling += 1;
+                            continue;
+                        }
+                    }
                     // Unpaid and past Stripe's 24h session lifetime — the
                     // checkout was abandoned. Guarded update so a concurrent
                     // activation can never be overwritten.
@@ -267,12 +339,14 @@ export const paymentReconciliationSweep = inngest.createFunction(
             recovered: recovered.length,
             failures: failures.length,
             expired,
+            settling,
         });
 
         return {
             checked: stalePending.length,
             activated: recovered.length,
             expired,
+            settling,
             failures: failures.length,
         };
     },

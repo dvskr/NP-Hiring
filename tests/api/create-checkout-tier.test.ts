@@ -14,7 +14,14 @@
  *     immutable quotaDomain snapshot;
  *   - the response carries { tier, price } for the checkout page;
  *   - the B78 resume path re-prices from the PERSISTED pricingTier (the row
- *     the employer is completing), not from a fresh count.
+ *     the employer is completing), not from a fresh count;
+ *   - during the launch promo both paths answer 409 PROMO_ACTIVE before any
+ *     row or Stripe session exists (every other test runs with the promo
+ *     stubbed off: the paid funnel only opens once the promo ends);
+ *   - the resume path decides "already paid" by payment_status, so a failed
+ *     delayed payment can be retried while one that is still settling
+ *     (intent 'processing') or awaiting ACH microdeposit verification
+ *     (intent 'requires_action') cannot be paid twice.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
@@ -93,6 +100,9 @@ function stripeSessionArg() {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    // The paid funnel only opens after the launch promo; the promo describe
+    // below switches it back on.
+    vi.spyOn(config, 'isPromoActive').mockReturnValue(false);
     process.env.STRIPE_SECRET_KEY = 'sk_test_x';
     getUserMock.mockResolvedValue({ data: { user: { id: 'user-1', email: `Owner@${SIGNUP_DOMAIN}` } }, error: null });
     vi.mocked(prisma.userProfile.findUnique).mockResolvedValue({ supabaseId: 'user-1', role: 'employer', email: `owner@${SIGNUP_DOMAIN}` } as never);
@@ -283,5 +293,156 @@ describe('B78 resume path — re-prices from the persisted rung', () => {
         expect(res.status).toBe(409);
         expect(json.code).toBe('NOT_RESUMABLE');
         expect(sessionsCreate).not.toHaveBeenCalled();
+    });
+});
+
+describe('B78 resume path — delayed payments decide by payment_status, not session status', () => {
+    function rowWithPreviousSession(paymentStatus = 'pending') {
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
+            id: 'ej-9', jobId: 'job-9', paymentStatus, pricingTier: 'pro', userId: 'user-1',
+            contactEmail: 'x@y.example', dashboardToken: 'd', stripeCheckoutSessionId: 'cs_prev',
+            job: { id: 'job-9', title: 't', employer: 'e', location: 'l', archivedAt: null },
+        } as never);
+    }
+
+    it('reads the previous session with its PaymentIntent expanded', async () => {
+        rowWithPreviousSession();
+        sessionsRetrieve.mockResolvedValue({ id: 'cs_prev', status: 'expired', payment_status: 'unpaid' });
+        await post({ resumeJobId: 'job-9' });
+        expect(sessionsRetrieve).toHaveBeenCalledWith('cs_prev', { expand: ['payment_intent'] });
+    });
+
+    it('a failed delayed payment (complete, unpaid, intent back to requires_payment_method) can be paid again', async () => {
+        rowWithPreviousSession('expired');
+        sessionsRetrieve.mockResolvedValue({
+            id: 'cs_prev', status: 'complete', payment_status: 'unpaid',
+            payment_intent: { id: 'pi_prev', status: 'requires_payment_method' },
+        });
+
+        const { res, json } = await post({ resumeJobId: 'job-9' });
+
+        expect(res.status).toBe(200);
+        expect(json).toMatchObject({ sessionId: 'cs_1', tier: 'pro', price: config.postingPrice });
+        expect(sessionsCreate).toHaveBeenCalledOnce();
+        // A completed session cannot be expired; nothing is payable on it any more.
+        expect(sessionsExpire).not.toHaveBeenCalled();
+        // The swept row is revived so the new session's activation can claim it.
+        expect(prisma.employerJob.updateMany).toHaveBeenCalledWith({
+            where: { id: 'ej-9', paymentStatus: 'expired' },
+            data: { paymentStatus: 'pending' },
+        });
+    });
+
+    it('a delayed payment that is still settling (intent processing) is refused, so the employer cannot pay twice', async () => {
+        rowWithPreviousSession();
+        sessionsRetrieve.mockResolvedValue({
+            id: 'cs_prev', status: 'complete', payment_status: 'unpaid',
+            payment_intent: { id: 'pi_prev', status: 'processing' },
+        });
+
+        const { res, json } = await post({ resumeJobId: 'job-9' });
+
+        expect(res.status).toBe(409);
+        expect(json.code).toBe('PAYMENT_PROCESSING');
+        expect(json.error).toMatch(/still processing/);
+        expect(json.error).toMatch(/goes live automatically once it clears/);
+        expect(sessionsCreate).not.toHaveBeenCalled();
+        expect(prisma.job.update).not.toHaveBeenCalled();
+    });
+
+    it('a delayed payment awaiting ACH microdeposit verification (intent requires_action) is refused, so the employer cannot pay twice', async () => {
+        rowWithPreviousSession();
+        sessionsRetrieve.mockResolvedValue({
+            id: 'cs_prev', status: 'complete', payment_status: 'unpaid',
+            payment_intent: { id: 'pi_prev', status: 'requires_action', next_action: { type: 'verify_with_microdeposits' } },
+        });
+
+        const { res, json } = await post({ resumeJobId: 'job-9' });
+
+        expect(res.status).toBe(409);
+        expect(json.code).toBe('PAYMENT_PROCESSING');
+        expect(json.error).toMatch(/verify your bank account/);
+        expect(json.error).toMatch(/nothing more to pay now/);
+        expect(json.error).not.toMatch(/[–—]| - /);
+        expect(sessionsCreate).not.toHaveBeenCalled();
+        expect(sessionsExpire).not.toHaveBeenCalled();
+        expect(prisma.job.update).not.toHaveBeenCalled();
+        expect(prisma.employerJob.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("a delayed payment that was canceled (complete, unpaid, intent 'canceled') can be paid again", async () => {
+        rowWithPreviousSession();
+        sessionsRetrieve.mockResolvedValue({
+            id: 'cs_prev', status: 'complete', payment_status: 'unpaid',
+            payment_intent: { id: 'pi_prev', status: 'canceled' },
+        });
+
+        const { res } = await post({ resumeJobId: 'job-9' });
+
+        expect(res.status).toBe(200);
+        expect(sessionsCreate).toHaveBeenCalledOnce();
+    });
+
+    it("treats 'no_payment_required' like 'paid': refused, never sold again", async () => {
+        rowWithPreviousSession();
+        sessionsRetrieve.mockResolvedValue({ id: 'cs_prev', status: 'complete', payment_status: 'no_payment_required' });
+
+        const { res, json } = await post({ resumeJobId: 'job-9' });
+
+        expect(res.status).toBe(409);
+        expect(json.code).toBe('PAYMENT_PROCESSING');
+        expect(json.error).toMatch(/already received/);
+        expect(sessionsCreate).not.toHaveBeenCalled();
+    });
+});
+
+describe('launch promo — no paid checkout while every post is free', () => {
+    const PROMO_MESSAGE = `Every post is free through ${config.promoEndsLabel}. Go back to the preview to publish.`;
+
+    beforeEach(() => {
+        vi.mocked(config.isPromoActive).mockReturnValue(true);
+    });
+
+    it('refuses a new paid post with 409 PROMO_ACTIVE before creating any row or Stripe session', async () => {
+        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
+
+        const { res, json } = await post(BODY);
+
+        expect(res.status).toBe(409);
+        expect(json).toEqual({ code: 'PROMO_ACTIVE', error: PROMO_MESSAGE });
+        expect(prisma.employerJob.count).not.toHaveBeenCalled();
+        expect(prisma.job.create).not.toHaveBeenCalled();
+        expect(prisma.employerJob.create).not.toHaveBeenCalled();
+        expect(sessionsCreate).not.toHaveBeenCalled();
+        expect(res.headers.get('set-cookie')).toBeNull();
+    });
+
+    it("refuses the dashboard's resume path too, before touching the row or Stripe", async () => {
+        vi.mocked(prisma.employerJob.findFirst).mockResolvedValue({
+            id: 'ej-9', jobId: 'job-9', paymentStatus: 'expired', pricingTier: 'intro', userId: 'user-1',
+            contactEmail: 'x@y.example', dashboardToken: 'd', stripeCheckoutSessionId: 'cs_old',
+            job: { id: 'job-9', title: 't', employer: 'e', location: 'l', archivedAt: null },
+        } as never);
+
+        const { res, json } = await post({ resumeJobId: 'job-9' });
+
+        expect(res.status).toBe(409);
+        expect(json).toEqual({ code: 'PROMO_ACTIVE', error: PROMO_MESSAGE });
+        expect(prisma.employerJob.findFirst).not.toHaveBeenCalled();
+        expect(prisma.employerJob.updateMany).not.toHaveBeenCalled();
+        expect(sessionsRetrieve).not.toHaveBeenCalled();
+        expect(sessionsExpire).not.toHaveBeenCalled();
+        expect(sessionsCreate).not.toHaveBeenCalled();
+    });
+
+    it('nothing in the request can switch the promo check off', async () => {
+        const { res } = await post({ ...BODY, promoActive: false, isPromoActive: false, now: '2027-06-01T00:00:00Z', pricingTier: 'pro' });
+        expect(res.status).toBe(409);
+        expect(sessionsCreate).not.toHaveBeenCalled();
+    });
+
+    it('consults config.isPromoActive, the promo clock tests/lib/config-pricing.test.ts pins', async () => {
+        await post(BODY);
+        expect(config.isPromoActive).toHaveBeenCalledWith();
     });
 });

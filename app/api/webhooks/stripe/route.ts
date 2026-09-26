@@ -43,8 +43,16 @@ export const maxDuration = 60;
  * A 'processing' dedupe row older than this is a delivery that died without
  * running any catch block (function timeout, OOM, instance shutdown). A
  * Stripe retry may take it over instead of being acknowledged as a duplicate.
+ *
+ * Derived from maxDuration: no live delivery can hold its claim longer than
+ * the platform lets the function run, so anything older is dead. The margin
+ * covers clock skew between the database and the instances that stamp
+ * claimedAt and compute the cutoff. A longer window only means a retry that
+ * lands after the kill but inside the window is acknowledged as a duplicate
+ * and the event is lost.
  */
-const DEDUPE_RECLAIM_AFTER_MS = 5 * 60 * 1000;
+const DEDUPE_RECLAIM_MARGIN_MS = 30 * 1000;
+const DEDUPE_RECLAIM_AFTER_MS = maxDuration * 1000 + DEDUPE_RECLAIM_MARGIN_MS;
 
 type CleanupDedupe = () => Promise<void>;
 

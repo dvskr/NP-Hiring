@@ -35,6 +35,8 @@ import {
     FLAT_FEE_PRICING,
     FREE_POST_SCOPE_NOTE,
     INTRO_PRICE_SCOPE_NOTE,
+    PLAN_NO_RENEWALS_NOTE,
+    RENEWAL_SCOPE_NOTE,
     compareChannels,
     flatFeeCostPerHire,
     flatFeeSpend,
@@ -220,9 +222,9 @@ export default function EmployerCostPerHireCalculator() {
                 first post is {formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is{' '}
                 {formatUsd(FLAT_FEE_PRICING.postingPrice)} for {FLAT_FEE_PRICING.durationDays} days
                 ({formatUsd(FLAT_FEE_COST_PER_DAY)} a day), or {formatUsd(FLAT_FEE_PRICING.planPrice)}/month for{' '}
-                {FLAT_FEE_PRICING.planSlots} active jobs. Renew any post for {formatUsd(FLAT_FEE_PRICING.renewalPrice)}{' '}
-                (+{FLAT_FEE_PRICING.durationDays} days). Every post includes {FLAT_FEE_PRICING.candidateUnlocksPerPosting}{' '}
-                candidate unlocks and {FLAT_FEE_PRICING.inmailsPerPosting} direct messages.
+                {FLAT_FEE_PRICING.planSlots} active jobs. Renewal: {RENEWAL_SCOPE_NOTE}; {PLAN_NO_RENEWALS_NOTE}.
+                Every post includes {FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate unlocks and{' '}
+                {FLAT_FEE_PRICING.inmailsPerPosting} direct messages.
             </p>
             <div style={{ marginBottom: '10px' }}>
                 <label htmlFor="cph-flat-mode" style={labelStyle}>How you would buy from us</label>
@@ -255,7 +257,7 @@ export default function EmployerCostPerHireCalculator() {
                     <NumberField
                         id="cph-plan-months"
                         label="Months on the Employer plan"
-                        hint={`Starts at ${DEFAULT_INPUTS.planMonths} because that is our ${FLAT_FEE_PRICING.durationDays}-day posting window in whole billing months. That is a product fact, not how long anyone subscribes. Plan posts stay live while you are subscribed, so there are no renewals to price.`}
+                        hint={`Starts at ${DEFAULT_INPUTS.planMonths} because that is our ${FLAT_FEE_PRICING.durationDays}-day posting window in whole billing months. That is a product fact, not how long anyone subscribes. There are no renewals to price, because ${PLAN_NO_RENEWALS_NOTE}.`}
                         value={draft.planMonths}
                         suffix="months"
                         onChange={set('planMonths')}
@@ -264,7 +266,7 @@ export default function EmployerCostPerHireCalculator() {
                     <NumberField
                         id="cph-renewals"
                         label="Renewals per role"
-                        hint={`Each renewal adds ${formatUsd(FLAT_FEE_PRICING.renewalPrice)} and another ${FLAT_FEE_PRICING.durationDays} days.`}
+                        hint={`Each renewal adds ${formatUsd(FLAT_FEE_PRICING.renewalPrice)} and another ${FLAT_FEE_PRICING.durationDays} days, up to ${FLAT_FEE_PRICING.renewalCapDays} days after the post first went live. It does not add unlocks or messages.`}
                         value={draft.renewalsPerRole}
                         onChange={set('renewalsPerRole')}
                     />

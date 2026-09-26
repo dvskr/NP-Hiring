@@ -5,29 +5,38 @@
  * use flows through these helpers, so this file pins the three things that
  * would silently mis-charge someone if they drifted:
  *
- *   - `isPromoActive` ends at exactly 2027-01-01T05:00:00Z (midnight
- *     America/New_York on December 31, 2026) — exclusive, so the first
- *     instant of January 1 already prices the ladder;
+ *   - `isPromoActive` ends at exactly 2027-01-01T10:00:00Z (midnight
+ *     Pacific/Honolulu, the last of the 50 states to leave December 31,
+ *     2026) — exclusive, so the promise "free through December 31, 2026",
+ *     printed with no time zone, is true at 11:59 pm local in every US zone;
  *   - `priceCentsForTier` maps every rung to the Stripe unit_amount declared
  *     beside its dollar value, and never falls back to a CHEAPER rung for an
  *     unknown / tampered tier;
  *   - `getTierLabel` is what the checkout product name and the dashboard
- *     badge print.
+ *     badge print;
+ *   - `renewalCapDays` is the cap the renewal code actually applies.
  */
 import { describe, it, expect } from 'vitest';
 import { config } from '@/lib/config';
+import { renewalExpiresAt } from '@/lib/expires-at';
 
-describe('config.isPromoActive — every post is free until midnight ET on December 31, 2026', () => {
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Calendar date of an instant in a zone, in the copy's "Month D, YYYY" form. */
+const dateIn = (instant: number, timeZone: string): string =>
+    new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(instant));
+
+describe('config.isPromoActive — every post is free through December 31, 2026 in every US time zone', () => {
     it('is active one second before the boundary', () => {
-        expect(config.isPromoActive(new Date('2027-01-01T04:59:59.000Z'))).toBe(true);
+        expect(config.isPromoActive(new Date('2027-01-01T09:59:59.000Z'))).toBe(true);
     });
 
-    it('is inactive at exactly 2027-01-01T05:00:00Z (exclusive end)', () => {
-        expect(config.isPromoActive(new Date('2027-01-01T05:00:00.000Z'))).toBe(false);
+    it('is inactive at exactly 2027-01-01T10:00:00Z (exclusive end)', () => {
+        expect(config.isPromoActive(new Date('2027-01-01T10:00:00.000Z'))).toBe(false);
     });
 
     it('is inactive after the boundary', () => {
-        expect(config.isPromoActive(new Date('2027-01-01T05:00:01.000Z'))).toBe(false);
+        expect(config.isPromoActive(new Date('2027-01-01T10:00:01.000Z'))).toBe(false);
         expect(config.isPromoActive(new Date('2027-06-01T00:00:00.000Z'))).toBe(false);
     });
 
@@ -36,16 +45,82 @@ describe('config.isPromoActive — every post is free until midnight ET on Decem
         expect(config.isPromoActive(new Date('2026-12-31T23:59:59.000Z'))).toBe(true);
     });
 
+    // The bug this boundary fixes: at 05:00Z (midnight Eastern) an employer in
+    // Pacific time posting at 9 pm on December 31 was charged although every
+    // surface promised the post free "through December 31, 2026".
+    it.each([
+        ['Eastern', 'America/New_York', '2027-01-01T04:59:00.000Z'],
+        ['Central', 'America/Chicago', '2027-01-01T05:59:00.000Z'],
+        ['Mountain', 'America/Denver', '2027-01-01T06:59:00.000Z'],
+        ['Arizona', 'America/Phoenix', '2027-01-01T06:59:00.000Z'],
+        ['Pacific', 'America/Los_Angeles', '2027-01-01T07:59:00.000Z'],
+        ['Alaska', 'America/Anchorage', '2027-01-01T08:59:00.000Z'],
+        ['Hawaii', 'Pacific/Honolulu', '2027-01-01T09:59:00.000Z'],
+    ])('is still free at 11:59 pm on December 31 in %s time', (_name, timeZone, iso) => {
+        const instant = Date.parse(iso);
+        // The fixture really is 11:59 pm on the promised last day in that zone…
+        expect(dateIn(instant, timeZone)).toBe(config.promoEndsLabel);
+        expect(new Intl.DateTimeFormat('en-US', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(instant))).toBe('23:59');
+        // …and the promo honours it.
+        expect(config.isPromoActive(new Date(instant))).toBe(true);
+    });
+
     it('compares against config.promoEndsAt, which the quote endpoint echoes to the UI', () => {
         const endsAt = Date.parse(config.promoEndsAt);
-        expect(endsAt).toBe(Date.UTC(2027, 0, 1, 5, 0, 0));
+        expect(endsAt).toBe(Date.UTC(2027, 0, 1, 10, 0, 0));
         expect(config.isPromoActive(new Date(endsAt - 1))).toBe(true);
         expect(config.isPromoActive(new Date(endsAt))).toBe(false);
     });
 
-    it('carries the copy labels that match that instant', () => {
+    it('ends exactly at midnight in Hawaii, the last US state to leave December 31', () => {
+        const endsAt = Date.parse(config.promoEndsAt);
+        expect(dateIn(endsAt - 1, 'Pacific/Honolulu')).toBe('December 31, 2026');
+        expect(dateIn(endsAt, 'Pacific/Honolulu')).toBe('January 1, 2027');
+    });
+
+    it('carries the copy labels that match that instant, unchanged by the zone move', () => {
         expect(config.promoEndsLabel).toBe('December 31, 2026');
         expect(config.ladderStartsLabel).toBe('January 1, 2027');
+        const endsAt = Date.parse(config.promoEndsAt);
+        // The last free instant is on promoEndsLabel and the first paid one is
+        // on ladderStartsLabel in the zone that defines the boundary, so no
+        // printed date moved when the instant did.
+        expect(dateIn(endsAt - 1, 'Pacific/Honolulu')).toBe(config.promoEndsLabel);
+        expect(dateIn(endsAt, 'Pacific/Honolulu')).toBe(config.ladderStartsLabel);
+        // In the zones east of Hawaii the promo only runs longer, never shorter:
+        // the last free instant is already January 1 there.
+        expect(dateIn(endsAt - 1, 'America/New_York')).toBe(config.ladderStartsLabel);
+    });
+});
+
+describe('config.renewalCapDays — the renewal limit copy states is the one the code applies', () => {
+    const createdAt = new Date('2027-02-01T00:00:00.000Z');
+
+    it('caps an early renewal at renewalCapDays after the post was created', () => {
+        // Renewed early, near the end of its first year: a full durationDays
+        // extension would overshoot the cap, so the expiry lands on it.
+        const now = new Date(createdAt.getTime() + 330 * DAY_MS);
+        const currentExpiry = new Date(createdAt.getTime() + 340 * DAY_MS);
+        const next = renewalExpiresAt({ currentExpiry, originalCreatedAt: createdAt, durationDays: config.durationDays, now });
+        expect(next.getTime()).toBe(createdAt.getTime() + config.renewalCapDays * DAY_MS);
+    });
+
+    it('adds the full durationDays whenever the cap is not reached', () => {
+        const now = new Date(createdAt.getTime() + 50 * DAY_MS);
+        const currentExpiry = new Date(createdAt.getTime() + config.durationDays * DAY_MS);
+        const next = renewalExpiresAt({ currentExpiry, originalCreatedAt: createdAt, durationDays: config.durationDays, now });
+        expect(next.getTime()).toBe(currentExpiry.getTime() + config.durationDays * DAY_MS);
+    });
+
+    it('extends an already expired post from the renewal date, not from its old expiry', () => {
+        const now = new Date(createdAt.getTime() + 100 * DAY_MS);
+        const currentExpiry = new Date(createdAt.getTime() + config.durationDays * DAY_MS);
+        const next = renewalExpiresAt({ currentExpiry, originalCreatedAt: createdAt, durationDays: config.durationDays, now });
+        expect(next.getTime()).toBe(now.getTime() + config.durationDays * DAY_MS);
+    });
+
+    it('leaves room for at least one full renewal after a first listing', () => {
+        expect(config.renewalCapDays).toBeGreaterThanOrEqual(2 * config.durationDays);
     });
 });
 

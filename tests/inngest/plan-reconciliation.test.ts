@@ -11,10 +11,14 @@
  *     subscription (lost .updated/.deleted) is re-applied through
  *     handleSubscriptionChange; an in-sync row is left alone;
  *   - a row whose subscription Stripe no longer has is reported as orphaned;
- *   - every finding reaches Discord.
+ *   - every finding reaches Discord;
+ *   - without a Stripe key the sweep logs a skip and returns instead of
+ *     failing every day with retries (a warning when plan rows tracking a
+ *     subscription exist, since those can no longer be reconciled).
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 type StepRun = <T>(name: string, fn: () => Promise<T>) => Promise<T>;
 interface CapturedFunction {
@@ -160,5 +164,49 @@ describe('drift on existing rows', () => {
         expect(result.findings).toBe(1);
         expect(JSON.stringify(discordMocks.sendDiscordMessage.mock.calls)).toContain('orphaned-row');
         expect(handlerMocks.handleSubscriptionChange).not.toHaveBeenCalled();
+    });
+});
+
+describe('without a Stripe key', () => {
+    const savedKey = process.env.STRIPE_SECRET_KEY;
+
+    beforeEach(() => {
+        delete process.env.STRIPE_SECRET_KEY;
+    });
+
+    afterEach(() => {
+        if (savedKey === undefined) delete process.env.STRIPE_SECRET_KEY;
+        else process.env.STRIPE_SECRET_KEY = savedKey;
+    });
+
+    it('skips with an info log instead of failing the run and its retries every day', async () => {
+        vi.mocked(prisma.employerPlan.count).mockResolvedValue(0 as never);
+        const infoSpy = vi.spyOn(logger, 'info').mockImplementation(() => undefined);
+        const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+
+        const result = await run(await load());
+
+        expect(result).toEqual({ missingRows: 0, checkedRows: 0, findings: 0, skipped: 'stripe_not_configured' });
+        expect(prisma.employerPlan.count).toHaveBeenCalledWith({ where: { stripeSubscriptionId: { not: null } } });
+        expect(stripeMocks.subscriptionsList).not.toHaveBeenCalled();
+        expect(stripeMocks.subscriptionsRetrieve).not.toHaveBeenCalled();
+        expect(prisma.employerPlan.findMany).not.toHaveBeenCalled();
+        expect(discordMocks.sendDiscordMessage).not.toHaveBeenCalled();
+        expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('Stripe is not configured'));
+        expect(warnSpy).not.toHaveBeenCalled();
+        infoSpy.mockRestore();
+        warnSpy.mockRestore();
+    });
+
+    it('warns when plan rows that track a Stripe subscription can no longer be reconciled', async () => {
+        vi.mocked(prisma.employerPlan.count).mockResolvedValue(2 as never);
+        const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+
+        const result = await run(await load());
+
+        expect(result).toMatchObject({ findings: 0, skipped: 'stripe_not_configured' });
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Stripe is not configured'), { trackedRows: 2 });
+        expect(stripeMocks.subscriptionsRetrieve).not.toHaveBeenCalled();
+        warnSpy.mockRestore();
     });
 });

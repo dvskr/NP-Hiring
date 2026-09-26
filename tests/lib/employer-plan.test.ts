@@ -14,6 +14,12 @@
  *     (canPost must be false and no DB round-trip wasted).
  *   - `pausePlanPosts` / `resumePlanPosts` touch only 'plan' rows, keep the
  *     EmployerJob rows, and resume newest-first within the remaining slots.
+ *     Resume only revives posts the PLAN paused: a post the employer paused
+ *     or an admin unpublished / soft deleted (isManuallyUnpublished = true)
+ *     stays down on every renewal.
+ *   - `republishPlanPost` (employer unpause of a 'plan' post) reads the plan,
+ *     counts live plan posts and writes in ONE Serializable transaction, and
+ *     writes nothing unless the plan is entitled AND a slot is free.
  *   - `upsertPlan` falls through subscriptionId → userId → unattached email
  *     row so an admin grant followed by a Stripe checkout UPDATES rather
  *     than failing on the unique userId.
@@ -31,6 +37,7 @@ import {
     mapStripeSubscriptionStatus,
     pausePlanPosts,
     planEntitlementEndsAt,
+    republishPlanPost,
     resumePlanPosts,
     upsertPlan,
 } from '@/lib/employer-plan';
@@ -216,7 +223,7 @@ describe('resumePlanPosts — re-publish paused plan posts within the remaining 
         expect(prisma.job.updateMany).not.toHaveBeenCalled();
     });
 
-    it('re-publishes newest first, only unexpired + unarchived paused plan rows, capped at the remaining slots', async () => {
+    it('re-publishes newest first, only unexpired + unarchived rows the plan paused, capped at the remaining slots', async () => {
         vi.mocked(prisma.employerPlan.findUnique).mockResolvedValue(makePlan({ slots: 5 }) as never);
         vi.mocked(prisma.employerJob.count).mockResolvedValue(3 as never); // 2 slots free
         vi.mocked(prisma.employerJob.findMany).mockResolvedValue([{ jobId: 'newest' }, { jobId: 'older' }] as never);
@@ -227,7 +234,7 @@ describe('resumePlanPosts — re-publish paused plan posts within the remaining 
             where: {
                 userId: USER_ID,
                 paymentStatus: 'plan',
-                job: { isPublished: false, archivedAt: null, expiresAt: { gt: NOW } },
+                job: { isPublished: false, isManuallyUnpublished: false, archivedAt: null, expiresAt: { gt: NOW } },
             },
             select: { jobId: true },
             orderBy: { createdAt: 'desc' },
@@ -245,6 +252,91 @@ describe('resumePlanPosts — re-publish paused plan posts within the remaining 
         vi.mocked(prisma.employerJob.findMany).mockResolvedValue([] as never);
         expect(await resumePlanPosts(USER_ID, NOW)).toEqual([]);
         expect(prisma.job.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('never selects a post the employer paused or an admin unpublished, even with every slot free', async () => {
+        vi.mocked(prisma.employerPlan.findUnique).mockResolvedValue(makePlan({ slots: 5 }) as never);
+        vi.mocked(prisma.employerJob.count).mockResolvedValue(0 as never);
+        vi.mocked(prisma.employerJob.findMany).mockResolvedValue([] as never);
+        await resumePlanPosts(USER_ID, NOW);
+        const where = vi.mocked(prisma.employerJob.findMany).mock.calls[0][0]?.where as { job: Record<string, unknown> };
+        expect(where.job.isManuallyUnpublished).toBe(false);
+    });
+});
+
+describe('republishPlanPost — employer unpause of a plan post, race safe', () => {
+    const JOB_ID = 'job-9';
+    const REPUBLISH_DATA = { isPublished: true, isManuallyUnpublished: false };
+
+    /** Interactive-transaction stand-in: records the options and hands the callback its own client. */
+    function mockTransaction() {
+        const tx = {
+            employerPlan: { findUnique: vi.fn() },
+            employerJob: { count: vi.fn() },
+            job: { update: vi.fn().mockResolvedValue({ id: JOB_ID }) },
+        };
+        vi.mocked(prisma.$transaction).mockImplementationOnce(
+            ((fn: (client: typeof tx) => Promise<unknown>) => fn(tx)) as never,
+        );
+        return tx;
+    }
+
+    it('refuses as plan_inactive without opening a transaction when the post has no owner', async () => {
+        expect(await republishPlanPost(null, JOB_ID, REPUBLISH_DATA, NOW)).toEqual({ ok: false, reason: 'plan_inactive' });
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('reads the plan, counts and writes through ONE Serializable transaction', async () => {
+        const tx = mockTransaction();
+        tx.employerPlan.findUnique.mockResolvedValue(makePlan({ slots: 5 }));
+        tx.employerJob.count.mockResolvedValue(4);
+
+        expect(await republishPlanPost(USER_ID, JOB_ID, REPUBLISH_DATA, NOW)).toEqual({ ok: true });
+
+        expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(prisma.$transaction).mock.calls[0][1]).toEqual({ isolationLevel: 'Serializable' });
+        expect(tx.employerPlan.findUnique).toHaveBeenCalledWith({ where: { userId: USER_ID } });
+        expect(tx.employerJob.count).toHaveBeenCalledWith({
+            where: {
+                userId: USER_ID,
+                paymentStatus: 'plan',
+                job: { isPublished: true, OR: [{ expiresAt: null }, { expiresAt: { gt: NOW } }] },
+            },
+        });
+        expect(tx.job.update).toHaveBeenCalledWith({ where: { id: JOB_ID }, data: REPUBLISH_DATA });
+        // Nothing went through the global client: the check and the write share the snapshot.
+        expect(prisma.employerPlan.findUnique).not.toHaveBeenCalled();
+        expect(prisma.employerJob.count).not.toHaveBeenCalled();
+        expect(prisma.job.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses as slots_full and writes nothing when every slot holds a live post', async () => {
+        const tx = mockTransaction();
+        tx.employerPlan.findUnique.mockResolvedValue(makePlan({ slots: 5 }));
+        tx.employerJob.count.mockResolvedValue(5);
+
+        expect(await republishPlanPost(USER_ID, JOB_ID, REPUBLISH_DATA, NOW)).toEqual({ ok: false, reason: 'slots_full', used: 5, slots: 5 });
+        expect(tx.job.update).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['no plan', null],
+        ['a pending plan', makePlan({ status: 'pending', currentPeriodEnd: daysFromNow(30) })],
+        ['a cancelled plan past its paid period', makePlan({ status: 'cancelled', currentPeriodEnd: daysFromNow(-1) })],
+        ['an active plan past its grace window', makePlan({ status: 'active', currentPeriodEnd: daysFromNow(-(config.planGraceDays + 1)) })],
+    ])('refuses as plan_inactive for %s, without counting or writing', async (_label, plan) => {
+        const tx = mockTransaction();
+        tx.employerPlan.findUnique.mockResolvedValue(plan);
+
+        expect(await republishPlanPost(USER_ID, JOB_ID, REPUBLISH_DATA, NOW)).toEqual({ ok: false, reason: 'plan_inactive' });
+        expect(tx.employerJob.count).not.toHaveBeenCalled();
+        expect(tx.job.update).not.toHaveBeenCalled();
+    });
+
+    it('lets a serialization failure (P2034) reach the caller so it can ask for a retry', async () => {
+        const conflict = Object.assign(new Error('could not serialize access'), { code: 'P2034' });
+        vi.mocked(prisma.$transaction).mockRejectedValueOnce(conflict as never);
+        await expect(republishPlanPost(USER_ID, JOB_ID, REPUBLISH_DATA, NOW)).rejects.toBe(conflict);
     });
 });
 

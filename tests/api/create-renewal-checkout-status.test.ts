@@ -4,7 +4,9 @@
  * launch promo + 2027 ladder.
  *
  *   allowed  'promo' (launch-free posts renew at the normal price) and 'paid'
- *   409      'pending' (never completed), legacy 'free' (unchanged message),
+ *   409      'pending' (never completed), 'expired' (an abandoned checkout the
+ *            reconciliation sweep retired: never paid, so a renewal must not
+ *            publish it at the renewal price), legacy 'free' (unchanged message),
  *            'refunded' (moderation gate), 'disputed' (chargeback), 'plan' (plan posts stay live while
  *            the plan is active — re-post from a slot instead)
  *
@@ -108,7 +110,7 @@ describe('renewable rows', () => {
 });
 
 describe('blocked rows (409, no Stripe call)', () => {
-    it("'plan' — plan posts stay live while the plan is active; re-post from a slot", async () => {
+    it("'plan' — plan posts are not renewed; each runs its 60 days, then re-post into the freed slot", async () => {
         row('plan', 'plan');
         const { res, json } = await post();
         expect(res.status).toBe(409);
@@ -130,6 +132,15 @@ describe('blocked rows (409, no Stripe call)', () => {
         const { res, json } = await post();
         expect(res.status).toBe(409);
         expect(json.error).toMatch(/never completed/i);
+        expect(sessionsCreate).not.toHaveBeenCalled();
+    });
+
+    it("'expired' — an abandoned checkout cannot be bought back at the renewal price", async () => {
+        row('expired');
+        const { res, json } = await post();
+        expect(res.status).toBe(409);
+        expect(json.error).toMatch(/never completed/i);
+        expect(json.error).toMatch(/complete the original checkout/i);
         expect(sessionsCreate).not.toHaveBeenCalled();
     });
 

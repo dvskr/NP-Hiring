@@ -16,13 +16,17 @@
  * hits P2002, its transaction rolls back, and it returns 'already_applied' —
  * so the expiry is never extended twice.
  *
- * Revoked postings: a 'refunded' or 'disputed' posting must never be
+ * Refused postings: a 'refunded' or 'disputed' posting must never be
  * re-published by a renewal (that would erase the dispute marker and bypass
- * the refund gate). The EmployerJob status write is conditional on the row
- * not being revoked and the whole transaction rolls back when it matches
- * nothing — closing the race with a refund landing mid-checkout. The money
- * is still recorded on the ledger (without touching the posting) so the
- * operator can refund it.
+ * the refund gate), and neither may a posting that was never paid for:
+ * 'pending' (checkout not completed) or 'expired' (an abandoned checkout the
+ * reconciliation sweep retired). Renewing one of those would publish it as
+ * 'paid' for the renewal price instead of the post price. The EmployerJob
+ * status write is conditional on the row not being in a refused state and
+ * the whole transaction rolls back when it matches nothing, closing the
+ * race with a refund landing mid-checkout. The money is still recorded on
+ * the ledger (without touching the posting) so the operator can refund it,
+ * and the outcome is 'revoked_posting', which every caller alerts on.
  *
  * Callers MUST have verified `session.payment_status === 'paid'` and
  * `session.metadata.type === 'renewal'`.
@@ -51,11 +55,15 @@ export interface RenewalResult {
   revokedStatus?: string;
 }
 
-const REVOKED_STATUSES = ['refunded', 'disputed'];
+/**
+ * Statuses a renewal must never be applied to: revoked postings, and
+ * postings that were never paid for (see the file header).
+ */
+const REFUSED_STATUSES = ['refunded', 'disputed', 'pending', 'expired'];
 
 class RevokedPostingError extends Error {
   constructor() {
-    super('posting was refunded or disputed before the renewal applied');
+    super('posting was refunded, disputed or never paid for before the renewal applied');
     this.name = 'RevokedPostingError';
   }
 }
@@ -99,7 +107,7 @@ export async function applyRenewalCheckout(
 
   const invoiceData = await fetchInvoiceData(stripe, session);
 
-  if (REVOKED_STATUSES.includes(employerJob.paymentStatus)) {
+  if (REFUSED_STATUSES.includes(employerJob.paymentStatus)) {
     await recordChargeOnly(session, employerJob.id, invoiceData);
     return { outcome: 'revoked_posting', jobId, revokedStatus: employerJob.paymentStatus };
   }
@@ -124,7 +132,7 @@ export async function applyRenewalCheckout(
       // Ledger FIRST: the unique stripeSessionId is the cross-path lock.
       await tx.jobCharge.create({ data: renewalChargeData(session, employerJob.id, invoiceData) });
       const claimed = await tx.employerJob.updateMany({
-        where: { id: employerJob.id, paymentStatus: { notIn: REVOKED_STATUSES } },
+        where: { id: employerJob.id, paymentStatus: { notIn: REFUSED_STATUSES } },
         // Reset expiryWarningSentAt so the renewed posting (new, later
         // expiresAt) gets its own 5-day-out warning.
         data: { paymentStatus: 'paid', pricingTier: renewalTier, expiryWarningSentAt: null },

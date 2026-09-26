@@ -48,6 +48,8 @@ import {
   FLAT_FEE_PRICING,
   FREE_POST_SCOPE_NOTE,
   INTRO_PRICE_SCOPE_NOTE,
+  PLAN_NO_RENEWALS_NOTE,
+  RENEWAL_SCOPE_NOTE,
 } from '@/components/tools/cost-per-hire-model';
 import { TOOL_ACCENT, TOOL_PAGE_CSS, TOOL_HERO_BG, TOOL_PANEL_BG, clayCard, formatUsd } from '@/components/tools/tool-theme';
 import { STAT_SOURCES } from '@/lib/stats-sources';
@@ -82,10 +84,10 @@ export const metadata: Metadata = {
 
 const ASSUMPTIONS: readonly string[] = [
   `Cost per hire is total channel spend divided by hires. Cost per applicant is total channel spend divided by applicants. Nothing else is folded in.`,
-  `Our own prices are read from the pricing config the checkout charges against. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${FLAT_FEE_PRICING.ladderStartsLabel}: your first post is ${formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is ${formatUsd(FLAT_FEE_PRICING.postingPrice)}, or ${formatUsd(FLAT_FEE_PRICING.planPrice)}/month for ${FLAT_FEE_PRICING.planSlots} active jobs. Every post runs ${FLAT_FEE_PRICING.durationDays} days, renews for ${formatUsd(FLAT_FEE_PRICING.renewalPrice)}, and includes ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate unlocks plus ${FLAT_FEE_PRICING.inmailsPerPosting} direct messages.`,
+  `Our own prices are read from the pricing config the checkout charges against. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${FLAT_FEE_PRICING.ladderStartsLabel}: your first post is ${formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is ${formatUsd(FLAT_FEE_PRICING.postingPrice)}, or ${formatUsd(FLAT_FEE_PRICING.planPrice)}/month for ${FLAT_FEE_PRICING.planSlots} active jobs. Every post runs ${FLAT_FEE_PRICING.durationDays} days and includes ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate unlocks plus ${FLAT_FEE_PRICING.inmailsPerPosting} direct messages. Renewal: ${RENEWAL_SCOPE_NOTE}; ${PLAN_NO_RENEWALS_NOTE}.`,
   `The promo result is a real price for a dated window, not a rate: a plan modeled on the promo costs nothing on our side until the promo ends, so the calculator lets you price the same roles on the ${FLAT_FEE_PRICING.ladderStartsLabel} ladder or the Employer plan as well.`,
   `The intro price is scoped to the employer's email domain rather than to a login: ${INTRO_PRICE_SCOPE_NOTE}. A five-recruiter health system therefore gets one intro-priced post between all five, not one each, so a multi-role plan modeled per post shows at most one intro post and prices every other post at ${formatUsd(FLAT_FEE_PRICING.postingPrice)}. Posts made free during the promo do not use the intro price up.`,
-  `The Employer plan is modeled as enough concurrent plans to hold every role at once (${FLAT_FEE_PRICING.planSlots} active slots each) for the months you enter, which start at ${DEFAULT_PLAN_MONTHS}: our ${FLAT_FEE_PRICING.durationDays}-day posting window in whole billing months, not an estimate of how long anyone subscribes. Plan posts stay live while the plan is active, so the plan carries no renewals.`,
+  `The Employer plan is modeled as enough concurrent plans to hold every role at once (${FLAT_FEE_PRICING.planSlots} active slots each) for the months you enter, which start at ${DEFAULT_PLAN_MONTHS}: our ${FLAT_FEE_PRICING.durationDays}-day posting window in whole billing months, not an estimate of how long anyone subscribes. Nothing is added for renewals, because ${PLAN_NO_RENEWALS_NOTE}.`,
   `Every figure for the sponsored-ad and agency channels is yours. We publish no typical cost per click, no typical contingency rate, no typical time-to-fill, and no typical applicant-to-hire ratio. We sell one side of this comparison, and a benchmark from us would not be evidence.`,
   `A channel with nothing entered is reported as not comparable, never as zero. A zero in a cost column would read as free.`,
   `The applicant-volume default of ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} is the number of candidate unlocks a posting includes. It is a plan feature, not an expected response rate. Replace it with what your own postings draw.`,
@@ -124,7 +126,7 @@ const FAQS = [
   },
   {
     q: `What does a posting include, and what does it cost?`,
-    a: `Every post (promo, intro, featured, or plan) runs ${FLAT_FEE_PRICING.durationDays} days, is featured, and includes ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate profile unlocks and ${FLAT_FEE_PRICING.inmailsPerPosting} direct messages. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${FLAT_FEE_PRICING.ladderStartsLabel}: your first post is ${formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is ${formatUsd(FLAT_FEE_PRICING.postingPrice)}, or ${formatUsd(FLAT_FEE_PRICING.planPrice)}/month for ${FLAT_FEE_PRICING.planSlots} active jobs. Renewing any post costs ${formatUsd(FLAT_FEE_PRICING.renewalPrice)}. Those are the prices in the calculator, read from the same config the checkout uses, so they cannot drift from what you would actually be charged.`,
+    a: `Every post (promo, intro, featured, or plan) runs ${FLAT_FEE_PRICING.durationDays} days, is featured, and includes ${FLAT_FEE_PRICING.candidateUnlocksPerPosting} candidate profile unlocks and ${FLAT_FEE_PRICING.inmailsPerPosting} direct messages. During the launch promo ${FREE_POST_SCOPE_NOTE}. From ${FLAT_FEE_PRICING.ladderStartsLabel}: your first post is ${formatUsd(FLAT_FEE_PRICING.introPrice)}, every post after that is ${formatUsd(FLAT_FEE_PRICING.postingPrice)}, or ${formatUsd(FLAT_FEE_PRICING.planPrice)}/month for ${FLAT_FEE_PRICING.planSlots} active jobs. Renewal: ${RENEWAL_SCOPE_NOTE}; ${PLAN_NO_RENEWALS_NOTE}. Those are the prices in the calculator, read from the same config the checkout uses, so they cannot drift from what you would actually be charged.`,
   },
   {
     q: `Who exactly gets the intro price?`,

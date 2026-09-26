@@ -46,10 +46,9 @@ interface JobFormData {
 /**
  * The employer's quoted rung for their NEXT post, from
  * GET /api/employer/free-quota-status (see lib/pricing.ts#PricingQuote).
- * The order summary reads the amount from here — intro vs pro — so the
+ * The order summary reads the amount from here (intro vs pro), so the
  * number the employer sees matches the Stripe line item create-checkout
- * builds from the same quote. Every field is optional: until it loads (or
- * if it fails) the summary falls back to config.postingPrice.
+ * builds from the same resolution. Every field is optional.
  */
 interface PricingQuote {
   eligible: boolean;
@@ -58,6 +57,38 @@ interface PricingQuote {
   willBeFree?: boolean;
   price?: number;
   priceCents?: number;
+}
+
+type QuoteFetch = 'loading' | 'loaded' | 'failed';
+
+/**
+ * What the page may say about the amount. Only the server quote supplies a
+ * number: there is no list-price fallback, because the server may charge a
+ * different rung (intro) or nothing at all (promo, plan slot).
+ *   loading — the quote has not answered yet: no amount, Pay disabled;
+ *   free    — the next post needs no payment: no Pay button at all;
+ *   paid    — the quoted amount, shown on the summary and the Pay button;
+ *   unknown — the quote failed or said nothing usable: no amount is shown,
+ *             and Stripe shows the exact amount before anything is charged.
+ */
+type QuoteView =
+  | { kind: 'loading' }
+  | { kind: 'free'; mode: PricingQuote['mode'] }
+  | { kind: 'paid'; price: number; priceCents: number; isIntro: boolean }
+  | { kind: 'unknown' };
+
+function toQuoteView(fetchState: QuoteFetch, quote: PricingQuote | null): QuoteView {
+  if (fetchState === 'loading') return { kind: 'loading' };
+  if (!quote || quote.eligible !== true) return { kind: 'unknown' };
+  if (quote.willBeFree === true) return { kind: 'free', mode: quote.mode };
+  if (
+    quote.willBeFree === false
+    && typeof quote.price === 'number' && quote.price > 0
+    && typeof quote.priceCents === 'number' && quote.priceCents > 0
+  ) {
+    return { kind: 'paid', price: quote.price, priceCents: quote.priceCents, isIntro: quote.mode === 'intro' };
+  }
+  return { kind: 'unknown' };
 }
 
 export default function CheckoutPage() {
@@ -70,6 +101,7 @@ export default function CheckoutPage() {
   // still returns a stable 503 code if payment is attempted anyway.
   const [paidPostingAvailable, setPaidPostingAvailable] = useState<boolean | null>(null);
   const [quote, setQuote] = useState<PricingQuote | null>(null);
+  const [quoteFetch, setQuoteFetch] = useState<QuoteFetch>('loading');
 
   useEffect(() => {
     let cancelled = false;
@@ -91,11 +123,19 @@ export default function CheckoutPage() {
     (async () => {
       try {
         const res = await fetch('/api/employer/free-quota-status');
-        if (!res.ok) return;
+        if (!res.ok) {
+          if (!cancelled) setQuoteFetch('failed');
+          return;
+        }
         const data = (await res.json()) as PricingQuote;
-        if (!cancelled) setQuote(data);
+        if (!cancelled) {
+          setQuote(data);
+          setQuoteFetch('loaded');
+        }
       } catch {
-        /* leave null — the summary falls back to the list price */
+        // No amount is guessed: the summary shows none and Stripe shows the
+        // exact amount before the employer pays.
+        if (!cancelled) setQuoteFetch('failed');
       }
     })();
     return () => { cancelled = true; };
@@ -128,28 +168,24 @@ export default function CheckoutPage() {
   }, [router]);
 
   // ─── Quoted amount ────────────────────────────────────────────────────
-  // Trust the quote only when it says a charge is due; an eligible+free
-  // answer (promo / plan) means this page was reached with a stale draft
-  // and is handled by the banner below, never by silently charging.
-  const quoteIsPaid = quote?.eligible === true && quote.willBeFree === false;
-  const quotedPrice = quoteIsPaid && typeof quote?.price === 'number' && quote.price > 0
-    ? quote.price
-    : config.postingPrice;
-  const quotedPriceCents = quoteIsPaid && typeof quote?.priceCents === 'number' && quote.priceCents > 0
-    ? quote.priceCents
-    : config.stripePriceInCents;
-  const isIntroRung = quoteIsPaid && quote?.mode === 'intro';
-  const nextPostIsFree = quote?.eligible === true && quote.willBeFree === true;
+  // An eligible+free answer (promo / plan) means this page was reached with
+  // a stale draft: the banner below sends the employer back to the preview
+  // and no Pay button renders, so nothing can be charged from here.
+  const quoteView = toQuoteView(quoteFetch, quote);
+  const isIntroRung = quoteView.kind === 'paid' && quoteView.isIntro;
+  const nextPostIsFree = quoteView.kind === 'free';
 
   const handlePayment = async () => {
-    if (!jobData) return;
+    if (!jobData || quoteView.kind === 'free' || quoteView.kind === 'loading') return;
 
     setLoading(true);
     setError(null);
 
-    // P7: fire begin_checkout before redirect to Stripe — with the quoted
-    // rung's amount so intro and pro checkouts report their real value
-    trackBeginCheckout(quotedPriceCents, 'new');
+    // P7: fire begin_checkout before redirect to Stripe, with the quoted
+    // rung's amount so intro and pro checkouts report their real value.
+    // Without a usable quote it waits for the amount the server charges
+    // (below) rather than reporting a guessed one.
+    if (quoteView.kind === 'paid') trackBeginCheckout(quoteView.priceCents, 'new');
 
     try {
       const response = await fetch('/api/create-checkout', {
@@ -192,7 +228,10 @@ export default function CheckoutPage() {
         throw new Error(fullMsg);
       }
 
-      const { url } = await response.json();
+      const { url, price } = (await response.json()) as { url?: string; price?: number };
+      if (quoteView.kind !== 'paid' && typeof price === 'number' && price > 0) {
+        trackBeginCheckout(Math.round(price * 100), 'new');
+      }
 
       if (url) {
         window.location.href = url;
@@ -205,8 +244,6 @@ export default function CheckoutPage() {
       setLoading(false);
     }
   };
-
-  const getPrice = () => `$${quotedPrice}`;
 
   // Customer-facing rung names. "Intro" is the company's first paid post;
   // every later post is a Featured post (config.postingPrice). Both carry
@@ -249,8 +286,10 @@ export default function CheckoutPage() {
   };
 
   // F3: paid posting isn't open (flag off or Stripe unconfigured) — show a
-  // clear "coming soon" state instead of letting the Pay button 503.
-  if (paidPostingAvailable === false) {
+  // clear "coming soon" state instead of letting the Pay button 503. A free
+  // quote (launch promo, plan slot) skips it: that post needs no checkout,
+  // and the page below sends the employer back to the preview to post it.
+  if (paidPostingAvailable === false && !nextPostIsFree) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16">
         <div className="bg-white rounded-lg shadow-md p-8 text-center">
@@ -294,7 +333,9 @@ export default function CheckoutPage() {
       {/* Page Header */}
       <div className="mb-6 text-center">
         <h1 className="text-3xl font-bold mb-1">Confirm Your Job Posting</h1>
-        <p className="text-gray-600">Review your listing before payment</p>
+        <p className="text-gray-600">
+          {nextPostIsFree ? 'Review your listing, then post it from the preview' : 'Review your listing before payment'}
+        </p>
       </div>
 
       {/* Job Summary Card */}
@@ -358,11 +399,11 @@ export default function CheckoutPage() {
           payment (launch promo or an Employer-plan slot). Charging them
           anyway would be the worst outcome on this page, so point them back
           to the preview, whose primary button posts without Stripe. */}
-      {nextPostIsFree && (
+      {quoteView.kind === 'free' && (
         <div className="bg-pink-50 border border-pink-200 rounded-lg p-4 mb-6">
           <p className="text-pink-800 text-sm">
             Good news: your next post doesn&apos;t need a payment
-            {quote?.mode === 'plan'
+            {quoteView.mode === 'plan'
               ? ' (it uses a slot on your Employer plan)'
               : ` (every post is free through ${config.promoEndsLabel})`}
             .{' '}
@@ -386,9 +427,26 @@ export default function CheckoutPage() {
               </p>
             )}
           </div>
+          {/* The amount comes from the server quote only; see QuoteView. */}
           <div className="text-right shrink-0">
-            <span className="text-3xl font-bold text-gray-900">{getPrice()}</span>
-            <p className="text-sm text-gray-500">one-time</p>
+            {quoteView.kind === 'paid' && (
+              <>
+                <span className="text-3xl font-bold text-gray-900">${quoteView.price}</span>
+                <p className="text-sm text-gray-500">one-time</p>
+              </>
+            )}
+            {quoteView.kind === 'free' && (
+              <>
+                <span className="text-3xl font-bold text-gray-900">Free</span>
+                <p className="text-sm text-gray-500">no payment needed</p>
+              </>
+            )}
+            {quoteView.kind === 'loading' && (
+              <p className="text-sm text-gray-500">Checking your price...</p>
+            )}
+            {quoteView.kind === 'unknown' && (
+              <p className="text-sm text-gray-500 max-w-[12rem]">Stripe shows the exact amount before you pay.</p>
+            )}
           </div>
         </div>
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-700">
@@ -421,32 +479,49 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      {/* Payment Button */}
-      <button
-        onClick={handlePayment}
-        disabled={loading}
-        className="w-full bg-pink-600 text-white py-3 rounded-lg font-semibold hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-      >
-        {loading ? (
-          <>
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            Creating checkout session...
-          </>
-        ) : (
-          `Proceed to Payment: ${getPrice()}`
-        )}
-      </button>
-
-      {/* Terms acknowledgement — visible at point-of-purchase per consumer
-          protection norms. Reduces post-charge "I didn't know it was
-          non-refundable" support tickets and chargeback risk. */}
-      <p className="text-center text-xs text-gray-500 mt-3">
-        By clicking Pay, you agree to our{' '}
-        <Link href="/terms" className="text-pink-700 hover:text-pink-800 underline">
-          Terms of Service
+      {/* Payment Button. A free quote (promo or plan slot) renders no Pay
+          button at all, only the way back to the preview, which posts
+          without Stripe; the server refuses a promo checkout as well. */}
+      {quoteView.kind === 'free' ? (
+        <Link
+          href="/post-job/preview"
+          className="w-full bg-pink-600 text-white py-3 rounded-lg font-semibold hover:bg-pink-700 transition-colors flex items-center justify-center gap-2"
+        >
+          Go back to the preview to post it
         </Link>
-        .
-      </p>
+      ) : (
+        <>
+          <button
+            onClick={handlePayment}
+            disabled={loading || quoteView.kind === 'loading'}
+            className="w-full bg-pink-600 text-white py-3 rounded-lg font-semibold hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                Creating checkout session...
+              </>
+            ) : quoteView.kind === 'paid' ? (
+              `Proceed to Payment: $${quoteView.price}`
+            ) : quoteView.kind === 'loading' ? (
+              'Checking your price...'
+            ) : (
+              'Proceed to Payment'
+            )}
+          </button>
+
+          {/* Terms acknowledgement — visible at point-of-purchase per consumer
+              protection norms. Reduces post-charge "I didn't know it was
+              non-refundable" support tickets and chargeback risk. */}
+          <p className="text-center text-xs text-gray-500 mt-3">
+            By clicking Pay, you agree to our{' '}
+            <Link href="/terms" className="text-pink-700 hover:text-pink-800 underline">
+              Terms of Service
+            </Link>
+            .
+          </p>
+        </>
+      )}
 
       {/* Back Link */}
       <div className="text-center mt-4">
