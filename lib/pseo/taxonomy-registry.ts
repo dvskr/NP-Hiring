@@ -123,13 +123,15 @@ export const STATE_ELIGIBLE_CATEGORY_SLUGS: readonly string[] = [
 export const CITY_ELIGIBLE_CATEGORY_SLUGS: readonly string[] = ALL_CATEGORY_SLUGS;
 
 /**
- * Categories whose category×city URLs are submitted to the Google
- * Indexing API by cron/index-pseo. A deliberate 12-slug subset of the
- * state-eligible set — the 100/day pSEO indexing quota goes to the
- * broadest, highest-demand categories first (all five core modalities,
- * the three main job types, 1099, new-grad, and the two highest-volume
- * NP specialties). Remaining categories still appear in sitemaps;
- * they're just not priority-pushed through the API.
+ * Categories whose category×city URLs cron/index-pseo submits to Bing and
+ * IndexNow. Never to Google: the Google Indexing API accepts job posting
+ * pages only, and these landings carry no JobPosting markup. A deliberate
+ * 12-slug subset of the state-eligible set, because the cron's 100 per run
+ * submission cap (SUBMISSIONS_PER_RUN) goes to the broadest,
+ * highest-demand categories first (all five core modalities, the three
+ * main job types, 1099, new-grad, and the two highest-volume NP
+ * specialties). Remaining categories still appear in sitemaps; they're
+ * just not priority-pushed.
  */
 export const PSEO_INDEXING_CATEGORY_SLUGS: readonly string[] = [
     'remote', 'telehealth', 'inpatient', 'outpatient', 'travel',

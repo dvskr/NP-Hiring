@@ -44,7 +44,7 @@ import {
     SOP_STATE_ROWS,
     buildSopFaqs,
 } from '@/components/ScopeOfPracticeData';
-import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
+import { STATE_PRACTICE_AUTHORITY, getAuthorityLabel } from '@/lib/state-practice-authority';
 import {
     LICENSE_GUIDE_STATES,
     NLC_ROSTER_VERIFIED_AT,
@@ -82,7 +82,9 @@ describe('data fidelity — rows are a verbatim join of the canonical datasets',
             const info = STATE_PRACTICE_AUTHORITY[row.name];
             expect(info, row.name).toBeDefined();
             expect(row.authority, row.name).toBe(info.authority);
-            expect(row.authorityLabel, row.name).toBe(info.description);
+            // The chip is AANP's tier name, never the dataset's "Full Practice
+            // Authority" beside details that describe a transition period.
+            expect(row.authorityLabel, row.name).toBe(getAuthorityLabel(info.authority));
             expect(row.details, row.name).toBe(info.details);
         }
     });

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { googleWasNotAsked, pingAllSearchEnginesBatchDeleted } from '@/lib/search-indexing';
+import {
+    GOOGLE_POLICY_REFUSED,
+    googleWasNotAsked,
+    isGoogleIndexingEligibleUrl,
+    pingAllSearchEnginesBatchDeleted,
+} from '@/lib/search-indexing';
 import { verifyCronOrAdmin } from '@/lib/auth/verify-cron-or-admin';
 import { sendCronFailureAlert } from '@/lib/discord-notifier';
 import { withCronTracking } from '@/lib/cron/track';
@@ -8,12 +13,13 @@ import { brand } from '@/config/brand';
 
 export const maxDuration = 300; // 5 minutes: HEAD checks BATCH_SIZE URLs in parallel, then submits.
 
-// HEAD-check 50 URLs per run x 3 runs/day (vercel.json: 0 1,7,19). The scarce
-// resource is not BATCH_SIZE, it is the backlog-removal lane's share of the
-// 200/day Google Indexing API quota (lib/search-indexing.ts), which grants 15
-// publishes per run. A run that finds more gone URLs than that defers the rest
-// and they come back on the next run, so the queue advances at the lane's pace
-// whatever BATCH_SIZE says.
+// HEAD-check up to 50 URLs per run x 3 runs/day (vercel.json: 0 1,7,19). The
+// scarce resource is not BATCH_SIZE, it is the backlog-removal lane's share of
+// the 200/day Google Indexing API quota: the lane's per-run grant
+// (GOOGLE_INDEXING_LANES['backlog-removal'].perInvocation in
+// lib/search-indexing.ts) is smaller than the batch. A run that finds more gone
+// URLs than that defers the rest and they come back on the next run, so the
+// queue advances at the lane's pace whatever BATCH_SIZE says.
 //
 // The HEAD batch is still kept wider than the lane on purpose: a URL that turns
 // out to be LIVE is cleared from the queue without spending any Google budget,
@@ -63,7 +69,11 @@ const GONE_STATUSES: ReadonlySet<number> = new Set([404, 410]);
  *
  * FLOW:
  *   1. Pull oldest N pending rows (oldest first, for fairness)
- *   2. HEAD-check each URL with a short timeout
+ *      - A row whose URL is not a job posting page is retired as 'failed'
+ *        at once, with GOOGLE_POLICY_REFUSED in lastError. The Google
+ *        Indexing API accepts job posting pages only, so no later run could
+ *        ever submit it, and it gets no HEAD check either
+ *   2. HEAD-check each remaining URL with a short timeout
  *      - If 200/3xx, the URL is alive: mark 'live' and remove from queue
  *      - If 404/410, submit URL_DELETED to Google + IndexNow. The row is
  *        retired as 'submitted' only once Google has actually been asked
@@ -156,11 +166,29 @@ export async function GET(request: NextRequest) {
             };
         }
 
-        // 1. HEAD-check all candidates in parallel.
+        // 0. Retire the rows Google will never accept, before any network.
+        //    The queue was seeded from Search Console exports of every URL
+        //    type, so it holds landings, posts and account pages as well as
+        //    jobs, and lib/search-indexing.ts refuses every one of them
+        //    permanently. Left in the normal flow, each such row would cost a
+        //    HEAD request and one attempt on three separate runs before it
+        //    failed anyway, and hold a slot in this oldest first batch each
+        //    time. One updateMany retires them all, attempt left as it is,
+        //    because no request was ever made.
+        const eligible = candidates.filter((row) => isGoogleIndexingEligibleUrl(row.url));
+        const outOfScope = candidates.filter((row) => !isGoogleIndexingEligibleUrl(row.url));
+        if (outOfScope.length > 0) {
+            await prisma.deindexQueue.updateMany({
+                where: { id: { in: outOfScope.map((r) => r.id) } },
+                data: { status: 'failed', lastError: GOOGLE_POLICY_REFUSED },
+            });
+        }
+
+        // 1. HEAD-check the eligible candidates in parallel.
         //    URLs that return 200/3xx are still live, so we must NOT submit
         //    URL_DELETED for them (would actively de-index a working page).
         const headResults = await Promise.all(
-            candidates.map(async (row) => {
+            eligible.map(async (row) => {
                 try {
                     const controller = new AbortController();
                     const timer = setTimeout(() => controller.abort(), HEAD_CHECK_TIMEOUT_MS);
@@ -226,8 +254,9 @@ export async function GET(request: NextRequest) {
         //    query above filters on status 'pending'. So the test for retiring
         //    is "was Google actually asked", not "did either engine take it":
         //    IndexNow has no way to remove a URL from Google, and with a batch
-        //    of 50 against a lane that grants 15, an IndexNow-only rule would
-        //    retire most of every batch with Google never asked at all.
+        //    of 50 against the lane's much smaller per-run grant, an
+        //    IndexNow-only rule would retire most of every batch with Google
+        //    never asked at all.
         //
         //    A deferred row is offered to IndexNow again on its next run. That
         //    is harmless: the protocol is idempotent, and lib/indexnow.ts caps
@@ -333,6 +362,7 @@ export async function GET(request: NextRequest) {
         const summary = {
             success: true,
             processed: candidates.length,
+            outOfScope: outOfScope.length,
             live: live.length,
             submitted: submittedCount,
             submitFailed: submitFailedCount,
@@ -347,6 +377,7 @@ export async function GET(request: NextRequest) {
             response: NextResponse.json(summary),
             metrics: {
                 processed: candidates.length,
+                outOfScope: outOfScope.length,
                 live: live.length,
                 submitted: submittedCount,
                 submitFailed: submitFailedCount,

@@ -14,7 +14,8 @@
  *     kebab-case name, and stays within its size cap.
  *  4. Psych-only art stays on the psychiatric-mental-health category.
  *  5. The port script never lists a denied source (PMHNP text, psych-only
- *     scenes, unsourced figures, stale dates).
+ *     scenes, unsourced figures, stale dates, stated credentials, baked
+ *     sign or banner text).
  *  6. One destination, one navigation icon across the landings.
  *  7. Every taxonomy slug resolves through categoryNavArt to a clay tile or
  *     a lucide glyph, never a blank tile; tiles and glyphs partition the
@@ -153,6 +154,11 @@ describe('category art port', () => {
       'categories/hero_wc_senior.webp',
       'categories/bento_newgrad_mentorship.webp',
       'categories/bento_ct_salary.webp',
+      // Found by the 2026-09-23 full-size review for the twelve sage-hero slugs:
+      // a stated credential ladder, a printed paycheck figure, a banner.
+      'categories/bento_bh_growth.webp',
+      'categories/bento_sa_salary.webp',
+      'about/diorama_new_grad.webp',
     ]) {
       expect(script.DENIED).toHaveProperty([denied]);
     }

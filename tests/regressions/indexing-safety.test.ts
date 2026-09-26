@@ -1,8 +1,8 @@
 /**
  * Search indexing safety.
  *
- * Four failures that are all invisible today, because every key in the
- * indexing pipeline is empty, and all four become live and expensive the
+ * Five failures that are all invisible today, because every key in the
+ * indexing pipeline is empty, and all five become live and expensive the
  * moment an owner pastes credentials in:
  *
  *  1. app/api/cron/historical-deindex classified any non 2xx/3xx HEAD result
@@ -22,6 +22,13 @@
  *     the owner armed it. It now stops before it reads the queue.
  *  4. The IndexNow key lived under two env names and half the readers only
  *     knew one of them.
+ *  5. app/api/cron/index-pseo published category x city landings, which carry
+ *     no JobPosting markup, to the Google Indexing API, and the blog publish
+ *     did the same for posts. Google limits the API to JobPosting and
+ *     BroadcastEvent pages and can revoke access for the whole Cloud project,
+ *     which would take the in-policy job publishes and removals down with it.
+ *     lib/search-indexing.ts now refuses every other page type for every
+ *     caller, and index-pseo has no Google leg at all.
  *
  * Nothing here touches the network or the database. Every fetch is mocked,
  * including the Google OAuth exchange, so "Google was asked" is a real code
@@ -46,6 +53,11 @@ vi.mock('@/lib/prisma', () => ({
             create: vi.fn().mockResolvedValue({ id: 'cron-run-test' }),
             update: vi.fn(),
         },
+        pseoStats: {
+            findMany: vi.fn(),
+            upsert: vi.fn(),
+        },
+        $queryRaw: vi.fn(),
     },
 }));
 vi.mock('@/lib/auth/verify-cron-or-admin', () => ({
@@ -54,17 +66,35 @@ vi.mock('@/lib/auth/verify-cron-or-admin', () => ({
 vi.mock('@/lib/discord-notifier', () => ({
     sendCronFailureAlert: vi.fn().mockResolvedValue(undefined),
 }));
+// The real dataset is tens of thousands of lines; index-pseo only reads the
+// population and the shortage flag, so three stand-in cities cover every
+// branch of its gate: two above the population floor and one below it.
+vi.mock('@/lib/pseo/city-data/cities', () => {
+    const cities: Record<string, { population: number; mentalHealthShortage: boolean }> = {
+        'large-city-tx': { population: 600000, mentalHealthShortage: false },
+        'mid-city-oh': { population: 120000, mentalHealthShortage: false },
+        'hamlet-vt': { population: 900, mentalHealthShortage: false },
+    };
+    return { getCityBySlug: (slug: string) => cities[slug] };
+});
 
 import { prisma } from '@/lib/prisma';
 import { brand } from '@/config/brand';
+import { slugify } from '@/lib/utils';
 import {
     GOOGLE_BUDGET_REFUSED,
+    GOOGLE_DAILY_HEADROOM,
     GOOGLE_DAILY_PUBLISH_QUOTA,
     GOOGLE_INDEXING_LANES,
     GOOGLE_NOT_CONFIGURED,
+    GOOGLE_POLICY_REFUSED,
     GOOGLE_TOKEN_EXCHANGE_FAILED,
     googleWasNotAsked,
     isGoogleBudgetRefusal,
+    isGoogleIndexingEligibleUrl,
+    isGooglePolicyRefusal,
+    pingAllSearchEngines,
+    pingAllSearchEnginesBatch,
     pingAllSearchEnginesBatchDeleted,
     pingGoogle,
     resetGoogleIndexingBudget,
@@ -75,6 +105,25 @@ import { matchIndexNowKeyPath, resolveIndexNowKey } from '@/lib/indexnow-key-fil
 
 const ROOT = process.cwd();
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+/** Repo-relative paths of every .ts/.tsx file under `dirs`, forward slashes. */
+function sourceFiles(dirs: string[]): string[] {
+    const files: string[] = [];
+    for (const dir of dirs) {
+        const stack = [path.join(ROOT, dir)];
+        while (stack.length > 0) {
+            const current = stack.pop() as string;
+            for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+                const full = path.join(current, entry.name);
+                if (entry.isDirectory()) stack.push(full);
+                else if (/\.tsx?$/.test(entry.name)) {
+                    files.push(path.relative(ROOT, full).replace(/\\/g, '/'));
+                }
+            }
+        }
+    }
+    return files;
+}
 
 const INDEXING_KEYS = [
     'GOOGLE_INDEXING_CREDENTIALS',
@@ -107,6 +156,18 @@ afterEach(() => {
     savedEnv.clear();
 });
 
+// ─── Job page URLs in the shape the detail page resolves ────────────────────
+
+/**
+ * A UUID the job page's resolver accepts, distinct per index. The detail page
+ * finds a job only by a trailing UUID in its slug, and lib/search-indexing.ts
+ * only lets that shape reach Google, so every job fixture here carries one.
+ */
+const jobUuid = (i: number): string => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`;
+
+/** A job detail URL, e.g. /jobs/gone-00000000-0000-4000-8000-000000000003. */
+const jobUrl = (label: string, i = 0): string => `${brand.baseUrl}/jobs/${label}-${jobUuid(i)}`;
+
 // ─── Credible credentials, so "Google was asked" is a real code path ────────
 
 /**
@@ -131,6 +192,12 @@ function armGoogle(): void {
     });
 }
 
+/** Arm the two engines that carry no page type restriction. */
+function armBingAndIndexNow(): void {
+    process.env.BING_WEBMASTER_API_KEY = 'bing-test-key';
+    process.env.INDEXNOW_KEY = 'f'.repeat(32);
+}
+
 interface NetworkOptions {
     /** What every HEAD check on one of our own URLs answers with. */
     headStatus: number;
@@ -138,10 +205,12 @@ interface NetworkOptions {
     googleStatus?: number;
     /** What IndexNow answers. Default 503, so only Google can retire a row. */
     indexNowStatus?: number;
+    /** What the Bing URL Submission API answers. Default 200. */
+    bingStatus?: number;
 }
 
 /**
- * One mock for the whole network. Routing by URL keeps the three endpoints
+ * One mock for the whole network. Routing by URL keeps the endpoints
  * independent, which is what lets a test say "Google accepted and IndexNow did
  * not" and mean it.
  */
@@ -160,8 +229,23 @@ const mockNetwork = (opts: NetworkOptions) =>
         if (url.includes('indexnow')) {
             return new Response('', { status: opts.indexNowStatus ?? 503 });
         }
+        if (url.includes('ssl.bing.com')) {
+            return new Response('', { status: opts.bingStatus ?? 200 });
+        }
         return new Response(null, { status: opts.headStatus });
     });
+
+type FetchMock = ReturnType<typeof mockNetwork>;
+
+/** Every URL this run asked the Indexing API to publish, in order. */
+const googlePublishedUrls = (fetchMock: FetchMock): string[] =>
+    fetchMock.mock.calls
+        .filter((call) => String(call[0]).includes('indexing.googleapis.com'))
+        .map((call) => JSON.parse(String((call[1] as RequestInit).body)).url as string);
+
+/** True when anything at all went to a Google endpoint, OAuth included. */
+const touchedGoogle = (fetchMock: FetchMock): boolean =>
+    fetchMock.mock.calls.some((call) => String(call[0]).includes('googleapis.com'));
 
 // ─── 1. Only a proven-gone status may trigger a removal ─────────────────────
 
@@ -174,7 +258,7 @@ interface QueueRow {
 const queueRows = (count: number, attempt = 0): QueueRow[] =>
     Array.from({ length: count }, (_, i) => ({
         id: `row-${i}`,
-        url: `${brand.baseUrl}/jobs/legacy-posting-${i}`,
+        url: jobUrl('legacy-posting', i),
         attempt,
     }));
 
@@ -188,11 +272,15 @@ async function runDeindexCron(): Promise<{ status: number; body: Record<string, 
     return { status: res.status, body: await res.json() };
 }
 
+/** Every prisma.deindexQueue.update this run made, with the row it targeted. */
+const queueUpdateCalls = (): Array<{ id: string; data: Record<string, unknown> }> =>
+    vi.mocked(prisma.deindexQueue.update).mock.calls.map((call) => {
+        const arg = call[0] as { where: { id: string }; data: Record<string, unknown> };
+        return { id: arg.where.id, data: arg.data };
+    });
+
 /** The data payload of every prisma.deindexQueue.update this run made. */
-const queueUpdates = (): Record<string, unknown>[] =>
-    vi
-        .mocked(prisma.deindexQueue.update)
-        .mock.calls.map((call) => (call[0] as { data: Record<string, unknown> }).data);
+const queueUpdates = (): Record<string, unknown>[] => queueUpdateCalls().map((call) => call.data);
 
 describe('historical-deindex only removes URLs it can prove are gone', () => {
     // 5xx is the one that must never regress: it is OUR fault, not evidence.
@@ -303,8 +391,9 @@ describe('historical-deindex only removes URLs it can prove are gone', () => {
         // Google. Counting an IndexNow acceptance as success for a row the
         // Google budget never reached would take that row out of a queue
         // filtered on status 'pending', so Google would never be asked about
-        // the URL at all. With a batch of 50 against a lane granting 15 that
-        // is most of the backlog, reported to the admin page as submitted.
+        // the URL at all. With a batch of 50 against the lane's much smaller
+        // per run grant, that is most of the backlog, reported to the admin
+        // page as submitted.
         armGoogle();
         process.env.INDEXNOW_KEY = 'd'.repeat(32);
         const cap = GOOGLE_INDEXING_LANES['backlog-removal'].perInvocation;
@@ -398,9 +487,13 @@ describe('the Google Indexing API daily budget cannot be exceeded', () => {
         [GoogleIndexingLane, (typeof GOOGLE_INDEXING_LANES)[GoogleIndexingLane]]
     >;
 
-    it('reserves no more than the whole quota across every lane', () => {
+    it('reserves no more than the quota across every lane, with headroom to spare', () => {
+        // The headroom is what absorbs the unscheduled publishes (an employer
+        // post, a manual script run). Reallocating a lane may move quota
+        // between lanes; it may not eat into this.
         const reserved = lanes.reduce((sum, [, lane]) => sum + lane.dailyReservation, 0);
-        expect(reserved).toBeLessThanOrEqual(GOOGLE_DAILY_PUBLISH_QUOTA);
+        expect(GOOGLE_DAILY_HEADROOM).toBeGreaterThan(0);
+        expect(reserved + GOOGLE_DAILY_HEADROOM).toBeLessThanOrEqual(GOOGLE_DAILY_PUBLISH_QUOTA);
     });
 
     it('keeps each lane scheduled spend inside its own reservation', () => {
@@ -412,6 +505,33 @@ describe('the Google Indexing API daily budget cannot be exceeded', () => {
         }
     });
 
+    it('holds no quota for a caller the scope rule refuses', () => {
+        // The 'programmatic' lane existed for index-pseo's category x city
+        // landings. Those carry no JobPosting, so nothing in policy could
+        // spend it, and a reservation nobody can spend is quota taken from
+        // the lanes that are starved.
+        expect(Object.keys(GOOGLE_INDEXING_LANES).sort()).toEqual([
+            'backlog-removal',
+            'expired-job-removal',
+            'new-content',
+            'unreserved',
+        ]);
+        for (const [name, lane] of lanes) {
+            expect(lane.callers, `lane "${name}" still names index-pseo`).not.toContain('index-pseo');
+        }
+    });
+
+    it('grants the backlog lane no more per run than historical-deindex can find', () => {
+        // The retired lane's quota went to backlog-removal. A per run grant
+        // wider than the cron's HEAD batch could never be spent, so the two
+        // numbers have to move together.
+        const batch = Number(
+            read('app/api/cron/historical-deindex/route.ts').match(/const BATCH_SIZE = (\d+);/)?.[1],
+        );
+        expect(batch).toBeGreaterThan(0);
+        expect(GOOGLE_INDEXING_LANES['backlog-removal'].perInvocation).toBeLessThanOrEqual(batch);
+    });
+
     it('spends nothing for a caller that declares the unreserved lane', async () => {
         armGoogle();
         const fetchMock = mockNetwork({ headStatus: 404 });
@@ -420,20 +540,15 @@ describe('the Google Indexing API daily budget cannot be exceeded', () => {
         // lib/ingestion-service.ts runs 60 batches a day over URLs that
         // index-urls and deindex-expired already publish out of real lanes.
         // Naming this lane keeps its IndexNow coverage without paying twice.
-        const { google } = await pingAllSearchEnginesBatchDeleted(
-            [`${brand.baseUrl}/jobs/anything`],
-            'unreserved',
-        );
+        const { google } = await pingAllSearchEnginesBatchDeleted([jobUrl('anything')], 'unreserved');
 
         expect(google).toHaveLength(1);
         expect(isGoogleBudgetRefusal(google[0])).toBe(true);
         expect(google[0].error).toContain(GOOGLE_BUDGET_REFUSED);
-        for (const call of fetchMock.mock.calls) {
-            expect(String(call[0])).not.toContain('googleapis.com');
-        }
+        expect(touchedGoogle(fetchMock)).toBe(false);
     });
 
-    it('takes the lane as a required argument on both batch helpers', () => {
+    it('takes the lane as a required argument on both batch helpers and on pingGoogle', () => {
         // A default is the failure this pins. Generous enough for the three
         // cron firings a day and the 60 ingest batches spend it all; small
         // enough for the ingest path and it is zero, which silently kills
@@ -441,7 +556,7 @@ describe('the Google Indexing API daily budget cannot be exceeded', () => {
         // out of Google. Requiring the argument turns that into a type error.
         const src = read('lib/search-indexing.ts');
         expect(src).toContain('lane: GoogleIndexingLane,');
-        expect(src).not.toMatch(/lane: GoogleIndexingLane = 'unreserved'/);
+        expect(src).not.toMatch(/lane: GoogleIndexingLane = '/);
     });
 
     it('has no batch caller left that relies on a default lane, beyond the known handoffs', () => {
@@ -456,57 +571,68 @@ describe('the Google Indexing API daily budget cannot be exceeded', () => {
         ];
         const callPattern = /pingAllSearchEnginesBatch(?:Deleted)?\(\s*[A-Za-z_$][\w$]*\s*\)/;
 
-        const offenders = new Set<string>();
-        for (const dir of ['app', 'lib', 'scripts']) {
-            const stack = [path.join(ROOT, dir)];
-            while (stack.length > 0) {
-                const current = stack.pop() as string;
-                for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-                    const full = path.join(current, entry.name);
-                    if (entry.isDirectory()) {
-                        stack.push(full);
-                    } else if (/\.tsx?$/.test(entry.name)) {
-                        const rel = path.relative(ROOT, full).replace(/\\/g, '/');
-                        if (rel === 'lib/search-indexing.ts') continue;
-                        if (callPattern.test(fs.readFileSync(full, 'utf8'))) offenders.add(rel);
-                    }
-                }
-            }
-        }
+        const offenders = sourceFiles(['app', 'lib', 'scripts']).filter(
+            (rel) => rel !== 'lib/search-indexing.ts' && callPattern.test(read(rel)),
+        );
 
-        expect([...offenders].filter((f) => !KNOWN_HANDOFFS.includes(f))).toEqual([]);
+        expect(offenders.filter((f) => !KNOWN_HANDOFFS.includes(f))).toEqual([]);
     });
 
-    it('gives a bare pingGoogle the smallest real lane, so index-pseo is not starved to zero', async () => {
-        // app/api/cron/index-pseo is off limits to this package, so the
-        // default lane on pingGoogle is the only share it can get.
-        const cap = GOOGLE_INDEXING_LANES.programmatic.perInvocation;
-        expect(cap).toBeGreaterThan(0);
+    it('has no direct pingGoogle caller left without a lane', () => {
+        // tsconfig excludes scripts/, so a script can still call pingGoogle
+        // with one or two arguments and only find out at run time. The last
+        // two such callers were scripts: scripts/google-index.ts now names
+        // the new-content lane and filters to job pages first, and
+        // scripts/deindex-auth-pages.ts has no Google leg at all, since auth
+        // pages carry no job posting markup. So nothing is excused any more.
 
-        const results = [];
-        for (let i = 0; i < cap + 2; i++) {
-            results.push(await pingGoogle(`${brand.baseUrl}/jobs/city-page-${i}`));
-        }
+        /** Calls whose top level argument list has fewer than three entries. */
+        const callsWithoutLane = (src: string): number => {
+            let count = 0;
+            const opener = /\bpingGoogle\(/g;
+            // exec advances opener.lastIndex to just past the '(' each time.
+            while (opener.exec(src) !== null) {
+                let depth = 1;
+                let commas = 0;
+                for (let i = opener.lastIndex; i < src.length && depth > 0; i++) {
+                    const ch = src[i];
+                    if (ch === '(' || ch === '[' || ch === '{') depth++;
+                    else if (ch === ')' || ch === ']' || ch === '}') depth--;
+                    else if (ch === ',' && depth === 1) commas++;
+                }
+                if (commas < 2) count++;
+            }
+            return count;
+        };
 
-        expect(results.filter((r) => !isGoogleBudgetRefusal(r))).toHaveLength(cap);
-        expect(
-            GOOGLE_INDEXING_LANES.programmatic.priority,
-            'the pingGoogle default must stay the LOWEST real lane',
-        ).toBe(Math.max(...lanes.filter(([name]) => name !== 'unreserved').map(([, l]) => l.priority)));
+        const offenders = sourceFiles(['app', 'lib', 'scripts']).filter(
+            (rel) => rel !== 'lib/search-indexing.ts' && callsWithoutLane(read(rel)) > 0,
+        );
+
+        expect(offenders).toEqual([]);
+    });
+
+    it('throws by name when a caller declares no lane at all', async () => {
+        // pingGoogle used to default to 'programmatic' so index-pseo could
+        // spend without declaring a lane. That caller and that lane are gone,
+        // and a silent zero would print in a script's summary as "Google took
+        // nothing", which reads like a quota problem rather than a missing
+        // argument. So an omitted lane fails as loudly as a mistyped one.
+        await expect(
+            pingGoogle(jobUrl('open-role'), 'URL_UPDATED', undefined as never),
+        ).rejects.toThrow(/No Google indexing lane was declared/);
     });
 
     it('stops granting publishes once a lane hits its per-invocation cap', async () => {
         // No credential is armed here on purpose: the cap has to be the
-        // outermost check, so the arithmetic reads the same whether or not the
-        // project happens to be configured.
+        // outermost numeric check, so the arithmetic reads the same whether
+        // or not the project happens to be configured.
         const cap = GOOGLE_INDEXING_LANES['backlog-removal'].perInvocation;
         const attempts = cap + 10;
 
         const results = [];
         for (let i = 0; i < attempts; i++) {
-            results.push(
-                await pingGoogle(`${brand.baseUrl}/jobs/gone-${i}`, 'URL_DELETED', 'backlog-removal'),
-            );
+            results.push(await pingGoogle(jobUrl('gone', i), 'URL_DELETED', 'backlog-removal'));
         }
 
         expect(results.filter((r) => !isGoogleBudgetRefusal(r))).toHaveLength(cap);
@@ -518,7 +644,7 @@ describe('the Google Indexing API daily budget cannot be exceeded', () => {
         mockNetwork({ headStatus: 404 });
         const lane: GoogleIndexingLane = 'expired-job-removal';
         const cap = GOOGLE_INDEXING_LANES[lane].perInvocation;
-        const urls = Array.from({ length: cap }, (_, i) => `${brand.baseUrl}/jobs/expired-${i}`);
+        const urls = Array.from({ length: cap }, (_, i) => jobUrl('expired', i));
 
         const first = await pingAllSearchEnginesBatchDeleted(urls, lane);
         const second = await pingAllSearchEnginesBatchDeleted(urls, lane);
@@ -531,7 +657,7 @@ describe('the Google Indexing API daily budget cannot be exceeded', () => {
         armGoogle();
         mockNetwork({ headStatus: 404 });
         const cap = GOOGLE_INDEXING_LANES['backlog-removal'].perInvocation;
-        const urls = Array.from({ length: cap + 3 }, (_, i) => `${brand.baseUrl}/jobs/gone-${i}`);
+        const urls = Array.from({ length: cap + 3 }, (_, i) => jobUrl('gone', i));
 
         const { google } = await pingAllSearchEnginesBatchDeleted(urls, 'backlog-removal');
 
@@ -545,25 +671,14 @@ describe('the Google Indexing API daily budget cannot be exceeded', () => {
         // tsconfig excludes scripts/, so a one off script can pass a lane name
         // no compiler ever checked. A loud named throw is the failure mode we
         // want: granting zero would print as "Google 0 of N" in the script's
-        // own summary and read like a quota problem rather than a typo.
+        // own summary and read like a quota problem rather than a typo. The
+        // retired lane is the likeliest stale name, so it is checked by name.
         await expect(
-            pingGoogle(`${brand.baseUrl}/jobs/gone`, 'URL_DELETED', 'backlog_removal' as never),
+            pingGoogle(jobUrl('gone'), 'URL_DELETED', 'backlog_removal' as never),
         ).rejects.toThrow(/Unknown Google indexing lane/);
-    });
-
-    it('treats an omitted lane as programmatic rather than as an error', async () => {
-        // scripts/google-index.ts still calls the batch helper with one
-        // argument, which is the handoff this package filed and cannot edit.
-        // Until that lands, the parameter default is what keeps it working,
-        // so the two behaviours have to be pinned together: a missing lane is
-        // the smallest real share, a wrong lane is a throw.
-        const result = await pingGoogle(
-            `${brand.baseUrl}/jobs/gone`,
-            'URL_DELETED',
-            undefined as never,
-        );
-
-        expect(result.error).toBe(GOOGLE_NOT_CONFIGURED);
+        await expect(
+            pingGoogle(jobUrl('gone'), 'URL_DELETED', 'programmatic' as never),
+        ).rejects.toThrow(/Unknown Google indexing lane "programmatic"/);
     });
 
     it('orders the lanes so removals of live expired jobs outrank the backlog', () => {
@@ -571,7 +686,7 @@ describe('the Google Indexing API daily budget cannot be exceeded', () => {
             GOOGLE_INDEXING_LANES['backlog-removal'].priority,
         );
         expect(GOOGLE_INDEXING_LANES['new-content'].priority).toBeLessThan(
-            GOOGLE_INDEXING_LANES.programmatic.priority,
+            GOOGLE_INDEXING_LANES['backlog-removal'].priority,
         );
         expect(GOOGLE_INDEXING_LANES.unreserved.priority).toBe(
             Math.max(...lanes.map(([, lane]) => lane.priority)),
@@ -583,7 +698,7 @@ describe('the Google Indexing API daily budget cannot be exceeded', () => {
 
 describe('a publish that never became a request reports itself as such', () => {
     it('reports an absent credential as not configured, not as a rejection', async () => {
-        const result = await pingGoogle(`${brand.baseUrl}/jobs/gone`, 'URL_DELETED', 'backlog-removal');
+        const result = await pingGoogle(jobUrl('gone'), 'URL_DELETED', 'backlog-removal');
 
         expect(result.success).toBe(false);
         expect(result.error).toBe(GOOGLE_NOT_CONFIGURED);
@@ -592,7 +707,7 @@ describe('a publish that never became a request reports itself as such', () => {
     });
 
     it('counts a budget refusal as not asked as well', async () => {
-        const result = await pingGoogle(`${brand.baseUrl}/jobs/gone`, 'URL_DELETED', 'unreserved');
+        const result = await pingGoogle(jobUrl('gone'), 'URL_DELETED', 'unreserved');
 
         expect(googleWasNotAsked(result)).toBe(true);
     });
@@ -609,7 +724,7 @@ describe('a publish that never became a request reports itself as such', () => {
             return new Response(null, { status: 200 });
         });
 
-        const result = await pingGoogle(`${brand.baseUrl}/jobs/gone`, 'URL_DELETED', 'backlog-removal');
+        const result = await pingGoogle(jobUrl('gone'), 'URL_DELETED', 'backlog-removal');
 
         expect(result.error).toBe(GOOGLE_TOKEN_EXCHANGE_FAILED);
         expect(googleWasNotAsked(result)).toBe(false);
@@ -619,7 +734,7 @@ describe('a publish that never became a request reports itself as such', () => {
         expect(
             googleWasNotAsked({
                 engine: 'Google',
-                url: `${brand.baseUrl}/jobs/gone`,
+                url: jobUrl('gone'),
                 success: false,
                 error: 'Permission denied. Failed to verify the URL ownership.',
             }),
@@ -627,7 +742,371 @@ describe('a publish that never became a request reports itself as such', () => {
     });
 });
 
-// ─── 4. One IndexNow key, resolved the same way by every reader ─────────────
+// ─── 4. Google only ever sees pages that carry JobPosting ───────────────────
+
+describe('the Google Indexing API only ever sees job posting pages', () => {
+    const OUT_OF_SCOPE = [
+        `${brand.baseUrl}/blog/choosing-your-first-role`,
+        `${brand.baseUrl}/jobs/remote`,
+        `${brand.baseUrl}/jobs/remote/city/large-city-tx`,
+        `${brand.baseUrl}/jobs/state/texas`,
+        `${brand.baseUrl}/companies/acme-health`,
+        `${brand.baseUrl}/signup`,
+        `${brand.baseUrl}/jobs`,
+        `${brand.baseUrl}/`,
+        // A job UUID with a further segment is not the detail page.
+        `${brand.baseUrl}/jobs/nurse-practitioner-${jobUuid(1)}/apply`,
+        'not a url at all',
+    ];
+
+    it('admits the job detail page and nothing else', () => {
+        expect(isGoogleIndexingEligibleUrl(jobUrl('family-nurse-practitioner', 7))).toBe(true);
+        for (const url of OUT_OF_SCOPE) {
+            expect(isGoogleIndexingEligibleUrl(url), url).toBe(false);
+        }
+    });
+
+    it('refuses every landing directory under app/jobs, including ones added later', () => {
+        // Read from disk so a new landing is covered the day it is created.
+        const landings = fs
+            .readdirSync(path.join(ROOT, 'app/jobs'), { withFileTypes: true })
+            .filter((entry) => entry.isDirectory() && !/^[[(_]/.test(entry.name))
+            .map((entry) => entry.name);
+        expect(landings.length).toBeGreaterThan(10);
+
+        for (const name of landings) {
+            expect(isGoogleIndexingEligibleUrl(`${brand.baseUrl}/jobs/${name}`), name).toBe(false);
+            expect(
+                isGoogleIndexingEligibleUrl(`${brand.baseUrl}/jobs/${name}/city/large-city-tx`),
+                `${name} city landing`,
+            ).toBe(false);
+        }
+    });
+
+    it('admits exactly the slugs the job page itself resolves', () => {
+        // The scope rule is a copy of the detail page's resolver. If the page
+        // ever resolves jobs differently, this is where the two disagree.
+        const src = read('app/jobs/[slug]/page.tsx');
+        const resolvers = [...src.matchAll(/slug\.match\(\/(.+?)\/([a-z]*)\)/g)].map(
+            ([, body, flags]) => new RegExp(body, flags),
+        );
+        expect(resolvers.length).toBeGreaterThan(0);
+
+        const uuid = jobUuid(42);
+        const samples = [
+            slugify('Nurse Practitioner (Telehealth) / Remote, Part Time', uuid),
+            slugify(`Family Nurse Practitioner ${'Primary Care '.repeat(20)}`, uuid),
+            slugify('', uuid),
+            uuid,
+            `nurse-practitioner-${uuid.toUpperCase()}`,
+            `nurse-practitioner-${uuid.slice(0, -1)}`,
+            'nurse-practitioner-12345',
+            'remote',
+            'family-practice',
+        ];
+        for (const slug of samples) {
+            const pageResolves = resolvers.every((re) => re.test(slug));
+            expect(isGoogleIndexingEligibleUrl(`${brand.baseUrl}/jobs/${slug}`), slug).toBe(pageResolves);
+        }
+    });
+
+    it('renders JobPosting markup from exactly one page, the one the rule admits', () => {
+        // If another page type starts carrying JobPosting, the scope rule in
+        // lib/search-indexing.ts has to learn its URL shape in the same change.
+        const files = sourceFiles(['app', 'components', 'lib']);
+        const importers = files.filter((rel) =>
+            /from ['"]@\/components\/JobStructuredData['"]/.test(read(rel)),
+        );
+        const emitters = files.filter((rel) =>
+            /['"]@type['"]\s*:\s*['"]JobPosting['"]/.test(read(rel)),
+        );
+        expect(importers).toEqual(['app/jobs/[slug]/page.tsx']);
+        expect(emitters).toEqual(['components/JobStructuredData.tsx']);
+    });
+
+    it('refuses every other page type before any network, whatever the lane', async () => {
+        armGoogle();
+        const fetchMock = mockNetwork({ headStatus: 200 });
+
+        for (const url of OUT_OF_SCOPE) {
+            for (const lane of ['expired-job-removal', 'new-content', 'backlog-removal'] as const) {
+                for (const type of ['URL_UPDATED', 'URL_DELETED'] as const) {
+                    const result = await pingGoogle(url, type, lane);
+                    expect(result.error, url).toBe(GOOGLE_POLICY_REFUSED);
+                    expect(isGooglePolicyRefusal(result)).toBe(true);
+                }
+            }
+        }
+
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('reports a scope refusal as final rather than as a deferral', async () => {
+        // googleWasNotAsked means "try again later". A scope refusal never
+        // clears up, and historical-deindex reads its oldest rows first, so
+        // reporting one as a deferral would hold that row pending forever and
+        // a handful of them would block the queue for good.
+        const result = await pingGoogle(`${brand.baseUrl}/jobs/remote`, 'URL_DELETED', 'backlog-removal');
+
+        expect(isGooglePolicyRefusal(result)).toBe(true);
+        expect(isGoogleBudgetRefusal(result)).toBe(false);
+        expect(googleWasNotAsked(result)).toBe(false);
+    });
+
+    it('does not let an out of scope URL use up any of a lane', async () => {
+        const lane: GoogleIndexingLane = 'backlog-removal';
+        const cap = GOOGLE_INDEXING_LANES[lane].perInvocation;
+
+        for (let i = 0; i < cap + 5; i++) {
+            await pingGoogle(`${brand.baseUrl}/jobs/remote/city/town-${i}`, 'URL_DELETED', lane);
+        }
+        const jobs = [];
+        for (let i = 0; i < cap; i++) {
+            jobs.push(await pingGoogle(jobUrl('gone', i), 'URL_DELETED', lane));
+        }
+
+        expect(jobs.filter(isGoogleBudgetRefusal)).toHaveLength(0);
+        expect(jobs.every((r) => r.error === GOOGLE_NOT_CONFIGURED)).toBe(true);
+    });
+
+    it('sends a blog post to Bing and IndexNow but never to Google', async () => {
+        // app/api/blog pings every engine through pingAllSearchEngines when a
+        // post goes live. The post keeps its Bing and IndexNow coverage.
+        armGoogle();
+        armBingAndIndexNow();
+        const fetchMock = mockNetwork({ headStatus: 200, indexNowStatus: 200 });
+
+        const results = await pingAllSearchEngines(`${brand.baseUrl}/blog/choosing-your-first-role`);
+
+        expect(touchedGoogle(fetchMock)).toBe(false);
+        const called = fetchMock.mock.calls.map((call) => String(call[0]));
+        expect(called.some((url) => url.includes('ssl.bing.com'))).toBe(true);
+        expect(called.some((url) => url.includes('indexnow'))).toBe(true);
+        expect(results.find((r) => r.engine === 'Google')?.error).toBe(GOOGLE_POLICY_REFUSED);
+    });
+
+    it('still publishes a new job page through the single URL helper', async () => {
+        armGoogle();
+        armBingAndIndexNow();
+        const fetchMock = mockNetwork({ headStatus: 200, indexNowStatus: 200 });
+        const url = jobUrl('new-role', 3);
+
+        const results = await pingAllSearchEngines(url);
+
+        expect(googlePublishedUrls(fetchMock)).toEqual([url]);
+        expect(results.find((r) => r.engine === 'Google')?.success).toBe(true);
+    });
+
+    it('publishes only the job pages out of a mixed batch, and gives Bing and IndexNow all of it', async () => {
+        armGoogle();
+        armBingAndIndexNow();
+        const fetchMock = mockNetwork({ headStatus: 200, indexNowStatus: 200 });
+        const jobs = [jobUrl('new-role', 1), jobUrl('new-role', 2)];
+        const others = [`${brand.baseUrl}/jobs/telehealth`, `${brand.baseUrl}/blog/a-post`];
+
+        const { google, bing, indexNow } = await pingAllSearchEnginesBatch([...others, ...jobs], 'new-content');
+
+        expect(googlePublishedUrls(fetchMock)).toEqual(jobs);
+        expect(google.filter(isGooglePolicyRefusal).map((r) => r.url)).toEqual(others);
+        expect(bing).toHaveLength(4);
+        expect(bing.every((r) => r.success)).toBe(true);
+        expect(indexNow).toHaveLength(4);
+        expect(indexNow.every((r) => r.success)).toBe(true);
+    });
+
+    it('lets historical-deindex retire an out of scope row at once instead of holding it', async () => {
+        // The queue was seeded from Search Console exports of every URL type,
+        // so it holds landings and posts as well as jobs. Those rows must
+        // neither reach Google nor sit pending at the head of an oldest first
+        // queue. Google's refusal is permanent, so the cron retires them all
+        // in one updateMany before any network: spending three runs, three
+        // HEAD requests and three attempts on each would change nothing.
+        armGoogle();
+        const cap = GOOGLE_INDEXING_LANES['backlog-removal'].perInvocation;
+        const outOfScope: QueueRow[] = [
+            { id: 'old-landing', url: `${brand.baseUrl}/jobs/remote/city/old-town-xx`, attempt: 0 },
+            { id: 'old-post', url: `${brand.baseUrl}/blog/retired-post`, attempt: 2 },
+        ];
+        vi.mocked(prisma.deindexQueue.findMany).mockResolvedValue(
+            [...outOfScope, ...queueRows(cap)] as never,
+        );
+        const fetchMock = mockNetwork({ headStatus: 404 });
+
+        const { body } = await runDeindexCron();
+
+        // Every job row still got the lane's full grant, and the out of scope
+        // rows are reported as their own count, not as Google failures.
+        expect(body.submitted).toBe(cap);
+        expect(body.budgetDeferred).toBe(0);
+        expect(body.submitFailed).toBe(0);
+        expect(body.outOfScope).toBe(2);
+        expect(body.processed).toBe(cap + 2);
+
+        // No request of any kind went out for them, HEAD checks included.
+        const requested = fetchMock.mock.calls.map((call) => String(call[0]));
+        const published = googlePublishedUrls(fetchMock);
+        for (const row of outOfScope) {
+            expect(requested).not.toContain(row.url);
+            expect(published).not.toContain(row.url);
+        }
+
+        // One updateMany retires them together, with the reason kept and the
+        // attempt counter left alone, because nothing was attempted.
+        expect(prisma.deindexQueue.updateMany).toHaveBeenCalledTimes(1);
+        expect(prisma.deindexQueue.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: ['old-landing', 'old-post'] } },
+            data: { status: 'failed', lastError: GOOGLE_POLICY_REFUSED },
+        });
+
+        // And no per-row update touches them afterwards.
+        const updatedIds = queueUpdateCalls().map((call) => call.id);
+        for (const row of outOfScope) expect(updatedIds).not.toContain(row.id);
+        expect(updatedIds).toHaveLength(cap);
+    });
+
+    it('keeps the hand-run scripts inside the scope rule', () => {
+        // tsconfig excludes scripts/, so no compiler checks these two, and
+        // each one used to send pages Google refuses.
+        const bulk = read('scripts/google-index.ts');
+        expect(bulk).toContain('urls.filter(isGoogleIndexingEligibleUrl)');
+        expect(bulk).toContain("pingGoogle(capped[i], 'URL_UPDATED', 'new-content')");
+        expect(bulk).toContain("GOOGLE_INDEXING_LANES['new-content'].perInvocation");
+        expect(bulk).not.toMatch(/slice\(0, 200\)/);
+        expect(bulk).not.toContain('/blog/');
+        expect(bulk).toContain('const BASE_URL = brand.baseUrl;');
+        expect(bulk).not.toContain('pmhnphiring.com');
+
+        // Auth pages carry no job posting markup, so this one keeps only its
+        // IndexNow leg and sends the operator to the Removals tool for Google.
+        const auth = read('scripts/deindex-auth-pages.ts');
+        expect(auth).not.toMatch(/\bpingGoogle\b/);
+        expect(auth).toContain('pingIndexNow(AUTH_URLS)');
+        expect(auth).toContain('Removals');
+        expect(auth).toContain('const BASE = brand.baseUrl;');
+        expect(auth).not.toContain("'https://pmhnphiring.com'");
+    });
+});
+
+// ─── 5. index-pseo submits its landings to Bing and IndexNow only ───────────
+
+describe('index-pseo never publishes to Google', () => {
+    const ROUTE = 'app/api/cron/index-pseo/route.ts';
+    const PSEO_BASE = process.env.NEXT_PUBLIC_BASE_URL || brand.baseUrl;
+    const LANDING_ROWS = [
+        { categorySlug: 'remote', locationSlug: 'large-city-tx', totalJobs: 12, distinctEmployers: 5 },
+        { categorySlug: 'telehealth', locationSlug: 'mid-city-oh', totalJobs: 6, distinctEmployers: 3 },
+        // Fails the sitemap gate: a single employer.
+        { categorySlug: 'travel', locationSlug: 'large-city-tx', totalJobs: 9, distinctEmployers: 1 },
+        // Fails the population floor.
+        { categorySlug: 'remote', locationSlug: 'hamlet-vt', totalJobs: 9, distinctEmployers: 4 },
+    ];
+    // Highest score first: 24 for the jobs plus 20 for the city beats 12 plus 15.
+    const EXPECTED_URLS = [
+        `${PSEO_BASE}/jobs/remote/city/large-city-tx`,
+        `${PSEO_BASE}/jobs/telehealth/city/mid-city-oh`,
+    ];
+
+    async function runIndexPseoCron(): Promise<{ status: number; body: Record<string, unknown> }> {
+        const { GET } = await import('@/app/api/cron/index-pseo/route');
+        const res = await GET(
+            new Request('https://example.com/api/cron/index-pseo', {
+                headers: { authorization: 'Bearer test' },
+            }) as never,
+        );
+        return { status: res.status, body: await res.json() };
+    }
+
+    function stageLandings(recentlySubmitted: Array<{ categorySlug: string; locationSlug: string }> = []): void {
+        vi.mocked(prisma.$queryRaw).mockResolvedValue(LANDING_ROWS as never);
+        vi.mocked(prisma.pseoStats.findMany).mockResolvedValue(recentlySubmitted as never);
+        vi.mocked(prisma.pseoStats.upsert).mockResolvedValue({} as never);
+    }
+
+    /** The urlList of the one Bing batch this run sent. */
+    const bingUrlList = (fetchMock: FetchMock): string[] => {
+        const calls = fetchMock.mock.calls.filter((call) => String(call[0]).includes('ssl.bing.com'));
+        expect(calls).toHaveLength(1);
+        return JSON.parse(String((calls[0][1] as RequestInit).body)).urlList;
+    };
+
+    it('has no Google call left in its source', () => {
+        const src = read(ROUTE);
+        expect(src).not.toMatch(/\bpingGoogle\b/);
+        // pingAllSearchEngines and both batch helpers carry a Google leg.
+        expect(src).not.toMatch(/\bpingAllSearchEngines/);
+        expect(src).not.toContain('googleapis.com');
+        const imported = src.match(/import \{([^}]*)\} from '@\/lib\/search-indexing'/)?.[1] ?? '';
+        expect(
+            imported
+                .split(',')
+                .map((name) => name.trim())
+                .filter(Boolean)
+                .sort(),
+        ).toEqual(['pingBingBatch', 'pingIndexNow']);
+    });
+
+    it('sends its landings to Bing and IndexNow only, even with the Google key armed', async () => {
+        armGoogle();
+        armBingAndIndexNow();
+        stageLandings();
+        const fetchMock = mockNetwork({ headStatus: 200, indexNowStatus: 200 });
+
+        const { status, body } = await runIndexPseoCron();
+
+        expect(status).toBe(200);
+        expect(touchedGoogle(fetchMock)).toBe(false);
+        expect(bingUrlList(fetchMock)).toEqual(EXPECTED_URLS);
+        const indexNowCall = fetchMock.mock.calls.find((call) => String(call[0]).includes('indexnow'));
+        expect(JSON.parse(String((indexNowCall?.[1] as RequestInit).body)).urlList).toEqual(EXPECTED_URLS);
+
+        // The response and the stored run metrics stop reporting Google.
+        expect(body).not.toHaveProperty('google');
+        expect(body.bing).toEqual({ submitted: 2, failed: 0 });
+        expect(body.indexNow).toEqual({ submitted: 2, failed: 0 });
+        expect(body.recorded).toBe(2);
+        const metrics = vi.mocked(prisma.cronRun.update).mock.calls.map(
+            (call) => (call[0] as { data: { metrics?: Record<string, unknown> } }).data.metrics ?? {},
+        );
+        expect(metrics).toHaveLength(1);
+        expect(Object.keys(metrics[0]).filter((key) => /google/i.test(key))).toEqual([]);
+    });
+
+    it('does not bench a landing no engine accepted', async () => {
+        // With neither key set nothing is sent, so nothing may be recorded as
+        // submitted: the landing has to be offered again on the next run
+        // rather than sit out a week for a submission that never happened.
+        stageLandings();
+        const fetchMock = mockNetwork({ headStatus: 200 });
+
+        const { body } = await runIndexPseoCron();
+
+        expect(body.submitted).toBe(2);
+        expect(body.recorded).toBe(0);
+        expect(prisma.pseoStats.upsert).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('still skips a landing it offered inside the last seven days', async () => {
+        armBingAndIndexNow();
+        stageLandings([{ categorySlug: 'remote', locationSlug: 'large-city-tx' }]);
+        const fetchMock = mockNetwork({ headStatus: 200, indexNowStatus: 200 });
+
+        const { body } = await runIndexPseoCron();
+
+        expect(bingUrlList(fetchMock)).toEqual([EXPECTED_URLS[1]]);
+        expect(body.recorded).toBe(1);
+
+        const where = (vi.mocked(prisma.pseoStats.findMany).mock.calls[0][0] as {
+            where: { type: string; updatedAt: { gte: Date } };
+        }).where;
+        expect(where.type).toBe('index-submitted');
+        const windowDays = (Date.now() - where.updatedAt.gte.getTime()) / 86_400_000;
+        expect(windowDays).toBeGreaterThan(6.9);
+        expect(windowDays).toBeLessThan(7.1);
+    });
+});
+
+// ─── 6. One IndexNow key, resolved the same way by every reader ─────────────
 
 describe('the IndexNow key resolves under either env name, everywhere', () => {
     const KEY = 'b'.repeat(32);
@@ -693,7 +1172,7 @@ describe('the IndexNow key resolves under either env name, everywhere', () => {
     });
 });
 
-// ─── 5. Ops surfaces stop describing a pipeline that no longer exists ───────
+// ─── 7. Ops surfaces stop describing a pipeline that no longer exists ───────
 
 describe('the ops surfaces describe the pipeline as it actually is', () => {
     it('.env.example points at the live key-file owner, not the removed route', () => {

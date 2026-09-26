@@ -121,7 +121,7 @@ describe('P10 defects 1, 5, 6: apply modal UI wiring', () => {
     const form = read('components/InPlatformApplyForm.tsx');
 
     it('success keeps the modal mounted so the confirmation renders', () => {
-        const start = button.indexOf('const handlePlatformApplySuccess = () => {');
+        const start = button.search(/const handlePlatformApplySuccess = \([^)]*\) => \{/);
         const end = button.indexOf('\n  };', start);
         expect(start).toBeGreaterThan(-1);
         expect(button.slice(start, end)).not.toContain('setShowPlatformApply(false)');

@@ -85,11 +85,20 @@ beforeEach(() => {
 // ─── 1. practice-authority prose ────────────────────────────────────────────
 
 describe('P3 #1 — practice-authority details are niche-token prose, not donor copy', () => {
-    it('the file carries zero reference-niche terms, tightening its baseline entry', () => {
+    it("the file's only reference-niche term is Minnesota's statutory 'mental health services' clause", () => {
         // Baselined at 54 hits, so the ratchet could never catch this copy.
-        // Zero is the only value that keeps it out of the scan for good.
+        // The donor copy is gone. The one remaining hit is the corrected
+        // Minnesota entry quoting its statute's "other than primary care or
+        // mental health services" setting rule, so it is pinned to that
+        // string and no other entry may carry a reference-niche term.
         const debt = scanNicheCopyDebt({ root: ROOT });
-        expect(debt[AUTHORITY_FILE]).toBeUndefined();
+        expect(debt[AUTHORITY_FILE] ?? 0).toBe(1);
+        const hits = Object.entries(STATE_PRACTICE_AUTHORITY)
+            .filter(([, i]) => /pmhnp|psychiatric|mental health/i.test(i.details))
+            .map(([n]) => n);
+        expect(hits).toEqual(['Minnesota']);
+        expect(STATE_PRACTICE_AUTHORITY['Minnesota'].details)
+            .toContain('other than primary care or mental health services');
     });
 
     it('every details string names the profession through the brand token', () => {
@@ -115,12 +124,15 @@ describe('P3 #1 — practice-authority details are niche-token prose, not donor 
     });
 
     it('the legal substance of each tier survived the rewrite', () => {
-        // Only the profession wording moved; the tier language each entry
-        // carried must still be there, per tier.
+        // The profession wording moved, and the 2026-09 regulatory
+        // corrections restated several entries in their statutes' own terms
+        // (delegated act, practice agreement, exempt from the agreement), so
+        // each tier accepts those terms; the tier language must still be
+        // there, per tier.
         for (const [name, info] of Object.entries(STATE_PRACTICE_AUTHORITY)) {
             if (info.authority === 'full') {
                 expect(info.details, `${name}: full tier lost its independence language`)
-                    .toMatch(/independent|full practice authority/i);
+                    .toMatch(/independent|full practice|without a collaborative agreement|exempt from those requirements/i);
             }
             if (info.authority === 'reduced') {
                 expect(info.details, `${name}: reduced tier lost its collaboration language`)
@@ -128,7 +140,7 @@ describe('P3 #1 — practice-authority details are niche-token prose, not donor 
             }
             if (info.authority === 'restricted') {
                 expect(info.details, `${name}: restricted tier lost its supervision language`)
-                    .toMatch(/supervis/i);
+                    .toMatch(/supervis|delegated act|practice agreement/i);
             }
         }
     });

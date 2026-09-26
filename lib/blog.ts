@@ -73,8 +73,24 @@ const POSTS_PER_PAGE = 12;
 /** Upper bound on DB rows merged in memory with the license-guide series. */
 const MERGED_LISTING_MAX_ROWS = 1000;
 
-const LISTING_COLUMNS = 'id, title, slug, meta_description, category, publish_date, created_at, image_url, youtube_video_id';
-const RELATED_COLUMNS = 'id, title, slug, meta_description, category, publish_date, image_url';
+const LISTING_COLUMNS = 'id, title, slug, meta_description, category, publish_date, created_at, image_url, youtube_video_id, reviewed_at';
+const RELATED_COLUMNS = 'id, title, slug, meta_description, category, publish_date, image_url, reviewed_at';
+
+/**
+ * Listing and "Read next" cards print a row's title and meta_description.
+ * getPostBySlug already swaps a superseded license-guide mirror for the
+ * reviewed guide, but these cards read blog_posts directly, so a mirror synced
+ * before the 2026-09 practice-authority review would keep printing its old
+ * generated description ("physician-supervision rules" for every restricted
+ * state, "collaborative-agreement rules" for every reduced one) on /blog and
+ * in "Read next". This gives the cards the same reviewed copy the page shows.
+ */
+export function withReviewedLicenseGuideCopy<T extends Pick<BlogPost, 'slug' | 'reviewed_at' | 'title' | 'meta_description'>>(row: T): T {
+    if (!isSupersededLicenseGuideRow(row)) return row;
+    const match = row.slug.match(LICENSE_GUIDE_SLUG_REGEX);
+    const reviewed = match ? getLicenseGuidePost(match[1]) : null;
+    return reviewed ? { ...row, title: reviewed.title, meta_description: reviewed.meta_description } : row;
+}
 
 type SupabaseClient = ReturnType<typeof getSupabaseClient>;
 
@@ -255,7 +271,7 @@ export async function getPublishedPosts(
     // A failed read contributes zero DB rows. The code-served posts still
     // list (getPostBySlug renders them when blog_posts is unreadable), so
     // /blog never claims "No posts found" during an outage.
-    const rows = listing.data ?? [];
+    const rows = (listing.data ?? []).map(withReviewedLicenseGuideCopy);
     if (!mergeFallbacks) return rows;
 
     const licenseSlugs = includeGuides ? licenseGuideFallbackSlugs(licenseDbSlugs) : [];
@@ -285,11 +301,33 @@ export async function getPostCount(category?: string): Promise<number> {
     return dbCount + guideCount + mdxFallbackPosts(mdxDbSlugs, category).length;
 }
 
+/**
+ * True when a published blog_posts row for a license-guide slug was
+ * reviewed BEFORE the generator's latest editorial review
+ * (LICENSE_GUIDE_REVIEWED_AT), so the generated guide supersedes it.
+ *
+ * WHY: scripts/sync-blog-to-db.ts --license-guides mirrors the generator
+ * into blog_posts, and a published row normally wins (editorial override).
+ * A mirror synced before a YMYL correction would therefore keep serving
+ * the corrected-away copy, here the tier-derived physician claims the
+ * 2026-09 practice-authority pass removed, until someone reruns that sync
+ * against the production database. The sync stamps reviewed_at with
+ * LICENSE_GUIDE_REVIEWED_AT, so a row dated earlier predates the current
+ * reviewed text. A row with no review date, or one an editor dated on or
+ * after the series review, still wins; rerunning the sync restores DB
+ * precedence with identical content.
+ */
+export function isSupersededLicenseGuideRow(row: Pick<BlogPost, 'slug' | 'reviewed_at'>): boolean {
+    if (!LICENSE_GUIDE_SERIES_PUBLISHED || !LICENSE_GUIDE_SLUG_REGEX.test(row.slug)) return false;
+    const reviewed = row.reviewed_at ? Date.parse(row.reviewed_at) : Number.NaN;
+    return Number.isFinite(reviewed) && reviewed < Date.parse(LICENSE_GUIDE_REVIEWED_AT);
+}
+
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
     const found = await readBlogPosts<BlogPost | null>('fetching blog post', (supabase) =>
         supabase.from('blog_posts').select('*').eq('slug', slug).eq('status', 'published').maybeSingle(),
     );
-    if (found.data) return found.data;
+    if (found.data && !isSupersededLicenseGuideRow(found.data)) return found.data;
 
     // A miss (no published row, or blog_posts unreadable) falls through to
     // the code-served posts, so rendering never depends on the sync script
@@ -298,9 +336,13 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
     // deterministically from lib/blog-license-guides.ts when no DB row
     // exists, so the all-or-nothing gate (LICENSE_GUIDE_SERIES_PUBLISHED)
     // can never 404 a subset of the 51 states. A published DB row for the
-    // same slug (editorial override via admin) takes precedence above.
+    // same slug (editorial override via admin) takes precedence above,
+    // unless it predates the series review (isSupersededLicenseGuideRow).
     const licenseMatch = slug.match(LICENSE_GUIDE_SLUG_REGEX);
     if (licenseMatch && LICENSE_GUIDE_SERIES_PUBLISHED) {
+        // A superseded row is published, so it is no takedown: serve the
+        // reviewed guide without the suppression lookup.
+        if (found.data) return getLicenseGuidePost(licenseMatch[1]);
         return (await hasSuppressedRow(slug))
             ? null
             : getLicenseGuidePost(licenseMatch[1]);
@@ -354,7 +396,7 @@ export async function getRelatedPosts(
             .order('publish_date', { ascending: false, nullsFirst: false })
             .limit(limit),
     );
-    const related: BlogPost[] = [...(same.data ?? [])];
+    const related: BlogPost[] = (same.data ?? []).map(withReviewedLicenseGuideCopy);
     const have = new Set([currentSlug, ...related.map((p) => p.slug)]);
 
     // Top up from any category when the same-category query is short of
@@ -371,7 +413,7 @@ export async function getRelatedPosts(
                 .order('publish_date', { ascending: false, nullsFirst: false })
                 .limit(limit + related.length),
         );
-        appendUpToLimit(related, have, fill.data ?? [], limit);
+        appendUpToLimit(related, have, (fill.data ?? []).map(withReviewedLicenseGuideCopy), limit);
     }
 
     // Code-served top-up: the license guides and .mdx posts that render

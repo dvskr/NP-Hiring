@@ -279,13 +279,15 @@ describe('locations', () => {
   });
 
   it('HUB-S9 says nearby, never borders, and needs one nearby state with jobs', () => {
-    expect(buildNearbyStatesSentence([{ name: 'Oklahoma', count: 0, authorityDescription: 'Restricted Practice' }])).toBeNull();
+    expect(buildNearbyStatesSentence([{ name: 'Oklahoma', count: 0 }])).toBeNull();
+    // Each tier is AANP's name for it, read from the state's own dataset row
+    // and attributed to AANP.
     const out = keep(buildNearbyStatesSentence([
-      { name: 'Oklahoma', count: 3, authorityDescription: 'Restricted Practice' },
-      { name: 'Louisiana', count: 1, authorityDescription: 'Reduced Practice' },
-      { name: 'Arkansas', count: 0, authorityDescription: 'Reduced Practice' },
+      { name: 'Oklahoma', count: 3 },
+      { name: 'Louisiana', count: 1 },
+      { name: 'Arkansas', count: 0 },
     ]));
-    expect(out).toBe(`Nearby states with open ${NP} roles on this site: Oklahoma (3 roles, Restricted Practice) and Louisiana (1 role, Reduced Practice).`);
+    expect(out).toBe(`Nearby states with open ${NP} roles on this site, with AANP's classification of each: Oklahoma (3 roles, Restricted Practice) and Louisiana (1 role, Reduced Practice).`);
     expect(keep(NEARBY_STATES_NOTE)).not.toMatch(/border/i);
   });
 });
@@ -461,12 +463,12 @@ describe('licensure and practice environment', () => {
 
   it('CITY-C6, CC-K6, HUB-S8, SAL-S1 and CO-C3 read from one environment', () => {
     const city = keep(buildPracticingInStateParagraph(TEXAS));
-    expect(city.startsWith(`${TEXAS.authorityLabel}. ${TEXAS.details} Texas is a Nurse Licensure Compact member.`)).toBe(true);
+    expect(city.startsWith(`AANP classifies Texas as a restricted practice state. ${TEXAS.details} Texas is a Nurse Licensure Compact member.`)).toBe(true);
     expect(city).toContain('APRN licensure is issued by the Texas Board of Nursing.');
     expect(keep(buildPracticingAsRoleParagraph(TEXAS, 'FNP-BC or FNP-C'))).toBe(`${city} Certification for this role: FNP-BC or FNP-C.`);
     expect(keep(buildBoardChecklistSentence(TEXAS.boardName))).toBe('Forms, fees and processing times change, so work from the Texas Board of Nursing checklist.');
     expect(keep(buildSalaryPracticeEnvironmentParagraph(TEXAS, NLC_VERIFIED_LABEL)))
-      .toBe(`${TEXAS.authorityLabel}. ${TEXAS.details} Texas is a member of the Nurse Licensure Compact (verified against the NCSBN roster on ${NLC_VERIFIED_LABEL}). Licensure applications run through the Texas Board of Nursing.`);
+      .toBe(`AANP classifies Texas as a restricted practice state. ${TEXAS.details} Texas is a member of the Nurse Licensure Compact (verified against the NCSBN roster on ${NLC_VERIFIED_LABEL}). Licensure applications run through the Texas Board of Nursing.`);
     expect(keep(buildCompanyStatePracticeLine(TEXAS))).toBe(`Texas: Restricted Practice, a Nurse Licensure Compact member. ${TEXAS.details}`);
   });
 
@@ -486,7 +488,7 @@ describe('licensure and practice environment', () => {
   it('SPEC-P2 needs five openings with a known state', () => {
     expect(buildSpecialtyAuthoritySentence({ label: 'family practice', states: named([['Arizona', 3], ['Texas', 1]]) })).toBeNull();
     expect(keep(buildSpecialtyAuthoritySentence({ label: 'family practice', states: named([['Arizona', 4], ['Texas', 2]]) })))
-      .toBe('Of the 6 open family practice roles with a listed state, 4 are in full practice authority states (Arizona) and 2 in restricted practice states, using the AANP classification.');
+      .toBe('Of the 6 open family practice roles with a listed state, 4 are in full practice states (Arizona) and 2 in restricted practice states, using the AANP classification.');
   });
 });
 
@@ -555,7 +557,8 @@ describe('FAQ arrays drop an entry whenever its answer is missing', () => {
     }));
     expect(full).toHaveLength(7);
     expect(full[0].answer).toBe(`There are 5 open ${NP} roles in Texas on ${BRAND}. By category, Remote has 4 open roles and Full-Time has 2. Counts refresh hourly.`);
-    expect(full[1].answer).toBe(`${TEXAS.details} Source: ${STAT_SOURCES.fullPracticeStates.source}.`);
+    // AANP is credited with the tier it assigns, not with the state's details.
+    expect(full[1].answer).toBe(`AANP classifies Texas as a restricted practice state. ${TEXAS.details}`);
     expect(full[3].answer).toBe(`Austin has the most open ${NP} roles in Texas (3), followed by Dallas (2).`);
     expect(full[5].answer).toBe('2 of 5 open Texas roles are listed as remote. Each posting names the states it requires licensure in.');
     expect(full[6].answer).toBe('The first steps are to hold an active RN license and complete a graduate program. Applications run through the Texas Board of Nursing.');
@@ -589,7 +592,7 @@ describe('FAQ arrays drop an entry whenever its answer is missing', () => {
     expect(full.map((f) => f.question)).toEqual([
       `How many Remote ${NP} jobs are open in Texas?`,
       `What do Remote ${NP} jobs in Texas pay?`,
-      `Do ${NP}s need a collaborating physician in Texas?`,
+      `Do ${NP}s need a collaborating or supervising physician in Texas?`,
       'Is Texas part of the Nurse Licensure Compact?',
     ]);
     expect(full[0].answer).toBe('All 4 current Remote listings in Texas are posted by Alpha. The newest listing was posted on September 1, 2026.');
@@ -648,12 +651,18 @@ describe('titles print counts only at the display floor and stay inside the SERP
   it('HUB-meta', () => {
     expect(keep(buildHubTitle({ stateName: 'Texas', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR - 1, distinctEmployers: 1, benchmark: null }))).toBe(`${NP} Jobs in Texas (TX): 1 Employer Hiring`);
     expect(keep(buildHubTitle({ stateName: 'Texas', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR, distinctEmployers: 3, benchmark: BENCH }))).toBe(`${COUNT_DISPLAY_FLOOR} ${NP} Jobs in Texas (TX): $132K Median Pay`);
-    const description = keep(buildHubDescription({ stateName: 'Texas', facts: facts({ total: 12, distinctEmployers: 4, cities: [{ name: 'Austin', stateCode: 'TX', count: 5 }] }), authorityDescription: 'Restricted Practice', topCategories: ['Remote', 'Full-Time', 'Travel'] }));
-    expect(description).toBe(`12 open ${NP_PROSE} roles in Texas from 4 employers, led by Austin. Restricted Practice state. Top categories: Remote and Full-Time.`);
+    // The tier clause is AANP's classification from the state's own dataset
+    // row, attributed; tests/regressions/authority-tier-copy.test.ts pins it
+    // for every jurisdiction.
+    const description = keep(buildHubDescription({ stateName: 'Texas', facts: facts({ total: 12, distinctEmployers: 4, cities: [{ name: 'Austin', stateCode: 'TX', count: 5 }] }), topCategories: ['Remote', 'Full-Time', 'Travel'] }));
+    expect(description).toBe(`12 open ${NP_PROSE} roles in Texas from 4 employers, led by Austin. AANP classification: Restricted Practice. Top categories: Remote and Full-Time.`);
     // A crowded page drops clauses from the end rather than overflow or cut mid-word.
-    const crowded = keep(buildHubDescription({ stateName: 'Texas', facts: facts({ total: 12, distinctEmployers: 4, cities: [{ name: 'Austin', stateCode: 'TX', count: 5 }, { name: 'Dallas', stateCode: 'TX', count: 3 }], benchmark: BENCH }), authorityDescription: 'Restricted Practice', topCategories: ['Remote', 'Full-Time'] }));
-    expect(crowded).toBe(`12 open ${NP_PROSE} roles in Texas from 4 employers, led by Austin and Dallas. Restricted Practice state. Median posted pay $132K.`);
+    const crowded = keep(buildHubDescription({ stateName: 'Texas', facts: facts({ total: 12, distinctEmployers: 4, cities: [{ name: 'Austin', stateCode: 'TX', count: 5 }, { name: 'Dallas', stateCode: 'TX', count: 3 }], benchmark: BENCH }), topCategories: ['Remote', 'Full-Time'] }));
+    expect(crowded).toBe(`12 open ${NP_PROSE} roles in Texas from 4 employers, led by Austin and Dallas. AANP classification: Restricted Practice. Median posted pay $132K.`);
     expect(crowded.length).toBeLessThanOrEqual(DESCRIPTION_MAX);
+    // Off the dataset the clause is omitted, never guessed.
+    expect(keep(buildHubDescription({ stateName: 'Guam', facts: facts({ total: 2, distinctEmployers: 1 }), topCategories: [] })))
+      .toBe(`2 open ${NP_PROSE} roles in Guam from 1 employer.`);
   });
 
   it('CITY-C9', () => {
@@ -675,19 +684,27 @@ describe('titles print counts only at the display floor and stay inside the SERP
     expect(keep(buildSettingStateTitle({ titleLabel: 'Remote', stateName: 'Texas', total: COUNT_DISPLAY_FLOOR }))).toBe(`Remote ${NP} Jobs in Texas: ${COUNT_DISPLAY_FLOOR} Openings`);
     const longBase = `Adult-Gerontology Primary Care ${NP} Jobs in North Carolina`;
     expect(keep(buildSettingStateTitle({ titleLabel: 'Adult-Gerontology Primary Care', stateName: 'North Carolina', total: 40 }))).toBe(longBase);
-    const description = keep(buildSettingStateDescription({ label: 'Remote', slug: 'remote', stateName: 'Texas', facts: facts({ total: 1, distinctEmployers: 1, cities: [{ name: 'Austin', stateCode: 'TX', count: 1 }] }), authorityDescription: 'Restricted Practice', statsAsOf: SEP_1 }));
-    expect(description).toBe(`1 remote ${NP} opening in Texas from 1 employer. Restricted Practice state. Updated Sep 1.`);
-    expect(keep(buildSettingStateDescription({ label: 'Outpatient', slug: 'outpatient', stateName: 'Texas', facts: facts({ total: 6, distinctEmployers: 2, cities: [{ name: 'Austin', stateCode: 'TX', count: 4 }], benchmark: BENCH }), authorityDescription: null, statsAsOf: null })))
-      .toBe(`6 outpatient ${NP} openings in Texas from 2 employers. Median posted pay $132K. Top city: Austin.`);
+    const description = keep(buildSettingStateDescription({ label: 'Remote', slug: 'remote', stateName: 'Texas', facts: facts({ total: 1, distinctEmployers: 1, cities: [{ name: 'Austin', stateCode: 'TX', count: 1 }] }), statsAsOf: SEP_1 }));
+    expect(description).toBe(`1 remote ${NP} opening in Texas from 1 employer. AANP classification: Restricted Practice. Updated Sep 1.`);
+    expect(keep(buildSettingStateDescription({ label: 'Outpatient', slug: 'outpatient', stateName: 'Texas', facts: facts({ total: 6, distinctEmployers: 2, cities: [{ name: 'Austin', stateCode: 'TX', count: 4 }], benchmark: BENCH }), statsAsOf: null })))
+      .toBe(`6 outpatient ${NP} openings in Texas from 2 employers. Median posted pay $132K. Top city: Austin. AANP classification: Restricted Practice.`);
+    // Off the dataset the clause is omitted, never guessed.
+    expect(keep(buildSettingStateDescription({ label: 'Outpatient', slug: 'outpatient', stateName: 'Guam', facts: facts({ total: 6, distinctEmployers: 2, cities: [{ name: 'Hagatna', stateCode: 'GU', count: 4 }], benchmark: BENCH }), statsAsOf: null })))
+      .toBe(`6 outpatient ${NP} openings in Guam from 2 employers. Median posted pay $132K. Top city: Hagatna.`);
   });
 
   it('CC-K9, DIR-meta, METRO-meta', () => {
     expect(keep(buildCategoryCityTitle({ labelNoun: `Remote ${NP}`, city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR - 1 }))).toBe(`Remote ${NP} Jobs in Austin, TX`);
     expect(keep(buildCategoryCityTitle({ labelNoun: 'Nurse Anesthetist', city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR }))).toBe(`Nurse Anesthetist Jobs in Austin, TX (${COUNT_DISPLAY_FLOOR} Open)`);
-    const ccDescription = keep(buildCategoryCityDescription({ labelSentence: 'remote', city: 'Austin', stateCode: 'TX', facts: facts({ total: 3, distinctEmployers: 2, topEmployers: emp([['Alpha', 2], ['Beta', 1]]), workMode: mode(3, 3, 0, 0) }), authorityDescription: 'Restricted Practice' }));
-    expect(ccDescription).toBe('3 active remote listings in Austin, TX from 2 employers, led by Alpha. 3 are hybrid or remote. Restricted Practice state.');
-    expect(keep(buildCategoryCityDescription({ labelSentence: 'outpatient', city: 'Austin', stateCode: 'TX', facts: facts({ total: 3, distinctEmployers: 1, workMode: mode(3, 0, 0, 3), settings: mix(3, [['Outpatient', 2], ['Clinic', 1]]) }), authorityDescription: null })))
-      .toBe('3 active outpatient listings in Austin, TX. Settings include Outpatient and Clinic.');
+    const ccDescription = keep(buildCategoryCityDescription({ labelSentence: 'remote', city: 'Austin', stateCode: 'TX', facts: facts({ total: 3, distinctEmployers: 2, topEmployers: emp([['Alpha', 2], ['Beta', 1]]), workMode: mode(3, 3, 0, 0) }) }));
+    expect(ccDescription).toBe('3 active remote listings in Austin, TX from 2 employers, led by Alpha. 3 are hybrid or remote. AANP classification: Restricted Practice.');
+    expect(keep(buildCategoryCityDescription({ labelSentence: 'outpatient', city: 'Austin', stateCode: 'TX', facts: facts({ total: 3, distinctEmployers: 1, workMode: mode(3, 0, 0, 3), settings: mix(3, [['Outpatient', 2], ['Clinic', 1]]) }) })))
+      .toBe('3 active outpatient listings in Austin, TX. Settings include Outpatient and Clinic. AANP classification: Restricted Practice.');
+    // Off the dataset (or an inherited key) the clause is omitted, never guessed.
+    for (const stateCode of ['GU', 'constructor']) {
+      expect(keep(buildCategoryCityDescription({ labelSentence: 'outpatient', city: 'Hagatna', stateCode, facts: facts({ total: 3, distinctEmployers: 1, workMode: mode(3, 0, 0, 3), settings: mix(3, [['Outpatient', 2], ['Clinic', 1]]) }) })))
+        .toBe(`3 active outpatient listings in Hagatna, ${stateCode}. Settings include Outpatient and Clinic.`);
+    }
 
     expect(keep(buildDirectoryTitle({ stateName: 'Texas', trackedCities: 1 }))).toBe(`${NP} Jobs by City in Texas: 1 City Hiring`);
     expect(keep(buildDirectoryTitle({ stateName: 'Texas', trackedCities: 3 }))).toBe(`${NP} Jobs by City in Texas: 3 Cities Hiring`);
@@ -698,9 +715,9 @@ describe('titles print counts only at the display floor and stay inside the SERP
     expect(keep(buildMetroTitle({ city: 'Austin', stateCode: 'TX', total: COUNT_DISPLAY_FLOOR, year: 2026 }))).toBe(`${COUNT_DISPLAY_FLOOR} ${NP} Jobs in Austin, TX (2026)`);
     const metroInput = { city: 'Austin', stateCode: 'TX', stateName: 'Texas', practiceAuthority: 'Restricted', nearbyCities: ['Round Rock', 'Cedar Park', 'Georgetown'], subMarkets: ['Downtown', 'North Austin'] };
     expect(keep(buildMetroDescription({ ...metroInput, benchmark: null })))
-      .toBe(`Open ${NP} roles in Austin, TX and nearby Round Rock and Cedar Park. Texas is a restricted practice state. Hiring across Downtown and North Austin.`);
+      .toBe(`Open ${NP} roles in Austin, TX and nearby Round Rock and Cedar Park. AANP classification: Restricted Practice. Hiring across Downtown and North Austin.`);
     const crowdedMetro = keep(buildMetroDescription({ ...metroInput, benchmark: BENCH }));
-    expect(crowdedMetro).toBe(`Open ${NP} roles in Austin, TX and nearby Round Rock and Cedar Park. Texas is a restricted practice state. Median posted pay $132K.`);
+    expect(crowdedMetro).toBe(`Open ${NP} roles in Austin, TX and nearby Round Rock and Cedar Park. AANP classification: Restricted Practice. Median posted pay $132K.`);
     expect(crowdedMetro.length).toBeLessThanOrEqual(DESCRIPTION_MAX);
   });
 
@@ -708,10 +725,12 @@ describe('titles print counts only at the display floor and stay inside the SERP
     expect(keep(buildSalaryStateTitle({ stateName: 'Texas', stateCode: 'TX', benchmark: BENCH, year: 2026 }))).toBe(`${NP} Salary in Texas (TX): $132,000 Median, 2026`);
     expect(keep(buildSalaryStateTitle({ stateName: 'Texas', stateCode: 'TX', benchmark: null, year: 2026 }))).toBe(`${NP} Jobs and Pay Data in Texas (TX), 2026`);
     const gated = keep(buildSalaryStateDescription({ env: TEXAS, facts: facts({ total: 9, benchmark: BENCH }) }));
-    expect(gated).toBe(`Median posted ${NP} pay in Texas is $132,000 across 6 postings from 3 employers, middle half $118,000 to $150,000. 9 open roles, restricted practice.`);
+    // No bare tier beside the pay sentence: the attributed clause cannot fit
+    // there, and "restricted practice" alone read as a rule for the state.
+    expect(gated).toBe(`Median posted ${NP} pay in Texas is $132,000 across 6 postings from 3 employers, middle half $118,000 to $150,000. 9 open roles.`);
     const below = keep(buildSalaryStateDescription({ env: TEXAS, facts: facts({ total: 2, distinctEmployers: 1 }) }));
-    // The gate clause is assembled last and is dropped whenever the first two fill the budget.
-    expect(below).toBe(`2 open ${NP} roles in Texas from 1 employer. Texas is a restricted practice state and a Nurse Licensure Compact member.`);
+    // The gate clause is assembled last and is dropped whenever the first three fill the budget.
+    expect(below).toBe(`2 open ${NP} roles in Texas from 1 employer. AANP classification: Restricted Practice. Texas is a member of the Nurse Licensure Compact.`);
     expect(gated.length).toBeLessThanOrEqual(DESCRIPTION_MAX);
     expect(below.length).toBeLessThanOrEqual(DESCRIPTION_MAX);
 

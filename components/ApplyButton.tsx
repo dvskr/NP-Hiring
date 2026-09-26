@@ -6,7 +6,7 @@ import { ExternalLink, LogIn, Zap } from 'lucide-react';
 import useAppliedJobs from '@/lib/hooks/useAppliedJobs';
 import { shouldLabelDirectApply } from '@/lib/direct-apply';
 
-import InPlatformApplyForm from '@/components/InPlatformApplyForm';
+import InPlatformApplyForm, { type PlatformApplyOutcome } from '@/components/InPlatformApplyForm';
 import { trackJobApply } from '@/lib/analytics';
 import { buildTrackedJobItem, type TrackedJob } from '@/components/analytics/ViewTrackers';
 import Link from 'next/link';
@@ -265,18 +265,26 @@ export default function ApplyButton({
   // "Application Submitted!" confirmation and the user dismisses it with Done
   // or Close (onClose). Closing here unmounted the confirmation the instant
   // it rendered, so candidates never saw that the submit went through.
-  const handlePlatformApplySuccess = () => {
+  const handlePlatformApplySuccess = ({ isNew }: PlatformApplyOutcome) => {
     // Count the lead only when this submit created one. The apply route
     // upserts on (userId, jobId) and answers 200 either way, and the button
     // above offers "Apply Again" to someone who has already applied, so an
     // ungated call would book a second generate_lead against one application
-    // row. Read this BEFORE markApplied, which flips isApplied().
+    // row.
     //
-    // A null serverApplied means the check request has not settled yet, and
-    // that counts as not applied on purpose: a slow network must never cost
-    // us a real conversion. This fails open in the same direction as the
-    // job-alert surfaces.
-    const isFirstApplication = !serverApplied?.applied && !isApplied(jobId);
+    // The route's own `isNew` is the authority: it is decided server side
+    // under a lock, so it is right even when this browser has never seen the
+    // earlier application (another device, cleared storage) or has not
+    // finished loading it yet. The local guard below only runs when the
+    // response did not carry the flag (a route build that predates it), and
+    // it must be read BEFORE markApplied, which flips isApplied(). In that
+    // fallback a null serverApplied means the check request has not settled
+    // yet, and that counts as not applied on purpose: a slow network must
+    // never cost us a real conversion. This fails open in the same direction
+    // as the job-alert surfaces.
+    const isFirstApplication = typeof isNew === 'boolean'
+      ? isNew
+      : !serverApplied?.applied && !isApplied(jobId);
     markApplied(jobId);
     // The Easy Apply conversion. Fired on the submitted application, not on
     // the modal opening, because this branch is the one place on the board

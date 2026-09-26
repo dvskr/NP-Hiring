@@ -19,19 +19,29 @@
  */
 import { brand } from '@/config/brand';
 import { PSYCH_SPECIALTY_SLUG } from './taxonomy-registry';
-import { getCategoryAxis } from './category-axis-guide';
 import { getPracticeEnvironment, nlcSentence } from './practice-environment';
 import {
+    getAanpTierDefinition,
     getStatePracticeAuthority,
     PracticeAuthority,
 } from '@/lib/state-practice-authority';
 
 // ─── Phrase fragments ───────────────────────────────────────────────────────
 
+/**
+ * AANP tier names for prose. Names only: these phrases used to carry a rule
+ * per tier ("requiring physician supervision", "independent prescribing
+ * without physician oversight"), which contradicted the verified details of
+ * Virginia, South Carolina and Michigan (restricted), Wisconsin and the
+ * reduced states with a route out of the agreement, and every full-tier state
+ * with a transition to practice. What a tier means comes from
+ * getAanpTierDefinition, attributed to AANP; what a state requires comes from
+ * its own details string, which the hub prints in its Practice Authority card.
+ */
 const AUTHORITY_PHRASES: Record<PracticeAuthority, string> = {
-    full: 'full practice authority, meaning independent prescribing without physician oversight',
-    reduced: 'reduced practice authority requiring a collaborative agreement with a physician',
-    restricted: 'restricted practice authority requiring physician supervision',
+    full: 'full practice',
+    reduced: 'reduced practice',
+    restricted: 'restricted practice',
 };
 
 // ─── NLC (Nurse Licensure Compact) roster mirrors ───────────────────────────
@@ -87,7 +97,7 @@ const SETTING_LEADS: Record<string, SettingLeadFn> = {
     '1099': (c) => `Independent-contractor (1099) ${NP} listings for ${c.stateName} quote a rate before self-employment tax, malpractice, and the benefits you fund yourself. Model the after-tax figure, and confirm who holds any collaborative agreement ${c.stateName} requires before signing.`,
     'per-diem': (c) => `Per-diem ${NP} listings for ${c.stateName} are as-needed shifts without guaranteed hours, credentialed facility by facility. Keep licensure and certification paperwork current, and clarify cancellation terms and any weekend or holiday differentials up front.`,
     'locum-tenens': (c) => `Locum tenens ${NP} listings for ${c.stateName} cover a practice or facility for a defined period, usually through an agency that handles scheduling and credentialing paperwork. Each assignment still requires ${c.stateName} APRN licensure, so confirm the licensing timeline before the start date.`,
-    'family-practice': (c) => `Family practice ${NP} (FNP) listings for ${c.stateName} cover primary care across the lifespan, from group practices to rural health clinics. Check each listing for panel size, walk-in coverage, and the collaboration terms ${c.stateName} applies.`,
+    'family-practice': (c) => `Family practice ${NP} (FNP) listings for ${c.stateName} cover primary care across the lifespan, from group practices to rural health clinics. Check each listing for panel size, walk-in coverage, and any collaboration terms ${c.stateName} applies.`,
     'adult-gerontology': (c) => `Adult-gerontology ${NP} listings for ${c.stateName} split between the primary care track (AGPCNP) in clinics and long-term care and the acute care track (AGACNP) in hospital services. Match the listing's certification requirement to your own track before applying.`,
     'pediatric': (c) => `Pediatric ${NP} listings for ${c.stateName} span primary-care pediatrics, school-based programs, and children's hospital services. Confirm the acuity mix and any after-hours nurse-line or call expectations in each listing.`,
     'women-health': (c) => `Women's health ${NP} (WHNP) listings for ${c.stateName} sit in OB/GYN groups, family-planning programs, and prenatal clinics. Confirm whether the scope is gynecology only or includes prenatal and postpartum panels, and whether obstetric call is expected.`,
@@ -114,15 +124,21 @@ const SETTING_LEADS: Record<string, SettingLeadFn> = {
 // ─── Composite narrative ────────────────────────────────────────────────────
 
 /**
- * Category-state paragraph: the setting lead, the AANP practice-authority
- * sentence (skipped on the APRN axis, whose roles are regulated separately),
- * and the live posting count.
+ * Category-state paragraph: the setting lead and the live posting count.
  *
- * The two `_` parameters are the retired cost-of-living index and the
- * retired behavioral-health shortage count. Neither renders any more (thin
- * spec 1 T6 and T11: the dataset behind each has no citation), but the
- * positional signature is kept for the template and the pinned tests until
- * W2-STATE and W4-INTEGRATE drop the arguments together.
+ * No practice-authority sentence: the setting x state page states the AANP
+ * classification once, in its practice card (thin-spec CS-S6 replaced the
+ * narrative's authority sentence), and a second copy in this paragraph read
+ * as the same regulatory fact twice on one page. The APRN axis leads (CRNA,
+ * CNM) still carry their own clause saying those roles are regulated apart
+ * from NP practice authority.
+ *
+ * Retired parameters, still accepted so the caller in
+ * lib/pseo/setting-state-template.tsx and the pinned tests compile
+ * unchanged: `_avgCOL` (the cost-of-living index) and `_shortageCityCount`
+ * (the behavioral-health shortage count). Neither is read; thin spec 1 T6
+ * and T11 retired both because the dataset behind each has no citation.
+ * Drop them together with their call sites.
  */
 export function buildSettingStateNarrative(
     settingKey: string,
@@ -137,20 +153,8 @@ export function buildSettingStateNarrative(
     const lead = SETTING_LEADS[settingKey]?.({ stateName, stateCode });
     if (lead) parts.push(lead);
 
-    // Sentence 2: practice authority (lib/state-practice-authority data). The
-    // NP framework does not govern CRNA or CNM practice, so the APRN axis
-    // carries its own regulatory clause inside the lead instead.
-    if (getCategoryAxis(settingKey) !== 'aprn') {
-        const auth = getStatePracticeAuthority(stateName);
-        parts.push(
-            auth
-                ? `${stateName} grants ${AUTHORITY_PHRASES[auth.authority]}.`
-                : `${stateName} applies state-specific practice rules; confirm current requirements with the ${stateCode} board of nursing before applying.`,
-        );
-    }
-
-    // Sentence 3: the live count, stated as inventory rather than as a market
-    // signal. The verb agrees with the count.
+    // The live count, stated as inventory rather than as a market signal.
+    // The verb agrees with the count.
     parts.push(
         `The ${totalJobs} active ${totalJobs === 1 ? 'posting reflects' : 'postings reflect'} what employers currently list on ${brand.name} for ${stateName} in this category, not an estimate of the wider market.`,
     );
@@ -167,12 +171,28 @@ export function buildSettingStateNarrative(
 // deterministic per-state paragraph. Every figure is caller-supplied from
 // live DB aggregation or repo regulatory data; nothing here invents numbers.
 
-/** Authority-tier consequence clauses for the plain state hubs. */
-const AUTHORITY_IMPLICATIONS: Record<PracticeAuthority, string> = {
-    full: 'which supports independent practice models and widens the range of roles employers can offer',
-    reduced: 'so collaborative-agreement logistics appear in many job requirements',
-    restricted: 'so most roles are structured around physician-supervised care teams',
-};
+/**
+ * The practice-authority sentences of a plain state hub: the AANP tier,
+ * AANP's own meaning of it, and a reminder that the tier does not settle any
+ * one state's rules. The tier-level consequence clauses this replaced ("so
+ * most roles are structured around physician-supervised care teams") were
+ * uncited and false for several states in each tier. Nothing here states a
+ * rule for this state: the hub's Practice Authority card, directly below the
+ * narrative, prints the state's verified details.
+ */
+function plainStateAuthoritySentences(stateName: string, stateCode: string): string {
+    const auth = getStatePracticeAuthority(stateName);
+    if (!auth) {
+        return `On the regulatory side, ${stateName} applies state-specific practice rules; confirm current requirements with the ${stateCode} board of nursing before applying.`;
+    }
+    // The District of Columbia is not a state, so its peers are "jurisdictions".
+    const peers = stateCode === 'DC' ? 'Jurisdictions' : 'States';
+    return [
+        `On the regulatory side, AANP places ${stateName} in its ${AUTHORITY_PHRASES[auth.authority]} category.`,
+        getAanpTierDefinition(auth.authority),
+        `${peers} in the same category still set different requirements, so check the ${stateName} rules themselves before applying.`,
+    ].join(' ');
+}
 
 export interface PlainStateNarrativeInput {
     stateName: string;
@@ -248,22 +268,21 @@ export function buildPlainStateNarrative(input: PlainStateNarrativeInput): strin
     );
 
     // Sentence 2: top live-inventory categories (pseoStats setting-state rows).
+    // This sentence and the pay sentence name the jurisdiction rather than
+    // saying "the state" or "a state median": the District of Columbia hub
+    // reads this narrative too, and it is not a state.
     if (topCategoryLabels.length > 0) {
         const labels = topCategoryLabels.slice(0, 3);
         parts.push(
             labels.length === 1
-                ? `By posting volume, ${labels[0]} roles carry the deepest live inventory in the state.`
+                ? `By posting volume, ${labels[0]} roles carry the deepest live inventory in ${stateName}.`
                 : `By posting volume, the most active categories right now are ${joinWithAnd(labels)}.`,
         );
     }
 
-    // Sentence 3: practice authority (lib/state-practice-authority data).
-    const auth = getStatePracticeAuthority(stateName);
-    parts.push(
-        auth
-            ? `On the regulatory side, ${stateName} grants ${AUTHORITY_PHRASES[auth.authority]}, ${AUTHORITY_IMPLICATIONS[auth.authority]}.`
-            : `On the regulatory side, ${stateName} applies state-specific practice rules; confirm current requirements with the ${stateCode} board of nursing before applying.`,
-    );
+    // Sentence 3: the AANP tier and what AANP means by it, never a rule for
+    // this state (lib/state-practice-authority data).
+    parts.push(plainStateAuthoritySentences(stateName, stateCode));
 
     // Sentence 4: pay. Renders only when the caller passed the gated median;
     // below the gate the sentence says so and prints no figure of any kind,
@@ -272,7 +291,7 @@ export function buildPlainStateNarrative(input: PlainStateNarrativeInput): strin
         parts.push(
             medianK > 0
                 ? `Across ${stateName} postings that disclose annual pay, the median is $${medianK}K per year.`
-                : `Not enough ${stateName} postings disclose pay to publish a state median, so compare compensation posting by posting.`,
+                : `Not enough ${stateName} postings disclose pay to publish a median, so compare compensation posting by posting.`,
         );
     }
 

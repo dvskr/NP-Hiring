@@ -71,6 +71,17 @@ const NOUN = labelNoun(SLUG, LABEL);
 const MID = labelSentence(LABEL);
 
 /**
+ * GA4 item_list_name for this page's listings. The view_item_list impression
+ * and every card's select_item both read this one constant, because GA4
+ * joins a click to its impression on the list name alone and two spellings
+ * would report a click-through rate of zero. The value is the name the
+ * impression has always sent, so earlier reports stay on the same row.
+ * Cards report their absolute position (skip + i), so a card on a later
+ * page continues the count from the page before it.
+ */
+const LIST_NAME = `${NOUN} Jobs`;
+
+/**
  * The bucket for a category slug. Slugs without a legacy keyword entry gate
  * on the precomputed categoryTags column, so a sibling count can never
  * degrade to "all published jobs".
@@ -269,7 +280,7 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
     <div style={{ backgroundColor: '#FDFBF7' }}>
       <ClayStyles />
       <BreadcrumbSchema items={breadcrumbTrail} />
-      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName={`${NOUN} Jobs`} />
+      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName={LIST_NAME} indexOffset={skip} />
       {jobs.length > 0 && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson({ '@context': 'https://schema.org', '@type': 'ItemList', name: `${NOUN} Jobs`, numberOfItems: facts.total, itemListElement: jobs.slice(0, 10).map((job: Job, idx: number) => ({ '@type': 'ListItem', position: idx + 1, name: job.title, url: `${brand.baseUrl}/jobs/${job.slug || job.id}` })) }) }} />
       )}
@@ -306,7 +317,7 @@ export default async function LgbtqPage({ searchParams }: PageProps) {
           <div className="lg:col-span-3">
             <h2 className="font-lora mb-6" style={{ fontSize: '20px', fontWeight: 700, color: '#1A2E35' }}>LGBTQ+ Affirming Positions ({facts.total})</h2>
             {jobs.length > 0 && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}</div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">{jobs.map((job: Job, i: number) => (<JobCard key={job.id} job={job} listName={LIST_NAME} listIndex={skip + i} />))}</div>
             )}
 
             {/* LAND-L7 low inventory: the counted intro and the related

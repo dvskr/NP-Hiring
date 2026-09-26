@@ -1,28 +1,37 @@
 /**
- * GSC Indexing Crisis (P2.3): one-shot URL_DELETED submission for the 5
- * auth pages stuck in "Indexed, though blocked by robots.txt".
+ * GSC Indexing Crisis (P2.3): one-shot removal signal for the 5 auth pages
+ * stuck in "Indexed, though blocked by robots.txt".
  *
  * Run AFTER deploying the robots.ts change that unblocks these paths.
  * Sequence:
- *   1. Deploy the P2.3 robots.ts change → Googlebot can now crawl these paths
- *   2. Run this script → submit URL_DELETED for each (instant signal)
- *   3. Wait ~14 days → Google re-crawls, sees X-Robots-Tag: noindex, drops
- *   4. Manually re-add paths to FULL_DISALLOW (see AUTH_REBLOCK_DATE in robots.ts)
+ *   1. Deploy the P2.3 robots.ts change → crawlers can now fetch these paths
+ *      and see their X-Robots-Tag: noindex header
+ *   2. Run this script → IndexNow tells Bing, Yandex and Seznam to recrawl
+ *   3. For Google, file each URL in the Search Console Removals tool
+ *      (Indexing > Removals > New request). The noindex header is what keeps
+ *      a page out once Google recrawls; the Removals tool hides it sooner.
+ *   4. Wait ~14 days → Google re-crawls, sees X-Robots-Tag: noindex, drops
+ *   5. Manually re-add paths to FULL_DISALLOW (see AUTH_REBLOCK_DATE in robots.ts)
  *
- * Each URL uses the Google Indexing API DELETION quota (100/day, separate
- * from the creation quota). 5 URLs is well within budget.
+ * No Google Indexing API call is made. That API accepts only job posting
+ * pages, and lib/search-indexing.ts refuses everything else for every caller,
+ * because a misuse sanction lands on the whole Cloud project that also
+ * carries the site's real job publishes and removals.
  *
  * Run:
  *   npx tsx scripts/deindex-auth-pages.ts          # submit
  *   npx tsx scripts/deindex-auth-pages.ts --dry    # print what would be submitted
  */
 import { config as dotenvConfig } from 'dotenv';
+import { brand } from '@/config/brand';
 dotenvConfig({ path: '.env.local' });
 dotenvConfig({ path: '.env' });
 dotenvConfig({ path: '.env.prod' });
 
 const DRY = process.argv.includes('--dry') || process.argv.includes('--dry-run');
-const BASE = 'https://pmhnphiring.com';
+// The board's own domain from the brand config, never a literal: this repo is
+// forked per board, and a hardcoded domain would signal another board's URLs.
+const BASE = brand.baseUrl;
 
 // The 5 URLs from GSC's "Indexed, though blocked by robots.txt" drilldown
 // (GSC ISSUES/https___pmhnphiring.com_-Coverage-Drilldown-2026-05-04 (3)/Table.csv).
@@ -44,9 +53,9 @@ async function main() {
     }
 
     // PRE-FLIGHT: confirm robots.txt actually permits crawling these paths.
-    // If FULL_DISALLOW still blocks them, Google will see noindex on next crawl
-    // attempt only AFTER seeing it's allowed; submitting URL_DELETED before
-    // unblocking wastes the deletion quota with no effect.
+    // A crawler only sees the noindex header on a path it is allowed to
+    // fetch, so a recrawl signal sent while FULL_DISALLOW still blocks them
+    // has nothing to act on.
     try {
         const robotsRes = await fetch(`${BASE}/robots.txt`);
         if (robotsRes.ok) {
@@ -62,36 +71,25 @@ async function main() {
                 console.error(`\nDeploy the P2.3 robots.ts change first, then re-run this script.`);
                 process.exit(1);
             }
-            console.log(`\nrobots.txt pre-flight: OK — paths are now crawlable.`);
+            console.log(`\nrobots.txt pre-flight: OK, paths are now crawlable.`);
         }
     } catch (err) {
         console.warn(`Could not fetch robots.txt for pre-flight (${err}). Proceeding anyway.`);
     }
 
-    const { pingGoogle, pingIndexNow } = await import('@/lib/search-indexing');
-
-    let googleOk = 0;
-    let googleFail = 0;
-    for (const url of AUTH_URLS) {
-        const r = await pingGoogle(url, 'URL_DELETED');
-        if (r.success) {
-            googleOk++;
-            console.log(`  ✓ Google URL_DELETED: ${url}`);
-        } else {
-            googleFail++;
-            console.error(`  ✗ Google URL_DELETED failed: ${url} — ${r.error}`);
-        }
-        await new Promise((r) => setTimeout(r, 200)); // gentle pacing
-    }
+    const { pingIndexNow } = await import('@/lib/search-indexing');
 
     console.log(`\nIndexNow batch...`);
     const indexNowResults = await pingIndexNow(AUTH_URLS);
     const indexNowOk = indexNowResults.filter((r) => r.success).length;
 
     console.log(`\nDone.`);
-    console.log(`  Google: ${googleOk} ok, ${googleFail} failed`);
     console.log(`  IndexNow: ${indexNowOk}/${indexNowResults.length} ok`);
-    console.log(`\nNext: wait ~14 days → re-pull GSC Coverage report → confirm`);
+    console.log(`\nGoogle: not contacted. The Indexing API accepts job posting pages only.`);
+    console.log(`Each page already sends X-Robots-Tag: noindex, which removes it once Google recrawls.`);
+    console.log(`To hide them sooner, file each URL above in Search Console:`);
+    console.log(`  Indexing > Removals > New request.`);
+    console.log(`\nNext: wait ~14 days, re-pull the GSC Coverage report, and confirm the`);
     console.log(`"Indexed, though blocked by robots.txt" count drops to 0.`);
     console.log(`Then re-add paths to FULL_DISALLOW per AUTH_REBLOCK_DATE in robots.ts.`);
 }

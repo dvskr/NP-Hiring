@@ -4,20 +4,20 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, MapPinned } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
-import { PUBLISHED_LISTING_WHERE } from '@/lib/pseo/listing-where';
 import { METRO_CITIES } from '@/lib/metro-data';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import StateImage from '@/components/StateImage';
 import { canonicalBucketWhere } from '@/lib/canonical-counts';
-import { formatCount, pluralize } from '@/lib/display-text';
+import { formatCount, joinWithAnd, pluralize } from '@/lib/display-text';
 import { NAV_ICONS, SHARED_ART, type Art } from '@/lib/pseo/category-asset-registry';
 import { HUB_REMOTE_LICENSURE_NOTE } from '@/lib/pseo/listing-narrative';
-import { STATE_CODES } from '@/lib/pseo/setting-state-config';
+import { STATE_CODES, stateToSlug } from '@/lib/pseo/setting-state-config';
 import {
   buildCitySlug,
   buildStateCityDirectory,
   cityLinkResolves,
+  countJobsByJurisdiction,
   shouldRenderStateCityDirectory,
   MIN_CITY_JOBS_FOR_LINK,
 } from './[state]/directory';
@@ -26,13 +26,27 @@ import {
 // force-dynamic removed: it overrides revalidate and defeats ISR caching
 export const revalidate = 3600; // Revalidate every hour
 
-// Type definitions for Prisma groupBy results
-interface StateGroupResult {
-  state: string | null;
-  stateCode: string | null;
-  _count: { state: number };
-}
+/**
+ * The 50 states and the District of Columbia, from the one STATE_CODES
+ * table the state hubs and directories resolve against. DC used to be
+ * missing from a hand-typed list here, so its tile and its city directory
+ * never appeared although both pages render (lib/state-practice-authority.ts
+ * carries it as its own jurisdiction). Also keeps non-US groupings such as
+ * "British Columbia" out of the cities-hiring stat.
+ */
+const US_STATES: ReadonlySet<string> = new Set(Object.keys(STATE_CODES));
 
+/**
+ * The one jurisdiction in US_STATES that is not a state. The grid gives it a
+ * tile (it has its own NP licensure and its own hub), but every figure this
+ * page labels "state" leaves it out and names it separately, the convention
+ * app/press/page.tsx ("50 states and DC") and app/tools/tools-registry.ts
+ * ("51 jurisdictions") already follow. Counting it as a state would print
+ * "51 US states" once every jurisdiction is hiring.
+ */
+const DISTRICT_OF_COLUMBIA = 'District of Columbia';
+
+// Type definitions for Prisma groupBy results
 interface CityGroupResult {
   city: string | null;
   state: string | null;
@@ -67,67 +81,57 @@ interface StateCityDirectoryLink {
 }
 
 /**
- * Fetch job counts by state
+ * Every count on this page, on the canonical predicate (PLAN T0-1).
+ *
+ * The state grid, the remote banner and the hero total used to count every
+ * published row, expired and dead-link rows included, while the state hubs
+ * and /jobs/remote count with canonicalBucketWhere. A tile could then
+ * promise more jobs than the page it links to lists. Each query below now
+ * composes the same predicate as its destination, which also carries the
+ * profession quarantine (GLOBAL_EXCLUSIONS).
  */
 async function getLocationStats() {
-  // Job counts by state
-  const stateData = await prisma.job.groupBy({
-    by: ['state', 'stateCode'],
-    where: {
-      ...PUBLISHED_LISTING_WHERE,
-      state: { not: null },
-    },
-    _count: {
-      state: true,
-    },
-    orderBy: {
+  const [stateGroups, remoteCount, topCities, totalJobs, directoryCityRows] = await Promise.all([
+    // State tiles, grouped by (state, stateCode) so each jurisdiction can be
+    // counted with the hub's own `state = name OR stateCode = code` bucket.
+    prisma.job.groupBy({
+      by: ['state', 'stateCode'],
+      where: canonicalBucketWhere({ OR: [{ state: { not: null } }, { stateCode: { not: null } }] }),
+      _count: { _all: true },
+    }),
+    // The remote banner: the same { isRemote: true } bucket /jobs/remote counts.
+    prisma.job.count({ where: canonicalBucketWhere({ isRemote: true }) }),
+    // Top cities. Every tile links a /jobs/city page whose own gate counts
+    // canonical inventory, so a city that clears MIN_CITY_JOBS_FOR_LINK here
+    // clears it there too.
+    prisma.job.groupBy({
+      by: ['city', 'state', 'stateCode'],
+      where: canonicalBucketWhere({ city: { not: null }, state: { not: null } }),
       _count: {
-        state: 'desc',
+        city: true,
       },
-    },
-  });
-
-  // Remote jobs count
-  const remoteCount = await prisma.job.count({
-    where: {
-      ...PUBLISHED_LISTING_WHERE,
-      isRemote: true,
-    },
-  });
-
-  // Top cities. Counted on the canonical predicate (PLAN T0-1): every tile
-  // links a /jobs/city page whose own gate counts canonical inventory, so a
-  // city that clears MIN_CITY_JOBS_FOR_LINK here clears it there too.
-  const topCities = await prisma.job.groupBy({
-    by: ['city', 'state', 'stateCode'],
-    where: canonicalBucketWhere({ city: { not: null }, state: { not: null } }),
-    _count: {
-      city: true,
-    },
-    orderBy: {
-      _count: {
-        city: 'desc',
+      orderBy: {
+        _count: {
+          city: 'desc',
+        },
       },
-    },
-    take: 12,
-  });
-
-  // Total jobs
-  const totalJobs = await prisma.job.count({
-    where: PUBLISHED_LISTING_WHERE,
-  });
-
-  // P2 #12: which states earn a /jobs/locations/<state> city directory.
-  //
-  // Grouped by (city, state) with the SAME canonical predicate the directory
-  // page and app/sitemap.ts use. The page matches `state = name OR stateCode
-  // = code`, a superset of this grouping, so a state that qualifies here
-  // always qualifies there: the hub can never link a directory that 404s.
-  const directoryCityRows = await prisma.job.groupBy({
-    by: ['city', 'state'],
-    where: canonicalBucketWhere({ city: { not: null }, state: { not: null } }),
-    _count: { city: true },
-  });
+      take: 12,
+    }),
+    // The hero total: the whole canonical pool, the site-wide count
+    // lib/canonical-counts.ts defines (never more than /jobs lists).
+    prisma.job.count({ where: canonicalBucketWhere({}) }),
+    // P2 #12: which states earn a /jobs/locations/<state> city directory.
+    // Grouped by (city, state) with the SAME canonical predicate the
+    // directory page and app/sitemap.ts use. The page matches `state = name
+    // OR stateCode = code`, a superset of this grouping, so a state that
+    // qualifies here always qualifies there: the hub can never link a
+    // directory that 404s.
+    prisma.job.groupBy({
+      by: ['city', 'state'],
+      where: canonicalBucketWhere({ city: { not: null }, state: { not: null } }),
+      _count: { city: true },
+    }),
+  ]);
 
   const cityRowsByState = new Map<string, { city: string; count: number }[]>();
   for (const row of directoryCityRows) {
@@ -138,27 +142,16 @@ async function getLocationStats() {
     else cityRowsByState.set(row.state, [entry]);
   }
 
-  // Valid US states + DC (whitelist to exclude non-US locations like British Columbia)
-  const US_STATES = new Set([
-    'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut',
-    'Delaware','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa',
-    'Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan',
-    'Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire',
-    'New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio',
-    'Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota',
-    'Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia',
-    'Wisconsin','Wyoming',
-  ]);
-
-  // Process states with explicit typing; filter to US only
-  const processedStates = stateData
-    .filter((s: StateGroupResult) => s.state !== null && US_STATES.has(s.state!))
-    .map((s: StateGroupResult) => ({
-      name: s.state!,
-      code: s.stateCode || '',
-      count: s._count.state,
-      slug: s.state!.toLowerCase().replace(/\s+/g, '-'),
-    }));
+  // One tile per jurisdiction, most jobs first. countJobsByJurisdiction
+  // applies the hub's bucket, so a jurisdiction whose rows split across two
+  // spellings gets one tile carrying the hub's own total instead of two.
+  const processedStates: ProcessedState[] = [
+    ...countJobsByJurisdiction(
+      stateGroups.map((group) => ({ state: group.state, stateCode: group.stateCode, count: group._count._all })),
+    ),
+  ]
+    .map(([name, count]) => ({ name, code: STATE_CODES[name], count, slug: stateToSlug(name) }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
   // Process cities with explicit typing; include the state code in the slug for proper routing.
   //
@@ -185,10 +178,10 @@ async function getLocationStats() {
 
   const cityDirectories: StateCityDirectoryLink[] = processedStates
     .map((s) => {
-      // STATE_CODES first: the directory page resolves its own code the same
-      // way, and the DB `stateCode` column can be null/blank on a state whose
-      // rows predate the normalizer. Same input → same verdict on both sides.
-      const stateCode = STATE_CODES[s.name] || s.code || '';
+      // s.code is the STATE_CODES code, the one the directory page resolves
+      // for itself, never the DB `stateCode` column (null or blank on rows
+      // that predate the normalizer). Same input, same verdict on both sides.
+      const stateCode = s.code;
       const directory = buildStateCityDirectory(cityRowsByState.get(s.name) ?? [], {
         // Identical veto to the directory page's own build. Without it a state
         // whose only ≥3 city is something like "St. Louis" would pass here and
@@ -289,20 +282,49 @@ export default async function LocationsPage() {
     boxShadow: '6px 6px 16px rgba(0,0,0,0.06), -3px -3px 10px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.02)',
   };
 
+  // stats.states holds one entry per jurisdiction with canonical listings,
+  // the District of Columbia included. Anything worded "state" counts the
+  // states alone and names DC on its own (see DISTRICT_OF_COLUMBIA).
+  const statesHiring = stats.states.filter((s) => s.name !== DISTRICT_OF_COLUMBIA).length;
+  const districtHiring = statesHiring < stats.states.length;
+
+  // Omit rather than pad: a part with nothing behind it drops out of the
+  // sentence instead of reading "0 cities".
+  const coverage = joinWithAnd([
+    ...(statesHiring > 0 ? [formatCount(statesHiring, 'US state')] : []),
+    ...(districtHiring ? ['the District of Columbia'] : []),
+    ...(stats.topCities.length > 0 ? [formatCount(stats.topCities.length, 'city', 'cities')] : []),
+  ]);
+
+  // Hero tiles, same rule: a bucket with no jobs drops its tile rather than
+  // printing a zero.
+  const heroStats = [
+    { count: stats.totalJobs, label: 'Jobs' },
+    { count: statesHiring, label: 'States Hiring' },
+    { count: stats.citiesHiring, label: 'Cities Hiring' },
+    { count: stats.remoteCount, label: 'Remote' },
+  ]
+    .filter((s) => s.count > 0)
+    .map((s) => ({ value: s.count.toLocaleString(), label: s.label }));
+
   // SEO Fix #15: emit CollectionPage + ItemList schema for the state directory.
   // Previously only BreadcrumbList was rendered, so Google had no signal that
   // this page is a curated directory of the state hubs, losing eligibility for
-  // sitelinks-search-style rich treatment.
+  // sitelinks-search-style rich treatment. The list carries every hub the
+  // grid links, so numberOfItems and itemListElement always agree; STATE_CODES
+  // bounds it at 51 entries.
   const collectionSchema = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: `${brand.niche.short} Jobs by Location`,
-    description: `Directory of ${brand.niche.descriptor} jobs across ${formatCount(stats.states.length, 'US state')} and ${formatCount(stats.topCities.length, 'city', 'cities')}.`,
+    description: coverage
+      ? `Directory of ${brand.niche.descriptor} jobs across ${coverage}.`
+      : `Directory of ${brand.niche.descriptor} jobs by state and city.`,
     url: `${brand.baseUrl}/jobs/locations`,
     mainEntity: {
       '@type': 'ItemList',
       numberOfItems: stats.states.length,
-      itemListElement: stats.states.slice(0, 50).map((s: ProcessedState, idx: number) => ({
+      itemListElement: stats.states.map((s: ProcessedState, idx: number) => ({
         '@type': 'ListItem',
         position: idx + 1,
         name: `${brand.niche.short} Jobs in ${s.name}`,
@@ -338,13 +360,8 @@ export default async function LocationsPage() {
         headlineLine1={brand.niche.short}
         headlineLine2="Locations"
         headlineSub="Search by State & City"
-        stats={[
-          { value: stats.totalJobs.toLocaleString(), label: 'Jobs' },
-          { value: stats.states.length.toLocaleString(), label: 'States Hiring' },
-          { value: stats.citiesHiring.toLocaleString(), label: 'Cities Hiring' },
-          { value: stats.remoteCount.toString(), label: 'Remote' },
-        ]}
-        description={`Explore ${stats.totalJobs.toLocaleString()} ${brand.niche.adjective} ${brand.niche.descriptor} positions across the United States. Find opportunities by state, in the largest metro areas and in remote positions.`}
+        stats={heroStats}
+        description={`Explore ${stats.totalJobs > 0 ? `${stats.totalJobs.toLocaleString()} ` : ''}${brand.niche.adjective} ${brand.niche.descriptor} positions across the United States. Find opportunities by state, in the largest metro areas and in remote positions.`}
         ctaLabel="Browse All Jobs"
         ctaHref="/jobs"
       />
@@ -578,7 +595,9 @@ export default async function LocationsPage() {
                 </h2>
               </div>
               <p style={{ fontSize: '14px', color: '#7A6A62', marginBottom: '20px', lineHeight: 1.5 }}>
-                Every city in these states with live {brand.niche.short} openings, with the count shown next to
+                {/* "Each directory", not "these states": the District of
+                    Columbia earns a directory here on the same gate. */}
+                Each directory lists every city with live {brand.niche.short} openings, with the count shown next to
                 each one. Cities with {MIN_CITY_JOBS_FOR_LINK} or more roles are linked when a page for them exists.
               </p>
 

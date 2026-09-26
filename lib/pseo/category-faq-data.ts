@@ -192,8 +192,21 @@ function aprnPayAnswer(roleLabel: string, variesWith: string, medianSalary?: num
         : `${roleLabel} pay varies with ${variesWith}. ${brand.name} publishes a median for a page only once enough listings from enough employers disclose annual pay; until then, compare the ranges employers post listing by listing.`;
 }
 
-/** Practice-authority answer for NP-specialty categories, driven by the cited AANP stat. */
-const NP_FPA_ANSWER = `Practice authority is set state by state. ${FPA_STATES} grant ${brand.niche.descriptor}s Full Practice Authority (${STAT_SOURCES.fullPracticeStates.source}), meaning they can evaluate, diagnose, and prescribe without physician oversight; the remaining states require a collaborative or supervisory agreement with a physician. Check the practice-authority details on this page, or the AANP State Practice Environment map, for the state you are browsing.`;
+/**
+ * Practice-authority answer for NP-specialty categories, driven by the cited
+ * AANP stat. Tier-level copy only: it says what AANP's Full Practice
+ * classification means (closely paraphrasing AANP's own definition) and that
+ * states inside a tier differ. It used to read the tier as a per-state rule
+ * ("without physician oversight"; "the remaining states require a
+ * collaborative or supervisory agreement with a physician"), which the
+ * verified rows in lib/state-practice-authority.ts contradict for the
+ * Full Practice transition states (CO, CT, MA, MD, ME, MN, NE, NV, NY, SD,
+ * VT), for Wisconsin (physician or dentist), and for the routes out of an
+ * agreement in AR, IL, KY, NJ, WV, CA, FL, OK and VA. The outpatient
+ * private practice answer and the 1099 practice-authority answer reuse it
+ * for the same reason; both used to read the tier as a per-state rule too.
+ */
+const NP_FPA_ANSWER = `Practice authority is set state by state, and the tier alone does not settle what applies to you. The ${STAT_SOURCES.fullPracticeStates.source} classifies ${FPA_STATES} as Full Practice, where state law lets ${brand.niche.descriptor}s evaluate patients, diagnose, order and interpret diagnostic tests, and initiate and manage treatments, including prescribing medications and controlled substances, under the exclusive licensure authority of the state board of nursing. Several of those states first require a transition period of collaborative or supervised practice. Most other states require a collaborative agreement, supervision or delegation involving a physician or another health provider, and several of them offer a route out of it after a set amount of experience. Check the practice-authority details for the state you are browsing on its state jobs page, or in the Full Practice Authority guide, before relying on the tier.`;
 
 /** Cited BLS outlook sentence; the projection cycle is named inside the citation. */
 const NP_OUTLOOK_SENTENCE = `The BLS projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for ${brand.niche.descriptor}s from 2024 to 2034 (${STAT_SOURCES.blsGrowth2034.source}).`;
@@ -323,7 +336,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Can outpatient ${NP}s start their own private practice?`,
-            answer: `Outpatient experience is the usual preparation for private practice. ${FPA_STATES} grant ${brand.niche.descriptor}s Full Practice Authority (${STAT_SOURCES.fullPracticeStates.source}); elsewhere a collaborative or supervisory agreement with a physician is required, which shapes how an independent practice is structured.`,
+            answer: `Outpatient experience is the usual preparation for private practice, and any practice arrangement a state requires shapes how an independent practice is structured. ${NP_FPA_ANSWER}`,
         },
     ],
     'community-health': ({ totalJobs, avgSalary }) => [
@@ -423,7 +436,7 @@ const CATEGORY_FAQS: Partial<Record<CategorySlug, (props: CategoryFaqInput) => F
         },
         {
             question: `Does state practice authority matter for 1099 ${NP}s?`,
-            answer: `Yes. Independent contracting is administratively simplest in the ${FPA_STATES} with Full Practice Authority (${STAT_SOURCES.fullPracticeStates.source}), where no physician agreement is required. In reduced- and restricted-practice states you must maintain the required collaborative or supervisory arrangement, so confirm who holds that agreement before signing.`,
+            answer: `Yes. The law of the state where you practice decides whether you need a collaborative agreement, supervision or another practice arrangement, and who must hold it. ${NP_FPA_ANSWER} If the state requires an arrangement, confirm who holds it before signing.`,
         },
     ],
     'locum-tenens': ({ totalJobs }) => [

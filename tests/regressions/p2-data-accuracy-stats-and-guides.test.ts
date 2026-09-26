@@ -115,22 +115,26 @@ describe('P2 #10 — SALARY_BANDS is the single source for published pay ranges'
  * integration pass): 17 of the original 24 surfaces stopped printing a
  * hand-typed band and were deleted from the list in one edit. Every pay figure
  * on them now comes from the gated benchmark helpers and carries its cite, so
- * the scanner no longer flags them. The seven below are the real remaining
- * debt. Nothing was ADDED: the scan was reproduced against the worktree and
- * its output is a strict subset of the previous list.
+ * the scanner no longer flags them. Nothing was ADDED: the scan was
+ * reproduced against the worktree and its output is a strict subset of the
+ * previous list.
+ *
+ * 2026-09-26: components/HomepageFAQ.tsx left the list. Its hand-typed pay
+ * bands (and every other unsourced pay figure in that FAQ) were cut, and its
+ * pay answers now quote only STAT_SOURCES.averageSalary. The six below are
+ * the real remaining debt.
  * ────────────────────────────────────────────────────────────────────────*/
 const UNMIGRATED_SALARY_BAND_SURFACES: readonly string[] = [
     'app/api/og/city/route.tsx',
     'app/salary-guide/page.tsx',
     'app/salary-guide/specialty/specialty-content.ts',
-    'components/HomepageFAQ.tsx',
     'lib/blog-formatter.ts',
     'lib/pseo/category-landing-content.ts',
     'scripts/generate-salary-pdf.ts',
 ];
 
-/** The length after waves 2 and 3. The ratchet may only shrink from here. */
-const SALARY_BAND_DEBT_CEILING = 7;
+/** The length after the homepage FAQ left the list. The ratchet may only shrink from here. */
+const SALARY_BAND_DEBT_CEILING = 6;
 
 /**
  * Files the scan flags but which publish nothing: lib/stats-sources.ts

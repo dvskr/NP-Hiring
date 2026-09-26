@@ -686,14 +686,27 @@ function currentPageReferrer(): string | undefined {
 // IMPORTANT: All events use gtag('event', ...) NOT dataLayer.push().
 // Without GTM, dataLayer.push() for custom events is silently ignored.
 
-/** User views a list of jobs (search results, category page, homepage) */
-export function trackJobListView(jobs: JobItem[], listName: string) {
+/**
+ * User views a list of jobs (search results, category page, homepage).
+ *
+ * startIndex is the absolute position of jobs[0] in the whole list, e.g. 50
+ * for page 2 of a 50-per-page board. select_item (trackJobClick, fed by
+ * JobCard's listIndex) already reports absolute positions, and GA4's item
+ * list position reports read `index` from both events, so an impression
+ * numbered from 0 on every page would file page 2's first card at position
+ * 0 while its click says 50.
+ *
+ * Only the first 20 items of the page are reported. That cap is deliberate
+ * and left as it is: it bounds the event payload, so on a 50-row page the
+ * rows past the 20th send clicks with no matching impression.
+ */
+export function trackJobListView(jobs: JobItem[], listName: string, startIndex = 0) {
   gtag('event', 'view_item_list', {
     item_list_id: listName.toLowerCase().replace(/\s+/g, '_'),
     item_list_name: listName,
     items: jobs.slice(0, 20).map((job, index) => ({
       ...job,
-      index,
+      index: startIndex + index,
       quantity: 1,
     })),
   });

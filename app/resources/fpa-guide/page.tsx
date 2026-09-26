@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { Shield, MapPin, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
-import { STATE_PRACTICE_AUTHORITY, getStatesByAuthority, getAuthorityColor } from '@/lib/state-practice-authority';
+import { STATE_PRACTICE_AUTHORITY, getStatesByAuthority, getAuthorityColor, getAuthorityLabel, type PracticeAuthority } from '@/lib/state-practice-authority';
 import { STAT_SOURCES } from '@/lib/stats-sources';
 // P6 #10: this guide carried Article JSON-LD + a review stamp but no
 // E-E-A-T byline. Visible byline and schema both derive from
@@ -16,7 +16,7 @@ import EditorialByline, { editorialSchemaFields } from '@/components/EditorialBy
 // Update at least quarterly; sooner if NLC membership or state authority
 // classifications change.
 const PUBLISHED_AT = '2026-03-19';
-const LAST_REVIEWED = '2026-07-29';
+const LAST_REVIEWED = '2026-09-25';
 
 /* ─────────────────────────────────────────────────────────────────────────
  * P2 #22 — UNSOURCED CLAIMS REMOVED FROM THIS PAGE
@@ -68,6 +68,69 @@ const ldJson = (obj: unknown): string =>
 /** Live NLC roster — the only place this page will point for membership. */
 const NLC_MAP_URL = 'https://www.nursecompact.com/';
 
+const NP = brand.niche.short;
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * TIER COPY RULE (2026-09 practice-authority accuracy pass)
+ * ─────────────────────────────────────────────────────────────────────────
+ * The table on this page prints each state's verified `details` string from
+ * lib/state-practice-authority.ts. The explainer copy around it used to turn
+ * the TIER into a per-state rule ("without physician oversight", "the
+ * physician does not need to be on-site", "requires physician supervision",
+ * "you need a collaborating or supervising physician in place first"), and
+ * every one of those contradicted rows on this same page: the transition
+ * states under Full Practice (CO, CT, MA, MD, ME, MN, NE, NV, NY, SD, VT),
+ * Alabama's part-time on-site rule, the routes out of the agreement in AR,
+ * IL, KY, NJ, WI and WV, and the Restricted rows for CA, FL, MI, OK, SC and VA.
+ *
+ * Tier copy now says only what AANP's classification means, attributed to
+ * AANP, and says plainly that states within a tier differ. The three
+ * meanings are close paraphrases of AANP's own definitions
+ * (https://www.aanp.org/advocacy/state/state-practice-environment, map
+ * marked "Updated: 05/2026", read 2026-09-25). One qualifier is dropped on
+ * purpose: AANP calls the reduced and restricted arrangements "career-long",
+ * which the verified rows for AR, IL, KY, NJ, WI, WV, CA, FL, OK and VA
+ * contradict. Any sentence about ONE state belongs in that state's
+ * `details`, never here.
+ *
+ * The reduced and restricted meanings keep AANP's OPENING clause ("reduces"
+ * or "restricts the ability ... to engage in at least one element") and give
+ * its mechanisms as examples, the same shape getAanpTierDefinition uses. An
+ * earlier wording made the mechanism the placement rule ("restricts ... by
+ * requiring supervision"). Read that way, this page's own table contradicted
+ * itself: Maine, Massachusetts and Nevada (supervised periods) would be
+ * Restricted, and CT, MN, NY, SD and VT (a collaborative transition) would be
+ * Reduced, yet AANP lists all eight as Full Practice.
+ */
+const AANP_TIER_MEANING: Record<PracticeAuthority, string> = {
+  full: `state law lets ${NP}s evaluate patients, diagnose, order and interpret diagnostic tests, and initiate and manage treatments, including prescribing medications and controlled substances, under the exclusive licensure authority of the state board of nursing`,
+  reduced: `state law reduces the ability of ${NP}s to engage in at least one element of ${NP} practice, for example through a regulated collaborative agreement with another health provider or a limit on the setting of one or more elements of ${NP} practice`,
+  restricted: `state law restricts the ability of ${NP}s to engage in at least one element of ${NP} practice, for example through supervision, delegation or team management by another health provider`,
+};
+
+/** How states inside each tier differ, as the verified per-state rows show. */
+const TIER_VARIATION: Record<PracticeAuthority, string> = {
+  // Prescribing is limited for NEWER NPs (Colorado's provisional authority,
+  // Nevada's Schedule II protocol, Massachusetts' supervised prescribing),
+  // and it is not a condition of independent practice: Colorado's own row
+  // says its NPs practice independently while prescribing is provisional.
+  full: `Several of these states require a transition period of collaborative or supervised practice before an ${NP} practices independently, and some limit prescribing for newer ${NP}s.`,
+  reduced: `What the agreement covers differs by state, and several of these states offer a route out of it after a set amount of experience.`,
+  restricted: `The arrangement differs by state, and some of these states offer a route to practice or prescribe without it after a set amount of experience.`,
+};
+
+/**
+ * The within-tier warning every tier-level passage on this page carries.
+ *
+ * It names Full Practice states explicitly rather than inlining
+ * TIER_VARIATION.full ("Several of these states"): in FAQ 2, which is also the
+ * FAQPage JSON-LD answer, this note follows the Restricted clause directly, so
+ * "these states" read as the Restricted states and the transition warning for
+ * Full Practice states disappeared from both the visible answer and the
+ * structured data.
+ */
+const WITHIN_TIER_NOTE = `States in the same tier do not share one rule. Several Full Practice states require a transition period of collaborative or supervised practice before an ${NP} practices independently, and some limit prescribing for newer ${NP}s. Several Reduced and Restricted states offer a route out of the agreement or supervision, or out of part of it, after a set amount of experience.`;
+
 // P0 OG sweep: edge-generated card via /api/og — the previous Supabase
 // page-screenshot 400'd on every share (pattern: app/for-employers/page.tsx).
 // Absolute URL because it also feeds Article JSON-LD `image`.
@@ -75,11 +138,11 @@ const HERO_IMAGE = `${brand.baseUrl}/api/og?title=${encodeURIComponent(`${brand.
 
 export const metadata: Metadata = {
   title: `${brand.niche.short} Full Practice Authority Guide 2026: All 50 States`,
-  description: `Complete state-by-state Full Practice Authority (FPA) guide for ${brand.niche.descriptor}s. See which states allow independent ${brand.niche.short} practice, prescriptive authority rules, Nurse Licensure Compact membership, and what practice authority changes about how you can work and get paid.`,
+  description: `Complete state-by-state Full Practice Authority (FPA) guide for ${brand.niche.descriptor}s. See how AANP classifies each state, what each state's rules say about collaboration, supervision and transition periods, Nurse Licensure Compact membership, and what practice authority changes about how you can work and get paid.`,
   keywords: [`${brand.niche.short} full practice authority`, 'nurse practitioner independent practice states', 'FPA states 2026', `${brand.niche.short} prescriptive authority by state`, `${brand.niche.short} scope of practice`, 'NLC compact states for NP'],
   openGraph: {
     title: `Full Practice Authority Guide for ${brand.niche.short}s (2026)`,
-    description: `State-by-state FPA classifications. See where ${brand.niche.descriptor}s can practice independently.`,
+    description: `State-by-state FPA classifications, and what each state's rules require of ${brand.niche.descriptor}s.`,
     type: 'article',
     images: [{ url: HERO_IMAGE, width: 1200, height: 630, alt: `${brand.niche.short} Full Practice Authority Guide 2026` }],
   },
@@ -108,19 +171,19 @@ export default function FPAGuidePage() {
   const fpaFaqs = [
     {
       question: `What is Full Practice Authority for ${brand.niche.short}s?`,
-      answer: `Full Practice Authority (FPA) means an ${brand.niche.short} can evaluate patients, diagnose conditions, order and interpret tests, prescribe medications (including controlled substances), and manage treatment plans without physician oversight or a collaborative agreement. FPA states grant ${brand.niche.short}s the same level of autonomy as physicians in their scope of practice.`
+      answer: `Full Practice Authority (FPA) is one of the three practice environments AANP uses to classify state law. AANP classifies a state as Full Practice when ${AANP_TIER_MEANING.full}. The classification describes the state's law, not every ${NP} in it. ${TIER_VARIATION.full} Check your state's entry in the table on this page before assuming independent practice from your first day.`
     },
     {
       question: "How many states have Full Practice Authority for nurse practitioners?",
-      answer: `${fullStateCount} states plus Washington D.C. grant Full Practice Authority to ${brand.niche.short}s (${STAT_SOURCES.fullPracticeStates.source}, ${STAT_SOURCES.fullPracticeStates.asOf}). ${reducedStates.length} states have Reduced Practice, requiring a collaborative agreement with a physician, and ${restrictedStates.length} states have Restricted Practice, requiring physician supervision. Classifications change as state legislatures act, so confirm against the AANP State Practice Environment map before relying on one.`
+      answer: `AANP classifies ${fullStateCount} states plus Washington D.C. as Full Practice (${STAT_SOURCES.fullPracticeStates.source}, ${STAT_SOURCES.fullPracticeStates.asOf}). It classifies ${reducedStates.length} states as Reduced Practice, where ${AANP_TIER_MEANING.reduced}, and ${restrictedStates.length} states as Restricted Practice, where ${AANP_TIER_MEANING.restricted}. ${WITHIN_TIER_NOTE} Classifications change as state legislatures act, so confirm against the AANP State Practice Environment map before relying on one.`
     },
     {
       question: `Does Full Practice Authority affect ${brand.niche.short} pay?`,
-      answer: `It changes what you are able to do, which in turn shapes what you can be paid for. This board does not publish a national premium figure, because no verifiable one exists in our data. Practice authority concretely controls whether you can open and bill under your own practice without a physician agreement, whether you can take independent contract or telehealth work in that state without arranging supervision, and whether a collaborating physician's fee comes out of your revenue. Pay itself varies far more by setting, specialty, experience, and local market than by classification alone. For real numbers, use the state pages in our salary guide, which compute averages from live postings in that state.`
+      answer: `It changes what you are able to do, which in turn shapes what you can be paid for. This board does not publish a national premium figure, because no verifiable one exists in our data. A state's practice rules decide whether, and after how much experience, you can practice without a collaborative or supervisory agreement, whether independent contract or telehealth work there means arranging one, and whether a collaborator's fee comes out of your revenue. Those rules differ within each tier, so read your state's entry rather than relying on its classification. Pay itself varies far more by setting, specialty, experience, and local market than by classification alone. For real numbers, use the state pages in our salary guide, which compute averages from live postings in that state.`
     },
     {
       question: `Can ${brand.niche.short}s prescribe controlled substances in all states?`,
-      answer: `${brand.niche.short}s can prescribe controlled substances in all 50 states, but the requirements differ. In FPA states, prescribing is independent. In reduced practice states, a collaborative agreement is needed. In restricted states, a supervisory protocol with a physician is required. All ${brand.niche.short}s need DEA registration.`
+      answer: `${brand.niche.short}s can prescribe controlled substances in all 50 states, but each state sets its own conditions, and they do not follow the three tiers neatly. Some Full Practice states limit prescribing for newer ${NP}s, for example through provisional prescriptive authority, a physician-approved protocol for Schedule II drugs, or supervised prescribing. In some Reduced and Restricted states the rules for controlled substances are stricter than for other prescription drugs. Check your state's entry in the table on this page. Prescribing controlled substances also requires a DEA registration.`
     },
     {
       question: `What is the Nurse Licensure Compact (NLC) and how does it help ${brand.niche.short}s?`,
@@ -227,15 +290,21 @@ export default function FPAGuidePage() {
                 What is Full Practice Authority (FPA)?
               </h2>
               <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                Full Practice Authority allows {brand.niche.short}s ({brand.niche.descriptor}s) to evaluate patients, diagnose conditions, order and interpret diagnostic tests, prescribe medications (including controlled substances), and manage treatment plans <strong>without physician oversight</strong> or a collaborative agreement.
+                Full Practice Authority is one of three practice environments AANP uses to classify state law for {brand.niche.short}s ({brand.niche.descriptor}s). The cards below give AANP&apos;s meaning for each environment.
               </p>
+              <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
+                {WITHIN_TIER_NOTE} <strong>Read your state&apos;s entry in the table below</strong> before deciding how you can practice there.
+              </p>
+              {/* Each card: AANP's meaning for the tier, then how states inside
+                  it differ. Never a per-state rule (see TIER COPY RULE). */}
               <div className="grid md:grid-cols-3 gap-4 mt-6">
                 <div className="p-4 rounded-lg bg-green-50 border border-green-200">
                   <div className="flex items-center gap-2 mb-2">
                     <CheckCircle className="h-5 w-5 text-green-600" />
                     <h3 className="font-semibold text-green-800">Full Practice Authority</h3>
                   </div>
-                  <p className="text-sm text-green-700">Independent practice. No physician oversight. Full prescriptive authority, including Schedule II-V.</p>
+                  <p className="text-sm text-green-700">AANP places a state here when {AANP_TIER_MEANING.full}.</p>
+                  <p className="text-sm text-green-700 mt-2">{TIER_VARIATION.full}</p>
                   <p className="text-xs text-green-600 mt-2 font-semibold">{fullStateCount} states + DC</p>
                 </div>
                 <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
@@ -243,7 +312,8 @@ export default function FPAGuidePage() {
                     <AlertTriangle className="h-5 w-5 text-yellow-600" />
                     <h3 className="font-semibold text-yellow-800">Reduced Practice</h3>
                   </div>
-                  <p className="text-sm text-yellow-700">Requires a collaborative agreement with a physician. The physician does not need to be on-site.</p>
+                  <p className="text-sm text-yellow-700">AANP places a state here when {AANP_TIER_MEANING.reduced}.</p>
+                  <p className="text-sm text-yellow-700 mt-2">{TIER_VARIATION.reduced}</p>
                   <p className="text-xs text-yellow-600 mt-2 font-semibold">{reducedStates.length} states</p>
                 </div>
                 <div className="p-4 rounded-lg bg-orange-50 border border-orange-200">
@@ -251,7 +321,8 @@ export default function FPAGuidePage() {
                     <XCircle className="h-5 w-5 text-orange-600" />
                     <h3 className="font-semibold text-orange-800">Restricted Practice</h3>
                   </div>
-                  <p className="text-sm text-orange-700">Requires physician supervision. You must practice under a supervisory protocol or agreement.</p>
+                  <p className="text-sm text-orange-700">AANP places a state here when {AANP_TIER_MEANING.restricted}.</p>
+                  <p className="text-sm text-orange-700 mt-2">{TIER_VARIATION.restricted}</p>
                   <p className="text-xs text-orange-600 mt-2 font-semibold">{restrictedStates.length} states</p>
                 </div>
               </div>
@@ -269,7 +340,7 @@ export default function FPAGuidePage() {
                   <thead>
                     <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
                       <th className="text-left py-3 pr-4 font-semibold" style={{ color: 'var(--text-primary)' }}>State</th>
-                      <th className="text-left py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Practice Authority</th>
+                      <th className="text-left py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>AANP Classification</th>
                       <th className="text-left py-3 pl-4 font-semibold hidden md:table-cell" style={{ color: 'var(--text-primary)' }}>Details</th>
                       <th className="text-right py-3 pl-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Jobs</th>
                     </tr>
@@ -287,8 +358,14 @@ export default function FPAGuidePage() {
                           </td>
                           <td className="py-3 px-4">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text} ${colors.border} border`}>
-                              {info.description}
+                              {getAuthorityLabel(info.authority)}
                             </span>
+                            {/* The Details column is hidden below md, and the
+                                copy on this page sends every reader to their
+                                state's entry, so phones get it here. */}
+                            <p className="md:hidden mt-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                              {info.details}
+                            </p>
                           </td>
                           <td className="py-3 pl-4 hidden md:table-cell text-xs" style={{ color: 'var(--text-secondary)' }}>
                             {info.details}
@@ -317,10 +394,10 @@ export default function FPAGuidePage() {
                 Practice authority is a legal classification, not a pay scale. It does not set your salary; it sets which ways of earning are open to you in that state. The national median annual wage for {brand.niche.descriptor}s is {STAT_SOURCES.averageSalary.formatted} ({STAT_SOURCES.averageSalary.source}). What changes from state to state is the structure around that number:
               </p>
               <ul className="space-y-3 text-sm mb-5" style={{ color: 'var(--text-secondary)' }}>
-                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether you can own the practice.</strong> In a full-practice state, you can open and bill under your own practice without a physician agreement. In reduced and restricted states, you need a collaborating or supervising physician in place first, which is a real barrier to independent ownership.</span></li>
-                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether a collaboration fee comes out of your revenue.</strong> Where an agreement is required, the collaborating physician is typically compensated for it, an ongoing cost against your income that a full-practice colleague does not carry. Fees are negotiated privately and vary widely, so treat any quoted figure with caution.</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether you need an agreement to practice on your own.</strong> That turns on your state&apos;s own rules, not only its tier. Many Full Practice states allow independent practice once you are licensed, but several first require a transition period of collaborative or supervised practice. Most Reduced and Restricted states require a collaborative agreement, supervision or delegation involving a physician or another health provider, and several of them offer a route out of it after a set amount of experience.</span></li>
+                <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Whether a collaboration fee comes out of your revenue.</strong> Where an agreement is required, the collaborator is typically compensated for it, an ongoing cost against your income that a colleague practicing without an agreement does not carry. Fees are negotiated privately and vary widely, so treat any quoted figure with caution.</span></li>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>How easily you can take contract and telehealth work.</strong> Independent 1099 and telehealth arrangements are simplest where no supervisory relationship has to be arranged and maintained in each state you cover.</span></li>
-                <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Transition-to-practice periods still apply in several full-practice states.</strong> Check the Details column in the table above before assuming day-one autonomy.</span></li>
+                <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" aria-hidden="true" /><span><strong>Check your state&apos;s entry, whatever its tier.</strong> Transition periods, prescribing limits and routes out of an agreement are set state by state, so read your state&apos;s entry in the table above before planning how you will practice there.</span></li>
               </ul>
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                 For actual pay rather than classification, the <Link href="/salary-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>{brand.niche.short} salary guide</Link> computes state-level averages from live postings. If independent practice is the goal, the <Link href="/resources/private-practice-guide" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>private practice startup guide</Link> covers entity formation, credentialing, and a revenue model, and the <Link href="/resources/1099-vs-w2" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>1099 vs W2 guide</Link> shows what a contract has to pay to beat a salaried package.
@@ -344,7 +421,7 @@ export default function FPAGuidePage() {
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>You must hold an APRN license in each state where your patients are located</span></li>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>DEA registration is required in each state where you prescribe controlled substances</span></li>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>Some telehealth companies handle multi-state licensing and credentialing for you</span></li>
-                <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span>Restricted practice states may require a collaborative physician in that specific state</span></li>
+                <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span>Where the patient&apos;s state requires a collaborative agreement, supervision or a transition period, that requirement applies to your practice there, and some states require your collaborator to hold a license in that state</span></li>
                 <li className="flex gap-2"><AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" /><span>Pandemic-era telehealth waivers have mostly expired, so verify current requirements</span></li>
                 <li className="flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" /><span>The Nurse Licensure Compact can remove the RN endorsement step in member states, but not the APRN application. Membership and implementation dates change, so confirm each state against the <a href={NLC_MAP_URL} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline" style={{ color: 'var(--color-primary)' }}>NCSBN compact map</a> rather than a count published on a jobs board</span></li>
               </ul>

@@ -20,6 +20,28 @@ import { useViewMode } from '@/lib/hooks/useViewMode';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { resolveAiSearchMode } from '@/lib/jobs/resolve-search-mode';
 import { formatZeroResultHint, readZeroResultHint, type ZeroResultSearchHint } from '@/components/jobs/zero-result-hint';
+import { JobListViewTracker, JOBS_BOARD_LIST_NAME } from '@/components/analytics/ViewTrackers';
+
+/**
+ * Rows per page of the browse list. The card position GA4 receives is
+ * absolute across pages ((page - 1) * this + index), so it must be the page
+ * size that actually produced the rows: app/jobs/page.tsx renders the first
+ * page server side with `const limit = 50`, and every client fetch below
+ * asks /api/jobs for this many. tests/regressions/ga-list-clicks.test.ts
+ * fails if the two drift apart.
+ */
+const JOBS_PAGE_SIZE = 50;
+
+/**
+ * GA4 item_list_name for the AI search matches. They are a different list
+ * from the board: a different query, a different ranking and no pagination.
+ * Crediting their clicks to JOBS_BOARD_LIST_NAME would count clicks against
+ * an impression that never contained those jobs and inflate the board's
+ * click-through rate, so the matches get their own name and their own
+ * view_item_list, mounted just above the grid and outside its loading gate
+ * (the comment there says why).
+ */
+const AI_MATCHES_LIST_NAME = 'AI Search Matches';
 
 interface JobsApiResponse {
   jobs: Job[];
@@ -93,6 +115,15 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDegraded, setAiDegraded] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  // True while the grid shows board rows that no server render produced.
+  // The board's view_item_list lives in app/jobs/page.tsx and fires once per
+  // server render, that is once per URL. The AI bar's keyword fallback
+  // fetches its rows on the client without touching the URL (ai.search.semantic
+  // defaults to off in lib/ai/feature-flags.ts, so by default every AI search
+  // takes that path), so no server impression ever covers them. While this is set, the grid mounts its own board
+  // impression for those rows; a URL change clears it, because the server
+  // then renders and reports the rows itself.
+  const [boardRowsNotImpressed, setBoardRowsNotImpressed] = useState(false);
 
   const clearAiSearch = useCallback(() => {
     setAiResults(null);
@@ -119,7 +150,7 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
 
       // Pagination + sort ride on top — they are not FilterState fields.
       params.set('page', page.toString());
-      params.set('limit', '50'); // Show 50 jobs per page
+      params.set('limit', String(JOBS_PAGE_SIZE));
       if (sort && sort !== 'best') {
         params.set('sort', sort);
       }
@@ -191,6 +222,9 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
       setAiLoading(false);
       const nextFilters = { ...currentFilters, search: outcome.query };
       setCurrentFilters(nextFilters);
+      // The URL stays as it was, so app/jobs/page.tsx does not re-render and
+      // reports nothing for these rows: the grid reports them instead.
+      setBoardRowsNotImpressed(true);
       fetchJobs(nextFilters, 1, sortOption);
       return;
     }
@@ -230,6 +264,9 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
     // and sort changes write the URL via router.push, which lands here and
     // drives the fetch; Back/Forward restore both the same way.
     setCurrentPage(pageFromUrl);
+    // A URL change re-renders app/jobs/page.tsx, which fires the board
+    // impression for these rows; a second one from the grid would double it.
+    setBoardRowsNotImpressed(false);
     fetchJobs(filters, pageFromUrl, params.get('sort') || 'best');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]); // Only depend on searchParams, not fetchJobs
@@ -316,6 +353,18 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
           : currentFilters.cityExact)
       : currentFilters.stateCode?.toUpperCase()) ||
     undefined;
+
+  // GA4 list attribution for the cards in the grid below. The board list's
+  // view_item_list is mounted by app/jobs/page.tsx under JOBS_BOARD_LIST_NAME,
+  // or by the grid itself for rows the server never rendered (see
+  // boardRowsNotImpressed); the AI matches carry their own impression (see
+  // AI_MATCHES_LIST_NAME).
+  // Board positions are absolute, so the first card on page 2 is position 50
+  // rather than a second position 0. The matches are one unpaginated ranking.
+  const isShowingAiMatches = aiResults !== null;
+  const cardListName = isShowingAiMatches ? AI_MATCHES_LIST_NAME : JOBS_BOARD_LIST_NAME;
+  const cardListOffset = isShowingAiMatches ? 0 : (currentPage - 1) * JOBS_PAGE_SIZE;
+
   const alertFilters = {
     keyword: currentFilters.search || specialtyKeyword || categoryKeyword || undefined,
     location: alertLocation,
@@ -757,9 +806,37 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
               </div>
             )}
 
+            {/* The AI matches' impression. It lives outside the grid's
+                loading gate on purpose: the URL effect never clears
+                aiResults, so a filter or sort click while the matches are on
+                screen runs a URL-driven fetch that hides the grid behind
+                loading and shows it again with the same matches. A tracker
+                inside the gate would remount then and count those matches a
+                second time for every such click. Out here it fires once per
+                set of matches, because aiResults is state and the tracker
+                re-fires only when its jobs prop changes identity (so it gets
+                the state array itself, never a mapped copy, which would be
+                new on every keystroke in the search box). It still waits on
+                !error, because the grid, and so the matches, are not on
+                screen while a fetch error is. */}
+            {!error && aiResults !== null && aiResults.length > 0 && (
+              <JobListViewTracker jobs={aiResults} listName={AI_MATCHES_LIST_NAME} />
+            )}
+
             {/* Jobs Grid/List — renders AI results when active, else the normal browse list */}
             {!loading && !error && (aiResults !== null ? aiResults.length > 0 : jobs.length > 0) && (
               <>
+                {/* The keyword fallback's rows, which no server render
+                    reported (see boardRowsNotImpressed). jobs is state, so
+                    this fires once per fetch, and again only if the rows are
+                    shown again after the AI matches are cleared. It takes
+                    cardListOffset, the offset the cards below add to their
+                    listIndex, so impressions and clicks agree on position.
+                    The AI matches tracker above needs none: that list is not
+                    paginated and cardListOffset is 0 while it shows. */}
+                {aiResults === null && boardRowsNotImpressed && (
+                  <JobListViewTracker jobs={jobs} listName={JOBS_BOARD_LIST_NAME} indexOffset={cardListOffset} />
+                )}
                 <div style={
                   viewMode === 'grid'
                     ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(340px, 100%), 1fr))', gap: '16px', alignItems: 'start' }
@@ -775,7 +852,12 @@ function JobsContent({ initialJobs, initialTotal, initialPage, initialTotalPages
                         animation="fade-in-up"
                         delay={Math.min(index * 50, 600)}
                       >
-                        <JobCard job={job} viewMode={viewMode} />
+                        <JobCard
+                          job={job}
+                          viewMode={viewMode}
+                          listName={cardListName}
+                          listIndex={cardListOffset + index}
+                        />
                       </AnimatedContainer>
                     </div>
                   ))}

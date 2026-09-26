@@ -7,11 +7,36 @@ import Link from 'next/link';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { displayText } from '@/lib/display-text';
 
+/**
+ * What the apply route reported about a successful submit, handed to the
+ * parent through onSuccess.
+ */
+export interface PlatformApplyOutcome {
+    /**
+     * True when this submit created the application, false when it updated
+     * one the candidate already had (a re-apply). Undefined when the response
+     * did not carry the field as a boolean, for example a route build that
+     * predates it: the parent then falls back to its own local guard rather
+     * than treating the submit as either kind.
+     */
+    isNew?: boolean;
+}
+
 interface InPlatformApplyFormProps {
     jobId: string;
     jobTitle: string;
     onClose: () => void;
-    onSuccess: () => void;
+    onSuccess: (outcome: PlatformApplyOutcome) => void;
+}
+
+/**
+ * Reads the route's isNew answer out of an untrusted response body. Only a
+ * real boolean is believed: anything else is reported as unknown, so a
+ * malformed body can neither invent a conversion nor suppress one.
+ */
+export function readApplyOutcome(body: unknown): PlatformApplyOutcome {
+    const isNew = (body as { isNew?: unknown } | null)?.isNew;
+    return typeof isNew === 'boolean' ? { isNew } : {};
 }
 
 interface UserProfile {
@@ -275,7 +300,7 @@ export default function InPlatformApplyForm({
             }
 
             setSubmitted(true);
-            onSuccess();
+            onSuccess(readApplyOutcome(data));
 
             // Fetch similar jobs in the background
             try {

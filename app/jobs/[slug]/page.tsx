@@ -1262,7 +1262,14 @@ export default async function JobPage({ params }: JobPageProps) {
                     <ApplyButton jobId={job.id} applyLink={job.applyLink} jobTitle={job.title} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />
                   </Suspense>
                   <div style={{ display: 'grid', gridTemplateColumns: job.sourceType === 'employer' ? '1fr 1fr' : '1fr', gap: '8px' }}>
-                    <SaveJobButton jobId={job.id} />
+                    <SaveJobButton
+                      jobId={job.id}
+                      jobTitle={job.title}
+                      employer={job.employer}
+                      jobType={job.jobType}
+                      stateCode={job.stateCode}
+                      sourceProvider={job.sourceProvider}
+                    />
                     {job.sourceType === 'employer' && (
                       <MessageEmployerButton jobId={job.id} jobTitle={displayTitle} employerName={displayEmployer} employerUserId={employerUserId} />
                     )}
@@ -1403,7 +1410,14 @@ export default async function JobPage({ params }: JobPageProps) {
               <ApplyButton jobId={job.id} applyLink={job.applyLink} jobTitle={job.title} applyOnPlatform={job.applyOnPlatform} sourceType={job.sourceType} />
             </Suspense>
             <div style={{ display: 'grid', gridTemplateColumns: job.sourceType === 'employer' ? '1fr 1fr' : '1fr', gap: '8px' }}>
-              <SaveJobButton jobId={job.id} />
+              <SaveJobButton
+                jobId={job.id}
+                jobTitle={job.title}
+                employer={job.employer}
+                jobType={job.jobType}
+                stateCode={job.stateCode}
+                sourceProvider={job.sourceProvider}
+              />
               {job.sourceType === 'employer' && (
                 <MessageEmployerButton jobId={job.id} jobTitle={displayTitle} employerName={displayEmployer} employerUserId={employerUserId} />
               )}

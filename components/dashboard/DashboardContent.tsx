@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import HowItWorksSidebar from './HowItWorksSidebar'
 import JobCard from '@/components/JobCard'
+import { JobListViewTracker } from '@/components/analytics/ViewTrackers'
 import type { Job as JobCardJob } from '@/lib/types'
 import { DASHBOARD_MARKET_PULSE, DASHBOARD_PROFILE_NUDGE_CLAIM } from '@/config/niche/stats'
 import { brand } from '@/config/brand'
@@ -122,6 +123,13 @@ interface DashboardData {
     recommendedJobs: DashboardJob[]
     unreadMessages: number
 }
+
+/**
+ * GA4 item_list_name for the "Recommended for you" cards. The
+ * view_item_list impression and each card's select_item read this one
+ * constant, because GA4 joins a click to its impression on the name alone.
+ */
+const RECOMMENDED_LIST_NAME = 'Dashboard Recommendations'
 
 /* ── Shared styles — Clay Design ── */
 const cardBase: React.CSSProperties = {
@@ -1083,8 +1091,17 @@ export default function DashboardContent() {
                        control writes dismissedAt + hides the card. Rule-based
                        fallback recommendations have no CandidateRecommendation
                        rows, so they render without the dismiss control. */
+                    /* GA4: one impression per dashboard load, over the list as
+                       it was first shown. recommendedJobs comes straight from
+                       the fetched state, so its identity is stable and a
+                       dismissal does not re-fire the impression. Each card
+                       keeps its position in that list (i over recommendedJobs,
+                       a dismissed card renders nothing), so a click after a
+                       dismissal still joins the position the impression
+                       recorded instead of the shifted one. */
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        {recommendedJobs.filter((job) => !dismissedRecIds.has(job.id)).map((job) => (
+                        <JobListViewTracker jobs={recommendedJobs} listName={RECOMMENDED_LIST_NAME} />
+                        {recommendedJobs.map((job, i) => dismissedRecIds.has(job.id) ? null : (
                             <div
                                 key={job.id}
                                 onClickCapture={(e) => {
@@ -1093,7 +1110,7 @@ export default function DashboardContent() {
                                     if (target?.closest('a')) trackRecommendation(job.id, 'click')
                                 }}
                             >
-                                <JobCard job={job as unknown as JobCardJob} />
+                                <JobCard job={job as unknown as JobCardJob} listName={RECOMMENDED_LIST_NAME} listIndex={i} />
                                 {job.recommendationTier && (
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
                                         <button
@@ -1197,7 +1214,7 @@ export default function DashboardContent() {
                             Need Help?
                         </h3>
                         <p style={{ fontSize: '12px', color: '#6B7F8A', margin: '0 0 12px', lineHeight: 1.4 }}>
-                            We typically respond within 24 hours.
+                            We respond within 24 to 48 hours.
                         </p>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                             <Link href="/contact" className="jc-view-btn" style={{

@@ -155,7 +155,7 @@ export default function FAQPage() {
     },
     {
       question: `What is the difference between an ${brand.niche.short} and a physician?`,
-      answer: `${brand.niche.short}s hold a Master's or Doctoral degree in nursing, while physicians complete medical school followed by a residency. Both can diagnose, treat, and prescribe. In full practice authority states, ${brand.niche.short}s practice independently. Physician training adds residency and covers a broader, more specialized scope, which is the main tradeoff between the two paths.`
+      answer: `${brand.niche.short}s hold a Master's or Doctoral degree in nursing, while physicians complete medical school followed by a residency. Both can diagnose, treat, and prescribe. In full practice authority states, ${brand.niche.short}s can practice independently once any transition period their state requires is complete. Physician training adds residency and covers a broader, more specialized scope, which is the main tradeoff between the two paths.`
     },
     {
       question: `What are the main ${brand.niche.short} specialties?`,
@@ -224,7 +224,7 @@ export default function FAQPage() {
     },
     {
       question: `Are there state licensure rules that affect demand for ${brand.niche.short}s?`,
-      answer: `Yes. States with Full Practice Authority (${STAT_SOURCES.fullPracticeStates.formatted} per the ${STAT_SOURCES.fullPracticeStates.source}, ${STAT_SOURCES.fullPracticeStates.asOf}) allow ${brand.niche.short}s to practice independently, which widens the settings where an ${brand.niche.short} can lead care. Reduced and restricted practice states require physician collaboration or supervision, which adds a step for employers and can shape which roles are offered.`
+      answer: `State practice rules shape which roles ${brand.niche.short}s can take, such as independent contract, telehealth and practice ownership work, though no figure in our data measures their effect on demand or pay. AANP classifies ${STAT_SOURCES.fullPracticeStates.formatted} as Full Practice (${STAT_SOURCES.fullPracticeStates.source}, ${STAT_SOURCES.fullPracticeStates.asOf}) and the rest as Reduced or Restricted Practice. The tier does not settle any one state's rules: several full practice states require a transition period of collaborative or supervised practice, and several reduced and restricted states let experienced ${brand.niche.short}s qualify out of the arrangement, so check each state's own rules before planning around them.`
     },
     {
       question: `What skills are employers seeking in ${brand.niche.short} graduates?`,

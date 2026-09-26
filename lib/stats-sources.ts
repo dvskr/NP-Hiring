@@ -21,6 +21,10 @@
 //     still describing this stat as a behavioral-health designation must
 //     say "primary care".
 //   - fullPracticeStates: verified against AANP (27 states + DC, 2025).
+//     RE-VERIFIED 2026-09-25: the count still reads 27 states + DC on the
+//     AANP State Practice Environment map marked "Updated: 05/2026", and it
+//     agrees with the 28 full-tier rows in lib/state-practice-authority.ts,
+//     so `asOf` moved from '2025' to '2026' (see the entry below).
 //
 // P2 #10 CONSOLIDATION PASS (2026-07-29):
 //   - The two open verify-markers (on the BLS growth entry and
@@ -203,14 +207,31 @@ export const STAT_SOURCES = {
             'current-quarter figure is pinned rather than a floor.',
     },
 
-    /** States granting Full Practice Authority to NPs (incl. DC). */
+    /**
+     * States granting Full Practice Authority to NPs (incl. DC).
+     *
+     * `asOf` is the year of the AANP map revision the count was read from:
+     * the map was marked "Updated: 05/2026" when it was re-read on
+     * 2026-09-25. It stays a bare year rather than '2026-05' because most
+     * consumers print it raw inside a citation, "(AANP State Practice
+     * Environment, 2026)" or "as of 2026", where a YYYY-MM string would read
+     * as machine output. formatStatVintage() handles both shapes.
+     */
     fullPracticeStates: {
         value: '27',
         formatted: '27 states + DC',
         source: 'AANP State Practice Environment',
         sourceUrl: 'https://www.aanp.org/advocacy/state/state-practice-environment',
-        asOf: '2025',
+        asOf: '2026',
         vintageNote:
+            'Last re-verified 2026-09-25 against the AANP State Practice ' +
+            'Environment map marked "Updated: 05/2026": 27 states plus DC, ' +
+            'matching the 28 full-tier rows in lib/state-practice-authority.ts. ' +
+            'Hand-authored posts in content/blog/ cite this vintage as a literal ' +
+            '("AANP, 2026"), so a vintage change must update them too: grep ' +
+            'content/blog for "AANP", because only some of those posts sit in a ' +
+            'test that checks the vintage. The CE hub post is generated; rerun ' +
+            'its generator (see lib/blog-ceu-guide.ts) instead of editing it. ' +
             'Moves whenever a state legislature acts, so re-check each session. ' +
             'lib/state-practice-authority.ts holds the per-state classifications ' +
             'this count must agree with: change a state there and this value, ' +

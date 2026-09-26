@@ -236,7 +236,7 @@ export async function GET(req: Request) {
           updateData.salaryPeriod = 'year';
           const dispMin = `$${Math.round(min / 1000)}k`;
           const dispMax = `$${Math.round(max / 1000)}k`;
-          updateData.displaySalary = `${dispMin} - ${dispMax}/yr`;
+          updateData.displaySalary = `${dispMin} to ${dispMax}/yr`;
           stats.salaryUpdated++;
           fieldsUpdated++;
         }

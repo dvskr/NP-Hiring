@@ -317,7 +317,7 @@ const faqData = [
   // specialization — an equally uncited figure left standing next to the
   // one that was deleted. The parenthetical is gone from the answer; the
   // table it came from is still on the page and is now labelled.
-  { q: `How can I increase my ${brand.niche.short} salary?`, a: 'Top strategies include specializing in high-demand areas such as acute care, emergency, or psychiatric-mental health; practicing in a Full Practice Authority state so that independent contract, telehealth, and practice-ownership work are open to you at all; modelling private practice against your own visit volume and overhead rather than a headline range; working in rural or underserved areas for loan repayment incentives; and always negotiating total compensation. The specialty premiums shown on this page are our own estimates from posted roles, so treat them as a hypothesis to test against real offers rather than a number to expect.' },
+  { q: `How can I increase my ${brand.niche.short} salary?`, a: 'Top strategies include specializing in high-demand areas such as acute care, emergency, or psychiatric-mental health; practicing where the rules of your state open independent contract, telehealth, and practice-ownership work to you (a Full Practice classification alone does not settle it, because several of those states first require a transition period); modelling private practice against your own visit volume and overhead rather than a headline range; working in rural or underserved areas for loan repayment incentives; and always negotiating total compensation. The specialty premiums shown on this page are our own estimates from posted roles, so treat them as a hypothesis to test against real offers rather than a number to expect.' },
   // SECOND PASS: "typically earn 20-50% more than permanent positions" and
   // "$150,000 to $250,000+" were both uncited. A locum rate is also not
   // comparable to a salary without pricing the benefits, malpractice, and
@@ -803,17 +803,25 @@ export default async function SalaryGuidePage() {
                 <div style={{ padding: '14px 16px', borderRadius: '14px', background: '#FDF2F8', border: '1px solid #FBCFE8' }}>
                   <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#BE185D', margin: '0 0 8px' }}>✓ Full Practice Authority</h4>
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '11.5px', color: '#5A4A42' }}>
+                    {/* The panels describe the TIERS, so each carries the
+                        within-tier caveat the verified per-state details
+                        demand: "Full clinical independence", "Collaborating
+                        physician required first" and "Physician oversight
+                        where restricted" were false for the transition
+                        states, for Wisconsin's dentist collaborator and the
+                        routes out of an agreement, and for Virginia, South
+                        Carolina and Michigan. The PDF mirrors these lines. */}
                     <li style={{ marginBottom: '3px' }}>• Own and bill under your own practice</li>
                     <li style={{ marginBottom: '3px' }}>• Independent 1099 and telehealth work</li>
-                    <li>• Full clinical independence</li>
+                    <li>• Several states first require a transition period</li>
                   </ul>
                 </div>
                 <div style={{ padding: '14px 16px', borderRadius: '14px', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)' }}>
                   <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#64748B', margin: '0 0 8px' }}>Restricted / Reduced</h4>
                   <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '11.5px', color: '#5A4A42' }}>
-                    <li style={{ marginBottom: '3px' }}>• Collaborating physician required first</li>
+                    <li style={{ marginBottom: '3px' }}>• Most require an agreement, supervision or delegation first</li>
                     <li style={{ marginBottom: '3px' }}>• That agreement is usually a paid one</li>
-                    <li>• Physician oversight where restricted</li>
+                    <li>• Several offer a route out after a set amount of experience</li>
                   </ul>
                 </div>
               </div>

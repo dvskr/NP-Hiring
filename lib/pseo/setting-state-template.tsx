@@ -45,7 +45,7 @@ import CategoryHero from '@/components/CategoryHero';
 import CategoryFAQ from '@/components/CategoryFAQ';
 import { type CategorySlug } from './category-faq-data';
 import { Job } from '@/lib/types';
-import { PseoPageViewTracker } from '@/components/analytics/ViewTrackers';
+import { JobListViewTracker, PseoPageViewTracker } from '@/components/analytics/ViewTrackers';
 import {
   SettingConfig,
   SETTING_CONFIGS,
@@ -116,6 +116,16 @@ interface SettingStateGateRow {
 
 /** Listings per page; the count drives the pagination controls. */
 const PAGE_SIZE = 10;
+
+/**
+ * GA4 item_list_name for the listings on every category x state page. The
+ * view_item_list impression and each card's select_item read this one
+ * constant, because GA4 joins a click to its impression on the name alone.
+ * One name for the whole template rather than one per page, so the item-list
+ * reports keep a single row for this surface instead of one per category and
+ * state; both are already on the pseo_page_view event this page sends.
+ */
+const CATEGORY_STATE_LIST_NAME = 'Category State Jobs';
 
 /** Pills shown in the "more job types" row. */
 const MAX_OTHER_SETTING_PILLS = 12;
@@ -320,14 +330,12 @@ export async function buildSettingStateMetadata(
     readStoredIndexVerdict(config, stateSlug),
   ]);
   const basePath = `/jobs/${config.slug}/${stateSlug}`;
-  const env = getPracticeEnvironment(stateName);
   const title = buildSettingStateTitle({ titleLabel: config.label, stateName, total: facts.total });
   const description = buildSettingStateDescription({
     label: config.label,
     slug: config.slug,
     stateName,
     facts,
-    authorityDescription: env?.authorityDescription ?? null,
     statsAsOf: facts.computedAt,
   });
   const indexable = resolveSettingStateIndexable({
@@ -593,6 +601,13 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
         state={stateName!}
         jobCount={facts.total}
       />
+      {/* indexOffset={skip} matches the cards' listIndex={skip + i}, so a
+          card's impression and click report the same position. */}
+      <JobListViewTracker
+        jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))}
+        listName={CATEGORY_STATE_LIST_NAME}
+        indexOffset={skip}
+      />
 
       {/* P2 #19: visible, linked breadcrumb trail.
           CategoryHero's own `breadcrumbs` prop is deliberately empty below:
@@ -660,8 +675,10 @@ export default async function SettingStatePage({ settingKey, stateSlug, page }: 
               ) : (
                 <>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                    {jobs.map((job: Job) => (
-                      <JobCard key={job.id} job={job} />
+                    {/* Absolute position (skip + i): page 2 continues the
+                        count from page 1 rather than restarting it. */}
+                    {jobs.map((job: Job, i: number) => (
+                      <JobCard key={job.id} job={job} listName={CATEGORY_STATE_LIST_NAME} listIndex={skip + i} />
                     ))}
                   </div>
 

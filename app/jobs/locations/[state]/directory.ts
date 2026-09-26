@@ -8,10 +8,13 @@
  * LINK and which it may only MENTION.
  *
  * The gating arithmetic (buildStateCityDirectory, shouldRenderStateCityDirectory,
- * selectCityDetails, summarizeStateDirectories) is pure so it is unit-testable
- * without a database or a server-component render. The one loader at the
- * bottom (getStatesWithCityDirectory) is shared by the directory page (DIR-L6),
- * the locations hub and the state hub so every "does this state have a
+ * selectCityDetails, summarizeStateDirectories) and the per-jurisdiction
+ * tallies the locations hub and app/sitemap.ts build from grouped rows
+ * (countJobsByJurisdiction, tallyDirectoryCities) are pure so they are
+ * unit-testable without a database or a server-component render. The one
+ * loader at the bottom (getStatesWithCityDirectory) is shared by the
+ * directory page (DIR-L6) and the state hub; the locations hub runs the same
+ * build and gate over its own grouping, so every "does this state have a
  * directory" answer reads one predicate. Every importer of this module is a
  * server module (the loader pulls in the Prisma client).
  */
@@ -185,6 +188,123 @@ export function activeJobsInStateWhere(
   now?: Date,
 ): Prisma.JobWhereInput {
   return canonicalBucketWhere(stateBucketWhere(stateName, stateCode), now);
+}
+
+/* ─── Jurisdiction wording ────────────────────────────────────────────────── */
+
+/**
+ * Whether a STATE_CODES jurisdiction is the District of Columbia, keyed by
+ * its code so no second spelling of the name can drift from the table.
+ *
+ * STATE_CODES carries the 50 states and DC, so DC gets a hub tile, a city
+ * directory and a sitemap entry like any state. It is still not a state:
+ * copy that names a jurisdiction's kind ("a Full Practice Authority state",
+ * "the statewide feed") must word DC as a jurisdiction or a district, and a
+ * figure labelled "states" must leave it out. The site's own convention is
+ * "50 states and DC" or "51 jurisdictions" (app/press/page.tsx,
+ * app/tools/tools-registry.ts). Pure.
+ */
+export function isDistrictOfColumbia(stateName: string): boolean {
+  return STATE_CODES[stateName] === 'DC';
+}
+
+/* ─── Per-jurisdiction tallies from grouped rows ──────────────────────────── */
+
+/** One `groupBy(['state', 'stateCode'])` row of the canonical pool. */
+export interface StateGroupRow {
+  state: string | null;
+  stateCode: string | null;
+  count: number;
+}
+
+/**
+ * Canonical jobs per jurisdiction under the state hub's own bucket,
+ * `state = name OR stateCode = code` (stateBucketWhere), keyed by the
+ * STATE_CODES name. A tile on /jobs/locations therefore prints the number
+ * /jobs/state/<slug> counts, rather than only the rows stored under one
+ * spelling. The groups partition the pool, so summing every group that
+ * matches a jurisdiction counts each of its rows once; equality is exact,
+ * like the database comparison the page makes. Jurisdictions with no rows
+ * are omitted. Pure.
+ */
+export function countJobsByJurisdiction(rows: readonly StateGroupRow[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const [name, code] of Object.entries(STATE_CODES)) {
+    const total = rows
+      .filter((row) => row.state === name || row.stateCode === code)
+      .reduce((sum, row) => sum + row.count, 0);
+    if (total > 0) counts.set(name, total);
+  }
+  return counts;
+}
+
+/** One grouped row of the canonical pool that carries a city (app/sitemap.ts). */
+export interface DirectoryGroupRow {
+  city: string | null;
+  state: string | null;
+  /** Present on the code-half grouping only. */
+  stateCode?: string | null;
+  count: number;
+  /** Newest updatedAt in the group, for the sitemap lastmod. */
+  newest: Date | null;
+}
+
+/** A jurisdiction's city rows as the directory page groups them. */
+export interface JurisdictionCityRows {
+  /** One row per stored city spelling, counts summed across groups. */
+  rows: CityJobRow[];
+  newest: Date | null;
+}
+
+/**
+ * City rows per jurisdiction under the directory page's own bucket,
+ * `state = name OR stateCode = code`, keyed by the STATE_CODES name, so the
+ * sitemap feeds buildStateCityDirectory the rows the page itself groups.
+ *
+ * `byName` is a (city, state) grouping and covers the name half; its state is
+ * trimmed, as summarizeStateDirectories does. `byCode` is a
+ * (city, state, stateCode) grouping of rows carrying a jurisdiction code and
+ * adds the code half, skipping every group whose trimmed state already
+ * equals that jurisdiction's name because `byName` counted it. Without the
+ * code half, rows stored under the right code but a variant state spelling
+ * ("DC" or "Washington DC" for the District of Columbia) count on the page
+ * and nowhere else, and the page can index a directory the sitemap never
+ * lists. Pure.
+ */
+export function tallyDirectoryCities(
+  byName: readonly DirectoryGroupRow[],
+  byCode: readonly DirectoryGroupRow[] = [],
+): Map<string, JurisdictionCityRows> {
+  const nameByCode = new Map(Object.entries(STATE_CODES).map(([name, code]) => [code, name]));
+  const jurisdictions = new Set(Object.keys(STATE_CODES));
+  const cityCounts = new Map<string, Map<string, number>>();
+  const newest = new Map<string, Date>();
+  const add = (stateName: string, row: DirectoryGroupRow): void => {
+    if (!row.city) return;
+    const cities = cityCounts.get(stateName) ?? new Map<string, number>();
+    cities.set(row.city, (cities.get(row.city) ?? 0) + row.count);
+    cityCounts.set(stateName, cities);
+    const seen = newest.get(stateName);
+    if (row.newest && (!seen || row.newest > seen)) newest.set(stateName, row.newest);
+  };
+  for (const row of byName) {
+    const stateName = row.state?.trim();
+    if (stateName && jurisdictions.has(stateName)) add(stateName, row);
+  }
+  for (const row of byCode) {
+    const stateName = row.stateCode ? nameByCode.get(row.stateCode) : undefined;
+    if (!stateName || row.state?.trim() === stateName) continue;
+    add(stateName, row);
+  }
+  return new Map(
+    [...cityCounts].map(([stateName, cities]): [string, JurisdictionCityRows] => [
+      stateName,
+      {
+        rows: [...cities].map(([city, count]) => ({ city, count })),
+        newest: newest.get(stateName) ?? null,
+      },
+    ]),
+  );
 }
 
 /* ─── Per-city card facts (DIR-L2, DIR-L4) ────────────────────────────────── */

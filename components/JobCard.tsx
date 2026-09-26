@@ -51,13 +51,20 @@ interface JobCardProps {
    * tracks nothing, which is the honest outcome: a guessed list name would
    * silently corrupt the click-through rate the event exists to measure.
    *
-   * No render site passes them yet, so select_item is currently emitted
-   * nowhere. The first surface to wire them should be /jobs, whose
-   * impression already exists: pass JOBS_BOARD_LIST_NAME from
-   * components/analytics/ViewTrackers and the map index from
-   * app/jobs/JobsPageClient. That index is page-local, which is the right
-   * one, because trackJobListView numbers its items from zero within the
-   * same page slice.
+   * Every list that renders this card passes both, and each list surface
+   * mounts a view_item_list under the same name (/jobs mounts its impression
+   * in app/jobs/page.tsx, and in app/jobs/JobsPageClient.tsx for rows only
+   * the client fetched). tests/regressions/ga-list-clicks.test.ts fails on
+   * a list render that omits them and names the single-card renders, such
+   * as the post-job preview, that must not pass them.
+   *
+   * listIndex is the card's absolute position across pages, so page 2
+   * continues from page 1 instead of restarting at zero, and it must equal
+   * the impression tracker's indexOffset plus the card's position on the
+   * page. A surface that renders listIndex={skip + i} mounts its
+   * JobListViewTracker with indexOffset={skip} (cardListOffset on /jobs),
+   * so view_item_list and select_item report the same position for the
+   * same card. ga-list-clicks.test.ts pins that the two offsets match.
    */
   listName?: string;
   listIndex?: number;

@@ -52,6 +52,7 @@ import {
   buildStateCityDirectory,
   cityLinkResolves,
   shouldRenderStateCityDirectory,
+  tallyDirectoryCities,
 } from '@/app/jobs/locations/[state]/directory'
 // Name to code map shared with the directory page and the locations hub.
 import { STATE_CODES } from '@/lib/pseo/setting-state-config'
@@ -321,10 +322,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Shared filter: published, not expired, and not a repeated dead link (S6).
   // Computed per-request (B28) so `now` is never stale on warm instances.
-  // Used by the company block (the profile page gates on this same helper
-  // until W2-COMPANY moves it onto the canonical predicate) and the sanity
-  // floor; the pSEO gates count with canonicalBucketWhere, which today is
-  // numerically identical (both carry GLOBAL_EXCLUSIONS).
+  // Used by the company block and the sanity floor. The company profile's
+  // robots and 404 gate read this same helper on purpose (thin-spec-4 5.5
+  // keeps robots, this sitemap and the 404 gate on one count); the pSEO gates
+  // count with canonicalBucketWhere, and the middleware's company 410 gate
+  // re-implements those canonical semantics at the edge. The two predicates
+  // are numerically identical today (both carry GLOBAL_EXCLUSIONS).
   const ACTIVE_JOB_WHERE = activeIndexableJobWhere()
 
   // GSC Fix (P1.4): the newest job date, or "now" as a safe live fallback,
@@ -577,45 +580,61 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // P2 #12: per-state city directories. A SEPARATE groupBy from
     // `topCities` below (that one is capped and volume-ordered; a truncated
     // tail would understate `trackedCities`, the render gate's input).
-    // Grouped and gated like app/jobs/locations/page.tsx: canonical
-    // predicate, STATE_CODES, cityLinkResolves, shouldRenderStateCityDirectory,
-    // plus the shouldIndexStateCityDirectory index gate the page robots read.
-    // The page matches `state = name OR stateCode = code`, a superset, so a
-    // state that qualifies here always renders there.
+    // Gated the way app/jobs/locations/[state]/page.tsx gates itself:
+    // canonical predicate, STATE_CODES, cityLinkResolves,
+    // shouldRenderStateCityDirectory, plus the shouldIndexStateCityDirectory
+    // index gate the page robots read.
+    //
+    // The page counts `state = name OR stateCode = code`. The first grouping
+    // is the name half; the second supplies the code half, which the name
+    // grouping alone never saw. Without it a jurisdiction whose rows store a
+    // variant state spelling under the right code (District of Columbia rows
+    // stored as "DC" or "Washington DC") could render and index on the page
+    // while this sitemap left it out. tallyDirectoryCities merges the halves
+    // without counting a row twice.
     const directoryCityRows = await prisma.job.groupBy({
       by: ['city', 'state'],
       where: canonicalBucketWhere({ city: { not: null }, state: { not: null } }, now),
       _count: { city: true },
       _max: { updatedAt: true },
     });
-    const directoryRowsByState = new Map<string, { city: string; count: number }[]>();
-    const directoryLastmod = new Map<string, Date>();
-    for (const row of directoryCityRows) {
-      if (!row.city || !row.state) continue;
-      const stateName = row.state.trim();
-      const bucket = directoryRowsByState.get(stateName);
-      const entry = { city: row.city, count: row._count.city };
-      if (bucket) bucket.push(entry);
-      else directoryRowsByState.set(stateName, [entry]);
-      const seen = directoryLastmod.get(stateName);
-      if (row._max.updatedAt && (!seen || row._max.updatedAt > seen)) {
-        directoryLastmod.set(stateName, row._max.updatedAt);
-      }
-    }
-    // US_STATES keeps non-US groupings ("British Columbia") out.
+    const directoryCodeRows = await prisma.job.groupBy({
+      by: ['city', 'state', 'stateCode'],
+      where: canonicalBucketWhere({ city: { not: null }, stateCode: { in: Object.values(STATE_CODES) } }, now),
+      _count: { city: true },
+      _max: { updatedAt: true },
+    });
+    const directoryCities = tallyDirectoryCities(
+      directoryCityRows.map((row) => ({
+        city: row.city,
+        state: row.state,
+        count: row._count.city,
+        newest: row._max.updatedAt,
+      })),
+      directoryCodeRows.map((row) => ({
+        city: row.city,
+        state: row.state,
+        stateCode: row.stateCode,
+        count: row._count.city,
+        newest: row._max.updatedAt,
+      })),
+    );
+    // US_STATES (the 50 states plus the District of Columbia, the same
+    // jurisdictions as STATE_CODES) is a belt-and-braces guard on the slug.
     const usStateSlugs = new Set(US_STATES);
     stateCityDirectoryPages = Object.entries(STATE_CODES)
       .map(([stateName, stateCode]) => {
         const slug = slugify(stateName);
         if (!usStateSlugs.has(slug)) return null;
-        const directory = buildStateCityDirectory(directoryRowsByState.get(stateName) ?? [], {
+        const cities = directoryCities.get(stateName);
+        const directory = buildStateCityDirectory(cities?.rows ?? [], {
           canLink: (row) => cityLinkResolves(row.city, stateCode),
         });
         if (!shouldRenderStateCityDirectory(directory)) return null;
         if (!shouldIndexStateCityDirectory({ linkableCities: directory.linkable.length })) return null;
         return {
           url: `${baseUrl}/jobs/locations/${slug}`,
-          lastModified: directoryLastmod.get(stateName) ?? latestJobDate,
+          lastModified: cities?.newest ?? latestJobDate,
           changeFrequency: 'weekly' as const,
           priority: 0.7,
         };

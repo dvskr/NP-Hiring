@@ -46,13 +46,14 @@ import { getNeighboringStates } from '@/lib/pseo/neighboring-states';
 import { shouldIndexStateCityDirectory } from '@/lib/pseo/render-gate';
 import { resolveStateSlug, stateToSlug, STATE_CODES } from '@/lib/pseo/setting-state-config';
 import { getGatedCitySalaries, type GatedSalary } from '@/lib/salary-analytics';
-import { getStatePracticeAuthority } from '@/lib/state-practice-authority';
+import { getAuthorityLabel, getStatePracticeAuthority } from '@/lib/state-practice-authority';
 import {
   activeJobsInStateWhere,
   buildCitySlug,
   buildStateCityDirectory,
   cityLinkResolves,
   getStatesWithCityDirectory,
+  isDistrictOfColumbia,
   selectCityDetails,
   shouldRenderStateCityDirectory,
   stateBucketWhere,
@@ -433,6 +434,9 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
   ]);
 
   const authority = getStatePracticeAuthority(stateName);
+  // The District of Columbia has a directory like any state but is not one:
+  // every word below that names the jurisdiction's kind says so.
+  const isDistrict = isDistrictOfColumbia(stateName);
   const canonicalPath = `/jobs/locations/${canonicalSlug}`;
   const howToUse = buildDirectoryHowToUse(MIN_CITY_JOBS_FOR_LINK);
 
@@ -592,13 +596,18 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
                   {rankedCities[0].name} leads with {formatCount(rankedCities[0].count, 'opening')}.{' '}
                 </>
               )}
-              {/* Only the authority LABEL is reused here. The long `details`
-                  prose already renders verbatim on /jobs/state/<state>, so
-                  repeating it would make these two URLs near-duplicates. */}
+              {/* Only the AANP tier is reused here. The long `details` prose
+                  already renders verbatim on /jobs/state/<state>, so repeating
+                  it would make these two URLs near-duplicates. The tier is
+                  attributed and carries no rule: it used to read "is a Full
+                  Practice Authority state, which shapes how much supervision
+                  a role carries", a claim a tier cannot make for any one
+                  state (transition periods, practice agreements and routes
+                  out of an agreement all differ within a tier). */}
               {authority && (
                 <>
-                  {stateName} is a <strong>{authority.description}</strong> state, which shapes how much
-                  supervision a role in any of these cities carries.{' '}
+                  AANP classifies {stateName} as a <strong>{getAuthorityLabel(authority.authority)}</strong> {isDistrict ? 'jurisdiction' : 'state'};
+                  its hub page lists what {stateName} itself requires.{' '}
                 </>
               )}
               {howToUse}
@@ -682,7 +691,7 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
             <section style={{ marginBottom: '40px' }} aria-labelledby="across-state-heading">
               <ClayStyles />
               <div style={{ marginBottom: '20px' }}>
-                <p style={sectionEyebrow}>Statewide</p>
+                <p style={sectionEyebrow}>{isDistrict ? 'Districtwide' : 'Statewide'}</p>
                 <h2 id="across-state-heading" style={sectionHeading}>
                   Across {stateName}
                 </h2>
@@ -719,8 +728,10 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
                   salaryGuide={{ href: `/salary-guide/${canonicalSlug}`, label: `${stateName} salary guide`, renders: true }}
                   index={2}
                 />
+                {/* "Nearby directories", not "state directories": Maryland
+                    and Virginia list the District of Columbia among theirs. */}
                 {nearbySentence && (
-                  <ClayCard chip="Nearby" title="Nearby state directories" icon={Compass} index={3} desc={nearbySentence}>
+                  <ClayCard chip="Nearby" title="Nearby directories" icon={Compass} index={3} desc={nearbySentence}>
                     {/* The sentence above already carries each neighbour's city
                         count, so the tiles are navigation only: printing the
                         same figure twice on one card is boilerplate. */}
@@ -772,7 +783,7 @@ export default async function StateCityDirectoryPage({ params }: StateDirectoryP
                   All {stateName} {brand.niche.short} jobs
                 </h3>
                 <p style={{ fontSize: '12px', color: '#7A6A62', margin: 0, lineHeight: 1.5 }}>
-                  The statewide feed, including remote roles open to {stateName} licensees.
+                  The {isDistrict ? 'districtwide' : 'statewide'} feed, including remote roles open to {stateName} licensees.
                 </p>
               </div>
             </Link>

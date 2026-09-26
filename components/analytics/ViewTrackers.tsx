@@ -116,17 +116,26 @@ export function JobViewTracker({ job }: { job: TrackedJob }) {
 
 /**
  * Fires `view_item_list` (GA4) when a job list page mounts.
- * Pass a slim array of job data — it will track the first 20 items.
+ * Pass a slim array of job data. Only the first 20 items are reported (the
+ * cap lives in trackJobListView), so on a longer page the later rows' clicks
+ * have no impression to join.
+ *
+ * indexOffset is the absolute position of jobs[0], and must be the same
+ * offset the surface adds to each JobCard's listIndex (skip on a paginated
+ * hub, cardListOffset on the /jobs board). With it, the impression and the
+ * click for one card report the same position; without it, page 2 would
+ * report its impressions from 0 and its clicks from the page offset.
  */
-export function JobListViewTracker({ jobs, listName }: {
+export function JobListViewTracker({ jobs, listName, indexOffset = 0 }: {
   jobs: TrackedJob[];
   listName: string;
+  indexOffset?: number;
 }) {
   useEffect(() => {
     if (jobs.length === 0) return;
     const items: JobItem[] = jobs.map(j => buildTrackedJobItem(j));
-    trackJobListView(items, listName);
-  }, [jobs, listName]);
+    trackJobListView(items, listName, indexOffset);
+  }, [jobs, listName, indexOffset]);
 
   return null;
 }
@@ -140,9 +149,16 @@ export function JobListViewTracker({ jobs, listName }: {
  * so JOBS_BOARD_LIST_NAME must not cross that boundary. Keeping the name on
  * this side leaves it in exactly one place, and the click half of the pair
  * imports the constant directly (client to client).
+ *
+ * indexOffset is the board page's row offset, the same value JobsPageClient
+ * adds to each card's listIndex, so page 2's impressions start at 50 as its
+ * clicks do.
  */
-export function JobsBoardListViewTracker({ jobs }: { jobs: TrackedJob[] }) {
-  return <JobListViewTracker jobs={jobs} listName={JOBS_BOARD_LIST_NAME} />;
+export function JobsBoardListViewTracker({ jobs, indexOffset = 0 }: {
+  jobs: TrackedJob[];
+  indexOffset?: number;
+}) {
+  return <JobListViewTracker jobs={jobs} listName={JOBS_BOARD_LIST_NAME} indexOffset={indexOffset} />;
 }
 
 /**

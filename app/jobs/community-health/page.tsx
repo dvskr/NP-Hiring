@@ -79,6 +79,17 @@ const NOUN = labelNoun(SLUG, LABEL);
 const MID = labelSentence(LABEL);
 
 /**
+ * GA4 item_list_name for this page's listings. The view_item_list impression
+ * and every card's select_item both read this one constant, because GA4
+ * joins a click to its impression on the list name alone and two spellings
+ * would report a click-through rate of zero. The value is the name the
+ * impression has always sent, so earlier reports stay on the same row.
+ * Cards report their absolute position (skip + i), so a card on a later
+ * page continues the count from the page before it.
+ */
+const LIST_NAME = `Community Health ${brand.niche.short} Jobs`;
+
+/**
  * Category bucket. Slugs without a legacy keyword entry gate on the
  * precomputed categoryTags column so a sibling count never degrades to
  * "all published jobs" (same rule as lib/pseo/category-landing-template).
@@ -389,7 +400,7 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
           }}
         />
       )}
-      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName={`Community Health ${brand.niche.short} Jobs`} />
+      <JobListViewTracker jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))} listName={LIST_NAME} indexOffset={skip} />
 
       {/* HERO */}
       <CategoryHero
@@ -425,7 +436,7 @@ export default async function CommunityHealthJobsPage({ searchParams }: PageProp
             </div>
             {jobs.length > 0 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                {jobs.map((job: Job) => (<JobCard key={job.id} job={job} />))}
+                {jobs.map((job: Job, i: number) => (<JobCard key={job.id} job={job} listName={LIST_NAME} listIndex={skip + i} />))}
               </div>
             )}
             {isLowInventory && (<LowInventoryBlock total={facts.total} counts={exploreCounts} />)}

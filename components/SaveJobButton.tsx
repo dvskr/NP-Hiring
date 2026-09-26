@@ -14,10 +14,13 @@ import useSavedJobs from '@/lib/hooks/useSavedJobs';
 interface SaveJobButtonProps {
   jobId: string;
   /**
-   * Analytics-only job dimensions for the add_to_wishlist item. Optional
-   * because the job detail page still passes only jobId: until it forwards
-   * the rest, the event reports those dimensions as absent instead of
-   * carrying a stand-in. Nothing here affects what the button renders.
+   * Analytics-only job dimensions for the add_to_wishlist item. The job
+   * detail page forwards every one of them from the same row its view_item
+   * reports, so a save lines up with the view in GA4. They stay optional so
+   * a caller holding less than a full row reports the missing dimensions as
+   * absent instead of inventing a stand-in, and
+   * tests/regressions/ga-conversion-coverage.test.ts fails if a detail page
+   * render site drops one. Nothing here affects what the button renders.
    *
    * There is deliberately no salary prop. trackJobSave sends the item's
    * price as the event's monetary `value`, so forwarding a $120,000 listing
@@ -57,8 +60,8 @@ export default function SaveJobButton({
   // `title` is passed through undefined when the caller did not supply one,
   // and buildTrackedJobItem then drops item_name rather than sending the
   // empty string this button used to send. GA4 keys the item on item_id, so
-  // the save still joins the same job's view_item; the label reads
-  // "(not set)" until the detail page forwards the title it already has.
+  // a save from a caller without a title still joins the same job's
+  // view_item; only its label reads "(not set)".
   const trackedJob: TrackedJob = {
     id: jobId,
     title: jobTitle,

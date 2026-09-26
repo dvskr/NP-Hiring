@@ -462,6 +462,8 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
           where: { id },
           select: {
             isManuallyUnpublished: true,
+            isPublished: true,
+            expiresAt: true,
             description: true,
             descriptionSummary: true,
             minSalary: true,
@@ -491,10 +493,16 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
         if (existingPostedAt) {
           const ageMs = Date.now() - new Date(existingPostedAt).getTime();
           if (ageMs > MAX_JOB_AGE_MS) {
-            await prisma.job.update({
-              where: { id },
-              data: { isPublished: false },
-            });
+            // Skip the write when the row is already unpublished. It would
+            // change nothing but updatedAt, and deindex-expired reads a newer
+            // updatedAt as a removal it has not sent yet, so every ingest run
+            // that still sees the job would resend it to the search engines.
+            if (existing.isPublished) {
+              await prisma.job.update({
+                where: { id },
+                data: { isPublished: false },
+              });
+            }
             rejectedJobs.push({
               title: title,
               employer: null,
@@ -508,6 +516,18 @@ async function ingestFromSource(source: JobSource, options?: { chunk?: number; f
             expiredByAge++;
             return;
           }
+        }
+
+        // Past its own expiresAt (an undated job gets 30 days): leave the row
+        // alone. The job page and middleware already answer 410 on the date,
+        // every public listing, sitemap and feed filters on expiresAt too, and
+        // cleanupExpiredJobs (after the ingest cron, and in the twice-daily
+        // cleanup-expired cron) would unpublish a revived row again, so the
+        // revive changes nothing a visitor sees.
+        // It would only move updatedAt, which deindex-expired reads as a new
+        // removal to send.
+        if (existing.expiresAt && existing.expiresAt.getTime() < Date.now()) {
+          return;
         }
 
         // Within window: revive if it was unpublished, touch updatedAt.

@@ -113,7 +113,7 @@ describe('the category x state FAQ array is the FAQPage graph', () => {
         const stateFaqs: FaqEntry[] = buildSettingStateFaqs({ label: 'Remote', stateName: 'Texas', slug: 'remote', facts, physicianAnswer, nlcAnswer });
         expect(stateFaqs.map((f) => f.question)).toEqual([
             'How many Remote NP jobs are open in Texas?',
-            'Do NPs need a collaborating physician in Texas?',
+            'Do NPs need a collaborating or supervising physician in Texas?',
             'Is Texas part of the Nurse Licensure Compact?',
         ]);
 

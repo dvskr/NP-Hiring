@@ -12,6 +12,22 @@
  *     never invents a person. When a real reviewer is contracted, the
  *     same config drives the named credit here, the blog bylines, and
  *     the Person schema.
+ *   - The disclosures under "Where our numbers come from" describe other
+ *     surfaces, so each must match what those surfaces print today and may
+ *     never promise less than they print. The metro-guide paragraph is a
+ *     promise about lib/metro-data.ts, and
+ *     tests/regressions/p1-eeat-editorial-trust.test.ts checks it against
+ *     the records themselves: if a guide ever quotes a processing time, a
+ *     fee, a cost-of-living or population figure, a ranking or a shortage
+ *     designation again, that test fails and this paragraph must widen with
+ *     it. The same test holds the guides' pay pointers to this paragraph's
+ *     account of the pay card, so the two cannot contradict. That card has
+ *     three branches: a local median only with enough posted pay from enough
+ *     employers; below that, when at least one listing states pay, the cited
+ *     national median as a reference; and nothing at all when no listing
+ *     states pay (postedPaySentence in components/seo/pseo/PostedPay.tsx
+ *     returns null). The paragraph names the national reference only for
+ *     the middle branch.
  */
 import { Metadata } from 'next';
 import Link from 'next/link';
@@ -221,13 +237,35 @@ export default function EditorialPolicyPage() {
                         boards change the details without notice.
                     </p>
                     <p style={{ marginTop: '10px' }}>
-                        Two other surfaces do show figures of this kind, and we want to be exact about
-                        what they are. Our licensure checker lists <em>national</em> ballpark ranges for
-                        things like certification-exam and DEA registration costs, and our metro market
-                        pages describe a typical board processing window. Those are orientation figures
-                        meant to set expectations, not verified state-specific quotes, and they are not
-                        in the source table above. Confirm any number you plan to budget or schedule
-                        around with your own board before you rely on it.
+                        Our licensure checker follows the same rule. For certification-exam and DEA
+                        registration fees, license fees and renewal cycles, CE hours, and processing
+                        times, it names the body that sets each one instead of quoting a figure, because
+                        those figures change. Confirm any number you plan to budget or schedule around
+                        with that body before you rely on it.
+                    </p>
+                    <p style={{ marginTop: '10px' }}>
+                        Our metro market pages carry hand-written local guides, and those guides quote
+                        no board processing times, fees, cost-of-living or population figures, pay
+                        figures, or market rankings. They also do not say which areas hold a federal
+                        shortage designation, because loan repayment eligibility depends on the exact
+                        practice site: check the street address with HRSA&apos;s Find Shortage Areas by
+                        Address tool and the county in HPSA Find, and confirm eligibility with the
+                        employer. Their licensing statements, including the hour and year thresholds
+                        some states set, restate our per-state practice-authority entries, which were
+                        checked against each state&apos;s primary sources, plus two rules read at the
+                        source: the Massachusetts law that sets its transition to full practice
+                        authority, and the federal regulation on full practice authority at VA
+                        facilities. What they say about multistate nursing licenses follows the Nurse
+                        Licensure Compact roster that our license guides check against NCSBN, and the
+                        compact&apos;s own scope: it covers RN and LPN licenses, never APRN licenses. The
+                        figures a metro page does show come from three places: live job
+                        counts and other listing tallies and, when enough listings from enough
+                        employers state pay, a posted-pay median and how it compares with the statewide
+                        one, all computed from listings on this board; the cited national median from
+                        the table above, shown as a reference point when some local listings state pay
+                        but too few for a local median; and the practice-authority entries, meaning the
+                        AANP classification described above and the licensing thresholds in each
+                        state&apos;s entry.
                     </p>
                 </Section>
 

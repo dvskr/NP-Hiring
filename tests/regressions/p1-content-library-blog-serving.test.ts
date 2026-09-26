@@ -75,8 +75,8 @@ vi.mock('@supabase/supabase-js', () => ({
     createClient: () => ({ from: () => makeQuery() }),
 }));
 
-import { getPostBySlug, getAllPublishedSlugs } from '@/lib/blog';
-import { getAllLicenseGuideSlugs, LICENSE_GUIDE_STATES } from '@/lib/blog-license-guides';
+import { getPostBySlug, getAllPublishedSlugs, isSupersededLicenseGuideRow } from '@/lib/blog';
+import { getAllLicenseGuideSlugs, LICENSE_GUIDE_REVIEWED_AT, LICENSE_GUIDE_STATES } from '@/lib/blog-license-guides';
 import { getAllMdxPosts } from '@/lib/blog-mdx-posts';
 import { LICENSE_GUIDE_SERIES_PUBLISHED } from '@/config/niche/content-map';
 
@@ -111,6 +111,47 @@ describe('license-guide fallback vs editorial control', () => {
         }];
         const post = await getPostBySlug(SLUG);
         expect(post!.title).toBe('Editorially rewritten New Mexico guide');
+    });
+
+    /**
+     * 2026-09 practice-authority pass: a mirror synced before the series
+     * review (the sync stamps reviewed_at with LICENSE_GUIDE_REVIEWED_AT)
+     * would keep serving the tier-derived physician claims the pass removed
+     * until someone reruns the sync against production. A row dated before
+     * the review is superseded; one dated on or after it still wins.
+     */
+    it('a published row reviewed before the series review is superseded by the generated guide', async () => {
+        db.rows = [{
+            slug: SLUG,
+            status: 'published',
+            id: 'row-1',
+            title: 'Stale mirror',
+            content: 'No collaborative or supervising physician is required in New Mexico.',
+            reviewed_at: '2026-07-29T00:00:00+00:00',
+        }];
+        const post = await getPostBySlug(SLUG);
+        expect(post!.id).toBe('license-guide-new-mexico');
+        expect(post!.reviewed_at).toBe(LICENSE_GUIDE_REVIEWED_AT);
+        expect(post!.content).not.toContain('No collaborative or supervising physician is required');
+    });
+
+    it('a published row reviewed on or after the series review still wins', async () => {
+        db.rows = [{
+            slug: SLUG,
+            status: 'published',
+            id: 'row-1',
+            title: 'Reviewed edit',
+            content: 'db copy',
+            reviewed_at: LICENSE_GUIDE_REVIEWED_AT,
+        }];
+        expect((await getPostBySlug(SLUG))!.title).toBe('Reviewed edit');
+    });
+
+    it('supersession applies to license-guide slugs only', () => {
+        expect(isSupersededLicenseGuideRow({ slug: SLUG, reviewed_at: '2026-07-29T00:00:00Z' })).toBe(true);
+        expect(isSupersededLicenseGuideRow({ slug: SLUG, reviewed_at: null })).toBe(false);
+        expect(isSupersededLicenseGuideRow({ slug: SLUG, reviewed_at: 'not a date' })).toBe(false);
+        expect(isSupersededLicenseGuideRow({ slug: 'np-salary-guide', reviewed_at: '2020-01-01T00:00:00Z' })).toBe(false);
     });
 
     // Authored content/blog/*.mdx guides (np-salary-guide among them) now

@@ -54,6 +54,28 @@ const REMOTE_LOCATION_RE = /\bremote\b|\bwork[\s-]?from[\s-]?home\b|\bwfh\b|\ban
 // 'flexible' alone describes a schedule, not a work mode — dropped.
 const HYBRID_LOCATION_RE = /\bhybrid\b|\bpartial(?:ly)?[\s-]remote\b/i;
 
+// District of Columbia abbreviations. Sources often write the District as
+// "D.C.", but no pattern in parseLocation can read the dotted form: the
+// code patterns need two bare letters and the name patterns reject dots.
+// "Washington, D.C." therefore fell through to the state-name scan, which
+// matched "Washington" and filed the listing under Washington state with no
+// city, and "Washington D.C." (no comma) was skipped there as a compound
+// city name and lost. Rewriting the token to the bare code "DC" lets the
+// existing "City, ST" and state-code patterns resolve it to the District.
+// Covers "D.C.", "D.C", "D. C." in any case; the lookbehind keeps it from
+// matching inside a longer dotted abbreviation.
+const DOTTED_DC_RE = /(?<![\w.])D\.\s?C\b\.?/gi;
+// The bare state-code pattern reads upper-case pairs only (so ordinary
+// words are never taken for codes), which lost "washington dc" typed in
+// lower case. A "dc" directly after "Washington" is the District's code.
+const WASHINGTON_LOWERCASE_DC_RE = /\b(washington\s*,?\s*)dc\b/gi;
+
+function normalizeDistrictOfColumbia(text: string): string {
+  return text
+    .replace(DOTTED_DC_RE, 'DC')
+    .replace(WASHINGTON_LOWERCASE_DC_RE, '$1DC');
+}
+
 /**
  * Parse a location string into structured data
  */
@@ -105,6 +127,8 @@ export function parseLocation(location: string): ParsedLocation {
     // Remove "HQ:", "Headquarters:"
     .replace(/\b(hq|headquarters)\s*[:]\s*/gi, '')
     .trim();
+
+  cleaned = normalizeDistrictOfColumbia(cleaned);
 
   // Handle Workday "US-ST-City" format → "City, ST" (BEFORE stripping "US")
   cleaned = cleaned.replace(/^US-([A-Z]{2})-(.+)$/i, '$2, $1');

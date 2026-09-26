@@ -16,6 +16,17 @@
 // oncology, cardiology, dermatology, orthopedic, aesthetics, pain-management,
 // anesthesia, midwifery). That list is the art commission list.
 //
+// It cannot be closed from existing files. A full-size review on 2026-09-23
+// of every unported reference-board file and every unreferenced file under
+// public/images found nothing fit for those twelve heroes: the candidates
+// were lone benefit icons, flat vector art outside the hero family, scenes
+// with baked text, or psych-only scenes (the text and psych rejects are now
+// refused by DENIED in scripts/port-category-art.mjs). A commissioned hero
+// must join the family on disk: a watercolor scene of an NP at work on a
+// flat pastel ground, or an isometric clay diorama, 1024px square, with no
+// text, badge, logo or stated credential, and a subject that shows the
+// specialty itself rather than a generic clinic.
+//
 // Navigation layer (one destination, one icon, everywhere):
 //   - NAV_ICONS: clay tile per destination slug, plus 'salary' and 'location'.
 //   - CATEGORY_GLYPHS: lucide icon name for every taxonomy slug without a tile.

@@ -19,6 +19,7 @@ import {
     shouldRenderStateCityDirectory,
 } from '@/app/jobs/locations/[state]/directory';
 import JobCard from '@/components/JobCard';
+import { JobListViewTracker } from '@/components/analytics/ViewTrackers';
 import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 import CategoryHero, { crumbsFromSchema } from '@/components/CategoryHero';
 import CategoryFAQ from '@/components/CategoryFAQ';
@@ -85,6 +86,15 @@ export function generateStaticParams(): Array<{ slug: string }> {
 }
 
 const NP = brand.niche.short;
+
+/**
+ * GA4 item_list_name for the listings on every city hub. The view_item_list
+ * impression and each card's select_item read this one constant, because
+ * GA4 joins a click to its impression on the name alone. One name for every
+ * city rather than one per city, so the item-list reports keep a single row
+ * for this surface instead of splitting it across thousands of cities.
+ */
+const CITY_HUB_LIST_NAME = 'City Hub Jobs';
 
 /* State mappings (mirrored by lib/pseo/listing-gates-edge.ts for the middleware ruling) */
 
@@ -739,6 +749,10 @@ export default async function CityJobsPage({ params }: CityPageProps) {
             <ClayStyles />
             {/* Breadcrumb Schema */}
             <BreadcrumbSchema items={schemaCrumbs} />
+            <JobListViewTracker
+                jobs={jobs.map((j: Job) => ({ id: j.id, title: j.title, employer: j.employer }))}
+                listName={CITY_HUB_LIST_NAME}
+            />
 
             {/* ItemList: recovers Google Jobs eligibility on the generic city
                 surface. Mirrors the schema block in lib/pseo/category-city-template.tsx;
@@ -820,8 +834,9 @@ export default async function CityJobsPage({ params }: CityPageProps) {
                         ) : (
                             <>
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                                    {jobs.map((job: Job) => (
-                                        <JobCard key={job.id} job={job} />
+                                    {/* One unpaginated slice, so the map index is the position. */}
+                                    {jobs.map((job: Job, i: number) => (
+                                        <JobCard key={job.id} job={job} listName={CITY_HUB_LIST_NAME} listIndex={i} />
                                     ))}
                                 </div>
 

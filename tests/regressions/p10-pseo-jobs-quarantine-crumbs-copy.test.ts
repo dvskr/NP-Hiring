@@ -7,10 +7,14 @@
  *      BreadcrumbList JSON-LD declares, as links
  *   3. state hub count copy agrees in number ("1 job", not "1 jobs")
  *   4. the branded 404 page carries its own title
+ *   5. the locations index never counts the District of Columbia as a state
  */
 import fs from 'fs';
 import path from 'path';
-import { describe, it, expect } from 'vitest';
+import React from 'react';
+import { describe, it, expect, vi } from 'vitest';
+import { brand } from '@/config/brand';
+import { prisma } from '@/lib/prisma';
 import { GLOBAL_EXCLUSIONS } from '@/lib/filters';
 import {
     withListingQuarantine,
@@ -18,8 +22,10 @@ import {
     PUBLISHED_LISTING_WHERE,
 } from '@/lib/pseo/listing-where';
 import { canonicalActiveJobWhere, canonicalBucketWhere } from '@/lib/canonical-counts';
-import { crumbsFromSchema, normalizeCrumbs } from '@/components/CategoryHero';
+import { STATE_CODES } from '@/lib/pseo/setting-state-config';
+import CategoryHero, { crumbsFromSchema, normalizeCrumbs } from '@/components/CategoryHero';
 import { metadata as notFoundMetadata } from '@/app/not-found';
+import LocationsPage from '@/app/jobs/locations/page';
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -68,7 +74,6 @@ describe('1. profession quarantine on pSEO listing predicates', () => {
     for (const rel of [
         'app/jobs/city/[slug]/page.tsx',
         'app/jobs/metro/[slug]/page.tsx',
-        'app/jobs/locations/page.tsx',
     ]) {
         it(`${rel} carries no bare isPublished predicate`, () => {
             const src = read(rel);
@@ -77,6 +82,31 @@ describe('1. profession quarantine on pSEO listing predicates', () => {
             expect(src).toMatch(/\.\.\.PUBLISHED_LISTING_WHERE/);
         });
     }
+
+    /*
+     * WHY THIS PIN CHANGED (indexing-policy follow-up, 2026-09): the
+     * locations index counted its state tiles, remote banner and hero total
+     * on the published-only spread base, which carries the quarantine but
+     * not the expiry or dead-link gates, while the state hubs and
+     * /jobs/remote those tiles link to count with canonicalBucketWhere. A
+     * tile could promise more jobs than its destination listed. The property
+     * this case exists for, that no listing count skips the profession
+     * quarantine, still holds: canonicalBucketWhere carries every
+     * GLOBAL_EXCLUSIONS veto (pinned behaviourally below) plus the two gates
+     * the old base lacked. Every query is checked, not just the first, so a
+     * count added later with a bare where clause fails here.
+     */
+    it('app/jobs/locations/page.tsx routes every Job query through canonicalBucketWhere', () => {
+        const rel = 'app/jobs/locations/page.tsx';
+        const src = read(rel);
+        expect(src).not.toMatch(/isPublished: true/);
+        expect(src).not.toMatch(/PUBLISHED_LISTING_WHERE/);
+        expect(src).toContain("import { canonicalBucketWhere } from '@/lib/canonical-counts';");
+        const queries = src.match(/prisma\.job\.\w+\(\{[\s\S]{0,240}?where: [^\n]*/g) ?? [];
+        // State tiles, remote banner, top cities, hero total, directory rows.
+        expect(queries.length, `${rel} lost a Job query, so the loader moved`).toBeGreaterThanOrEqual(5);
+        for (const query of queries) expect(query, query).toContain('canonicalBucketWhere(');
+    });
 
     /*
      * WHY THIS PIN CHANGED (PLAN T0-1, thin-content state hub rewrite):
@@ -239,5 +269,99 @@ describe('4. branded 404 title', () => {
         expect(notFoundMetadata.robots).toEqual({ index: false, follow: true });
         expect(String(notFoundMetadata.title)).toMatch(/not found/i);
         expect(String(notFoundMetadata.description)).not.toMatch(/[–—]/);
+    });
+});
+
+/*
+ * The locations index builds its grid from STATE_CODES, the 50 states and
+ * the District of Columbia. With DC in the grid, stats.states.length counts
+ * a jurisdiction that is not a state: printed under "US state" or "States
+ * Hiring" it would read "51 US states" once every jurisdiction is hiring,
+ * and an ItemList sliced to 50 would then disagree with its own
+ * numberOfItems. The site's convention is "50 states and DC" or "51
+ * jurisdictions". Pinned on what the page emits: the loader runs against
+ * the Prisma mock and the returned element tree is read without rendering.
+ */
+describe('5. the locations index labels the District of Columbia truthfully', () => {
+    const DC = 'District of Columbia';
+    const ALL = Object.keys(STATE_CODES);
+    const STATES_ONLY = ALL.filter((name) => name !== DC);
+
+    type GroupByArgs = { by: readonly string[] };
+    interface ListItem { position: number; name: string; url: string }
+    interface CollectionSchema {
+        '@type': string;
+        description: string;
+        mainEntity: { numberOfItems: number; itemListElement: ListItem[] };
+    }
+    interface HeroStat { value: string; label: string }
+
+    /** Every element in the tree that `match` accepts, children first to last. */
+    function collect(node: unknown, match: (el: React.ReactElement) => boolean, out: React.ReactElement[] = []): React.ReactElement[] {
+        if (Array.isArray(node)) {
+            for (const child of node) collect(child, match, out);
+            return out;
+        }
+        if (!React.isValidElement(node)) return out;
+        if (match(node)) out.push(node);
+        collect((node.props as { children?: unknown }).children, match, out);
+        return out;
+    }
+
+    /** Runs the page with `hiring` carrying 2 canonical jobs each and no city rows. */
+    async function renderIndex(hiring: readonly string[]): Promise<{ schema: CollectionSchema; stats: HeroStat[] }> {
+        vi.mocked(prisma.job.count).mockResolvedValue(40 as never);
+        vi.mocked(prisma.job.groupBy).mockImplementation((async (args: GroupByArgs) =>
+            [...args.by].join(',') === 'state,stateCode'
+                ? hiring.map((name) => ({ state: name, stateCode: STATE_CODES[name], _count: { _all: 2 } }))
+                : []) as never);
+        const tree = await LocationsPage();
+        const schemas = collect(tree, (el) => el.type === 'script' && (el.props as { type?: string }).type === 'application/ld+json')
+            .map((el) => JSON.parse((el.props as { dangerouslySetInnerHTML: { __html: string } }).dangerouslySetInnerHTML.__html) as CollectionSchema)
+            .filter((schema) => schema['@type'] === 'CollectionPage');
+        const heroes = collect(tree, (el) => el.type === CategoryHero);
+        expect(schemas).toHaveLength(1);
+        expect(heroes).toHaveLength(1);
+        return { schema: schemas[0], stats: (heroes[0].props as { stats: HeroStat[] }).stats };
+    }
+
+    function expectListMatchesCount(schema: CollectionSchema, expected: number): void {
+        const { numberOfItems, itemListElement } = schema.mainEntity;
+        expect(numberOfItems).toBe(expected);
+        expect(itemListElement).toHaveLength(numberOfItems);
+        expect(itemListElement.map((item) => item.position)).toEqual(itemListElement.map((_, idx) => idx + 1));
+    }
+
+    it('STATE_CODES is the 50 states plus DC, spelled as the page spells it', () => {
+        expect(ALL).toHaveLength(51);
+        expect(STATES_ONLY).toHaveLength(50);
+        expect(STATE_CODES[DC]).toBe('DC');
+    });
+
+    it('with every jurisdiction hiring: 50 US states and the District of Columbia, never 51 states', async () => {
+        const { schema, stats } = await renderIndex(ALL);
+        expect(schema.description).toContain('across 50 US states and the District of Columbia.');
+        expect(JSON.stringify(schema)).not.toMatch(/\b51\s+(?:US\s+)?states?\b/i);
+        expect(stats).toContainEqual({ value: '50', label: 'States Hiring' });
+        expect(stats.map((s) => s.value)).not.toContain('51');
+        // Every tile the grid links is listed, DC included, and the count agrees.
+        expectListMatchesCount(schema, 51);
+        expect(schema.mainEntity.itemListElement.map((item) => item.url)).toContain(`${brand.baseUrl}/jobs/state/district-of-columbia`);
+    });
+
+    it('with states only: counts the states and says nothing about DC', async () => {
+        const { schema, stats } = await renderIndex(['Texas', 'Ohio', 'Utah']);
+        expect(schema.description).toContain('across 3 US states.');
+        expect(schema.description).not.toContain(DC);
+        expect(stats).toContainEqual({ value: '3', label: 'States Hiring' });
+        expectListMatchesCount(schema, 3);
+    });
+
+    it('with DC alone: names the District and prints no state figure at all', async () => {
+        const { schema, stats } = await renderIndex([DC]);
+        expect(schema.description).toContain('across the District of Columbia.');
+        expect(schema.description).not.toMatch(/\bstates?\b/i);
+        expect(stats.map((s) => s.label)).not.toContain('States Hiring');
+        expectListMatchesCount(schema, 1);
     });
 });

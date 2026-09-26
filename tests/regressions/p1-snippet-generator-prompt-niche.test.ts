@@ -42,6 +42,8 @@ import { ALL_CATEGORY_CONFIGS } from '@/lib/pseo/category-city-template';
 import { TASK_REGISTRY } from '@/lib/ai/tasks';
 import { MODEL_PRICING } from '@/lib/ai/pricing';
 import { brand } from '@/config/brand';
+import { STATE_PRACTICE_AUTHORITY } from '@/lib/state-practice-authority';
+import { STATE_CODES } from '@/lib/pseo/setting-state-config';
 import type { CityData } from '@/lib/pseo/city-data/types';
 
 const ROOT = process.cwd();
@@ -201,6 +203,35 @@ describe('P1 #10 — rendered prompts carry zero reference-niche terms', () => {
         }
         // Non-APRN categories keep the fact (fixture state has a known level).
         expect(buildTaxonomyPrompt(factBlock, narrativeFacts, 'remote', TOTAL_JOBS)).toContain('practice authority:');
+    });
+
+    it('every prompt that hands the model the tier also forbids reading a per-state rule off it', () => {
+        // The tier is AANP's classification, not a rule: an approved snippet
+        // overrides the Layer 1 narrative on the live page, so a model left
+        // alone with "Virginia practice authority: restricted" could publish
+        // "requires physician supervision", which is false for Virginia.
+        // Every jurisdiction, every tier, the city prompt and every
+        // city-eligible taxonomy prompt.
+        const GUARD = 'say only that AANP classifies';
+        let checked = 0;
+        for (const [stateName, info] of Object.entries(STATE_PRACTICE_AUTHORITY)) {
+            const block = { ...factBlock, stateName, stateCode: STATE_CODES[stateName], practiceAuthority: info.authority };
+            const prompts = [
+                buildCityPrompt(block, TOTAL_JOBS),
+                ...CITY_ELIGIBLE_CATEGORY_SLUGS.map((slug) => buildTaxonomyPrompt(block, narrativeFacts, slug, TOTAL_JOBS)),
+            ];
+            for (const prompt of prompts) {
+                if (!prompt.includes('practice authority:')) continue;
+                checked += 1;
+                expect(prompt, `${stateName}: tier fact without the tier-only instruction`).toContain(GUARD);
+                expect(prompt).toContain(`AANP classifies ${stateName} as a ${info.authority} practice`);
+            }
+        }
+        expect(checked).toBeGreaterThan(51);
+        // No tier, no fact line and no instruction.
+        const untiered = { ...factBlock, practiceAuthority: null };
+        expect(buildCityPrompt(untiered, TOTAL_JOBS)).not.toContain(GUARD);
+        expect(buildTaxonomyPrompt(untiered, narrativeFacts, 'remote', TOTAL_JOBS)).not.toContain(GUARD);
     });
 });
 

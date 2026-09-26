@@ -10,6 +10,19 @@
  * the jobs link from a real route. Nothing per-state is asserted about the
  * Nurse Licensure Compact — see the note below.
  *
+ * WHY A ROW'S PRACTICE-AUTHORITY LINE IS THE STATE'S DETAILS, NOT ITS TIER
+ * Each row used to print one sentence per tier: no collaborative agreement or
+ * supervision for full, a physician agreement for reduced, career-long
+ * physician supervision for restricted. A tier cannot carry that answer. Full
+ * practice states include ones that require collaboration, supervision or a
+ * prescribing protocol during a transition period; reduced and restricted
+ * states include ones with a route out of the arrangement, a practice
+ * agreement in place of supervision, or a non-physician collaborator. So a
+ * row prints its state's verified `details` verbatim
+ * (plannerPracticeRequirement), and the only tier-level copy is the AANP
+ * legend (the shared getAanpTierDefinition), attributed to AANP and stating
+ * that states within a tier differ.
+ *
  * WHY THERE IS NO PER-STATE COMPACT VERDICT HERE  ← do not "restore" this
  * An earlier revision rendered a member / not-in-the-compact badge per state,
  * a "your multistate RN license covers this state — no separate RN
@@ -39,6 +52,7 @@ import {
   ShieldAlert, ShieldCheck, ShieldX, type LucideIcon,
 } from 'lucide-react';
 import { brand } from '@/config/brand';
+import { getAanpTierDefinition, getStatePracticeAuthority } from '@/lib/state-practice-authority';
 import ToolStyles from './ToolStyles';
 import { TOOL_ACCENT, clayCard, labelStyle } from './tool-theme';
 
@@ -64,30 +78,59 @@ const AUTHORITY_META: Record<PlannerAuthority, {
   color: string;
   bg: string;
   icon: LucideIcon;
-  consequence: string;
 }> = {
   full: {
-    label: 'Full practice authority',
+    // AANP's tier name, as on every other surface (getAuthorityLabel), not
+    // "Full practice authority": the chip sits above rows whose details
+    // describe a transition period before independent practice.
+    label: 'Full practice',
     color: '#047857',
     bg: '#D1FAE5',
     icon: ShieldCheck,
-    consequence: 'no collaborative agreement or physician supervision required to evaluate, diagnose, and prescribe.',
   },
   reduced: {
     label: 'Reduced practice',
     color: '#B45309',
     bg: '#FEF3C7',
     icon: ShieldAlert,
-    consequence: 'a collaborative agreement with a physician is required for at least one element of practice.',
   },
   restricted: {
     label: 'Restricted practice',
     color: '#B91C1C',
     bg: '#FEE2E2',
     icon: ShieldX,
-    consequence: 'career-long physician supervision, delegation, or team management is required to practice.',
   },
 };
+
+const NP = brand.niche.short;
+const NPS = `${brand.niche.short}s`;
+
+const TIER_ORDER: readonly PlannerAuthority[] = ['full', 'reduced', 'restricted'];
+
+/**
+ * The legend's tier definitions: AANP's own, from the shared
+ * getAanpTierDefinition, so this tool and every other surface explain a tier
+ * in the same words. That function trims AANP's text to what is true of every
+ * state in the tier (see its docblock), which is what lets the legend sit
+ * above rows it would otherwise contradict. Do not substitute a local quote.
+ */
+export const AANP_TIER_LEGEND: readonly { authority: PlannerAuthority; definition: string }[] =
+  TIER_ORDER.map((authority) => ({ authority, definition: getAanpTierDefinition(authority) }));
+
+/**
+ * States within one tier differ. Both halves are borne out by the verified
+ * details in lib/state-practice-authority.ts, which the rows print.
+ */
+export const TIER_VARIATION_NOTE = `States in the same tier still set different rules. Full practice states differ on whether a newer ${NP} must first work through a transition period and for how long, and some reduced and restricted states let experienced ${NPS} qualify out of the collaborative or supervisory arrangement they otherwise require. Each row gives that state's own requirements.`;
+
+/**
+ * The practice-authority line for one planner row: the state's verified
+ * details, verbatim. Null when the dataset has no entry for the name, and the
+ * row then omits the line rather than fall back to a tier sentence.
+ */
+export function plannerPracticeRequirement(stateName: string): string | null {
+  return getStatePracticeAuthority(stateName)?.details ?? null;
+}
 
 /** NCSBN's compact site — the authoritative, current member list. */
 const NLC_SOURCE_URL = 'https://www.nursecompact.com/';
@@ -236,7 +279,7 @@ export default function MultiStatePlanner({ states }: Props) {
             {[
               { value: planned.length, label: 'States selected', bg: '#F1F5F9', color: '#334155' },
               { value: planned.length, label: 'Need their own APRN license', bg: '#EEF2FF', color: '#3730A3' },
-              { value: fullCount, label: 'Full practice authority', bg: '#D1FAE5', color: '#047857' },
+              { value: fullCount, label: AUTHORITY_META.full.label, bg: '#D1FAE5', color: '#047857' },
               { value: reducedCount, label: 'Reduced practice', bg: '#FEF3C7', color: '#B45309' },
               { value: restrictedCount, label: 'Restricted practice', bg: '#FEE2E2', color: '#B91C1C' },
             ].map((tile) => (
@@ -252,6 +295,7 @@ export default function MultiStatePlanner({ states }: Props) {
             {planned.map((s) => {
               const meta = AUTHORITY_META[s.authority];
               const AuthorityIcon = meta.icon;
+              const requirement = plannerPracticeRequirement(s.name);
               return (
                 <div
                   key={s.name}
@@ -269,9 +313,11 @@ export default function MultiStatePlanner({ states }: Props) {
                         <AuthorityIcon size={12} aria-hidden="true" /> {meta.label}
                       </span>
                     </div>
-                    <p style={{ fontSize: '13px', color: '#5A4A42', margin: '0 0 5px', lineHeight: 1.6 }}>
-                      <strong>Practice authority:</strong> {meta.consequence}
-                    </p>
+                    {requirement && (
+                      <p style={{ fontSize: '13px', color: '#5A4A42', margin: '0 0 5px', lineHeight: 1.6 }}>
+                        <strong>Practice authority:</strong> {requirement}
+                      </p>
+                    )}
                     <p style={{ fontSize: '13px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
                       <strong>APRN layer:</strong> {s.name} issues its own APRN license; the compact does not
                       cover it. Confirm current requirements with the {s.name} board of nursing.
@@ -296,6 +342,26 @@ export default function MultiStatePlanner({ states }: Props) {
                 </div>
               );
             })}
+          </div>
+
+          {/* Tier legend: AANP's definitions, attributed, never a per-state claim. */}
+          <div style={{ marginTop: '18px', padding: '16px 18px', borderRadius: '14px', background: '#F8FAFC', border: '1px solid rgba(0,0,0,0.05)' }}>
+            <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#1A2E35', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              What the tiers mean
+            </h3>
+            <p style={{ fontSize: '12.5px', color: '#5A4A42', margin: '0 0 8px', lineHeight: 1.6 }}>
+              Full, reduced and restricted are AANP&apos;s state practice environment tiers.
+            </p>
+            <ul style={{ margin: '0 0 8px', padding: '0 0 0 18px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              {AANP_TIER_LEGEND.map(({ authority, definition }) => (
+                <li key={authority} style={{ fontSize: '12.5px', color: '#5A4A42', lineHeight: 1.6 }}>
+                  <strong style={{ color: AUTHORITY_META[authority].color }}>{AUTHORITY_META[authority].label}:</strong> {definition}
+                </li>
+              ))}
+            </ul>
+            <p style={{ fontSize: '12.5px', color: '#5A4A42', margin: 0, lineHeight: 1.6 }}>
+              {TIER_VARIATION_NOTE}
+            </p>
           </div>
         </div>
       )}

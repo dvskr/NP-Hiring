@@ -11,6 +11,14 @@
  *
  * DATA SOURCES (truth rules — nothing else is stated as fact):
  *   - Practice authority level: lib/state-practice-authority.ts (AANP).
+ *     The tier is only ever described as AANP's classification, in AANP's
+ *     own terms (AANP_TIER_MEANING), with a note that states in one tier
+ *     differ. It never answers a question about one state.
+ *   - What one state requires (does an NP need a physician, is there a
+ *     transition period): that state's `details` string, which a
+ *     primary-source audit of all 51 jurisdictions corrected in September
+ *     2026, plus the short verdicts in LICENSE_GUIDE_PHYSICIAN_VERDICTS
+ *     that restate it (drift-guarded by their `basis` phrases).
  *   - NLC status: LICENSE_GUIDE_NLC_NON_MEMBERS +
  *     LICENSE_GUIDE_NLC_ENACTED_PENDING below — mirror the canonical sets
  *     in lib/pseo/state-narrative.ts (kept in sync by the drift test in
@@ -55,8 +63,11 @@ import type { BlogPost } from './blog';
 // ─── Editorial dates (real, fixed — never render-time; audit B54) ───────────
 
 /** Date the series content + data sources were authored/verified. Bump on
- *  each editorial review pass (feeds reviewed_at → BlogPosting.dateModified). */
-export const LICENSE_GUIDE_REVIEWED_AT = '2026-07-29T00:00:00.000Z';
+ *  each editorial review pass (feeds reviewed_at → BlogPosting.dateModified).
+ *  2026-09-25: the practice-authority pass that rebuilt every per-state
+ *  answer from the audited dataset. lib/blog.ts also uses this date to let
+ *  the generator supersede a blog_posts mirror synced before it. */
+export const LICENSE_GUIDE_REVIEWED_AT = '2026-09-25T00:00:00.000Z';
 /** Series publish date (fixed so freshness is never fabricated per-render). */
 export const LICENSE_GUIDE_PUBLISH_DATE = '2026-07-29T00:00:00.000Z';
 
@@ -302,47 +313,294 @@ const NP = brand.niche.short; // 'NP'
 const NP_LONG = brand.niche.long; // 'Nurse Practitioner'
 const NP_PROSE = brand.niche.descriptor; // 'nurse practitioner'
 
-function authorityIntroPhrase(s: LicenseGuideState): string {
-    switch (s.authority) {
-        case 'full':
-            return `${s.name} is a full practice authority state, so the licensure path here ends with independent practice; no collaborating or supervising physician is required`;
-        case 'reduced':
-            return `${s.name} is a reduced practice state, so plan for one extra step most full-practice states skip: a collaborative agreement with a physician`;
-        case 'restricted':
-            return `${s.name} is a restricted practice state, so physician supervision is built into how ${NP}s practice here and into the paperwork you will file`;
-    }
-}
+// ─── Practice authority: AANP's tier versus the state's own rule ────────────
+//
+// The tier is too coarse to answer a question about one state. AANP puts
+// Connecticut, New York and Maine in its full practice tier although a new
+// NP there first practices with a collaborator or supervisor, and it puts
+// Virginia, Illinois and Wisconsin in the lower tiers although each offers
+// a way out of the agreement. So the guides split the two jobs:
+//   - Tier copy (AANP_TIER_MEANING and the "states differ" paragraph) says
+//     only what AANP's classification means, attributed to AANP.
+//   - Every sentence that answers a question about ONE state (the quick
+//     answer, both practice FAQs, the practice-requirements step that also
+//     ships as HowTo structured data) is the state's audited details string,
+//     optionally opened by a short verdict restating it. A state without a
+//     verdict gets its details alone: a shorter true answer beats a
+//     confident false one.
 
-function authoritySection(s: LicenseGuideState): string {
-    switch (s.authority) {
-        case 'full':
-            return [
-                `The AANP classifies ${s.name} as a **full practice authority (FPA)** state, one of ${STAT_SOURCES.fullPracticeStates.formatted} (${STAT_SOURCES.fullPracticeStates.source}, ${STAT_SOURCES.fullPracticeStates.asOf}). Under FPA, ${NP_PROSE}s evaluate patients, diagnose, order and interpret tests, and initiate and manage treatment, including prescribing, under the licensure authority of the state board of nursing, without a mandated physician relationship.`,
-                `You will notice the difference in the ${s.code} job market: postings rarely name a collaborating physician, ${NP}-owned practices are a realistic path, and telehealth employers often prioritize clinicians licensed in FPA states. One caveat: some full-practice states phase authority in through a transition-to-practice period after initial licensure, so confirm the current rule with the [${s.boardName}](${s.boardUrl}) before assuming day-one independence.`,
-            ].join('\n\n');
-        case 'reduced':
-            return [
-                `The AANP classifies ${s.name} as a **reduced practice** state. You hold your own APRN license, but state law requires a collaborative agreement with a physician covering at least one element of ${NP_PROSE} practice, most commonly prescriptive authority. The agreement is a filed, documented relationship, not day-to-day on-site oversight.`,
-                `Practically, that means employed roles in ${s.code} usually come with collaboration built in (hospitals and group practices maintain the agreements), while independent or practice-ownership routes require you to arrange (and often pay for) a collaborating physician yourself. The required contents of the agreement and any filing steps are defined by the [${s.boardName}](${s.boardUrl}); review the current rules there rather than relying on a colleague's older paperwork.`,
-            ].join('\n\n');
-        case 'restricted':
-            return [
-                `The AANP classifies ${s.name} as a **restricted practice** state: state law requires supervision, delegation, or team management by a physician for at least one element of ${NP_PROSE} practice. Expect ${s.code} job postings to name a supervising physician, reference protocols or practice agreements, and describe chart-review or delegation arrangements. That language reflects the licensure framework, not an individual employer's preference.`,
-                `Restricted status affects more than autonomy: it shapes credentialing, prescriptive authority paperwork, and how quickly you can change practice settings, since supervision arrangements typically must be updated when you move. The [${s.boardName}](${s.boardUrl}) publishes the supervision and delegation requirements that apply; legislative changes in restricted states are frequent enough that the board page is the only current source worth trusting.`,
-            ].join('\n\n');
-    }
+/**
+ * AANP's definitions of the three practice environments, read from the
+ * AANP State Practice Environment page (STAT_SOURCES.fullPracticeStates
+ * .sourceUrl, marked "Last Updated: 05/2026") on 2026-09-25. Verbatim:
+ *   Full: "State practice and licensure laws permit all NPs to evaluate
+ *     patients; diagnose, order and interpret diagnostic tests; and
+ *     initiate and manage treatments, including prescribing medications and
+ *     controlled substances, under the exclusive licensure authority of the
+ *     state board of nursing."
+ *   Reduced: "State practice and licensure laws reduce the ability of NPs
+ *     to engage in at least one element of NP practice. State law requires
+ *     a career-long regulated collaborative agreement with another health
+ *     provider in order for the NP to provide patient care, or it limits
+ *     the setting of one or more elements of NP practice."
+ *   Restricted: "State practice and licensure laws restrict the ability of
+ *     NPs to engage in at least one element of NP practice. State law
+ *     requires career-long supervision, delegation or team management by
+ *     another health provider in order for the NP to provide patient care."
+ * The close paraphrase below drops two words the audited dataset shows are
+ * not true of every state in the tier: "all" (the full practice states
+ * with a transition period) and "career-long" (the reduced and restricted
+ * states with a route out of the agreement). Note that neither lower tier
+ * names a physician: AANP says "another health provider".
+ *
+ * The reduced and restricted meanings give AANP's mechanisms as EXAMPLES
+ * ("for example through"), the same shape getAanpTierDefinition in
+ * lib/state-practice-authority.ts and the FPA guide use. Written as "by
+ * requiring", the mechanism read as the placement rule: under it, Maine,
+ * Massachusetts and Nevada (supervised periods) would be restricted and
+ * CT, MN, NY, SD and VT (a collaborative transition) reduced, yet AANP lists
+ * all eight as full practice. This text appears in all 51 guides.
+ */
+export const AANP_TIER_MEANING: Readonly<Record<PracticeAuthority, string>> = {
+    full: `AANP applies that classification where state practice and licensure laws permit ${NP}s to evaluate patients; diagnose, order and interpret diagnostic tests; and initiate and manage treatments, including prescribing medications and controlled substances, under the exclusive licensure authority of the state board of nursing.`,
+    reduced: `AANP applies that classification where state practice and licensure laws reduce the ability of ${NP}s to engage in at least one element of ${NP} practice, for example through a regulated collaborative agreement with another health provider or a limit on the setting of one or more elements of practice.`,
+    restricted: `AANP applies that classification where state practice and licensure laws restrict the ability of ${NP}s to engage in at least one element of ${NP} practice, for example through supervision, delegation or team management by another health provider.`,
+};
+
+/** Tier name for prose, e.g. "AANP classifies Ohio as a reduced practice state". */
+/**
+ * DC is a jurisdiction, not a state (tests/regressions/dc-jurisdiction-wording
+ * and authority-tier-copy pin the same rule for the pSEO builders).
+ */
+const jurisdictionKind = (s: LicenseGuideState): 'state' | 'jurisdiction' =>
+    s.code === 'DC' ? 'jurisdiction' : 'state';
+
+const TIER_NAME: Readonly<Record<PracticeAuthority, string>> = {
+    full: 'full practice',
+    reduced: 'reduced practice',
+    restricted: 'restricted practice',
+};
+
+/** Why states in the same tier read differently (tier level, AANP-neutral). */
+const TIER_VARIES: Readonly<Record<PracticeAuthority, string>> = {
+    full: `AANP's classification describes the state's practice environment, not every license holder's first day, and states in the same tier set different conditions: several full practice states require a period of collaborative or supervised practice, or a prescribing mentorship, before a newly licensed ${NP} practices or prescribes on their own.`,
+    reduced: `States in the same tier set different conditions: who may serve as the collaborating provider, which elements of practice an agreement covers, and whether experience or a practice setting removes the requirement all vary from state to state.`,
+    restricted: `States in the same tier set different conditions: some limit the requirement to certain elements of practice, such as prescribing controlled substances, and some offer a route out of it after a set amount of experience.`,
+};
+
+export interface PhysicianVerdict {
+    /**
+     * Short answer to "Do I need a collaborating or supervising physician
+     * in {state}?", always followed by the state's details string, which
+     * carries the conditions. Pronoun-free, because the same answer serves
+     * the guide ("Do I need…") and the setting-by-state FAQ ("Do NPs need…").
+     */
+    verdict: string;
+    /**
+     * Verbatim phrases of the state's details string that the verdict
+     * restates. The license-guide test fails when a details edit drops one,
+     * so a re-audit of the dataset cannot leave a stale verdict behind.
+     */
+    basis: readonly string[];
 }
 
 /**
- * LIC-L1: the state's own rule text, quoted verbatim from the AANP-based
+ * Verdicts for the states whose details string answers the physician
+ * question directly. Absent states (details that only say "grants full
+ * practice authority", or name an agreement without naming its parties)
+ * get no verdict: the details are published alone, with a pointer to the
+ * board, because nothing verified supports a firmer answer.
+ */
+export const LICENSE_GUIDE_PHYSICIAN_VERDICTS: Readonly<Record<string, PhysicianVerdict>> = {
+    // Full practice (AANP)
+    'Alaska': { verdict: 'No.', basis: ['without physician oversight'] },
+    'Arizona': { verdict: 'No.', basis: ['all without physician supervision, a collaborative agreement or a transition period'] },
+    'Colorado': {
+        verdict: 'Not to practice, though new prescribers must complete a prescribing mentorship.',
+        basis: ['can practice independently and prescribe', 'new to prescribing', 'must complete a 750 hour prescribing mentorship with a physician or an advanced practice registered nurse'],
+    },
+    'Connecticut': {
+        verdict: 'Yes, for at least the first three years and 2,000 hours of practice.',
+        basis: ['to practice in collaboration with a physician for at least three years and 2,000 hours before practicing independently'],
+    },
+    'Delaware': { verdict: 'No.', basis: ['requires no collaborative agreement or supervised experience period after licensure'] },
+    'Maine': {
+        verdict: 'Not necessarily a physician, but until new Board of Nursing rules take effect, a supervision or employment requirement applies for at least the first 24 months.',
+        basis: [
+            'must practice for at least 24 months under the supervision of a licensed physician or a supervising',
+            'or be employed by a clinic or hospital whose medical director is a licensed physician',
+            'A 2026 law replaces this requirement once the Board of Nursing adopts new practice standards by rule',
+        ],
+    },
+    'Maryland': {
+        verdict: 'Not necessarily.',
+        basis: ['Applicants who have never been certified as', 'must name a mentor on their application, a physician or'],
+    },
+    'Massachusetts': {
+        verdict: 'Not necessarily a physician. Prescribing is supervised until the required practice experience is attested to the Board of Registration in Nursing.',
+        basis: ['who may be a physician or an experienced', 'supervises their prescribing', 'once they attest to the Board of Registration in Nursing'],
+    },
+    'Minnesota': {
+        verdict: 'Not necessarily a physician, but at least the first 2,080 hours of practice are under a collaborative agreement.',
+        basis: ['must first practice at least 2,080 hours under a collaborative agreement with a physician or with an advanced practice registered nurse'],
+    },
+    'Nevada': {
+        verdict: 'In some cases.',
+        basis: ['may prescribe Schedule II controlled substances only under a protocol approved by a collaborating physician', 'must complete 1,000 hours of supervised practice'],
+    },
+    'New York': {
+        verdict: 'Yes, for the first 3,600 hours of practice.',
+        basis: ['with 3,600 hours of practice or fewer must practice in collaboration with a physician', 'with more than 3,600 hours of practice are currently exempt'],
+    },
+    'South Dakota': {
+        verdict: 'Not necessarily a physician, but the first 1,040 hours of licensed practice are under a collaborative agreement.',
+        basis: ['need a written collaborative agreement with a physician, certified nurse practitioner or certified nurse midwife', 'until they have completed 1,040 hours of licensed practice'],
+    },
+    'Vermont': {
+        verdict: 'Not necessarily a physician, but a collaborative provider agreement is required until the transition to practice is complete.',
+        basis: ['once they complete the transition to practice', 'must have a collaborative provider agreement with a Vermont licensed physician or advanced practice registered nurse'],
+    },
+    // Reduced practice (AANP)
+    'Alabama': { verdict: 'Yes.', basis: ['to practice under a collaborative practice agreement with a physician'] },
+    'Arkansas': {
+        verdict: 'For prescribing, usually.',
+        basis: ['need a collaborative practice agreement, typically with a physician, to prescribe unless they hold a certificate of full independent practice authority'],
+    },
+    'Illinois': {
+        verdict: 'Not always.',
+        basis: ['to have a written collaborative agreement until they obtain full practice authority, except when they practice under clinical privileges'],
+    },
+    'Indiana': { verdict: 'Yes.', basis: ['must practice under a collaborative agreement with a physician'] },
+    'Kentucky': {
+        verdict: 'For prescribing, at least until four years of prescribing experience; dropping the controlled substance agreement also requires a Board of Nursing good standing review.',
+        basis: [
+            'need a collaborative agreement with a physician to prescribe',
+            'four years of prescribing experience',
+            'they may prescribe without these agreements',
+            'dropping the controlled substance agreement first requires a Board of Nursing good standing review',
+        ],
+    },
+    'New Jersey': {
+        verdict: 'For prescribing and ordering medications and devices, generally yes.',
+        basis: ['generally requires', 'to have joint protocols with a collaborating physician in order to prescribe or order medications and devices'],
+    },
+    'Ohio': { verdict: 'Yes.', basis: ['must have a standard care arrangement with a collaborating physician'] },
+    'West Virginia': {
+        verdict: 'For prescribing, unless the Board of Registered Nurses has approved removal of that requirement.',
+        basis: ['must have a collaborative agreement with a physician to prescribe unless the Board of Registered Nurses has approved removal of that requirement'],
+    },
+    'Wisconsin': {
+        verdict: 'Yes, or a dentist, until the Board of Nursing verifies eligibility for independent practice.',
+        basis: ['must practice in collaboration with a physician or dentist until the Board of Nursing verifies that they qualify for independent practice'],
+    },
+    // Restricted practice (AANP)
+    'California': {
+        verdict: 'Generally, yes.',
+        basis: ['generally practice under standardized procedures developed collaboratively with physicians and furnish drugs and devices under physician supervision'],
+    },
+    'Florida': {
+        verdict: 'Generally, yes.',
+        basis: ['to practice under a supervisory protocol with a physician', 'may register for autonomous practice'],
+    },
+    'Georgia': { verdict: 'Yes.', basis: ['to practice under physician supervision with a protocol agreement'] },
+    'Michigan': {
+        verdict: 'For controlled substance prescribing, yes.',
+        basis: ['may prescribe controlled substances in schedules 2 to 5 only as a delegated act of a physician'],
+    },
+    'Missouri': { verdict: 'Yes.', basis: ['to have a collaborative practice arrangement with physician supervision'] },
+    'North Carolina': { verdict: 'Yes.', basis: ['to practice under physician supervision'] },
+    'Oklahoma': {
+        verdict: 'For prescribing, until the Board of Nursing grants independent prescriptive authority.',
+        basis: ['who prescribe must have a written supervision agreement with a supervising physician until the Board of Nursing grants them independent prescriptive authority'],
+    },
+    'South Carolina': { verdict: 'Yes.', basis: ['must perform medical acts under a practice agreement with a physician'] },
+    'Tennessee': { verdict: 'Yes.', basis: ['requires physician supervision for'] },
+    'Texas': { verdict: 'Yes.', basis: ['to have a prescriptive authority agreement with a supervising physician'] },
+    'Virginia': {
+        verdict: 'Generally, yes.',
+        basis: ['must maintain a practice agreement documenting collaboration and consultation with a patient care team physician', 'can apply for a license designation to practice without a practice agreement'],
+    },
+};
+
+/** The state's audited rule text (the only per-state source these guides use). */
+function stateRule(s: LicenseGuideState): string {
+    return STATE_PRACTICE_AUTHORITY[s.name].details;
+}
+
+/** The state's verdict, or null when its details are published alone. */
+function physicianVerdict(s: LicenseGuideState): PhysicianVerdict | null {
+    return LICENSE_GUIDE_PHYSICIAN_VERDICTS[s.name] ?? null;
+}
+
+/**
+ * Board pointer closing each per-state answer. Where no verdict exists,
+ * it names what the details leave open (a transition period in a full
+ * practice state, the parties to an agreement elsewhere) without claiming
+ * either way.
+ */
+function boardRulePointer(s: LicenseGuideState): string {
+    if (physicianVerdict(s)) return `The ${s.boardName} publishes the current rule.`;
+    if (s.authority === 'full') {
+        return `The ${s.boardName} publishes the current rule, including any requirement that applies to newly licensed ${NP}s.`;
+    }
+    return /agreement|arrangement|protocol/i.test(stateRule(s))
+        ? `The ${s.boardName} publishes the current rule, including who may be a party to the agreement.`
+        : `The ${s.boardName} publishes the current rule.`;
+}
+
+/**
+ * True when the state's rule ties a requirement to time or hours (a
+ * transition, a mentorship, an experience route out of an agreement).
+ * Read from the details string, never from the tier.
+ */
+function ruleDependsOnExperience(s: LicenseGuideState): boolean {
+    return /\b(hours?|months?|years?)\b/i.test(stateRule(s));
+}
+
+/** Quick answer: the AANP tier, then the state's own answer. */
+function quickAuthorityAnswer(s: LicenseGuideState): string {
+    const tier = `AANP classifies ${s.name} as a ${TIER_NAME[s.authority]} ${jurisdictionKind(s)}.`;
+    const verdict = physicianVerdict(s);
+    return verdict
+        ? `${tier} Do you need a collaborating or supervising physician? ${verdict.verdict} The practice authority section below quotes the full ${s.name} rule.`
+        : `${tier} ${stateRule(s)}`;
+}
+
+/**
+ * The practice authority section above the rule text: AANP's meaning of
+ * the tier (attributed and linked) and why same-tier states differ.
+ */
+function authoritySection(s: LicenseGuideState): string {
+    const fpa = STAT_SOURCES.fullPracticeStates;
+    const aanp = `[${fpa.source}](${fpa.sourceUrl})`;
+    const classification = s.authority === 'full'
+        ? `The AANP classifies ${s.name} as a **full practice authority (FPA)** ${jurisdictionKind(s)}, one of ${fpa.formatted} (${aanp}, ${fpa.asOf}).`
+        : `The AANP classifies ${s.name} as a **${TIER_NAME[s.authority]}** ${jurisdictionKind(s)} (${aanp}).`;
+    return [
+        `${classification} ${AANP_TIER_MEANING[s.authority]}`,
+        `${TIER_VARIES[s.authority]} The ${s.name} rule quoted below is the one that applies here.`,
+    ].join('\n\n');
+}
+
+/** Practical close of the section: tier-neutral, true in every state. */
+function authorityJobSearchParagraph(s: LicenseGuideState): string {
+    const record = ruleDependsOnExperience(s)
+        ? `Because the ${s.name} rule ties part of the requirement to time or hours, keep a dated record of your practice hours, settings and any collaborating or supervising providers from your first day; you may need to document them later. `
+        : '';
+    return `${record}In a job search, read each posting against the ${s.name} rule rather than the AANP tier. When an offer depends on an agreement with a collaborating or supervising physician or another provider, ask who fills that role, whether the arrangement will be in place before your start date, and what happens to it if you change roles.`;
+}
+
+/**
+ * LIC-L1: the state's own rule text, quoted verbatim from the audited
  * dataset (lib/state-practice-authority.ts). Repo data, not live data, so
  * it lives in the static markdown the sync script mirrors into the DB.
  * Every entry differs, which is what breaks the near-duplicate groups
- * among same-tier guides (spec4 3C).
+ * among same-tier guides (spec4 3C). The details are the dataset's own
+ * summary of state law, not AANP text, so the sentence does not attribute
+ * them to AANP.
  */
 export function buildLicenseGuideRuleText(s: LicenseGuideState): string {
-    const details = STATE_PRACTICE_AUTHORITY[s.name].details;
-    return `The ${s.name} entry in the practice-authority dataset ${brand.name} publishes (AANP classification) reads: "${details}" The [${s.boardName}](${s.boardUrl}) holds the current rule text and the forms that go with it.`;
+    return `The ${s.name} entry in the practice-authority dataset ${brand.name} publishes reads: "${stateRule(s)}" The [${s.boardName}](${s.boardUrl}) holds the current rule text and the forms that go with it.`;
 }
 
 /**
@@ -379,7 +637,10 @@ export interface LicenseGuideStep {
 /**
  * Application-path steps — ONE array feeds the markdown "How to apply"
  * section, the FAQ answer, and the exported HowTo schema builder, so
- * visible content and structured data can never diverge.
+ * visible content and structured data can never diverge. Every step must
+ * be true in every state it renders for (51 guides, the state hubs and the
+ * HowTo graph), so the practice step points the reader to the state's own
+ * rule and names no tier-derived requirement.
  */
 export function buildLicenseGuideSteps(s: LicenseGuideState): LicenseGuideStep[] {
     const rnStep = s.nlcStatus === 'member'
@@ -387,12 +648,10 @@ export function buildLicenseGuideSteps(s: LicenseGuideState): LicenseGuideStep[]
         : s.nlcStatus === 'pending'
             ? `Hold an active, unencumbered ${s.name} RN license. ${s.name} has enacted the Nurse Licensure Compact but implementation is still pending, so until the board announces an implementation date, out-of-state RNs still apply for ${s.code} RN licensure by endorsement.`
             : `Hold an active, unencumbered ${s.name} RN license. ${s.name} is not a compact state, so out-of-state RNs first apply for ${s.code} RN licensure by endorsement.`;
-    const prescriptiveStep =
-        s.authority === 'full'
-            ? `Complete any prescriptive-authority or transition-to-practice requirements. In a full-practice state, these are handled through the board itself; no collaborative or supervisory agreement is required.`
-            : s.authority === 'reduced'
-                ? `Establish and document your collaborative agreement with a physician, and file it as the board requires. In ${s.name}, this is part of practicing, not optional paperwork.`
-                : `Establish your supervision or delegation arrangement with a physician and submit the practice-agreement documentation the board requires before beginning practice.`;
+    // Tier-free and state-rule-first: the step names no agreement, because
+    // whether one is required (and with whom) is the state's rule, which the
+    // guide quotes in full and the state hub prints beside this list.
+    const practiceStep = `Read the ${s.name} practice rule against your own experience and practice setting, confirm with the ${s.boardName} which of its requirements apply to you, and complete any agreement, notice or application that the rule or the board requires before you begin practicing.`;
     return [
         { name: 'Verify your RN license foundation', text: rnStep },
         {
@@ -401,13 +660,16 @@ export function buildLicenseGuideSteps(s: LicenseGuideState): LicenseGuideStep[]
         },
         {
             name: 'Pass national board certification',
-            text: `Certify with the body that matches your role: AANP or ANCC for ${NP}s, NBCRNA for CRNAs, AMCB for certified nurse midwives. ${s.name} requires current national certification for APRN licensure.`,
+            // No per-state certification claim: nothing in repo data verifies
+            // which boards require national certification, so the board
+            // checklist answers for the state.
+            text: `Certify with the body that matches your role: AANP or ANCC for ${NP}s, NBCRNA for CRNAs, AMCB for certified nurse midwives. Most states require current national certification for APRN licensure; the ${s.boardName}'s checklist confirms whether ${s.name} does.`,
         },
         {
             name: `Apply for APRN licensure with the ${s.boardName}`,
-            text: `Submit the APRN application with transcripts, certification verification, and the fees on the board's current checklist. The board's own checklist is authoritative. Forms, fees, and processing times change, so work directly from the board site.`,
+            text: `Submit the APRN application with transcripts, any required certification verification, and the fees on the board's current checklist. The board's own checklist is authoritative. Forms, fees, and processing times change, so work directly from the board site.`,
         },
-        { name: 'Secure your practice-authority paperwork', text: prescriptiveStep },
+        { name: 'Confirm the practice requirements that apply to you', text: practiceStep },
         {
             name: 'Register for federal identifiers',
             text: `Obtain an NPI number, and register with the DEA if you will prescribe controlled substances. Some states also require a separate state controlled-substance registration; the board checklist will say whether ${s.name} does.`,
@@ -426,23 +688,26 @@ export interface LicenseGuideFaq {
  * app/blog/[slug]/page.tsx), so schema always matches visible content.
  */
 export function buildLicenseGuideFaq(s: LicenseGuideState): LicenseGuideFaq[] {
-    const authorityAnswer =
-        s.authority === 'full'
-            ? `Yes. The AANP classifies ${s.name} as a full practice authority state, one of ${STAT_SOURCES.fullPracticeStates.formatted}, so ${NP_PROSE}s can practice and prescribe without a required physician relationship. Some full-practice states apply a transition-to-practice period after initial licensure; the ${s.boardName} publishes the current requirement.`
-            : s.authority === 'reduced'
-                ? `No. The AANP classifies ${s.name} as a reduced practice state: ${NP_PROSE}s must maintain a collaborative agreement with a physician covering at least one element of practice, most commonly prescribing. The ${s.boardName} defines what the agreement must contain.`
-                : `No. The AANP classifies ${s.name} as a restricted practice state: physician supervision, delegation, or team management is required for ${NP_PROSE} practice. The ${s.boardName} publishes the supervision and practice-agreement requirements.`;
+    const fpa = STAT_SOURCES.fullPracticeStates;
+    // The classification answers "does the state have FPA" only in AANP's
+    // terms; the state's own rule follows, so a transition period (or a
+    // state route to full practice authority, as in Illinois) is never
+    // hidden behind the tier.
+    const authorityAnswer = s.authority === 'full'
+        ? `By AANP's classification, yes. AANP classifies ${s.name} as a full practice ${jurisdictionKind(s)}, one of ${fpa.formatted} (${fpa.source}, ${fpa.asOf}). ${stateRule(s)} ${boardRulePointer(s)}`
+        : `Not by AANP's classification. AANP classifies ${s.name} as a ${TIER_NAME[s.authority]} ${jurisdictionKind(s)} rather than a full practice ${jurisdictionKind(s)}. ${stateRule(s)} ${boardRulePointer(s)}`;
     const nlcAnswer = s.nlcStatus === 'member'
         ? `Yes, ${s.name} is a Nurse Licensure Compact member (verified against the live NCSBN roster, ${NLC_VERIFIED_LABEL}). The compact covers the RN license underpinning your APRN credential (a multistate RN license works across member states), but APRN licensure itself is still issued individually by each state, including ${s.name}.`
         : s.nlcStatus === 'pending'
             ? `Not yet. ${s.name} has enacted the Nurse Licensure Compact, but implementation is pending. NCSBN lists the implementation date as to-be-determined (verified against the live NCSBN roster, ${NLC_VERIFIED_LABEL}). Until the ${s.boardName} completes implementation, a multistate RN license is neither issued nor honored in ${s.name}, so you still need a ${s.name}-issued RN license (by endorsement) plus ${s.code} APRN licensure; verify the current status with the board.`
             : `No, ${s.name} is not a Nurse Licensure Compact member (verified against the live NCSBN roster, ${NLC_VERIFIED_LABEL}). Even with a multistate RN license from a compact state, you need a ${s.name}-issued RN license (by endorsement) plus ${s.code} APRN licensure to practice as an ${NP} there.`;
-    const physicianAnswer =
-        s.authority === 'full'
-            ? `No collaborative or supervising physician is required in ${s.name}, which is a full practice authority state. Confirm any transition-to-practice conditions with the ${s.boardName}.`
-            : s.authority === 'reduced'
-                ? `Yes. ${s.name} requires a documented collaborative agreement with a physician. Employed roles usually have this arranged by the employer; independent practice means arranging your own collaborator per the ${s.boardName}'s rules.`
-                : `Yes. ${s.name} requires physician supervision or delegation for ${NP_PROSE} practice, documented in the practice-agreement paperwork the ${s.boardName} requires.`;
+    // Also published as "Do NPs need a collaborating or supervising physician in {state}?"
+    // on the setting-by-state pages (lib/pseo/setting-state-template.tsx
+    // finds it by the /collaborating or supervising physician/ question
+    // name), beside the same details on the Practice Authority card.
+    const physicianAnswer = [physicianVerdict(s)?.verdict, stateRule(s), boardRulePointer(s)]
+        .filter(Boolean)
+        .join(' ');
     return [
         {
             name: `Does ${s.name} have full practice authority for ${NP}s?`,
@@ -454,7 +719,7 @@ export function buildLicenseGuideFaq(s: LicenseGuideState): LicenseGuideFaq[] {
         },
         {
             name: `What do I need to apply for APRN licensure in ${s.name}?`,
-            text: `An active RN license, an MSN or DNP from an accredited program, national certification (AANP or ANCC for ${NP}s; NBCRNA for CRNAs, AMCB for CNMs), and the application on the ${s.boardName}'s current checklist. Fees, forms, and processing times are set by the board and change, so work directly from the board site rather than third-party summaries.`,
+            text: `An active RN license, an MSN or DNP from an accredited program, national certification where the board requires it (AANP or ANCC for ${NP}s; NBCRNA for CRNAs, AMCB for CNMs), and the application on the ${s.boardName}'s current checklist. Fees, forms, and processing times are set by the board and change, so work directly from the board site rather than third-party summaries.`,
         },
         {
             name: `Do I need a collaborating or supervising physician in ${s.name}?`,
@@ -491,7 +756,7 @@ function buildMarkdown(s: LicenseGuideState): string {
         : s.nlcStatus === 'pending'
             ? `${s.name} has enacted the Nurse Licensure Compact but implementation is pending, so for now out-of-state RNs still add an endorsement step.`
             : `${s.name} sits outside the Nurse Licensure Compact, so out-of-state RNs add an endorsement step.`;
-    return `**Quick answer:** ${authorityIntroPhrase(s)}. ${quickNlc} Applications, fees, and timelines run through the [${s.boardName}](${s.boardUrl}).
+    return `**Quick answer:** ${quickAuthorityAnswer(s)} ${quickNlc} Applications, fees, and timelines run through the [${s.boardName}](${s.boardUrl}).
 
 ---
 
@@ -500,6 +765,8 @@ function buildMarkdown(s: LicenseGuideState): string {
 ${authoritySection(s)}
 
 ${buildLicenseGuideRuleText(s)}
+
+${authorityJobSearchParagraph(s)}
 
 ## The Nurse Licensure Compact and your ${s.code} license
 
@@ -527,13 +794,14 @@ ${faqMd}
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
+/**
+ * Meta description, also the HowTo description. It names the AANP tier as
+ * a topic, never a tier-derived requirement: "physician-supervision rules"
+ * was false for Virginia, and "collaborative-agreement rules" for the
+ * reduced practice states with a way out of the agreement.
+ */
 function metaDescription(s: LicenseGuideState): string {
-    const authorityBit =
-        s.authority === 'full'
-            ? 'full practice authority'
-            : s.authority === 'reduced'
-                ? 'collaborative-agreement rules'
-                : 'physician-supervision rules';
+    const authorityBit = s.authority === 'full' ? 'full practice authority rules' : `${TIER_NAME[s.authority]} rules`;
     return `${s.name} ${NP} licensure guide: ${authorityBit}, Nurse Licensure Compact status, APRN application steps, renewal pointers, and salary data.`;
 }
 
