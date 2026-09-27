@@ -86,6 +86,17 @@ export async function getTopStatesByJobCount(): Promise<StateJobCount[]> {
  * They were cut rather than restated: each answer now says what moves the
  * number and where the current figure is published. Do not add a pay band
  * here unless it comes from lib/stats-sources.ts with its citation.
+ *
+ * No answer states an unsourced frequency, ranking or trend ("often",
+ * "many", "most in-demand", "increasingly"). "Most reduced and restricted
+ * practice states" is sourced: tests/regressions/generic-tier-copy-truth
+ * counts the arrangement in the verified details. The state loan repayment
+ * sentence restates HRSA's NHSC State Loan Repayment Program as described in
+ * its FY2026 funding notice (HRSA-26-015) and the program's nhsc.hrsa.gov
+ * pages, checked 2026-09-27: cost-sharing grants to states and territories,
+ * which run their own programs for clinicians in HPSAs, with eligible
+ * disciplines (nurse practitioners among them) set state by state. It
+ * names no award amount, because each state sets its own.
  */
 export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[] {
     const fpa = STAT_SOURCES.fullPracticeStates;
@@ -114,23 +125,23 @@ export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[
         },
         {
             question: `What is the ${brand.niche.short} job outlook?`,
-            answer: `The ${brand.niche.short} job outlook is strong: ${STAT_SOURCES.blsGrowth2034.source} projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for nurse practitioners through 2034, which is much faster than average. ${STAT_SOURCES.hrsaShortagePopulation.formatted} Americans live in federally designated primary care Health Professional Shortage Areas (${STAT_SOURCES.hrsaShortagePopulation.source}, ${STAT_SOURCES.hrsaShortagePopulation.asOf}), so demand for ${brand.niche.short}s continues to expand alongside telehealth access.`,
+            answer: `The ${brand.niche.short} job outlook is strong: ${STAT_SOURCES.blsGrowth2034.source} projects ${STAT_SOURCES.blsGrowth2034.formatted} employment growth for nurse practitioners through 2034, which is much faster than average. ${STAT_SOURCES.hrsaShortagePopulation.formatted} Americans live in federally designated primary care Health Professional Shortage Areas (${STAT_SOURCES.hrsaShortagePopulation.source}, ${STAT_SOURCES.hrsaShortagePopulation.asOf}), a designation that marks a shortage of primary care providers.`,
         },
         {
             question: `How long does it take to become an ${brand.niche.short}?`,
-            answer: `Becoming an ${brand.niche.short} takes a BSN and an active RN license, then an accredited MSN or DNP program with ${brand.niche.short} specialization, then a national ${brand.niche.short} certification exam (ANCC or AANP). Many programs ask for RN experience before admission, and BSN-to-DNP programs combine the graduate steps into one program. Total time depends on the degree you choose and on full-time or part-time study, so compare each program's published length.`,
+            answer: `Becoming an ${brand.niche.short} takes a BSN and an active RN license, then an accredited MSN or DNP program with ${brand.niche.short} specialization, then a national ${brand.niche.short} certification exam (ANCC or AANP). Some programs ask for RN experience before admission, and BSN-to-DNP programs combine the graduate steps into one program. Total time depends on the degree you choose and on full-time or part-time study, so compare each program's published length.`,
         },
         {
             question: `Can ${brand.niche.short}s prescribe medication?`,
-            answer: `Yes, ${brand.niche.short}s can prescribe medications including controlled substances in all 50 states, but each state sets the conditions. The ${fpa.source} classifies ${fpa.formatted} as having full practice authority (${fpa.asOf}), where state law lets ${brand.niche.short}s prescribe medications and controlled substances under the exclusive licensure authority of the state board of nursing, although several of those states limit prescribing or require a transition period for newer ${brand.niche.short}s. In reduced and restricted practice states, prescribing often depends on a collaborative agreement, supervision or delegation, and some of those states offer a route out of it after a set amount of experience. The medications ${brand.niche.short}s prescribe follow their specialty, from antibiotics and antihypertensives to insulin, ADHD medications, and controlled pain medications.`,
+            answer: `Yes, ${brand.niche.short}s can prescribe medications including controlled substances in all 50 states, but each state sets the conditions. The ${fpa.source} classifies ${fpa.formatted} as having full practice authority (${fpa.asOf}), where state law lets ${brand.niche.short}s prescribe medications and controlled substances under the exclusive licensure authority of the state board of nursing, although several of those states limit prescribing or require a transition period for newer ${brand.niche.short}s. In most reduced and restricted practice states, prescribing depends on a collaborative agreement, supervision or delegation, and some of those states offer a route out of it after a set amount of experience. The medications ${brand.niche.short}s prescribe follow their specialty, from antibiotics and antihypertensives to insulin, ADHD medications, and controlled pain medications.`,
         },
         {
             question: `What is the difference between an ${brand.niche.short} and a physician?`,
-            answer: `${brand.niche.short}s hold a master's or doctoral degree in nursing, while physicians complete medical school plus a residency. Both can diagnose conditions and prescribe medications. Whether an ${brand.niche.short} needs a collaborating or supervising clinician depends on the state, and some states require one for newly licensed ${brand.niche.short}s even where experienced ${brand.niche.short}s practice independently. The median annual wage for ${brand.niche.short}s is ${salary.formatted} (${salary.source}), and because graduate ${brand.niche.short} programs are shorter than medical school plus residency, ${brand.niche.short}s usually begin practicing years sooner.`,
+            answer: `${brand.niche.short}s hold a master's or doctoral degree in nursing, while physicians complete medical school plus a residency. Both can diagnose conditions and prescribe medications. Whether an ${brand.niche.short} needs a collaborating or supervising clinician depends on the state, and some states require one for newly licensed ${brand.niche.short}s even where experienced ${brand.niche.short}s practice independently. The median annual wage for ${brand.niche.short}s is ${salary.formatted} (${salary.source}), and because a graduate ${brand.niche.short} program is shorter than medical school plus residency, ${brand.niche.short}s can begin practicing sooner.`,
         },
         {
             question: `What does a ${brand.niche.descriptor} do on a typical workday?`,
-            answer: `A typical ${brand.niche.short} workday includes seeing patients for scheduled evaluations and follow-ups, diagnosing and treating acute and chronic conditions, prescribing and adjusting medications, ordering and reviewing labs and imaging, collaborating with interdisciplinary teams, and documenting in EHR systems. Inpatient roles add rounding on hospitalized patients. Patient volume depends on the setting and the employer's scheduling template, so ask how many patients a day a role expects before you accept it.`,
+            answer: `An ${brand.niche.short} workday can include seeing patients for scheduled evaluations and follow-ups, diagnosing and treating acute and chronic conditions, prescribing and adjusting medications, ordering and reviewing labs and imaging, collaborating with interdisciplinary teams, and documenting in EHR systems. Inpatient roles add rounding on hospitalized patients. Patient volume depends on the setting and the employer's scheduling template, so ask how many patients a day a role expects before you accept it.`,
         },
         {
             question: `Are there remote ${brand.niche.short} jobs?`,
@@ -142,12 +153,12 @@ export function buildHomepageFaqs(topStates: readonly StateJobCount[]): FAQItem[
         },
         ...demandFaq,
         {
-            question: `What are the most in-demand ${brand.niche.short} specializations?`,
-            answer: `The most in-demand ${brand.niche.short} specializations include acute care (AGACNP), emergency (ENP), correctional health, geriatrics and long-term care, aesthetics and dermatology, and telehealth-focused chronic-care management. Dual certification (e.g., FNP plus an acute-care or specialty credential) is also increasingly valuable.`,
+            question: `Which ${brand.niche.short} specializations are employers hiring for?`,
+            answer: `Employers post ${brand.niche.short} roles in family, adult-gerontology and pediatric primary care, women's health, acute care (AGACNP), emergency care (ENP), geriatrics and long-term care, correctional health, aesthetics and dermatology, and telehealth chronic-care management. Which of these is in demand depends on the region and the setting, so filter current ${brand.name} listings by specialty and state rather than relying on a national ranking. A second certification, such as an acute-care credential alongside an FNP, widens the roles you can apply for.`,
         },
         {
             question: `Are ${brand.niche.short}s eligible for loan forgiveness or incentive programs?`,
-            answer: `Yes, ${brand.niche.short}s working in designated Health Professional Shortage Areas (HPSAs) may qualify for HRSA's National Health Service Corps (NHSC) loan repayment, which publishes its current award amounts and service terms at nhsc.hrsa.gov. VA ${brand.niche.short}s may qualify for the Education Debt Reduction Program (EDRP). ${brand.niche.short}s in community health centers and rural areas often have additional state-level loan forgiveness programs available.`,
+            answer: `Yes, ${brand.niche.short}s working in designated Health Professional Shortage Areas (HPSAs) may qualify for HRSA's National Health Service Corps (NHSC) loan repayment, which publishes its current award amounts and service terms at nhsc.hrsa.gov. VA ${brand.niche.short}s may qualify for the Education Debt Reduction Program (EDRP). Through the NHSC State Loan Repayment Program, HRSA also funds loan repayment programs that participating states and territories run for clinicians in HPSAs, and ${brand.niche.short}s are among the disciplines those programs can accept. Each state sets its own eligible disciplines, sites and terms, so check your state's program through its primary care office or HRSA's State Loan Repayment Program contacts page on nhsc.hrsa.gov.`,
         },
     ];
 }
