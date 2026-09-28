@@ -89,6 +89,12 @@ model Job {
   qualityScore             Int                       @default(0) @map("quality_score")
   createdAt                DateTime                  @default(now()) @map("created_at")
   updatedAt                DateTime                  @updatedAt @map("updated_at")
+  // When the published content last changed (title, description, pay,
+  // location, work mode). Drives sitemap lastmod and the visible "Last
+  // updated" line. Set explicitly on create and on content edits only;
+  // never from view counts, link or presence checks, or freshness decay.
+  // updatedAt stays the write timestamp: deindex-expired uses it as its cursor.
+  contentChangedAt         DateTime?                 @map("content_changed_at")
   expiresAt                DateTime?                 @map("expires_at")
   companyId                String?                   @map("company_id")
   originalPostedAt         DateTime?                 @map("original_posted_at")
