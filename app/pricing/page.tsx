@@ -8,7 +8,7 @@ import BreadcrumbSchema from '@/components/BreadcrumbSchema';
 // Applicants", "Others: 30 days") labeled "same as employer page" — the P2
 // #16 honesty audit had only reached /for-employers. Both pages now render
 // the ONE audited module, so the audit cannot be forked away again.
-import { EMPLOYER_COMPARISON_ROWS } from '@/lib/employer-comparison';
+import { employerComparisonRows } from '@/lib/employer-comparison';
 import { config } from '@/lib/config';
 import { isPlanSaleOpen } from '@/lib/employer-plan-link';
 import { Check, ArrowRight, X, HelpCircle, RefreshCw, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign, Layers } from 'lucide-react';
@@ -129,10 +129,6 @@ const ctaSecondary: React.CSSProperties = {
     boxShadow: '2px 2px 6px rgba(0,0,0,0.04)',
 };
 
-/* ═══ Comparison Data — the shared audited module (lib/employer-comparison.ts),
-   genuinely the same rows as the employer page ═══ */
-const comparisonRows = EMPLOYER_COMPARISON_ROWS;
-
 const faqs = [
     { q: 'How long is posting free?', a: `${PROMO_HEADLINE}. ${PROMO_SUB} Promo posts run the full ${config.durationDays} days even if that runs past the promo, and they can be renewed like an intro or featured post.` },
     { q: `What happens on ${config.ladderStartsLabel}?`, a: `${LADDER_LINE} ${RENEWAL_LINE} Every post, whether promo, intro, featured, or plan, gets exactly the same features. There is no stripped-down tier.` },
@@ -146,6 +142,10 @@ const faqs = [
 ];
 
 export default function PricingPage() {
+    // The shared audited comparison module (lib/employer-comparison.ts),
+    // genuinely the same rows as the employer page, read at render time so
+    // the table switches when the promo ends.
+    const comparisonRows = employerComparisonRows();
     // The plan is sold through a Stripe Payment Link (subscription). The CTA
     // never hands out the raw link: /api/employer/plan/subscribe signs the
     // buyer in, sends an employer who already has a plan to the dashboard,

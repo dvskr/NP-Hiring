@@ -143,7 +143,7 @@ describe('WP-5 — one audited comparison table, consumed by both pages', () => 
         for (const rel of ['app/for-employers/page.tsx', 'app/pricing/page.tsx']) {
             const src = read(rel);
             expect(src, rel).toContain("from '@/lib/employer-comparison'");
-            expect(src, rel).toContain('EMPLOYER_COMPARISON_ROWS');
+            expect(src, rel).toContain('employerComparisonRows(');
             // No local row-array literal — a fork is exactly how the audit
             // was lost the first time.
             expect(code(src), rel).not.toMatch(/const comparisonRows(?::|\s*=\s*\[)/);

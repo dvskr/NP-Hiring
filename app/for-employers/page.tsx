@@ -13,7 +13,7 @@ import EmployerBenchmarkWidget from '@/components/tools/EmployerBenchmarkWidget'
 // module — /pricing renders the SAME rows, so the honesty audit can no
 // longer be forked away on one page and survive on the other. The
 // cell-honesty rules live with the data in lib/employer-comparison.ts.
-import { EMPLOYER_COMPARISON_ROWS } from '@/lib/employer-comparison';
+import { employerComparisonRows } from '@/lib/employer-comparison';
 import { config } from '@/lib/config';
 import {
   Check, ArrowRight, X, Calendar, Star, TrendingUp, Mail, Users, Briefcase, BarChart3, DollarSign, HelpCircle,
@@ -75,9 +75,10 @@ const iconBgCentered: React.CSSProperties = {
  * One cell changed in the move (live review items 1a–1d → 8a): the
  * "NP-Only Job Inventory" absolute became a screening commitment, because
  * the live inventory carried out-of-scope listings; the absolute may
- * return only when the WP-1 inventory-invariant test is green.
+ * return only when the WP-1 inventory-invariant test is green. The page
+ * reads the rows at render time (employerComparisonRows), so the table
+ * switches when the promo ends.
  */
-const comparisonRows = EMPLOYER_COMPARISON_ROWS;
 
 // Single source of truth for the FAQ content. Both the FAQPage JSON-LD and
 // the visible accordion consume this list — they cannot diverge (repo
@@ -129,6 +130,7 @@ const employerFaqs = [
 ];
 
 export default async function ForEmployersPage() {
+  const comparisonRows = employerComparisonRows();
   return (
     <>
       <BreadcrumbSchema items={[{ name: 'Home', url: brand.baseUrl }, { name: 'For Employers', url: `${brand.baseUrl}/for-employers` }]} />

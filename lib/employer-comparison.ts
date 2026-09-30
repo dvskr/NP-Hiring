@@ -29,11 +29,13 @@
  *     Post Free") — competitor cells stay 'partial', not false: both
  *     Indeed and LinkedIn offer limited free listings. The row label
  *     interpolates config.promoEndsLabel, so the claim always carries
- *     its own end date and cannot silently outlive the promo.
- *   - "Flat Per-Post Pricing, No Bidding" — the note states the 2027
- *     ladder (intro price, then the standard per-post price, or the
- *     monthly Employer plan) from config tokens; no price is typed by
- *     hand.
+ *     its own end date, and employerComparisonRows drops the row once
+ *     the promo has ended.
+ *   - "Flat Per-Post Pricing, No Bidding" — the note states the ladder
+ *     (intro price, then the standard per-post price, or the monthly
+ *     Employer plan) from config tokens; no price is typed by hand.
+ *     While the promo runs it is dated "From <ladderStartsLabel>"; after
+ *     that it states the prices as they are.
  *   - Listing duration — competitor cells never assert "Others: 30
  *     days" (unverifiable, plan-dependent); every post here runs
  *     config.durationDays, so there is no shorter free window to
@@ -64,10 +66,17 @@ export interface ComparisonRow {
     note?: string;
 }
 
-export const EMPLOYER_COMPARISON_ROWS: ComparisonRow[] = [
-    { feature: `${brand.niche.medium}-Focused Job Inventory`, us: true, indeed: false, linkedin: false, note: `Built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles. Listings are screened at ingest and removed when flagged out of scope` },
-    { feature: `Free Posting Through ${config.promoEndsLabel}`, us: true, indeed: 'partial', linkedin: 'partial', note: `Every post is free during our launch period; others offer limited free listings` },
-    { feature: `Flat Per-Post Pricing, No Bidding`, us: true, indeed: false, linkedin: false, note: `From ${config.ladderStartsLabel}: $${config.introPrice} first post, $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs. Others bill per click or per day` },
+// Each row is one line: tests/regressions/p2-trust-surfaces-point-of-sale.test.ts
+// reads the rows from this source and renders every cell as English.
+const INVENTORY_ROW: ComparisonRow = { feature: `${brand.niche.medium}-Focused Job Inventory`, us: true, indeed: false, linkedin: false, note: `Built exclusively for ${brand.niche.long} and ${brand.niche.adjective} nursing roles. Listings are screened at ingest and removed when flagged out of scope` };
+/** Only while the launch promo runs. */
+const FREE_POSTING_ROW: ComparisonRow = { feature: `Free Posting Through ${config.promoEndsLabel}`, us: true, indeed: 'partial', linkedin: 'partial', note: `Every post is free during our launch period; others offer limited free listings` };
+/** While the launch promo runs: the ladder is announced for its start date. */
+const FLAT_PRICING_ROW_PROMO: ComparisonRow = { feature: `Flat Per-Post Pricing, No Bidding`, us: true, indeed: false, linkedin: false, note: `From ${config.ladderStartsLabel}: $${config.introPrice} first post, $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs. Others bill per click or per day` };
+/** Once the ladder is live: the same prices, stated as they are. */
+const FLAT_PRICING_ROW_LADDER: ComparisonRow = { feature: `Flat Per-Post Pricing, No Bidding`, us: true, indeed: false, linkedin: false, note: `$${config.introPrice} first post, $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs. Others bill per click or per day` };
+
+const SHARED_ROWS: readonly ComparisonRow[] = [
     { feature: `${config.durationDays}-Day Listing Duration`, us: true, indeed: 'partial', linkedin: 'partial', note: `Every post runs ${config.durationDays} days. Competitor durations vary by plan` },
     { feature: 'Direct Candidate Messaging', us: true, indeed: 'partial', linkedin: 'partial', note: `${config.limits.inmailsPerPosting} InMails included per posting; a paid add-on elsewhere` },
     { feature: 'Candidate Profile Unlocks', us: true, indeed: 'partial', linkedin: 'partial', note: `${config.limits.candidateUnlocksPerPosting} included per posting; a paid add-on elsewhere` },
@@ -76,3 +85,14 @@ export const EMPLOYER_COMPARISON_ROWS: ComparisonRow[] = [
     { feature: 'Applications in a Built-In Dashboard', us: true, indeed: true, linkedin: true },
     { feature: 'Instant Apply Notifications', us: true, indeed: true, linkedin: true },
 ];
+
+/**
+ * The comparison rows for `now`. Call it at render time, never at module
+ * load, so the table switches when the promo ends without a deploy
+ * (lib/pricing-copy.ts explains why).
+ */
+export function employerComparisonRows(now: Date = new Date()): ComparisonRow[] {
+    return config.isPromoActive(now)
+        ? [INVENTORY_ROW, FREE_POSTING_ROW, FLAT_PRICING_ROW_PROMO, ...SHARED_ROWS]
+        : [INVENTORY_ROW, FLAT_PRICING_ROW_LADDER, ...SHARED_ROWS];
+}

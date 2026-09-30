@@ -26,6 +26,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { brand } from '@/config/brand';
 import { config as pricingConfig } from '@/lib/config';
+import { employerComparisonRows } from '@/lib/employer-comparison';
 
 const ROOT = process.cwd();
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -272,7 +273,7 @@ describe('P2 #16 — the comparison table is honest', () => {
     });
 
     it('stops asserting that competitors have no free posting option', () => {
-        const rows = comparison.slice(comparison.indexOf('const EMPLOYER_COMPARISON_ROWS'));
+        const rows = comparison.slice(comparison.indexOf('const INVENTORY_ROW'));
         // 2026-09-12: the row is the dated launch promo ("Free Posting Through
         // <config.promoEndsLabel>"), not "First Post Free" — and the competitor
         // cells stay 'partial' because both offer limited free listings.
@@ -285,7 +286,7 @@ describe('P2 #16 — the comparison table is honest', () => {
     });
 
     it('states the 2027 ladder from config tokens in the flat-pricing row', () => {
-        const rows = comparison.slice(comparison.indexOf('const EMPLOYER_COMPARISON_ROWS'));
+        const rows = comparison.slice(comparison.indexOf('const INVENTORY_ROW'));
         const flatRow = rows.split('\n').find((l) => l.includes('Flat Per-Post Pricing, No Bidding'));
         expect(flatRow).toBeDefined();
         expect(flatRow).toContain('From ${config.ladderStartsLabel}: $${config.introPrice} first post, $${config.postingPrice} after, or $${config.planPrice}/month for ${config.planSlots} active jobs');
@@ -294,8 +295,20 @@ describe('P2 #16 — the comparison table is honest', () => {
         expect(comparisonCode).not.toMatch(/\$(199|299|399)\b/);
     });
 
+    it('drops the free-posting row and the ladder date once the promo has ended', () => {
+        const during = employerComparisonRows(new Date('2027-01-01T09:59:59.000Z'));
+        const after = employerComparisonRows(new Date(pricingConfig.promoEndsAt));
+        expect(during.map((r) => r.feature)).toContain(`Free Posting Through ${pricingConfig.promoEndsLabel}`);
+        expect(after.map((r) => r.feature).join('\n')).not.toMatch(/Free Posting/);
+        expect(after).toHaveLength(during.length - 1);
+        const flat = after.find((r) => r.feature === 'Flat Per-Post Pricing, No Bidding');
+        expect(flat?.note).toBe(`$${pricingConfig.introPrice} first post, $${pricingConfig.postingPrice} after, or $${pricingConfig.planPrice}/month for ${pricingConfig.planSlots} active jobs. Others bill per click or per day`);
+        expect(JSON.stringify(after)).not.toContain(pricingConfig.promoEndsLabel);
+        expect(JSON.stringify(after)).not.toContain(pricingConfig.ladderStartsLabel);
+    });
+
     it('marks competitor paid add-ons as limited rather than absent', () => {
-        const rows = comparison.slice(comparison.indexOf('const EMPLOYER_COMPARISON_ROWS'));
+        const rows = comparison.slice(comparison.indexOf('const INVENTORY_ROW'));
         for (const feature of ['Direct Candidate Messaging', 'Candidate Profile Unlocks']) {
             const row = rows.split('\n').find((l) => l.includes(feature));
             expect(row, feature).toBeDefined();
@@ -337,7 +350,7 @@ describe('P2 #16 — the comparison table is honest', () => {
  */
 describe('P2 #16 — the comparison table renders as English', () => {
     const rowsBlock = comparisonCode.slice(
-        comparisonCode.indexOf('const EMPLOYER_COMPARISON_ROWS'),
+        comparisonCode.indexOf('const INVENTORY_ROW'),
     );
 
     /** Evaluate a source template literal against the real config objects. */
